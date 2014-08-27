@@ -288,6 +288,8 @@ python_error(int value)
 static PyObject *
 python_cloudi_subscribe(PyObject * self, PyObject * args);
 static PyObject *
+python_cloudi_subscribe_count(PyObject * self, PyObject * args);
+static PyObject *
 python_cloudi_unsubscribe(PyObject * self, PyObject * args);
 static PyObject *
 python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs);
@@ -326,6 +328,9 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"subscribe",
      python_cloudi_subscribe, METH_VARARGS,
      "Subscribe to a service name with a callback function."},
+    {"subscribe_count",
+     python_cloudi_subscribe_count, METH_VARARGS,
+     "Determine how may service name pattern subscriptions have occurred."},
     {"unsubscribe",
      python_cloudi_unsubscribe, METH_VARARGS,
      "Completely unsubscribe from a service name."},
@@ -716,6 +721,28 @@ python_cloudi_subscribe(PyObject * self, PyObject * args)
         return NULL;
     }
     Py_RETURN_NONE;
+}
+
+static PyObject *
+python_cloudi_subscribe_count(PyObject * self, PyObject * args)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    char const * pattern;
+    if (! PyArg_ParseTuple(args, "s:subscribe_count", &pattern))
+    {
+        return NULL;
+    }
+    int result;
+    THREADS_BEGIN;
+    result = object->api->subscribe_count(pattern);
+    THREADS_END;
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
+    return Py_BuildValue("I", object->api->get_subscribe_count());
 }
 
 static PyObject *

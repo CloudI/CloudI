@@ -95,6 +95,11 @@ module CloudI
             send(term_to_binary([:subscribe, pattern]))
         end
 
+        def subscribe_count(pattern)
+            send(term_to_binary([:subscribe_count, pattern]))
+            return poll_request(false)
+        end
+
         def unsubscribe(pattern)
             key = @prefix + pattern
             value = @callbacks.fetch(key, nil)
@@ -551,6 +556,14 @@ module CloudI
                             next
                         end
                     end
+                when MESSAGE_SUBSCRIBE_COUNT
+                    i += j; j = 4
+                    subscribe_count = data[i, j].unpack('L')[0]
+                    i += j
+                    if i != data.length
+                        raise MessageDecodingException
+                    end
+                    return subscribe_count
                 else
                     raise MessageDecodingException
                 end
@@ -644,15 +657,16 @@ module CloudI
             data
         end
 
-        MESSAGE_INIT           = 1
-        MESSAGE_SEND_ASYNC     = 2
-        MESSAGE_SEND_SYNC      = 3
-        MESSAGE_RECV_ASYNC     = 4
-        MESSAGE_RETURN_ASYNC   = 5
-        MESSAGE_RETURN_SYNC    = 6
-        MESSAGE_RETURNS_ASYNC  = 7
-        MESSAGE_KEEPALIVE      = 8
-        MESSAGE_REINIT         = 9
+        MESSAGE_INIT                = 1
+        MESSAGE_SEND_ASYNC          = 2
+        MESSAGE_SEND_SYNC           = 3
+        MESSAGE_RECV_ASYNC          = 4
+        MESSAGE_RETURN_ASYNC        = 5
+        MESSAGE_RETURN_SYNC         = 6
+        MESSAGE_RETURNS_ASYNC       = 7
+        MESSAGE_KEEPALIVE           = 8
+        MESSAGE_REINIT              = 9
+        MESSAGE_SUBSCRIBE_COUNT     = 10
 
         NULL = 0
 

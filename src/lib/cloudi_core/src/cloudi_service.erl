@@ -108,6 +108,7 @@
          self/1,
          dispatcher/1,
          subscribe/2,
+         subscribe_count/2,
          unsubscribe/2,
          get_pid/2,
          get_pid/3,
@@ -395,6 +396,20 @@ dispatcher(Dispatcher) ->
 subscribe(Dispatcher, Pattern)
     when is_pid(Dispatcher), is_list(Pattern) ->
     gen_server:call(Dispatcher, {'subscribe', Pattern}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine how may service name pattern subscriptions have occurred.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec subscribe_count(Dispatcher :: dispatcher(),
+                      Pattern :: service_name_pattern()) ->
+    non_neg_integer().
+
+subscribe_count(Dispatcher, Pattern)
+    when is_pid(Dispatcher), is_list(Pattern) ->
+    gen_server:call(Dispatcher, {'subscribe_count', Pattern}, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

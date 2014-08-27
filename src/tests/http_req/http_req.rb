@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,9 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
+                Task.assert{@api.subscribe_count('ruby.xml/get') == 0}
                 @api.subscribe('ruby.xml/get', method(:request))
+                Task.assert{@api.subscribe_count('ruby.xml/get') == 1}
 
                 result = @api.poll
                 $stdout.puts "exited thread: #{result}"
@@ -64,7 +66,7 @@ if __FILE__ == $PROGRAM_NAME
 
             private
 
-            def assert
+            def self.assert
                 raise "Assertion failed !" unless yield # if $DEBUG
             end
 

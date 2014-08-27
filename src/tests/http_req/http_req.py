@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -58,7 +58,9 @@ class Task(threading.Thread):
 
     def run(self):
         try:
+            assert self.__api.subscribe_count(self.__name + '.xml/get') == 0
             self.__api.subscribe(self.__name + '.xml/get', self.request)
+            assert self.__api.subscribe_count(self.__name + '.xml/get') == 1
 
             result = self.__api.poll()
             print 'exited thread:', result

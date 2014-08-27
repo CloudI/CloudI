@@ -71,15 +71,16 @@
 -include("cloudi_core_i_constants.hrl").
 
 % message type enumeration
--define(MESSAGE_INIT,            1).
--define(MESSAGE_SEND_ASYNC,      2).
--define(MESSAGE_SEND_SYNC,       3).
--define(MESSAGE_RECV_ASYNC,      4).
--define(MESSAGE_RETURN_ASYNC,    5).
--define(MESSAGE_RETURN_SYNC,     6).
--define(MESSAGE_RETURNS_ASYNC,   7).
--define(MESSAGE_KEEPALIVE,       8).
--define(MESSAGE_REINIT,          9).
+-define(MESSAGE_INIT,                1).
+-define(MESSAGE_SEND_ASYNC,          2).
+-define(MESSAGE_SEND_SYNC,           3).
+-define(MESSAGE_RECV_ASYNC,          4).
+-define(MESSAGE_RETURN_ASYNC,        5).
+-define(MESSAGE_RETURN_SYNC,         6).
+-define(MESSAGE_RETURNS_ASYNC,       7).
+-define(MESSAGE_KEEPALIVE,           8).
+-define(MESSAGE_REINIT,              9).
+-define(MESSAGE_SUBSCRIBE_COUNT,    10).
 
 -record(state,
     {
@@ -339,6 +340,16 @@ init([Protocol, SocketPath,
         true ->
             ok
     end,
+    {next_state, 'HANDLE', State};
+
+'HANDLE'({'subscribe_count', Pattern},
+         #state{dispatcher = Dispatcher,
+                prefix = Prefix,
+                options = #config_service_options{
+                    scope = Scope}} = State) ->
+    Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
+                                    Dispatcher, infinity),
+    send('subscribe_count_out'(Count), State),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
@@ -1380,8 +1391,12 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
          is_integer(PriorityDefault),
          PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
          is_boolean(RequestTimeoutAdjustment) ->
+    true = ProcessCount < 4294967296,
+    true = ProcessCountMax < 4294967296,
+    true = ProcessCountMin < 4294967296,
     PrefixBin = erlang:list_to_binary(Prefix),
     PrefixSize = erlang:byte_size(PrefixBin) + 1,
+    true = PrefixSize < 4294967296,
     RequestTimeoutAdjustmentInt = if
         RequestTimeoutAdjustment ->
             1;
@@ -1402,6 +1417,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
 
 'reinit_out'(ProcessCount)
     when is_integer(ProcessCount) ->
+    true = ProcessCount < 4294967296,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native>>.
 
@@ -1416,12 +1432,17 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
          is_binary(TransId), is_pid(Source) ->
     NameBin = erlang:list_to_binary(Name),
     NameSize = erlang:byte_size(NameBin) + 1,
+    true = NameSize < 4294967296,
     PatternBin = erlang:list_to_binary(Pattern),
     PatternSize = erlang:byte_size(PatternBin) + 1,
+    true = PatternSize < 4294967296,
     RequestInfoSize = erlang:byte_size(RequestInfo),
+    true = RequestInfoSize < 4294967296,
     RequestSize = erlang:byte_size(Request),
+    true = RequestSize < 4294967296,
     SourceBin = erlang:term_to_binary(Source),
     SourceSize = erlang:byte_size(SourceBin),
+    true = SourceSize < 4294967296,
     <<?MESSAGE_SEND_ASYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0:8,
@@ -1445,12 +1466,17 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
          is_binary(TransId), is_pid(Source) ->
     NameBin = erlang:list_to_binary(Name),
     NameSize = erlang:byte_size(NameBin) + 1,
+    true = NameSize < 4294967296,
     PatternBin = erlang:list_to_binary(Pattern),
     PatternSize = erlang:byte_size(PatternBin) + 1,
+    true = PatternSize < 4294967296,
     RequestInfoSize = erlang:byte_size(RequestInfo),
+    true = RequestInfoSize < 4294967296,
     RequestSize = erlang:byte_size(Request),
+    true = RequestSize < 4294967296,
     SourceBin = erlang:term_to_binary(Source),
     SourceSize = erlang:byte_size(SourceBin),
+    true = SourceSize < 4294967296,
     <<?MESSAGE_SEND_SYNC:32/unsigned-integer-native,
       NameSize:32/unsigned-integer-native,
       NameBin/binary, 0:8,
@@ -1491,7 +1517,9 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
 'return_sync_out'(ResponseInfo, Response, TransId)
     when is_binary(ResponseInfo), is_binary(Response), is_binary(TransId) ->
     ResponseInfoSize = erlang:byte_size(ResponseInfo),
+    true = ResponseInfoSize < 4294967296,
     ResponseSize = erlang:byte_size(Response),
+    true = ResponseSize < 4294967296,
     <<?MESSAGE_RETURN_SYNC:32/unsigned-integer-native,
       ResponseInfoSize:32/unsigned-integer-native,
       ResponseInfo/binary, 0:8,
@@ -1507,6 +1535,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     when is_list(TransIdList) ->
     TransIdListBin = erlang:list_to_binary(TransIdList),
     TransIdListCount = erlang:length(TransIdList),
+    true = TransIdListCount < 4294967296,
     <<?MESSAGE_RETURNS_ASYNC:32/unsigned-integer-native,
       TransIdListCount:32/unsigned-integer-native,
       TransIdListBin/binary>>.    % 128 bits * count
@@ -1521,13 +1550,20 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
 'recv_async_out'(ResponseInfo, Response, TransId)
     when is_binary(ResponseInfo), is_binary(Response), is_binary(TransId) ->
     ResponseInfoSize = erlang:byte_size(ResponseInfo),
+    true = ResponseInfoSize < 4294967296,
     ResponseSize = erlang:byte_size(Response),
+    true = ResponseSize < 4294967296,
     <<?MESSAGE_RECV_ASYNC:32/unsigned-integer-native,
       ResponseInfoSize:32/unsigned-integer-native,
       ResponseInfo/binary, 0:8,
       ResponseSize:32/unsigned-integer-native,
       Response/binary, 0:8,
       TransId/binary>>.           % 128 bits
+
+'subscribe_count_out'(Count)
+    when is_integer(Count), Count >= 0, Count < 4294967296 ->
+    <<?MESSAGE_SUBSCRIBE_COUNT:32/unsigned-integer-native,
+      Count:32/unsigned-integer-native>>.
 
 send(Data, #state{protocol = Protocol,
                   incoming_port = Port,

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_test).
@@ -191,7 +191,7 @@ supervisor_via_test() ->
     erlang:exit(SupPid, kill),
     ok.
 
-pid_age_test() ->
+pid_age_1_test() ->
     Pid1 = erlang:spawn(fun busy_pid/0),
     Pid2 = erlang:spawn(fun busy_pid/0),
     Pid3 = erlang:spawn(fun busy_pid/0),
@@ -212,6 +212,38 @@ pid_age_test() ->
     end,
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
+    erlang:exit(Pid2, kill),
+    erlang:exit(Pid3, kill),
+    ok.
+
+pid_age_2_test() ->
+    Pid1 = erlang:spawn(fun busy_pid/0),
+    Pid2 = erlang:spawn(fun busy_pid/0),
+    Pid3 = erlang:spawn(fun busy_pid/0),
+    0 = cpg:join_count("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid1),
+    1 = cpg:join_count("GroupA", Pid1),
+    0 = cpg:join_count("GroupA", Pid2),
+    ok = cpg:join("GroupA", Pid2),
+    1 = cpg:join_count("GroupA", Pid2),
+    0 = cpg:join_count("GroupA", Pid3),
+    ok = cpg:join("GroupA", Pid3),
+    1 = cpg:join_count("GroupA", Pid3),
+    ok = cpg:join("GroupA", Pid1),
+    2 = cpg:join_count("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid2),
+    2 = cpg:join_count("GroupA", Pid2),
+    ok = cpg:leave("GroupA", Pid1),
+    1 = cpg:join_count("GroupA", Pid1),
+    ok = cpg:leave("GroupA", Pid1),
+    0 = cpg:join_count("GroupA", Pid1),
+    {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
+    erlang:exit(Pid1, kill),
     erlang:exit(Pid2, kill),
     erlang:exit(Pid3, kill),
     ok.

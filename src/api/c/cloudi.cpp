@@ -535,6 +535,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     char const * const buffer_size_p = ::getenv("CLOUDI_API_INIT_BUFFER_SIZE");
     if (buffer_size_p == 0)
         return cloudi_invalid_input;
+    ::memset(p, 0, sizeof(cloudi_instance_t));
     uint32_t const buffer_size = ::atoi(buffer_size_p);
     if (::strcmp(protocol, "tcp") == 0)
     {
@@ -544,7 +545,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     else if (::strcmp(protocol, "udp") == 0)
     {
         p->fd_in = p->fd_out = thread_index + 3;
-        p->use_header = 0;
+        //p->use_header = 0;
     }
     else if (::strcmp(protocol, "local") == 0)
     {
@@ -553,19 +554,19 @@ int cloudi_initialize(cloudi_instance_t * p,
     }
     else
     {
-        p->fd_in = p->fd_out = 0; // uninitialized
+        //p->fd_in = p->fd_out = 0; // uninitialized
         return cloudi_invalid_input;
     }
-    p->initialization_complete = 0;
+    //p->initialization_complete = 0;
     p->buffer_size = buffer_size;
     p->lookup = new lookup_t();
     p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->buffer_recv = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
-    p->buffer_recv_index = 0;
+    //p->buffer_recv_index = 0;
     p->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->poll_timer = new timer();
     p->request_timer = new timer();
-    p->prefix = 0;
+    //p->prefix = 0;
 
     ::atexit(&exit_handler);
     std::set_terminate(exception_unknown);
@@ -658,6 +659,33 @@ int cloudi_subscribe(cloudi_instance_t * p,
     return cloudi_subscribe_(p,
                              pattern,
                              callback_function(p, f));
+}
+
+int cloudi_subscribe_count(cloudi_instance_t * p,
+                           char const * const pattern)
+{
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    int index = 0;
+    if (p->use_header)
+        index = 4;
+    if (ei_encode_version(buffer.get<char>(), &index))
+        return cloudi_error_ei_encode;
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
+        return cloudi_error_ei_encode;
+    if (ei_encode_atom(buffer.get<char>(), &index, "subscribe_count"))
+        return cloudi_error_ei_encode;
+    if (buffer.reserve(index + strlen(pattern) + 128) == false)
+        return cloudi_error_write_overflow;
+    if (ei_encode_string(buffer.get<char>(), &index, pattern))
+        return cloudi_error_ei_encode;
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
+    if (result)
+        return result;
+    result = poll_request(p, -1, 0);
+    if (result)
+        return result;
+    return cloudi_success;
 }
 
 int cloudi_unsubscribe(cloudi_instance_t * p,
@@ -1226,15 +1254,16 @@ static int keepalive(cloudi_instance_t * p)
     return cloudi_success;
 }
 
-#define MESSAGE_INIT           1
-#define MESSAGE_SEND_ASYNC     2
-#define MESSAGE_SEND_SYNC      3
-#define MESSAGE_RECV_ASYNC     4
-#define MESSAGE_RETURN_ASYNC   5
-#define MESSAGE_RETURN_SYNC    6
-#define MESSAGE_RETURNS_ASYNC  7
-#define MESSAGE_KEEPALIVE      8
-#define MESSAGE_REINIT         9
+#define MESSAGE_INIT                1
+#define MESSAGE_SEND_ASYNC          2
+#define MESSAGE_SEND_SYNC           3
+#define MESSAGE_RECV_ASYNC          4
+#define MESSAGE_RETURN_ASYNC        5
+#define MESSAGE_RETURN_SYNC         6
+#define MESSAGE_RETURNS_ASYNC       7
+#define MESSAGE_KEEPALIVE           8
+#define MESSAGE_REINIT              9
+#define MESSAGE_SUBSCRIBE_COUNT    10
 
 static void callback(cloudi_instance_t * p,
                      int const command,
@@ -1589,6 +1618,14 @@ static int poll_request(cloudi_instance_t * p,
                 }
                 break;
             }
+            case MESSAGE_SUBSCRIBE_COUNT:
+            {
+                store_incoming_uint32(buffer_recv, index, p->subscribe_count);
+                if (index != p->buffer_recv_index)
+                    ::exit(cloudi_error_read_underflow);
+                p->buffer_recv_index = 0;
+                return cloudi_success;
+            }
             default:
             {
                 ::exit(cloudi_error_read_underflow);
@@ -1727,6 +1764,12 @@ int API::subscribe(char const * const pattern,
                              callback_function(p));
 }
 
+int API::subscribe_count(char const * const pattern) const
+{
+    return cloudi_subscribe_count(m_api,
+                                  pattern);
+}
+
 int API::unsubscribe(char const * const pattern) const
 {
     return cloudi_unsubscribe(m_api,
@@ -1855,6 +1898,11 @@ bool API::get_trans_id_null(unsigned int const i) const
     char const * const trans_id = get_trans_id(i);
     assert(trans_id != 0);
     return (memcmp(null, trans_id, 16) == 0);
+}
+
+uint32_t API::get_subscribe_count() const
+{
+    return m_api->subscribe_count;
 }
 
 int API::forward_(int const command,

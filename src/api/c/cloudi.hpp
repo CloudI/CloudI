@@ -820,6 +820,13 @@ class API
                       callback_function_generic * p) const;
 
     public:
+        int subscribe_count(char const * const pattern) const;
+
+        inline int subscribe_count(std::string const & pattern) const
+        {
+            return subscribe_count(pattern.c_str());
+        }
+
         int unsubscribe(char const * const pattern) const;
 
         inline int unsubscribe(std::string const & pattern) const
@@ -950,6 +957,8 @@ class API
         uint32_t get_trans_id_count() const;
         char const * get_trans_id(unsigned int const i = 0) const;
         bool get_trans_id_null(unsigned int const i = 0) const;
+
+        uint32_t get_subscribe_count() const;
 
         int forward_(int const command,
                      char const * const name,

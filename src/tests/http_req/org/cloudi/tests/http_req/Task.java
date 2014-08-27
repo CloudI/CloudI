@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,9 @@ public class Task implements Runnable
  
     public void run()
     {
+        assert api.subscribe_count("java.xml/get") == 0;
         api.subscribe("java.xml/get", this, "request");
+        assert api.subscribe_count("java.xml/get") == 1;
         boolean running = true;
         while (running)
         {

@@ -76,8 +76,15 @@ class Input
             m_stop(m_stop_default),
             m_api(thread_index)
         {
-            int const result = m_api.subscribe("hexpi", *this, &Input::hexpi);
+            int result = 0;
+            result = m_api.subscribe_count("hexpi");
             assert(result == CloudI::API::return_value::success);
+            assert(m_api.get_subscribe_count() == 0);
+            result = m_api.subscribe("hexpi", *this, &Input::hexpi);
+            assert(result == CloudI::API::return_value::success);
+            result = m_api.subscribe_count("hexpi");
+            assert(result == CloudI::API::return_value::success);
+            assert(m_api.get_subscribe_count() == 1);
         }
 
         void hexpi(CloudI::API const & api,

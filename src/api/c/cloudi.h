@@ -83,6 +83,7 @@ typedef struct cloudi_instance_t
     uint32_t response_size;
     char * trans_id;          /* always 16 characters (128 bits) length */
     uint32_t trans_id_count;
+    uint32_t subscribe_count;
 
 } cloudi_instance_t;
 
@@ -105,20 +106,21 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   uint32_t const pid_size);
 
 
-#define cloudi_get_response(p)               (p->response)
-#define cloudi_get_response_size(p)          (p->response_size)
-#define cloudi_get_response_info(p)          (p->response_info)
-#define cloudi_get_response_info_size(p)     (p->response_info_size)
-#define cloudi_get_trans_id_count(p)         (p->trans_id_count)
-#define cloudi_get_trans_id(p, i)            (&(p->trans_id[i * 16]))
-#define cloudi_get_process_index(p)          (p->process_index)
-#define cloudi_get_process_count(p)          (p->process_count)
-#define cloudi_get_process_count_max(p)      (p->process_count_max)
-#define cloudi_get_process_count_min(p)      (p->process_count_min)
-#define cloudi_get_prefix(p)                 (p->prefix)
-#define cloudi_get_timeout_async(p)          (p->timeout_async)
-#define cloudi_get_timeout_sync(p)           (p->timeout_sync)
-#define cloudi_get_priority_default(p)       (p->priority_default)
+#define cloudi_get_response(p)               ((p)->response)
+#define cloudi_get_response_size(p)          ((p)->response_size)
+#define cloudi_get_response_info(p)          ((p)->response_info)
+#define cloudi_get_response_info_size(p)     ((p)->response_info_size)
+#define cloudi_get_trans_id_count(p)         ((p)->trans_id_count)
+#define cloudi_get_trans_id(p, i)            (&((p)->trans_id[i * 16]))
+#define cloudi_get_subscribe_count(p)        ((p)->subscribe_count)
+#define cloudi_get_process_index(p)          ((p)->process_index)
+#define cloudi_get_process_count(p)          ((p)->process_count)
+#define cloudi_get_process_count_max(p)      ((p)->process_count_max)
+#define cloudi_get_process_count_min(p)      ((p)->process_count_min)
+#define cloudi_get_prefix(p)                 ((p)->prefix)
+#define cloudi_get_timeout_async(p)          ((p)->timeout_async)
+#define cloudi_get_timeout_sync(p)           ((p)->timeout_sync)
+#define cloudi_get_priority_default(p)       ((p)->priority_default)
 
 int cloudi_initialize(cloudi_instance_t * p,
                       unsigned int const thread_index);
@@ -130,6 +132,9 @@ int cloudi_initialize_thread_count(unsigned int * const thread_count);
 int cloudi_subscribe(cloudi_instance_t * p,
                      char const * const pattern,
                      cloudi_callback_t f);
+
+int cloudi_subscribe_count(cloudi_instance_t * p,
+                           char const * const pattern);
 
 int cloudi_unsubscribe(cloudi_instance_t * p,
                        char const * const pattern);

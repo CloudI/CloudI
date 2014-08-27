@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -98,8 +98,14 @@ void process_requests(void * p)
     int result = cloudi_initialize(&api, data->thread_index);
     assert(result == cloudi_success);
 
+    result = cloudi_subscribe_count(&api, "c.xml/get");
+    assert(result == cloudi_success);
+    assert(cloudi_get_subscribe_count(&api) == 0);
     result = cloudi_subscribe(&api, "c.xml/get", &request);
     assert(result == cloudi_success);
+    result = cloudi_subscribe_count(&api, "c.xml/get");
+    assert(result == cloudi_success);
+    assert(cloudi_get_subscribe_count(&api) == 1);
 
     result = cloudi_poll(&api, -1);
     if (result != cloudi_success)

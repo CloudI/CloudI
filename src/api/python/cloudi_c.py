@@ -68,6 +68,9 @@ class API(object):
     def subscribe(self, pattern, Function):
         self.__api.subscribe(pattern, Function)
 
+    def subscribe_count(self, pattern):
+        return self.__api.subscribe_count(pattern)
+
     def unsubscribe(self, pattern):
         self.__api.unsubscribe(pattern)
 

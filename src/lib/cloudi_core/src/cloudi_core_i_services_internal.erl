@@ -313,6 +313,15 @@ handle_call({'subscribe', Pattern}, _,
     end,
     hibernate_check({reply, Result, State});
 
+handle_call({'subscribe_count', Pattern}, _,
+            #state{prefix = Prefix,
+                   receiver_pid = ReceiverPid,
+                   options = #config_service_options{
+                       scope = Scope}} = State) ->
+    Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
+                                    ReceiverPid, infinity),
+    hibernate_check({reply, Count, State});
+
 handle_call({'unsubscribe', Pattern}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,

@@ -70,6 +70,7 @@
 %
 % Software:
 %  Ubuntu 12.04.2 LTS (GNU/Linux 3.2.0-29-generic x86_64)
+%  Erlang R16B03-1 (with lock counting, so probably slower than possible)
 %
 % Max Stable (Total) Request Rate (during informal testing):
 %  requests/second dest_refresh_method duo_mode sender receiver

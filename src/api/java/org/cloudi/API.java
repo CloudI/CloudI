@@ -79,15 +79,16 @@ public class API
     public static final int ASYNC  =  1;
     public static final int SYNC   = -1;
 
-    private static final int MESSAGE_INIT            = 1;
-    private static final int MESSAGE_SEND_ASYNC      = 2;
-    private static final int MESSAGE_SEND_SYNC       = 3;
-    private static final int MESSAGE_RECV_ASYNC      = 4;
-    private static final int MESSAGE_RETURN_ASYNC    = 5;
-    private static final int MESSAGE_RETURN_SYNC     = 6;
-    private static final int MESSAGE_RETURNS_ASYNC   = 7;
-    private static final int MESSAGE_KEEPALIVE       = 8;
-    private static final int MESSAGE_REINIT          = 9;
+    private static final int MESSAGE_INIT                = 1;
+    private static final int MESSAGE_SEND_ASYNC          = 2;
+    private static final int MESSAGE_SEND_SYNC           = 3;
+    private static final int MESSAGE_RECV_ASYNC          = 4;
+    private static final int MESSAGE_RETURN_ASYNC        = 5;
+    private static final int MESSAGE_RETURN_SYNC         = 6;
+    private static final int MESSAGE_RETURNS_ASYNC       = 7;
+    private static final int MESSAGE_KEEPALIVE           = 8;
+    private static final int MESSAGE_REINIT              = 9;
+    private static final int MESSAGE_SUBSCRIBE_COUNT     = 10;
 
     private FileDescriptor fd_in;
     private FileDescriptor fd_out;
@@ -255,6 +256,30 @@ public class API
                                          new OtpErlangString(pattern)};
         subscribe.write_any(new OtpErlangTuple(tuple));
         send(subscribe);
+    }
+
+    /**
+     * Determine how may service name pattern subscriptions have occurred.
+     *
+     * @param  pattern     the service name pattern
+     */ 
+    public int subscribe_count(final String pattern)
+    {
+        OtpOutputStream subscribe_count = new OtpOutputStream();
+        subscribe_count.write(OtpExternal.versionTag);
+        final OtpErlangObject[] tuple = {new OtpErlangAtom("subscribe_count"),
+                                         new OtpErlangString(pattern)};
+        subscribe_count.write_any(new OtpErlangTuple(tuple));
+        send(subscribe_count);
+        try
+        {
+            return (Integer) poll_request(false);
+        }
+        catch (MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            return -1;
+        }
     }
 
     /**
@@ -1166,6 +1191,13 @@ public class API
                             this.input.available() == 0)
                             continue;
                         break;
+                    }
+                    case MESSAGE_SUBSCRIBE_COUNT:
+                    {
+                        int subscribeCount = buffer.getInt();
+                        if (buffer.hasRemaining())
+                            throw new MessageDecodingException();
+                        return subscribeCount;
                     }
                     default:
                         throw new MessageDecodingException();

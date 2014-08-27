@@ -53,15 +53,16 @@ from erlang import (binary_to_term, term_to_binary,
 
 assert sys.version >= '2.7'
 
-_MESSAGE_INIT           = 1
-_MESSAGE_SEND_ASYNC     = 2
-_MESSAGE_SEND_SYNC      = 3
-_MESSAGE_RECV_ASYNC     = 4
-_MESSAGE_RETURN_ASYNC   = 5
-_MESSAGE_RETURN_SYNC    = 6
-_MESSAGE_RETURNS_ASYNC  = 7
-_MESSAGE_KEEPALIVE      = 8
-_MESSAGE_REINIT         = 9
+_MESSAGE_INIT                = 1
+_MESSAGE_SEND_ASYNC          = 2
+_MESSAGE_SEND_SYNC           = 3
+_MESSAGE_RECV_ASYNC          = 4
+_MESSAGE_RETURN_ASYNC        = 5
+_MESSAGE_RETURN_SYNC         = 6
+_MESSAGE_RETURNS_ASYNC       = 7
+_MESSAGE_KEEPALIVE           = 8
+_MESSAGE_REINIT              = 9
+_MESSAGE_SUBSCRIBE_COUNT     = 10
 
 class API(object):
     ASYNC  =  1
@@ -122,6 +123,10 @@ class API(object):
         else:
             value.append(Function)
         self.__send(term_to_binary((OtpErlangAtom('subscribe'), pattern)))
+
+    def subscribe_count(self, pattern):
+        self.__send(term_to_binary((OtpErlangAtom('subscribe_count'), pattern)))
+        return self.__poll_request(False)
 
     def unsubscribe(self, pattern):
         key = self.__prefix + pattern
@@ -502,6 +507,11 @@ class API(object):
                     IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
                     if len(IN) == 0:
                         continue
+            elif command == _MESSAGE_SUBSCRIBE_COUNT:
+                i, j = j, j + 4
+                if j != len(data):
+                    raise message_decoding_exception()
+                return struct.unpack('=I', data[i:j])[0]
             else:
                 raise message_decoding_exception()
 

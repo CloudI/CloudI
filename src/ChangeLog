@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the subscribe_count function to the CloudI API for checking
+      if a subscription on a service name pattern has occurred and
+      how many times
+    * Fix bug where 1 unsubscribe would affect all subscriptions of a single
+      service process (now N subscribes can be undone by N unsubscribes)
+    * Update cpg
+
 2014-08-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudI Service API functions to get the current configuration:
