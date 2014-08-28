@@ -3017,7 +3017,7 @@ services_remove_all_internal([_ | Services],
 services_remove_all([], Services, _) ->
     {ok, Services};
 services_remove_all([Service | RemoveServices], Services, Timeout) ->
-    Remove = services_remove_all_internal(Services, Service),
+    Remove = services_remove_all_internal(RemoveServices ++ Services, Service),
     case cloudi_core_i_configurator:service_stop(Service, Remove, Timeout) of
         ok ->
             services_remove_all(RemoveServices, Services, Timeout);

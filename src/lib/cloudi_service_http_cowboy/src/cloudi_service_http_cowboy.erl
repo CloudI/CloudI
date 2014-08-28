@@ -514,7 +514,11 @@ cloudi_service_handle_info(Request, State, _) ->
     {noreply, State}.
 
 cloudi_service_terminate(_, #state{service = Service}) ->
-    cloudi_x_cowboy:stop_listener(Service),
+    try cloudi_x_cowboy:stop_listener(Service)
+    catch
+        exit:{noproc, _} ->
+            ?LOG_WARN("ranch noproc", [])
+    end,
     ok.
 
 %%%------------------------------------------------------------------------

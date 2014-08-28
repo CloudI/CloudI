@@ -365,6 +365,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             ?LOG_INFO("Service pid ~p shutdown~n ~p",
                       [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             NewServices = terminate_service(ServiceId, Pids, Service, Services),
+            cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, State#state{services = NewServices}};
         error ->
             {noreply, State}
@@ -391,6 +392,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
                       [Pid, Reason, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             NewServices = terminate_service(ServiceId, Pids, Reason,
                                             Service, Services),
+            cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, State#state{services = NewServices}};
         error ->
             {noreply, State}

@@ -1028,18 +1028,13 @@ nodes_call({F, L, _, Timeout} = Request,
 
 shutdown_wait_monitor([]) ->
     ok;
-shutdown_wait_monitor(Monitored) ->
+shutdown_wait_monitor(Monitors) ->
     receive
-        {'DOWN', _, process, Pid, _} ->
-            shutdown_wait_monitor(lists:delete(Pid, Monitored))
+        {'DOWN', Monitor, process, _, _} ->
+            shutdown_wait_monitor(lists:delete(Monitor, Monitors))
     end.
 shutdown_wait(Pids) ->
-    shutdown_wait(Pids, []).
-shutdown_wait([], Monitored) ->
-    shutdown_wait_monitor(Monitored);
-shutdown_wait([Pid | Pids], Monitored) ->
-    erlang:monitor(process, Pid),
-    shutdown_wait(Pids, [Pid | Monitored]).
+    shutdown_wait_monitor([erlang:monitor(process, Pid) || Pid <- Pids]).
 
 timeout_decr(infinity) ->
     infinity;
