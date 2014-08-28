@@ -179,12 +179,14 @@ port(Process) when is_pid(Process) ->
     gen_fsm:sync_send_all_state_event(Process, port).
 
 stdout(OsPid, Output) ->
-    ?LOG_INFO("stdout (pid ~w):~n~s",
-              [OsPid, indent_space_1(Output)]).
+    % uses a fake module name and a fake line number
+    cloudi_core_i_logger_interface:info('STDOUT', OsPid,
+                                        filter_stream(Output), []).
 
 stderr(OsPid, Output) ->
-    ?LOG_ERROR("stderr (pid ~w):~n~s",
-               [OsPid, indent_space_1(Output)]).
+    % uses a fake module name and a fake line number
+    cloudi_core_i_logger_interface:error('STDERR', OsPid,
+                                         filter_stream(Output), []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_fsm
@@ -1237,17 +1239,14 @@ format_status(_Opt,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-% indent std streams by 1 space without last newline
-indent_space_1(Output) ->
-    indent_space_1_lines([32 | Output], []).
-indent_space_1_lines([], Output) ->
-    lists:reverse(Output);
-indent_space_1_lines([10], Output) ->
-    lists:reverse(Output);
-indent_space_1_lines([10 | L], Output) ->
-    indent_space_1_lines(L, [32, 10 | Output]);
-indent_space_1_lines([C | L], Output) ->
-    indent_space_1_lines(L, [C | Output]).
+filter_stream(Output0) ->
+    % just consume the last newline character, if one exists
+    case lists:reverse(Output0) of
+        [10 | Output1] ->
+            lists:reverse(Output1);
+        _ ->
+            Output0
+    end.
 
 os_pid_kill(undefined) ->
     ok;

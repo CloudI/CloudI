@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2012-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_messaging_sequence4).
@@ -82,6 +82,7 @@ cloudi_service_init(_Args, _Prefix, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "h"),
     cloudi_service:subscribe(Dispatcher, "h"),
     cloudi_service:subscribe(Dispatcher, "h"),
+    8 = cloudi_service:subscribe_count(Dispatcher, "h"),
     cloudi_service:subscribe(Dispatcher, "sequence4"),
     {ok, #state{}}.
 
@@ -92,9 +93,9 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     Prefix = cloudi_service:prefix(Dispatcher),
     if
         Request == "start" ->
-            ?LOG_INFO(" messaging sequence4 start erlang", []),
+            ?LOG_INFO("messaging sequence4 start erlang", []),
             sequence4(Dispatcher, Prefix),
-            ?LOG_INFO(" messaging sequence4 end erlang", []),
+            ?LOG_INFO("messaging sequence4 end erlang", []),
             % loop to find any infrequent problems, restart sequence1
             cloudi_service:send_async(Dispatcher,
                                       Prefix ++ "sequence1", "start"),

@@ -908,6 +908,7 @@ service_stop_internal(#config_service_internal{
                           uuid = ID} = Service, Remove, Timeout) ->
     case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
+            shutdown_wait(Pids),
             if
                 Reload =:= true ->
                     ok = cloudi_core_i_services_internal_reload:
@@ -947,6 +948,7 @@ service_stop_external(#config_service_external{
                           uuid = ID}, Timeout) ->
     case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
+            shutdown_wait(Pids),
             ?LOG_INFO("Service pids ~p stopped~n ~p",
                       [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
             ok;
@@ -1023,6 +1025,21 @@ nodes_call({F, L, _, Timeout} = Request,
         {error, _} = Error ->
             {reply, Error, State}
     end.
+
+shutdown_wait_monitor([]) ->
+    ok;
+shutdown_wait_monitor(Monitored) ->
+    receive
+        {'DOWN', _, process, Pid, _} ->
+            shutdown_wait_monitor(lists:delete(Pid, Monitored))
+    end.
+shutdown_wait(Pids) ->
+    shutdown_wait(Pids, []).
+shutdown_wait([], Monitored) ->
+    shutdown_wait_monitor(Monitored);
+shutdown_wait([Pid | Pids], Monitored) ->
+    erlang:monitor(process, Pid),
+    shutdown_wait(Pids, [Pid | Monitored]).
 
 timeout_decr(infinity) ->
     infinity;
