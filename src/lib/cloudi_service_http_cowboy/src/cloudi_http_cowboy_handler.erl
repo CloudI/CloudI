@@ -325,20 +325,6 @@ websocket_init(_Transport, Req0,
     SubscribeWebSocket = lists:prefix(Prefix, NameWebSocket),
     HeadersIncoming1 = if
         SubscribeWebSocket =:= true ->
-            if
-                WebSocketNameUnique =:= true ->
-                    case cloudi_x_cpg:get_members(Scope, NameWebSocket,
-                                                  infinity) of
-                        {ok, _, OldConnections} ->
-                            [cloudi_service_http_cowboy:close(OldConnection)
-                             || OldConnection <- OldConnections],
-                            ok;
-                        {error, _} ->
-                            ok
-                    end;
-                WebSocketNameUnique =:= false ->
-                    ok
-            end,
             [{<<"service-name">>, erlang:list_to_binary(NameWebSocket)} |
              HeadersIncoming0];
         SubscribeWebSocket =:= false ->
@@ -398,9 +384,37 @@ websocket_init(_Transport, Req0,
     end,
     if
         SubscribeWebSocket =:= true ->
+            % initiate an asynchronous close if the websocket must be unique
+            OldConnectionMonitors = if
+                WebSocketNameUnique =:= true ->
+                    case cloudi_x_cpg:get_members(Scope, NameWebSocket,
+                                                  infinity) of
+                        {ok, _, OldConnections} ->
+                            lists:map(fun(OldConnection) ->
+                                cloudi_service_http_cowboy:close(OldConnection),
+                                erlang:monitor(process, OldConnection)
+                            end, OldConnections);
+                        {error, _} ->
+                            []
+                    end;
+                WebSocketNameUnique =:= false ->
+                    []
+            end,
             % service requests are only received if they relate to
             % the service's prefix
             ok = cloudi_x_cpg:join(Scope, NameWebSocket, self(), infinity),
+            % block on the websocket close if the connection must be unique
+            if
+                WebSocketNameUnique =:= true ->
+                    lists:foreach(fun(OldConnectionMonitor) ->
+                        receive
+                            {'DOWN', OldConnectionMonitor, process, _, _} ->
+                                ok
+                        end
+                    end, OldConnectionMonitors);
+                WebSocketNameUnique =:= false ->
+                    ok
+            end,
             if
                 WebSocketSubscriptions =:= undefined ->
                     ok;

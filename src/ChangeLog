@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the closure of old websockets synchronous when
+      cloudi_service_http_cowboy has websocket_name_unique set to true
+
 2014-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the external service logging output to
@@ -8,7 +13,7 @@
       use STDERR as a module name for the stderr stream
       with the OS pid as line number
     * Do not indent stdout and stderr output from extenal services now
-    * Make sure a CloudI Service API call to service_remove waits for
+    * Make sure a CloudI Service API call to services_remove/2 waits for
       the service processes to terminate before removing the application
       dependencies (bugfix)
 
