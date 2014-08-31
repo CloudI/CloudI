@@ -460,7 +460,7 @@ init_per_testcase(TestCase, Config)
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
-end_per_testcase(_TestCase, Config) ->
+end_per_testcase(TestCase, Config) ->
     end_per_testcase(TestCase),
     {value, {_, ServiceIds}, NewConfig} = lists:keytake(service_ids, 1, Config),
     ok = cloudi_service_api:services_remove(ServiceIds, infinity),
