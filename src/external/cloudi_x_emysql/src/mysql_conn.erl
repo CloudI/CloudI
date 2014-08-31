@@ -71,8 +71,7 @@ start(Host, Port, User, Password, Database, Encoding, PoolId) ->
 get_ack(Pid) ->
     receive
         Pid -> {ok, Pid};
-        {error, Error} ->  {error, Error};
-        _ -> get_ack(Pid)
+        {error, Error} -> {error, Error}
     after 1000 * 5 ->
         {error, failed_to_open_connection}
     end.
