@@ -55,7 +55,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/13]).
+-export([start_link/14]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -138,10 +138,11 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
            TimeoutAsync, TimeoutSync, DestRefresh,
            DestDeny, DestAllow,
            #config_service_options{
-               scope = Scope} = ConfigOptions)
+               scope = Scope} = ConfigOptions, Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_pid(Parent) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -163,7 +164,8 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                                   [ProcessIndex, ProcessCount, GroupLeader,
                                    Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, DestRefresh,
-                                   DestDeny, DestAllow, ConfigOptions],
+                                   DestDeny, DestAllow, ConfigOptions,
+                                   Parent],
                                   [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
@@ -179,7 +181,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
       DestDeny, DestAllow,
       #config_service_options{
           duo_mode = DuoMode,
-          info_pid_options = InfoPidOptions} = ConfigOptions]) ->
+          info_pid_options = InfoPidOptions} = ConfigOptions, Parent]) ->
     Dispatcher = self(),
     if
         GroupLeader =:= undefined ->
@@ -206,6 +208,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
         true ->
             Dispatcher
     end,
+    Parent ! {self, Dispatcher, ReceiverPid}, % for supervisor
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     {ok, TimestampType} = application:get_env(cloudi_core, timestamp_type),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, TimestampType},

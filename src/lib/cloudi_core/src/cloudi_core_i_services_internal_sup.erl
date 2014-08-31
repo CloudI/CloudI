@@ -103,7 +103,7 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
                                           Module, Args, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           DestRefresh, DestDeny, DestAllow,
-                                          ConfigOptions]) of
+                                          ConfigOptions, self()]) of
         {ok, Dispatcher} ->
             result(Dispatcher);
         {ok, Dispatcher, _} ->
@@ -130,15 +130,12 @@ init([]) ->
 %%%------------------------------------------------------------------------
 
 result(Dispatcher) ->
-    try cloudi_service:self(Dispatcher) of
-        Service ->
+    % must not call cloudi_service:self/1 due to the possibility
+    % that external source code, called within cloudi_service_init/3,
+    % consumes incoming messages it isn't using
+    % (e.g., in the source code doing a start_link)
+    receive
+        {self, Dispatcher, Service} ->
             {ok, Service}
-    catch
-        exit:{timeout, _} ->
-            {error, internal_init_timeout};
-        exit:{noproc, _} ->
-            {error, internal_init_timeout};
-        _:Reason ->
-            {error, Reason}
     end.
 

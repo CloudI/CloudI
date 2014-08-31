@@ -248,14 +248,14 @@ cloudi_service_terminate(_, #state{process = Process}) ->
 
 response_internal({data, Result}, _) ->
     {ok, Result};
-response_internal({update, Result}, _) ->
+response_internal({updated, Result}, _) ->
     {ok, Result};
 response_internal({error, _} = Error, _) ->
     Error.
 
 response_external({data, Result}, Input) ->
     cloudi_response:new(Input, cloudi_string:term_to_binary(Result));
-response_external({update, Result}, Input) ->
+response_external({updated, Result}, Input) ->
     cloudi_response:new(Input, cloudi_string:term_to_binary(Result));
 response_external({error, _} = Error, Input) ->
     cloudi_response:new(Input, Error).

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-08-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for cloudi_service_db_mysql
+    * Switch to get internal service self pid from supervisor, fixes bug if
+      an internal service consumes messages in the cloudi_service_init/3
+      (messages not related to its source code)
+
 2014-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make the closure of old websockets synchronous when
