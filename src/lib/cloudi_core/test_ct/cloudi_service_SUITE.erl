@@ -456,7 +456,6 @@ t_service_internal_sync_1(_Config) ->
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     Self = self(),
-    TimeoutMax = cloudi:timeout_sync(Context),
     {ok,
      ?RESPONSE_INFO1,
      ?RESPONSE1} = cloudi:send_sync(Context,
@@ -465,28 +464,16 @@ t_service_internal_sync_1(_Config) ->
                                     undefined, undefined),
     {ok,
      [{'send_sync', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
-       Timeout, 0, TransId1, Self}]} = cloudi:send_sync(Context,
-                                                        ServiceName,
-                                                        ?REQUEST2),
-    true = (Timeout == TimeoutMax),
+       _Timeout1, 0, TransId1, Self}]} = cloudi:send_sync(Context,
+                                                          ServiceName,
+                                                          ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId1),
-    case cloudi_service_api:services_add([
+    {ok, _} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
          {options, [{automatic_loading, false}]}]
-        ], infinity) of
-        {error,
-         {service_internal_start_failed,
-          {{{badmatch,{error,invalid_state}},
-            _},
-           _}}} ->
-            ok;
-        {error,
-         {service_internal_start_failed,
-          internal_init_timeout}} ->
-            ok
-    end,
+        ], infinity),
     {ok,
      ?RESPONSE_INFO1,
      ?RESPONSE1} = cloudi:send_sync(Context,
@@ -495,28 +482,17 @@ t_service_internal_sync_1(_Config) ->
                                     undefined, undefined),
     {ok,
      [{'send_sync', ServiceName, ServiceName, ?REQUEST_INFO1, ?REQUEST1,
-       Timeout, 0, TransId2, Self}]} = cloudi:send_sync(Context,
-                                                        ServiceName,
-                                                        ?REQUEST2),
+       _Timeout2, 0, TransId2, Self}]} = cloudi:send_sync(Context,
+                                                          ServiceName,
+                                                          ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
-    case cloudi_service_api:services_add([
+    {ok, _} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
          {options, [{automatic_loading, false}]}]
-        ], infinity) of
-        {error,
-         {service_internal_start_failed,
-          {{{badmatch,{error,invalid_state}},
-            _},
-           _}}} ->
-            ok;
-        {error,
-         {service_internal_start_failed,
-          internal_init_timeout}} ->
-            ok
-    end,
+        ], infinity),
     ok.
 
 t_service_internal_sync_2(_Config) ->
@@ -570,23 +546,12 @@ t_service_internal_async_1(_Config) ->
                                                          ?REQUEST2),
     true = (Timeout1 > (TimeoutMax - 1000)) andalso (Timeout1 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId1),
-    case cloudi_service_api:services_add([
+    {ok, _} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
          {options, [{automatic_loading, false}]}]
-        ], infinity) of
-        {error,
-         {service_internal_start_failed,
-          {{{badmatch,{error,invalid_state}},
-            _},
-           _}}} ->
-            ok;
-        {error,
-         {service_internal_start_failed,
-          internal_init_timeout}} ->
-            ok
-    end,
+        ], infinity),
     {ok, TransId2} = cloudi:send_async(Context,
                                        ServiceName,
                                        ?REQUEST_INFO1, ?REQUEST1,
@@ -603,23 +568,12 @@ t_service_internal_async_1(_Config) ->
     true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
-    case cloudi_service_api:services_add([
+    {ok, _} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
          {options, [{automatic_loading, false}]}]
-        ], infinity) of
-        {error,
-         {service_internal_start_failed,
-          {{{badmatch,{error,invalid_state}},
-            _},
-           _}}} ->
-            ok;
-        {error,
-         {service_internal_start_failed,
-          internal_init_timeout}} ->
-            ok
-    end,
+        ], infinity),
     ok.
 
 t_service_internal_async_2(_Config) ->
