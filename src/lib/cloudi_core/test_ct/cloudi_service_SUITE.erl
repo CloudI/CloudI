@@ -279,6 +279,8 @@ suite() ->
      {timetrap, 10100}].
 
 init_per_suite(Config) ->
+    ok = cloudi_x_reltool_util:
+             application_start(sasl, [{sasl_error_logger, false}], infinity),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 
@@ -295,10 +297,21 @@ init_per_group(_GroupName, Config) ->
 end_per_group(_GroupName, Config) ->
     Config.
 
+init_per_testcase(TestCase) ->
+    error_logger:info_msg("~p init~n", [TestCase]),
+    error_logger:tty(false),
+    ok.
+
+end_per_testcase(TestCase) ->
+    error_logger:tty(true),
+    error_logger:info_msg("~p end~n", [TestCase]),
+    ok.
+
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_sync_1) orelse
          (TestCase =:= t_service_internal_sync_2) orelse
          (TestCase =:= t_service_internal_async_1) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -313,6 +326,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_sync_3) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -327,6 +341,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_async_2) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -340,6 +355,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_async_3) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -354,6 +370,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_aspects_1) ->
+    init_per_testcase(TestCase),
     InitAfter1 = fun(_, _, #state{count = Count} = State, _) ->
         {ok, State#state{count = Count + 3}}
     end,
@@ -382,6 +399,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_1) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -396,6 +414,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_2) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -411,6 +430,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_3) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -425,6 +445,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_terminate_4) ->
+    init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
@@ -440,6 +461,7 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config].
 
 end_per_testcase(_TestCase, Config) ->
+    end_per_testcase(TestCase),
     {value, {_, ServiceIds}, NewConfig} = lists:keytake(service_ids, 1, Config),
     ok = cloudi_service_api:services_remove(ServiceIds, infinity),
     NewConfig.
