@@ -602,6 +602,7 @@ t_service_internal_async_2(_Config) ->
     % make sure mcast_async works normally and remains ordered when
     % sending to a service that has a single process
     % (including cloudi:recv_asyncs functionality)
+    receive after 1000 -> ok end,
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     Self = self(),
