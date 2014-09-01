@@ -698,6 +698,7 @@ t_service_internal_async_3(_Config) ->
     % exist, a service mcast_async to the service name will only be able to
     % send to a single service process)
     % (including cloudi_service:recv_asyncs functionality)
+    receive after 1000 -> ok end,
     Context = cloudi:new(),
     ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
     {ok,
