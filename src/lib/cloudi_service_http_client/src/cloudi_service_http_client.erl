@@ -471,28 +471,27 @@ headers_request_filter(Headers0) ->
         {<<"url-path">>,                 undefined},
         % removed parameters
         % (possible if coming from cloudi_service_http_cowboy)
-        {<<"version">>,                  undefined},
         {<<"peer">>,                     undefined},
         {<<"peer-port">>,                undefined},
         {<<"source-address">>,           undefined},
         {<<"source-port">>,              undefined}],
     case cloudi_lists:take_values(Defaults, Headers0) of
         [undefined, _,
-         _, _, _, _, _ | _] ->
+         _, _, _, _ | _] ->
             {error, {request_info_missing, <<"host">>}};
         [Host, _,
-         _, _, _, _, _ | _]
+         _, _, _, _ | _]
             when not is_binary(Host) ->
             {error, {request_info_invalid, <<"host">>}};
         [_, undefined,
-         _, _, _, _, _ | _] ->
+         _, _, _, _ | _] ->
             {error, {request_info_missing, <<"url-path">>}};
         [_, URLPath,
-         _, _, _, _, _ | _]
+         _, _, _, _ | _]
             when not is_binary(URLPath) ->
             {error, {request_info_invalid, <<"url-path">>}};
         [Host, URLPath,
-         _, _, _, _, _ | Headers1] ->
+         _, _, _, _ | Headers1] ->
             {ok, Host, URLPath, Headers1}
     end.
 
