@@ -85,16 +85,16 @@ t_client_basic_1(_Config) ->
     {ok, ConfigData} = file:read_file(CloudIConfigPath),
     ContentLength0 = erlang:integer_to_binary(erlang:byte_size(ConfigData)),
     Host = <<"127.0.0.1:6464">>,
-    URLPath0 = <<"/ct_test_files/cloudi_service_http_client_SUITE.conf">>,
+    URLPath0 = <<"/ct_test_files/cloudi_service_http_client_SUITE.config">>,
     {ok,
      [{<<"status">>, <<"200">>},
       {<<"connection">>, _},
       {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>},
+      {<<"etag">>, _},
       {<<"server">>, <<"Cowboy">>},
       {<<"content-length">>, ContentLength0},
-      {<<"content-type">>, <<"application/octet-stream">>},
-      {<<"content-disposition">>,
-       <<"attachment; filename=\"cloudi_service_http_client_SUITE.conf\"">>}],
+      {<<"last-modified">>, _}],
      Response0} = cloudi_service_http_client:get(Context,
                                                  ?SERVICE_PREFIX1,
                                                  [{<<"host">>, Host},
@@ -130,5 +130,5 @@ t_client_basic_1(_Config) ->
 
 config_path() ->
     Path = [_ | _] = os:getenv("TEST_DIR"),
-    filename:join(Path, erlang:atom_to_list(?MODULE) ++ ".conf").
+    filename:join(Path, erlang:atom_to_list(?MODULE) ++ ".config").
 

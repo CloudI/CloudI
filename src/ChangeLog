@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add range request support for cloudi_service_filesystem GET requests
+    * Add write truncate support to cloudi_service_filesystem for PUT requests
+    * Add HEAD and OPTIONS requests to cloudi_service_filesystem
+    * Add legacy stdout/stderr output formatting as special modes on the
+      legacy logging formatter used in the default configuration
+      (just so the new version generates the same log output by default)
+
 2014-08-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes for cloudi_service_db_mysql

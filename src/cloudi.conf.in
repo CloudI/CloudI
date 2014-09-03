@@ -1075,7 +1075,19 @@
     % [{identity, "CloudI"},
     %  {facility, local0},
     %  {level, trace}]}, % CloudI log levels are mapped to syslog levels
-    {formatters, [{any, [{formatter, cloudi_core_i_logger}]}]},
+    {formatters,
+     [{any,
+       [{formatter, cloudi_core_i_logger},
+        {formatter_config,
+         [{mode, legacy}]}]},
+      {['STDOUT'],
+       [{formatter, cloudi_core_i_logger},
+        {formatter_config,
+         [{mode, legacy_stdout}]}]},
+      {['STDERR'],
+       [{formatter, cloudi_core_i_logger},
+        {formatter_config,
+         [{mode, legacy_stderr}]}]}]},
     {redirect, undefined}
 ]}.
 

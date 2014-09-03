@@ -135,11 +135,12 @@ handle(Req0,
     {PathRaw, Req4} = cloudi_x_cowboy_req:path(Req3),
     {{ClientIpAddr, ClientPort} = Client,
      Req5} = cloudi_x_cowboy_req:peer(Req4),
+    {VersionType, Req6} = cloudi_x_cowboy_req:version(Req5),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
                                                  Client,
-                                                 Req5),
+                                                 Req6),
     RequestAccepted = if
         ContentTypesAccepted =:= undefined ->
             true;
@@ -182,10 +183,12 @@ handle(Req0,
                     NameIncoming ++ [$/ |
                         string:to_lower(erlang:binary_to_list(Method))]
             end,
+            Version = erlang:atom_to_binary(VersionType, utf8),
             PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
             PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
             PeerPort = erlang:integer_to_binary(ClientPort),
-            HeadersIncoming1 = [{<<"peer">>, PeerShort},
+            HeadersIncoming1 = [{<<"version">>, Version},
+                                {<<"peer">>, PeerShort},
                                 {<<"peer-port">>, PeerPort},
                                 {<<"source-address">>, PeerLong},
                                 {<<"source-port">>, PeerPort},
@@ -304,11 +307,12 @@ websocket_init(_Transport, Req0,
     {PathRaw, Req3} = cloudi_x_cowboy_req:path(Req2),
     {{ClientIpAddr, ClientPort} = Client,
      Req4} = cloudi_x_cowboy_req:peer(Req3),
+    {VersionType, Req5} = cloudi_x_cowboy_req:version(Req4),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
                                                  Client,
-                                                 Req4),
+                                                 Req5),
     NameOutgoing = if
         UseMethodSuffix =:= false ->
             NameIncoming;
@@ -330,10 +334,12 @@ websocket_init(_Transport, Req0,
         SubscribeWebSocket =:= false ->
             HeadersIncoming0
     end,
+    Version = erlang:atom_to_binary(VersionType, utf8),
     PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
     PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
     PeerPort = erlang:integer_to_binary(ClientPort),
-    HeadersIncoming2 = [{<<"peer">>, PeerShort},
+    HeadersIncoming2 = [{<<"version">>, Version},
+                        {<<"peer">>, PeerShort},
                         {<<"peer-port">>, PeerPort},
                         {<<"source-address">>, PeerLong},
                         {<<"source-port">>, PeerPort},
@@ -1099,12 +1105,17 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
             HeadersPart1 = headers_merge(HeadersPart0, Headers),
             HeadersPartN = if
                 HeadersPartNextN =:= undefined ->
-                    [{<<"x-multipart-id">>, MultipartId},
+                    [% socket pid as a string
+                     {<<"x-multipart-id">>, MultipartId},
+                     % 0-based index
                      {<<"x-multipart-index">>, erlang:integer_to_binary(I)},
+                     % yes, this is the last part
                      {<<"x-multipart-last">>, <<"true">>} |
                      HeadersPart1];
                 true ->
-                    [{<<"x-multipart-id">>, MultipartId},
+                    [% socket pid as a string
+                     {<<"x-multipart-id">>, MultipartId},
+                     % 0-based index
                      {<<"x-multipart-index">>, erlang:integer_to_binary(I)} |
                      HeadersPart1]
             end,

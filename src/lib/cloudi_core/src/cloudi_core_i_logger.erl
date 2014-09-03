@@ -331,7 +331,7 @@ trace(Mode, Process, Module, Line, Format, Args) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Lager formatter.===
+%% ===Lager formatter for legacy output.===
 %% Provides legacy CloudI logger output formatting in a
 %% lager formatter function.
 %% @end
@@ -342,10 +342,10 @@ format(Msg, Config) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Lager formatter for colors.===
+%% ===Lager formatter for legacy output.===
 %% Provides legacy CloudI logger output formatting in a
 %% lager formatter function.
-%% Use "{formatters, [{any, [{formatter, cloudi_core_i_logger}]}]}" for 
+%% Use ``{formatters, [{any, [{formatter, cloudi_core_i_logger}, {formatter_config, [{mode, legacy}]}]}, {['STDOUT'], [{formatter, cloudi_core_i_logger}, {formatter_config, [{mode, legacy_stdout}]}]}, {['STDERR'], [{formatter, cloudi_core_i_logger}, {formatter_config, [{mode, legacy_stderr}]}]}]}'' for 
 %% legacy log output with this formatter function.
 %% @end
 %%-------------------------------------------------------------------------
@@ -376,7 +376,17 @@ format(Msg, Config, _) ->
     if
         Mode =:= legacy ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, indent_space_1(LogMessage))
+                        Module, Line, indent_space_1(LogMessage));
+        Mode =:= legacy_stdout ->
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line,
+                        cloudi_string:format(" stdout (pid ~w):~n", [Line]) ++
+                        indent_space_2(LogMessage));
+        Mode =:= legacy_stderr ->
+            format_line(Level, Timestamp, Node, Pid,
+                        Module, Line,
+                        cloudi_string:format(" stderr (pid ~w):~n", [Line]) ++
+                        indent_space_2(LogMessage))
     end.
 
 %%%------------------------------------------------------------------------
@@ -758,6 +768,17 @@ indent_space_1_lines([10 | L], Output) ->
     indent_space_1_lines(L, [32, 10 | Output]);
 indent_space_1_lines([C | L], Output) ->
     indent_space_1_lines(L, [C | Output]).
+
+indent_space_2(Output) ->
+    indent_space_2_lines([32, 32 | Output], []).
+indent_space_2_lines([], Output) ->
+    lists:reverse(Output);
+indent_space_2_lines([10], Output) ->
+    lists:reverse([10 | Output]);
+indent_space_2_lines([10 | L], Output) ->
+    indent_space_2_lines(L, [32, 32, 10 | Output]);
+indent_space_2_lines([C | L], Output) ->
+    indent_space_2_lines(L, [C | Output]).
 
 log_message_formatter_call(Level, Timestamp, Node, Pid,
                            Module, Line, LogMessage,
