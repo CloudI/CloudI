@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Filesystem Date/Time==
+%%% ==CloudI Filesystem Parsing of HTTP data==
 %%% @end
 %%%
 %%% MIT LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
+%%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
 %%% 
 %%% Permission to use, copy, modify, and/or distribute this software for any
 %%% purpose with or without fee is hereby granted, provided that the above
@@ -23,21 +23,33 @@
 %%% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 %%%
 %%% @author Loïc Hoguin <essen@ninenines.eu>
-%%% @copyright 2011-2013 Loïc Hoguin
-%%% @version 1.3.2 {@date} {@time}
+%%% @copyright 2011-2014 Loïc Hoguin
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_filesystem_datetime).
+-module(cloudi_service_filesystem_parse).
 -author('essen [at] ninenines (dot) eu').
 
 %% external interface
--export([parse/1]).
+-export([datetime/1,
+         range/1]).
 
--spec parse(binary()) ->
-    calendar:datetime() | {error, badarg}.
+-spec datetime(binary()) ->
+    calendar:datetime() |
+    {error, badarg}.
 
-parse(Binary) ->
+datetime(Binary) ->
     http_date(Binary).
+
+-spec range(binary()) ->
+    {binary(),
+     list({non_neg_integer(),
+           non_neg_integer() | infinity} |
+          neg_integer())} |
+    {error, badarg}.
+
+range(Binary) ->
+    token_ci(Binary, fun range/2).
 
 %%%------------------------------------------------------------------------
 %%% From cowboy, in cowboy_http.erl
@@ -277,6 +289,126 @@ time(<< H1, H2, ":", M1, M2, ":", S1, S2, Rest/binary >>, Fun)
             {error, badarg}
     end.
 
+range(Data, Token) ->
+    whitespace(Data,
+        fun(<<"=", Rest/binary>>) ->
+            case list(Rest, fun range_beginning/2) of
+                {error, badarg} ->
+                    {error, badarg};
+                Ranges ->
+                    {Token, Ranges}
+            end;
+           (_) ->
+            {error, badarg}
+        end).
+
+range_beginning(Data, Fun) ->
+    range_digits(Data, suffix,
+        fun(D, RangeBeginning) ->
+            range_ending(D, Fun, RangeBeginning)
+        end).
+
+range_ending(Data, Fun, RangeBeginning) ->
+    whitespace(Data,
+        fun(<<"-", R/binary>>) ->
+            case RangeBeginning of
+                suffix ->
+                    range_digits(R,
+                                 fun(D, RangeEnding) ->
+                                     Fun(D, -RangeEnding)
+                                 end);
+                _ ->
+                    range_digits(R, infinity,
+                        fun(D, RangeEnding) ->
+                            Fun(D, {RangeBeginning, RangeEnding})
+                        end)
+            end;
+           (_) ->
+            {error, badarg}
+        end).
+
+-spec range_digits(binary(), fun()) -> any().
+range_digits(Data, Fun) ->
+    whitespace(Data,
+        fun(D) ->
+            digits(D, Fun)
+        end).
+
+-spec range_digits(binary(), any(), fun()) -> any().
+range_digits(Data, Default, Fun) ->
+    whitespace(Data,
+        fun(<< C, Rest/binary >>) when C >= $0, C =< $9 ->
+            digits(Rest, Fun, C - $0);
+           (_) ->
+            Fun(Data, Default)
+        end).
+
+-spec list(binary(), fun()) -> list() | {error, badarg}.
+list(Data, Fun) ->
+    case list(Data, Fun, []) of
+        {error, badarg} -> {error, badarg};
+        L -> lists:reverse(L)
+    end.
+
+-spec list(binary(), fun(), [binary()]) -> [any()] | {error, badarg}.
+%% From the RFC:
+%% <blockquote>Wherever this construct is used, null elements are allowed,
+%% but do not contribute to the count of elements present.
+%% That is, "(element), , (element) " is permitted, but counts
+%% as only two elements. Therefore, where at least one element is required,
+%% at least one non-null element MUST be present.</blockquote>
+list(Data, Fun, Acc) ->
+    whitespace(Data,
+        fun (<<>>) -> Acc;
+            (<< $,, Rest/binary >>) -> list(Rest, Fun, Acc);
+            (Rest) -> Fun(Rest,
+                fun (D, I) -> whitespace(D,
+                        fun (<<>>) -> [I|Acc];
+                            (<< $,, R/binary >>) -> list(R, Fun, [I|Acc]);
+                            (_Any) -> {error, badarg}
+                        end)
+                end)
+        end).
+
+-spec digits(binary(), fun()) -> any().
+digits(<< C, Rest/binary >>, Fun)
+        when C >= $0, C =< $9 ->
+    digits(Rest, Fun, C - $0);
+digits(_Data, _Fun) ->
+    {error, badarg}.
+
+-spec digits(binary(), fun(), non_neg_integer()) -> any().
+digits(<< C, Rest/binary >>, Fun, Acc)
+        when C >= $0, C =< $9 ->
+    digits(Rest, Fun, Acc * 10 + (C - $0));
+digits(Data, Fun, Acc) ->
+    Fun(Data, Acc).
+
+%% Changes all characters to lowercase.
+-spec token_ci(binary(), fun()) -> any().
+token_ci(Data, Fun) ->
+    token(Data, Fun, ci, <<>>).
+
+%-spec token(binary(), fun()) -> any().
+%token(Data, Fun) ->
+%    token(Data, Fun, cs, <<>>).
+
+-spec token(binary(), fun(), ci | cs, binary()) -> any().
+token(<<>>, Fun, _Case, Acc) ->
+    Fun(<<>>, Acc);
+token(Data = << C, _Rest/binary >>, Fun, _Case, Acc)
+        when C =:= $(; C =:= $); C =:= $<; C =:= $>; C =:= $@;
+             C =:= $,; C =:= $;; C =:= $:; C =:= $\\; C =:= $";
+             C =:= $/; C =:= $[; C =:= $]; C =:= $?; C =:= $=;
+             C =:= ${; C =:= $}; C =:= $\s; C =:= $\t;
+             C < 32; C =:= 127 ->
+    Fun(Data, Acc);
+token(<< C, Rest/binary >>, Fun, Case = ci, Acc) ->
+    C2 = char_to_lower(C),
+    token(Rest, Fun, Case, << Acc/binary, C2 >>);
+token(<< C, Rest/binary >>, Fun, Case, Acc) ->
+    token(Rest, Fun, Case, << Acc/binary, C >>).
+
 %% @doc Skip whitespace.
 -spec whitespace(binary(), fun()) -> any().
 whitespace(<< C, Rest/binary >>, Fun)
@@ -320,5 +452,59 @@ asctime_date_test_() ->
     ],
     [{V, fun() -> R = asctime_date(V) end} || {V, R} <- Tests].
 
+http_range_test_() ->
+    Tests = [
+        {<<"bytes=1-20">>,
+            {<<"bytes">>, [{1, 20}]}},
+        {<<"bytes=-100">>,
+            {<<"bytes">>, [-100]}},
+        {<<"bytes=1-">>,
+            {<<"bytes">>, [{1, infinity}]}},
+        {<<"bytes=1-20,30-40,50-">>,
+            {<<"bytes">>, [{1, 20}, {30, 40}, {50, infinity}]}},
+        {<<"bytes = 1 - 20 , 50 - , - 300 ">>,
+            {<<"bytes">>, [{1, 20}, {50, infinity}, -300]}},
+        {<<"bytes=1-20,-500,30-40">>,
+            {<<"bytes">>, [{1, 20}, -500, {30, 40}]}},
+        {<<"test=1-20,-500,30-40">>,
+            {<<"test">>, [{1, 20}, -500, {30, 40}]}},
+        {<<"bytes=-">>,
+            {error, badarg}},
+        {<<"bytes=-30,-">>,
+            {error, badarg}}
+    ],
+    [fun() -> R = range(V) end ||{V, R} <- Tests].
 -endif.
 
+%%%------------------------------------------------------------------------
+%%% From cowboy, in cowboy_bstr.erl
+%%%------------------------------------------------------------------------
+
+-spec char_to_lower(char()) -> char().
+char_to_lower($A) -> $a;
+char_to_lower($B) -> $b;
+char_to_lower($C) -> $c;
+char_to_lower($D) -> $d;
+char_to_lower($E) -> $e;
+char_to_lower($F) -> $f;
+char_to_lower($G) -> $g;
+char_to_lower($H) -> $h;
+char_to_lower($I) -> $i;
+char_to_lower($J) -> $j;
+char_to_lower($K) -> $k;
+char_to_lower($L) -> $l;
+char_to_lower($M) -> $m;
+char_to_lower($N) -> $n;
+char_to_lower($O) -> $o;
+char_to_lower($P) -> $p;
+char_to_lower($Q) -> $q;
+char_to_lower($R) -> $r;
+char_to_lower($S) -> $s;
+char_to_lower($T) -> $t;
+char_to_lower($U) -> $u;
+char_to_lower($V) -> $v;
+char_to_lower($W) -> $w;
+char_to_lower($X) -> $x;
+char_to_lower($Y) -> $y;
+char_to_lower($Z) -> $z;
+char_to_lower(Ch) -> Ch.

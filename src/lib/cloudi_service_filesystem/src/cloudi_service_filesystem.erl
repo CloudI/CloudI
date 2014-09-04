@@ -1512,7 +1512,7 @@ cache_status_1(ETag, KeyValues, MTime) ->
 cache_status_2(KeyValues, MTime) ->
     case cloudi_service:key_value_find(<<"if-modified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
-            case cloudi_service_filesystem_datetime:parse(DateTimeBinary) of
+            case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
                 {error, _} ->
                     cache_status_3(KeyValues, MTime);
                 DateTime when MTime > DateTime ->
@@ -1527,7 +1527,7 @@ cache_status_2(KeyValues, MTime) ->
 cache_status_3(KeyValues, MTime) ->
     case cloudi_service:key_value_find(<<"if-unmodified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
-            case cloudi_service_filesystem_datetime:parse(DateTimeBinary) of
+            case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
                 {error, _} ->
                     200;
                 DateTime when MTime =< DateTime ->
@@ -1589,7 +1589,7 @@ contents_ranges_read(ETag, KeyValues, MTime) ->
 contents_ranges_read_0(ETag, KeyValues, MTime) ->
     case cloudi_service:key_value_find(<<"range">>, KeyValues) of
         {ok, RangeData} ->
-            case cloudi_x_cowboy_http:range(RangeData) of
+            case cloudi_service_filesystem_parse:range(RangeData) of
                 {error, badarg} ->
                     {400, undefined};
                 {<<"bytes">>, RangeList} ->
@@ -1607,7 +1607,7 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
         {ok, ETag} ->
             {206, RangeList};
         {ok, IfRangeData} ->
-            case cloudi_service_filesystem_datetime:parse(IfRangeData) of
+            case cloudi_service_filesystem_parse:datetime(IfRangeData) of
                 {error, _} ->
                     {410, undefined};
                 DateTime when MTime == DateTime ->
