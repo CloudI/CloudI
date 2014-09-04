@@ -98,6 +98,9 @@
         % notification service name which will receive the file's data
         % in a service request sent with mcast_async.
 -define(DEFAULT_NOTIFY_ON_START,          true). % send notify in init
+-define(DEFAULT_USE_CONTENT_TYPES,        true). % see below:
+        % Should the content-type ResponseInfo data be a guess based on
+        % the file extension?
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % see below:
         % Uses the "/get" suffix on service name patterns used for
         % subscriptions as would be used from HTTP related senders like
@@ -107,13 +110,15 @@
 -record(state,
     {
         prefix :: string(),
+        service :: pid(),
         directory :: string(),
         directory_length :: non_neg_integer(),
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
         use_http_get_suffix :: boolean(),
         toggle :: boolean(),
-        files :: cloudi_x_trie:cloudi_x_trie()
+        files :: cloudi_x_trie:cloudi_x_trie(),
+        content_type_lookup :: undefined | cloudi_x_trie:cloudi_x_trie()
     }).
 
 -record(file_notify,
@@ -128,12 +133,15 @@
     {
         contents :: binary(),
         path :: string(),
+        headers :: list({binary(), binary()}),
         mtime :: calendar:datetime(),
         access :: 'read' | 'write' | 'read_write' | 'none',
         toggle :: boolean(),
         notify = [] :: list(#file_notify{}),
         write = [] :: list(truncate | append),
-        write_appends = [] :: list()
+        write_appends = [] :: list({binary(),
+                                    list({non_neg_integer(),
+                                          {any(), any()}})})
     }).
 
 %%%------------------------------------------------------------------------
@@ -283,9 +291,11 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         {notify_one,             ?DEFAULT_NOTIFY_ONE},
         {notify_all,             ?DEFAULT_NOTIFY_ALL},
         {notify_on_start,        ?DEFAULT_NOTIFY_ON_START},
+        {use_content_types,      ?DEFAULT_USE_CONTENT_TYPES},
         {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [DirectoryRaw, Refresh, Cache0, WriteTruncateL, WriteAppendL,
-     NotifyOneL, NotifyAllL, NotifyOnStart, UseHttpGetSuffix] =
+     NotifyOneL, NotifyAllL, NotifyOnStart,
+     UseContentTypes, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
     true = (Refresh =:= undefined) orelse
@@ -303,13 +313,21 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_list(NotifyOneL),
     true = is_list(NotifyAllL),
     true = is_boolean(NotifyOnStart),
+    true = is_boolean(UseContentTypes),
     true = (UseHttpGetSuffix =:= true) orelse
            ((UseHttpGetSuffix =:= false) andalso
+            (UseContentTypes =:= false) andalso
             (WriteTruncateL == []) andalso (WriteAppendL == [])),
     false = lists:member($*, Prefix),
     PrefixLength = erlang:length(Prefix),
     Directory = cloudi_service:environment_transform(DirectoryRaw),
     DirectoryLength = erlang:length(Directory),
+    ContentTypeLookup = if
+        UseContentTypes =:= true ->
+            cloudi_response_info:lookup_content_type();
+        UseContentTypes =:= false ->
+            undefined
+    end,
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
         case lists:member($*, FileName) of
@@ -318,8 +336,10 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                            mtime = MTime} = FileInfo,
                 case file_read_data(FileInfo, FilePath) of
                     {ok, Contents} ->
+                        Headers = file_headers(FilePath, ContentTypeLookup),
                         File = #file{contents = Contents,
                                      path = FilePath,
+                                     headers = Headers,
                                      mtime = MTime,
                                      access = Access,
                                      toggle = Toggle},
@@ -337,86 +357,94 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         end
     end, cloudi_x_trie:new()),
     MTimeFake = calendar:now_to_universal_time(os:timestamp()),
-    Files3 = lists:foldl(fun(Name, Files2) ->
+    Files4 = lists:foldl(fun(Name, Files2) ->
         true = is_list(Name) andalso is_integer(hd(Name)),
         FileName = lists:nthtail(PrefixLength, Name),
         case cloudi_x_trie:find(Name, Files2) of
             {ok, #file{access = Access,
                        write = []} = File}
                 when Access =:= read_write ->
-                file_add_write_truncate(FileName,
-                                        File#file{write = [truncate]},
-                                        Files2, Prefix, Dispatcher);
+                NewFile = File#file{write = [truncate]},
+                Files3 = file_add_write_truncate(FileName, NewFile,
+                                                 Files2, Prefix, Dispatcher),
+                file_refresh(FileName, NewFile,
+                             Files3, true, Prefix);
             {ok, #file{path = FilePath}} ->
                 erlang:exit({eacces, FilePath}),
                 Files2;
             error ->
                 FilePath = filename:join(Directory, FileName),
-                file_add_write_new(FileName,
-                                   #file{contents = <<>>,
-                                         path = FilePath,
-                                         mtime = MTimeFake,
-                                         toggle = Toggle,
-                                         write = [truncate]},
-                                   Files2, Prefix, Dispatcher)
+                Headers = file_headers(FilePath, ContentTypeLookup),
+                file_add_write(FileName,
+                               #file{contents = <<>>,
+                                     path = FilePath,
+                                     headers = Headers,
+                                     mtime = MTimeFake,
+                                     toggle = Toggle,
+                                     write = [truncate]},
+                               Files2, Prefix, Dispatcher)
         end
     end, Files1, WriteTruncateL),
-    Files5 = lists:foldl(fun(Name, Files4) ->
+    Files7 = lists:foldl(fun(Name, Files5) ->
         true = is_list(Name) andalso is_integer(hd(Name)),
         FileName = lists:nthtail(PrefixLength, Name),
-        case cloudi_x_trie:find(Name, Files4) of
+        case cloudi_x_trie:find(Name, Files5) of
             {ok, #file{access = Access,
                        write = Write} = File}
                 when Access =:= read_write ->
-                file_add_write_append(FileName,
-                                      File#file{write = [append | Write]},
-                                      Files4, Prefix, Dispatcher);
+                NewFile = File#file{write = [append | Write]},
+                Files6 = file_add_write_append(FileName, NewFile,
+                                               Files5, Prefix, Dispatcher),
+                file_refresh(FileName, NewFile,
+                             Files6, true, Prefix);
             {ok, #file{path = FilePath}} ->
                 erlang:exit({eacces, FilePath}),
-                Files4;
+                Files5;
             error ->
                 FilePath = filename:join(Directory, FileName),
-                file_add_write_new(FileName,
-                                   #file{contents = <<>>,
-                                         path = FilePath,
-                                         mtime = MTimeFake,
-                                         toggle = Toggle,
-                                         write = [append]},
-                                   Files4, Prefix, Dispatcher)
+                Headers = file_headers(FilePath, ContentTypeLookup),
+                file_add_write(FileName,
+                               #file{contents = <<>>,
+                                     path = FilePath,
+                                     headers = Headers,
+                                     mtime = MTimeFake,
+                                     toggle = Toggle,
+                                     write = [append]},
+                               Files5, Prefix, Dispatcher)
         end
-    end, Files3, WriteAppendL),
+    end, Files4, WriteAppendL),
     Timeout = cloudi_service:timeout_async(Dispatcher),
     Priority = cloudi_service:priority_default(Dispatcher),
-    Files8 = lists:foldl(fun({NameOne, NotifyNameOne}, Files6) ->
+    Files10 = lists:foldl(fun({NameOne, NotifyNameOne}, Files8) ->
         true = is_list(NameOne) andalso is_integer(hd(NameOne)),
         true = is_list(NotifyNameOne) andalso is_integer(hd(NotifyNameOne)),
         true = lists:prefix(Prefix, NameOne),
         case files_notify(#file_notify{send = send_async,
                                        service_name = NotifyNameOne},
-                          NameOne, Files6, Timeout, Priority,
+                          NameOne, Files8, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
-            {ok, _, Files7} ->
-                Files7;
+            {ok, _, Files9} ->
+                Files9;
             {error, Reason} ->
                 erlang:exit({Reason, NameOne}),
-                Files6
+                Files8
         end
-    end, Files5, NotifyOneL),
-    FilesN = lists:foldl(fun({NameAll, NotifyNameAll}, Files9) ->
+    end, Files7, NotifyOneL),
+    FilesN = lists:foldl(fun({NameAll, NotifyNameAll}, Files11) ->
         true = is_list(NameAll) andalso is_integer(hd(NameAll)),
         true = is_list(NotifyNameAll) andalso is_integer(hd(NotifyNameAll)),
         true = lists:prefix(Prefix, NameAll),
         case files_notify(#file_notify{send = mcast_async,
                                        service_name = NotifyNameAll},
-                          NameAll, Files9, Timeout, Priority,
+                          NameAll, Files11, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
-            {ok, _, Files10} ->
-                Files10;
+            {ok, _, Files12} ->
+                Files12;
             {error, Reason} ->
                 erlang:exit({Reason, NameAll}),
-                Files9
+                Files11
         end
-    end, Files8, NotifyAllL),
+    end, Files10, NotifyAllL),
     if
         NotifyOnStart =:= true ->
             cloudi_x_trie:foreach(fun(Name,
@@ -434,21 +462,23 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         true ->
             ok
     end,
+    Service = cloudi_service:self(Dispatcher),
     if
         is_integer(Refresh) ->
-            erlang:send_after(Refresh * 1000,
-                              cloudi_service:self(Dispatcher), refresh);
+            erlang:send_after(Refresh * 1000, Service, refresh);
         true ->
             ok
     end,
     {ok, #state{prefix = Prefix,
+                service = Service,
                 directory = Directory,
                 directory_length = DirectoryLength,
                 refresh = Refresh,
                 cache = CacheN,
                 toggle = Toggle,
                 files = FilesN,
-                use_http_get_suffix = UseHttpGetSuffix}}.
+                use_http_get_suffix = UseHttpGetSuffix,
+                content_type_lookup = ContentTypeLookup}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
                               #file_notify{} = Notify,
@@ -483,13 +513,14 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
             {reply, {error, not_found}, State}
     end;
 cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Pid,
                               #state{files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, _Dispatcher) ->
     case cloudi_x_trie:find(Pattern, Files) of
-        {ok, #file{mtime = MTime,
-                   contents = Contents} = File} ->
+        {ok, #file{contents = Contents,
+                   headers = FileHeaders,
+                   mtime = MTime} = File} ->
             if
                 UseHttpGetSuffix =:= true ->
                     case cloudi_string:afterr($/, Pattern) of
@@ -500,16 +531,21 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                               contents_ranges_headers(true)],
                              <<>>, State};
                         "head" ->
-                            request_header(MTime, Contents, RequestInfo, State);
+                            request_header(MTime, Contents, FileHeaders,
+                                           RequestInfo, State);
                         "get" ->
-                            request_read(MTime, Contents, RequestInfo, State);
+                            request_read(MTime, Contents, FileHeaders,
+                                         RequestInfo, State);
                         "put" ->
                             request_truncate(File, RequestInfo, Request, State);
                         "post" ->
-                            request_append(File, RequestInfo, Request, State)
+                            request_append(File, Pattern,
+                                           RequestInfo, Request,
+                                           Timeout, State)
                     end;
                 UseHttpGetSuffix =:= false ->
-                    request_read(MTime, Contents, RequestInfo, State)
+                    request_read(MTime, Contents, FileHeaders,
+                                 RequestInfo, State)
             end;
         error ->
             % possible if a sending service has stale service name lookup data
@@ -521,20 +557,34 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
 
 cloudi_service_handle_info(refresh,
                            #state{prefix = Prefix,
+                                  service = Service,
                                   directory = Directory,
                                   refresh = Refresh,
                                   toggle = Toggle,
                                   files = Files,
-                                  use_http_get_suffix =
-                                      UseHttpGetSuffix} = State,
+                                  use_http_get_suffix = UseHttpGetSuffix,
+                                  content_type_lookup =
+                                      ContentTypeLookup} = State,
                            Dispatcher) ->
     NewToggle = not Toggle,
     NewFiles = files_refresh(Directory, NewToggle,
-                             Files, UseHttpGetSuffix, Prefix, Dispatcher),
-    erlang:send_after(Refresh * 1000,
-                      cloudi_service:self(Dispatcher), refresh),
+                             Files, ContentTypeLookup, UseHttpGetSuffix,
+                             Prefix, Dispatcher),
+    erlang:send_after(Refresh * 1000, Service, refresh),
     {noreply, State#state{toggle = NewToggle,
                           files = NewFiles}};
+
+cloudi_service_handle_info({append_clear, Name, Id},
+                           #state{files = Files} = State, _) ->
+    NewFiles = case cloudi_x_trie:find(Name, Files) of
+        {ok, #file{write_appends = Appends} = File} ->
+            {value, _, NewAppends} = request_append_take(Id, Appends),
+            cloudi_x_trie:store(Name,
+                                File#file{write_appends = NewAppends}, Files);
+        error ->
+            Files
+    end,
+    {noreply, State#state{files = NewFiles}};
 
 cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -547,7 +597,7 @@ cloudi_service_terminate(_, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request_header(MTime, Contents, RequestInfo,
+request_header(MTime, Contents, FileHeaders, RequestInfo,
                #state{cache = undefined,
                       use_http_get_suffix = true} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
@@ -558,20 +608,29 @@ request_header(MTime, Contents, RequestInfo,
             case content_range_list_check(RangeList, Contents) of
                 {206, Headers} ->
                     {reply,
-                     Headers ++
+                     Headers ++ FileHeaders ++
                      cacheless_headers_data(NowTime, MTime, ETag, true),
                      <<>>, State};
                 {416, Headers} ->
                     {reply, Headers, <<>>, State}
             end;
-        {200, undefined} ->
+        {Status, undefined}
+            when Status == 200;
+                 Status == 410 ->
             {reply,
+             FileHeaders ++
              cacheless_headers_data(NowTime, MTime, ETag, true),
+             <<>>, State};
+        {416, undefined} ->
+            {reply,
+             [{<<"status">>, <<"416">>},
+              contents_ranges_header_length(Contents) |
+              contents_ranges_headers(true)],
              <<>>, State};
         {400, undefined} ->
             {reply, [{<<"status">>, <<"400">>}], <<>>, State}
     end;
-request_header(MTime, Contents, RequestInfo,
+request_header(MTime, Contents, FileHeaders, RequestInfo,
                #state{cache = Cache,
                       use_http_get_suffix = true} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
@@ -584,16 +643,25 @@ request_header(MTime, Contents, RequestInfo,
                     case content_range_list_check(RangeList, Contents) of
                         {206, Headers} ->
                             {reply,
-                             Headers ++
+                             Headers ++ FileHeaders ++
                              cache_headers_data(NowTime, MTime,
                                                 ETag, Cache, true),
                              <<>>, State};
                         {416, Headers} ->
                             {reply, Headers, <<>>, State}
                     end;
-                {200, undefined} ->
+                {Status, undefined}
+                    when Status == 200;
+                         Status == 410 ->
                     {reply,
+                     FileHeaders ++
                      cache_headers_data(NowTime, MTime, ETag, Cache, true),
+                     <<>>, State};
+                {416, undefined} ->
+                    {reply,
+                     [{<<"status">>, <<"416">>},
+                      contents_ranges_header_length(Contents) |
+                      contents_ranges_headers(true)],
                      <<>>, State};
                 {400, undefined} ->
                     {reply, [{<<"status">>, <<"400">>}], <<>>, State}
@@ -606,12 +674,13 @@ request_header(MTime, Contents, RequestInfo,
              <<>>, State}
     end.
 
-request_read(MTime, Contents, RequestInfo,
+request_read(MTime, Contents, FileHeaders, RequestInfo,
              #state{cache = undefined,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
-    KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
     if
         UseHttpGetSuffix =:= true ->
+            KeyValues = cloudi_service:
+                        request_info_key_value_parse(RequestInfo),
             NowTime = calendar:now_to_universal_time(os:timestamp()),
             ETag = cache_header_etag(MTime),
             case contents_ranges_read(ETag, KeyValues, MTime) of
@@ -619,25 +688,34 @@ request_read(MTime, Contents, RequestInfo,
                     case content_range_read(RangeList, Contents) of
                         {206, Headers, Response} ->
                             {reply,
-                             Headers ++
+                             Headers ++ FileHeaders ++
                              cacheless_headers_data(NowTime, MTime, ETag,
                                                     UseHttpGetSuffix),
                              Response, State};
                         {416, Headers, Response} ->
                             {reply, Headers, Response, State}
                     end;
-                {200, undefined} ->
+                {Status, undefined}
+                    when Status == 200;
+                         Status == 410 ->
                     {reply,
+                     FileHeaders ++
                      cacheless_headers_data(NowTime, MTime, ETag,
                                             UseHttpGetSuffix),
                      Contents, State};
+                {416, undefined} ->
+                    {reply,
+                     [{<<"status">>, <<"416">>},
+                      contents_ranges_header_length(Contents) |
+                      contents_ranges_headers(true)],
+                     <<>>, State};
                 {400, undefined} ->
                     {reply, [{<<"status">>, <<"400">>}], <<>>, State}
             end;
         UseHttpGetSuffix =:= false ->
             {reply, Contents, State}
     end;
-request_read(MTime, Contents, RequestInfo,
+request_read(MTime, Contents, FileHeaders, RequestInfo,
              #state{cache = Cache,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
@@ -652,7 +730,7 @@ request_read(MTime, Contents, RequestInfo,
                             case content_range_read(RangeList, Contents) of
                                 {206, Headers, Response} ->
                                     {reply,
-                                     Headers ++
+                                     Headers ++ FileHeaders ++
                                      cache_headers_data(NowTime, MTime,
                                                         ETag, Cache,
                                                         UseHttpGetSuffix),
@@ -660,11 +738,20 @@ request_read(MTime, Contents, RequestInfo,
                                 {416, Headers, Response} ->
                                     {reply, Headers, Response, State}
                             end;
-                        {200, undefined} ->
+                        {Status, undefined}
+                            when Status == 200;
+                                 Status == 410 ->
                             {reply,
+                             FileHeaders ++
                              cache_headers_data(NowTime, MTime,
                                                 ETag, Cache, UseHttpGetSuffix),
                              Contents, State};
+                        {416, undefined} ->
+                            {reply,
+                             [{<<"status">>, <<"416">>},
+                              contents_ranges_header_length(Contents) |
+                              contents_ranges_headers(true)],
+                             <<>>, State};
                         {400, undefined} ->
                             {reply, [{<<"status">>, <<"400">>}], <<>>, State}
                     end;
@@ -681,6 +768,28 @@ request_read(MTime, Contents, RequestInfo,
               cache_headers_empty(NowTime, MTime, UseHttpGetSuffix)],
              <<>>, State}
     end.
+
+request_truncate_file(#file{contents = Contents,
+                            path = FilePath,
+                            headers = FileHeaders,
+                            mtime = MTime} = File,
+                      #state{prefix = Prefix,
+                             directory_length = DirectoryLength,
+                             cache = Cache,
+                             files = Files,
+                             use_http_get_suffix = true} = State) ->
+    FileName = lists:nthtail(DirectoryLength, FilePath),
+    ETag = cache_header_etag(MTime),
+    NewFiles = file_refresh(FileName, File, Files, true, Prefix),
+    Headers = if
+        Cache =:= undefined ->
+            cacheless_headers_data(MTime, MTime, ETag, true);
+        true ->
+            cache_headers_data(MTime, MTime, ETag, Cache, true)
+    end,
+    {reply,
+     Headers ++ FileHeaders, Contents,
+     State#state{files = NewFiles}}.
 
 request_truncate(#file{path = FilePath,
                        write = Write} = File,
@@ -700,11 +809,14 @@ request_truncate(#file{path = FilePath,
                         is_list(Request) ->
                             erlang:iolist_to_binary(Request)
                     end,
-                    NowTime = calendar:now_to_universal_time(os:timestamp()),
                     case file:write_file(FilePath, NewContents) of
                         ok ->
+                            {ok, FileInfo} = read_file_info(FilePath),
+                            #file_info{mtime = MTime,
+                                       access = Access} = FileInfo,
                             NewFile = File#file{contents = NewContents,
-                                                mtime = NowTime},
+                                                mtime = MTime,
+                                                access = Access},
                             request_truncate_file(NewFile, State);
                         {error, Reason} ->
                             ?LOG_ERROR("file write ~s error: ~p",
@@ -720,52 +832,201 @@ request_truncate(#file{path = FilePath,
              <<>>, State}
     end.
 
-request_truncate_file(#file{contents = Contents,
-                            path = FilePath,
-                            mtime = MTime} = File,
-                      #state{prefix = Prefix,
-                             directory_length = DirectoryLength,
-                             cache = Cache,
-                             files = Files,
-                             use_http_get_suffix = true} = State) ->
-    FileName = lists:nthtail(DirectoryLength, FilePath),
-    ETag = cache_header_etag(MTime),
-    NewFiles = file_refresh(FileName, File, Files, true, Prefix),
-    Headers = if
-        Cache =:= undefined ->
-            cacheless_headers_data(MTime, MTime, ETag, true);
-        true ->
-            cache_headers_data(MTime, MTime, ETag, Cache, true)
-    end,
-    {reply,
-     Headers, Contents,
-     State#state{files = NewFiles}}.
+request_append_take(Id, Appends) ->
+    case lists:keytake(Id, 1, Appends) of
+        {value, {_, L}, NewAppends} ->
+            Value = lists:map(fun({_Index, Tref, RangeRequest}) ->
+                if
+                    Tref /= undefined ->
+                        erlang:cancel_timer(Tref);
+                    true ->
+                        ok
+                end,
+                RangeRequest
+            end, L),
+            {value, Value, NewAppends};
+        false ->
+            false
+    end.
 
-request_append(#file{mtime = MTime,
+request_append_store(Id, Index, Range, Request, Appends) ->
+    case lists:keytake(Id, 1, Appends) of
+        {value, {_, L}, NextAppends} ->
+            NewL = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
+            lists:umerge(NextAppends, [{Id, NewL}]);
+        false ->
+            L = [{Index, undefined, {Range, Request}}],
+            lists:umerge(Appends, [{Id, L}])
+    end.
+
+request_append_store(Id, Index,
+                     Name, Range, Request, Timeout,
+                     Appends, Service) ->
+    case lists:keytake(Id, 1, Appends) of
+        {value, {_, L}, NextAppends} ->
+            NewL = lists:umerge(L, [{Index, undefined, {Range, Request}}]),
+            lists:umerge(NextAppends, [{Id, NewL}]);
+        false ->
+            Tref = erlang:send_after(Timeout, Service,
+                                     {append_clear, Name, Id}),
+            L = [{Index, Tref, {Range, Request}}],
+            lists:umerge(Appends, [{Id, L}])
+    end.
+
+request_append_file([],
+                    #file{contents = Contents,
+                          path = FilePath,
+                          headers = FileHeaders} = File,
+                    #state{prefix = Prefix,
+                           directory_length = DirectoryLength,
+                           cache = Cache,
+                           files = Files,
+                           use_http_get_suffix = true} = State) ->
+    case file:write_file(FilePath, Contents) of
+        ok ->
+            {ok, FileInfo} = read_file_info(FilePath),
+            #file_info{mtime = MTime,
+                       access = Access} = FileInfo,
+            NewFile = File#file{mtime = MTime,
+                                access = Access},
+            FileName = lists:nthtail(DirectoryLength, FilePath),
+            NewFiles = file_refresh(FileName, NewFile, Files, true, Prefix),
+            ETag = cache_header_etag(MTime),
+            Headers = if
+                Cache =:= undefined ->
+                    cacheless_headers_data(MTime, MTime, ETag, true);
+                true ->
+                    cache_headers_data(MTime, MTime, ETag, Cache, true)
+            end,
+            {reply,
+             Headers ++ FileHeaders, Contents,
+             State#state{files = NewFiles}};
+        {error, Reason} ->
+            ?LOG_ERROR("file write ~s error: ~p",
+                       [FilePath, Reason]),
+            {reply,
+             [{<<"status">>, <<"500">>}],
+             <<>>, State}
+    end;
+request_append_file([{undefined, Request} | RangeRequests],
+                    #file{contents = Contents} = File, State) ->
+    NewContents = if
+        is_binary(Request) ->
+            <<Contents/binary, Request/binary>>;
+        is_list(Request) ->
+            erlang:iolist_to_binary([Contents, Request])
+    end,
+    request_append_file(RangeRequests,
+                        File#file{contents = NewContents}, State);
+request_append_file([{Range, Request} | RangeRequests],
+                    #file{contents = Contents} = File, State) ->
+    RequestBin = if
+        is_binary(Request) ->
+            Request;
+        is_list(Request) ->
+            erlang:iolist_to_binary(Request)
+    end,
+    ContentLength = erlang:byte_size(Contents),
+    {Start, End} = case Range of
+        {I, infinity} ->
+            ByteStart = if
+                I < 0 ->
+                    ContentLength + I;
+                I >= 0 ->
+                    I
+            end,
+            ByteEnd = ContentLength - 1,
+            {ByteStart, ByteEnd};
+        {IStart, IEnd} ->
+            ByteStart = if
+                IStart < 0 ->
+                    ContentLength + IStart;
+                IStart >= 0 ->
+                    IStart
+            end,
+            ByteEnd = IEnd,
+            {ByteStart, ByteEnd};
+        I ->
+            ByteStart = if
+                I < 0 ->
+                    ContentLength + I;
+                I >= 0 ->
+                    I
+            end,
+            ByteEnd = ContentLength - 1,
+            {ByteStart, ByteEnd}
+    end,
+    if
+        Start =< End, Start < ContentLength ->
+            NewContents = if
+                End < ContentLength ->
+                    StartBinBits = Start * 8,
+                    EndBinBits = (End - Start + 1) * 8,
+                    <<StartBin:StartBinBits/bitstring,
+                      _:EndBinBits,
+                      EndBin/binary>> = Contents,
+                    <<StartBin/binary,
+                      RequestBin/binary,
+                      EndBin/binary>>;
+                true ->
+                    StartBinBits = Start * 8,
+                    <<StartBin:StartBinBits/bitstring,
+                      _/binary>> = Contents,
+                    <<StartBin/binary,
+                      RequestBin/binary>>
+            end,
+            request_append_file(RangeRequests,
+                                File#file{contents = NewContents}, State);
+        true ->
+            ContentLengthBin = erlang:integer_to_binary(ContentLength),
+            {reply,
+             [{<<"status">>, <<"416">>},
+              {<<"content-range">>,
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)],
+             <<>>, State}
+    end.
+
+request_append(#file{contents = Contents,
+                     mtime = MTime,
                      write = Write,
-                     write_appends = _Appends} = _File,
-               RequestInfo, _Request,
-               #state{} = State) ->
+                     write_appends = Appends} = File,
+               Name, RequestInfo, Request, Timeout,
+               #state{service = Service,
+                      files = Files,
+                      use_http_get_suffix = true} = State) ->
     case lists:member(append, Write) of
         true ->
             KeyValues = cloudi_service:
                         request_info_key_value_parse(RequestInfo),
             ETag = cache_header_etag(MTime),
             case contents_ranges_append(ETag, KeyValues, MTime) of
-                {206, {_Range, _, true, 0}} ->
-                    %XXX
+                {Status, {Range, Id, true, Index}}
+                    when Status == 200;
+                         Status == 206 ->
+                    NextAppends = request_append_store(Id, Index,
+                                                       Range, Request,
+                                                       Appends),
+                    {value,
+                     RangeRequests,
+                     NewAppends} = request_append_take(Id, NextAppends),
+                    request_append_file(RangeRequests,
+                                        File#file{write_appends = NewAppends},
+                                        State);
+                {Status, {Range, Id, false, Index}}
+                    when Status == 200;
+                         Status == 206 ->
+                    NewAppends = request_append_store(Id, Index, Name,
+                                                      Range, Request, Timeout,
+                                                      Appends, Service),
+                    NewFile = File#file{write_appends = NewAppends},
+                    NewFiles = cloudi_x_trie:store(Name, NewFile, Files),
+                    {reply, [], <<>>, State#state{files = NewFiles}};
+                {416, undefined} ->
                     {reply,
-                     [{<<"status">>, <<"501">>}],
-                     <<>>, State};
-                {206, {_Range, _Id, true, _Index}} ->
-                    %XXX
-                    {reply,
-                     [{<<"status">>, <<"501">>}],
-                     <<>>, State};
-                {206, {_Range, _Id, false, _Index}} ->
-                    %XXX
-                    {reply,
-                     [{<<"status">>, <<"501">>}],
+                     [{<<"status">>, <<"416">>},
+                      contents_ranges_header_length(Contents) |
+                      contents_ranges_headers(true)],
                      <<>>, State};
                 {Status, undefined}
                     when Status == 400;
@@ -908,8 +1169,8 @@ file_add_read(FileName, File,
             Files4
     end.
 
-file_add_write_new(FileName, #file{write = Write} = File,
-                   Files0, Prefix, Dispatcher) ->
+file_add_write(FileName, #file{write = Write} = File,
+               Files0, Prefix, Dispatcher) ->
     Files1 = file_add_read(FileName, File,
                            Files0, true, Prefix, Dispatcher),
     case Write of
@@ -921,11 +1182,17 @@ file_add_write_new(FileName, #file{write = Write} = File,
                                   Files1, Prefix, Dispatcher)
     end.
 
-file_add_write_truncate(FileName, #file{write = [truncate]} = File,
+file_add_write_truncate(FileName, #file{write = Write} = File,
                         Files0, Prefix, Dispatcher) ->
     Suffix0 = service_name_suffix_write_truncate(FileName),
     cloudi_service:subscribe(Dispatcher, Suffix0),
-    cloudi_x_trie:store(Prefix ++ Suffix0, File, Files0).
+    case lists:delete(truncate, Write) of
+        [] ->
+            cloudi_x_trie:store(Prefix ++ Suffix0, File, Files0);
+        [append] ->
+            file_refresh(FileName, File,
+                         Files0, true, Prefix)
+    end.
 
 file_add_write_append(FileName, #file{write = Write} = File,
                       Files0, Prefix, Dispatcher) ->
@@ -1031,6 +1298,32 @@ file_read_data(#file_info{access = Access}, FilePath)
 file_read_data(_, _) ->
     {error, enoent}.
 
+file_headers(_, undefined) ->
+    [];
+file_headers(FilePath, ContentTypeLookup) ->
+    case filename:extension(FilePath) of
+        [$. | _] = Extension ->
+            case cloudi_x_trie:find(Extension, ContentTypeLookup) of
+                error ->
+                    [{<<"content-disposition">>,
+                      erlang:iolist_to_binary(["attachment; filename=\"",
+                                               filename:basename(FilePath),
+                                               "\""])},
+                     {<<"content-type">>,
+                      <<"application/octet-stream">>}];
+                {ok, {request, ContentType}} ->
+                    [{<<"content-type">>, ContentType}];
+                {ok, {attachment, ContentType}} ->
+                    [{<<"content-disposition">>,
+                      erlang:iolist_to_binary(["attachment; filename=\"",
+                                               filename:basename(FilePath),
+                                               "\""])},
+                     {<<"content-type">>, ContentType}]
+            end;
+        _ ->
+            []
+    end.
+
 file_notify_send([], _, _) ->
     ok;
 file_notify_send([#file_notify{send = Send,
@@ -1042,7 +1335,8 @@ file_notify_send([#file_notify{send = Send,
     file_notify_send(NotifyL, Contents, Dispatcher).
 
 files_refresh(Directory, Toggle,
-              Files0, UseHttpGetSuffix, Prefix, Dispatcher) ->
+              Files0, ContentTypeLookup, UseHttpGetSuffix,
+              Prefix, Dispatcher) ->
     Files2 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files1) ->
         #file_info{access = Access,
                    mtime = MTime} = FileInfo,
@@ -1076,8 +1370,10 @@ files_refresh(Directory, Toggle,
             error ->
                 case file_read_data(FileInfo, FilePath) of
                     {ok, Contents} ->
+                        Headers = file_headers(FilePath, ContentTypeLookup),
                         File = #file{contents = Contents,
                                      path = FilePath,
+                                     headers = Headers,
                                      mtime = MTime,
                                      access = Access,
                                      toggle = Toggle},
@@ -1161,7 +1457,7 @@ fold_files_directory([], _, _, A) ->
     A;
 fold_files_directory([FileName | FileNames], Directory, F, A) ->
     FilePath = filename:join(Directory, FileName),
-    case file:read_file_info(FilePath, [{time, universal}]) of
+    case read_file_info(FilePath) of
         {ok, #file_info{type = directory}} ->
             fold_files_directory(FileNames, Directory, F,
                                  fold_files(Directory, FileName, F, A));
@@ -1173,6 +1469,9 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
             ?LOG_WARN("file ~s error: ~p", [FilePath, Reason]),
             fold_files_directory(FileNames, Directory, F, A)
     end.
+
+read_file_info(FilePath) ->
+    file:read_file_info(FilePath, [{time, universal}]).
 
 cache_status(ETag, KeyValues, MTime) ->
     cache_status_0(ETag, KeyValues, MTime).
@@ -1275,6 +1574,12 @@ contents_ranges_headers(true) ->
 contents_ranges_headers(false) ->
     [].
 
+contents_ranges_header_length(Contents) ->
+    ContentLength = erlang:byte_size(Contents),
+    ContentLengthBin = erlang:integer_to_binary(ContentLength),
+    {<<"content-range">>,
+     <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}.
+
 contents_ranges_read(ETag, KeyValues, MTime) ->
     contents_ranges_read_0(ETag, KeyValues, MTime).
 
@@ -1288,7 +1593,7 @@ contents_ranges_read_0(ETag, KeyValues, MTime) ->
                     contents_ranges_read_1(RangeList, ETag,
                                            KeyValues, MTime);
                 {_, _} ->
-                    {200, undefined}
+                    {416, undefined}
             end;
         error ->
             {200, undefined}
@@ -1301,11 +1606,11 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
         {ok, IfRangeData} ->
             case cloudi_service_filesystem_datetime:parse(IfRangeData) of
                 {error, _} ->
-                    {200, undefined};
+                    {410, undefined};
                 DateTime when MTime == DateTime ->
                     {206, RangeList};
                 _ ->
-                    {200, undefined}
+                    {410, undefined}
             end;
         error ->
             {206, RangeList}
@@ -1335,7 +1640,8 @@ contents_ranges_append(ETag, KeyValues, MTime) ->
     end,
     case contents_ranges_read(ETag, KeyValues, MTime) of
         {200, undefined} ->
-            {410, undefined};
+            NewLast = Last orelse (Id =:= undefined),
+            {200, {undefined, Id, NewLast, Index}};
         {206, [Range]} ->
             NewLast = Last orelse (Id =:= undefined),
             {206, {Range, Id, NewLast, Index}};
@@ -1348,7 +1654,11 @@ contents_ranges_append(ETag, KeyValues, MTime) ->
                     {400, undefined}
             end;
         {400, undefined} = BadRequest ->
-            BadRequest
+            BadRequest;
+        {410, undefined} = Gone ->
+            Gone;
+        {416, undefined} = RequestedRangeNotSatisfiable ->
+            RequestedRangeNotSatisfiable
     end.
 
 content_range_read_part(undefined,
@@ -1413,7 +1723,8 @@ content_range_read([{I, infinity} | RangeList], Output, Boundary,
             {416,
              [{<<"status">>, <<"416">>},
               {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}], <<>>}
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)], <<>>}
     end;
 content_range_read([{IStart, IEnd} | RangeList], Output, Boundary,
                    ContentLengthBin, ContentLength, Contents) ->
@@ -1435,7 +1746,8 @@ content_range_read([{IStart, IEnd} | RangeList], Output, Boundary,
             {416,
              [{<<"status">>, <<"416">>},
               {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}], <<>>}
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)], <<>>}
     end;
 content_range_read([I | RangeList], Output, Boundary,
                    ContentLengthBin, ContentLength, Contents)
@@ -1479,7 +1791,8 @@ content_range_list_check([{I, infinity} | RangeList], Boundary,
             {416,
              [{<<"status">>, <<"416">>},
               {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}]}
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)]}
     end;
 content_range_list_check([{IStart, IEnd} | RangeList], Boundary,
                          ContentLengthBin, ContentLength) ->
@@ -1498,7 +1811,8 @@ content_range_list_check([{IStart, IEnd} | RangeList], Boundary,
             {416,
              [{<<"status">>, <<"416">>},
               {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}]}
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)]}
     end;
 content_range_list_check([I | RangeList], Boundary,
                          ContentLengthBin, ContentLength)
