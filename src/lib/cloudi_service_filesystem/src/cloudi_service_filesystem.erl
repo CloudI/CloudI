@@ -1314,9 +1314,7 @@ file_headers(FilePath, ContentTypeLookup) ->
                                                "\""])},
                      {<<"content-type">>,
                       <<"application/octet-stream">>}];
-                {ok, {request, ContentType}} ->
-                    [{<<"content-type">>, ContentType}];
-                {ok, {attachment, ContentType}} ->
+                {ok, {_, ContentType}} ->
                     [{<<"content-disposition">>,
                       erlang:iolist_to_binary(["attachment; filename=\"",
                                                filename:basename(FilePath),

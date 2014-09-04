@@ -61,7 +61,8 @@
          end_per_testcase/2]).
 
 %% test callbacks
--export([t_filesystem_basic_read_1/1]).
+-export([t_filesystem_basic_read_1/1,
+         t_filesystem_basic_write_truncate_1/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -69,6 +70,9 @@
 -define(SERVICE_PREFIX1, "/filesystem/").
 % ASCII_FILE created with: file:write_file("ASCII.bin", lists:seq(0, 126)).
 -define(ASCII_FILE, "ASCII.bin").
+-define(WRITABLE_DIRECTORY, "/tmp/").
+-define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
+-define(WRITABLE_FILEPATH, ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
@@ -79,11 +83,12 @@ all() ->
 
 groups() ->
     [{filesystem_basic_1, [],
-      [t_filesystem_basic_read_1]}].
+      [t_filesystem_basic_read_1,
+       t_filesystem_basic_write_truncate_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 10100}].
+     {timetrap, 20100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
@@ -108,15 +113,39 @@ init_per_testcase(TestCase, Config)
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
-         {args, [{directory, "${TEST_DIR}"}]},
+         {args,
+          [{directory, "${TEST_DIR}"}]},
          {dest_refresh, none},
-         {timeout_init, 10000}]
+         {timeout_init, 10000},
+         {timeout_sync, 10000}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_filesystem_basic_write_truncate_1) ->
+    ok = file:write_file(?WRITABLE_FILEPATH, <<>>),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, cloudi_service_filesystem},
+         {args,
+          [{directory, ?WRITABLE_DIRECTORY},
+           {write_truncate,
+            [?WRITABLE_FILENAME]}]},
+         {dest_refresh, none},
+         {timeout_init, 10000},
+         {timeout_sync, 10000}]
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
 end_per_testcase(TestCase, Config) ->
     {value, {_, ServiceIds}, NewConfig} = lists:keytake(service_ids, 1, Config),
     ok = cloudi_service_api:services_remove(ServiceIds, infinity),
+    if
+        TestCase =:= t_filesystem_basic_write_truncate_1 ->
+            ok = file:delete(?WRITABLE_FILEPATH);
+        true ->
+            ok
+    end,
     NewConfig.
 
 %%%------------------------------------------------------------------------
@@ -298,6 +327,26 @@ t_filesystem_basic_read_1(_Config) ->
      <<"{|}~">>} = cloudi:send_sync(Context, ServiceNameGet,
                                     RequestInfo6, Request,
                                     Timeout, Priority),
+    ok.
+
+t_filesystem_basic_write_truncate_1(_Config) ->
+    Context = cloudi:new(),
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
+    _ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/put",
+    Request = <<>>,
+    Timeout = undefined, % default
+    Priority = undefined, % default
+    {ok,
+     [{<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"content-type">>, <<"text/plain">>},
+      {<<"etag">>, _ETag},
+      {<<"last-modified">>, _LastModified},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     <<>>} = cloudi:send_sync(Context, ServiceNameGet,
+                              <<>>, Request,
+                              Timeout, Priority),
     ok.
 
 %%%------------------------------------------------------------------------
