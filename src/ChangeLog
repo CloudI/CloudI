@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CT tests for cloudi_service_filesystem
+    * Fix cloudi_service_filesystem based on CT tests
+
 2014-09-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add write append support to cloudi_service_filesystem for POST requests

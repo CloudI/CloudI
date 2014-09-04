@@ -608,7 +608,7 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
             case content_range_list_check(RangeList, Contents) of
                 {206, Headers} ->
                     {reply,
-                     Headers ++ FileHeaders ++
+                     Headers ++
                      cacheless_headers_data(NowTime, MTime, ETag, true),
                      <<>>, State};
                 {416, Headers} ->
@@ -643,7 +643,7 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
                     case content_range_list_check(RangeList, Contents) of
                         {206, Headers} ->
                             {reply,
-                             Headers ++ FileHeaders ++
+                             Headers ++
                              cache_headers_data(NowTime, MTime,
                                                 ETag, Cache, true),
                              <<>>, State};
@@ -688,7 +688,7 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
                     case content_range_read(RangeList, Contents) of
                         {206, Headers, Response} ->
                             {reply,
-                             Headers ++ FileHeaders ++
+                             Headers ++
                              cacheless_headers_data(NowTime, MTime, ETag,
                                                     UseHttpGetSuffix),
                              Response, State};
@@ -730,7 +730,7 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
                             case content_range_read(RangeList, Contents) of
                                 {206, Headers, Response} ->
                                     {reply,
-                                     Headers ++ FileHeaders ++
+                                     Headers ++
                                      cache_headers_data(NowTime, MTime,
                                                         ETag, Cache,
                                                         UseHttpGetSuffix),
@@ -957,7 +957,7 @@ request_append_file([{Range, Request} | RangeRequests],
             {ByteStart, ByteEnd}
     end,
     if
-        Start =< End, Start < ContentLength ->
+        Start =< End, Start =< ContentLength ->
             NewContents = if
                 End < ContentLength ->
                     StartBinBits = Start * 8,
@@ -968,11 +968,14 @@ request_append_file([{Range, Request} | RangeRequests],
                     <<StartBin/binary,
                       RequestBin/binary,
                       EndBin/binary>>;
-                true ->
+                Start < ContentLength ->
                     StartBinBits = Start * 8,
                     <<StartBin:StartBinBits/bitstring,
                       _/binary>> = Contents,
                     <<StartBin/binary,
+                      RequestBin/binary>>;
+                Start == ContentLength ->
+                    <<Contents/binary,
                       RequestBin/binary>>
             end,
             request_append_file(RangeRequests,
@@ -1696,13 +1699,18 @@ content_range_read([_ | L] = RangeList, Contents) ->
                        ContentLengthBin, ContentLength, Contents).
 
 content_range_read([], [{Headers, Response}], undefined, _, _, _) ->
-    {206, [{<<"status">>, <<"206">>} | Headers], Response};
+    {206,
+     [{<<"status">>, <<"206">>},
+      {<<"content-type">>, <<"application/octet-stream">>} |
+      Headers], Response};
 content_range_read([], Output, Boundary, _, _, _) ->
+    ResponseData = lists:reverse([cloudi_x_cow_multipart:close(Boundary) |
+                                  Output]),
     {206,
      [{<<"status">>, <<"206">>},
       {<<"content-type">>,
        <<(<<"multipart/byteranges; boundary=">>)/binary, Boundary/binary>>}],
-     lists:reverse([cloudi_x_cow_multipart:close(Boundary) | Output])};
+     erlang:iolist_to_binary(ResponseData)};
 content_range_read([{I, infinity} | RangeList], Output, Boundary,
                    ContentLengthBin, ContentLength, Contents) ->
     ByteStart = if
@@ -1769,7 +1777,9 @@ content_range_list_check([_ | L] = RangeList, Contents) ->
                              ContentLengthBin, ContentLength).
 
 content_range_list_check([], undefined, _, _) ->
-    {206, [{<<"status">>, <<"206">>}]};
+    {206,
+     [{<<"status">>, <<"206">>},
+      {<<"content-type">>, <<"application/octet-stream">>}]};
 content_range_list_check([], _, _, _) ->
     {206,
      [{<<"status">>, <<"206">>},
