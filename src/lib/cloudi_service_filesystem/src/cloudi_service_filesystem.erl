@@ -788,7 +788,7 @@ request_truncate_file(#file{contents = Contents,
             cache_headers_data(MTime, MTime, ETag, Cache, true)
     end,
     {reply,
-     Headers ++ FileHeaders, Contents,
+     FileHeaders ++ Headers, Contents,
      State#state{files = NewFiles}}.
 
 request_truncate(#file{path = FilePath,
@@ -899,7 +899,7 @@ request_append_file([],
                     cache_headers_data(MTime, MTime, ETag, Cache, true)
             end,
             {reply,
-             Headers ++ FileHeaders, Contents,
+             FileHeaders ++ Headers, Contents,
              State#state{files = NewFiles}};
         {error, Reason} ->
             ?LOG_ERROR("file write ~s error: ~p",
