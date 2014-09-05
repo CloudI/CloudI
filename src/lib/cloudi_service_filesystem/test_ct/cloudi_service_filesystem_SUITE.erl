@@ -78,6 +78,9 @@
 -define(WRITABLE_DIRECTORY, "/tmp/").
 -define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
 -define(WRITABLE_FILEPATH, ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
+-define(TIMEOUT, 20000).
+-define(REFRESH, 50). % ((?TIMEOUT * 2.5) div 1000)
+-define(REFRESH_STRING, "50").
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
@@ -98,9 +101,10 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 20100}].
+     {timetrap, ?TIMEOUT * 2 + 100}].
 
 init_per_suite(Config) ->
+    ?REFRESH = erlang:round(?TIMEOUT * 2.5) div 1000,
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 
@@ -126,8 +130,8 @@ init_per_testcase(TestCase, Config)
          {args,
           [{directory, "${TEST_DIR}"}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -139,10 +143,10 @@ init_per_testcase(TestCase, Config)
          {args,
           [{directory, "${TEST_DIR}"},
            {cache, 1},
-           {refresh, 30}]},
+           {refresh, ?REFRESH}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -157,8 +161,8 @@ init_per_testcase(TestCase, Config)
            {write_truncate,
             [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -171,12 +175,12 @@ init_per_testcase(TestCase, Config)
          {args,
           [{directory, ?WRITABLE_DIRECTORY},
            {cache, 1},
-           {refresh, 30},
+           {refresh, ?REFRESH},
            {write_truncate,
             [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -191,8 +195,8 @@ init_per_testcase(TestCase, Config)
            {write_append,
             [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -205,12 +209,12 @@ init_per_testcase(TestCase, Config)
          {args,
           [{directory, ?WRITABLE_DIRECTORY},
            {cache, 1},
-           {refresh, 30},
+           {refresh, ?REFRESH},
            {write_append,
             [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
@@ -221,11 +225,11 @@ init_per_testcase(TestCase, Config)
          {module, cloudi_service_filesystem},
          {args,
           [{directory, "${TEST_DIR}"},
-           {cache, 30},
-           {refresh, 30}]},
+           {cache, ?REFRESH},
+           {refresh, ?REFRESH}]},
          {dest_refresh, none},
-         {timeout_init, 10000},
-         {timeout_sync, 10000}]
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
@@ -1137,7 +1141,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        <<"attachment; filename=\"ASCII.bin\"">>},
       {<<"content-type">>, <<"application/octet-stream">>},
       {<<"etag">>, ETag},
-      {<<"cache-control">>, <<"public,max-age=30">>},
+      {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
       {<<"expires">>, _},
       {<<"last-modified">>, LastModified},
       {<<"date">>, _},
@@ -1161,7 +1165,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        <<"attachment; filename=\"ASCII.bin\"">>},
       {<<"content-type">>, <<"application/octet-stream">>},
       {<<"etag">>, ETag},
-      {<<"cache-control">>, <<"public,max-age=30">>},
+      {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
       {<<"expires">>, _},
       {<<"last-modified">>, LastModified},
       {<<"date">>, _},
@@ -1184,7 +1188,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        <<"attachment; filename=\"ASCII.bin\"">>},
       {<<"content-type">>, <<"application/octet-stream">>},
       {<<"etag">>, ETag},
-      {<<"cache-control">>, <<"public,max-age=30">>},
+      {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
       {<<"expires">>, _},
       {<<"last-modified">>, LastModified},
       {<<"date">>, _},
@@ -1208,7 +1212,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        <<"attachment; filename=\"ASCII.bin\"">>},
       {<<"content-type">>, <<"application/octet-stream">>},
       {<<"etag">>, ETag},
-      {<<"cache-control">>, <<"public,max-age=30">>},
+      {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
       {<<"expires">>, _},
       {<<"last-modified">>, LastModified},
       {<<"date">>, _},
@@ -1231,7 +1235,7 @@ t_filesystem_basic_read_cache_1(_Config) ->
        <<"attachment; filename=\"ASCII.bin\"">>},
       {<<"content-type">>, <<"application/octet-stream">>},
       {<<"etag">>, ETag},
-      {<<"cache-control">>, <<"public,max-age=30">>},
+      {<<"cache-control">>, <<"public,max-age=" ?REFRESH_STRING>>},
       {<<"expires">>, _},
       {<<"last-modified">>, LastModified},
       {<<"date">>, _},
