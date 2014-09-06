@@ -509,6 +509,16 @@ class EncodeTestCase(unittest.TestCase):
                          '\x10\x49\xc1\2\0\x5d\x60\x08\x50',
                          erlang.term_to_binary('d' * 20, compressed=9))
 
+def get_suite():
+    load = unittest.TestLoader().loadTestsFromTestCase
+    suite = unittest.TestSuite()
+    suite.addTests(load(AtomTestCase))
+    suite.addTests(load(ListTestCase))
+    suite.addTests(load(ImproperListTestCase))
+    suite.addTests(load(DecodeTestCase))
+    suite.addTests(load(EncodeTestCase))
+    return suite
+
 if __name__ == '__main__':
     try:
         import coverage
