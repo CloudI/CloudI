@@ -39,9 +39,10 @@
 # DAMAGE.
 #
 
-import struct, string, types, math
+import struct, string, types, math, zlib
 
 __all__ = ['OtpErlangAtom',
+           'OtpErlangList',
            'OtpErlangBinary',
            'OtpErlangFunction',
            'OtpErlangReference',
@@ -50,10 +51,12 @@ __all__ = ['OtpErlangAtom',
            'binary_to_term',
            'term_to_binary',
            'ParseException',
+           'InputException',
            'OutputException']
 
 # tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 _TAG_VERSION = 131
+_TAG_COMPRESSED_ZLIB = 80
 _TAG_NEW_FLOAT_EXT = 70
 _TAG_BIT_BINARY_EXT = 77
 _TAG_ATOM_CACHE_REF = 78
@@ -106,8 +109,33 @@ class OtpErlangAtom(object):
                 )
         else:
             raise OutputException('unknown atom type')
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, repr(self.value))
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
+    def __eq__(self, other):
+        return str(self) == str(other)
+
+class OtpErlangList(object):
+    def __init__(self, value, improper = False):
+        self.value = value
+        self.improper = improper # no empty list tail?
+    def __str__(self):
+        if type(self.value) == list:
+            length = len(self.value)
+            if self.improper and length > 0:
+                return (chr(_TAG_LIST_EXT) + struct.pack('>I', length - 1) +
+                    ''.join([_term_to_binary(element)
+                             for element in self.value])
+                )
+            else:
+                return _list_to_binary(self.value)
+        else:
+            raise OutputException('unknown list type')
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, repr(self.value))
+    def __hash__(self):
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -116,15 +144,22 @@ class OtpErlangBinary(object):
         self.value = value
         self.bits = bits # bits in last byte
     def __str__(self):
-        size = len(self.value)
-        if self.bits != 8:
-            return (chr(_TAG_BIT_BINARY_EXT) + struct.pack('>I', size) +
-                chr(self.bits) + self.value
-            )
+        if type(self.value) == bytes:
+            size = len(self.value)
+            if self.bits != 8:
+                return (chr(_TAG_BIT_BINARY_EXT) + struct.pack('>I', size) +
+                    chr(self.bits) + self.value
+                )
+            else:
+                return (chr(_TAG_BINARY_EXT) + struct.pack('>I', size) +
+                    self.value
+                )
         else:
-            return chr(_TAG_BINARY_EXT) + struct.pack('>I', size) + self.value
+            raise OutputException('unknown binary type')
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, repr(self.value))
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -134,8 +169,13 @@ class OtpErlangFunction(object):
         self.value = value
     def __str__(self):
         return chr(self.tag) + self.value
+    def __repr__(self):
+        return '%s(%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.tag), repr(self.value)
+        )
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -154,8 +194,13 @@ class OtpErlangReference(object):
             return (chr(_TAG_REFERENCE_EXT) +
                 str(self.node) + self.id + self.creation
             )
+    def __repr__(self):
+        return '%s(%s,%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.node), repr(self.id), repr(self.creation)
+        )
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -166,8 +211,13 @@ class OtpErlangPort(object):
         self.creation = creation
     def __str__(self):
         return chr(_TAG_PORT_EXT) + str(self.node) + self.id + self.creation
+    def __repr__(self):
+        return '%s(%s,%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.node), repr(self.id), repr(self.creation)
+        )
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
@@ -181,20 +231,34 @@ class OtpErlangPid(object):
         return (chr(_TAG_PID_EXT) +
             str(self.node) + self.id + self.serial + self.creation
         )
+    def __repr__(self):
+        return '%s(%s,%s,%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.node), repr(self.id), repr(self.serial),
+            repr(self.creation)
+        )
     def __hash__(self):
-        return str(self).__hash__()
+        return hash(str(self))
     def __eq__(self, other):
         return str(self) == str(other)
 
 # binary_to_term
 
 def binary_to_term(data):
+    size = len(data)
+    if size <= 1:
+        raise ParseException('null input')
     if ord(data[0]) != _TAG_VERSION:
         raise ParseException('invalid version')
-    i, term = _binary_to_term(1, data)
-    if i != len(data):
-        raise ParseException('unparsed data')
-    return term
+    try:
+        i, term = _binary_to_term(1, data)
+        if i != size:
+            raise ParseException('unparsed data')
+        return term
+    except struct.error:
+        raise ParseException('missing data')
+    except IndexError:
+        raise ParseException('missing data')
 
 def _binary_to_term(i, data):
     tag = ord(data[i])
@@ -261,6 +325,7 @@ def _binary_to_term(i, data):
         i, tail = _binary_to_term(i, data)
         if tail != []: 
             tmp.append(tail)
+            tmp = OtpErlangList(tmp, improper=True)
         return (i, tmp)
     elif tag == _TAG_BINARY_EXT:
         j = struct.unpack('>I', data[i:i + 4])[0]
@@ -274,13 +339,13 @@ def _binary_to_term(i, data):
             j = struct.unpack('>I', data[i:i + 4])[0]
             i += 4
         sign = ord(data[i])
-        i += 1
         bignum = 0
         for bignum_index in range(j):
             digit = ord(data[i + j - bignum_index])
             bignum = bignum * 256 + int(digit)
         if sign:
             bignum *= -1
+        i += 1
         return (i + j, bignum)
     elif tag == _TAG_NEW_FUN_EXT:
         size = struct.unpack('>I', data[i:i + 4])[0]
@@ -335,6 +400,20 @@ def _binary_to_term(i, data):
         i += 1
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
+    elif tag == _TAG_COMPRESSED_ZLIB:
+        size_uncompressed = struct.unpack('>I', data[i:i + 4])[0]
+        if size_uncompressed == 0:
+            raise ParseException('compressed data null')
+        i += 4
+        data_compressed = data[i:]
+        j = len(data_compressed)
+        data_uncompressed = zlib.decompress(data_compressed)
+        if size_uncompressed != len(data_uncompressed):
+            raise ParseException('compression corrupt')
+        (i_new, term) = _binary_to_term(0, data_uncompressed)
+        if i_new != size_uncompressed:
+            raise ParseException('unparsed data')
+        return (i + j, term)
     else:
         raise ParseException('invalid tag')
 
@@ -398,12 +477,27 @@ def _binary_to_atom(i, data):
 
 # term_to_binary
 
-def term_to_binary(term):
-    return chr(_TAG_VERSION) + _term_to_binary(term)
+def term_to_binary(term, compressed=False):
+    data_uncompressed = _term_to_binary(term)
+    if compressed is False:
+        return chr(_TAG_VERSION) + data_uncompressed
+    else:
+        if compressed is True:
+            compressed = 6
+        if compressed < 0 or compressed > 9:
+            raise InputException('compressed in [0..9]')
+        data_compressed = zlib.compress(data_uncompressed, compressed)
+        size_uncompressed = len(data_uncompressed)
+        return (
+            chr(_TAG_VERSION) + chr(_TAG_COMPRESSED_ZLIB) +
+            struct.pack('>I', size_uncompressed) + data_compressed
+        )
 
 def _term_to_binary(term):
     if type(term) == bytes:
         return _string_to_binary(term)
+    if type(term) == unicode:
+        return _string_to_binary(term.encode(encoding='utf-8', errors='strict'))
     elif type(term) == list:
         return _list_to_binary(term)
     elif type(term) == tuple:
@@ -417,6 +511,8 @@ def _term_to_binary(term):
     elif type(term) == bool:
         return str(OtpErlangAtom(term and "true" or "false"))
     elif isinstance(term, OtpErlangAtom):
+        return str(term)
+    elif isinstance(term, OtpErlangList):
         return str(term)
     elif isinstance(term, OtpErlangBinary):
         return str(term)
@@ -509,6 +605,12 @@ class ParseException(SyntaxError):
     def __str__(self):
         return self.__s
 
+class InputException(ValueError):
+    def __init__(self, s):
+        self.__s = str(s)
+    def __str__(self):
+        return self.__s
+
 class OutputException(TypeError):
     def __init__(self, s):
         self.__s = str(s)
@@ -584,73 +686,3 @@ def consult(string_in):
         i += 1
     return eval(''.join(list_out))
 
-# Testing.
-def _test():
-    """Unit testing function for this module."""
-
-    print 'Starting tests.'
-
-    ## Term to binary conversions.
-    print 'Term to binary tests.'
-
-    # Strings.
-    print 'Testing string conversions',
-    assert term_to_binary('') == '\x83\x6A'
-    assert term_to_binary('test') == '\x83\x6B\x00\x04\x74\x65\x73\x74'
-    assert term_to_binary('two words') == ('\x83\x6B\x00\x09\x74\x77\x6F\x20'
-                                           '\x77\x6F\x72\x64\x73')
-    assert (term_to_binary('testing multiple words') ==
-            '\x83\x6B\x00\x16\x74\x65\x73\x74\x69\x6E\x67\x20\x6D\x75\x6C'
-            '\x74\x69\x70\x6C\x65\x20\x77\x6F\x72\x64\x73')
-    assert term_to_binary(' ') == '\x83\x6B\x00\x01\x20'
-    assert term_to_binary('  ') == '\x83\x6B\x00\x02\x20\x20'
-    assert term_to_binary('1') == '\x83\x6B\x00\x01\x31'
-    assert term_to_binary('37') == '\x83\x6B\x00\x02\x33\x37'
-    assert term_to_binary('one = 1') == ('\x83\x6B\x00\x07\x6F\x6E\x65\x20\x3D'
-                                         '\x20\x31')
-    assert (term_to_binary('!@#$%^&*()_+-=[]{}\\|;\':",./<>?~`') ==
-            '\x83\x6B\x00\x20\x21\x40\x23\x24\x25\x5E\x26\x2A\x28\x29\x5F\x2B'
-            '\x2D\x3D\x5B\x5D\x7B\x7D\x5C\x7C\x3B\x27\x3A\x22\x2C\x2E\x2F\x3C'
-            '\x3E\x3F\x7E\x60')
-    assert (term_to_binary('\"\b\f\n\r\t\v\123\x12') ==
-            '\x83\x6B\x00\x09\x22\x08\x0C\x0A\x0D\x09\x0B\x53\x12')
-    print 'ok'
-
-    # Lists.
-    print 'Testing list conversions',
-    assert term_to_binary([]) == '\x83\x6A'
-    assert term_to_binary(['']) == '\x83\x6C\x00\x00\x00\x01\x6A\x6A'
-    assert term_to_binary([1]) == '\x83\x6C\x00\x00\x00\x01\x61\x01\x6A'
-    assert term_to_binary([255]) == '\x83\x6C\x00\x00\x00\x01\x61\xFF\x6A'
-    assert (term_to_binary([256]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\x00\x00\x01\x00\x6A')
-    assert (term_to_binary([2147483647]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\x7F\xFF\xFF\xFF\x6A')
-    assert (term_to_binary([2147483648]) ==
-            '\x83\x6C\x00\x00\x00\x01\x6E\x04\x00\x00\x00\x00\x80\x6A')
-    assert term_to_binary([0]) == '\x83\x6C\x00\x00\x00\x01\x61\x00\x6A'
-    assert (term_to_binary([-1]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\xFF\xFF\xFF\xFF\x6A')
-    assert (term_to_binary([-256]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\xFF\xFF\xFF\x00\x6A')
-    assert (term_to_binary([-257]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\xFF\xFF\xFE\xFF\x6A')
-    assert (term_to_binary([-2147483648]) ==
-            '\x83\x6C\x00\x00\x00\x01\x62\x80\x00\x00\x00\x6A')
-    assert (term_to_binary([-2147483649]) ==
-            '\x83\x6C\x00\x00\x00\x01\x6E\x04\x01\x01\x00\x00\x80\x6A')
-    assert (term_to_binary(['test']) ==
-            '\x83\x6C\x00\x00\x00\x01\x6B\x00\x04\x74\x65\x73\x74\x6A')
-    assert (term_to_binary([373, 455]) ==
-            '\x83\x6C\x00\x00\x00\x02\x62\x00\x00\x01\x75\x62\x00\x00\x01\xC7'
-            '\x6A')
-    assert term_to_binary([[]]) == '\x83\x6C\x00\x00\x00\x01\x6A\x6A'
-    assert term_to_binary([[], []]) == '\x83\x6C\x00\x00\x00\x02\x6A\x6A\x6A'
-    assert (term_to_binary([['this', 'is'], [['a']], 'test']) ==
-            '\x83\x6C\x00\x00\x00\x03\x6C\x00\x00\x00\x02\x6B\x00\x04\x74\x68'
-            '\x69\x73\x6B\x00\x02\x69\x73\x6A\x6C\x00\x00\x00\x01\x6C\x00\x00'
-            '\x00\x01\x6B\x00\x01\x61\x6A\x6A\x6B\x00\x04\x74\x65\x73\x74\x6A')
-    print 'ok'
-
-if __name__=='__main__':
-    _test()

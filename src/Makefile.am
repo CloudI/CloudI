@@ -841,6 +841,7 @@ xref: all
         || exit 0)
 
 test: all
+	$(PYTHON) $(top_srcdir)/api/python/tests/erlang_tests.py
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
