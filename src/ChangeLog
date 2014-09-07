@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add tests for the Erlang Binary Term Format encoding in Ruby
+
 2014-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add tests for the Erlang Binary Term Format encoding in Python

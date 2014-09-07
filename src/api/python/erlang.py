@@ -343,7 +343,7 @@ def _binary_to_term(i, data):
         for bignum_index in range(j):
             digit = ord(data[i + j - bignum_index])
             bignum = bignum * 256 + int(digit)
-        if sign:
+        if sign == 1:
             bignum *= -1
         i += 1
         return (i + j, bignum)
@@ -370,7 +370,14 @@ def _binary_to_term(i, data):
     elif tag == _TAG_SMALL_ATOM_EXT:
         j = ord(data[i:i + 1])
         i += 1
-        return (i + j, OtpErlangAtom(data[i:i + j]))
+        atom_name = data[i:i + j]
+        if atom_name == 'true':
+            tmp = True
+        elif atom_name == 'false':
+            tmp = False
+        else:
+            tmp = OtpErlangAtom(atom_name)
+        return (i + j, tmp)
     elif tag == _TAG_MAP_EXT:
         arity = struct.unpack('>I', data[i:i + 4])[0]
         i += 4
@@ -509,7 +516,7 @@ def _term_to_binary(term):
     elif type(term) == dict:
         return _dict_to_binary(term)
     elif type(term) == bool:
-        return str(OtpErlangAtom(term and "true" or "false"))
+        return str(OtpErlangAtom(term and 'true' or 'false'))
     elif isinstance(term, OtpErlangAtom):
         return str(term)
     elif isinstance(term, OtpErlangList):
@@ -573,7 +580,7 @@ def _long_to_binary(term):
 
 def _bignum_to_binary(term):
     bignum = abs(term)
-    size = int(math.log(bignum) / math.log(256)) + 1
+    size = int(math.ceil(bignum.bit_length() / 8.0))
     if term < 0:
         sign = chr(1)
     else:

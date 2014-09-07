@@ -842,6 +842,7 @@ xref: all
 
 test: all
 	$(PYTHON) $(top_srcdir)/api/python/tests/erlang_tests.py
+	$(RUBY) $(top_srcdir)/api/ruby/tests/erlang_tests.rb
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
