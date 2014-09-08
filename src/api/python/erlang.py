@@ -597,7 +597,7 @@ def _long_to_binary(term):
 
 def _bignum_to_binary(term):
     bignum = abs(term)
-    size = int(math.ceil(bignum.bit_length() / 8.0))
+    size = int(math.ceil(_bignum_bit_length(bignum) / 8.0))
     if term < 0:
         sign = b_chr(1)
     else:
@@ -614,6 +614,9 @@ def _bignum_to_binary(term):
         return (b_chr(_TAG_LARGE_BIG_EXT) +
             struct.pack('>I', size) + b''.join(L)
         )
+
+def _bignum_bit_length(bignum):
+    return len(bin(bignum).lstrip('-0b'))
 
 def _float_to_binary(term):
     return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack('>d', term)

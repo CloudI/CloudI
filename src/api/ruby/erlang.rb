@@ -716,12 +716,7 @@ module Erlang
     end
 
     def self.bignum_bit_length(bignum)
-        bit_length = 0
-        while bignum != 0
-            bignum = bignum >> 1
-            bit_length += 1
-        end
-        return bit_length
+        return bignum.to_s(2).bytesize
     end
     
     def self.float_to_binary(term)
