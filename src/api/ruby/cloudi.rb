@@ -75,7 +75,7 @@ module CloudI
             @initialization_complete = false
             @size = buffer_size_str.to_i
             @callbacks = Hash.new
-            send(term_to_binary(:init))
+            send(Erlang.term_to_binary(:init))
             poll_request(false)
         end
 
@@ -92,11 +92,11 @@ module CloudI
             else
                 value.push(function)
             end
-            send(term_to_binary([:subscribe, pattern]))
+            send(Erlang.term_to_binary([:subscribe, pattern]))
         end
 
         def subscribe_count(pattern)
-            send(term_to_binary([:subscribe_count, pattern]))
+            send(Erlang.term_to_binary([:subscribe_count, pattern]))
             return poll_request(false)
         end
 
@@ -108,7 +108,7 @@ module CloudI
             if value.empty?
                 @callbacks.delete(key)
             end
-            send(term_to_binary([:unsubscribe, pattern]))
+            send(Erlang.term_to_binary([:unsubscribe, pattern]))
         end
 
         def send_async(name, request,
@@ -122,10 +122,10 @@ module CloudI
             if priority.nil?
                 priority = @priorityDefault
             end
-            send(term_to_binary([:send_async, name,
-                                  OtpErlangBinary.new(request_info),
-                                  OtpErlangBinary.new(request),
-                                  timeout, priority]))
+            send(Erlang.term_to_binary([:send_async, name,
+                                        OtpErlangBinary.new(request_info),
+                                        OtpErlangBinary.new(request),
+                                        timeout, priority]))
             return poll_request(false)
         end
 
@@ -140,10 +140,10 @@ module CloudI
             if priority.nil?
                 priority = @priorityDefault
             end
-            send(term_to_binary([:send_sync, name,
-                                  OtpErlangBinary.new(request_info),
-                                  OtpErlangBinary.new(request),
-                                  timeout, priority]))
+            send(Erlang.term_to_binary([:send_sync, name,
+                                        OtpErlangBinary.new(request_info),
+                                        OtpErlangBinary.new(request),
+                                        timeout, priority]))
             return poll_request(false)
         end
 
@@ -158,10 +158,10 @@ module CloudI
             if priority.nil?
                 priority = @priorityDefault
             end
-            send(term_to_binary([:mcast_async, name,
-                                  OtpErlangBinary.new(request_info),
-                                  OtpErlangBinary.new(request),
-                                  timeout, priority]))
+            send(Erlang.term_to_binary([:mcast_async, name,
+                                        OtpErlangBinary.new(request_info),
+                                        OtpErlangBinary.new(request),
+                                        timeout, priority]))
             return poll_request(false)
         end
 
@@ -190,11 +190,11 @@ module CloudI
                     end
                 end
             end
-            send(term_to_binary([:forward_async, name,
-                                 OtpErlangBinary.new(request_info),
-                                 OtpErlangBinary.new(request),
-                                 timeout, priority,
-                                 OtpErlangBinary.new(trans_id), pid]))
+            send(Erlang.term_to_binary([:forward_async, name,
+                                        OtpErlangBinary.new(request_info),
+                                        OtpErlangBinary.new(request),
+                                        timeout, priority,
+                                        OtpErlangBinary.new(trans_id), pid]))
             raise ForwardAsyncException.new()
         end
 
@@ -211,11 +211,11 @@ module CloudI
                     end
                 end
             end
-            send(term_to_binary([:forward_sync, name, 
-                                 OtpErlangBinary.new(request_info),
-                                 OtpErlangBinary.new(request),
-                                 timeout, priority,
-                                 OtpErlangBinary.new(trans_id), pid]))
+            send(Erlang.term_to_binary([:forward_sync, name, 
+                                        OtpErlangBinary.new(request_info),
+                                        OtpErlangBinary.new(request),
+                                        timeout, priority,
+                                        OtpErlangBinary.new(trans_id), pid]))
             raise ForwardSyncException.new()
         end
 
@@ -246,11 +246,11 @@ module CloudI
                     end
                 end
             end
-            send(term_to_binary([:return_async, name, pattern,
-                                 OtpErlangBinary.new(response_info),
-                                 OtpErlangBinary.new(response),
-                                 timeout,
-                                 OtpErlangBinary.new(trans_id), pid]))
+            send(Erlang.term_to_binary([:return_async, name, pattern,
+                                        OtpErlangBinary.new(response_info),
+                                        OtpErlangBinary.new(response),
+                                        timeout,
+                                        OtpErlangBinary.new(trans_id), pid]))
             raise ReturnAsyncException.new()
         end
 
@@ -269,11 +269,11 @@ module CloudI
                     end
                 end
             end
-            send(term_to_binary([:return_sync, name, pattern,
-                                 OtpErlangBinary.new(response_info),
-                                 OtpErlangBinary.new(response),
-                                 timeout,
-                                 OtpErlangBinary.new(trans_id), pid]))
+            send(Erlang.term_to_binary([:return_sync, name, pattern,
+                                        OtpErlangBinary.new(response_info),
+                                        OtpErlangBinary.new(response),
+                                        timeout,
+                                        OtpErlangBinary.new(trans_id), pid]))
             raise ReturnSyncException.new()
         end
 
@@ -284,8 +284,9 @@ module CloudI
             if trans_id.nil?
                 trans_id = 0.chr * 16
             end
-            send(term_to_binary([:recv_async, timeout,
-                                  OtpErlangBinary.new(trans_id), consume]))
+            send(Erlang.term_to_binary([:recv_async, timeout,
+                                        OtpErlangBinary.new(trans_id),
+                                        consume]))
             return poll_request(false)
         end
 
@@ -422,7 +423,7 @@ module CloudI
 
         def poll_request(external)
             if external and not @initialization_complete
-                send(term_to_binary(:polling))
+                send(Erlang.term_to_binary(:polling))
                 @initialization_complete = true
             end
 
@@ -496,7 +497,8 @@ module CloudI
                     end
                     data.clear()
                     callback(command, name, pattern, request_info, request,
-                             timeout, priority, trans_id, binary_to_term(pid))
+                             timeout, priority, trans_id,
+                             Erlang.binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
                     responseInfoSize = data[i, j].unpack('L')[0]
@@ -532,7 +534,7 @@ module CloudI
                     end
                     return transIdList
                 when MESSAGE_KEEPALIVE
-                    send(term_to_binary(:keepalive))
+                    send(Erlang.term_to_binary(:keepalive))
                     i += j
                     if i < data.length
                         raise MessageDecodingException

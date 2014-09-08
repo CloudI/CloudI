@@ -104,7 +104,7 @@ class ImproperListTestCase < Test::Unit::TestCase
 end
 
 class DecodeTestCase < Test::Unit::TestCase
-    def test_decode
+    def test_binary_to_term
         assert_raise(Erlang::ParseException){
             Erlang::binary_to_term("")
         }
