@@ -47,7 +47,7 @@ module Erlang
             @value = value
         end
         attr_reader :value
-        def to_s
+        def binary
             if @value.kind_of?(Integer)
                 return "#{TAG_ATOM_CACHE_REF.chr}#{@value.chr}"
             elsif @value.kind_of?(String)
@@ -73,11 +73,14 @@ module Erlang
                 raise OutputException, 'unknown atom type', caller
             end
         end
+        def to_s
+            return "#{self.class.name}('#{@value.to_s}')"
+        end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -89,7 +92,7 @@ module Erlang
         end
         attr_reader :value
         attr_reader :improper
-        def to_s
+        def binary
             if @value.kind_of?(Array)
                 length = @value.length
                 if length == 0
@@ -112,11 +115,15 @@ module Erlang
                 raise OutputException, 'unknown list type', caller
             end
         end
+        def to_s
+            return "#{self.class.name}" \
+                   "(#{@value.to_s},improper=#{@improper.to_s})"
+        end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -128,7 +135,7 @@ module Erlang
         end
         attr_reader :value
         attr_reader :bits
-        def to_s
+        def binary
             if @value.kind_of?(String)
                 size = @value.bytesize
                 size_packed = [size].pack('N')
@@ -142,11 +149,14 @@ module Erlang
                 raise OutputException, 'unknown binary type', caller
             end
         end
+        def to_s
+            return "#{self.class.name}('#{@value.to_s}',bits=#{@bits.to_s})"
+        end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -158,14 +168,17 @@ module Erlang
         end
         attr_reader :tag
         attr_reader :value
-        def to_s
+        def binary
             return "#{@tag.chr}#{@value}"
         end
+        def to_s
+            return "#{self.class.name}('#{@tag.to_s}','#{@value.to_s}')"
+        end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -179,21 +192,26 @@ module Erlang
         attr_reader :node
         attr_reader :id
         attr_reader :creation
-        def to_s
+        def binary
             size = @id.bytesize / 4
             if size > 1
                 size_packed = [size].pack('n')
                 return "#{TAG_NEW_REFERENCE_EXT.chr}#{size_packed}" \
-                       "#{@node.to_s}#{@creation}#{@id}"
+                       "#{@node.binary}#{@creation}#{@id}"
             else
-                return "#{TAG_REFERENCE_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
+                return "#{TAG_REFERENCE_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@creation}"
             end
         end
+        def to_s
+            return "#{self.class.name}" \
+                   "('#{@node.to_s}','#{@id.to_s}','#{@creation.to_s}')"
+        end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -207,14 +225,18 @@ module Erlang
         attr_reader :node
         attr_reader :id
         attr_reader :creation
+        def binary
+            return "#{TAG_PORT_EXT.chr}#{@node.binary}#{@id}#{@creation}"
+        end
         def to_s
-            return "#{TAG_PORT_EXT.chr}#{@node.to_s}#{@id}#{@creation}"
+            return "#{self.class.name}" \
+                   "('#{@node.to_s}','#{@id.to_s}','#{@creation.to_s}')"
         end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -230,15 +252,20 @@ module Erlang
         attr_reader :id
         attr_reader :serial
         attr_reader :creation
+        def binary
+            return "#{TAG_PID_EXT.chr}" \
+                   "#{@node.binary}#{@id}#{@serial}#{@creation}"
+        end
         def to_s
-            return "#{TAG_PID_EXT.chr}#{@node.to_s}#{@id}#{@serial}" \
-                   "#{@creation}"
+            return "#{self.class.name}" \
+                   "('#{@node.to_s}','#{@id.to_s}','#{@serial.to_s}'," \
+                    "'#{@creation.to_s}')"
         end
         def hash
-            return to_s.hash
+            return binary.hash
         end
         def ==(other)
-            return to_s == other.to_s
+            return binary == other.binary
         end
         alias eql? ==
     end
@@ -589,8 +616,6 @@ module Erlang
     def self.term_to_binary_(term)
         if term.kind_of?(String)
             return string_to_binary(term)
-        elsif term.kind_of?(OtpErlangList)
-            return term.to_s
         elsif term.kind_of?(Array)
             return tuple_to_binary(term)
         elsif term.kind_of?(Float)
@@ -600,23 +625,29 @@ module Erlang
         elsif term.kind_of?(Hash)
             return hash_to_binary(term)
         elsif term.kind_of?(Symbol)
-            return OtpErlangAtom.new(term.to_s).to_s
+            return OtpErlangAtom.new(term.to_s).binary
         elsif term.kind_of?(TrueClass)
-            return OtpErlangAtom.new('true'.force_encoding('ISO-8859-1')).to_s
+            return OtpErlangAtom.new(
+                'true'.force_encoding('ISO-8859-1')
+            ).binary
         elsif term.kind_of?(FalseClass)
-            return OtpErlangAtom.new('false'.force_encoding('ISO-8859-1')).to_s
+            return OtpErlangAtom.new(
+                'false'.force_encoding('ISO-8859-1')
+            ).binary
         elsif term.kind_of?(OtpErlangAtom)
-            return term.to_s
+            return term.binary
+        elsif term.kind_of?(OtpErlangList)
+            return term.binary
         elsif term.kind_of?(OtpErlangBinary)
-            return term.to_s
+            return term.binary
         elsif term.kind_of?(OtpErlangFunction)
-            return term.to_s
+            return term.binary
         elsif term.kind_of?(OtpErlangReference)
-            return term.to_s
+            return term.binary
         elsif term.kind_of?(OtpErlangPort)
-            return term.to_s
+            return term.binary
         elsif term.kind_of?(OtpErlangPid)
-            return term.to_s
+            return term.binary
         else
             raise OutputException, 'unknown ruby type', caller
         end

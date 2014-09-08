@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make sure the Erlang Binary Term Format encoding in Python
+      supports Python v3
+    * Fixes to make sure everything is ok with the Ruby and Python
+      Erlang Binary Term Format encoding/decoding
+
 2014-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add tests for the Erlang Binary Term Format encoding in Ruby

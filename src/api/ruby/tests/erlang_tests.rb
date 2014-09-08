@@ -54,6 +54,7 @@ class AtomTestCase < Test::Unit::TestCase
         atom1 = Erlang::OtpErlangAtom.new('test')
         assert(atom1.kind_of?(Erlang::OtpErlangAtom))
         assert_equal(Erlang::OtpErlangAtom.new('test'), atom1)
+        assert_equal("Erlang::OtpErlangAtom('test')", atom1.to_s)
         atom2 = Erlang::OtpErlangAtom.new('test2')
         atom1_new = Erlang::OtpErlangAtom.new('test')
         assert_not_equal(atom1, atom2)
@@ -65,7 +66,7 @@ class AtomTestCase < Test::Unit::TestCase
     end
     def test_invalid_atom
         assert_raise(Erlang::OutputException){
-            Erlang::OtpErlangAtom.new([1, 2]).to_s
+            Erlang::OtpErlangAtom.new([1, 2]).binary
         }
     end
 end
@@ -76,6 +77,8 @@ class ListTestCase < Test::Unit::TestCase
         assert(lst.kind_of?(Erlang::OtpErlangList))
         assert_equal(Erlang::OtpErlangList.new([116, 101, 115, 116]), lst)
         assert_equal([116, 101, 115, 116], lst.value)
+        assert_equal('Erlang::OtpErlangList([116, 101, 115, 116],' \
+                                           'improper=false)', lst.to_s)
     end
 end
 
@@ -85,6 +88,8 @@ class ImproperListTestCase < Test::Unit::TestCase
         assert(lst.kind_of?(Erlang::OtpErlangList))
         assert_equal(Erlang::OtpErlangList.new([1, 2, 3, 4]).value, lst.value)
         assert_equal(4, lst.value[-1])
+        assert_equal('Erlang::OtpErlangList([1, 2, 3, 4],' \
+                                           'improper=true)', lst.to_s)
     end
     def test_comparison
         lst = Erlang::OtpErlangList.new([1, 2, 3, 4], improper=true)
@@ -98,7 +103,7 @@ class ImproperListTestCase < Test::Unit::TestCase
     end
     def test_errors
         assert_raise(Erlang::OutputException){
-            Erlang::OtpErlangList.new('invalid', improper=true).to_s
+            Erlang::OtpErlangList.new('invalid', improper=true).binary
         }
     end
 end

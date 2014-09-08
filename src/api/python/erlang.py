@@ -39,8 +39,17 @@
 # DAMAGE.
 #
 
-import struct, string, types, math, zlib
-
+import sys, struct, string, math, zlib
+if int(sys.version[0]) >= 3:
+    long = int
+    unicode = str
+    def b_chr(x):
+        return bytes([x])
+    def b_ord(x):
+        return x
+else:
+    b_chr = chr
+    b_ord = ord
 __all__ = ['OtpErlangAtom',
            'OtpErlangList',
            'OtpErlangBinary',
@@ -87,24 +96,26 @@ _TAG_SMALL_ATOM_UTF8_EXT = 119
 class OtpErlangAtom(object):
     def __init__(self, value):
         self.value = value
-    def __str__(self):
+    def binary(self):
         if type(self.value) == int:
-            return chr(_TAG_ATOM_CACHE_REF) + chr(self.value)
+            return b_chr(_TAG_ATOM_CACHE_REF) + b_chr(self.value)
         elif type(self.value) == bytes:
             size = len(self.value)
             if size < 256:
-                return chr(_TAG_SMALL_ATOM_EXT) + chr(size) + self.value
+                return b_chr(_TAG_SMALL_ATOM_EXT) + b_chr(size) + self.value
             else:
-                return chr(_TAG_ATOM_EXT) + struct.pack('>H', size) + self.value
+                return (b_chr(_TAG_ATOM_EXT) + struct.pack('>H', size) +
+                    self.value
+                )
         elif type(self.value) == unicode:
             value_encoded = self.value.encode('utf-8')
             size = len(value_encoded)
             if size < 256:
-                return (chr(_TAG_SMALL_ATOM_UTF8_EXT) + chr(size) +
+                return (b_chr(_TAG_SMALL_ATOM_UTF8_EXT) + b_chr(size) +
                     value_encoded
                 )
             else:
-                return (chr(_TAG_ATOM_UTF8_EXT) + struct.pack('>H', size) +
+                return (b_chr(_TAG_ATOM_UTF8_EXT) + struct.pack('>H', size) +
                     value_encoded
                 )
         else:
@@ -112,87 +123,97 @@ class OtpErlangAtom(object):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.value))
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangList(object):
     def __init__(self, value, improper = False):
         self.value = value
         self.improper = improper # no empty list tail?
-    def __str__(self):
+    def binary(self):
         if type(self.value) == list:
             length = len(self.value)
-            if self.improper and length > 0:
-                return (chr(_TAG_LIST_EXT) + struct.pack('>I', length - 1) +
-                    ''.join([_term_to_binary(element)
-                             for element in self.value])
+            if length == 0:
+                return b_chr(_TAG_NIL_EXT)
+            elif self.improper:
+                return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', length - 1) +
+                    b''.join([_term_to_binary(element)
+                              for element in self.value])
                 )
             else:
-                return _list_to_binary(self.value)
+                return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', length) +
+                    b''.join([_term_to_binary(element)
+                              for element in self.value]) +
+                    b_chr(_TAG_NIL_EXT)
+                )
         else:
             raise OutputException('unknown list type')
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, repr(self.value))
+        return '%s(%s,improper=%s)' % (
+            self.__class__.__name__, repr(self.value), repr(self.improper)
+        )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangBinary(object):
     def __init__(self, value, bits = 8):
         self.value = value
         self.bits = bits # bits in last byte
-    def __str__(self):
+    def binary(self):
         if type(self.value) == bytes:
             size = len(self.value)
             if self.bits != 8:
-                return (chr(_TAG_BIT_BINARY_EXT) + struct.pack('>I', size) +
-                    chr(self.bits) + self.value
+                return (b_chr(_TAG_BIT_BINARY_EXT) + struct.pack('>I', size) +
+                    b_chr(self.bits) + self.value
                 )
             else:
-                return (chr(_TAG_BINARY_EXT) + struct.pack('>I', size) +
+                return (b_chr(_TAG_BINARY_EXT) + struct.pack('>I', size) +
                     self.value
                 )
         else:
             raise OutputException('unknown binary type')
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, repr(self.value))
+        return '%s(%s,bits=%s)' % (
+            self.__class__.__name__, repr(self.value), repr(self.bits)
+        )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangFunction(object):
     def __init__(self, tag, value):
         self.tag = tag
         self.value = value
-    def __str__(self):
-        return chr(self.tag) + self.value
+    def binary(self):
+        return b_chr(self.tag) + self.value
     def __repr__(self):
         return '%s(%s,%s)' % (
             self.__class__.__name__,
             repr(self.tag), repr(self.value)
         )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangReference(object):
     def __init__(self, node, id, creation):
         self.node = node
         self.id = id
         self.creation = creation
-    def __str__(self):
+    def binary(self):
         size = len(self.id) / 4
         if size > 1:
-            return (chr(_TAG_NEW_REFERENCE_EXT) + struct.pack('>H', size) +
-                str(self.node) + self.creation + self.id
+            return (b_chr(_TAG_NEW_REFERENCE_EXT) + struct.pack('>H', size) +
+                self.node.binary() + self.creation + self.id
             )
         else:
-            return (chr(_TAG_REFERENCE_EXT) +
-                str(self.node) + self.id + self.creation
+            return (b_chr(_TAG_REFERENCE_EXT) +
+                self.node.binary() + self.id + self.creation
             )
     def __repr__(self):
         return '%s(%s,%s,%s)' % (
@@ -200,26 +221,28 @@ class OtpErlangReference(object):
             repr(self.node), repr(self.id), repr(self.creation)
         )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangPort(object):
     def __init__(self, node, id, creation):
         self.node = node
         self.id = id
         self.creation = creation
-    def __str__(self):
-        return chr(_TAG_PORT_EXT) + str(self.node) + self.id + self.creation
+    def binary(self):
+        return (b_chr(_TAG_PORT_EXT) +
+            self.node.binary() + self.id + self.creation
+        )
     def __repr__(self):
         return '%s(%s,%s,%s)' % (
             self.__class__.__name__,
             repr(self.node), repr(self.id), repr(self.creation)
         )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 class OtpErlangPid(object):
     def __init__(self, node, id, serial, creation):
@@ -227,9 +250,9 @@ class OtpErlangPid(object):
         self.id = id
         self.serial = serial
         self.creation = creation
-    def __str__(self):
-        return (chr(_TAG_PID_EXT) +
-            str(self.node) + self.id + self.serial + self.creation
+    def binary(self):
+        return (b_chr(_TAG_PID_EXT) +
+            self.node.binary() + self.id + self.serial + self.creation
         )
     def __repr__(self):
         return '%s(%s,%s,%s,%s)' % (
@@ -238,17 +261,19 @@ class OtpErlangPid(object):
             repr(self.creation)
         )
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.binary())
     def __eq__(self, other):
-        return str(self) == str(other)
+        return self.binary() == other.binary()
 
 # binary_to_term
 
 def binary_to_term(data):
+    if type(data) != bytes:
+        raise ParseException('not bytes input')
     size = len(data)
     if size <= 1:
         raise ParseException('null input')
-    if ord(data[0]) != _TAG_VERSION:
+    if b_ord(data[0]) != _TAG_VERSION:
         raise ParseException('invalid version')
     try:
         i, term = _binary_to_term(1, data)
@@ -261,24 +286,24 @@ def binary_to_term(data):
         raise ParseException('missing data')
 
 def _binary_to_term(i, data):
-    tag = ord(data[i])
+    tag = b_ord(data[i])
     i += 1
     if tag == _TAG_NEW_FLOAT_EXT:
         return (i + 8, struct.unpack('>d', data[i:i + 8])[0])
     elif tag == _TAG_BIT_BINARY_EXT:
         j = struct.unpack('>I', data[i:i + 4])[0]
         i += 4
-        bits = ord(data[i])
+        bits = b_ord(data[i])
         i += 1
         return (i + j, OtpErlangBinary(data[i:i + j], bits))
     elif tag == _TAG_ATOM_CACHE_REF:
-        return (i + 1, OtpErlangAtom(ord(data[i:i + 1])))
+        return (i + 1, OtpErlangAtom(b_ord(data[i:i + 1])))
     elif tag == _TAG_SMALL_INTEGER_EXT:
-        return (i + 1, ord(data[i]))
+        return (i + 1, b_ord(data[i]))
     elif tag == _TAG_INTEGER_EXT:
         return (i + 4, struct.unpack('>i', data[i:i + 4])[0])
     elif tag == _TAG_FLOAT_EXT:
-        value = float(data[i:i + 31].partition(chr(0))[0])
+        value = float(data[i:i + 31].partition(b_chr(0))[0])
         return (i + 31, value)
     elif tag == _TAG_ATOM_EXT:
         j = struct.unpack('>H', data[i:i + 2])[0]
@@ -305,7 +330,7 @@ def _binary_to_term(i, data):
         return (i, OtpErlangPid(node, id, serial, creation))
     elif tag == _TAG_SMALL_TUPLE_EXT or tag == _TAG_LARGE_TUPLE_EXT:
         if tag == _TAG_SMALL_TUPLE_EXT:
-            arity = ord(data[i])
+            arity = b_ord(data[i])
             i += 1
         elif tag == _TAG_LARGE_TUPLE_EXT:
             arity = struct.unpack('>I', data[i:i + 4])[0]
@@ -323,7 +348,7 @@ def _binary_to_term(i, data):
         i += 4
         i, tmp = _binary_to_term_sequence(i, arity, data)
         i, tail = _binary_to_term(i, data)
-        if tail != []: 
+        if type(tail) != list or tail != []: 
             tmp.append(tail)
             tmp = OtpErlangList(tmp, improper=True)
         return (i, tmp)
@@ -333,15 +358,15 @@ def _binary_to_term(i, data):
         return (i + j, OtpErlangBinary(data[i:i + j], 8))
     elif tag == _TAG_SMALL_BIG_EXT or tag == _TAG_LARGE_BIG_EXT:
         if tag == _TAG_SMALL_BIG_EXT:
-            j = ord(data[i])
+            j = b_ord(data[i])
             i += 1
         elif tag == _TAG_LARGE_BIG_EXT:
             j = struct.unpack('>I', data[i:i + 4])[0]
             i += 4
-        sign = ord(data[i])
+        sign = b_ord(data[i])
         bignum = 0
         for bignum_index in range(j):
-            digit = ord(data[i + j - bignum_index])
+            digit = b_ord(data[i + j - bignum_index])
             bignum = bignum * 256 + int(digit)
         if sign == 1:
             bignum *= -1
@@ -354,10 +379,10 @@ def _binary_to_term(i, data):
         old_i = i
         i, module = _binary_to_atom(i, data)
         i, function = _binary_to_atom(i, data)
-        if ord(data[i]) != _TAG_SMALL_INTEGER_EXT:
+        if b_ord(data[i]) != _TAG_SMALL_INTEGER_EXT:
             raise ParseException('invalid small integer tag')
         i += 1
-        arity = ord(data[i])
+        arity = b_ord(data[i])
         i += 1
         return (i, OtpErlangFunction(tag, data[old_i:i]))
     elif tag == _TAG_NEW_REFERENCE_EXT:
@@ -368,12 +393,12 @@ def _binary_to_term(i, data):
         i += 1
         return (i + j, OtpErlangReference(node, data[i: i + j], creation))
     elif tag == _TAG_SMALL_ATOM_EXT:
-        j = ord(data[i:i + 1])
+        j = b_ord(data[i])
         i += 1
         atom_name = data[i:i + j]
-        if atom_name == 'true':
+        if atom_name == b'true':
             tmp = True
-        elif atom_name == 'false':
+        elif atom_name == b'false':
             tmp = False
         else:
             tmp = OtpErlangAtom(atom_name)
@@ -403,7 +428,7 @@ def _binary_to_term(i, data):
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict') 
         return (i + j, OtpErlangAtom(atom_name))
     elif tag == _TAG_SMALL_ATOM_UTF8_EXT:
-        j = ord(data[i:i + 1])
+        j = b_ord(data[i:i + 1])
         i += 1
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
@@ -432,17 +457,17 @@ def _binary_to_term_sequence(i, arity, data):
     return (i, sequence)
         
 def _binary_to_integer(i, data):
-    tag = ord(data[i])
+    tag = b_ord(data[i])
     i += 1
     if tag == _TAG_SMALL_INTEGER_EXT:
-        return (i + 1, ord(data[i]))
+        return (i + 1, b_ord(data[i]))
     elif tag == _TAG_INTEGER_EXT:
         return (i + 4, struct.unpack('>i', data[i:i + 4])[0])
     else:
         raise ParseException('invalid integer tag')
 
 def _binary_to_pid(i, data):
-    tag = ord(data[i])
+    tag = b_ord(data[i])
     i += 1
     if tag == _TAG_PID_EXT:
         i, node = _binary_to_atom(i, data)
@@ -457,16 +482,16 @@ def _binary_to_pid(i, data):
         raise ParseException('invalid pid tag')
 
 def _binary_to_atom(i, data):
-    tag = ord(data[i])
+    tag = b_ord(data[i])
     i += 1
     if tag == _TAG_ATOM_EXT:
         j = struct.unpack('>H', data[i:i + 2])[0]
         i += 2
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_CACHE_REF:
-        return (i + 1, OtpErlangAtom(ord(data[i:i + 1])))
+        return (i + 1, OtpErlangAtom(b_ord(data[i:i + 1])))
     elif tag == _TAG_SMALL_ATOM_EXT:
-        j = ord(data[i:i + 1])
+        j = b_ord(data[i:i + 1])
         i += 1
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_UTF8_EXT:
@@ -475,7 +500,7 @@ def _binary_to_atom(i, data):
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict') 
         return (i + j, OtpErlangAtom(atom_name))
     elif tag == _TAG_SMALL_ATOM_UTF8_EXT:
-        j = ord(data[i:i + 1])
+        j = b_ord(data[i:i + 1])
         i += 1
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
@@ -487,7 +512,7 @@ def _binary_to_atom(i, data):
 def term_to_binary(term, compressed=False):
     data_uncompressed = _term_to_binary(term)
     if compressed is False:
-        return chr(_TAG_VERSION) + data_uncompressed
+        return b_chr(_TAG_VERSION) + data_uncompressed
     else:
         if compressed is True:
             compressed = 6
@@ -496,81 +521,73 @@ def term_to_binary(term, compressed=False):
         data_compressed = zlib.compress(data_uncompressed, compressed)
         size_uncompressed = len(data_uncompressed)
         return (
-            chr(_TAG_VERSION) + chr(_TAG_COMPRESSED_ZLIB) +
+            b_chr(_TAG_VERSION) + b_chr(_TAG_COMPRESSED_ZLIB) +
             struct.pack('>I', size_uncompressed) + data_compressed
         )
 
 def _term_to_binary(term):
     if type(term) == bytes:
         return _string_to_binary(term)
-    if type(term) == unicode:
+    elif type(term) == unicode:
         return _string_to_binary(term.encode(encoding='utf-8', errors='strict'))
     elif type(term) == list:
-        return _list_to_binary(term)
+        return OtpErlangList(term).binary()
     elif type(term) == tuple:
         return _tuple_to_binary(term)
-    elif type(term) == int or type(term) == types.LongType:
+    elif type(term) == int or type(term) == long:
         return _long_to_binary(term)
     elif type(term) == float:
         return _float_to_binary(term)
     elif type(term) == dict:
         return _dict_to_binary(term)
     elif type(term) == bool:
-        return str(OtpErlangAtom(term and 'true' or 'false'))
+        return OtpErlangAtom(term and b'true' or b'false').binary()
     elif isinstance(term, OtpErlangAtom):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangList):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangBinary):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangFunction):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangReference):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangPort):
-        return str(term)
+        return term.binary()
     elif isinstance(term, OtpErlangPid):
-        return str(term)
+        return term.binary()
     else:
         raise OutputException('unknown python type')
 
 def _string_to_binary(term):
     arity = len(term)
     if arity == 0:
-        return chr(_TAG_NIL_EXT)
+        return b_chr(_TAG_NIL_EXT)
     elif arity < 65536:
-        return chr(_TAG_STRING_EXT) + struct.pack('>H', arity) + term
+        return b_chr(_TAG_STRING_EXT) + struct.pack('>H', arity) + term
     else:
-        return (chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
-            ''.join([chr(_TAG_SMALL_INTEGER_EXT) + c for c in term])
-        )
-
-def _list_to_binary(term):
-    arity = len(term)
-    if arity == 0:
-        return chr(_TAG_NIL_EXT)
-    else:
-        return (chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
-            ''.join([_term_to_binary(element) for element in term]) +
-            chr(_TAG_NIL_EXT)
+        return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
+            b''.join([b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(b_ord(c))
+                      for c in term]) +
+            b_chr(_TAG_NIL_EXT)
         )
 
 def _tuple_to_binary(term):
     arity = len(term)
     if arity < 256:
-        return (chr(_TAG_SMALL_TUPLE_EXT) + chr(arity) +
-            ''.join([_term_to_binary(element) for element in term])
+        return (b_chr(_TAG_SMALL_TUPLE_EXT) + b_chr(arity) +
+            b''.join([_term_to_binary(element) for element in term])
         )
     else:
-        return (chr(_TAG_LARGE_TUPLE_EXT) + struct.pack('>I', arity) +
-            ''.join([_term_to_binary(element) for element in term])
+        return (b_chr(_TAG_LARGE_TUPLE_EXT) + struct.pack('>I', arity) +
+            b''.join([_term_to_binary(element) for element in term])
         )
 
 def _integer_to_binary(term):
     if 0 <= term <= 255:
-        return chr(_TAG_SMALL_INTEGER_EXT) + chr(term)
+        return b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(term)
     else:
-        return chr(_TAG_INTEGER_EXT) + struct.pack('>i', term)
+        return b_chr(_TAG_INTEGER_EXT) + struct.pack('>i', term)
 
 def _long_to_binary(term):
     if -2147483648 <= term <= 2147483647:
@@ -582,26 +599,30 @@ def _bignum_to_binary(term):
     bignum = abs(term)
     size = int(math.ceil(bignum.bit_length() / 8.0))
     if term < 0:
-        sign = chr(1)
+        sign = b_chr(1)
     else:
-        sign = chr(0)
+        sign = b_chr(0)
     L = [sign]
     for byte in range(0, size):
-        L.append(chr(bignum & 255))
+        L.append(b_chr(bignum & 255))
         bignum >>= 8
     if size < 256:
-        return chr(_TAG_SMALL_BIG_EXT) + chr(size) + ''.join(L)
+        return (b_chr(_TAG_SMALL_BIG_EXT) +
+            b_chr(size) + b''.join(L)
+        )
     else:
-        return chr(_TAG_LARGE_BIG_EXT) + struct.pack('>I', size) + ''.join(L)
+        return (b_chr(_TAG_LARGE_BIG_EXT) +
+            struct.pack('>I', size) + b''.join(L)
+        )
 
 def _float_to_binary(term):
-    return chr(_TAG_NEW_FLOAT_EXT) + struct.pack('>d', term)
+    return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack('>d', term)
 
 def _dict_to_binary(term):
     arity = len(term)
-    return (chr(_TAG_MAP_EXT) + struct.pack('>I', arity) +
-        ''.join([_term_to_binary(key) + _term_to_binary(value)
-                 for key, value in term.iteritems()])
+    return (b_chr(_TAG_MAP_EXT) + struct.pack('>I', arity) +
+        b''.join([_term_to_binary(key) + _term_to_binary(value)
+                  for key, value in term.items()])
     )
 
 # exceptions
