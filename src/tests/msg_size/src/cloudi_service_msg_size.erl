@@ -69,7 +69,7 @@
 -record(state, {
         service,
         request_count = 0 :: non_neg_integer(),
-        request_id :: cloudi_service:trans_id(),
+        request_id = undefined :: cloudi_service:trans_id() | undefined,
         suffixes = ["cxx", "java", "python", "python_c", "ruby"]
     }).
 
@@ -84,16 +84,24 @@ aspect_init(CommandLine, _, undefined) ->
 % for external services
 aspect_request(_, _, _, _, _, _, _, TransId, _,
                #state{request_count = Count} = State) ->
+    true = is_binary(TransId),
     {ok, State#state{request_count = Count + 1,
                      request_id = TransId}}.
  
 % for internal services
 aspect_request(_, _, _, _, _, _, _, TransId, _,
                #state{request_count = Count} = State, _) ->
+    true = is_binary(TransId),
     {ok, State#state{request_count = Count + 1,
                      request_id = TransId}}.
  
 % for internal and external services
+aspect_terminate(_, #state{service = Service,
+                           request_id = undefined} = State) ->
+    ?LOG_WARN("msg_size 0 requests/second "
+              "forwarded for~n~p",
+              [Service]),
+    {ok, State};
 aspect_terminate(_, #state{service = Service,
                            request_count = Count,
                            request_id = TransId} = State) ->

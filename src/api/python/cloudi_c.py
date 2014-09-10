@@ -53,10 +53,13 @@ class API(object):
     SYNC   = -1
 
     def __init__(self, thread_index):
+        exception = None
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
         except libcloudi_py.invalid_input_exception as e:
-            raise invalid_input_exception(e)
+            exception = str(e)
+        if exception is not None:
+            raise invalid_input_exception(exception)
 
     @staticmethod
     def thread_count():
@@ -190,10 +193,13 @@ class API(object):
         return self.__api.timeout_sync()
 
     def poll(self):
+        exception = None
         try:
             self.__api.poll()
         except libcloudi_py.error_exception as e:
-            raise message_decoding_exception(e)
+            exception = str(e)
+        if exception is not None:
+            raise message_decoding_exception(exception)
 
     def __binary_key_value_parse(self, binary):
         result = {}
@@ -216,11 +222,9 @@ class API(object):
         return self.__binary_key_value_parse(message_info)
 
 class invalid_input_exception(Exception):
-    def __init__(self, e=None):
-        if e is None:
+    def __init__(self, message=None):
+        if message is None:
             message = 'Invalid Input'
-        else:
-            message = 'c: ' + str(e)
         Exception.__init__(self, message)
 
 class return_sync_exception(Exception):
@@ -240,8 +244,8 @@ class forward_async_exception(Exception):
         Exception.__init__(self, 'Asynchronous Call Forward Invalid')
 
 class message_decoding_exception(Exception):
-    def __init__(self, e):
-        Exception.__init__(self, str(e))
+    def __init__(self, message):
+        Exception.__init__(self, message)
 
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):
