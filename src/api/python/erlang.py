@@ -119,7 +119,7 @@ class OtpErlangAtom(object):
                     value_encoded
                 )
         else:
-            raise OutputException(b'unknown atom type')
+            raise OutputException('unknown atom type')
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.value))
     def __hash__(self):
@@ -148,7 +148,7 @@ class OtpErlangList(object):
                     b_chr(_TAG_NIL_EXT)
                 )
         else:
-            raise OutputException(b'unknown list type')
+            raise OutputException('unknown list type')
     def __repr__(self):
         return '%s(%s,improper=%s)' % (
             self.__class__.__name__, repr(self.value), repr(self.improper)
@@ -174,7 +174,7 @@ class OtpErlangBinary(object):
                     self.value
                 )
         else:
-            raise OutputException(b'unknown binary type')
+            raise OutputException('unknown binary type')
     def __repr__(self):
         return '%s(%s,bits=%s)' % (
             self.__class__.__name__, repr(self.value), repr(self.bits)
@@ -269,21 +269,21 @@ class OtpErlangPid(object):
 
 def binary_to_term(data):
     if type(data) != bytes:
-        raise ParseException(b'not bytes input')
+        raise ParseException('not bytes input')
     size = len(data)
     if size <= 1:
-        raise ParseException(b'null input')
+        raise ParseException('null input')
     if b_ord(data[0]) != _TAG_VERSION:
-        raise ParseException(b'invalid version')
+        raise ParseException('invalid version')
     try:
         i, term = _binary_to_term(1, data)
         if i != size:
-            raise ParseException(b'unparsed data')
+            raise ParseException('unparsed data')
         return term
     except struct.error:
-        raise ParseException(b'missing data')
+        raise ParseException('missing data')
     except IndexError:
-        raise ParseException(b'missing data')
+        raise ParseException('missing data')
 
 def _binary_to_term(i, data):
     tag = b_ord(data[i])
@@ -380,7 +380,7 @@ def _binary_to_term(i, data):
         i, module = _binary_to_atom(i, data)
         i, function = _binary_to_atom(i, data)
         if b_ord(data[i]) != _TAG_SMALL_INTEGER_EXT:
-            raise ParseException(b'invalid small integer tag')
+            raise ParseException('invalid small integer tag')
         i += 1
         arity = b_ord(data[i])
         i += 1
@@ -435,19 +435,19 @@ def _binary_to_term(i, data):
     elif tag == _TAG_COMPRESSED_ZLIB:
         size_uncompressed = struct.unpack(b'>I', data[i:i + 4])[0]
         if size_uncompressed == 0:
-            raise ParseException(b'compressed data null')
+            raise ParseException('compressed data null')
         i += 4
         data_compressed = data[i:]
         j = len(data_compressed)
         data_uncompressed = zlib.decompress(data_compressed)
         if size_uncompressed != len(data_uncompressed):
-            raise ParseException(b'compression corrupt')
+            raise ParseException('compression corrupt')
         (i_new, term) = _binary_to_term(0, data_uncompressed)
         if i_new != size_uncompressed:
-            raise ParseException(b'unparsed data')
+            raise ParseException('unparsed data')
         return (i + j, term)
     else:
-        raise ParseException(b'invalid tag')
+        raise ParseException('invalid tag')
 
 def _binary_to_term_sequence(i, arity, data):
     sequence = []
@@ -464,7 +464,7 @@ def _binary_to_integer(i, data):
     elif tag == _TAG_INTEGER_EXT:
         return (i + 4, struct.unpack(b'>i', data[i:i + 4])[0])
     else:
-        raise ParseException(b'invalid integer tag')
+        raise ParseException('invalid integer tag')
 
 def _binary_to_pid(i, data):
     tag = b_ord(data[i])
@@ -479,7 +479,7 @@ def _binary_to_pid(i, data):
         i += 1
         return (i, OtpErlangPid(node, id, serial, creation))
     else:
-        raise ParseException(b'invalid pid tag')
+        raise ParseException('invalid pid tag')
 
 def _binary_to_atom(i, data):
     tag = b_ord(data[i])
@@ -505,7 +505,7 @@ def _binary_to_atom(i, data):
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
     else:
-        raise ParseException(b'invalid atom tag')
+        raise ParseException('invalid atom tag')
 
 # term_to_binary
 
@@ -517,7 +517,7 @@ def term_to_binary(term, compressed=False):
         if compressed is True:
             compressed = 6
         if compressed < 0 or compressed > 9:
-            raise InputException(b'compressed in [0..9]')
+            raise InputException('compressed in [0..9]')
         data_compressed = zlib.compress(data_uncompressed, compressed)
         size_uncompressed = len(data_uncompressed)
         return (
@@ -557,7 +557,7 @@ def _term_to_binary(term):
     elif isinstance(term, OtpErlangPid):
         return term.binary()
     else:
-        raise OutputException(b'unknown python type')
+        raise OutputException('unknown python type')
 
 def _string_to_binary(term):
     arity = len(term)
