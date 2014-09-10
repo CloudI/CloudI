@@ -51,8 +51,6 @@ from timeit import default_timer
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
 
-assert sys.version >= '2.7'
-
 _MESSAGE_INIT                = 1
 _MESSAGE_SEND_ASYNC          = 2
 _MESSAGE_SEND_SYNC           = 3
@@ -95,7 +93,7 @@ class API(object):
         self.__initializtion_complete = False
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
-        self.__send(term_to_binary(OtpErlangAtom('init')))
+        self.__send(term_to_binary(OtpErlangAtom(b'init')))
         (self.__process_index,
          self.__process_count,
          self.__process_count_max,
@@ -122,10 +120,12 @@ class API(object):
             self.__callbacks[key] = collections.deque([Function])
         else:
             value.append(Function)
-        self.__send(term_to_binary((OtpErlangAtom('subscribe'), pattern)))
+        self.__send(term_to_binary((OtpErlangAtom(b'subscribe'),
+                                    pattern)))
 
     def subscribe_count(self, pattern):
-        self.__send(term_to_binary((OtpErlangAtom('subscribe_count'), pattern)))
+        self.__send(term_to_binary((OtpErlangAtom(b'subscribe_count'),
+                                    pattern)))
         return self.__poll_request(False)
 
     def unsubscribe(self, pattern):
@@ -135,17 +135,18 @@ class API(object):
         value.popleft()
         if len(value) == 0:
             del self.__callbacks[key]
-        self.__send(term_to_binary((OtpErlangAtom('unsubscribe'), pattern)))
+        self.__send(term_to_binary((OtpErlangAtom(b'unsubscribe'),
+                                    pattern)))
 
     def send_async(self, name, request,
                    timeout=None, request_info=None, priority=None):
         if timeout is None:
             timeout = self.__timeout_async
         if request_info is None:
-            request_info = ''
+            request_info = b''
         if priority is None:
             priority = self.__priority_default
-        self.__send(term_to_binary((OtpErlangAtom('send_async'), name,
+        self.__send(term_to_binary((OtpErlangAtom(b'send_async'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
@@ -156,10 +157,10 @@ class API(object):
         if timeout is None:
             timeout = self.__timeout_async
         if request_info is None:
-            request_info = ''
+            request_info = b''
         if priority is None:
             priority = self.__priority_default
-        self.__send(term_to_binary((OtpErlangAtom('send_sync'), name,
+        self.__send(term_to_binary((OtpErlangAtom(b'send_sync'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
@@ -170,10 +171,10 @@ class API(object):
         if timeout is None:
             timeout = self.__timeout_async
         if request_info is None:
-            request_info = ''
+            request_info = b''
         if priority is None:
             priority = self.__priority_default
-        self.__send(term_to_binary((OtpErlangAtom('mcast_async'), name,
+        self.__send(term_to_binary((OtpErlangAtom(b'mcast_async'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
@@ -201,7 +202,7 @@ class API(object):
                     timeout = 0
                 else:
                     timeout -= elapsed
-        self.__send(term_to_binary((OtpErlangAtom('forward_async'), name,
+        self.__send(term_to_binary((OtpErlangAtom(b'forward_async'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority,
@@ -217,7 +218,7 @@ class API(object):
                     timeout = 0
                 else:
                     timeout -= elapsed
-        self.__send(term_to_binary((OtpErlangAtom('forward_sync'), name,
+        self.__send(term_to_binary((OtpErlangAtom(b'forward_sync'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority,
@@ -243,12 +244,12 @@ class API(object):
             if timeout == self.__request_timeout:
                 elapsed = max(0, int(default_timer() - self.__request_timer))
                 if elapsed > timeout:
-                    response_info = ''
-                    response = ''
+                    response_info = b''
+                    response = b''
                     timeout = 0
                 else:
                     timeout -= elapsed
-        self.__send(term_to_binary((OtpErlangAtom('return_async'),
+        self.__send(term_to_binary((OtpErlangAtom(b'return_async'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
@@ -261,12 +262,12 @@ class API(object):
             if timeout == self.__request_timeout:
                 elapsed = max(0, int(default_timer() - self.__request_timer))
                 if elapsed > timeout:
-                    response_info = ''
-                    response = ''
+                    response_info = b''
+                    response = b''
                     timeout = 0
                 else:
                     timeout -= elapsed
-        self.__send(term_to_binary((OtpErlangAtom('return_sync'),
+        self.__send(term_to_binary((OtpErlangAtom(b'return_sync'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),
                                     OtpErlangBinary(response), timeout,
@@ -277,8 +278,8 @@ class API(object):
         if timeout is None:
             timeout = self.__timeout_sync
         if trans_id is None:
-            trans_id = chr(0) * 16
-        self.__send(term_to_binary((OtpErlangAtom('recv_async'), timeout,
+            trans_id = b'\0' * 16
+        self.__send(term_to_binary((OtpErlangAtom(b'recv_async'), timeout,
                                     OtpErlangBinary(trans_id), consume)))
         return self.__poll_request(False)
 
@@ -322,13 +323,13 @@ class API(object):
                     if not (type(response_info) == bytes or
                             type(response_info) == str or
                             type(response_info) == unicode):
-                        response_info = ''
+                        response_info = b''
                 else:
-                    response_info = ''
+                    response_info = b''
                 if not (type(response) == bytes or
                         type(response) == str or
                         type(response) == unicode):
-                    response = ''
+                    response = b''
             except return_async_exception:
                 return
             except return_sync_exception:
@@ -343,8 +344,8 @@ class API(object):
                 return
             except:
                 traceback.print_exc(file=sys.stderr)
-                response_info = ''
-                response = ''
+                response_info = b''
+                response = b''
             try:
                 self.return_async(name, pattern,
                                   response_info, response,
@@ -362,13 +363,13 @@ class API(object):
                     if not (type(response_info) == bytes or
                             type(response_info) == str or
                             type(response_info) == unicode):
-                        response_info = ''
+                        response_info = b''
                 else:
-                    response_info = ''
+                    response_info = b''
                 if not (type(response) == bytes or
                         type(response) == str or
                         type(response) == unicode):
-                    response = ''
+                    response = b''
             except return_sync_exception:
                 return
             except return_async_exception:
@@ -383,8 +384,8 @@ class API(object):
                 return
             except:
                 traceback.print_exc(file=sys.stderr)
-                response_info = ''
-                response = ''
+                response_info = b''
+                response = b''
             try:
                 self.return_sync(name, pattern,
                                  response_info, response,
@@ -397,7 +398,7 @@ class API(object):
 
     def __poll_request(self, external):
         if external and not self.__initializtion_complete:
-            self.__send(term_to_binary(OtpErlangAtom('polling')))
+            self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initializtion_complete = True
         ready = False
         while ready == False:
@@ -407,7 +408,7 @@ class API(object):
             if len(IN) > 0:
                 ready = True
 
-        data = ''
+        data = b''
         data = self.__recv(data)
 
         if len(data) == 0:
@@ -415,12 +416,12 @@ class API(object):
 
         while True:
             i, j = 0, 4
-            command = struct.unpack('=I', data[i:j])[0]
+            command = struct.unpack(b'=I', data[i:j])[0]
             if command == _MESSAGE_INIT:
                 i, j = j, j + 4 + 4 + 4 + 4 + 4
                 (processIndex, processCount,
                  processCountMax, processCountMin,
-                 prefixSize) = struct.unpack('=IIIII', data[i:j])
+                 prefixSize) = struct.unpack(b'=IIIII', data[i:j])
                 i, j = j, j + prefixSize + 4 + 4 + 1 + 1
                 (prefix, nullTerminator, timeoutAsync, timeoutSync,
                  priorityDefault,
@@ -431,65 +432,73 @@ class API(object):
                     raise message_decoding_exception()
                 return (processIndex, processCount,
                         processCountMax, processCountMin,
-                        prefix, timeoutSync, timeoutAsync,
+                        prefix.decode('utf-8'), timeoutSync, timeoutAsync,
                         priorityDefault, bool(requestTimeoutAdjustment))
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
-                nameSize = struct.unpack('=I', data[i:j])[0]
+                nameSize = struct.unpack(b'=I', data[i:j])[0]
                 i, j = j, j + nameSize + 4
                 (name, nullTerminator,
                  patternSize) = struct.unpack('=%dscI' % (nameSize - 1),
                                               data[i:j])
                 i, j = j, j + patternSize + 4
                 (pattern, nullTerminator,
-                 request_infoSize) = struct.unpack('=%dscI' % (patternSize - 1),
-                                                  data[i:j])
+                 request_infoSize) = struct.unpack(
+                    '=%dscI' % (patternSize - 1), data[i:j]
+                )
                 i, j = j, j + request_infoSize + 1 + 4
                 (request_info, nullTerminator,
-                 requestSize) = struct.unpack('=%dscI' % request_infoSize,
-                                              data[i:j])
+                 requestSize) = struct.unpack(
+                    '=%dscI' % request_infoSize, data[i:j]
+                )
                 i, j = j, j + requestSize + 1 + 4 + 1 + 16 + 4
                 (request, nullTerminator, timeout, priority, trans_id,
-                 pidSize) = struct.unpack('=%dscIb16sI' % requestSize,
-                                          data[i:j])
+                 pidSize) = struct.unpack(
+                    '=%dscIb16sI' % requestSize, data[i:j]
+                )
                 i, j = j, j + pidSize
                 pid = struct.unpack('=%ds' % pidSize, data[i:j])[0]
                 if j != len(data):
                     raise message_decoding_exception()
-                data = ''
-                self.__callback(command, name, pattern,
+                data = b''
+                self.__callback(command,
+                                name.decode('utf-8'),
+                                pattern.decode('utf-8'),
                                 request_info, request,
                                 timeout, priority, trans_id,
                                 binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
-                responseInfoSize = struct.unpack('=I', data[i:j])[0]
+                responseInfoSize = struct.unpack(b'=I', data[i:j])[0]
                 i, j = j, j + responseInfoSize + 1 + 4
                 (response_info, nullTerminator,
-                 responseSize) = struct.unpack('=%dscI' % responseInfoSize,
-                                               data[i:j])
+                 responseSize) = struct.unpack(
+                    '=%dscI' % responseInfoSize, data[i:j]
+                )
                 i, j = j, j + responseSize + 1 + 16
                 if j != len(data):
                     raise message_decoding_exception()
                 (response, nullTerminator,
-                 trans_id) = struct.unpack('=%dsc16s' % responseSize, data[i:j])
+                 trans_id) = struct.unpack(
+                    '=%dsc16s' % responseSize, data[i:j]
+                )
                 return (response_info, response, trans_id)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
                 if j != len(data):
                     raise message_decoding_exception()
-                return struct.unpack('=16s', data[i:j])[0]
+                return struct.unpack(b'=16s', data[i:j])[0]
             elif command == _MESSAGE_RETURNS_ASYNC:
                 i, j = j, j + 4
-                transIdCount = struct.unpack('=I', data[i:j])[0]
+                transIdCount = struct.unpack(b'=I', data[i:j])[0]
                 i, j = j, j + 16 * transIdCount
                 if j != len(data):
                     raise message_decoding_exception()
-                return struct.unpack('=' + '16s' * transIdCount, data[i:j])
+                return struct.unpack(b'=' + b'16s' * transIdCount, data[i:j])
             elif command == _MESSAGE_KEEPALIVE:
-                self.__send(term_to_binary(OtpErlangAtom('keepalive')))
+                self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
                 if j < len(data):
                     raise message_decoding_exception()
                 data = data[j:]
@@ -499,7 +508,7 @@ class API(object):
                         continue
             elif command == _MESSAGE_REINIT:
                 i, j = j, j + 4
-                self.__process_count = struct.unpack('=I', data[i:j])[0]
+                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
                 if j < len(data):
                     raise message_decoding_exception()
                 data = data[j:]
@@ -511,7 +520,7 @@ class API(object):
                 i, j = j, j + 4
                 if j != len(data):
                     raise message_decoding_exception()
-                return struct.unpack('=I', data[i:j])[0]
+                return struct.unpack(b'=I', data[i:j])[0]
             else:
                 raise message_decoding_exception()
 
@@ -533,7 +542,7 @@ class API(object):
 
     def __binary_key_value_parse(self, binary):
         result = {}
-        data = binary.split(chr(0))
+        data = binary.split(b'\0')
         for i in range(0, len(data) - 1, 2):
             key = data[i]
             current = result.get(key, None)
@@ -553,7 +562,7 @@ class API(object):
 
     def __send(self, data):
         if self.__use_header:
-            data = struct.pack('>I', len(data)) + data
+            data = struct.pack(b'>I', len(data)) + data
         self.__s.sendall(data)
 
     def __recv(self, data):
@@ -561,7 +570,7 @@ class API(object):
             while len(data) < 4:
                 fragment = self.__s.recv(self.__size)
                 data += fragment
-            total = struct.unpack('>I', data[:4])[0]
+            total = struct.unpack(b'>I', data[:4])[0]
             data = data[4:]
             while len(data) < total:
                 fragment = self.__s.recv(self.__size)

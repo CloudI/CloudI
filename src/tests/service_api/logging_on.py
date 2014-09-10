@@ -54,5 +54,5 @@ if __name__ == '__main__':
     from cloudi_service_api import CloudI
     obj = CloudI()
     assert obj.loglevel_set('trace') == 'ok'
-    print 'logging turned on'
+    print('logging turned on')
 

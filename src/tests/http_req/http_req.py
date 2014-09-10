@@ -63,9 +63,9 @@ class Task(threading.Thread):
             assert self.__api.subscribe_count(self.__name + '.xml/get') == 1
 
             result = self.__api.poll()
-            print 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def request(self, command, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):

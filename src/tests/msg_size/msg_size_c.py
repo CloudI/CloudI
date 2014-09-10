@@ -61,7 +61,7 @@ class _Task(threading.Thread):
         self.__api.subscribe('python_c', self.request)
 
         result = self.__api.poll()
-        print 'exited thread:', result
+        print('exited thread: %d' % result)
 
     def request(self, command, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
@@ -71,9 +71,9 @@ class _Task(threading.Thread):
         else:
             i += 1
         request = struct.pack('=I', i) + request[4:]
-        print 'forward #%d python_c to %s (with timeout %d ms)' % (
+        print('forward #%d python_c to %s (with timeout %d ms)' % (
             i, _DESTINATION, timeout,
-        )
+        ))
         self.__api.forward_(command, _DESTINATION, request_info, request,
                             timeout, priority, trans_id, pid)
 

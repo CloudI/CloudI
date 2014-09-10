@@ -57,17 +57,16 @@ class _Task(threading.Thread):
 
     def run(self):
         try:
-            #print '> 32 characters to test stdout<'
             self.__api.subscribe('text/post', self.text)
 
             result = self.__api.poll()
-            print 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def text(self, command, name, pattern, request_info, request,
              timeout, priority, trans_id, pid):
-        print '(' + request + ')'
+        print('(' + request + ')')
         assert 'Test Text' == request
         self.__api.return_(command, name, pattern, '', 'Test Response',
                            timeout, trans_id, pid)

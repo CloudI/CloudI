@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Changes for the Python CloudI API to work with Python version 3
+      (for both the pure-python cloudi module and
+       the Python/C++ cloudi_c module)
+    * Update all the integration tests to work with Python version 3
+
 2014-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make sure the Erlang Binary Term Format encoding in Python

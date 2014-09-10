@@ -60,9 +60,9 @@ class Task(threading.Thread):
             self.__check_environment()
             # idle service with no subscriptions
             result = self.__api.poll()
-            print >> sys.stderr, 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def __check_environment(self):
         user = os.environ.get('USER')

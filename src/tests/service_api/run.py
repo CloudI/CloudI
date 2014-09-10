@@ -86,7 +86,7 @@ if __name__ == '__main__':
     assert type(services_added) == list # returns the list of new ServiceIds
     assert len(services_added) == 2
 
-    print 'waiting 20 seconds...'
+    print('waiting 20 seconds...')
     time.sleep(20)
 
     # stop the C flood test

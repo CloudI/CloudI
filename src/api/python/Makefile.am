@@ -8,7 +8,7 @@ libcloudi_py_la_CPPFLAGS = -g -Wall \
                            $(CXXFLAGS)
 libcloudi_py_la_LDFLAGS = $(PYTHON_LDFLAGS) -shared \
                           -no-undefined -module -avoid-version \
-                          -export-symbols-regex initlibcloudi_py \
+                          -export-symbols-regex '.*libcloudi_py' \
                           -weak libcloudi.la \
                           -L$(ERLANG_LIB_DIR_erl_interface)/lib/ 
 # libtool requires linking in the object files, since the library

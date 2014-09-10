@@ -197,7 +197,7 @@ class API(object):
 
     def __binary_key_value_parse(self, binary):
         result = {}
-        data = binary.split(chr(0))
+        data = binary.split(b'\0')
         for i in range(0, len(data) - 1, 2):
             key = data[i]
             current = result.get(key, None)

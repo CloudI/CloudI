@@ -87,265 +87,265 @@ class Task(threading.Thread):
             if self.__index == 0:
                 # start sequence1
                 self.__api.send_async(
-                    self.__api.prefix() + 'sequence1', 'start',
+                    self.__api.prefix() + 'sequence1', b'start',
                 )
     
             result = self.__api.poll()
-            print 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def __sequence1_abcd(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/b/c/d')
-        assert request == 'test1'
+        assert request == b'test1'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_abc_(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/b/c/*')
-        assert request == 'test2' or request == 'test3'
+        assert request == b'test2' or request == b'test3'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_ab_d(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/b/*/d')
-        assert request == 'test4' or request == 'test5'
+        assert request == b'test4' or request == b'test5'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_a_cd(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/*/c/d')
-        assert request == 'test6' or request == 'test7'
+        assert request == b'test6' or request == b'test7'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1__bcd(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + '*/b/c/d')
-        assert request == 'test8' or request == 'test9'
+        assert request == b'test8' or request == b'test9'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_ab__(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/b/*')
-        assert request == 'test10'
+        assert request == b'test10'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_a__d(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/*/d')
-        assert request == 'test11'
+        assert request == b'test11'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1___cd(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + '*/c/d')
-        assert request == 'test12'
+        assert request == b'test12'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_a___(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + 'a/*')
-        assert request == 'test13'
+        assert request == b'test13'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1____d(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + '*/d')
-        assert request == 'test14'
+        assert request == b'test14'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1_____(self, command, name, pattern, request_info, request,
                          timeout, priority, trans_id, pid):
         assert pattern == (self.__api.prefix() + '*')
-        assert request == 'test15'
+        assert request == b'test15'
         self.__api.return_(command, name, pattern,
-                           '', request, timeout, trans_id, pid)
+                           b'', request, timeout, trans_id, pid)
 
     def __sequence1(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
         # consume all the 'end' responses from all sequences handled
         # by this service
-        while self.__api.recv_async(timeout=1000)[1] == 'end':
+        while self.__api.recv_async(timeout=1000)[1] == b'end':
             pass
-        print 'messaging sequence1 start ' + self.__name
-        assert request == 'start'
+        print('messaging sequence1 start %s' % self.__name)
+        assert request == b'start'
         # n.b., depends on cloudi_constants.hrl having
         # SERVICE_NAME_PATTERN_MATCHING defined
         test1_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/c/d',  'test1'
+            self.__api.prefix() + 'a/b/c/d',  b'test1'
         )
         test2_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/c/z',  'test2'
+            self.__api.prefix() + 'a/b/c/z',  b'test2'
         )
         test3_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/c/dd', 'test3'
+            self.__api.prefix() + 'a/b/c/dd', b'test3'
         )
         test4_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/z/d',  'test4'
+            self.__api.prefix() + 'a/b/z/d',  b'test4'
         )
         test5_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/cc/d', 'test5'
+            self.__api.prefix() + 'a/b/cc/d', b'test5'
         )
         test6_id = self.__api.send_async(
-            self.__api.prefix() + 'a/z/c/d',  'test6'
+            self.__api.prefix() + 'a/z/c/d',  b'test6'
         )
         test7_id = self.__api.send_async(
-            self.__api.prefix() + 'a/bb/c/d', 'test7'
+            self.__api.prefix() + 'a/bb/c/d', b'test7'
         )
         test8_id = self.__api.send_async(
-            self.__api.prefix() + 'z/b/c/d',  'test8'
+            self.__api.prefix() + 'z/b/c/d',  b'test8'
         )
         test9_id = self.__api.send_async(
-            self.__api.prefix() + 'aa/b/c/d', 'test9'
+            self.__api.prefix() + 'aa/b/c/d', b'test9'
         )
         test10_id = self.__api.send_async(
-            self.__api.prefix() + 'a/b/czd',  'test10'
+            self.__api.prefix() + 'a/b/czd',  b'test10'
         )
         test11_id = self.__api.send_async(
-            self.__api.prefix() + 'a/bzc/d',  'test11'
+            self.__api.prefix() + 'a/bzc/d',  b'test11'
         )
         test12_id = self.__api.send_async(
-            self.__api.prefix() + 'azb/c/d',  'test12'
+            self.__api.prefix() + 'azb/c/d',  b'test12'
         )
         test13_id = self.__api.send_async(
-            self.__api.prefix() + 'a/bzczd',  'test13'
+            self.__api.prefix() + 'a/bzczd',  b'test13'
         )
         test14_id = self.__api.send_async(
-            self.__api.prefix() + 'azbzc/d',  'test14'
+            self.__api.prefix() + 'azbzc/d',  b'test14'
         )
         test15_id = self.__api.send_async(
-            self.__api.prefix() + 'azbzczd',  'test15'
+            self.__api.prefix() + 'azbzczd',  b'test15'
         )
         # n.b., depends on cloudi_constants.hrl having
         # RECV_ASYNC_STRATEGY == recv_async_select_oldest
         self.__api.recv_async(trans_id=test1_id, consume=False)
         (tmp, test1_check, test1_id_check) = self.__api.recv_async()
-        assert test1_check == 'test1'
+        assert test1_check == b'test1'
         assert test1_id_check == test1_id
         self.__api.recv_async(trans_id=test2_id, consume=False)
         (tmp, test2_check, test2_id_check) = self.__api.recv_async()
-        assert test2_check == 'test2'
+        assert test2_check == b'test2'
         assert test2_id_check == test2_id
         self.__api.recv_async(trans_id=test3_id, consume=False)
         (tmp, test3_check, test3_id_check) = self.__api.recv_async()
-        assert test3_check == 'test3'
+        assert test3_check == b'test3'
         assert test3_id_check == test3_id
         self.__api.recv_async(trans_id=test4_id, consume=False)
         (tmp, test4_check, test4_id_check) = self.__api.recv_async()
-        assert test4_check == 'test4'
+        assert test4_check == b'test4'
         assert test4_id_check == test4_id
         self.__api.recv_async(trans_id=test5_id, consume=False)
         (tmp, test5_check, test5_id_check) = self.__api.recv_async()
-        assert test5_check == 'test5'
+        assert test5_check == b'test5'
         assert test5_id_check == test5_id
         self.__api.recv_async(trans_id=test6_id, consume=False)
         (tmp, test6_check, test6_id_check) = self.__api.recv_async()
-        assert test6_check == 'test6'
+        assert test6_check == b'test6'
         assert test6_id_check == test6_id
         self.__api.recv_async(trans_id=test7_id, consume=False)
         (tmp, test7_check, test7_id_check) = self.__api.recv_async()
-        assert test7_check == 'test7'
+        assert test7_check == b'test7'
         assert test7_id_check == test7_id
         self.__api.recv_async(trans_id=test8_id, consume=False)
         (tmp, test8_check, test8_id_check) = self.__api.recv_async()
-        assert test8_check == 'test8'
+        assert test8_check == b'test8'
         assert test8_id_check == test8_id
         self.__api.recv_async(trans_id=test9_id, consume=False)
         (tmp, test9_check, test9_id_check) = self.__api.recv_async()
-        assert test9_check == 'test9'
+        assert test9_check == b'test9'
         assert test9_id_check == test9_id
         self.__api.recv_async(trans_id=test10_id, consume=False)
         (tmp, test10_check, test10_id_check) = self.__api.recv_async()
-        assert test10_check == 'test10'
+        assert test10_check == b'test10'
         assert test10_id_check == test10_id
         self.__api.recv_async(trans_id=test11_id, consume=False)
         (tmp, test11_check, test11_id_check) = self.__api.recv_async()
-        assert test11_check == 'test11'
+        assert test11_check == b'test11'
         assert test11_id_check == test11_id
         self.__api.recv_async(trans_id=test12_id, consume=False)
         (tmp, test12_check, test12_id_check) = self.__api.recv_async()
-        assert test12_check == 'test12'
+        assert test12_check == b'test12'
         assert test12_id_check == test12_id
         self.__api.recv_async(trans_id=test13_id, consume=False)
         (tmp, test13_check, test13_id_check) = self.__api.recv_async()
-        assert test13_check == 'test13'
+        assert test13_check == b'test13'
         assert test13_id_check == test13_id
         self.__api.recv_async(trans_id=test14_id, consume=False)
         (tmp, test14_check, test14_id_check) = self.__api.recv_async()
-        assert test14_check == 'test14'
+        assert test14_check == b'test14'
         assert test14_id_check == test14_id
         self.__api.recv_async(trans_id=test15_id, consume=False)
         (tmp, test15_check, test15_id_check) = self.__api.recv_async()
-        assert test15_check == 'test15'
+        assert test15_check == b'test15'
         assert test15_id_check == test15_id
-        print 'messaging sequence1 end ' + self.__name
+        print('messaging sequence1 end %s' % self.__name)
         # start sequence2
-        self.__api.send_async(self.__api.prefix() + 'sequence2', 'start')
+        self.__api.send_async(self.__api.prefix() + 'sequence2', b'start')
         self.__api.return_(command, name, pattern,
-                           '', 'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, pid)
 
     def __sequence2_e1(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '1', timeout, trans_id, pid)
+                           b'', b'1', timeout, trans_id, pid)
 
     def __sequence2_e2(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '2', timeout, trans_id, pid)
+                           b'', b'2', timeout, trans_id, pid)
 
     def __sequence2_e3(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '3', timeout, trans_id, pid)
+                           b'', b'3', timeout, trans_id, pid)
 
     def __sequence2_e4(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '4', timeout, trans_id, pid)
+                           b'', b'4', timeout, trans_id, pid)
 
     def __sequence2_e5(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '5', timeout, trans_id, pid)
+                           b'', b'5', timeout, trans_id, pid)
 
     def __sequence2_e6(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '6', timeout, trans_id, pid)
+                           b'', b'6', timeout, trans_id, pid)
 
     def __sequence2_e7(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '7', timeout, trans_id, pid)
+                           b'', b'7', timeout, trans_id, pid)
 
     def __sequence2_e8(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', '8', timeout, trans_id, pid)
+                           b'', b'8', timeout, trans_id, pid)
 
     def __sequence2(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
-        print 'messaging sequence2 start ' + self.__name
-        assert request == 'start'
+        print('messaging sequence2 start %s' % self.__name)
+        assert request == b'start'
         while True:
             # the sending process is excluded from the services that receive
             # the asynchronous message, so in this case, the receiving thread
             # will not be called, despite the fact it has subscribed to 'e',
             # to prevent a process (in this case thread) from deadlocking
             # with itself.
-            e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', ' ')
+            e_ids = self.__api.mcast_async(self.__api.prefix() + 'e', b' ')
             # 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
             # since 1 thread is sending the mcast_async, so 3 * 8 == 24
             if len(e_ids) == 24:
@@ -357,71 +357,71 @@ class Task(threading.Thread):
                     assert e_id == e_id_check
                     e_check_list.append(e_check)
                 e_check_list.sort()
-                assert ''.join(e_check_list) == '111222333444555666777888'
+                assert b''.join(e_check_list) == b'111222333444555666777888'
                 break
             else:
-                print 'Waiting for %s services to initialize' % (
+                print('Waiting for %s services to initialize' % (
                     str(4 - len(e_ids) / 8.0),
-                )
+                ))
                 for e_id in e_ids:
                     (tmp,
                      e_check,
                      e_id_check) = self.__api.recv_async(trans_id=e_id)
                     assert e_id == e_id_check
                 null_id = self.__api.recv_async(timeout=1000)[2]
-                assert null_id == (chr(0) * 16)
-        print 'messaging sequence2 end ' + self.__name
+                assert null_id == b'\0' * 16
+        print('messaging sequence2 end %s' % self.__name)
         # start sequence3
-        self.__api.send_async(self.__api.prefix() + 'sequence3', 'start')
+        self.__api.send_async(self.__api.prefix() + 'sequence3', b'start')
         self.__api.return_(command, name, pattern,
-                           '', 'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, pid)
 
     def __sequence3_f1(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         request_i = int(request)
         if request_i == 4:
-            return 'done'
+            return b'done'
         request_new = request_i + 2 # two steps forward
-        self.__api.forward_(command, self.__api.prefix() + 'f2',
-                            request_info, str(request_new),
+        self.__api.forward_(command, self.__api.prefix() + 'f2', request_info,
+                            ('%d' % request_new).encode('ascii'),
                             timeout, priority, trans_id, pid)
                            
     def __sequence3_f2(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         request_i = int(request)
         request_new = request_i - 1 # one step back
-        self.__api.forward_(command, self.__api.prefix() + 'f1',
-                            request_info, str(request_new),
+        self.__api.forward_(command, self.__api.prefix() + 'f1', request_info,
+                            ('%d' % request_new).encode('ascii'),
                             timeout, priority, trans_id, pid)
 
     def __sequence3_g1(self, command, name, pattern, request_info, request,
                        timeout, priority, trans_id, pid):
         self.__api.return_(command, name, pattern,
-                           '', request + 'suffix', timeout, trans_id, pid)
+                           b'', request + b'suffix', timeout, trans_id, pid)
 
     def __sequence3(self, command, name, pattern, request_info, request,
                     timeout, priority, trans_id, pid):
-        print 'messaging sequence3 start ' + self.__name
-        assert request == 'start'
+        print('messaging sequence3 start %s' % self.__name)
+        assert request == b'start'
         test1_id = self.__api.send_async(
-            self.__api.prefix() + 'f1',  '0'
+            self.__api.prefix() + 'f1',  b'0'
         )
         (tmp, test1_check, test1_id_check) = self.__api.recv_async(
             trans_id=test1_id
         )
         assert test1_id_check == test1_id
-        assert test1_check == 'done'
+        assert test1_check == b'done'
         (tmp, test2_check, test2_id_check) = self.__api.send_sync(
-            self.__api.prefix() + 'g1',  'prefix_'
+            self.__api.prefix() + 'g1',  b'prefix_'
         )
-        assert test2_check == 'prefix_suffix'
-        print 'messaging sequence3 end ' + self.__name
+        assert test2_check == b'prefix_suffix'
+        print('messaging sequence3 end %s' % self.__name)
         # loop to find any infrequent problems, restart sequence1
         self.__api.send_async(
-            self.__api.prefix() + 'sequence1', 'start',
+            self.__api.prefix() + 'sequence1', b'start',
         )
         self.__api.return_(command, name, pattern,
-                           '', 'end', timeout, trans_id, pid)
+                           b'', b'end', timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

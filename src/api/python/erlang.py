@@ -104,7 +104,7 @@ class OtpErlangAtom(object):
             if size < 256:
                 return b_chr(_TAG_SMALL_ATOM_EXT) + b_chr(size) + self.value
             else:
-                return (b_chr(_TAG_ATOM_EXT) + struct.pack('>H', size) +
+                return (b_chr(_TAG_ATOM_EXT) + struct.pack(b'>H', size) +
                     self.value
                 )
         elif type(self.value) == unicode:
@@ -115,11 +115,11 @@ class OtpErlangAtom(object):
                     value_encoded
                 )
             else:
-                return (b_chr(_TAG_ATOM_UTF8_EXT) + struct.pack('>H', size) +
+                return (b_chr(_TAG_ATOM_UTF8_EXT) + struct.pack(b'>H', size) +
                     value_encoded
                 )
         else:
-            raise OutputException('unknown atom type')
+            raise OutputException(b'unknown atom type')
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.value))
     def __hash__(self):
@@ -137,18 +137,18 @@ class OtpErlangList(object):
             if length == 0:
                 return b_chr(_TAG_NIL_EXT)
             elif self.improper:
-                return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', length - 1) +
+                return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', length - 1) +
                     b''.join([_term_to_binary(element)
                               for element in self.value])
                 )
             else:
-                return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', length) +
+                return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', length) +
                     b''.join([_term_to_binary(element)
                               for element in self.value]) +
                     b_chr(_TAG_NIL_EXT)
                 )
         else:
-            raise OutputException('unknown list type')
+            raise OutputException(b'unknown list type')
     def __repr__(self):
         return '%s(%s,improper=%s)' % (
             self.__class__.__name__, repr(self.value), repr(self.improper)
@@ -166,15 +166,15 @@ class OtpErlangBinary(object):
         if type(self.value) == bytes:
             size = len(self.value)
             if self.bits != 8:
-                return (b_chr(_TAG_BIT_BINARY_EXT) + struct.pack('>I', size) +
+                return (b_chr(_TAG_BIT_BINARY_EXT) + struct.pack(b'>I', size) +
                     b_chr(self.bits) + self.value
                 )
             else:
-                return (b_chr(_TAG_BINARY_EXT) + struct.pack('>I', size) +
+                return (b_chr(_TAG_BINARY_EXT) + struct.pack(b'>I', size) +
                     self.value
                 )
         else:
-            raise OutputException('unknown binary type')
+            raise OutputException(b'unknown binary type')
     def __repr__(self):
         return '%s(%s,bits=%s)' % (
             self.__class__.__name__, repr(self.value), repr(self.bits)
@@ -208,7 +208,7 @@ class OtpErlangReference(object):
     def binary(self):
         size = len(self.id) / 4
         if size > 1:
-            return (b_chr(_TAG_NEW_REFERENCE_EXT) + struct.pack('>H', size) +
+            return (b_chr(_TAG_NEW_REFERENCE_EXT) + struct.pack(b'>H', size) +
                 self.node.binary() + self.creation + self.id
             )
         else:
@@ -269,29 +269,29 @@ class OtpErlangPid(object):
 
 def binary_to_term(data):
     if type(data) != bytes:
-        raise ParseException('not bytes input')
+        raise ParseException(b'not bytes input')
     size = len(data)
     if size <= 1:
-        raise ParseException('null input')
+        raise ParseException(b'null input')
     if b_ord(data[0]) != _TAG_VERSION:
-        raise ParseException('invalid version')
+        raise ParseException(b'invalid version')
     try:
         i, term = _binary_to_term(1, data)
         if i != size:
-            raise ParseException('unparsed data')
+            raise ParseException(b'unparsed data')
         return term
     except struct.error:
-        raise ParseException('missing data')
+        raise ParseException(b'missing data')
     except IndexError:
-        raise ParseException('missing data')
+        raise ParseException(b'missing data')
 
 def _binary_to_term(i, data):
     tag = b_ord(data[i])
     i += 1
     if tag == _TAG_NEW_FLOAT_EXT:
-        return (i + 8, struct.unpack('>d', data[i:i + 8])[0])
+        return (i + 8, struct.unpack(b'>d', data[i:i + 8])[0])
     elif tag == _TAG_BIT_BINARY_EXT:
-        j = struct.unpack('>I', data[i:i + 4])[0]
+        j = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         bits = b_ord(data[i])
         i += 1
@@ -301,19 +301,19 @@ def _binary_to_term(i, data):
     elif tag == _TAG_SMALL_INTEGER_EXT:
         return (i + 1, b_ord(data[i]))
     elif tag == _TAG_INTEGER_EXT:
-        return (i + 4, struct.unpack('>i', data[i:i + 4])[0])
+        return (i + 4, struct.unpack(b'>i', data[i:i + 4])[0])
     elif tag == _TAG_FLOAT_EXT:
         value = float(data[i:i + 31].partition(b_chr(0))[0])
         return (i + 31, value)
     elif tag == _TAG_ATOM_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0]
+        j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_REFERENCE_EXT or tag == _TAG_PORT_EXT:
         i, node = _binary_to_atom(i, data)
         id = data[i:i + 4]
         i += 4
-        creation = data[i]
+        creation = data[i:i + 1]
         i += 1
         if tag == _TAG_REFERENCE_EXT:
             return (i, OtpErlangReference(node, id, creation))
@@ -325,7 +325,7 @@ def _binary_to_term(i, data):
         i += 4
         serial = data[i:i + 4]
         i += 4
-        creation = data[i]
+        creation = data[i:i + 1]
         i += 1
         return (i, OtpErlangPid(node, id, serial, creation))
     elif tag == _TAG_SMALL_TUPLE_EXT or tag == _TAG_LARGE_TUPLE_EXT:
@@ -333,18 +333,18 @@ def _binary_to_term(i, data):
             arity = b_ord(data[i])
             i += 1
         elif tag == _TAG_LARGE_TUPLE_EXT:
-            arity = struct.unpack('>I', data[i:i + 4])[0]
+            arity = struct.unpack(b'>I', data[i:i + 4])[0]
             i += 4
         i, tmp = _binary_to_term_sequence(i, arity, data)
         return (i, tuple(tmp))
     elif tag == _TAG_NIL_EXT:
         return (i, [])
     elif tag == _TAG_STRING_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0]
+        j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         return (i + j, data[i:i + j])
     elif tag == _TAG_LIST_EXT:
-        arity = struct.unpack('>I', data[i:i + 4])[0]
+        arity = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         i, tmp = _binary_to_term_sequence(i, arity, data)
         i, tail = _binary_to_term(i, data)
@@ -353,7 +353,7 @@ def _binary_to_term(i, data):
             tmp = OtpErlangList(tmp, improper=True)
         return (i, tmp)
     elif tag == _TAG_BINARY_EXT:
-        j = struct.unpack('>I', data[i:i + 4])[0]
+        j = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         return (i + j, OtpErlangBinary(data[i:i + j], 8))
     elif tag == _TAG_SMALL_BIG_EXT or tag == _TAG_LARGE_BIG_EXT:
@@ -361,7 +361,7 @@ def _binary_to_term(i, data):
             j = b_ord(data[i])
             i += 1
         elif tag == _TAG_LARGE_BIG_EXT:
-            j = struct.unpack('>I', data[i:i + 4])[0]
+            j = struct.unpack(b'>I', data[i:i + 4])[0]
             i += 4
         sign = b_ord(data[i])
         bignum = 0
@@ -373,23 +373,23 @@ def _binary_to_term(i, data):
         i += 1
         return (i + j, bignum)
     elif tag == _TAG_NEW_FUN_EXT:
-        size = struct.unpack('>I', data[i:i + 4])[0]
+        size = struct.unpack(b'>I', data[i:i + 4])[0]
         return (i + size, OtpErlangFunction(tag, data[i:i + size]))
     elif tag == _TAG_EXPORT_EXT:
         old_i = i
         i, module = _binary_to_atom(i, data)
         i, function = _binary_to_atom(i, data)
         if b_ord(data[i]) != _TAG_SMALL_INTEGER_EXT:
-            raise ParseException('invalid small integer tag')
+            raise ParseException(b'invalid small integer tag')
         i += 1
         arity = b_ord(data[i])
         i += 1
         return (i, OtpErlangFunction(tag, data[old_i:i]))
     elif tag == _TAG_NEW_REFERENCE_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0] * 4
+        j = struct.unpack(b'>H', data[i:i + 2])[0] * 4
         i += 2
         i, node = _binary_to_atom(i, data)
-        creation = data[i]
+        creation = data[i:i + 1]
         i += 1
         return (i + j, OtpErlangReference(node, data[i: i + j], creation))
     elif tag == _TAG_SMALL_ATOM_EXT:
@@ -404,7 +404,7 @@ def _binary_to_term(i, data):
             tmp = OtpErlangAtom(atom_name)
         return (i + j, tmp)
     elif tag == _TAG_MAP_EXT:
-        arity = struct.unpack('>I', data[i:i + 4])[0]
+        arity = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         pairs = {}
         for arity_index in range(arity):
@@ -414,7 +414,7 @@ def _binary_to_term(i, data):
         return (i, pairs)
     elif tag == _TAG_FUN_EXT:
         old_i = i
-        numfree = struct.unpack('>I', data[i:i + 4])[0]
+        numfree = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         i, pid = _binary_to_pid(i, data)
         i, module = _binary_to_atom(i, data)
@@ -423,7 +423,7 @@ def _binary_to_term(i, data):
         i, free = _binary_to_term_sequence(i, numfree, data)
         return (i, OtpErlangFunction(tag, data[old_i:i]))
     elif tag == _TAG_ATOM_UTF8_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0]
+        j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict') 
         return (i + j, OtpErlangAtom(atom_name))
@@ -433,21 +433,21 @@ def _binary_to_term(i, data):
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
     elif tag == _TAG_COMPRESSED_ZLIB:
-        size_uncompressed = struct.unpack('>I', data[i:i + 4])[0]
+        size_uncompressed = struct.unpack(b'>I', data[i:i + 4])[0]
         if size_uncompressed == 0:
-            raise ParseException('compressed data null')
+            raise ParseException(b'compressed data null')
         i += 4
         data_compressed = data[i:]
         j = len(data_compressed)
         data_uncompressed = zlib.decompress(data_compressed)
         if size_uncompressed != len(data_uncompressed):
-            raise ParseException('compression corrupt')
+            raise ParseException(b'compression corrupt')
         (i_new, term) = _binary_to_term(0, data_uncompressed)
         if i_new != size_uncompressed:
-            raise ParseException('unparsed data')
+            raise ParseException(b'unparsed data')
         return (i + j, term)
     else:
-        raise ParseException('invalid tag')
+        raise ParseException(b'invalid tag')
 
 def _binary_to_term_sequence(i, arity, data):
     sequence = []
@@ -462,9 +462,9 @@ def _binary_to_integer(i, data):
     if tag == _TAG_SMALL_INTEGER_EXT:
         return (i + 1, b_ord(data[i]))
     elif tag == _TAG_INTEGER_EXT:
-        return (i + 4, struct.unpack('>i', data[i:i + 4])[0])
+        return (i + 4, struct.unpack(b'>i', data[i:i + 4])[0])
     else:
-        raise ParseException('invalid integer tag')
+        raise ParseException(b'invalid integer tag')
 
 def _binary_to_pid(i, data):
     tag = b_ord(data[i])
@@ -475,17 +475,17 @@ def _binary_to_pid(i, data):
         i += 4
         serial = data[i:i + 4]
         i += 4
-        creation = data[i]
+        creation = data[i:i + 1]
         i += 1
         return (i, OtpErlangPid(node, id, serial, creation))
     else:
-        raise ParseException('invalid pid tag')
+        raise ParseException(b'invalid pid tag')
 
 def _binary_to_atom(i, data):
     tag = b_ord(data[i])
     i += 1
     if tag == _TAG_ATOM_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0]
+        j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_CACHE_REF:
@@ -495,7 +495,7 @@ def _binary_to_atom(i, data):
         i += 1
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_UTF8_EXT:
-        j = struct.unpack('>H', data[i:i + 2])[0]
+        j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict') 
         return (i + j, OtpErlangAtom(atom_name))
@@ -505,7 +505,7 @@ def _binary_to_atom(i, data):
         atom_name = unicode(data[i:i + j], encoding='utf-8', errors='strict')
         return (i + j, OtpErlangAtom(atom_name))
     else:
-        raise ParseException('invalid atom tag')
+        raise ParseException(b'invalid atom tag')
 
 # term_to_binary
 
@@ -517,12 +517,12 @@ def term_to_binary(term, compressed=False):
         if compressed is True:
             compressed = 6
         if compressed < 0 or compressed > 9:
-            raise InputException('compressed in [0..9]')
+            raise InputException(b'compressed in [0..9]')
         data_compressed = zlib.compress(data_uncompressed, compressed)
         size_uncompressed = len(data_uncompressed)
         return (
             b_chr(_TAG_VERSION) + b_chr(_TAG_COMPRESSED_ZLIB) +
-            struct.pack('>I', size_uncompressed) + data_compressed
+            struct.pack(b'>I', size_uncompressed) + data_compressed
         )
 
 def _term_to_binary(term):
@@ -557,16 +557,16 @@ def _term_to_binary(term):
     elif isinstance(term, OtpErlangPid):
         return term.binary()
     else:
-        raise OutputException('unknown python type')
+        raise OutputException(b'unknown python type')
 
 def _string_to_binary(term):
     arity = len(term)
     if arity == 0:
         return b_chr(_TAG_NIL_EXT)
     elif arity < 65536:
-        return b_chr(_TAG_STRING_EXT) + struct.pack('>H', arity) + term
+        return b_chr(_TAG_STRING_EXT) + struct.pack(b'>H', arity) + term
     else:
-        return (b_chr(_TAG_LIST_EXT) + struct.pack('>I', arity) +
+        return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', arity) +
             b''.join([b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(b_ord(c))
                       for c in term]) +
             b_chr(_TAG_NIL_EXT)
@@ -579,7 +579,7 @@ def _tuple_to_binary(term):
             b''.join([_term_to_binary(element) for element in term])
         )
     else:
-        return (b_chr(_TAG_LARGE_TUPLE_EXT) + struct.pack('>I', arity) +
+        return (b_chr(_TAG_LARGE_TUPLE_EXT) + struct.pack(b'>I', arity) +
             b''.join([_term_to_binary(element) for element in term])
         )
 
@@ -587,7 +587,7 @@ def _integer_to_binary(term):
     if 0 <= term <= 255:
         return b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(term)
     else:
-        return b_chr(_TAG_INTEGER_EXT) + struct.pack('>i', term)
+        return b_chr(_TAG_INTEGER_EXT) + struct.pack(b'>i', term)
 
 def _long_to_binary(term):
     if -2147483648 <= term <= 2147483647:
@@ -612,18 +612,18 @@ def _bignum_to_binary(term):
         )
     else:
         return (b_chr(_TAG_LARGE_BIG_EXT) +
-            struct.pack('>I', size) + b''.join(L)
+            struct.pack(b'>I', size) + b''.join(L)
         )
 
 def _bignum_bit_length(bignum):
     return len(bin(bignum).lstrip('-0b'))
 
 def _float_to_binary(term):
-    return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack('>d', term)
+    return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack(b'>d', term)
 
 def _dict_to_binary(term):
     arity = len(term)
-    return (b_chr(_TAG_MAP_EXT) + struct.pack('>I', arity) +
+    return (b_chr(_TAG_MAP_EXT) + struct.pack(b'>I', arity) +
         b''.join([_term_to_binary(key) + _term_to_binary(value)
                   for key, value in term.items()])
     )

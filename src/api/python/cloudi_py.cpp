@@ -39,6 +39,13 @@
  */
 
 #include <Python.h>
+#if PY_MAJOR_VERSION >= 3
+#define PYTHON_VERSION_3_COMPATIBLE
+#endif
+#if (PY_MAJOR_VERSION > 3) || \
+    ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 3))
+#define PYTHON_VERSION_3_3_COMPATIBLE
+#endif
 #include "cloudi.hpp"
 #include <string>
 #include <cstring>
@@ -386,8 +393,7 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
 };
 
 static PyTypeObject python_cloudi_instance_type = {
-    PyObject_HEAD_INIT(NULL)
-    0,                                       // ob_size
+    PyVarObject_HEAD_INIT(NULL, 0)
     "libcloudi_py.cloudi_c",                 // tp_name
     sizeof(python_cloudi_instance_object),   // tp_basicsize
     0,                                       // tp_itemsize
@@ -395,7 +401,7 @@ static PyTypeObject python_cloudi_instance_type = {
     0,                                       // tp_print
     0,                                       // tp_getattr
     0,                                       // tp_setattr
-    0,                                       // tp_compare
+    0,                                       // tp_compare (now tp_reserved)
     0,                                       // tp_repr
     0,                                       // tp_as_number
     0,                                       // tp_as_sequence
@@ -448,16 +454,38 @@ static PyMethodDef python_cloudi_methods[] = {
     {NULL, NULL, 0, NULL} // Sentinel
 };
 
-PyMODINIT_FUNC
-initlibcloudi_py(void)
-{
-    if (PyType_Ready(&python_cloudi_instance_type) < 0)
-        return;
+#ifdef PYTHON_VERSION_3_COMPATIBLE
+#define MODINIT_FUNC_DECLARE(name) PyMODINIT_FUNC PyInit_##name(void)
+#define MODINIT_FUNC_RETURN_NULL return 0
+static struct PyModuleDef python_cloudi_module = {
+    PyModuleDef_HEAD_INIT,
+    "libcloudi_py",
+    "Python interface to the C++ CloudI API",
+    sizeof(python_cloudi_instance_object),
+    python_cloudi_methods,
+    0,
+    0,
+    0,
+    0
+};
+#else
+#define MODINIT_FUNC_DECLARE(name) PyMODINIT_FUNC init##name(void)
+#define MODINIT_FUNC_RETURN_NULL return
+#endif
 
+MODINIT_FUNC_DECLARE(libcloudi_py)
+{
+#ifdef PYTHON_VERSION_3_COMPATIBLE
+    PyObject * m = PyModule_Create(&python_cloudi_module);
+#else
     PyObject * m = Py_InitModule3("libcloudi_py", python_cloudi_methods,
                                   "Python interface to the C++ CloudI API");
+#endif
     if (m == NULL)
-        return;
+        MODINIT_FUNC_RETURN_NULL;
+
+    if (PyType_Ready(&python_cloudi_instance_type) < 0)
+        MODINIT_FUNC_RETURN_NULL;
 
     Py_INCREF(&python_cloudi_instance_type);
     PyModule_AddObject(m, "cloudi_c",
@@ -480,7 +508,18 @@ initlibcloudi_py(void)
     Py_INCREF(python_cloudi_invalid_input_exception);
     PyModule_AddObject(m, "invalid_input_exception",
                        python_cloudi_invalid_input_exception);
+#ifdef PYTHON_VERSION_3_COMPATIBLE
+    return m;
+#else
+    return;
+#endif
 }
+
+// provide custom macro equivalents of (no nested scope):
+// Py_BLOCK_THREADS
+// Py_UNBLOCK_THREADS
+// Py_BEGIN_ALLOW_THREADS
+// Py_END_ALLOW_THREADS
 
 // callback class
 #define THREADS_BLOCK       PyEval_RestoreThread(m_thread_state); \
@@ -491,6 +530,12 @@ initlibcloudi_py(void)
 #define THREADS_BEGIN       object->thread_state = PyEval_SaveThread()
 #define THREADS_END         PyEval_RestoreThread(object->thread_state); \
                             object->thread_state = 0
+
+#ifdef PYTHON_VERSION_3_COMPATIBLE
+#define BUILDVALUE_BYTES "y#"
+#else
+#define BUILDVALUE_BYTES "s#"
+#endif
 
 class callback : public CloudI::API::function_object_c
 {
@@ -526,7 +571,11 @@ class callback : public CloudI::API::function_object_c
                                   uint32_t const pid_size)
         {
             THREADS_BLOCK;
-            PyObject * args = Py_BuildValue("(i,s,s,s#,s#,I,i,s#,s#)",
+            PyObject * args = Py_BuildValue("(i,s,s,"
+                                            BUILDVALUE_BYTES ","
+                                            BUILDVALUE_BYTES ",I,i,"
+                                            BUILDVALUE_BYTES ","
+                                            BUILDVALUE_BYTES ")",
                                             command, name, pattern,
                                             request_info, request_info_size,
                                             request, request_size, timeout,
@@ -542,17 +591,15 @@ class callback : public CloudI::API::function_object_c
             Py_DECREF(args);
             if (result == NULL)
             {
-                PyObject * exception = PyErr_Occurred();
-                PyObject * exception_name_object =
-                    PyObject_GetAttrString(exception, "__name__");
-                if (exception_name_object == NULL)
+                PyTypeObject * exception =
+                    reinterpret_cast<PyTypeObject *>(PyErr_Occurred());
+                if (exception == NULL ||
+                    exception->tp_name == NULL)
                 {
-                    PyErr_Print();
                     THREADS_UNBLOCK;
                     return;
                 }
-                char * exception_name =
-                    PyString_AsString(exception_name_object);
+                char const * exception_name = exception->tp_name;
                 bool const return_sync_exception =
                     (::strcmp(exception_name, "return_sync_exception") == 0);
                 bool const return_async_exception =
@@ -561,7 +608,6 @@ class callback : public CloudI::API::function_object_c
                     (::strcmp(exception_name, "forward_sync_exception") == 0);
                 bool const forward_async_exception =
                     (::strcmp(exception_name, "forward_async_exception") == 0);
-                Py_DECREF(exception_name_object);
                 bool exception_invalid = false;
                 if (command == CloudI::API::SYNC &&
                     return_sync_exception)
@@ -628,30 +674,91 @@ class callback : public CloudI::API::function_object_c
                 if (PyTuple_Check(result) &&
                     PyTuple_Size(result) == 2)
                 {
-                    if (! PyArg_ParseTuple(result, "s#s#",
+                    Py_ssize_t response_info_size_tmp = 0;
+                    Py_ssize_t response_size_tmp = 0;
+                    if (! PyArg_ParseTuple(result,
+                                           BUILDVALUE_BYTES
+                                           BUILDVALUE_BYTES,
                                            &response_info,
-                                           &response_info_size,
+                                           &response_info_size_tmp,
                                            &response,
-                                           &response_size))
+                                           &response_size_tmp))
                     {
                         PyErr_Print();
                         result_invalid = true;
                     }
+                    else if (response_info_size_tmp < 0 ||
+                             response_info_size_tmp > 0xffffffff ||
+                             response_size_tmp < 0 ||
+                             response_size_tmp > 0xffffffff)
+                    {
+                        result_invalid = true;
+                    }
+                    else
+                    {
+                        response_info_size =
+                            static_cast<uint32_t>(response_info_size_tmp);
+                        response_size =
+                            static_cast<uint32_t>(response_size_tmp);
+                    }
                 }
-                else if (PyString_Check(result) ||
-                         PyUnicode_Check(result))
+                else if (PyBytes_Check(result))
                 {
-                    Py_ssize_t response_size_tmp;
-                    if (PyString_AsStringAndSize(result,
-                                                 &response,
-                                                 &response_size_tmp))
+                    Py_ssize_t response_size_tmp = 0;
+                    if (PyBytes_AsStringAndSize(result,
+                                                &response,
+                                                &response_size_tmp))
+                    {
+                        PyErr_Print();
+                        result_invalid = true;
+                    }
+                    else if (response_size_tmp < 0 ||
+                             response_size_tmp > 0xffffffff)
+                    {
+                        result_invalid = true;
+                    }
+                    else
+                    {
+                        response_size =
+                            static_cast<uint32_t>(response_size_tmp);
+                    }
+                }
+                else if (PyUnicode_Check(result))
+                {
+                    Py_ssize_t response_size_tmp = 0;
+#ifdef PYTHON_VERSION_3_3_COMPATIBLE
+                    response = PyUnicode_AsUTF8AndSize(result,
+                                                       &response_size_tmp);
+                    if (response == NULL)
+                    {
+                        PyErr_Print();
+                        result_invalid = true;
+                    }
+#else // before python 3.3
+                    PyObject * result_new = PyUnicode_AsUTF8String(result);
+                    if (result_new == NULL)
                     {
                         PyErr_Print();
                         result_invalid = true;
                     }
                     else
                     {
-                        response_size = response_size_tmp & 0xffffffff;
+                        response_size_tmp =
+                            PyUnicode_GET_DATA_SIZE(result_new);
+                        response =
+                            const_cast<char *>(PyUnicode_AS_DATA(result_new));
+                        Py_DECREF(result_new);
+                    }
+#endif
+                    if (response_size_tmp < 0 ||
+                        response_size_tmp > 0xffffffff)
+                    {
+                        result_invalid = true;
+                    }
+                    else
+                    {
+                        response_size =
+                            static_cast<uint32_t>(response_size_tmp);
                     }
                 }
                 else
@@ -781,7 +888,9 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
     int8_t priority = object->api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ss#|Is#B:send_async",
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs,
+                                      "s" BUILDVALUE_BYTES "|I"
+                                      BUILDVALUE_BYTES "B:send_async",
                                       const_cast<char**>(kwlist),
                                       &name, &request, &request_size, &timeout,
                                       &request_info, &request_info_size,
@@ -804,7 +913,7 @@ python_cloudi_send_async(PyObject * self, PyObject * args, PyObject * kwargs)
         return NULL;
     }
     PY_ASSERT(object->api->get_trans_id_count() == 1);
-    return Py_BuildValue("s#", object->api->get_trans_id(0), 16);
+    return Py_BuildValue(BUILDVALUE_BYTES, object->api->get_trans_id(0), 16);
 }
 
 static PyObject *
@@ -821,7 +930,9 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
     int8_t priority = object->api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ss#|Is#B:send_sync",
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs,
+                                      "s" BUILDVALUE_BYTES "|I"
+                                      BUILDVALUE_BYTES "B:send_sync",
                                       const_cast<char**>(kwlist),
                                       &name, &request, &request_size, &timeout,
                                       &request_info, &request_info_size,
@@ -844,7 +955,9 @@ python_cloudi_send_sync(PyObject * self, PyObject * args, PyObject * kwargs)
         return NULL;
     }
     PY_ASSERT(object->api->get_trans_id_count() == 1);
-    return Py_BuildValue("(s#,s#,s#)",
+    return Py_BuildValue("(" BUILDVALUE_BYTES ","
+                         BUILDVALUE_BYTES ","
+                         BUILDVALUE_BYTES ")",
                          object->api->get_response_info(),
                          object->api->get_response_info_size(),
                          object->api->get_response(),
@@ -866,7 +979,9 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
     int8_t priority = object->api->priority_default();
     static char const * kwlist[] = {
         "timeout", "request_info", "priority", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "ss#|Is#B:mcast_async",
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs,
+                                      "s" BUILDVALUE_BYTES "|I"
+                                      BUILDVALUE_BYTES "B:mcast_async",
                                       const_cast<char**>(kwlist),
                                       &name, &request, &request_size, &timeout,
                                       &request_info, &request_info_size,
@@ -888,7 +1003,7 @@ python_cloudi_mcast_async(PyObject * self, PyObject * args, PyObject * kwargs)
         python_error(result);
         return NULL;
     }
-    return Py_BuildValue("s#", object->api->get_trans_id(0),
+    return Py_BuildValue(BUILDVALUE_BYTES, object->api->get_trans_id(0),
                          object->api->get_trans_id_count() * 16);
 }
 
@@ -908,7 +1023,9 @@ python_cloudi_forward_async(PyObject * self, PyObject * args)
     uint32_t trans_id_size = 0;
     char const * pid;
     uint32_t pid_size = 0;
-    if (! PyArg_ParseTuple(args, "ss#s#IBs#s#:forward_async",
+    if (! PyArg_ParseTuple(args,
+                           "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
+                           BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_async",
                            &name, &request_info, &request_info_size,
                            &request, &request_size, &timeout, &priority,
                            &trans_id, &trans_id_size, &pid, &pid_size))
@@ -954,7 +1071,9 @@ python_cloudi_forward_sync(PyObject * self, PyObject * args)
     uint32_t trans_id_size = 0;
     char const * pid;
     uint32_t pid_size = 0;
-    if (! PyArg_ParseTuple(args, "ss#s#IBs#s#:forward_sync",
+    if (! PyArg_ParseTuple(args,
+                           "s" BUILDVALUE_BYTES BUILDVALUE_BYTES "IB"
+                           BUILDVALUE_BYTES BUILDVALUE_BYTES ":forward_sync",
                            &name, &request_info, &request_info_size,
                            &request, &request_size, &timeout, &priority,
                            &trans_id, &trans_id_size, &pid, &pid_size))
@@ -1000,7 +1119,9 @@ python_cloudi_return_async(PyObject * self, PyObject * args)
     uint32_t trans_id_size = 0;
     char const * pid;
     uint32_t pid_size = 0;
-    if (! PyArg_ParseTuple(args, "sss#s#Is#s#:return_async",
+    if (! PyArg_ParseTuple(args,
+                           "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
+                           BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_async",
                            &name, &pattern, &response_info, &response_info_size,
                            &response, &response_size, &timeout,
                            &trans_id, &trans_id_size, &pid, &pid_size))
@@ -1046,7 +1167,9 @@ python_cloudi_return_sync(PyObject * self, PyObject * args)
     uint32_t trans_id_size = 0;
     char const * pid;
     uint32_t pid_size = 0;
-    if (! PyArg_ParseTuple(args, "sss#s#Is#s#:return_sync",
+    if (! PyArg_ParseTuple(args,
+                           "ss" BUILDVALUE_BYTES BUILDVALUE_BYTES "I"
+                           BUILDVALUE_BYTES BUILDVALUE_BYTES ":return_sync",
                            &name, &pattern, &response_info, &response_info_size,
                            &response, &response_size, &timeout,
                            &trans_id, &trans_id_size, &pid, &pid_size))
@@ -1087,7 +1210,8 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
     bool consume = true;
     static char const * kwlist[] = {
         "timeout", "trans_id", "consume", NULL};
-    if (! PyArg_ParseTupleAndKeywords(args, kwargs, "|Is#b:recv_async",
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs,
+                                      "|I" BUILDVALUE_BYTES "b:recv_async",
                                       const_cast<char**>(kwlist),
                                       &timeout, &trans_id, &trans_id_size,
                                       &consume))
@@ -1109,7 +1233,9 @@ python_cloudi_recv_async(PyObject * self, PyObject * args, PyObject * kwargs)
         return NULL;
     }
     PY_ASSERT(object->api->get_trans_id_count() == 1);
-    return Py_BuildValue("(s#,s#,s#)",
+    return Py_BuildValue("(" BUILDVALUE_BYTES ","
+                         BUILDVALUE_BYTES ","
+                         BUILDVALUE_BYTES ")",
                          object->api->get_response_info(),
                          object->api->get_response_info_size(),
                          object->api->get_response(),

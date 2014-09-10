@@ -62,15 +62,15 @@ class _Task(threading.Thread):
         # (i.e., otherwise the sending thread could receive the sent
         #  message, with this test ZeroMQ configuration)
         if self.__index == 0:
-            print 'zeromq zigzag start'
+            print('zeromq zigzag start')
             self.__api.send_async('/tests/zeromq/zigzag_start',
-                                  'magic', request_info='amazing')
-            print 'zeromq chain_inproc start'
+                                  b'magic', request_info=b'amazing')
+            print('zeromq chain_inproc start')
             self.__api.send_async('/tests/zeromq/chain_inproc_start',
-                                  'inproc', request_info='process')
-            print 'zeromq chain_ipc start'
+                                  b'inproc', request_info=b'process')
+            print('zeromq chain_ipc start')
             self.__api.send_async('/tests/zeromq/chain_ipc_start',
-                                  'ipc', request_info='pipes')
+                                  b'ipc', request_info=b'pipes')
         else:
             self.__api.subscribe('zigzag_finish',
                                  self.zigzag_finish)
@@ -79,34 +79,34 @@ class _Task(threading.Thread):
             self.__api.subscribe('chain_ipc_finish',
                                  self.chain_ipc_finish)
         result = self.__api.poll()
-        print 'exited thread:', result
+        print('exited thread: %d' % result)
 
     def zigzag_finish(self, command, name, pattern,
                       request_info, request,
                       timeout, priority, trans_id, pid):
-        assert request_info == 'amazing'
-        assert request == 'magic'
-        print 'zeromq zigzag end'
+        assert request_info == b'amazing'
+        assert request == b'magic'
+        print('zeromq zigzag end')
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, trans_id, pid)
+                           b'', b'done', timeout, trans_id, pid)
 
     def chain_inproc_finish(self, command, name, pattern,
                             request_info, request,
                             timeout, priority, trans_id, pid):
-        assert request_info == 'process'
-        assert request == 'inproc'
-        print 'zeromq chain_inproc end'
+        assert request_info == b'process'
+        assert request == b'inproc'
+        print('zeromq chain_inproc end')
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, trans_id, pid)
+                           b'', b'done', timeout, trans_id, pid)
 
     def chain_ipc_finish(self, command, name, pattern,
                          request_info, request,
                          timeout, priority, trans_id, pid):
-        assert request_info == 'pipes'
-        assert request == 'ipc'
-        print 'zeromq chain_ipc end'
+        assert request_info == b'pipes'
+        assert request == b'ipc'
+        print('zeromq chain_ipc end')
         self.__api.return_(command, name, pattern,
-                           '', 'done', timeout, trans_id, pid)
+                           b'', b'done', timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

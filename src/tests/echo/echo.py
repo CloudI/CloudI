@@ -62,16 +62,16 @@ class Task(threading.Thread):
             self.__api.subscribe('echo/get', self.__request)
 
             result = self.__api.poll()
-            print >> sys.stderr, 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def __request(self, command, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
         if request == '':
             return 'echo'
         else:
-            print 'echo: %s' % request
+            print('echo: %s' % request)
             if request_info == '':
                 return request
             else:

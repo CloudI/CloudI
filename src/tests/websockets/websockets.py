@@ -65,20 +65,22 @@ class Task(threading.Thread):
                                  self.__disconnect)
 
             result = self.__api.poll()
-            print >> sys.stderr, 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def __connect(self, command, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
         assert request == 'CONNECT'
-        print "connect:", self.__api.info_key_value_parse(request_info)
+        print('connect: %s' %
+              str(self.__api.info_key_value_parse(request_info)))
         return 'got connect! yay!'
 
     def __disconnect(self, command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid):
         assert request == 'DISCONNECT'
-        print "disconnect:", self.__api.info_key_value_parse(request_info)
+        print('disconnect: %s' %
+              str(self.__api.info_key_value_parse(request_info)))
         return ''
 
     def __request(self, command, name, pattern, request_info, request,
@@ -96,11 +98,11 @@ class Task(threading.Thread):
                                            'notification: got "' +
                                            request + '" 1 second ago')
         if len(trans_ids) == 0:
-            print 'websockets: (no websockets connected?)'
+            print('websockets: (no websockets connected?)')
         else:
             for check in trans_ids:
                 (tmp, response, tmp) = self.__api.recv_async(trans_id=check)
-                print 'websockets:', response
+                print('websockets: %s' % str(response))
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

@@ -60,9 +60,9 @@ class _Task(threading.Thread):
             self.__api.subscribe("python", self.flood)
 
             result = self.__api.poll()
-            print 'exited thread:', result
+            print('exited thread: %d' % result)
         except:
-            traceback.print_exc(file=sys.stdout)
+            traceback.print_exc(file=sys.stderr)
 
     def flood(self, command, name, pattern, request_info, request,
               timeout, priority, trans_id, pid):
