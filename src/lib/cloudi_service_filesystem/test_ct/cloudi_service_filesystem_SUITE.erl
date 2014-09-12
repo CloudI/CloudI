@@ -78,9 +78,9 @@
 -define(WRITABLE_DIRECTORY, "/tmp/").
 -define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
 -define(WRITABLE_FILEPATH, ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
--define(TIMEOUT, 960000).
--define(REFRESH, 2400). % ((?TIMEOUT * 2.5) div 1000)
--define(REFRESH_STRING, "2400").
+-define(TIMEOUT, 1920000).
+-define(REFRESH, 4800). % ((?TIMEOUT * 2.5) div 1000)
+-define(REFRESH_STRING, "4800").
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
