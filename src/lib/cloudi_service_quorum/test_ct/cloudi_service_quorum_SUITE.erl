@@ -36,7 +36,7 @@
 %-define(NUMTESTS, 10000).
 %-define(TIMEOUT_MAX, 3600000). % ms (1 hour)
 -define(NUMTESTS, 1).
--define(TIMEOUT_MAX, 300000). % ms (5 minutes)
+-define(TIMEOUT_MAX, 600000). % ms (10 minutes)
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
