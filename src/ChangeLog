@@ -1,6 +1,38 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve fix (done on 8/31) to make cloudi_service_init/3 completion
+      and aspects_init_after completion a requirement before an internal
+      service start is complete and to make sure the poll function has been
+      called before an external service start is complete
+        * The fix makes sure an error during service initialization is
+          passed back to the caller of cloudi_service_api:services_add/2 or
+          the cloudi_core_i_configurator process when the error occurs
+          within external source code (no race condition due to the
+          service process waiting for the cloudi_core_i_configurator to
+          monitor the process)
+    * Add get_status/2 and get_status/1 functions to both
+      cloudi_core_i_services_internal and
+      cloudi_core_i_services_external for the current process status
+      (similar to sys:get_status/2 and sys:get_status/1)
+    * Change the cloudi_core application supervisor to be one_for_all
+      (it is better to fail-fast when the CloudI configuration file
+       causes cloudi_core_i_configurator to crash)
+    * Make the internal service duo_mode pid handle system messages for
+      the sys module
+    * Add the dynamic request_rate configuration argument to
+      the cloudi_service_request_rate test
+    * Add the use_content_disposition cloudi_service_filesystem configuration
+      argument and make it default to false
+    * Fix the scope service configuration option formatting when the
+      service configuration is provided by the CloudI Service API
+    * Fix a potential race with a lazy destination refresh in an internal
+      service when a refresh occurs during the execution of
+      cloudi_service_init/3 in a way that prevents future updates
+    * Update cpg
+
 2014-09-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Changes for the Python CloudI API to work with Python version 3

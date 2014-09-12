@@ -58,6 +58,7 @@
 %% external interface
 -export([start_link/0,
          monitor/10,
+         initialize/1,
          shutdown/2,
          restart/2,
          search/2,
@@ -133,6 +134,19 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+-spec monitor(M :: module(),
+              F :: atom(),
+              A :: list(),
+              ProcessIndex :: non_neg_integer(),
+              CountProcess :: pos_integer(),
+              CountThread :: pos_integer(),
+              MaxR :: non_neg_integer(),
+              MaxT :: non_neg_integer(),
+              ServiceId :: cloudi_x_uuid:cloudi_x_uuid(),
+              Timeout :: infinity | pos_integer()) ->
+    {ok, list(pid())} |
+    {error, any()}.
+
 monitor(M, F, A, ProcessIndex, CountProcess,
         CountThread, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
@@ -146,6 +160,16 @@ monitor(M, F, A, ProcessIndex, CountProcess,
                                  ProcessIndex, CountProcess,
                                  CountThread, MaxR, MaxT, ServiceId},
                                 Timeout)).
+
+-spec initialize(Pids :: list(pid())) ->
+    ok.
+
+initialize([]) ->
+    ok;
+initialize([Pid | Pids])
+    when is_pid(Pid) ->
+    Pid ! initialize,
+    initialize(Pids).
 
 shutdown(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
@@ -203,6 +227,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess,
             #state{services = Services} = State) ->
     case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
+            Pids = [Pid],
             NewServices =
                 cloudi_x_key2value:store(ServiceId, Pid,
                     #service{service_m = M,
@@ -211,11 +236,11 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess,
                              process_index = ProcessIndex,
                              count_process = CountProcess,
                              count_thread = CountThread,
-                             pids = [Pid],
+                             pids = Pids,
                              monitor = erlang:monitor(process, Pid),
                              max_r = MaxR,
                              max_t = MaxT}, Services),
-            {reply, {ok, Pid}, State#state{services = NewServices}};
+            {reply, {ok, Pids}, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
@@ -488,25 +513,28 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p", [OldPid, Pid,
                               cloudi_x_uuid:uuid_to_string(ServiceId)]),
-            Monitor = erlang:monitor(process, Pid),
-            cloudi_x_key2value:store(ServiceId, Pid,
-                Service#service{pids = [Pid],
-                                monitor = Monitor,
+            Pids = [Pid],
+            NextServices = cloudi_x_key2value:store(ServiceId, Pid,
+                Service#service{pids = Pids,
+                                monitor = erlang:monitor(process, Pid),
                                 restart_count = 1,
-                                restart_times = [Now]}, Services);
+                                restart_times = [Now]}, Services),
+            ok = initialize(Pids),
+            NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
                       "                   (~p is now one of ~p)~n"
                       " ~p", [OldPid, Pids,
                               cloudi_x_uuid:uuid_to_string(ServiceId)]),
-            lists:foldl(fun(P, D) ->
-                Monitor = erlang:monitor(process, P),
+            NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
-                                    monitor = Monitor,
+                                    monitor = erlang:monitor(process, P),
                                     restart_count = 1,
                                     restart_times = [Now]}, D)
-            end, Services, Pids);
+            end, Services, Pids),
+            ok = initialize(Pids),
+            NextServices;
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p restart~n ~p",
                        [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
@@ -561,26 +589,29 @@ restart_stage2(#service{service_m = M,
                       "                   (~p is now ~p)~n"
                       " ~p", [R, T, OldPid, Pid,
                               cloudi_x_uuid:uuid_to_string(ServiceId)]),
-            Monitor = erlang:monitor(process, Pid),
-            cloudi_x_key2value:store(ServiceId, Pid,
-                Service#service{pids = [Pid],
-                                monitor = Monitor,
+            Pids = [Pid],
+            NextServices = cloudi_x_key2value:store(ServiceId, Pid,
+                Service#service{pids = Pids,
+                                monitor = erlang:monitor(process, Pid),
                                 restart_count = R,
                                 restart_times = [Now | RestartTimes]},
-                Services);
+                Services),
+            ok = initialize(Pids),
+            NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
                       "                   (~p is now one of ~p)~n"
                       " ~p", [R, T, OldPid, Pids,
                               cloudi_x_uuid:uuid_to_string(ServiceId)]),
-            lists:foldl(fun(P, D) ->
-                Monitor = erlang:monitor(process, P),
+            NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
-                                    monitor = Monitor,
+                                    monitor = erlang:monitor(process, P),
                                     restart_count = R,
                                     restart_times = [Now | RestartTimes]}, D)
-            end, Services, Pids);
+            end, Services, Pids),
+            ok = initialize(Pids),
+            NextServices;
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p restart~n ~p",
                        [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
@@ -711,21 +742,24 @@ pids_increase_loop(Count, ProcessIndex,
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [cloudi_x_uuid:uuid_to_string(ServiceId), Pid]),
-            cloudi_x_key2value:store(ServiceId, Pid,
+            Pids = [Pid],
+            NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 #service{service_m = M,
                          service_f = F,
                          service_a = A,
                          process_index = ProcessIndex,
                          count_process = CountProcess,
                          count_thread = CountThread,
-                         pids = [Pid],
+                         pids = Pids,
                          monitor = erlang:monitor(process, Pid),
                          max_r = MaxR,
-                         max_t = MaxT}, Services);
+                         max_t = MaxT}, Services),
+            ok = initialize(Pids),
+            NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [cloudi_x_uuid:uuid_to_string(ServiceId), Pids]),
-            lists:foldl(fun(P, D) ->
+            NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     #service{service_m = M,
                              service_f = F,
@@ -737,7 +771,9 @@ pids_increase_loop(Count, ProcessIndex,
                              monitor = erlang:monitor(process, P),
                              max_r = MaxR,
                              max_t = MaxT}, D)
-            end, Services, Pids);
+            end, Services, Pids),
+            ok = initialize(Pids),
+            NextServices;
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p",
                        [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),

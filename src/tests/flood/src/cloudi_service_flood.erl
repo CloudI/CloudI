@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_flood).
@@ -62,7 +62,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/2]).
 
--include("cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(FLOOD_INTERVAL,    1000). % ms, interval for creating load
 -define(STATUS_INTERVAL,  10000). % ms, report status

@@ -101,6 +101,10 @@
 -define(DEFAULT_USE_CONTENT_TYPES,        true). % see below:
         % Should the content-type ResponseInfo data be a guess based on
         % the file extension?
+-define(DEFAULT_USE_CONTENT_DISPOSITION, false). % see below:
+        % Should the content-disposition ResponseInfo data be set
+        % to provide the filename and mark the file data as an
+        % attachment to download
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % see below:
         % Uses the "/get" suffix on service name patterns used for
         % subscriptions as would be used from HTTP related senders like
@@ -116,6 +120,7 @@
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
         use_http_get_suffix :: boolean(),
+        use_content_disposition :: boolean(),
         toggle :: boolean(),
         files :: cloudi_x_trie:cloudi_x_trie(),
         content_type_lookup :: undefined | cloudi_x_trie:cloudi_x_trie()
@@ -283,19 +288,20 @@ notify_clear(Dispatcher, Name) ->
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     Defaults = [
-        {directory,              ?DEFAULT_DIRECTORY},
-        {refresh,                ?DEFAULT_REFRESH},
-        {cache,                  ?DEFAULT_CACHE},
-        {write_truncate,         ?DEFAULT_WRITE_TRUNCATE},
-        {write_append,           ?DEFAULT_WRITE_APPEND},
-        {notify_one,             ?DEFAULT_NOTIFY_ONE},
-        {notify_all,             ?DEFAULT_NOTIFY_ALL},
-        {notify_on_start,        ?DEFAULT_NOTIFY_ON_START},
-        {use_content_types,      ?DEFAULT_USE_CONTENT_TYPES},
-        {use_http_get_suffix,    ?DEFAULT_USE_HTTP_GET_SUFFIX}],
+        {directory,                    ?DEFAULT_DIRECTORY},
+        {refresh,                      ?DEFAULT_REFRESH},
+        {cache,                        ?DEFAULT_CACHE},
+        {write_truncate,               ?DEFAULT_WRITE_TRUNCATE},
+        {write_append,                 ?DEFAULT_WRITE_APPEND},
+        {notify_one,                   ?DEFAULT_NOTIFY_ONE},
+        {notify_all,                   ?DEFAULT_NOTIFY_ALL},
+        {notify_on_start,              ?DEFAULT_NOTIFY_ON_START},
+        {use_content_types,            ?DEFAULT_USE_CONTENT_TYPES},
+        {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
+        {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [DirectoryRaw, Refresh, Cache0, WriteTruncateL, WriteAppendL,
      NotifyOneL, NotifyAllL, NotifyOnStart,
-     UseContentTypes, UseHttpGetSuffix] =
+     UseContentTypes, UseContentDisposition, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
     true = (Refresh =:= undefined) orelse
@@ -328,6 +334,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         UseContentTypes =:= false ->
             undefined
     end,
+    true = is_boolean(UseContentDisposition),
     Toggle = true,
     Files1 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files0) ->
         case lists:member($*, FileName) of
@@ -336,7 +343,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                            mtime = MTime} = FileInfo,
                 case file_read_data(FileInfo, FilePath) of
                     {ok, Contents} ->
-                        Headers = file_headers(FilePath, ContentTypeLookup),
+                        Headers = file_headers(FilePath, ContentTypeLookup,
+                                               UseContentDisposition),
                         File = #file{contents = Contents,
                                      path = FilePath,
                                      headers = Headers,
@@ -374,7 +382,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 Files2;
             error ->
                 FilePath = filename:join(Directory, FileName),
-                Headers = file_headers(FilePath, ContentTypeLookup),
+                Headers = file_headers(FilePath, ContentTypeLookup,
+                                       UseContentDisposition),
                 file_add_write(FileName,
                                #file{contents = <<>>,
                                      path = FilePath,
@@ -402,7 +411,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 Files5;
             error ->
                 FilePath = filename:join(Directory, FileName),
-                Headers = file_headers(FilePath, ContentTypeLookup),
+                Headers = file_headers(FilePath, ContentTypeLookup,
+                                       UseContentDisposition),
                 file_add_write(FileName,
                                #file{contents = <<>>,
                                      path = FilePath,
@@ -478,6 +488,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                 toggle = Toggle,
                 files = FilesN,
                 use_http_get_suffix = UseHttpGetSuffix,
+                use_content_disposition = UseContentDisposition,
                 content_type_lookup = ContentTypeLookup}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
@@ -563,13 +574,15 @@ cloudi_service_handle_info(refresh,
                                   toggle = Toggle,
                                   files = Files,
                                   use_http_get_suffix = UseHttpGetSuffix,
+                                  use_content_disposition =
+                                      UseContentDisposition,
                                   content_type_lookup =
                                       ContentTypeLookup} = State,
                            Dispatcher) ->
     NewToggle = not Toggle,
     NewFiles = files_refresh(Directory, NewToggle,
-                             Files, ContentTypeLookup, UseHttpGetSuffix,
-                             Prefix, Dispatcher),
+                             Files, ContentTypeLookup, UseContentDisposition,
+                             UseHttpGetSuffix, Prefix, Dispatcher),
     erlang:send_after(Refresh * 1000, Service, refresh),
     {noreply, State#state{toggle = NewToggle,
                           files = NewFiles}};
@@ -1301,28 +1314,29 @@ file_read_data(#file_info{access = Access}, FilePath)
 file_read_data(_, _) ->
     {error, enoent}.
 
-file_headers(_, undefined) ->
-    [];
-file_headers(FilePath, ContentTypeLookup) ->
+file_header_content_disposition(FilePath, true) ->
+    [{<<"content-disposition">>,
+      erlang:iolist_to_binary(["attachment; filename=\"",
+                               filename:basename(FilePath), "\""])}];
+file_header_content_disposition(_, false) ->
+    [].
+
+file_headers(FilePath, undefined, UseContentDisposition) ->
+    file_header_content_disposition(FilePath, UseContentDisposition);
+file_headers(FilePath, ContentTypeLookup, UseContentDisposition) ->
+    Headers = file_header_content_disposition(FilePath, UseContentDisposition),
     case filename:extension(FilePath) of
         [$. | _] = Extension ->
             case cloudi_x_trie:find(Extension, ContentTypeLookup) of
                 error ->
-                    [{<<"content-disposition">>,
-                      erlang:iolist_to_binary(["attachment; filename=\"",
-                                               filename:basename(FilePath),
-                                               "\""])},
-                     {<<"content-type">>,
-                      <<"application/octet-stream">>}];
+                    [{<<"content-type">>, <<"application/octet-stream">>} |
+                     Headers];
                 {ok, {_, ContentType}} ->
-                    [{<<"content-disposition">>,
-                      erlang:iolist_to_binary(["attachment; filename=\"",
-                                               filename:basename(FilePath),
-                                               "\""])},
-                     {<<"content-type">>, ContentType}]
+                    [{<<"content-type">>, ContentType} |
+                     Headers]
             end;
         _ ->
-            []
+            Headers
     end.
 
 file_notify_send([], _, _) ->
@@ -1336,8 +1350,8 @@ file_notify_send([#file_notify{send = Send,
     file_notify_send(NotifyL, Contents, Dispatcher).
 
 files_refresh(Directory, Toggle,
-              Files0, ContentTypeLookup, UseHttpGetSuffix,
-              Prefix, Dispatcher) ->
+              Files0, ContentTypeLookup, UseContentDisposition,
+              UseHttpGetSuffix, Prefix, Dispatcher) ->
     Files2 = fold_files(Directory, fun(FilePath, FileName, FileInfo, Files1) ->
         #file_info{access = Access,
                    mtime = MTime} = FileInfo,
@@ -1371,7 +1385,8 @@ files_refresh(Directory, Toggle,
             error ->
                 case file_read_data(FileInfo, FilePath) of
                     {ok, Contents} ->
-                        Headers = file_headers(FilePath, ContentTypeLookup),
+                        Headers = file_headers(FilePath, ContentTypeLookup,
+                                               UseContentDisposition),
                         File = #file{contents = Contents,
                                      path = FilePath,
                                      headers = Headers,
@@ -1608,7 +1623,7 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
             case cloudi_service_filesystem_parse:datetime(IfRangeData) of
                 {error, _} ->
                     {410, undefined};
-                DateTime when MTime == DateTime ->
+                MTime ->
                     {206, RangeList};
                 _ ->
                     {410, undefined}

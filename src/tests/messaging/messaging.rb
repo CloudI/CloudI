@@ -360,7 +360,6 @@ if __FILE__ == $PROGRAM_NAME
                           timeout, priority, trans_id, pid)
                 $stdout.puts 'messaging sequence2 start ruby'
                 assert{request == 'start'}
-                sleep(0.5)
                 # the sending process is excluded from the services that
                 # receive the asynchronous message, so in this case, the
                 # receiving thread will not be called, despite the fact it

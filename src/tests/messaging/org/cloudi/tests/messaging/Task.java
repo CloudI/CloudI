@@ -466,7 +466,6 @@ public class Task implements Runnable
     {
         API.out.println("messaging sequence2 start java");
         assert new String(request) == "start";
-        Thread.sleep(500);
         // the sending process is excluded from the services that receive
         // the asynchronous message, so in this case, the receiving thread
         // will not be called, despite the fact it has subscribed to 'e',

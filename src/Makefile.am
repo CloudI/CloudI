@@ -802,6 +802,12 @@ dialyze: all \
               lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
               lib/keys1value/ebin/ \
+              tests/hexpi/ebin/ \
+              tests/flood/ebin/ \
+              tests/request_rate/ebin/ \
+              tests/messaging/ebin/ \
+              tests/msg_size/ebin/ \
+              tests/http_req/ebin/ \
               external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_dynamic_compile/ebin \

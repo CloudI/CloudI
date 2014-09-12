@@ -111,9 +111,9 @@ create_external(Protocol, SocketPath,
                                  TimeoutSync, TimeoutAsync, DestRefresh,
                                  DestDeny, DestAllow, ConfigOptions]) of
         {ok, Dispatcher} ->
-            result(Dispatcher);
+            result(Dispatcher, Timeout);
         {ok, Dispatcher, _} ->
-            result(Dispatcher);
+            result(Dispatcher, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -135,8 +135,8 @@ init([]) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-result(Service) ->
-    try cloudi_core_i_services_external:port(Service) of
+result(Service, Timeout) ->
+    try cloudi_core_i_services_external:port(Service, Timeout) of
         Port ->
             {ok, Service, Port}
     catch

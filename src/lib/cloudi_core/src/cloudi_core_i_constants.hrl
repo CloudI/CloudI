@@ -109,6 +109,14 @@
                 erlang:list_to_atom(?SCOPE_CUSTOM_PREFIX ++
                                     erlang:atom_to_list(Scope))
         end).
+-define(SCOPE_FORMAT(Name),
+        if
+            Name =:= ?SCOPE_DEFAULT ->
+                default;
+            true ->
+                ?SCOPE_CUSTOM_PREFIX ++ L = erlang:atom_to_list(Name),
+                erlang:list_to_atom(L)
+        end).
 
 % create the locally registered name for a cloudi_core_i_logger
 % formatter output gen_event module

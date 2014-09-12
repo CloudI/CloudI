@@ -47,7 +47,7 @@ sys.path.append(
     )
 )
 
-import threading, socket, types, traceback, time
+import threading, socket, types, traceback
 from cloudi import API
 
 class Task(threading.Thread):

@@ -59,7 +59,7 @@
          cloudi_service_map_reduce_recv/7,
          cloudi_service_map_reduce_info/3]).
 
--include("cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(NAME_PGSQL,          "/db/pgsql/cloudi_tests_proxy").
 -define(NAME_MYSQL,          "/db/mysql/cloudi_tests_proxy").

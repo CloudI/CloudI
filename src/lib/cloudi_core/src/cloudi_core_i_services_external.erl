@@ -55,7 +55,12 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/15, port/1, stdout/2, stderr/2]).
+-export([start_link/15,
+         port/2,
+         stdout/2,
+         stderr/2,
+         get_status/1,
+         get_status/2]).
 
 %% gen_fsm callbacks
 -export([init/1, handle_event/3,
@@ -64,6 +69,8 @@
 
 %% FSM States
 -export(['CONNECT'/2,
+         'INIT_WAIT'/2,
+         'INIT'/2,
          'HANDLE'/2]).
 
 -include("cloudi_logger.hrl").
@@ -95,6 +102,7 @@
         % unique state elements
         protocol,                      % tcp, udp, or local
         port,                          % port number used
+        initialize = false,            % ready to send init
         incoming_port,                 % udp incoming port
         listener,                      % tcp listener
         acceptor,                      % tcp acceptor
@@ -170,13 +178,16 @@ start_link(Protocol, SocketPath,
                                 ThreadIndex, ProcessIndex, ProcessCount,
                                 CommandLine, BufferSize, Timeout, Prefix,
                                 TimeoutAsync, TimeoutSync, DestRefresh,
-                                DestDeny, DestAllow, ConfigOptions], []);
+                                DestDeny, DestAllow, ConfigOptions],
+                               [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
     end.
 
-port(Process) when is_pid(Process) ->
-    gen_fsm:sync_send_all_state_event(Process, port).
+port(Dispatcher, Timeout)
+    when is_pid(Dispatcher), is_integer(Timeout) ->
+    gen_fsm:sync_send_all_state_event(Dispatcher, port,
+                                      Timeout + ?TIMEOUT_DELTA).
 
 stdout(OsPid, Output) ->
     % uses a fake module name and a fake line number
@@ -187,6 +198,12 @@ stderr(OsPid, Output) ->
     % uses a fake module name and a fake line number
     cloudi_core_i_logger_interface:error('STDERR', OsPid,
                                          filter_stream(Output), []).
+
+get_status(Dispatcher) ->
+    get_status(Dispatcher, 5000).
+
+get_status(Dispatcher, Timeout) ->
+    sys:get_status(Dispatcher, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_fsm
@@ -208,7 +225,6 @@ init([Protocol, SocketPath,
             cloudi_x_quickrand:seed(),
             NewConfigOptions =
                 check_init_receive(check_init_send(ConfigOptions)),
-            destination_refresh_first(DestRefresh, NewConfigOptions),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             {ok, TimestampType} = application:get_env(cloudi_core,
                                                       timestamp_type),
@@ -235,6 +251,8 @@ init([Protocol, SocketPath,
                     cloudi_x_cpg_data:get_empty_groups()
             end,
             process_flag(trap_exit, true),
+            destination_refresh_first(DestRefresh, Dispatcher,
+                                      NewConfigOptions),
             {ok, 'CONNECT',
              State#state{dispatcher = Dispatcher,
                          process_index = ProcessIndex,
@@ -263,21 +281,33 @@ init([Protocol, SocketPath,
     ?LOG_INFO("OS pid ~w connected", [OsPid]),
     {next_state, 'CONNECT', State#state{os_pid = OsPid}};
 
-'CONNECT'('init',
-          #state{dispatcher = Dispatcher,
-                 protocol = Protocol,
-                 process_index = ProcessIndex,
-                 process_count = ProcessCount,
-                 prefix = Prefix,
-                 timeout_async = TimeoutAsync,
-                 timeout_sync = TimeoutSync,
-                 options = #config_service_options{
-                     priority_default =
-                         PriorityDefault,
-                     request_timeout_adjustment =
-                         RequestTimeoutAdjustment,
-                     count_process_dynamic =
-                         CountProcessDynamic}} = State) ->
+'CONNECT'('init', #state{initialize = Ready} = State) ->
+    if
+        Ready =:= true ->
+            'INIT'('init', State);
+        Ready =:= false ->
+            {next_state, 'INIT_WAIT', State}
+    end;
+
+'CONNECT'(Request, State) ->
+    {stop, {'CONNECT', undefined_message, Request}, State}.
+
+'INIT_WAIT'(Request, State) ->
+    {stop, {'INIT_WAIT', undefined_message, Request}, State}.
+
+'INIT'('init',
+       #state{dispatcher = Dispatcher,
+              protocol = Protocol,
+              initialize = true,
+              process_index = ProcessIndex,
+              process_count = ProcessCount,
+              prefix = Prefix,
+              timeout_async = TimeoutAsync,
+              timeout_sync = TimeoutSync,
+              options = #config_service_options{
+                  priority_default = PriorityDefault,
+                  request_timeout_adjustment = RequestTimeoutAdjustment,
+                  count_process_dynamic = CountProcessDynamic}} = State) ->
     CountProcessDynamicFormat =
         cloudi_core_i_rate_based_configuration:
         count_process_dynamic_format(CountProcessDynamic),
@@ -305,10 +335,11 @@ init([Protocol, SocketPath,
     end,
     {next_state, 'HANDLE', State};
 
-'CONNECT'(Request, State) ->
-    {stop, {'CONNECT', undefined_message, Request}, State}.
+'INIT'(Request, State) ->
+    {stop, {'INIT', undefined_message, Request}, State}.
 
-'HANDLE'('polling', #state{service_state = ServiceState,
+'HANDLE'('polling', #state{dispatcher = Dispatcher,
+                           service_state = ServiceState,
                            command_line = CommandLine,
                            prefix = Prefix,
                            init_timeout = InitTimeout,
@@ -319,6 +350,8 @@ init([Protocol, SocketPath,
     erlang:cancel_timer(InitTimeout),
     case aspects_init(Aspects, CommandLine, Prefix, ServiceState) of
         {ok, NewServiceState} ->
+            ok = cloudi_core_i_configurator:
+                 service_initialized_process(Dispatcher),
             {next_state, 'HANDLE',
              process_queue(State#state{service_state = NewServiceState,
                                        init_timeout = undefined})};
@@ -650,6 +683,10 @@ init([Protocol, SocketPath,
 handle_sync_event(port, _, StateName, #state{port = Port} = State) ->
     {reply, Port, StateName, State};
 
+handle_sync_event(state, _, StateName, State) ->
+    Result = format_status(normal, [erlang:get(), State]),
+    {reply, Result, StateName, State};
+
 handle_sync_event(Event, _From, StateName, State) ->
     ?LOG_WARN("Unknown event \"~p\"", [Event]),
     {stop, {StateName, undefined_event, Event}, State}.
@@ -657,112 +694,6 @@ handle_sync_event(Event, _From, StateName, State) ->
 handle_event(Event, StateName, State) ->
     ?LOG_WARN("Unknown event \"~p\"", [Event]),
     {stop, {StateName, undefined_event, Event}, State}.
-
-handle_info({udp, Socket, _, Port, Data}, StateName,
-            #state{protocol = udp,
-                   incoming_port = Port,
-                   socket = Socket} = State) ->
-    inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
-    catch
-        error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, State}
-    end;
-
-handle_info({udp, Socket, _, Port, Data}, StateName,
-            #state{protocol = udp,
-                   socket = Socket} = State) ->
-    inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]),
-                          State#state{incoming_port = Port})
-    catch
-        error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, State}
-    end;
-
-handle_info(keepalive_udp, StateName,
-            #state{dispatcher = Dispatcher,
-                   keepalive = undefined,
-                   socket = Socket} = State) ->
-    Dispatcher ! {udp_closed, Socket},
-    {next_state, StateName, State};
-
-handle_info(keepalive_udp, StateName,
-            #state{dispatcher = Dispatcher,
-                   keepalive = received} = State) ->
-    send('keepalive_out'(), State),
-    erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp),
-    {next_state, StateName, State#state{keepalive = undefined}};
-
-handle_info({udp_closed, Socket}, _,
-            #state{protocol = udp,
-                   socket = Socket} = State) ->
-    {stop, socket_closed, State};
-
-handle_info({tcp, Socket, Data}, StateName,
-            #state{protocol = Protocol,
-                   socket = Socket} = State)
-    when Protocol =:= tcp; Protocol =:= local ->
-    inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
-    catch
-        error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, State}
-    end;
-
-handle_info({tcp_closed, Socket}, _,
-            #state{protocol = Protocol,
-                   socket = Socket} = State)
-    when Protocol =:= tcp; Protocol =:= local ->
-    {stop, socket_closed, State};
-
-handle_info({tcp_error, Socket, Reason}, _,
-            #state{protocol = Protocol,
-                   socket = Socket} = State)
-    when Protocol =:= tcp; Protocol =:= local ->
-    {stop, Reason, State};
-
-handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
-            #state{protocol = tcp,
-                   listener = Listener,
-                   acceptor = Acceptor,
-                   socket_options = SocketOptions} = State) ->
-    true = inet_db:register_socket(Socket, inet_tcp),
-    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
-    {next_state, StateName, State#state{listener = undefined,
-                                        acceptor = undefined,
-                                        socket = Socket}};
-
-handle_info({inet_async, undefined, undefined, {ok, FileDescriptor}}, StateName,
-            #state{protocol = local,
-                   socket_options = SocketOptions} = State) ->
-    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
-    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
-    ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
-                                          ReceiveBufferSize, SendBufferSize),
-    {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
-    ok = inet:setopts(Socket, [{active, once}]),
-    {next_state, StateName, State#state{socket = Socket}};
-
-handle_info({inet_async, Listener, Acceptor, Error}, StateName,
-            #state{protocol = Protocol,
-                   listener = Listener,
-                   acceptor = Acceptor} = State)
-    when Protocol =:= tcp; Protocol =:= local ->
-    {stop, {StateName, inet_async, Error}, State};
-
-handle_info({cloudi_cpg_data, Groups}, StateName,
-            #state{dest_refresh = DestRefresh,
-                   options = ConfigOptions} = State) ->
-    destination_refresh_start(DestRefresh, ConfigOptions),
-    {next_state, StateName, State#state{cpg_data = Groups}};
-
-handle_info('cloudi_service_init_timeout', _, State) ->
-    {stop, timeout, State};
 
 handle_info({'cloudi_service_send_async_retry', Name, RequestInfo, Request,
              Timeout, Priority}, StateName, State) ->
@@ -846,8 +777,6 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
 handle_info({'cloudi_service_recv_async_retry', Timeout, TransId, Consume},
             StateName, State) ->
     ?MODULE:StateName({'recv_async', Timeout, TransId, Consume}, State);
-
-% incoming requests (from other Erlang pids that are CloudI services)
 
 handle_info({SendType, _, _,
              RequestInfo, Request, Timeout, _, _, _}, StateName, State)
@@ -1067,6 +996,123 @@ handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
     {next_state, StateName,
      State#state{async_responses = dict:erase(TransId, AsyncResponses)}};
 
+handle_info({udp, Socket, _, Port, Data}, StateName,
+            #state{protocol = udp,
+                   incoming_port = Port,
+                   socket = Socket} = State) ->
+    inet:setopts(Socket, [{active, once}]),
+    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
+    catch
+        error:badarg ->
+            ?LOG_ERROR("Protocol Error ~p", [Data]),
+            {stop, {error, protocol}, State}
+    end;
+
+handle_info({udp, Socket, _, Port, Data}, StateName,
+            #state{protocol = udp,
+                   socket = Socket} = State) ->
+    inet:setopts(Socket, [{active, once}]),
+    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]),
+                          State#state{incoming_port = Port})
+    catch
+        error:badarg ->
+            ?LOG_ERROR("Protocol Error ~p", [Data]),
+            {stop, {error, protocol}, State}
+    end;
+
+handle_info({tcp, Socket, Data}, StateName,
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
+    inet:setopts(Socket, [{active, once}]),
+    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
+    catch
+        error:badarg ->
+            ?LOG_ERROR("Protocol Error ~p", [Data]),
+            {stop, {error, protocol}, State}
+    end;
+
+handle_info({cloudi_cpg_data, Groups}, StateName,
+            #state{dispatcher = Dispatcher,
+                   dest_refresh = DestRefresh,
+                   options = ConfigOptions} = State) ->
+    destination_refresh_start(DestRefresh, Dispatcher, ConfigOptions),
+    {next_state, StateName, State#state{cpg_data = Groups}};
+
+handle_info(keepalive_udp, StateName,
+            #state{dispatcher = Dispatcher,
+                   keepalive = undefined,
+                   socket = Socket} = State) ->
+    Dispatcher ! {udp_closed, Socket},
+    {next_state, StateName, State};
+
+handle_info(keepalive_udp, StateName,
+            #state{dispatcher = Dispatcher,
+                   keepalive = received} = State) ->
+    send('keepalive_out'(), State),
+    erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp),
+    {next_state, StateName, State#state{keepalive = undefined}};
+
+handle_info({udp_closed, Socket}, _,
+            #state{protocol = udp,
+                   socket = Socket} = State) ->
+    {stop, socket_closed, State};
+
+handle_info({tcp_closed, Socket}, _,
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
+    {stop, socket_closed, State};
+
+handle_info({tcp_error, Socket, Reason}, _,
+            #state{protocol = Protocol,
+                   socket = Socket} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
+    {stop, Reason, State};
+
+handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
+            #state{protocol = tcp,
+                   listener = Listener,
+                   acceptor = Acceptor,
+                   socket_options = SocketOptions} = State) ->
+    true = inet_db:register_socket(Socket, inet_tcp),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
+    catch gen_tcp:close(Listener),
+    {next_state, StateName, State#state{listener = undefined,
+                                        acceptor = undefined,
+                                        socket = Socket}};
+
+handle_info({inet_async, undefined, undefined, {ok, FileDescriptor}}, StateName,
+            #state{protocol = local,
+                   socket_options = SocketOptions} = State) ->
+    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
+    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
+    ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
+                                          ReceiveBufferSize, SendBufferSize),
+    {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
+    ok = inet:setopts(Socket, [{active, once}]),
+    {next_state, StateName, State#state{socket = Socket}};
+
+handle_info({inet_async, Listener, Acceptor, Error}, StateName,
+            #state{protocol = Protocol,
+                   listener = Listener,
+                   acceptor = Acceptor} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
+    {stop, {StateName, inet_async, Error}, State};
+
+handle_info(initialize, StateName, State) ->
+    true = StateName /= 'HANDLE',
+    NewState = State#state{initialize = true},
+    if
+        StateName =:= 'INIT_WAIT' ->
+            'INIT'('init', NewState);
+        true ->
+            {next_state, StateName, NewState}
+    end;
+
+handle_info('cloudi_service_init_timeout', _, State) ->
+    {stop, timeout, State};
+
 handle_info({'EXIT', _, Reason}, _, State) ->
     {stop, Reason, State};
 
@@ -1175,11 +1221,11 @@ code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
 
 -ifdef(VERBOSE_STATE).
-format_status(_Opt, [PDict, State]) ->
-    [{data, [{"StateData", [PDict, State]}]}].
+format_status(_Opt, [_PDict, State]) ->
+    [{data, [{"StateData", State}]}].
 -else.
 format_status(_Opt,
-              [PDict,
+              [_PDict,
                #state{send_timeouts = SendTimeouts,
                       send_timeout_monitors = SendTimeoutMonitors,
                       recv_timeouts = RecvTimeouts,
@@ -1223,16 +1269,15 @@ format_status(_Opt,
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"StateData",
-        [PDict,
-         State#state{send_timeouts = dict:to_list(SendTimeouts),
-                     send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
-                     recv_timeouts = NewRecvTimeouts,
-                     async_responses = dict:to_list(AsyncResponses),
-                     queued = NewQueue,
-                     cpg_data = NewGroups,
-                     dest_deny = NewDestDeny,
-                     dest_allow = NewDestAllow,
-                     options = NewConfigOptions}]}]}].
+        State#state{send_timeouts = dict:to_list(SendTimeouts),
+                    send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
+                    recv_timeouts = NewRecvTimeouts,
+                    async_responses = dict:to_list(AsyncResponses),
+                    queued = NewQueue,
+                    cpg_data = NewGroups,
+                    dest_deny = NewDestDeny,
+                    dest_allow = NewDestAllow,
+                    options = NewConfigOptions}}]}].
 -endif.
 
 %%%------------------------------------------------------------------------
@@ -1905,25 +1950,3 @@ aspects_request_after_f([F | L], Type,
             Stop
     end.
 
-aspects_terminate([], _, ServiceState) ->
-    {ok, ServiceState};
-aspects_terminate([{M, F} = Aspect | L], Reason, ServiceState) ->
-    try {ok, _} = M:F(Reason, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
-    catch
-        ErrorType:Error ->
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
-            {ok, ServiceState}
-    end;
-aspects_terminate([F | L], Reason, ServiceState) ->
-    try {ok, _} = F(Reason, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
-    catch
-        ErrorType:Error ->
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [F, ErrorType, Error, erlang:get_stacktrace()]),
-            {ok, ServiceState}
-    end.

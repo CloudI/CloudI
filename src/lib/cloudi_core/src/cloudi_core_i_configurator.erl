@@ -78,6 +78,7 @@
          service_start/2,
          service_stop/3,
          service_restart/2,
+         service_initialized_process/1,
          service_dead/1]).
 
 %% gen_server callbacks
@@ -256,8 +257,8 @@ service_start(#config_service_internal{
                     ok
             end,
             NewCountProcess = cloudi_concurrency:count(CountProcess),
-            service_start_internal(0, FoundService, GroupLeader,
-                                   NewCountProcess, timeout_decr(Timeout));
+            service_start_internal(FoundService, GroupLeader,
+                                   NewCountProcess, Timeout);
         {error, _} = Error ->
             Error
     end;
@@ -267,8 +268,8 @@ service_start(#config_service_external{count_process = CountProcess,
               Timeout) ->
     NewCountProcess = cloudi_concurrency:count(CountProcess),
     NewCountThread = cloudi_concurrency:count(CountThread),
-    service_start_external(0, Service, NewCountThread,
-                           NewCountProcess, timeout_decr(Timeout)).
+    service_start_external(Service, NewCountThread,
+                           NewCountProcess, Timeout).
 
 -spec service_stop(#config_service_internal{} |
                    #config_service_external{},
@@ -295,6 +296,11 @@ service_restart(#config_service_internal{} = Service, Timeout) ->
 
 service_restart(#config_service_external{} = Service, Timeout) ->
     service_restart_external(Service, timeout_decr(Timeout)).
+
+service_initialized_process(Pid)
+    when is_pid(Pid) ->
+    ?MODULE ! {service_initialized_process, Pid},
+    ok.
 
 service_dead(ID)
     when is_binary(ID) ->
@@ -499,6 +505,10 @@ handle_info(configure,
             {stop, Error, State}
     end;
 
+handle_info({service_initialized_process, _}, State) ->
+    % a service process has initialized after a restart occurred
+    % (nothing to do, handled by cloudi_core_i_services_monitor)
+    {noreply, State};
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -821,9 +831,57 @@ service_stop_remove_internal(#config_service_internal{
             {error, {service_internal_application_not_found, Reason}}
     end.
 
-service_start_internal(CountProcess, Service, _, CountProcess, _) ->
+service_start_wait_pid([], Error) ->
+    Error;
+service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
+    receive
+        {service_initialized_process, Pid} ->
+            erlang:demonitor(MonitorRef),
+            % at this point:
+            % - if it is an internal service process:
+            %   it has already completed executing cloudi_service_init/3 and
+            %   any aspects_init_after functions
+            % - if it is an external service process:
+            %   it has already completed executing CloudI API functions called
+            %   before the poll function and any aspects_init_after functions
+            %   (so the external service is now executing the poll function)
+            service_start_wait_pid(M, Error);
+        {'DOWN', MonitorRef, process, Pid, Info} ->
+            NewError = if
+                Error =:= undefined ->
+                    {error, {service_internal_start_failed, Info}};
+                true ->
+                    Error
+            end,
+            service_start_wait_pid(M, NewError)
+    end.
+
+service_start_wait_pids([], undefined, Service) ->
     {ok, Service};
-service_start_internal(IndexProcess,
+service_start_wait_pids([], Error, _) ->
+    Error;
+service_start_wait_pids([M | MonitorPids], Error, Service) ->
+    service_start_wait_pids(MonitorPids,
+                            service_start_wait_pid(M, Error), Service).
+
+service_start_wait(Pids, Service) ->
+    % create the monitors on all the service's receiver pids
+    MonitorPids = [[{erlang:monitor(process, Pid), Pid} ||
+                    Pid <- P] || P <- Pids],
+    % service processes block waiting for the configurator to get to this point
+    % so that monitors here may catch a process crash due to user source code
+    % and pass the error reason as a return value of the configure/2 function
+    % or the cloudi_service_api:services_add/2 function when a service
+    % starts for the first time
+    % (restarts require cloudi_core_i_services_monitor to send 'initialize')
+    lists:foreach(fun(P) ->
+        ok = cloudi_core_i_services_monitor:initialize(P)
+    end, Pids),
+    service_start_wait_pids(MonitorPids, undefined, Service).
+
+service_start_internal(CountProcess, Pids, Service, _, CountProcess, _) ->
+    service_start_wait(lists:reverse(Pids), Service);
+service_start_internal(IndexProcess, Pids,
                        #config_service_internal{
                            module = Module,
                            args = Args,
@@ -853,15 +911,19 @@ service_start_internal(IndexProcess,
                                   service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_internal(IndexProcess + 1, Service, GroupLeader,
-                                   CountProcess, Timeout);
+            service_start_internal(IndexProcess + 1, [P | Pids], Service,
+                                   GroupLeader, CountProcess, Timeout);
         {error, Reason} ->
             {error, {service_internal_start_failed, Reason}}
     end.
 
-service_start_external(CountProcess, Service, _, CountProcess, _) ->
-    {ok, Service};
-service_start_external(IndexProcess,
+service_start_internal(Service, GroupLeader, CountProcess, Timeout) ->
+    service_start_internal(0, [], Service, GroupLeader,
+                           CountProcess, timeout_decr(Timeout)).
+
+service_start_external(CountProcess, Pids, Service, _, CountProcess, _) ->
+    service_start_wait(lists:reverse(Pids), Service);
+service_start_external(IndexProcess, Pids,
                        #config_service_external{
                            file_path = FilePath,
                            args = Args,
@@ -895,11 +957,15 @@ service_start_external(IndexProcess,
                                   service_format(Service),
             ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
                                     ServiceConfig}, P]),
-            service_start_external(IndexProcess + 1, Service,
+            service_start_external(IndexProcess + 1, [P | Pids], Service,
                                    CountThread, CountProcess, Timeout);
         {error, Reason} ->
             {error, {service_external_start_failed, Reason}}
     end.
+
+service_start_external(Service, CountThread, CountProcess, Timeout) ->
+    service_start_external(0, [], Service, CountThread,
+                           CountProcess, timeout_decr(Timeout)).
 
 service_stop_internal(#config_service_internal{
                           module = Module,

@@ -64,12 +64,12 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/2]).
 
--include("cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -record(state, {
         service,
         request_count = 0 :: non_neg_integer(),
-        request_id = undefined :: cloudi_service:trans_id() | undefined,
+        elapsed_seconds = undefined :: float() | undefined,
         suffixes = ["cxx", "java", "python", "python_c", "ruby"]
     }).
 
@@ -86,32 +86,25 @@ aspect_request(_, _, _, _, _, _, _, TransId, _,
                #state{request_count = Count} = State) ->
     true = is_binary(TransId),
     {ok, State#state{request_count = Count + 1,
-                     request_id = TransId}}.
+                     elapsed_seconds = elapsed_seconds(TransId)}}.
  
 % for internal services
 aspect_request(_, _, _, _, _, _, _, TransId, _,
                #state{request_count = Count} = State, _) ->
     true = is_binary(TransId),
     {ok, State#state{request_count = Count + 1,
-                     request_id = TransId}}.
+                     elapsed_seconds = elapsed_seconds(TransId)}}.
  
 % for internal and external services
 aspect_terminate(_, #state{service = Service,
-                           request_id = undefined} = State) ->
+                           elapsed_seconds = undefined} = State) ->
     ?LOG_WARN("msg_size 0 requests/second "
               "forwarded for~n~p",
               [Service]),
     {ok, State};
 aspect_terminate(_, #state{service = Service,
                            request_count = Count,
-                           request_id = TransId} = State) ->
-    % original timeout is defined in cxx service source code
-    % (600000 milliseconds timeout value with a
-    %  100 millisecond penalty for each forward along with
-    %  the added request_timeout_adjustment and any queuing delays)
-    ElapsedSeconds = (cloudi_x_uuid:get_v1_time(os) -
-                      cloudi_x_uuid:get_v1_time(TransId)) / 1000000.0,
-
+                           elapsed_seconds = ElapsedSeconds} = State) ->
     % to trigger this:
     % cloudi_service_api:services_remove([element(1, S) || S <- element(2, cloudi_service_api:services(infinity)), (element(2, element(2, S)) == "/tests/msg_size/")], infinity).
     ?LOG_INFO("msg_size ~p requests/second "
@@ -167,4 +160,12 @@ cloudi_service_terminate(_, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+elapsed_seconds(TransId) ->
+    % original timeout is defined in cxx service source code
+    % (600000 milliseconds timeout value with a
+    %  100 millisecond penalty for each forward along with
+    %  the added request_timeout_adjustment and any queuing delays)
+    (cloudi_x_uuid:get_v1_time(os) -
+     cloudi_x_uuid:get_v1_time(TransId)) / 1000000.0.
 

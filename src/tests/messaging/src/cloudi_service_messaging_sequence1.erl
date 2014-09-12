@@ -59,7 +59,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/2]).
 
--include("cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -record(state, {
     }).

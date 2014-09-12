@@ -123,9 +123,9 @@ start_link(Config) when is_record(Config, config) ->
 
 init([Config]) when is_record(Config, config) ->
     true = ?CHECK,
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    {ok, {{rest_for_one, MaxRestarts, MaxTime}, ?CHILDSPECS}}.
+    MaxRestarts = 0,
+    MaxTime = 1, % seconds (1 minute)
+    {ok, {{one_for_all, MaxRestarts, MaxTime}, ?CHILDSPECS}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

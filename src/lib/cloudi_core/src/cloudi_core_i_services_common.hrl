@@ -88,7 +88,7 @@ destination_allowed(Name, DestDeny, DestAllow) ->
             end
     end.
 
-destination_refresh_first(DestRefresh,
+destination_refresh_first(DestRefresh, Dispatcher,
                           #config_service_options{
                               dest_refresh_start = Delay,
                               scope = Scope})
@@ -99,9 +99,9 @@ destination_refresh_first(DestRefresh,
           DestRefresh =:= lazy_remote orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Delay);
+    cloudi_x_cpg_data:get_groups(Scope, Dispatcher, Delay);
 
-destination_refresh_first(DestRefresh, _)
+destination_refresh_first(DestRefresh, _, _)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
@@ -111,10 +111,10 @@ destination_refresh_first(DestRefresh, _)
           DestRefresh =:= immediate_oldest) ->
     ok;
 
-destination_refresh_first(none, _) ->
+destination_refresh_first(none, _, _) ->
     ok.
 
-destination_refresh_start(DestRefresh,
+destination_refresh_start(DestRefresh, Dispatcher,
                           #config_service_options{
                               dest_refresh_delay = Delay,
                               scope = Scope})
@@ -125,9 +125,9 @@ destination_refresh_start(DestRefresh,
           DestRefresh =:= lazy_remote orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Delay);
+    cloudi_x_cpg_data:get_groups(Scope, Dispatcher, Delay);
 
-destination_refresh_start(DestRefresh, _)
+destination_refresh_start(DestRefresh, _, _)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
@@ -137,7 +137,7 @@ destination_refresh_start(DestRefresh, _)
           DestRefresh =:= immediate_oldest) ->
     ok;
 
-destination_refresh_start(none, _) ->
+destination_refresh_start(none, _, _) ->
     ok.
 
 destination_get(lazy_closest, _, Name, Pid, Groups, _)
@@ -534,4 +534,27 @@ check_incoming(ServiceRequest,
         monkey_latency = NewMonkeyLatency,
         monkey_chaos = NewMonkeyChaos,
         hibernate = NewHibernate}.
+
+aspects_terminate([], _, ServiceState) ->
+    {ok, ServiceState};
+aspects_terminate([{M, F} = Aspect | L], Reason, ServiceState) ->
+    try {ok, _} = M:F(Reason, ServiceState) of
+        {ok, NewServiceState} ->
+            aspects_terminate(L, Reason, NewServiceState)
+    catch
+        ErrorType:Error ->
+            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
+                       [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
+            {ok, ServiceState}
+    end;
+aspects_terminate([F | L], Reason, ServiceState) ->
+    try {ok, _} = F(Reason, ServiceState) of
+        {ok, NewServiceState} ->
+            aspects_terminate(L, Reason, NewServiceState)
+    catch
+        ErrorType:Error ->
+            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
+                       [F, ErrorType, Error, erlang:get_stacktrace()]),
+            {ok, ServiceState}
+    end.
 

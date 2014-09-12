@@ -890,7 +890,7 @@ services_format_options_external(Options) ->
     OptionsList11 = if
         Options#config_service_options.scope /= ?SCOPE_DEFAULT ->
             [{scope,
-              Options#config_service_options.scope} |
+              ?SCOPE_FORMAT(Options#config_service_options.scope)} |
              OptionsList10];
         true ->
             OptionsList10

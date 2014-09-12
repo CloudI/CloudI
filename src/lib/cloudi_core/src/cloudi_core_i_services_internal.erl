@@ -55,7 +55,9 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/14]).
+-export([start_link/14,
+         get_status/1,
+         get_status/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -66,7 +68,12 @@
 -export([duo_mode_loop_init/1,
          duo_mode_loop/1]).
 
-%% cloudi_core_i_services_internal callbacks
+%% duo_mode sys callbacks
+-export([system_continue/3,
+         system_terminate/4,
+         system_code_change/4]).
+
+%% cloudi_core_i_services_internal callbacks (request pid and info pid)
 -export([handle_module_request_loop_hibernate/2,
          handle_module_info_loop_hibernate/2]).
 
@@ -141,8 +148,7 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                scope = Scope} = ConfigOptions, Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_pid(Parent) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync), is_pid(Parent)  ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -164,12 +170,17 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                                   [ProcessIndex, ProcessCount, GroupLeader,
                                    Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, DestRefresh,
-                                   DestDeny, DestAllow, ConfigOptions,
-                                   Parent],
+                                   DestDeny, DestAllow, ConfigOptions, Parent],
                                   [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
     end.
+
+get_status(Dispatcher) ->
+    get_status(Dispatcher, 5000).
+
+get_status(Dispatcher, Timeout) ->
+    gen_server:call(Dispatcher, {get_status, Timeout}, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -208,7 +219,6 @@ init([ProcessIndex, ProcessCount, GroupLeader,
         true ->
             Dispatcher
     end,
-    Parent ! {self, Dispatcher, ReceiverPid}, % for supervisor
     {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
     {ok, TimestampType} = application:get_env(cloudi_core, timestamp_type),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, TimestampType},
@@ -250,8 +260,14 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     ReceiverPid ! {'cloudi_service_init_execute', Args, Timeout,
                    cloudi_core_i_services_internal_init:
                    process_dictionary_get(),
-                   State}, % no process dictionary or state modifications below
-    destination_refresh_first(DestRefresh, NewConfigOptions),
+                   State},
+    % no process dictionary or state modifications below
+
+    % send after 'cloudi_service_init_execute' to avoid race with initialize/1
+    ok = cloudi_core_i_services_internal_sup:
+         create_internal_done(Parent, Dispatcher, ReceiverPid),
+
+    destination_refresh_first(DestRefresh, Dispatcher, NewConfigOptions),
     {ok, State}.
 
 handle_call(process_index, _,
@@ -725,6 +741,23 @@ handle_call(trans_id, _,
             #state{uuid_generator = UUID} = State) ->
     hibernate_check({reply, cloudi_x_uuid:get_v1(UUID), State});
 
+handle_call({get_status, Timeout}, _,
+            #state{dispatcher = Dispatcher,
+                   duo_mode_pid = DuoModePid} = State) ->
+    % provide something close to the dispatcher's status to have more
+    % consistency between the DuoModePid, if it exists
+    PDict = erlang:get(),
+    Result = {{status,
+               Dispatcher,
+               {module, gen_server},
+               [PDict,
+                running,
+                undefined, % Parent
+                undefined, % Debug
+                format_status(normal, [PDict, State])]},
+              format_status_duo_mode(DuoModePid, Timeout)},
+    hibernate_check({reply, Result, State});
+
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
@@ -733,60 +766,6 @@ handle_call(Request, _, State) ->
 handle_cast(Request, State) ->
     ?LOG_WARN("Unknown cast \"~p\"", [Request]),
     hibernate_check({noreply, State}).
-
-handle_info({'cloudi_service_init_execute', Args, Timeout,
-             ProcessDictionary, State},
-            #state{dispatcher = Dispatcher,
-                   queue_requests = true,
-                   module = Module,
-                   prefix = Prefix,
-                   duo_mode_pid = undefined} = State) ->
-    {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
-                            start_link(Timeout, ProcessDictionary, State),
-    Result = try Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
-    catch
-        ErrorType:Error ->
-            ?LOG_ERROR("init ~p ~p~n~p",
-                       [ErrorType, Error, erlang:get_stacktrace()]),
-            erlang:ErrorType(Error)
-    end,
-    {NewProcessDictionary,
-     #state{options = ConfigOptions} = NextState} =
-        cloudi_core_i_services_internal_init:
-        stop_link(DispatcherProxy),
-    ok = cloudi_core_i_services_internal_init:
-         process_dictionary_set(NewProcessDictionary),
-    hibernate_check(case Result of
-        {ok, ServiceState} ->
-            NewConfigOptions = check_init_receive(ConfigOptions),
-            #config_service_options{
-                aspects_init_after = Aspects} = NewConfigOptions,
-            NewState = NextState#state{options = NewConfigOptions},
-            case aspects_init(Aspects, Args, Prefix,
-                              ServiceState, Dispatcher) of
-                {ok, NewServiceState} ->
-                    erlang:process_flag(trap_exit, true),
-                    {noreply,
-                     process_queues(NewServiceState, NewState)};
-                {stop, Reason, NewServiceState} ->
-                    {stop, Reason,
-                     NewState#state{service_state = NewServiceState,
-                                    duo_mode_pid = undefined}}
-            end;
-        {stop, Reason, ServiceState} ->
-            {stop, Reason, NextState#state{service_state = ServiceState,
-                                           duo_mode_pid = undefined}};
-        {stop, Reason} ->
-            {stop, Reason, NextState#state{duo_mode_pid = undefined}}
-    end);
-
-handle_info({'cloudi_service_init_state', NewProcessDictionary, NewState},
-            #state{duo_mode_pid = DuoModePid}) ->
-    true = is_pid(DuoModePid),
-    ok = cloudi_core_i_services_internal_init:
-         process_dictionary_set(NewProcessDictionary),
-    erlang:process_flag(trap_exit, true),
-    hibernate_check({noreply, NewState});
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              NewServiceState},
@@ -850,93 +829,6 @@ handle_info({'cloudi_service_info_failure',
             {Type, {Error, Stack}}
     end,
     {stop, Reason, State#state{service_state = NewServiceState}};
-
-handle_info({'EXIT', _, shutdown},
-            #state{duo_mode_pid = DuoModePid} = State) ->
-    % CloudI Service shutdown
-    if
-        is_pid(DuoModePid) ->
-            erlang:exit(DuoModePid, shutdown);
-        true ->
-            ok
-    end,
-    {stop, shutdown, State};
-
-handle_info({'EXIT', _, {shutdown, _} = Shutdown},
-            #state{duo_mode_pid = DuoModePid} = State) ->
-    % CloudI Service shutdown w/reason
-    if
-        is_pid(DuoModePid) ->
-            erlang:exit(DuoModePid, shutdown);
-        true ->
-            ok
-    end,
-    {stop, Shutdown, State};
-
-handle_info({'EXIT', _, restart},
-            #state{duo_mode_pid = DuoModePid} = State) ->
-    % CloudI Service API requested a restart
-    if
-        is_pid(DuoModePid) ->
-            erlang:exit(DuoModePid, restart);
-        true ->
-            ok
-    end,
-    {stop, restart, State};
-
-handle_info({'EXIT', DuoModePid, Reason},
-            #state{duo_mode_pid = DuoModePid} = State) ->
-    ?LOG_ERROR("~p duo_mode exited: ~p", [DuoModePid, Reason]),
-    {stop, Reason, State};
-
-handle_info({'EXIT', RequestPid,
-             {'cloudi_service_request_success', _RequestResponse,
-              _NewServiceState} = Result},
-            #state{request_pid = RequestPid} = State) ->
-    handle_info(Result, State#state{request_pid = undefined});
-
-handle_info({'EXIT', RequestPid,
-             {'cloudi_service_request_failure',
-              _Type, _Error, _Stack, _NewServiceState} = Result},
-            #state{request_pid = RequestPid} = State) ->
-    handle_info(Result, State#state{request_pid = undefined});
-
-handle_info({'EXIT', RequestPid, Reason},
-            #state{request_pid = RequestPid} = State) ->
-    ?LOG_ERROR("~p request exited: ~p", [RequestPid, Reason]),
-    {stop, Reason, State};
-
-handle_info({'EXIT', InfoPid,
-             {'cloudi_service_info_success',
-              _NewServiceState} = Result},
-            #state{info_pid = InfoPid} = State) ->
-    handle_info(Result, State#state{info_pid = undefined});
-
-handle_info({'EXIT', InfoPid,
-             {'cloudi_service_info_failure',
-              _Type, _Error, _Stack, _NewServiceState} = Result},
-            #state{info_pid = InfoPid} = State) ->
-    handle_info(Result, State#state{info_pid = undefined});
-
-handle_info({'EXIT', InfoPid, Reason},
-            #state{info_pid = InfoPid} = State) ->
-    ?LOG_ERROR("~p info exited: ~p", [InfoPid, Reason]),
-    {stop, Reason, State};
-
-handle_info({'EXIT', Dispatcher, Reason},
-            #state{dispatcher = Dispatcher} = State) ->
-    ?LOG_ERROR("~p service exited: ~p", [Dispatcher, Reason]),
-    {stop, Reason, State};
-
-handle_info({'EXIT', Pid, Reason}, State) ->
-    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
-    {stop, Reason, State};
-
-handle_info({cloudi_cpg_data, Groups},
-            #state{dest_refresh = DestRefresh,
-                   options = ConfigOptions} = State) ->
-    destination_refresh_start(DestRefresh, ConfigOptions),
-    hibernate_check({noreply, State#state{cpg_data = Groups}});
 
 handle_info({'cloudi_service_get_pid_retry', Name, Timeout, Client}, State) ->
     hibernate_check(handle_get_pid(Name, Timeout,
@@ -1380,6 +1272,13 @@ handle_info({'cloudi_service_recv_async_timeout', TransId},
                          async_responses =
                              dict:erase(TransId, AsyncResponses)}});
 
+handle_info({cloudi_cpg_data, Groups},
+            #state{dispatcher = Dispatcher,
+                   dest_refresh = DestRefresh,
+                   options = ConfigOptions} = State) ->
+    destination_refresh_start(DestRefresh, Dispatcher, ConfigOptions),
+    hibernate_check({noreply, State#state{cpg_data = Groups}});
+
 handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
             State) ->
     hibernate_check({noreply, send_timeout_dead(Pid, State)});
@@ -1469,6 +1368,144 @@ handle_info('cloudi_count_process_dynamic_terminate_now',
             #state{duo_mode_pid = undefined} = State) ->
     {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
 
+handle_info({'EXIT', _, shutdown},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service shutdown
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, shutdown);
+        true ->
+            ok
+    end,
+    {stop, shutdown, State};
+
+handle_info({'EXIT', _, {shutdown, _} = Shutdown},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service shutdown w/reason
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, shutdown);
+        true ->
+            ok
+    end,
+    {stop, Shutdown, State};
+
+handle_info({'EXIT', _, restart},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    % CloudI Service API requested a restart
+    if
+        is_pid(DuoModePid) ->
+            erlang:exit(DuoModePid, restart);
+        true ->
+            ok
+    end,
+    {stop, restart, State};
+
+handle_info({'EXIT', DuoModePid, Reason},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    ?LOG_ERROR("~p duo_mode exited: ~p", [DuoModePid, Reason]),
+    {stop, Reason, State};
+
+handle_info({'EXIT', RequestPid,
+             {'cloudi_service_request_success', _RequestResponse,
+              _NewServiceState} = Result},
+            #state{request_pid = RequestPid} = State) ->
+    handle_info(Result, State#state{request_pid = undefined});
+
+handle_info({'EXIT', RequestPid,
+             {'cloudi_service_request_failure',
+              _Type, _Error, _Stack, _NewServiceState} = Result},
+            #state{request_pid = RequestPid} = State) ->
+    handle_info(Result, State#state{request_pid = undefined});
+
+handle_info({'EXIT', RequestPid, Reason},
+            #state{request_pid = RequestPid} = State) ->
+    ?LOG_ERROR("~p request exited: ~p", [RequestPid, Reason]),
+    {stop, Reason, State};
+
+handle_info({'EXIT', InfoPid,
+             {'cloudi_service_info_success',
+              _NewServiceState} = Result},
+            #state{info_pid = InfoPid} = State) ->
+    handle_info(Result, State#state{info_pid = undefined});
+
+handle_info({'EXIT', InfoPid,
+             {'cloudi_service_info_failure',
+              _Type, _Error, _Stack, _NewServiceState} = Result},
+            #state{info_pid = InfoPid} = State) ->
+    handle_info(Result, State#state{info_pid = undefined});
+
+handle_info({'EXIT', InfoPid, Reason},
+            #state{info_pid = InfoPid} = State) ->
+    ?LOG_ERROR("~p info exited: ~p", [InfoPid, Reason]),
+    {stop, Reason, State};
+
+handle_info({'EXIT', Dispatcher, Reason},
+            #state{dispatcher = Dispatcher} = State) ->
+    ?LOG_ERROR("~p service exited: ~p", [Dispatcher, Reason]),
+    {stop, Reason, State};
+
+handle_info({'EXIT', Pid, Reason}, State) ->
+    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
+    {stop, Reason, State};
+
+handle_info({'cloudi_service_init_execute', Args, Timeout,
+             ProcessDictionary, State},
+            #state{dispatcher = Dispatcher,
+                   queue_requests = true,
+                   module = Module,
+                   prefix = Prefix,
+                   duo_mode_pid = undefined} = State) ->
+    ok = initialize_wait(Timeout),
+    {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
+                            start_link(Timeout, ProcessDictionary, State),
+    Result = try Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
+    catch
+        ErrorType:Error ->
+            ?LOG_ERROR("init ~p ~p~n~p",
+                       [ErrorType, Error, erlang:get_stacktrace()]),
+            erlang:ErrorType(Error)
+    end,
+    {NewProcessDictionary,
+     #state{options = ConfigOptions} = NextState} =
+        cloudi_core_i_services_internal_init:
+        stop_link(DispatcherProxy),
+    ok = cloudi_core_i_services_internal_init:
+         process_dictionary_set(NewProcessDictionary),
+    hibernate_check(case Result of
+        {ok, ServiceState} ->
+            NewConfigOptions = check_init_receive(ConfigOptions),
+            #config_service_options{
+                aspects_init_after = Aspects} = NewConfigOptions,
+            NewState = NextState#state{options = NewConfigOptions},
+            case aspects_init(Aspects, Args, Prefix,
+                              ServiceState, Dispatcher) of
+                {ok, NewServiceState} ->
+                    erlang:process_flag(trap_exit, true),
+                    ok = cloudi_core_i_configurator:
+                         service_initialized_process(Dispatcher),
+                    {noreply,
+                     process_queues(NewServiceState, NewState)};
+                {stop, Reason, NewServiceState} ->
+                    {stop, Reason,
+                     NewState#state{service_state = NewServiceState,
+                                    duo_mode_pid = undefined}}
+            end;
+        {stop, Reason, ServiceState} ->
+            {stop, Reason, NextState#state{service_state = ServiceState,
+                                           duo_mode_pid = undefined}};
+        {stop, Reason} ->
+            {stop, Reason, NextState#state{duo_mode_pid = undefined}}
+    end);
+
+handle_info({'cloudi_service_init_state', NewProcessDictionary, NewState},
+            #state{duo_mode_pid = DuoModePid}) ->
+    true = is_pid(DuoModePid),
+    ok = cloudi_core_i_services_internal_init:
+         process_dictionary_set(NewProcessDictionary),
+    erlang:process_flag(trap_exit, true),
+    hibernate_check({noreply, NewState});
+
 handle_info(Request,
             #state{queue_requests = true,
                    queued_info = QueueInfo,
@@ -1522,11 +1559,12 @@ code_change(_, State, _) ->
     {ok, State}.
 
 -ifdef(VERBOSE_STATE).
-format_status(_Opt, [PDict, State]) ->
-    [{data, [{"State", [PDict, State]}]}].
+format_status(_Opt, [_PDict, State]) ->
+    [{data,
+      [{"State", State}]}].
 -else.
 format_status(_Opt,
-              [PDict,
+              [_PDict,
                #state{send_timeouts = SendTimeouts,
                       send_timeout_monitors = SendTimeoutMonitors,
                       recv_timeouts = RecvTimeouts,
@@ -1577,22 +1615,36 @@ format_status(_Opt,
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"State",
-        [PDict,
-         State#state{send_timeouts = dict:to_list(SendTimeouts),
-                     send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
-                     recv_timeouts = NewRecvTimeouts,
-                     async_responses = dict:to_list(AsyncResponses),
-                     queued = NewQueue,
-                     queued_info = NewQueueInfo,
-                     cpg_data = NewGroups,
-                     dest_deny = NewDestDeny,
-                     dest_allow = NewDestAllow,
-                     options = NewConfigOptions}]}]}].
+        State#state{send_timeouts = dict:to_list(SendTimeouts),
+                    send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
+                    recv_timeouts = NewRecvTimeouts,
+                    async_responses = dict:to_list(AsyncResponses),
+                    queued = NewQueue,
+                    queued_info = NewQueueInfo,
+                    cpg_data = NewGroups,
+                    dest_deny = NewDestDeny,
+                    dest_allow = NewDestAllow,
+                    options = NewConfigOptions}}]}];
+format_status(_Opt,
+              [_PDict, _SysState, _Parent, _Debug,
+               #state_duo{} = State]) ->
+    [{data,
+      [{"State",
+        duo_mode_format_state(State)}]}].
 -endif.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+initialize_wait(Timeout) ->
+    receive
+        initialize ->
+            ok
+    after
+        Timeout ->
+            erlang:exit(timeout)
+    end.
 
 handle_get_pid(Name, Timeout, Client,
                #state{receiver_pid = ReceiverPid,
@@ -2838,12 +2890,25 @@ handle_module_info_loop_hibernate(Uses,
 
 % duo_mode specific logic
 
-duo_mode_loop_init(#state_duo{module = Module,
+format_status_duo_mode(undefined, _) ->
+    undefined;
+format_status_duo_mode(DuoModePid, Timeout)
+    when is_pid(DuoModePid) ->
+    case catch sys:get_status(DuoModePid, Timeout) of
+        {status, _, _, _} = Status ->
+            Status;
+        _ ->
+            timeout
+    end.
+
+duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
+                              module = Module,
                               dispatcher = Dispatcher} = State) ->
     receive
         {'cloudi_service_init_execute', Args, Timeout,
          DispatcherProcessDictionary,
          #state{prefix = Prefix} = DispatcherState} ->
+            ok = initialize_wait(Timeout),
             {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
                                     start_link(Timeout,
                                                DispatcherProcessDictionary,
@@ -2892,6 +2957,8 @@ duo_mode_loop_init(#state_duo{module = Module,
                             Dispatcher ! {'cloudi_service_init_state',
                                           NewDispatcherProcessDictionary,
                                           NewDispatcherState},
+                            ok = cloudi_core_i_configurator:
+                                 service_initialized_process(DuoModePid),
                             case cloudi_core_i_rate_based_configuration:
                                  hibernate_check(Hibernate) of
                                 false ->
@@ -2934,6 +3001,50 @@ duo_mode_loop(#state_duo{} = State) ->
                     end
             end
     end.
+
+system_continue(_Dispatcher, _Debug, State) ->
+    duo_mode_loop(State).
+
+system_terminate(Reason, _Dispatcher, _Debug,
+                 #state_duo{service_state = ServiceState} = State) ->
+    duo_mode_loop_terminate(Reason, ServiceState, State).
+
+system_code_change(State, _Module, _OldVsn, _Extra) ->
+    {ok, State}.
+
+-ifdef(VERBOSE_STATE).
+duo_mode_format_state(State) ->
+    State.
+-else.
+duo_mode_format_state(#state_duo{recv_timeouts = RecvTimeouts,
+                                 queued = Queue,
+                                 queued_info = QueueInfo,
+                                 options = ConfigOptions} = State) ->
+    NewRecvTimeouts = if
+        RecvTimeouts =:= undefined ->
+            undefined;
+        true ->
+            dict:to_list(RecvTimeouts)
+    end,
+    NewQueue = if
+        Queue =:= undefined ->
+            undefined;
+        true ->
+            cloudi_x_pqueue4:to_plist(Queue)
+    end,
+    NewQueueInfo = if
+        QueueInfo =:= undefined ->
+            undefined;
+        true ->
+            queue:to_list(QueueInfo)
+    end,
+    NewConfigOptions = cloudi_core_i_configuration:
+                       services_format_options_internal(ConfigOptions),
+    State#state_duo{recv_timeouts = NewRecvTimeouts,
+                    queued = NewQueue,
+                    queued_info = NewQueueInfo,
+                    options = NewConfigOptions}.
+-endif.
 
 duo_mode_loop_terminate(Reason, ServiceState,
                         #state_duo{duo_mode_pid = DuoModePid,
@@ -3180,6 +3291,21 @@ duo_handle_info('cloudi_count_process_dynamic_terminate_check',
 duo_handle_info('cloudi_count_process_dynamic_terminate_now', State) ->
     {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
 
+duo_handle_info({system, From, Msg},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    case Msg of
+        get_state ->
+            sys:handle_system_msg(get_state, From, Dispatcher, ?MODULE, [],
+                                  {State, State});
+        {replace_state, StateFun} ->
+            NewState = try StateFun(State) catch _:_ -> State end,
+            sys:handle_system_msg(replace_state, From, Dispatcher, ?MODULE, [],
+                                  {NewState, NewState});
+        _ ->
+            sys:handle_system_msg(Msg, From, Dispatcher, ?MODULE, [],
+                                  State)
+    end;
+
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,
                            queued_info = QueueInfo} = State) ->
@@ -3406,28 +3532,5 @@ aspects_info([F | L], Request, ServiceState, Dispatcher) ->
             aspects_info(L, Request, NewServiceState, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
-    end.
-
-aspects_terminate([], _, ServiceState) ->
-    {ok, ServiceState};
-aspects_terminate([{M, F} = Aspect | L], Reason, ServiceState) ->
-    try {ok, _} = M:F(Reason, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
-    catch
-        ErrorType:Error ->
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
-            {ok, ServiceState}
-    end;
-aspects_terminate([F | L], Reason, ServiceState) ->
-    try {ok, _} = F(Reason, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
-    catch
-        ErrorType:Error ->
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [F, ErrorType, Error, erlang:get_stacktrace()]),
-            {ok, ServiceState}
     end.
 

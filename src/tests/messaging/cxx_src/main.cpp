@@ -441,85 +441,71 @@ class Input
             assert(result == CloudI::API::return_value::success);
             char test1_id[16];
             ::memcpy(test1_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/b/c/z",
                                     "test2", 6);
             assert(result == CloudI::API::return_value::success);
             char test2_id[16];
             ::memcpy(test2_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/b/c/dd",
                                     "test3", 6);
             assert(result == CloudI::API::return_value::success);
             char test3_id[16];
             ::memcpy(test3_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/b/z/d",
                                     "test4", 6);
             assert(result == CloudI::API::return_value::success);
             char test4_id[16];
             ::memcpy(test4_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/b/cc/d",
                                     "test5", 6);
             assert(result == CloudI::API::return_value::success);
             char test5_id[16];
             ::memcpy(test5_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/z/c/d",
                                     "test6", 6);
             assert(result == CloudI::API::return_value::success);
             char test6_id[16];
             ::memcpy(test6_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/bb/c/d",
                                     "test7", 6);
             assert(result == CloudI::API::return_value::success);
             char test7_id[16];
             ::memcpy(test7_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "z/b/c/d",
                                     "test8", 6);
             assert(result == CloudI::API::return_value::success);
             char test8_id[16];
             ::memcpy(test8_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "aa/b/c/d",
                                     "test9", 6);
             assert(result == CloudI::API::return_value::success);
             char test9_id[16];
             ::memcpy(test9_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/b/czd",
                                     "test10", 7);
             assert(result == CloudI::API::return_value::success);
             char test10_id[16];
             ::memcpy(test10_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/bzc/d",
                                     "test11", 7);
             assert(result == CloudI::API::return_value::success);
             char test11_id[16];
             ::memcpy(test11_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "azb/c/d",
                                     "test12", 7);
             assert(result == CloudI::API::return_value::success);
             char test12_id[16];
             ::memcpy(test12_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "a/bzczd",
                                     "test13", 7);
             assert(result == CloudI::API::return_value::success);
             char test13_id[16];
             ::memcpy(test13_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "azbzc/d",
                                     "test14", 7);
             assert(result == CloudI::API::return_value::success);
             char test14_id[16];
             ::memcpy(test14_id, api.get_trans_id(), 16);
-            ::usleep(10000);
             result = api.send_async(std::string(api.prefix()) + "azbzczd",
                                     "test15", 7);
             assert(result == CloudI::API::return_value::success);
@@ -864,7 +850,6 @@ class Input
             std::cout << "messaging sequence2 start c++" << std::endl;
             assert(request_size == 6);
             assert(::memcmp(request, "start", 6) == 0);
-            ::usleep(500000);
             // the sending process is excluded from the services that receive
             // the asynchronous message, so in this case, the receiving thread
             // will not be called, despite the fact it has subscribed to 'e',

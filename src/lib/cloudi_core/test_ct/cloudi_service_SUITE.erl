@@ -490,7 +490,10 @@ t_service_internal_sync_1(_Config) ->
                                                           ServiceName,
                                                           ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId1),
-    {ok, _} = cloudi_service_api:services_add([
+    {error,
+     {service_internal_start_failed,
+      {{badmatch, {error, invalid_state}},
+       _}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
@@ -509,7 +512,10 @@ t_service_internal_sync_1(_Config) ->
                                                           ?REQUEST2),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
-    {ok, _} = cloudi_service_api:services_add([
+    {error,
+     {service_internal_start_failed,
+      {{badmatch, {error, invalid_state}},
+       _}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
@@ -568,7 +574,10 @@ t_service_internal_async_1(_Config) ->
                                                          ?REQUEST2),
     true = (Timeout1 > (TimeoutMax - 1000)) andalso (Timeout1 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId1),
-    {ok, _} = cloudi_service_api:services_add([
+    {error,
+     {service_internal_start_failed,
+      {{badmatch, {error, invalid_state}},
+       _}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
@@ -590,7 +599,10 @@ t_service_internal_async_1(_Config) ->
     true = (Timeout2 > (TimeoutMax - 1000)) andalso (Timeout2 =< TimeoutMax),
     true = cloudi_x_uuid:is_v1(TransId2),
     true = (TransId2 > TransId1),
-    {ok, _} = cloudi_service_api:services_add([
+    {error,
+     {service_internal_start_failed,
+      {{badmatch, {error, invalid_state}},
+       _}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},

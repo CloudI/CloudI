@@ -58,8 +58,8 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/2]).
 
--include("cloudi_logger.hrl").
--include("cloudi_service.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service.hrl").
 
 %% Example Usage:
 
@@ -80,21 +80,40 @@
 %            20000                lazy     true      2        4
 %            27000                lazy     true      3        6 (overheating)
 %
-% (sender is the number of cloudi_service_request_rate processes while
+% (dest_refresh_method is set on cloudi_service_request_rate
+%  duo_mode is set on cloudi_service_request_rate when true
+%  sender is the number of cloudi_service_request_rate processes while
 %  receiver is the number of cloudi_service_http_req processes)
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,
                                   (<<"40">>)/binary, 0:8>>).
--define(DEFAULT_REQUEST_RATE,            10000). % requests/second
+-define(DEFAULT_REQUEST_RATE,          dynamic). % requests/second
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
+-define(DEFAULT_TICK_STABLE_COUNT,           4). % dynamic attempts for stable
 
--record(state, {
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
+
+-record(dynamic,
+    {
+        count_stable_max :: pos_integer(),
+        count_stable = 0 :: non_neg_integer(),
+        request_rate = 1000 :: pos_integer(),
+        request_rate_stable = undefined :: pos_integer() | undefined,
+        request_rate_max = undefined :: pos_integer() | undefined
+    }).
+
+-record(state,
+    {
         name :: string(),
         request :: any(),
-        request_rate :: pos_integer(),
+        request_rate :: pos_integer() | #dynamic{},
         request_count :: non_neg_integer(),
-        request_ids,
+        request_ids :: dict_proxy(cloudi_service:trans_id(), undefined),
         tick_length :: pos_integer()
     }).
 
@@ -107,21 +126,41 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(Args, _Prefix, Dispatcher) ->
-
     Defaults = [
         {service_name,           ?DEFAULT_SERVICE_NAME},
         {request,                ?DEFAULT_REQUEST},
         {request_rate,           ?DEFAULT_REQUEST_RATE},
-        {tick_length,            ?DEFAULT_TICK_LENGTH}],
-    [Name, Request, RequestRate, TickLength] =
+        {tick_length,            ?DEFAULT_TICK_LENGTH},
+        {tick_stable_count,      ?DEFAULT_TICK_STABLE_COUNT}],
+    [Name, Request0, RequestRate0, TickLength, TickStableCount] =
         cloudi_proplists:take_values(Defaults, Args),
-    true = (is_list(Name) andalso is_integer(hd(Name))),
-    true = (is_number(RequestRate) andalso (RequestRate > 0.0)),
-    true = (is_integer(TickLength) andalso (TickLength >= 1000)),
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    RequestN = case Request0 of
+        {M, F} = Request1 ->
+            case erlang:function_exported(M, F, 0) of
+                true ->
+                    fun M:F/0;
+                false ->
+                    Request1
+            end;
+        F when is_function(F) ->
+            true = is_function(F, 0),
+            F;
+        Request1 ->
+            Request1
+    end,
+    true = is_integer(TickStableCount) andalso (TickStableCount > 0),
+    RequestRateN = if
+        RequestRate0 =:= dynamic ->
+            #dynamic{count_stable_max = TickStableCount};
+        is_number(RequestRate0) andalso (RequestRate0 > 0.0) ->
+            RequestRate0
+    end,
+    true = is_integer(TickLength) andalso (TickLength >= 1000),
     tick_start(Dispatcher),
     {ok, #state{name = Name,
-                request = Request,
-                request_rate = RequestRate,
+                request = RequestN,
+                request_rate = RequestRateN,
                 tick_length = TickLength}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
@@ -150,11 +189,12 @@ cloudi_service_handle_info(tick,
                                   request_rate = RequestRate,
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
-    RequestCountOut = request_count_sent(RequestRate, TickLength),
+    {RequestCountOut,
+     RequestRateNew} = request_count_sent(RequestRate, undefined, TickLength),
     tick_send(TickLength, Dispatcher),
-    RequestIds = tick_request_send(RequestCountOut, dict:new(),
-                                   Name, Request, Dispatcher),
-    {noreply, State#state{request_count = 0,
+    RequestIds = tick_request_send(RequestCountOut, Name, Request, Dispatcher),
+    {noreply, State#state{request_rate = RequestRateNew,
+                          request_count = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info({tick, T1},
                            #state{name = Name,
@@ -164,17 +204,15 @@ cloudi_service_handle_info({tick, T1},
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
     Elapsed = timer:now_diff(erlang:now(), T1) / 1000000.0, % seconds
-    RequestCountOut = request_count_sent(RequestRate, TickLength),
-    RequestRateComplete = erlang:round((RequestCountIn /
-                                        Elapsed) * 10.0) / 10.0,
-    ?LOG_INFO("~p requests/second "
-              "(to ~s, during ~p seconds, to attempt ~p requests/second)",
-              [RequestRateComplete, Name,
-               erlang:round(Elapsed * 10.0) / 10.0, RequestRate]),
+    RequestRateComplete = RequestCountIn / Elapsed,
+    {RequestCountOut,
+     RequestRateNew} = request_count_sent(RequestRate,
+                                          RequestRateComplete, TickLength),
+    request_rate_output(RequestRateNew, Elapsed, RequestRateComplete, Name),
     tick_send(TickLength, Dispatcher),
-    RequestIds = tick_request_send(RequestCountOut, dict:new(),
-                                   Name, Request, Dispatcher),
-    {noreply, State#state{request_count = 0,
+    RequestIds = tick_request_send(RequestCountOut, Name, Request, Dispatcher),
+    {noreply, State#state{request_rate = RequestRateNew,
+                          request_count = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -190,6 +228,87 @@ cloudi_service_terminate(_Reason, #state{}) ->
 request_count_sent(RequestRate, TickLength) ->
     erlang:round(RequestRate * (TickLength / 1000.0)).
 
+request_count_sent(#dynamic{request_rate = RequestRate} = Dynamic,
+                   undefined, TickLength) ->
+    {request_count_sent(RequestRate, TickLength), Dynamic};
+request_count_sent(#dynamic{count_stable_max = CountStableMax,
+                            count_stable = CountStable,
+                            request_rate = RequestRateOld,
+                            request_rate_stable = RequestRateStable,
+                            request_rate_max = RequestRateMax} = Dynamic,
+                   RequestRateComplete, TickLength) ->
+    % result will be within 1%
+    Offset = erlang:max(erlang:round(RequestRateComplete * 0.01) - 1, 0),
+    RequestRateCompleteOffset = erlang:round(RequestRateComplete) + Offset,
+    #dynamic{request_rate = RequestRateNew,
+             count_stable = CountStableNew} = DynamicNew = if
+        RequestRateOld =< RequestRateCompleteOffset ->
+            if
+                RequestRateMax =:= undefined ->
+                    Dynamic#dynamic{
+                        request_rate = RequestRateOld * 2};
+                is_integer(RequestRateMax),
+                RequestRateOld < RequestRateMax ->
+                    I = RequestRateMax - RequestRateOld,
+                    if
+                        I =< Offset ->
+                            Dynamic#dynamic{
+                                count_stable = CountStable + 1,
+                                request_rate_stable = RequestRateOld};
+                        true ->
+                            Delta = erlang:max(erlang:round(I / 2.0), 1),
+                            Dynamic#dynamic{
+                                request_rate = RequestRateOld + Delta}
+                    end
+            end;
+        RequestRateOld > RequestRateCompleteOffset ->
+            if
+                CountStable >= CountStableMax ->
+                    ?LOG_WARN("failed ~p requests/second after ~p ticks",
+                              [RequestRateStable, CountStable + 1]);
+                true ->
+                    ok
+            end,
+            I = RequestRateOld - RequestRateComplete,
+            Delta = erlang:max(erlang:round(I / 2.0), 1),
+            Dynamic#dynamic{
+                count_stable = 0,
+                request_rate = erlang:max(RequestRateOld - Delta, 1),
+                request_rate_stable = undefined,
+                request_rate_max = RequestRateOld}
+    end,
+    if
+        CountStableNew == 0 ->
+            ?LOG_DEBUG("attempt ~p requests/second", [RequestRateNew]);
+        true ->
+            ok
+    end,
+    {request_count_sent(RequestRateNew, TickLength), DynamicNew};
+request_count_sent(RequestRate, _, TickLength) ->
+    {request_count_sent(RequestRate, TickLength), RequestRate}.
+
+request_rate_output_log(RequestRate, Elapsed, RequestRateComplete, Name) ->
+    ?LOG_INFO("~p requests/second~n"
+              "(to ~s,~n"
+              " during ~p seconds,~n"
+              " sent ~p requests/second)",
+              [erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
+               erlang:round(Elapsed * 10.0) / 10.0, RequestRate]).
+
+request_rate_output(#dynamic{count_stable_max = CountStableMax,
+                             count_stable = CountStable,
+                             request_rate_stable = RequestRateStable},
+                    Elapsed, RequestRateComplete, Name) ->
+    if
+        CountStable >= CountStableMax ->
+            request_rate_output_log(RequestRateStable,
+                                    Elapsed, RequestRateComplete, Name);
+        true ->
+            ok
+    end;
+request_rate_output(RequestRate, Elapsed, RequestRateComplete, Name) ->
+    request_rate_output_log(RequestRate, Elapsed, RequestRateComplete, Name).
+
 tick_start(Dispatcher) ->
     erlang:send_after(500, cloudi_service:self(Dispatcher), tick),
     ok.
@@ -199,6 +318,15 @@ tick_send(TickLength, Dispatcher) ->
                       cloudi_service:self(Dispatcher),
                       {tick, erlang:now()}),
     ok.
+
+tick_request_send(I, Name, Request, Dispatcher) ->
+    RequestData = if
+        is_function(Request) ->
+            Request();
+        true ->
+            Request
+    end,
+    tick_request_send(I, dict:new(), Name, RequestData, Dispatcher).
 
 tick_request_send(0, RequestIds, _, _, _) ->
     RequestIds;

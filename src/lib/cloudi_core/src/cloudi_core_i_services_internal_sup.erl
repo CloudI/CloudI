@@ -54,7 +54,8 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/13]).
+         create_internal/13,
+         create_internal_done/3]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -112,6 +113,16 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
             Error
     end.
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% @end
+%%-------------------------------------------------------------------------
+
+create_internal_done(Parent, Dispatcher, ReceiverPid)
+    when is_pid(Parent), is_pid(Dispatcher), is_pid(ReceiverPid) ->
+    Parent ! {self, Dispatcher, ReceiverPid},
+    ok.
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
@@ -131,11 +142,16 @@ init([]) ->
 
 result(Dispatcher) ->
     % must not call cloudi_service:self/1 due to the possibility
-    % that external source code, called within cloudi_service_init/3,
-    % consumes incoming messages it isn't using
+    % that external source code (called within cloudi_service_init/3)
+    % will consume any incoming messages it doesn't understand
     % (e.g., in the source code doing a start_link)
+    MonitorRef = erlang:monitor(process, Dispatcher),
     receive
         {self, Dispatcher, Service} ->
-            {ok, Service}
+            % sent before cloudi_service_init/3 via create_internal_done/3
+            erlang:demonitor(MonitorRef),
+            {ok, Service};
+        {'DOWN', MonitorRef, process, Dispatcher, Info} ->
+            {error, Info}
     end.
 

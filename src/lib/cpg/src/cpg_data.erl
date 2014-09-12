@@ -49,7 +49,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.3.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -58,6 +58,7 @@
 -export([get_groups/0,
          get_groups/1,
          get_groups/2,
+         get_groups/3,
          get_empty_groups/0,
          get_members/2,
          get_members/3,
@@ -135,6 +136,20 @@ get_groups(Time) when is_integer(Time) ->
 
 get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
     erlang:send_after(Time, Scope, {cpg_data, self()}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the group storage for a particular scope and destination after a period of time.===
+%% This provides the internal representation of process groups so that
+%% requests will not be blocked by the single process managing the scope
+%% of the process groups.
+%% @end
+%%-------------------------------------------------------------------------
+
+get_groups(Scope, Destination, Time)
+    when is_atom(Scope), (is_pid(Destination) orelse is_atom(Destination)),
+         is_integer(Time) ->
+    erlang:send_after(Time, Scope, {cpg_data, Destination}).
 
 %%-------------------------------------------------------------------------
 %% @doc
