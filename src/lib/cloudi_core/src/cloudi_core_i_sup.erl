@@ -124,7 +124,7 @@ start_link(Config) when is_record(Config, config) ->
 init([Config]) when is_record(Config, config) ->
     true = ?CHECK,
     MaxRestarts = 0,
-    MaxTime = 1, % seconds (1 minute)
+    MaxTime = 1,
     {ok, {{one_for_all, MaxRestarts, MaxTime}, ?CHILDSPECS}}.
 
 %%%------------------------------------------------------------------------

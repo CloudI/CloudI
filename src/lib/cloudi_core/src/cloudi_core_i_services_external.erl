@@ -683,10 +683,6 @@ init([Protocol, SocketPath,
 handle_sync_event(port, _, StateName, #state{port = Port} = State) ->
     {reply, Port, StateName, State};
 
-handle_sync_event(state, _, StateName, State) ->
-    Result = format_status(normal, [erlang:get(), State]),
-    {reply, Result, StateName, State};
-
 handle_sync_event(Event, _From, StateName, State) ->
     ?LOG_WARN("Unknown event \"~p\"", [Event]),
     {stop, {StateName, undefined_event, Event}, State}.
