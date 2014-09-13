@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bug with incoming service request queue length not being accurate
+      after timeouts
+    * Reduce the latency a service request timeout may cause when many
+      service requests are pending (and potentially waiting to timeout), so
+      improve the performance of an overloaded service process
+    * Update pqueue
+
 2014-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve fix (done on 8/31) to make cloudi_service_init/3 completion

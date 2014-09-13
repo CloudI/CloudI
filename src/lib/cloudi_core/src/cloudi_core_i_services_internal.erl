@@ -1103,9 +1103,10 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId},
                    queue_requests = QueueRequests} = State) ->
     NewQueue = if
         QueueRequests =:= true ->
-            cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
-                Id /= TransId
-            end, Priority, Queue);
+            F = fun({_, _, _, _, _, _, _, Id, _}) -> Id == TransId end,
+            {_, % could be false if a timer message was sent while cancelling
+             NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
+            NextQueue;
         true ->
             Queue
     end,
@@ -3228,9 +3229,10 @@ duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId},
                            queued = Queue} = State) ->
     NewQueue = if
         QueueRequests =:= true ->
-            cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
-                Id /= TransId
-            end, Priority, Queue);
+            F = fun({_, _, _, _, _, _, _, Id, _}) -> Id == TransId end,
+            {_, % could be false if a timer message was sent while cancelling
+             NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
+            NextQueue;
         true ->
             Queue
     end,
