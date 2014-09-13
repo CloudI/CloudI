@@ -11596,9 +11596,15 @@ proper_test_() ->
 %% (based on the implementation of queue:filter/2 which is under the EPL)
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VER_16).
 -spec queue_remove_unique(F :: fun((any()) -> boolean()),
                           queue()) ->
     {boolean(), queue()}.
+-else.
+-spec queue_remove_unique(F :: fun((any()) -> boolean()),
+                          queue:queue()) ->
+    {boolean(), queue:queue()}.
+-endif.
 queue_remove_unique(Fun, {R0, F0} = Q)
     when is_function(Fun, 1), is_list(R0), is_list(F0) ->
     case queue_remove_unique_f(Fun, F0) of
