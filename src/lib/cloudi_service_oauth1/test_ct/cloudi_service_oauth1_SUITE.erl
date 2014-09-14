@@ -33,6 +33,7 @@
 -define(DEFAULT_PGSQL_PORT, 5432).
 -define(DEFAULT_RIAK_HOST, "127.0.0.1").
 -define(DEFAULT_RIAK_PORT, 8087).
+-define(TIMEOUT, 10000).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -89,7 +90,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 5100}].
+     {timetrap, ?TIMEOUT + 100}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
@@ -121,7 +122,8 @@ init_per_testcase(t_example_without_db_1, Config) ->
             ?MODULE,
             [{mode, example}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []},
         {internal,
             "/",
             cloudi_service_oauth1,
@@ -130,7 +132,8 @@ init_per_testcase(t_example_without_db_1, Config) ->
              {url_host, "https://photos.example.net"},
              {debug, true}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []}
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(t_example_without_db_2, Config) ->
@@ -142,7 +145,8 @@ init_per_testcase(t_example_without_db_2, Config) ->
             ?MODULE,
             [{mode, example}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []},
         {internal,
             "/",
             cloudi_service_oauth1,
@@ -151,7 +155,8 @@ init_per_testcase(t_example_without_db_2, Config) ->
              {url_host, "http://photos.example.net"},
              {debug, true}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []}
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(t_example_with_db_1, Config) ->
@@ -163,7 +168,8 @@ init_per_testcase(t_example_with_db_1, Config) ->
             ?MODULE,
             [{mode, example}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []},
         {internal,
             "/",
             cloudi_service_oauth1,
@@ -175,7 +181,8 @@ init_per_testcase(t_example_with_db_1, Config) ->
              {token_access_expiration, 1},
              {debug_db, true}],
             immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
+            ?TIMEOUT, ?TIMEOUT, ?TIMEOUT,
+            undefined, undefined, 1, 5, 300, []}
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
