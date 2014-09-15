@@ -9,6 +9,8 @@
       (it must need to be lower)
     * Adjust cloudi_service_request_rate to have better convergence when
       multiple processes are required
+    * Fix cloudi_service_filesystem CT test error and
+      reduce the CT test timeout
 
 2014-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 

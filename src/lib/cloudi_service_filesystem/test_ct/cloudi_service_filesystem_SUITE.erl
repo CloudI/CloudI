@@ -78,9 +78,9 @@
 -define(WRITABLE_DIRECTORY, "/tmp/").
 -define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
 -define(WRITABLE_FILEPATH, ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
--define(TIMEOUT, 3840000).
--define(REFRESH, 9600). % ((?TIMEOUT * 2.5) div 1000)
--define(REFRESH_STRING, "9600").
+-define(TIMEOUT, 960000).
+-define(REFRESH, 2400). % ((?TIMEOUT * 2.5) div 1000)
+-define(REFRESH_STRING, "2400").
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
@@ -396,8 +396,14 @@ t_filesystem_basic_read_1(_Config) ->
     <<LastModified0:184/bitstring,
       LastModified1:16/bitstring,
       LastModified2:32/bitstring>> = LastModified,
-    LastModified1New = erlang:integer_to_binary(
+    LastModified1Future = erlang:integer_to_binary(
         (erlang:binary_to_integer(LastModified1) + 1) rem 60),
+    LastModified1New = if
+        byte_size(LastModified1Future) == 1 ->
+            <<"0", LastModified1Future/binary>>;
+        true ->
+            LastModified1Future
+    end,
     LastModifiedFake = <<LastModified0/binary,
                          LastModified1New/binary,
                          LastModified2/binary>>,
@@ -585,8 +591,14 @@ t_filesystem_basic_read_wcache_1(_Config) ->
     <<LastModified0:184/bitstring,
       LastModified1:16/bitstring,
       LastModified2:32/bitstring>> = LastModified,
-    LastModified1New = erlang:integer_to_binary(
+    LastModified1Future = erlang:integer_to_binary(
         (erlang:binary_to_integer(LastModified1) + 1) rem 60),
+    LastModified1New = if
+        byte_size(LastModified1Future) == 1 ->
+            <<"0", LastModified1Future/binary>>;
+        true ->
+            LastModified1Future
+    end,
     LastModifiedFake = <<LastModified0/binary,
                          LastModified1New/binary,
                          LastModified2/binary>>,
