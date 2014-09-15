@@ -237,8 +237,8 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
                             request_rate_stable = RequestRateStable,
                             request_rate_max = RequestRateMax} = Dynamic,
                    RequestRateComplete, TickLength) ->
-    % result will be within 1%
-    Offset = erlang:max(erlang:round(RequestRateComplete * 0.01) - 1, 0),
+    % result will be within 5%
+    Offset = erlang:max(erlang:round(RequestRateComplete * 0.05) - 1, 0),
     RequestRateCompleteOffset = erlang:round(RequestRateComplete) + Offset,
     #dynamic{request_rate = RequestRateNew,
              count_stable = CountStableNew} = DynamicNew = if

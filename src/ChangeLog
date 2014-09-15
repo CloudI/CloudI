@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change RUN_ERL_LOG_ALIVE_MINUTES amd
+      RUN_ERL_LOG_ACTIVITY_MINUTES back to the defaults due to unexpected
+      latency caused with RUN_ERL_LOG_ACTIVITY_MINUTES set to 60
+      (it must need to be lower)
+    * Adjust cloudi_service_request_rate to have better convergence when
+      multiple processes are required
+
 2014-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix bug with incoming service request queue length not being accurate
