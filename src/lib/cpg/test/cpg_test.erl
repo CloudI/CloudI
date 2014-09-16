@@ -64,7 +64,7 @@ via1_test() ->
     ok = cpg_test_server:put("message", "Hello World!"),
     "Hello World!" = cpg_test_server:get("message"),
     erlang:unlink(Pid),
-    erlang:exit(Pid, kill),
+    ok = kill_pid(Pid),
     ok.
 
 via2_test() ->
@@ -98,13 +98,10 @@ via3_test() ->
     true = is_integer(I5),
     true = (I1 /= I2 orelse I2 /= I3 orelse I3 /= I4 orelse I4 /= I5),
     erlang:unlink(Pid1),
-    erlang:exit(Pid1, kill),
     erlang:unlink(Pid2),
-    erlang:exit(Pid2, kill),
     erlang:unlink(Pid3),
-    erlang:exit(Pid3, kill),
     erlang:unlink(Pid4),
-    erlang:exit(Pid4, kill),
+    ok = kill_pids([Pid1, Pid2, Pid3, Pid4]),
     ok.
 
 supervisor_via_test() ->
@@ -150,22 +147,14 @@ supervisor_via_test() ->
     {cpg_test_server1, ChildPid1b, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
-    ChildPid1bRef = erlang:monitor(process, ChildPid1b),
-    erlang:exit(ChildPid1b, kill),
-    receive
-        {'DOWN', ChildPid1bRef, process, ChildPid1b, killed} ->
-            timer:sleep(500)
-    end,
+    ok = kill_pid(ChildPid1b),
+    timer:sleep(500),
     {cpg_test_server1, ChildPid1c, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
     true = is_pid(ChildPid1c),
-    ChildPid1cRef = erlang:monitor(process, ChildPid1c),
-    erlang:exit(ChildPid1c, kill),
-    receive
-        {'DOWN', ChildPid1cRef, process, ChildPid1c, killed} ->
-            timer:sleep(500)
-    end,
+    ok = kill_pid(ChildPid1c),
+    timer:sleep(500),
     {cpg_test_server1, ChildPid1d, _, _} =
         lists:keyfind(cpg_test_server1, 1,
                       supervisor_cpg:which_children(SupViaName)),
@@ -178,17 +167,13 @@ supervisor_via_test() ->
                                                         cpg_test_server1),
     {error, not_found} = supervisor_cpg:delete_child(SupViaName,
                                                      cpg_test_server1),
-    ChildPid3Ref = erlang:monitor(process, ChildPid3),
-    erlang:exit(ChildPid3, kill),
-    receive
-        {'DOWN', ChildPid3Ref, process, ChildPid3, killed} ->
-            timer:sleep(500)
-    end,
+    ok = kill_pid(ChildPid3),
+    timer:sleep(500),
     [{active, 1},
      {specs, 1},
      {supervisors, 0},
      {workers, 1}] = lists:sort(supervisor_cpg:count_children(SupViaName)),
-    erlang:exit(SupPid, kill),
+    ok = kill_pid(SupPid),
     ok.
 
 pid_age_1_test() ->
@@ -204,18 +189,12 @@ pid_age_1_test() ->
     {ok, "GroupA", Pid1} = cpg:get_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid1} = cpg:get_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA", Pid1),
-    Pid1Ref = erlang:monitor(process, Pid1),
-    erlang:exit(Pid1, kill),
-    receive
-        {'DOWN', Pid1Ref, process, Pid1, killed} ->
-            timer:sleep(500)
-    end,
+    ok = kill_pid(Pid1),
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
-    erlang:exit(Pid2, kill),
-    erlang:exit(Pid3, kill),
+    ok = kill_pids([Pid2, Pid3]),
     ok.
 
 pid_age_2_test() ->
@@ -239,13 +218,13 @@ pid_age_2_test() ->
     1 = cpg:join_count("GroupA", Pid1),
     ok = cpg:leave("GroupA", Pid1),
     0 = cpg:join_count("GroupA", Pid1),
+    % joins GroupA: Pid1 Pid2 Pid3 Pid1 Pid2
+    % leave GroupA: Pid2 Pid3 Pid2
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
-    erlang:exit(Pid1, kill),
-    erlang:exit(Pid2, kill),
-    erlang:exit(Pid3, kill),
+    ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
 
 callbacks_test() ->
@@ -292,22 +271,22 @@ callbacks_test() ->
     ok = cpg:join("GroupC", GroupPid3),
     ok = cpg:join("GroupA", GroupPid3),
     ok = cpg:join("GroupB", GroupPid3),
-    erlang:exit(GroupPid2, kill),
-    receive after 100 -> ok end,
+    ok = kill_pid(GroupPid2),
+    timer:sleep(100),
     Pid ! {get, self()},
     Sequence1 = receive
         GroupSequence1 ->
             GroupSequence1
     end,
-    erlang:exit(GroupPid1, kill),
-    receive after 100 -> ok end,
+    ok = kill_pid(GroupPid1),
+    timer:sleep(100),
     Pid ! {get, self()},
     Sequence2 = receive
         GroupSequence2 ->
             GroupSequence2
     end,
-    erlang:exit(GroupPid3, kill),
-    receive after 100 -> ok end,
+    ok = kill_pid(GroupPid3),
+    timer:sleep(100),
     Pid ! {get, self()},
     Sequence3 = receive
         GroupSequence3 ->
@@ -329,7 +308,7 @@ callbacks_test() ->
     [{callback4_leave, "GroupA", GroupPid3, {exit, killed}},
      {callback5_leave, "GroupB", GroupPid3, {exit, killed}},
      {callback6_leave, "GroupC", GroupPid3, {exit, killed}}] = Sequence3,
-    erlang:exit(Pid, kill),
+    ok = kill_pid(Pid),
     ok = cpg:remove_join_callback("GroupA", Callback1),
     ok = cpg:remove_join_callback("GroupB", Callback2),
     ok = cpg:remove_join_callback("GroupC", Callback3),
@@ -344,6 +323,27 @@ cpg_stop_test_() ->
 busy_pid() ->
     timer:sleep(1000),
     busy_pid().
+
+kill_pid(Pid) when is_pid(Pid) ->
+    MonitorRef = erlang:monitor(process, Pid),
+    erlang:exit(Pid, kill),
+    receive
+        {'DOWN', MonitorRef, process, Pid, killed} ->
+            ok
+    end.
+
+kill_pids(Pids) when is_list(Pids) ->
+    MonitorPids = lists:map(fun(Pid) ->
+        MonitorRef = erlang:monitor(process, Pid),
+        erlang:exit(Pid, kill),
+        {MonitorRef, Pid}
+    end, Pids),
+    lists:foreach(fun({MonitorRef, Pid}) ->
+        receive
+            {'DOWN', MonitorRef, process, Pid, killed} ->
+                ok
+        end
+    end, MonitorPids).
 
 index(Item, L)
     when is_list(L) ->
