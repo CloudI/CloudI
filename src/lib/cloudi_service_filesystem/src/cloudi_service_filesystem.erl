@@ -527,7 +527,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
-                                     } = State, _Dispatcher) ->
+                                     } = State, Dispatcher) ->
     case cloudi_x_trie:find(Pattern, Files) of
         {ok, #file{contents = Contents,
                    headers = FileHeaders,
@@ -548,11 +548,12 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                             request_read(MTime, Contents, FileHeaders,
                                          RequestInfo, State);
                         "put" ->
-                            request_truncate(File, RequestInfo, Request, State);
+                            request_truncate(File, RequestInfo, Request,
+                                             State, Dispatcher);
                         "post" ->
                             request_append(File, Pattern,
-                                           RequestInfo, Request,
-                                           Timeout, State)
+                                           RequestInfo, Request, Timeout,
+                                           State, Dispatcher)
                     end;
                 UseHttpGetSuffix =:= false ->
                     request_read(MTime, Contents, FileHeaders,
@@ -805,9 +806,10 @@ request_truncate_file(#file{contents = Contents,
      State#state{files = NewFiles}}.
 
 request_truncate(#file{path = FilePath,
-                       write = Write} = File,
+                       write = Write,
+                       notify = NotifyL} = File,
                  RequestInfo, Request,
-                 #state{use_http_get_suffix = true} = State) ->
+                 #state{use_http_get_suffix = true} = State, Dispatcher) ->
     case lists:member(truncate, Write) of
         true ->
             KeyValues = cloudi_service:
@@ -825,6 +827,7 @@ request_truncate(#file{path = FilePath,
                     case file:write_file(FilePath, NewContents) of
                         ok ->
                             {ok, FileInfo} = read_file_info(FilePath),
+                            file_notify_send(NotifyL, NewContents, Dispatcher),
                             #file_info{mtime = MTime,
                                        access = Access} = FileInfo,
                             NewFile = File#file{contents = NewContents,
@@ -889,15 +892,17 @@ request_append_store(Id, Index,
 request_append_file([],
                     #file{contents = Contents,
                           path = FilePath,
-                          headers = FileHeaders} = File,
+                          headers = FileHeaders,
+                          notify = NotifyL} = File,
                     #state{prefix = Prefix,
                            directory_length = DirectoryLength,
                            cache = Cache,
                            files = Files,
-                           use_http_get_suffix = true} = State) ->
+                           use_http_get_suffix = true} = State, Dispatcher) ->
     case file:write_file(FilePath, Contents) of
         ok ->
             {ok, FileInfo} = read_file_info(FilePath),
+            file_notify_send(NotifyL, Contents, Dispatcher),
             #file_info{mtime = MTime,
                        access = Access} = FileInfo,
             NewFile = File#file{mtime = MTime,
@@ -922,7 +927,7 @@ request_append_file([],
              <<>>, State}
     end;
 request_append_file([{undefined, Request} | RangeRequests],
-                    #file{contents = Contents} = File, State) ->
+                    #file{contents = Contents} = File, State, Dispatcher) ->
     NewContents = if
         is_binary(Request) ->
             <<Contents/binary, Request/binary>>;
@@ -930,9 +935,9 @@ request_append_file([{undefined, Request} | RangeRequests],
             erlang:iolist_to_binary([Contents, Request])
     end,
     request_append_file(RangeRequests,
-                        File#file{contents = NewContents}, State);
+                        File#file{contents = NewContents}, State, Dispatcher);
 request_append_file([{Range, Request} | RangeRequests],
-                    #file{contents = Contents} = File, State) ->
+                    #file{contents = Contents} = File, State, Dispatcher) ->
     RequestBin = if
         is_binary(Request) ->
             Request;
@@ -992,7 +997,8 @@ request_append_file([{Range, Request} | RangeRequests],
                       RequestBin/binary>>
             end,
             request_append_file(RangeRequests,
-                                File#file{contents = NewContents}, State);
+                                File#file{contents = NewContents},
+                                State, Dispatcher);
         true ->
             ContentLengthBin = erlang:integer_to_binary(ContentLength),
             {reply,
@@ -1010,7 +1016,7 @@ request_append(#file{contents = Contents,
                Name, RequestInfo, Request, Timeout,
                #state{service = Service,
                       files = Files,
-                      use_http_get_suffix = true} = State) ->
+                      use_http_get_suffix = true} = State, Dispatcher) ->
     case lists:member(append, Write) of
         true ->
             KeyValues = cloudi_service:
@@ -1028,7 +1034,7 @@ request_append(#file{contents = Contents,
                      NewAppends} = request_append_take(Id, NextAppends),
                     request_append_file(RangeRequests,
                                         File#file{write_appends = NewAppends},
-                                        State);
+                                        State, Dispatcher);
                 {Status, {Range, Id, false, Index}}
                     when Status == 200;
                          Status == 206 ->

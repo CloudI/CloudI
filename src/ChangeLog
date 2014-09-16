@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add file notifications to cloudi_service_filesystem append and truncate
+    * Add --with-python-version to configure script
+
 2014-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change RUN_ERL_LOG_ALIVE_MINUTES amd

@@ -120,12 +120,35 @@ AC_ARG_WITH([python-debug],
     ],
     [PYTHON_DEBUG="no"])
 AC_ARG_VAR([PYTHON],[python executable])
-AS_IF([test "x$PYTHON_DEBUG" == "xno"],
-    [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
-    [AC_PATH_PROGS([PYTHON],[python2-dbg python2.7-dbg python-dbg])])
-AX_PROG_PYTHON_VERSION([2.7.0],
-    [AX_PYTHON_C],
-    [AC_MSG_ERROR([Python >= 2.7.0 not found])])
+AC_ARG_WITH([python_version],
+    [AS_HELP_STRING([--with-python-version@<:@=ARG@:>@],
+        [specify the version of Python (ARG=2|3)
+         @<:@ARG=2@:>@ ])],
+        [
+        if test "$withval" = "2"; then
+            PYTHON_VERSION_REQUIRED="2"
+        elif test "$withval" = "3"; then
+            PYTHON_VERSION_REQUIRED="3"
+        else
+            AC_MSG_ERROR([Python version 2 or 3, not $withval])
+        fi
+        ],
+        [PYTHON_VERSION_REQUIRED="2"])
+if test "x$PYTHON_VERSION_REQUIRED" = "x2"; then
+    AS_IF([test "x$PYTHON_DEBUG" == "xno"],
+        [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
+        [AC_PATH_PROGS([PYTHON],[python2-dbg python2.7-dbg python-dbg])])
+    AX_PROG_PYTHON_VERSION([2.7.0],
+        [AX_PYTHON_C],
+        [AC_MSG_ERROR([Python >= 2.7.0 not found])])
+elif test "x$PYTHON_VERSION_REQUIRED" = "x3"; then
+    AS_IF([test "x$PYTHON_DEBUG" == "xno"],
+        [AC_PATH_PROGS([PYTHON],[python3 python3.2 python])],
+        [AC_PATH_PROGS([PYTHON],[python3-dbg python3.2-dbg python-dbg])])
+    AX_PROG_PYTHON_VERSION([3.0.0],
+        [AX_PYTHON_C],
+        [AC_MSG_ERROR([Python >= 3.0.0 not found])])
+fi
 
 # ruby checks
 AC_ARG_VAR([RUBY],[ruby executable])
