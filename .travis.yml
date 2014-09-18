@@ -21,6 +21,8 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
+  - mysql -e "CREATE DATABASE cloudi_tests;"
+  - mysql -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
   - psql -U postgres -c "CREATE USER cloudi_tests WITH PASSWORD 'cloudi_tests'; GRANT ALL PRIVILEGES ON DATABASE cloudi_tests to cloudi_tests;"
 script: ../src/make_dev test install || ( find ../src/ -mmin 1 \( -name 'raw.log' -o -name 'cloudi.log' \) -printf '%C@ %p\n' | sort -r | cut -d ' ' -f 2 | xargs cat && exit 1 )

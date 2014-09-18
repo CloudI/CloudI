@@ -94,7 +94,7 @@
         % unique state elements
         queued_info = queue:new(),     % queue process messages for service
         module,                        % service module
-        service_state,                 % service state
+        service_state = undefined,     % service state
         process_index,                 % 0-based index of the Erlang process
         process_count,                 % initial count of Erlang processes
         prefix,                        % subscribe/unsubscribe name prefix

@@ -133,9 +133,11 @@ cloudi_service_init(_Args, _Prefix, Dispatcher) ->
     {ok, #state{service = ?MODULE}}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
-                              Timeout, _Priority, _TransId, _Pid,
+                              Timeout, Priority, _TransId, _Pid,
                               #state{suffixes = [Suffix | Suffixes]} = State,
                               _Dispatcher) ->
+    2097152 = erlang:byte_size(Request), % from cxx service
+    -5 = Priority,                       % from cxx service
     <<I:32/unsigned-integer-native, Rest/binary>> = Request,
     NewI = if
         I == 4294967295 ->

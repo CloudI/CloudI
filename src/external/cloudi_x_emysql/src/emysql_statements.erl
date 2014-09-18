@@ -28,7 +28,7 @@
 -export([start_link/0, init/1, handle_call/3, handle_cast/2]).
 -export([handle_info/2, terminate/2, code_change/3]).
 
--export([all/0, fetch/1, add/2, version/2, prepare/3, remove/1]).
+-export([all/0, fetch/1, fetch/2, add/2, add/3, version/2, version/3, prepare/3, prepare/4, remove/1]).
 
 -include("emysql.hrl").
 
@@ -52,17 +52,30 @@ all() ->
 fetch(StmtName) ->
     gen_server:call(?MODULE, {fetch, StmtName}, infinity).
 
+fetch(StmtName, Timeout) ->
+    gen_server:call(?MODULE, {fetch, StmtName}, Timeout).
+
 add(StmtName, Statement) ->
     gen_server:call(?MODULE, {add, StmtName, Statement}, infinity).
+
+add(StmtName, Statement, Timeout) ->
+    gen_server:call(?MODULE, {add, StmtName, Statement}, Timeout).
 
 version(ConnId, StmtName) ->
     gen_server:call(?MODULE, {version, ConnId, StmtName}, infinity).
 
+version(ConnId, StmtName, Timeout) ->
+    gen_server:call(?MODULE, {version, ConnId, StmtName}, Timeout).
+
 prepare(ConnId, StmtName, Version) ->
     gen_server:call(?MODULE, {prepare, ConnId, StmtName, Version}, infinity).
 
+prepare(ConnId, StmtName, Version, Timeout) ->
+    gen_server:call(?MODULE, {prepare, ConnId, StmtName, Version}, Timeout).
+
 remove(ConnId) ->
     gen_server:call(?MODULE, {remove, ConnId}, infinity).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================

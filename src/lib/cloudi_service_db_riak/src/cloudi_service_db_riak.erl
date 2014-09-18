@@ -577,13 +577,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_integer(Port),
     true = is_list(Options),
     TimeoutMax = cloudi_service:timeout_max(Dispatcher),
-    if
-        Ping =:= undefined ->
-            ok;
-        is_integer(Ping), Ping > 0, Ping =< TimeoutMax ->
-            erlang:send_after(Ping, cloudi_service:self(Dispatcher),
-                              {ping, Ping})
-    end,
+    true = (Ping =:= undefined) orelse
+           (is_integer(Ping) andalso (Ping > 0) andalso (Ping =< TimeoutMax)),
     true = ((Debug =:= true) orelse
             (Debug =:= false)),
     true = ((DebugLevel =:= trace) orelse
@@ -613,6 +608,14 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             % irregardless of auto_connect, to fail-fast
             case cloudi_x_riakc_pb_socket:is_connected(Connection) of
                 true ->
+                    if
+                        Ping =:= undefined ->
+                            ok;
+                        is_integer(Ping) ->
+                            erlang:send_after(Ping,
+                                              cloudi_service:self(Dispatcher),
+                                              {ping, Ping})
+                    end,
                     {ok, State};
                 {false, Reason} ->
                     {stop, {disconnected, Reason}, State}
@@ -754,7 +757,8 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
                         {ok, ObjectN} ->
                             if
                                 ObjectReply =:= true ->
-                                    {ok, cloudi_x_riakc_obj:key(ObjectN), ObjectN};
+                                    {ok,
+                                     cloudi_x_riakc_obj:key(ObjectN), ObjectN};
                                 ObjectReply =:= false ->
                                     object_to_tuple(ObjectN)
                             end;
@@ -848,7 +852,7 @@ object_indexes(Object0, [_ | _] = Indexes) ->
 driver_put(Connection, Object, Options, Timeout,
            #state{debug_level = DebugLevel}) ->
     Result = try cloudi_x_riakc_pb_socket:put(Connection, Object,
-                                     Options, Timeout)
+                                              Options, Timeout)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}
@@ -866,7 +870,7 @@ driver_put(Connection, Object, Options, Timeout,
 driver_delete(Connection, Bucket, Key, Options, Timeout,
               #state{debug_level = DebugLevel}) ->
     Result = try cloudi_x_riakc_pb_socket:delete(Connection, Bucket,
-                                        Key, Options, Timeout)
+                                                 Key, Options, Timeout)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}
@@ -884,7 +888,7 @@ driver_delete(Connection, Bucket, Key, Options, Timeout,
 driver_get(Connection, Bucket, Key, Options, Timeout,
            #state{debug_level = DebugLevel}) ->
     Result = try cloudi_x_riakc_pb_socket:get(Connection, Bucket, Key,
-                                     Options, Timeout)
+                                              Options, Timeout)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}
@@ -902,7 +906,7 @@ driver_get(Connection, Bucket, Key, Options, Timeout,
 driver_get_index_eq(Connection, Bucket, Index, Key, Options,
                     #state{debug_level = DebugLevel}) ->
     Result = try cloudi_x_riakc_pb_socket:get_index_eq(Connection, Bucket,
-                                              Index, Key, Options)
+                                                       Index, Key, Options)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}
@@ -920,8 +924,10 @@ driver_get_index_eq(Connection, Bucket, Index, Key, Options,
 driver_get_index_range(Connection, Bucket,
                        Index, KeyStart, KeyEnd, Options,
                        #state{debug_level = DebugLevel}) ->
-    Result = try cloudi_x_riakc_pb_socket:get_index_range(Connection, Bucket, Index,
-                                                 KeyStart, KeyEnd, Options)
+    Result = try cloudi_x_riakc_pb_socket:get_index_range(Connection,
+                                                          Bucket, Index,
+                                                          KeyStart, KeyEnd,
+                                                          Options)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}
@@ -954,7 +960,8 @@ driver_list_buckets(Connection, Options,
 
 driver_list_keys(Connection, Bucket, Options,
                  #state{debug_level = DebugLevel}) ->
-    Result = try cloudi_x_riakc_pb_socket:list_keys(Connection, Bucket, Options)
+    Result = try cloudi_x_riakc_pb_socket:list_keys(Connection,
+                                                    Bucket, Options)
     catch
         ExceptionType:ExceptionReason ->
             {error, {ExceptionType, ExceptionReason}}

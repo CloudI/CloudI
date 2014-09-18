@@ -73,14 +73,14 @@ exceptions due to their C integration).
 - `Tue Oct 22 11:58:41 PDT 2013`
 - `MIT`
 
-`emysql (erlang_mysql)`
------------------------
+`emysql`
+--------
  `Erlang MySQL (native) Driver`
  
 - `https://github.com/okeuday/emysql`
-- `alternative: https://github.com/Eonblast/Emysql`
-- `commit 13b3957b82f3647cb0255ac7eaeaba49e3ef9579`
-- `Tue Oct 22 11:58:41 PDT 2013`
+- `commit 9281bcf4850d26ac4968ab7f93bb443328b465d3 (v0.4.1_CloudI)`
+- `Thu Sep 18 16:41:01 PDT 2014`
+- `MIT`
 
 `epgsql`
 --------

@@ -26,21 +26,20 @@
 %% OTHER DEALINGS IN THE SOFTWARE.
 %% @private
 -module(emysql_tcp).
--export([send_and_recv_packet/3, recv_packet/3, response/4]).
+-export([send_and_recv_packet/4, recv_packet/3, response/4]).
 
 -include("emysql.hrl").
 
 -define(PACKETSIZE, 1460).
 
-send_and_recv_packet(Sock, Packet, SeqNum) ->
+send_and_recv_packet(Sock, Packet, SeqNum, Timeout) ->
     case gen_tcp:send(Sock, <<(size(Packet)):24/little, SeqNum:8, Packet/binary>>) of
         ok ->
             ok;
         {error, Reason} ->
             exit({failed_to_send_packet_to_server, Reason})
     end,
-    DefaultTimeout = emysql_app:default_timeout(),
-    case response_list(Sock, DefaultTimeout, ?SERVER_MORE_RESULTS_EXIST) of
+    case response_list(Sock, Timeout, ?SERVER_MORE_RESULTS_EXIST) of
         % This is a bit murky. It's compatible with former Emysql versions
         % but sometimes returns a list, e.g. for stored procedures,
         % since an extra OK package is sent at the end of their results.
@@ -48,24 +47,24 @@ send_and_recv_packet(Sock, Packet, SeqNum) ->
         List -> List
     end.
 
-response_list(Sock, DefaultTimeout, ServerStatus) -> 
-    response_list(Sock, DefaultTimeout, ServerStatus, <<>>).
+response_list(Sock, Timeout, ServerStatus) -> 
+    response_list(Sock, Timeout, ServerStatus, <<>>).
 
-response_list(_, _DefaultTimeout, 0, <<>>) -> [];  %%no further data received after last response.
+response_list(_, _Timeout, 0, <<>>) -> [];  %%no further data received after last response.
 
-response_list(Sock, DefaultTimeout, ?SERVER_MORE_RESULTS_EXIST, Buff) ->
-    {Packet, Rest} = recv_packet(Sock, DefaultTimeout, Buff),
-    {Response, ServerStatus, Rest2} = response(Sock, DefaultTimeout, Packet, Rest),
-    [ Response | response_list(Sock, DefaultTimeout, ServerStatus band ?SERVER_MORE_RESULTS_EXIST, Rest2)].
+response_list(Sock, Timeout, ?SERVER_MORE_RESULTS_EXIST, Buff) ->
+    {Packet, Rest} = recv_packet(Sock, Timeout, Buff),
+    {Response, ServerStatus, Rest2} = response(Sock, Timeout, Packet, Rest),
+    [ Response | response_list(Sock, Timeout, ServerStatus band ?SERVER_MORE_RESULTS_EXIST, Rest2)].
 
 
 
-recv_packet(Sock, DefaultTimeout, Buff) ->
+recv_packet(Sock, Timeout, Buff) ->
     %-% io:format("~p recv_packet~n", [self()]),
     %-% io:format("~p recv_packet: recv_packet_header~n", [self()]),
-    {PacketLength, SeqNum, Buff2} = recv_packet_header(Sock, DefaultTimeout, Buff),
+    {PacketLength, SeqNum, Buff2} = recv_packet_header(Sock, Timeout, Buff),
     %-% io:format("~p recv_packet: recv_packet_body~n", [self()]),
-    {Data, Rest} = recv_packet_body(Sock, PacketLength, DefaultTimeout, Buff2),
+    {Data, Rest} = recv_packet_body(Sock, PacketLength, Timeout, Buff2),
     %-% io:format("~nrecv_packet: len: ~p, data: ~p~n", [PacketLength, Data]),
     {#packet{size=PacketLength, seq_num=SeqNum, data=Data}, Rest}.
 
@@ -125,18 +124,18 @@ response(_Sock, _Timeout, #packet{seq_num = SeqNum, data = <<255:8, ErrNo:16/lit
      ?SERVER_NO_STATUS, Buff };
 
 % DATA response.
-response(Sock, DefaultTimeout, #packet{seq_num = SeqNum, data = Data}=_Packet, Buff) ->
+response(Sock, Timeout, #packet{seq_num = SeqNum, data = Data}=_Packet, Buff) ->
     %-% io:format("~nresponse (DATA): ~p~n", [_Packet]),
     {FieldCount, Rest1} = length_coded_binary(Data),
     {Extra, _} = length_coded_binary(Rest1),
-    {SeqNum1, FieldList, Buff2} = recv_field_list(Sock, SeqNum+1, DefaultTimeout, Buff),
+    {SeqNum1, FieldList, Buff2} = recv_field_list(Sock, SeqNum+1, Timeout, Buff),
     if
         length(FieldList) =/= FieldCount ->
             exit(query_returned_incorrect_field_count);
         true ->
             ok
     end,
-    {SeqNum2, Rows, ServerStatus, Buff3} = recv_row_data(Sock, FieldList, DefaultTimeout, SeqNum1+1, Buff2),
+    {SeqNum2, Rows, ServerStatus, Buff3} = recv_row_data(Sock, FieldList, Timeout, SeqNum1+1, Buff2),
     { #result_packet{
         seq_num = SeqNum2,
         field_list = FieldList,
@@ -184,11 +183,11 @@ recv_packet_body(Sock, PacketLength, Timeout, Buff) ->
             end
     end.
 
-recv_field_list(Sock, SeqNum, DefaultTimeout, Buff) ->
-    recv_field_list(Sock, SeqNum, DefaultTimeout,[], Buff).
+recv_field_list(Sock, SeqNum, Timeout, Buff) ->
+    recv_field_list(Sock, SeqNum, Timeout,[], Buff).
 
-recv_field_list(Sock, _SeqNum, DefaultTimeout, Acc, Buff) ->
-	case recv_packet(Sock, DefaultTimeout, Buff) of
+recv_field_list(Sock, _SeqNum, Timeout, Acc, Buff) ->
+	case recv_packet(Sock, Timeout, Buff) of
         {#packet{seq_num = SeqNum1, data = <<?RESP_EOF, _WarningCount:16/little, _ServerStatus:16/little>>}, Unparsed} -> % (*)!
 			%-% io:format("- eof: ~p~n", [emysql_conn:hstate(_ServerStatus)]),
                         {SeqNum1, lists:reverse(Acc), Unparsed};
@@ -221,12 +220,12 @@ recv_field_list(Sock, _SeqNum, DefaultTimeout, Acc, Buff) ->
 				decimals = Decimals,
                 decoder = cast_fun_for(Type)
 			},
-			recv_field_list(Sock, SeqNum1, DefaultTimeout, [Field|Acc], Unparsed)
+			recv_field_list(Sock, SeqNum1, Timeout, [Field|Acc], Unparsed)
 	end.
 
 
-recv_row_data(Socket, FieldList, DefaultTimeout, SeqNum, Buff) ->
-    recv_row_data(Socket, FieldList, DefaultTimeout, SeqNum, Buff, []).
+recv_row_data(Socket, FieldList, Timeout, SeqNum, Buff) ->
+    recv_row_data(Socket, FieldList, Timeout, SeqNum, Buff, []).
 
 recv_row_data(Socket, FieldList, Timeout, SeqNum, Buff, Acc) ->
        case parse_buffer(FieldList,Buff, Acc) of

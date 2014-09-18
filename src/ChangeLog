@@ -1,6 +1,25 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for cloudi_service_db_mysql
+    * Add CT tests to cloudi_service_db_mysql based on
+      the current cloudi_service_db_pgsql CT tests
+    * Update emysql to the eonblast repository
+      (different native return values,
+       but the old emysql was too broken to fix)
+    * Fix for cloudi_service_db_pgsql timeout usage
+        * The service request timeout value will be used instead of the
+          configuration argument timeout value for the semiocast driver
+          (making the configuration argument timeout connection only,
+           for the drivers that support it, i.e., epgsql and wg)
+    * Change cloudi_service_db_riak ping to start only after the connection
+      is created to be more accurate
+    * Add ping usage to cloudi_service_db_riak CT test
+    * Reformat cloudi_service_db_riak source code
+    * Add asserts to the cloudi_service_msg_size integration test
+
 2014-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add file notifications to cloudi_service_filesystem append and truncate

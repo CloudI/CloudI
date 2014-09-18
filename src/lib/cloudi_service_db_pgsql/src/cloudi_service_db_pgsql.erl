@@ -76,7 +76,7 @@
 -define(DEFAULT_PORT,                        5432).
 -define(DEFAULT_SSL,                        false).
 -define(DEFAULT_LISTEN,                 undefined). % LISTEN/NOTIFY destination
--define(DEFAULT_TIMEOUT,                    20000). % 20 seconds
+-define(DEFAULT_TIMEOUT,                    20000). % ms (connect-only)
 -define(DEFAULT_ENDIAN,                    native). % response binary sizes
 -define(DEFAULT_OUTPUT,                      both).
 -define(DEFAULT_INTERNAL_INTERFACE,        native).
@@ -97,7 +97,6 @@
         module :: ?MODULE_WG | ?MODULE_SEMIOCAST | ?MODULE_EPGSQL,
         connection :: any(),
         listen :: cloudi_service:service_name() | undefined,
-        timeout :: pos_integer(),
         endian :: endian(),
         output :: both | external | internal,
         interface :: native | common,
@@ -326,7 +325,6 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
             {ok, #state{module = Module,
                         connection = Connection,
                         listen = Listen,
-                        timeout = Timeout,
                         endian = Endian,
                         output = Output,
                         interface = Interface,
@@ -337,7 +335,7 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+                              Timeout, _Priority, _TransId, _Pid,
                               #state{output = Output,
                                      mysql = MysqlCompatibility} = State,
                               _Dispatcher) ->
@@ -345,7 +343,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         {Query, []}
             when (Output =/= external),
                  (is_binary(Query) orelse is_list(Query)) ->
-            case driver_squery(internal, Query, State) of
+            case driver_squery(internal, Query, Timeout, State) of
                 {error, closed} ->
                     {stop, closed, State};
                 Response ->
@@ -360,7 +358,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 MysqlCompatibility =:= false ->
                     Query
             end,
-            case driver_equery(NewQuery, Parameters, State) of
+            case driver_equery(NewQuery, Parameters, Timeout, State) of
                 {error, closed} ->
                     {stop, closed, State};
                 Response ->
@@ -369,7 +367,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         [Query | _] = QueryList
             when (Output =/= external),
                  (is_binary(Query) orelse is_list(Query)) ->
-            case driver_with_transaction(QueryList, State) of
+            case driver_with_transaction(QueryList, Timeout, State) of
                 {error, closed} ->
                     {stop, closed, State};
                 Response ->
@@ -383,7 +381,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                 Output =:= external; Output =:= both ->
                     external
             end,
-            case driver_squery(ResponseOutput, Query, State) of
+            case driver_squery(ResponseOutput, Query, Timeout, State) of
                 {error, closed} ->
                     {stop, closed, State};
                 Response ->
@@ -392,7 +390,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         Query
             when (Output =/= external),
                  is_list(Query) ->
-            case driver_squery(internal, Query, State) of
+            case driver_squery(internal, Query, Timeout, State) of
                 {error, closed} ->
                     {stop, closed, State};
                 Response ->
@@ -619,19 +617,19 @@ driver_close(?MODULE_SEMIOCAST, Connection) ->
     ?MODULE_SEMIOCAST:close(Connection).
 
 % only internal usage, due to relying on an erlang list
-driver_with_transaction(L, State) ->
+driver_with_transaction(L, Timeout, State) ->
     case driver_squery(internal,
-                       [<<"BEGIN;">> | L] ++ [<<"COMMIT;">>],
+                       [<<"BEGIN;">> | L] ++ [<<"COMMIT;">>], Timeout,
                        State#state{interface = common}) of
         {updated, 0} ->
             ok;
         {error, _} = Error ->
-            driver_squery(internal, <<"ROLLBACK;">>, State),
+            driver_squery(internal, <<"ROLLBACK;">>, Timeout, State),
             Error
     end.
 
 % only internal usage, due to relying on an erlang list
-driver_equery(Query, Parameters,
+driver_equery(Query, Parameters, _Timeout,
               #state{module = ?MODULE_EPGSQL,
                      connection = Connection,
                      interface = Interface,
@@ -649,7 +647,7 @@ driver_equery(Query, Parameters,
         Interface =:= native ->
             Native
     end;
-driver_equery(Query, Parameters,
+driver_equery(Query, Parameters, _Timeout,
               #state{module = ?MODULE_WG,
                      connection = Connection,
                      interface = Interface,
@@ -667,10 +665,9 @@ driver_equery(Query, Parameters,
         Interface =:= native ->
             Native
     end;
-driver_equery(Query, Parameters,
+driver_equery(Query, Parameters, Timeout,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
-                     timeout = Timeout,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
@@ -689,7 +686,7 @@ driver_equery(Query, Parameters,
     end.
 
 % internal or external
-driver_squery(internal, Query,
+driver_squery(internal, Query, _Timeout,
               #state{module = ?MODULE_EPGSQL,
                      connection = Connection,
                      interface = Interface,
@@ -707,7 +704,7 @@ driver_squery(internal, Query,
         Interface =:= native ->
             Native
     end;
-driver_squery(external, Query,
+driver_squery(external, Query, _Timeout,
               #state{module = ?MODULE_EPGSQL,
                      connection = Connection,
                      endian = Endian,
@@ -720,7 +717,7 @@ driver_squery(external, Query,
             driver_debug(DebugLevel, Query, Native)
     end,
     response_external(epgsql_to_common(Native), Query, Endian);
-driver_squery(internal, Query,
+driver_squery(internal, Query, _Timeout,
               #state{module = ?MODULE_WG,
                      connection = Connection,
                      interface = Interface,
@@ -738,7 +735,7 @@ driver_squery(internal, Query,
         Interface =:= native ->
             Native
     end;
-driver_squery(external, Query,
+driver_squery(external, Query, _Timeout,
               #state{module = ?MODULE_WG,
                      connection = Connection,
                      endian = Endian,
@@ -751,10 +748,9 @@ driver_squery(external, Query,
             driver_debug(DebugLevel, Query, Native)
     end,
     response_external(wg_to_common(Native), Query, Endian);
-driver_squery(internal, Query,
+driver_squery(internal, Query, Timeout,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
-                     timeout = Timeout,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
@@ -770,10 +766,9 @@ driver_squery(internal, Query,
         Interface =:= native ->
             Native
     end;
-driver_squery(external, Query,
+driver_squery(external, Query, Timeout,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
-                     timeout = Timeout,
                      endian = Endian,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),

@@ -524,7 +524,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 configure(#config{services = Services} = Config, Timeout) ->
-    case configure_service(Services, [], Timeout) of
+    case configure_service(Services, Timeout) of
         {ok, NewServices} ->
             {ok, Config#config{services = NewServices}};
         {error, _} = Error ->
@@ -538,12 +538,18 @@ configure_service([Service | Services], Configured, Timeout) ->
         {ok, NewService} ->
             configure_service(Services, [NewService | Configured], Timeout);
         {error, Reason} = Error ->
+            % wait for logging statements to be logged before crashing
+            receive after ?TIMEOUT_DELTA -> ok end,
+
             ServiceDescription = cloudi_core_i_configuration:
                                  service_format(Service),
             ?LOG_ERROR("configure failed: ~p~n~p",
                        [Reason, ServiceDescription]),
             Error
     end.
+
+configure_service(Services, Timeout) ->
+    configure_service(Services, [], Timeout).
 
 service_start_find_internal(#config_service_internal{
                                 module = Module,

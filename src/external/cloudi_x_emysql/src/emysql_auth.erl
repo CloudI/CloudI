@@ -30,7 +30,7 @@
 %% @private
 -module(emysql_auth).
 
--export([handshake/3]).
+-export([handshake/4]).
 
 -include("emysql.hrl").
 -include("crypto_compat.hrl").
@@ -40,15 +40,15 @@
 
 %% handshake/3 runs the low-level handshake code upon connection initiation
 %% @private
-handshake(Sock, User, Password) ->
-    {Packet, Unparsed} = emysql_tcp:recv_packet(Sock, emysql_app:default_timeout(), <<>>),
+handshake(Sock, User, Password, Timeout) ->
+    {Packet, Unparsed} = emysql_tcp:recv_packet(Sock, Timeout, <<>>),
     case parse_greeting(Packet) of
         {ok, #greeting { seq_num = SeqNum } = Greeting} ->
-            Auth = auth(Sock, User, Password, Greeting#greeting { seq_num = SeqNum + 1 }),
+            Auth = auth(Sock, User, Password, Greeting#greeting { seq_num = SeqNum + 1 }, Timeout),
             check_handshake_auth(Auth, Greeting);
         {error, wrong_parse} -> 
             {#error_packet{ code = Code, msg = Msg},_, _Rest} =
-                emysql_tcp:response(Sock, emysql_app:default_timeout(), Packet, Unparsed),
+                emysql_tcp:response(Sock, Timeout, Packet, Unparsed),
             {error, {Code, Msg}};
         {greeting_failed, What} ->
             {error, {greeting_failed, What}}
@@ -139,12 +139,12 @@ auth_packet_old(Password, #greeting { salt1 = Salt1 }) ->
     <<AuthOld/binary, 0:8>>.
 
 %% auth/4 handles authentication inside the system.
-auth(Sock, User, Password, #greeting { seq_num = SeqNum } = Greeting) ->
+auth(Sock, User, Password, #greeting { seq_num = SeqNum } = Greeting, Timeout) ->
     Packet = auth_packet(User, Password, Greeting),
-    case emysql_tcp:send_and_recv_packet(Sock, Packet, SeqNum) of
+    case emysql_tcp:send_and_recv_packet(Sock, Packet, SeqNum, Timeout) of
         #eof_packet{seq_num = EofSeqNum} ->
             PacketOld = auth_packet_old(Password, Greeting),
-            emysql_tcp:send_and_recv_packet(Sock, PacketOld, EofSeqNum+1);
+            emysql_tcp:send_and_recv_packet(Sock, PacketOld, EofSeqNum+1, Timeout);
         Result ->
             Result
     end.

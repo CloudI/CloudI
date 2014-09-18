@@ -740,6 +740,7 @@ distclean-local: rebar-directories-distclean \
            $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_db_mysql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_riak/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_filesystem/test_ct/logs \

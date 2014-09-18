@@ -50,7 +50,8 @@ init_per_suite(Config) ->
             "/",
             cloudi_service_db_riak,
             [{debug, true},
-             {bucket, ?BUCKET}],
+             {bucket, ?BUCKET},
+             {ping, 1000}],
             immediate_closest,
             5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}
         ], infinity),

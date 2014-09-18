@@ -16,7 +16,10 @@ cowboy           Loïc Hoguin <essen@ninenines.eu>
 ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
 elli             Knut Nesheim <knutin@gmail.com>
 ememcached       Nick Gerakines <nick@gerakines.net>
-emysql           Magnus Ahltorp <ahltorp@nada.kth.se>
+emysql           Bill Warnecke <bill@rupture.com>,
+                 Jacob Vorreuter <jacob.vorreuter@gmail.com>,
+                 Henning Diedrich <hd2010@eonblast.com>,
+                 Eonblast Corporation [http://www.eonblast.com]
 epgsql           Anton Lebedevich
 epgsql_wg        Will Glozer
 erlang-oauth     Tim Fletcher <mail@tfletcher.com>
