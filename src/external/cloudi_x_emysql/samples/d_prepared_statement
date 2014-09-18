@@ -1,0 +1,5 @@
+#! /bin/bash
+# This runs the sample for stored procedures.
+# For windows, see source of d_prepared_statement.erl
+erlc d_prepared_statement.erl
+erl -pa ../ebin -s d_prepared_statement run -s init stop -noshell

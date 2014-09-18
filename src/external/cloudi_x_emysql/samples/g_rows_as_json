@@ -1,0 +1,5 @@
+#! /bin/bash
+# This runs the sample for rows as json.
+# For windows, see source of g_rows_as_json.erl
+erlc g_rows_as_json.erl
+erl -pa ../ebin -s g_rows_as_json run -s init stop -noshell

@@ -1,0 +1,128 @@
+@doc
+== Changes ==
+
+== Current Master ==
+
+<b>If you run into trouble, please try the 'stable' branch.</b>
+
+```
+ git checkout origin/stable
+'''
+
+==== Jun 21 2013 hd | doc ====
+<li> Remove utf-8 encoding of binary data</li>
+  <em>Rationale</em>: The user must ensure that data passed to the MySQL
+  connection is already encoded in the right utf-8 format. The socket
+  doesn't know about encoding. In turn, one can again send binary BLOB
+  data over the driver.
+<li> Fixes many small errors by merging two major Emysql branches</li>
+
+==== Jun 21 2013 hd | doc ====
+<li> Fixed abuse of ETS table to store Mysql results</li>
+<li> Fixed floating point encoding in the driver base</li>
+<li> Support using atoms as prepared statements</li>
+<li> Optimize the code path around SETing parameters</li>
+<li> Fixed bug in receiving packet bodies which would lead to conn. stream corruption</li>
+<li> Make it possible to use configurable TCP timeout values</li>
+<li> Fix date encoding of special dates, e.g., year 1</li>
+
+==== Apr 23 2013 hd | doc ====
+<li> Fixed issue #44: LOAD DATA INFILE. Thanks to Qing Liang / qingliangcn.  </li>
+<li> Added samples and brief description of LOAD DATA INFILE  </li>
+<li> whitespace clean up  </li>
+
+==== Mar 26 2012 hd | Changed UTF-8/Latin-1 conversion ====
+<li> Magic taken out of automatic encoding  </li>
+<li> Added Common Tests for Latin-1 encoding  </li>
+<li> Added Common Tests for cross encoding (connection and db different)  </li>
+<li> This addressed issue #22, thanks to TheSquad  </li>
+
+Notes for March 26 2012:<br />
+
+<b>Incompatible changes for automatic UTF-8 conversion.</b><br />
+
+There are cases where the automatic conversion of parameters to prepared
+statements has been changed and now behaves different than before. The
+conversion now respects the encoding setting of the connection pool that it
+is for, which you assigned when opening the pool.
+
+There are extensive new tests checking as many sensible cases as possible, among
+them 40+ 'human readable' cases in the files test/utf8_SUITE, test/latin_SUITE,
+test/utf8_to_latindb_SUITE, test/latin_to_utf8db_SUITE. Please refer to these
+first in cases where you have doubt about expected behavior in fringe cases.
+
+
+==== Dec 14 2011 al | Detection of failed statement preparation d8330f035c ====
+<li> Error had been dropped silently.  </li>
+<li> Merge pull request #16 from binarin/master.  </li>
+<li> Quote sql statement passed when preparing it.   </li>
+<li> Always turn prepare error into exit().  </li>
+<li> Thanks to Alexey Lebedeff / binarin.  </li>
+
+==== Dec 13 2011 hd | Unicode UTF-8 string conversion 287e17b2d3 ====
+<li> Strings passed as lists to prepared statements as parameters are now converted right.  </li>
+<li> Issue #14, automatic conversion of list strings to utf-8.  </li>
+
+==== Dec 13 2011 hd | Common Tests for unicode 287e17b2d3 ====
+<li> Common Test suite for unicode conversion.  </li>
+
+==== Dec 12 2011 es | parsing of numbers in scientific notation c20ff42bbe ====
+<li> Fixed float notation parsing to work with the form 1e-1 besides 1.0e-1.  </li>
+<li> Thanks to Erik Seres / eseres.  </li>
+
+==== Dec 11 2011 hd | Common Test suites 4fdf9eedf9 ====
+<li> Common Test suites for basic operations, and environment set up.  </li>
+
+==== Oct 27 2011 ol | name collision with RabbitMQ 0fce8c9cc2 ====
+<li> Avoid name collision with RabbitMQ for the connection record.  </li>
+<li> Merge pull request #12 from lsowen/master.  </li>
+<li> Thanks to Logan Owen / lsowen.  </li>
+
+==== Jun 18 2011 pa | PoolId restrictions removed 1deb2063e7 ====
+<li> PoolId restrictions removed to prevent atom overflow  </li>
+<li> Thanks to Patrick Atambo / partoa.  </li>
+ 
+==== May 02 2011 hd | Fix of Connection Auto-Recover 3db0e45319 ====
+<li> Proposal for fix of issue #7 after quite some research.  </li>
+<li> The fix goes deep, so to be safe, tagging of previous master as 'stable'   branch.</li>
+<li> Tagging of dev branches for issue #7 and #9.  </li>
+<li> Support by Seven Du / seven1240 and Brendon Hogger / brendonh  </li>
+
+==== Mar 23 2011 jm | Protocol Bug Fix 8a3c6dc123 ====
+<li> Merge branch 'fix_pattern_mismatch'  </li>
+<li> Thanks to Joel Meyer / JoelPM  </li>
+
+==== Mar 17 2011 es | Added Connection Auto-Recover 3c9d0fe54b ====
+<li> Added capability to reopen a timedout connection when one is encountered.  </li>
+<li> Thanks to Erik Seres / eseres  </li>
+
+==== Mar 06 2011 hd | MySQL 4.1 protocol + password plugin 63c34c4bb8 ====
+<li> Improved and extended support for client/server 4.0 and 4.1 protocol.  </li>
+<li> Fix issue #6: Added support for MySQL server's password plugin.  </li>
+<li> Added emysql_conn:hstate/1 to return human readable server state flag.  </li>
+
+==== Feb 18 2011 hd | Docs e72142cb13 ====
+<li> Docs for module emysql.erl complete  </li>
+<li> Fix issue #5: make dep of include/</li>
+
+== 0.1 ==
+
+==== Jan 24 2011 hd | Stored Procedures + Docs  ====
+<li> Fixed stored procedures</li>
+<li> Added docs</li>
+
+==== Jun 12 2010 hd | Samples + History ====
+<li> Added samples and build scripts  </li>
+<li> Added History of MySQL driver forks  </li>
+
+<li> Correct handling of stored procedures result packages  </li>
+<li> Module emysql_tcp extended to handle the flag SERVER_MORE_RESULTS_EXIST correctly  </li>
+<li> Error packages parse additional sql status flag of mysql 4.1 format.  </li>
+<li> Additional example for stored procedures  </li>
+<li> Renaming of samples  </li>
+<li> Much extended docs  </li>
+<script>
+// Jump directly to a referenced url given in trailing '[]:...'-notation
+function goto(tag) { parent.document.location.href = url(tag); }
+function url(tag) { var o=document.getElementById(tag); return o ? o.href : '#'+tag; }
+</script>

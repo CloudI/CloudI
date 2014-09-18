@@ -1,0 +1,1515 @@
+Diff of ejabberd mysql driver vs yxa mysql driver
+-------------------------------------------------
+
+Both depend on Magnus Ahltorp's code. Half of the difference are simply changed
+comments, as Yxa went edoc. The remainder are mostly result inspection extensions
+on the part of the ejabberd source.
+
+This diff includes changes to comments. Find one ignoring comments here: 
+https://github.com/Eonblast/Emysql/blob/master/doc/diff-ejabberd-yxa-2.txt
+
+Yxa: https://github.com/fredrikt/yxa/tree/master/src/mysql/
+Ejabberd: http://svn.process-one.net/ejabberd-modules/mysql/trunk/
+Diff: Jan 2011
+
+$ diff ejabberd-modules/mysql/trunk/ yxa-1.0/src/mysql/
+Only in ejabberd-modules/mysql/trunk/: .svn
+Only in yxa-1.0/src/mysql/: Makefile.in
+diff ejabberd-modules/mysql/trunk/mysql.erl yxa-1.0/src/mysql/mysql.erl
+3,4c3,4
+< %%% Author  : Magnus Ahltorp <ahltorp@nada.kth.se>
+< %%% Descrip.: MySQL client.
+---
+> %%% @author   Magnus Ahltorp <ahltorp@nada.kth.se>
+> %%% @doc      MySQL client.
+6c6,7
+< %%% Created :  4 Aug 2005 by Magnus Ahltorp <ahltorp@nada.kth.se>
+---
+> %%% @since     4 Aug 2005 by Magnus Ahltorp <ahltorp@nada.kth.se>
+> %%% @end
+36,51c37,39
+< %%%     Result = {data, MySQLRes} | {updated, MySQLRes} |
+< %%%              {error, MySQLRes}
+< %%%
+< %%% Actual data can be extracted from MySQLRes by calling the following API
+< %%% functions:
+< %%%     - on data received:
+< %%%          FieldInfo = mysql:get_result_field_info(MysqlRes)
+< %%%          AllRows   = mysql:get_result_rows(MysqlRes)
+< %%%         with FieldInfo = list() of {Table, Field, Length, Name}
+< %%%          and AllRows   = list() of list() representing records
+< %%%     - on update:
+< %%%          Affected  = mysql:get_result_affected_rows(MysqlRes)
+< %%%         with Affected  = integer()
+< %%%     - on error:
+< %%%          Reason    = mysql:get_result_reason(MysqlRes)
+< %%%         with Reason    = string()
+---
+> %%%     Result = {ok, Fieldinfo, Rows}
+> %%%     Rows   = list() of [Row]
+> %%%     Row    = [string()]
+73,77d60
+< 	 get_result_field_info/1,
+< 	 get_result_rows/1,
+< 	 get_result_affected_rows/1,
+< 	 get_result_reason/1,
+< 
+81,84c64
+< 	 connect/7,
+< 	 stop/0,
+< 
+<      gc_each/1
+---
+> 	 connect/7
+108c88,89
+< -include("mysql.hrl").
+---
+> %% @type state() = #state{}.
+> %%                 no description
+111,112c92
+< 	  log_fun,	%% undefined | function for logging,
+<       gc_tref   %% undefined | timer:TRef
+---
+> 	  log_fun	%% undefined | function for logging,
+141,154c121,136
+< %% Function: start_link(Id, Host, User, Password, Database)
+< %%           start_link(Id, Host, Port, User, Password, Database)
+< %%           start_link(Id, Host, User, Password, Database, LogFun)
+< %%           start_link(Id, Host, Port, User, Password, Database,
+< %%                      LogFun)
+< %%           Id       = term(), first connection-group Id
+< %%           Host     = string()
+< %%           Port     = integer()
+< %%           User     = string()
+< %%           Password = string()
+< %%           Database = string()
+< %%           LogFun   = undefined | function() of arity 3
+< %% Descrip.: Starts the MySQL client gen_server process.
+< %% Returns : {ok, Pid} | ignore | {error, Error}
+---
+> %% @spec    (Id, Host, User, Password, Database) start_link(Id, Host,
+> %%          Port, User, Password, Database) start_link(Id, Host,
+> %%          User, Password, Database, LogFun) start_link(Id, Host,
+> %%          Port, User, Password, Database, LogFun) ->
+> %%            {ok, Pid} | ignore | {error, Error}
+> %%
+> %%            Id       = term() "first connection-group Id"
+> %%            Host     = string()
+> %%            Port     = integer()
+> %%            User     = string()
+> %%            Password = string()
+> %%            Database = string()
+> %%            LogFun   = undefined | function() of arity 3
+> %%
+> %% @doc     Starts the MySQL client gen_server process.
+> %% @end
+173,178d154
+< stop() ->
+<     gen_server:call(?SERVER, stop).
+< 
+< gc_each(Millisec) ->
+<     gen_server:call(?SERVER, {gc_each, Millisec}).
+< 
+180,189c156,169
+< %% Function: fetch(Id, Query)
+< %%           fetch(Id, Query, Timeout)
+< %%           Id      = term(), connection-group Id
+< %%           Query   = string(), MySQL query in verbatim
+< %%           Timeout = integer() | infinity, gen_server timeout value
+< %% Descrip.: Send a query and wait for the result.
+< %% Returns : {data, MySQLRes}    |
+< %%           {updated, MySQLRes} |
+< %%           {error, MySQLRes}
+< %%           MySQLRes = term()
+---
+> %% @spec    (Id, Query) fetch(Id, Query, Timeout) ->
+> %%            {ok, FieldInfo, Rows} |
+> %%            {error, Reason}
+> %%
+> %%            Id      = term() "connection-group Id"
+> %%            Query   = string() "MySQL query in verbatim"
+> %%            Timeout = integer() | infinity "gen_server timeout value"
+> %%
+> %%            FieldInfo = term()
+> %%            Rows      = [[string()]]
+> %%            Reason    = term()
+> %%
+> %% @doc     Send a query and wait for the result.
+> %% @end
+197,241c177,186
+< %% Function: get_result_field_info(MySQLRes)
+< %%           MySQLRes = term(), result of fetch function on "data"
+< %% Descrip.: Extract the FieldInfo from MySQL Result on data received
+< %% Returns : FieldInfo
+< %%           FieldInfo = list() of {Table, Field, Length, Name}
+< %%--------------------------------------------------------------------
+< get_result_field_info(#mysql_result{fieldinfo = FieldInfo}) ->
+<     FieldInfo.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: get_result_rows(MySQLRes)
+< %%           MySQLRes = term(), result of fetch function on "data"
+< %% Descrip.: Extract the Rows from MySQL Result on data received
+< %% Returns : Rows
+< %%           Rows = list() of list() representing records
+< %%--------------------------------------------------------------------
+< get_result_rows(#mysql_result{rows=AllRows}) ->
+<     AllRows.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: get_result_affected_rows(MySQLRes)
+< %%           MySQLRes = term(), result of fetch function on "updated"
+< %% Descrip.: Extract the Rows from MySQL Result on update
+< %% Returns : AffectedRows
+< %%           AffectedRows = integer()
+< %%--------------------------------------------------------------------
+< get_result_affected_rows(#mysql_result{affectedrows=AffectedRows}) ->
+<     AffectedRows.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: get_result_reason(MySQLRes)
+< %%           MySQLRes = term(), result of fetch function on "error"
+< %% Descrip.: Extract the error Reason from MySQL Result on error
+< %% Returns : Reason
+< %%           Reason    = string()
+< %%--------------------------------------------------------------------
+< get_result_reason(#mysql_result{error=Reason}) ->
+<     Reason.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: quote(String)
+< %%           String = string()
+< %% Descrip.: Quote a string so that it can be included safely in a
+< %%           MySQL query.
+< %% Returns : Quoted = string()
+---
+> %% @spec    (String) ->
+> %%            Quoted
+> %%
+> %%            String = string()
+> %%
+> %%            Quoted = string()
+> %%
+> %% @doc     Quote a string so that it can be included safely in a
+> %%          MySQL query.
+> %% @end
+266,274c211,222
+< %% Function: asciz_binary(Data, Acc)
+< %%           Data = binary()
+< %%           Acc  = list(), input accumulator
+< %% Descrip.: Find the first zero-byte in Data and add everything
+< %%           before it to Acc, as a string.
+< %% Returns : {NewList, Rest}
+< %%           NewList = list(), Acc plus what we extracted from Data
+< %%           Rest    = binary(), whatever was left of Data, not
+< %%                     including the zero-byte
+---
+> %% @spec    (Data, Acc) ->
+> %%            {NewList, Rest}
+> %%
+> %%            Data = binary()
+> %%            Acc  = list() "input accumulator"
+> %%
+> %%            NewList = list() "Acc plus what we extracted from Data"
+> %%            Rest    = binary() "whatever was left of Data, not including the zero-byte"
+> %%
+> %% @doc     Find the first zero-byte in Data and add everything before
+> %%          it to Acc, as a string.
+> %% @end
+284,295c232,245
+< %% Function: connect(Id, Host, Port, User, Password, Database,
+< %%                   Reconnect)
+< %%           Id        = term(), connection-group Id
+< %%           Host      = string()
+< %%           Port      = undefined | integer()
+< %%           User      = string()
+< %%           Password  = string()
+< %%           Database  = string()
+< %%           Reconnect = true | false
+< %% Descrip.: Starts a MySQL connection and, if successfull, registers
+< %%           it with the mysql_dispatcher.
+< %% Returns : {ok, ConnPid} | {error, Reason}
+---
+> %% @spec    (Id, Host, Port, User, Password, Database, Reconnect) ->
+> %%            {ok, ConnPid} | {error, Reason}
+> %%
+> %%            Id        = term() "connection-group Id"
+> %%            Host      = string()
+> %%            Port      = undefined | integer()
+> %%            User      = string()
+> %%            Password  = string()
+> %%            Database  = string()
+> %%            Reconnect = true | false
+> %%
+> %% @doc     Starts a MySQL connection and, if successfull, registers
+> %%          it with the mysql_dispatcher.
+> %% @end
+332,341c282,288
+< %% Function: log(LogFun, Level, Format)
+< %%           log(LogFun, Level, Format, Arguments)
+< %%           LogFun    = undefined | function() with arity 3
+< %%           Level     = debug | normal | error
+< %%           Format    = string()
+< %%           Arguments = list() of term()
+< %% Descrip.: Either call the function LogFun with the Level, Format
+< %%           and Arguments as parameters or log it to the console if
+< %%           LogFun is undefined.
+< %% Returns : void()
+---
+> %% @spec    (LogFun, Level, Format) log(LogFun, Level, Format,
+> %%          Arguments) -> void()
+> %%
+> %%            LogFun    = undefined | function() with arity 3
+> %%            Level     = debug | normal | error
+> %%            Format    = string()
+> %%            Arguments = [term()]
+343c290,293
+< %% Note    : Exported only for use by the mysql_* modules.
+---
+> %% @doc     Either call the function LogFun with the Level, Format and
+> %%          Arguments as parameters or log it to the console if
+> %%          LogFun is undefined. Note : Exported only for use by the
+> %%          mysql_* modules.
+344a295
+> %% @end
+362,374c313,327
+< %% Function: init(Args) -> {ok, State} |
+< %%                         {ok, State, Timeout} |
+< %%                         ignore               |
+< %%                         {stop, Reason}
+< %%           Args = [Id, Host, Port, User, Password, Database, LogFun]
+< %%             Id       = term(), connection-group Id
+< %%             Host     = string()
+< %%             Port     = integer()
+< %%             User     = string()
+< %%             Password = string()
+< %%             Database = string()
+< %%             LogFun   = undefined | function() with arity 3
+< %% Descrip.: Initiates the gen_server (MySQL dispatcher).
+---
+> %% @spec    (Args) -> {ok, State} | {ok, State, Timeout} | ignore |
+> %%          {stop, Reason} -> term()
+> %%
+> %%            Args     = [Id, Host, Port, User, Password, Database, LogFun]
+> %%            Id       = term() "connection-group Id"
+> %%            Host     = string()
+> %%            Port     = integer()
+> %%            User     = string()
+> %%            Password = string()
+> %%            Database = string()
+> %%            LogFun   = undefined | function() with arity 3
+> %%
+> %% @doc     Initiates the gen_server (MySQL dispatcher).
+> %% @hidden
+> %% @end
+391,392c344
+< 				conn_list = ConnList,
+<                 gc_tref = undefined
+---
+> 				conn_list = ConnList
+405,412c357,367
+< %% Function: handle_call(Msg, From, State)
+< %% Descrip.: Handling call messages.
+< %% Returns : {reply, Reply, State}          |
+< %%           {reply, Reply, State, Timeout} |
+< %%           {noreply, State}               |
+< %%           {noreply, State, Timeout}      |
+< %%           {stop, Reason, Reply, State}   | (terminate/2 is called)
+< %%           {stop, Reason, State}            (terminate/2 is called)
+---
+> %% @spec    handle_call(Msg, From, State) ->
+> %%            {reply, Reply, State}          |
+> %%            {reply, Reply, State, Timeout} |
+> %%            {noreply, State}               |
+> %%            {noreply, State, Timeout}      |
+> %%            {stop, Reason, Reply, State}   |
+> %%            {stop, Reason, State}
+> %%
+> %% @doc     Handling call messages.
+> %% @hidden
+> %% @end
+414a370,371
+> %% @clear
+> 
+417,427c374,389
+< %% Function: handle_call({fetch, Id, Query}, From, State)
+< %%           Id    = term(), connection-group id
+< %%           Query = string(), MySQL query
+< %% Descrip.: Make a MySQL query. Use the first connection matching Id
+< %%           in our connection-list. Don't block the mysql_dispatcher
+< %%           by returning {noreply, ...} here and let the mysql_conn
+< %%           do gen_server:reply(...) when it has an answer.
+< %% Returns : {noreply, NewState}             |
+< %%           {reply, {error, Reason}, State}
+< %%           NewState = state record()
+< %%           Reason   = atom() | string()
+---
+> %% @spec    ({fetch, Id, Query}, From, State) ->
+> %%            {noreply, NewState}             |
+> %%            {reply, {error, Reason}, State}
+> %%
+> %%            Id    = term() "connection-group id"
+> %%            Query = string() "MySQL query"
+> %%
+> %%            NewState = #state{}
+> %%            Reason   = atom() | string()
+> %%
+> %% @doc     Make a MySQL query. Use the first connection matching Id
+> %%          in our connection-list. Don't block the mysql_dispatcher
+> %%          by returning {noreply, ...} here and let the mysql_conn
+> %%          do gen_server:reply(...) when it has an answer.
+> %% @hidden
+> %% @end
+444,450c406,417
+< %% Function: handle_call({add_mysql_connection, Conn}, From, State)
+< %%           Conn = mysql_connection record()
+< %% Descrip.: Add Conn to our list of connections.
+< %% Returns : {reply, Reply, NewState}
+< %%           Reply = ok | {error, Reason}
+< %%           NewState = state record()
+< %%           Reason   = string()
+---
+> %% @spec    ({add_mysql_connection, Conn}, From, State) ->
+> %%            {reply, Reply, NewState}
+> %%
+> %%            Conn = #mysql_connection{}
+> %%
+> %%            Reply    = ok | {error, Reason}
+> %%            NewState = #state{}
+> %%            Reason   = string()
+> %%
+> %% @doc     Add Conn to our list of connections.
+> %% @hidden
+> %% @end
+464,467c431,438
+< %% Function: handle_call(get_logfun, From, State)
+< %% Descrip.: Fetch our logfun.
+< %% Returns : {reply, {ok, LogFun}, State}
+< %%           LogFun = undefined | function() with arity 3
+---
+> %% @spec    (get_logfun, From, State) ->
+> %%            {reply, {ok, LogFun}, State}
+> %%
+> %%            LogFun = undefined | function() with arity 3
+> %%
+> %% @doc     Fetch our logfun.
+> %% @hidden
+> %% @end
+472,487d442
+< handle_call(stop, _From, State) ->
+<     {stop, normal, State};
+< 
+< handle_call({gc_each, Millisec}, _From, State) ->
+<     case State#state.gc_tref of
+<         undefined -> ok;
+<         TRef ->
+<             timer:cancel(TRef)
+<     end,
+<     case timer:send_interval(Millisec, gc) of
+<         {ok, NewTRef} ->
+<             {reply, ok, State#state{gc_tref = NewTRef}};
+<         {error, Reason} ->
+<             {reply, {error, Reason}, State}
+<     end;
+< 
+494,498c449,456
+< %% Function: handle_cast(Msg, State)
+< %% Descrip.: Handling cast messages
+< %% Returns : {noreply, State}          |
+< %%           {noreply, State, Timeout} |
+< %%           {stop, Reason, State}            (terminate/2 is called)
+---
+> %% @spec    handle_cast(Msg, State) ->
+> %%            {noreply, State}          |
+> %%            {noreply, State, Timeout} |
+> %%            {stop, Reason, State}
+> %%
+> %% @doc     Handling cast messages
+> %% @hidden
+> %% @end
+499a458,460
+> 
+> %% @clear
+> 
+506,510c467,474
+< %% Function: handle_info(Msg, State)
+< %% Descrip.: Handling all non call/cast messages
+< %% Returns : {noreply, State}          |
+< %%           {noreply, State, Timeout} |
+< %%           {stop, Reason, State}            (terminate/2 is called)
+---
+> %% @spec    handle_info(Msg, State) ->
+> %%            {noreply, State}          |
+> %%            {noreply, State, Timeout} |
+> %%            {stop, Reason, State}
+> %%
+> %% @doc     Handling all non call/cast messages
+> %% @hidden
+> %% @end
+512a477,478
+> %% @clear
+> 
+514,526c480,495
+< %% Function: handle_info({'DOWN', ...}, State)
+< %% Descrip.: Handle a message that one of our monitored processes
+< %%           (mysql_conn processes in our connection list) has exited.
+< %%           Remove the entry from our list.
+< %% Returns : {noreply, NewState}   |
+< %%           {stop, normal, State}
+< %%           NewState = state record()
+< %%
+< %% Note    : For now, we stop if our connection list becomes empty.
+< %%           We should try to reconnect for a while first, to not
+< %%           eventually stop the whole OTP application if the MySQL-
+< %%           server is shut down and the mysql_dispatcher was super-
+< %%           vised by an OTP supervisor.
+---
+> %% @spec    ({'DOWN', ...}, State) ->
+> %%            {noreply, NewState}   |
+> %%            {stop, normal, State}
+> %%
+> %%            NewState = #state{}
+> %%
+> %% @doc     Handle a message that one of our monitored processes
+> %%          (mysql_conn processes in our connection list) has exited.
+> %%          Remove the entry from our list. Note : For now, we stop
+> %%          if our connection list becomes empty. We should try to
+> %%          reconnect for a while first, to not eventually stop the
+> %%          whole OTP application if the MySQL- server is shut down
+> %%          and the mysql_dispatcher was super- vised by an OTP
+> %%          supervisor.
+> %% @hidden
+> %% @end
+551,556d519
+< handle_info(gc, #state{conn_list = Connections} = State) ->
+<     [erlang:garbage_collect(C#mysql_connection.conn_pid) || C <- Connections],
+<     erlang:garbage_collect(self()),
+<     {noreply, State};
+< 
+< 
+562,564c525,529
+< %% Function: terminate(Reason, State)
+< %% Descrip.: Shutdown the server
+< %% Returns : Reason
+---
+> %% @spec    (Reason, State) -> Reason
+> %%
+> %% @doc     Shutdown the server
+> %% @hidden
+> %% @end
+573,575d537
+<     lists:foreach(fun(MysqlConn) ->
+< 			  MysqlConn#mysql_connection.conn_pid ! close
+< 		  end, State#state.conn_list),
+579,581c541,545
+< %% Function: code_change(_OldVsn, State, _Extra)
+< %% Descrip.: Convert process state when code is changed
+< %% Returns : {ok, State}
+---
+> %% @spec    (_OldVsn, State, _Extra) -> {ok, State}
+> %%
+> %% @doc     Convert process state when code is changed
+> %% @hidden
+> %% @end
+591,596c555,565
+< %% Function: add_mysql_conn(Conn, ConnList)
+< %%           Conn     = mysql_connection record()
+< %%           ConnList = list() of mysql_connection record()
+< %% Descrip.: Set up process monitoring of the mysql_conn process and
+< %%           then add it (first) to ConnList.
+< %% Returns : NewConnList = list() of mysql_connection record()
+---
+> %% @spec    (Conn, ConnList) ->
+> %%            NewConnList
+> %%
+> %%            Conn     = #mysql_connection{}
+> %%            ConnList = [#mysql_connection{}]
+> %%
+> %%            NewConnList = [#mysql_connection{}]
+> %%
+> %% @doc     Set up process monitoring of the mysql_conn process and
+> %%          then add it (first) to ConnList.
+> %% @end
+603,610c572,583
+< %% Function: remove_mysql_connection_using_pid(Pid, ConnList)
+< %%           Pid      = pid()
+< %%           ConnList = list() of mysql_connection record()
+< %% Descrip.: Removes the first mysql_connection in ConnList that has
+< %%           a pid matching Pid.
+< %% Returns : {ok, Conn, NewConnList} | nomatch
+< %%           Conn        = mysql_connection record()
+< %%           NewConnList = list() of mysql_connection record()
+---
+> %% @spec    (Pid, ConnList) ->
+> %%            {ok, Conn, NewConnList} | nomatch
+> %%
+> %%            Pid      = pid()
+> %%            ConnList = [#mysql_connection{}]
+> %%
+> %%            Conn        = #mysql_connection{}
+> %%            NewConnList = [#mysql_connection{}]
+> %%
+> %% @doc     Removes the first mysql_connection in ConnList that has a
+> %%          pid matching Pid.
+> %% @end
+620,628c593,604
+< %% Function: get_next_mysql_connection_for_id(Id, ConnList)
+< %%           Id       = term(), connection-group id
+< %%           ConnList = list() of mysql_connection record()
+< %% Descrip.: Find the first mysql_connection in ConnList that has an
+< %%           id matching Id.
+< %% Returns : {ok, Conn, NewConnList} | nomatch
+< %%           Conn        = mysql_connection record()
+< %%           NewConnList = list() of mysql_connection record(), same
+< %%                         as ConnList but without Conn
+---
+> %% @spec    (Id, ConnList) ->
+> %%            {ok, Conn, NewConnList} | nomatch
+> %%
+> %%            Id       = term() "connection-group id"
+> %%            ConnList = [#mysql_connection{}]
+> %%
+> %%            Conn        = #mysql_connection{}
+> %%            NewConnList = [#mysql_connection{}] "same as ConnList but without Conn"
+> %%
+> %% @doc     Find the first mysql_connection in ConnList that has an id
+> %%          matching Id.
+> %% @end
+641,647c617,625
+< %% Function: start_reconnect(Conn, LogFun)
+< %%           Conn   = mysql_connection record()
+< %%           LogFun = undefined | function() with arity 3
+< %% Descrip.: Spawns a process that will try to re-establish a new
+< %%           connection instead of the one in Conn which has just
+< %%           died.
+< %% Returns : ok
+---
+> %% @spec    (Conn, LogFun) -> ok
+> %%
+> %%            Conn   = #mysql_connection{}
+> %%            LogFun = undefined | function() with arity 3
+> %%
+> %% @doc     Spawns a process that will try to re-establish a new
+> %%          connection instead of the one in Conn which has just
+> %%          died.
+> %% @end
+659,664c637,644
+< %% Function: reconnect_loop(Conn, LogFun, 0)
+< %%           Conn   = mysql_connection record()
+< %%           LogFun = undefined | function() with arity 3
+< %% Descrip.: Loop indefinately until we are able to reconnect to the
+< %%           server specified in the now dead connection Conn.
+< %% Returns : ok
+---
+> %% @spec    (Conn, LogFun, 0) -> ok
+> %%
+> %%            Conn   = #mysql_connection{}
+> %%            LogFun = undefined | function() with arity 3
+> %%
+> %% @doc     Loop indefinately until we are able to reconnect to the
+> %%          server specified in the now dead connection Conn.
+> %% @end
+Only in ejabberd-modules/mysql/trunk/: mysql.hrl
+diff ejabberd-modules/mysql/trunk/mysql_auth.erl yxa-1.0/src/mysql/mysql_auth.erl
+3,5c3,6
+< %%% Author  : Fredrik Thulin <ft@it.su.se>
+< %%% Descrip.: MySQL client authentication functions.
+< %%% Created :  4 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+---
+> %%% @author   Fredrik Thulin <ft@it.su.se>
+> %%% @doc      MySQL client authentication functions.
+> %%% @since     4 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+> %%% @end
+10c11
+< %%% Copyright (c) 2001-2004 Kungliga Tekniska Högskolan
+---
+> %%% Copyright (c) 2001-2004 Kungliga Tekniska H?gskolan
+28d28
+< -define(FOUND_ROWS, 2).
+42,52c42,54
+< %% Function: do_old_auth(Sock, RecvPid, SeqNum, User, Password, Salt1,
+< %%                       LogFun)
+< %%           Sock     = term(), gen_tcp socket
+< %%           RecvPid  = pid(), receiver process pid
+< %%           SeqNum   = integer(), first sequence number we should use
+< %%           User     = string(), MySQL username
+< %%           Password = string(), MySQL password
+< %%           Salt1    = string(), salt 1 from server greeting
+< %%           LogFun   = undefined | function() of arity 3
+< %% Descrip.: Perform old-style MySQL authentication.
+< %% Returns : result of mysql_conn:do_recv/3
+---
+> %% @spec    (Sock, RecvPid, SeqNum, User, Password, Salt1, LogFun) ->
+> %%            result of mysql_conn:do_recv/3
+> %%
+> %%            Sock     = term() "gen_tcp socket"
+> %%            RecvPid  = pid() "receiver process pid"
+> %%            SeqNum   = integer() "first sequence number we should use"
+> %%            User     = string() "MySQL username"
+> %%            Password = string() "MySQL password"
+> %%            Salt1    = string() "salt 1 from server greeting"
+> %%            LogFun   = undefined | function() of arity 3
+> %%
+> %% @doc     Perform old-style MySQL authentication.
+> %% @end
+61,72c63,76
+< %% Function: do_new_auth(Sock, RecvPid, SeqNum, User, Password, Salt1,
+< %%                       Salt2, LogFun)
+< %%           Sock     = term(), gen_tcp socket
+< %%           RecvPid  = pid(), receiver process pid
+< %%           SeqNum   = integer(), first sequence number we should use
+< %%           User     = string(), MySQL username
+< %%           Password = string(), MySQL password
+< %%           Salt1    = string(), salt 1 from server greeting
+< %%           Salt2    = string(), salt 2 from server greeting
+< %%           LogFun   = undefined | function() of arity 3
+< %% Descrip.: Perform MySQL authentication.
+< %% Returns : result of mysql_conn:do_recv/3
+---
+> %% @spec    (Sock, RecvPid, SeqNum, User, Password, Salt1, Salt2,
+> %%          LogFun) -> result of mysql_conn:do_recv/3
+> %%
+> %%            Sock     = term() "gen_tcp socket"
+> %%            RecvPid  = pid() "receiver process pid"
+> %%            SeqNum   = integer() "first sequence number we should use"
+> %%            User     = string() "MySQL username"
+> %%            Password = string() "MySQL password"
+> %%            Salt1    = string() "salt 1 from server greeting"
+> %%            Salt2    = string() "salt 2 from server greeting"
+> %%            LogFun   = undefined | function() of arity 3
+> %%
+> %% @doc     Perform MySQL authentication.
+> %% @end
+109,110c113
+<     Caps = ?LONG_PASSWORD bor ?LONG_FLAG
+< 	bor ?TRANSACTIONS bor ?FOUND_ROWS,
+---
+>     Caps = ?LONG_PASSWORD bor ?LONG_FLAG bor ?TRANSACTIONS,
+126,127c129
+< 	?PROTOCOL_41 bor ?SECURE_CONNECTION bor DBCaps
+< 	bor ?FOUND_ROWS,
+---
+> 	?PROTOCOL_41 bor ?SECURE_CONNECTION bor DBCaps,
+diff ejabberd-modules/mysql/trunk/mysql_conn.erl yxa-1.0/src/mysql/mysql_conn.erl
+3,4c3,4
+< %%% Author  : Fredrik Thulin <ft@it.su.se>
+< %%% Descrip.: MySQL connection handler, handles de-framing of messages
+---
+> %%% @author   Fredrik Thulin <ft@it.su.se>
+> %%% @doc      MySQL connection handler, handles de-framing of messages
+6,7c6,7
+< %%% Created :  5 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+< %%% Modified: 11 Jan 2006 by Mickael Remond <mickael.remond@process-one.net>
+---
+> %%% @since     5 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+> %%% @end
+34,36d33
+< %%% Note: In stand-alone mode you have to start Erlang crypto application by
+< %%% yourself with crypto:start()
+< %%%
+41,58c38,40
+< %%%         Result = {data, MySQLRes}    |
+< %%%                  {updated, MySQLRes} |
+< %%%                  {error, MySQLRes}
+< %%%          Where: MySQLRes = #mysql_result
+< %%%
+< %%% Actual data can be extracted from MySQLRes by calling the following API
+< %%% functions:
+< %%%     - on data received:
+< %%%          FieldInfo = mysql:get_result_field_info(MysqlRes)
+< %%%          AllRows   = mysql:get_result_rows(MysqlRes)
+< %%%         with FieldInfo = list() of {Table, Field, Length, Name}
+< %%%          and AllRows = list() of list() representing records
+< %%%     - on update:
+< %%%          Affected= mysql:get_result_affected_rows(MysqlRes)
+< %%%         with Affected = integer()
+< %%%     - on error:
+< %%%          Reason    = mysql:get_result_reason(MysqlRes)
+< %%%         with Reason = string()
+---
+> %%%         Result = {ok, Fields, Rows} |
+> %%%                  {error, Reason}
+> %%%
+67d48
+< 	 start_link/6,
+69,71c50
+< 	 fetch/4,
+< 	 squery/4,
+< 	 stop/1
+---
+> 	 fetch/4
+80c59,60
+< -include("mysql.hrl").
+---
+> %% @type state() = #state{}.
+> %%                 no description
+82d61
+< 	  mysql_version,
+92,94d70
+< -define(DEFAULT_RESULT_TYPE, list).
+< -define(MYSQL_4_0, 40). %% Support for MySQL 4.0.x
+< -define(MYSQL_4_1, 41). %% Support for MySQL 4.1.x et 5.0.x
+101,113c77,92
+< %% Function: start(Host, Port, User, Password, Database, LogFun)
+< %% Function: start_link(Host, Port, User, Password, Database, LogFun)
+< %%           Host     = string()
+< %%           Port     = integer()
+< %%           User     = string()
+< %%           Password = string()
+< %%           Database = string()
+< %%           LogFun   = undefined | function() of arity 3
+< %% Descrip.: Starts a mysql_conn process that connects to a MySQL
+< %%           server, logs in and chooses a database.
+< %% Returns : {ok, Pid} | {error, Reason}
+< %%           Pid    = pid()
+< %%           Reason = string()
+---
+> %% @spec    (Host, Port, User, Password, Database, LogFun) ->
+> %%            {ok, Pid} | {error, Reason}
+> %%
+> %%            Host     = string()
+> %%            Port     = integer()
+> %%            User     = string()
+> %%            Password = string()
+> %%            Database = string()
+> %%            LogFun   = undefined | function() of arity 3
+> %%
+> %%            Pid    = pid()
+> %%            Reason = string()
+> %%
+> %% @doc     Starts a mysql_conn process that connects to a MySQL
+> %%          server, logs in and chooses a database.
+> %% @end
+121,135d99
+<     post_start(Pid, LogFun).
+< 
+< start_link(Host, Port, User, Password, Database, LogFun) when is_list(Host), is_integer(Port), is_list(User),
+< 							 is_list(Password), is_list(Database) ->
+<     ConnPid = self(),
+<     Pid = spawn_link(fun () ->
+< 			init(Host, Port, User, Password, Database, LogFun, ConnPid)
+< 		end),
+<     post_start(Pid, LogFun).
+< 
+< %% part of start/6 or start_link/6:
+< post_start(Pid, _LogFun) ->
+<     %%Timeout = get_option(timeout, Options, ?DEFAULT_STANDALONE_TIMEOUT),
+<     %%TODO find a way to get configured Options here
+<     Timeout= ?DEFAULT_STANDALONE_TIMEOUT,
+140,147c104,109
+< 	    stop(Pid),
+< 	    {error, Reason}
+< %	Unknown ->
+< %	    mysql:log(_LogFun, error, "mysql_conn: Received unknown signal, exiting"),
+< %	    mysql:log(_LogFun, debug, "mysql_conn: Unknown signal : ~p", [Unknown]),
+< %	    {error, "unknown signal received"}
+<     after Timeout ->
+< 	    stop(Pid),
+---
+> 	    {error, Reason};
+> 	Unknown ->
+> 	    mysql:log(LogFun, error, "mysql_conn: Received unknown signal, exiting"),
+> 	    mysql:log(LogFun, debug, "mysql_conn: Unknown signal : ~p", [Unknown]),
+> 	    {error, "unknown signal received"}
+>     after 5000 ->
+152,171c114,131
+< %% Function: fetch(Pid, Query, From)
+< %%           fetch(Pid, Query, From, Timeout)
+< %%           Pid     = pid(), mysql_conn to send fetch-request to
+< %%           Query   = string(), MySQL query in verbatim
+< %%           From    = pid() or term(), use a From of self() when
+< %%                     using this module for a single connection,
+< %%                     or pass the gen_server:call/3 From argument if
+< %%                     using a gen_server to do the querys (e.g. the
+< %%                     mysql_dispatcher)
+< %%           Timeout = integer() | infinity, gen_server timeout value
+< %% Descrip.: Send a query and wait for the result if running stand-
+< %%           alone (From = self()), but don't block the caller if we
+< %%           are not running stand-alone (From = gen_server From).
+< %% Returns : ok                        | (non-stand-alone mode)
+< %%           {data, #mysql_result}     | (stand-alone mode)
+< %%           {updated, #mysql_result}  | (stand-alone mode)
+< %%           {error, #mysql_result}      (stand-alone mode)
+< %%           FieldInfo = term()
+< %%           Rows      = list() of [string()]
+< %%           Reason    = term()
+---
+> %% @spec    (Pid, Query, From) fetch(Pid, Query, From, Timeout) ->
+> %%            ok                    |
+> %%            {ok, FieldInfo, Rows} |
+> %%            {error, Reason}         (stand-alone mode)
+> %%
+> %%            Pid     = pid() "mysql_conn to send fetch-request to"
+> %%            Query   = string() "MySQL query in verbatim"
+> %%            From    = pid() or term() "use a From of self() when using this module for a single connection, or pass the gen_server:call/3 From argument if using a gen_server to do the querys (e.g. the mysql_dispatcher)"
+> %%            Timeout = integer() | infinity "gen_server timeout value"
+> %%
+> %%            FieldInfo = term()
+> %%            Rows      = [[string()]]
+> %%            Reason    = term()
+> %%
+> %% @doc     Send a query and wait for the result if running stand-
+> %%          alone (From = self()), but don't block the caller if we
+> %%          are not running stand-alone (From = gen_server From).
+> %% @end
+173d132
+< 
+175,177c134
+<     squery(Pid, Query, From, []).
+< fetch(Pid, Query, From, Timeout) ->
+<     squery(Pid, Query, From, [{timeout, Timeout}]).
+---
+>     fetch(Pid, Query, From, ?DEFAULT_STANDALONE_TIMEOUT).
+179c136
+< squery(Pid, Query, From, Options) when is_pid(Pid), is_list(Query) ->
+---
+> fetch(Pid, Query, From, Timeout) when is_pid(Pid), is_list(Query), is_integer(Timeout) ->
+181,183c138
+<     Timeout = get_option(timeout, Options, ?DEFAULT_STANDALONE_TIMEOUT),
+<     TRef = erlang:start_timer(Timeout, self(), timeout),
+<     Pid ! {fetch, TRef, Query, From, Options},
+---
+>     Pid ! {fetch, Query, From},
+187c142,147
+< 	    wait_fetch_result(TRef, Pid);
+---
+> 	    receive
+> 		{fetch_result, Pid, Result} ->
+> 		    Result
+> 	    after Timeout ->
+> 		    {error, "query timed out"}
+> 	    end;
+193,218d152
+< wait_fetch_result(TRef, Pid) ->
+<     receive
+< 	{fetch_result, TRef, Pid, Result} ->
+< 	    case erlang:cancel_timer(TRef) of
+< 		false ->
+< 		    receive
+< 			{timeout, TRef, _} ->
+< 			    ok
+< 		    after 0 ->
+< 			    ok
+< 		    end;
+< 		_ ->
+< 		    ok
+< 	    end,
+< 	    Result;
+< 	{fetch_result, _BadRef, Pid, _Result} ->
+< 	    wait_fetch_result(TRef, Pid);
+< 	{timeout, TRef, _} ->
+< 	    stop(Pid),
+< 	    {error, "query timed out"}
+<     end.
+< 
+< stop(Pid) ->
+<     Pid ! close.
+< 
+< 
+220,229c154,160
+< %% Function: do_recv(LogFun, RecvPid, SeqNum)
+< %%           LogFun  = undefined | function() with arity 3
+< %%           RecvPid = pid(), mysql_recv process
+< %%           SeqNum  = undefined | integer()
+< %% Descrip.: Wait for a frame decoded and sent to us by RecvPid.
+< %%           Either wait for a specific frame if SeqNum is an integer,
+< %%           or just any frame if SeqNum is undefined.
+< %% Returns : {ok, Packet, Num} |
+< %%           {error, Reason}
+< %%           Reason = term()
+---
+> %% @spec    (LogFun, RecvPid, SeqNum) ->
+> %%            {ok, Packet, Num} |
+> %%            {error, Reason}
+> %%
+> %%            LogFun  = undefined | function() with arity 3
+> %%            RecvPid = pid() "mysql_recv process"
+> %%            SeqNum  = undefined | integer()
+231c162,168
+< %% Note    : Only to be used externally by the 'mysql_auth' module.
+---
+> %%            Reason = term()
+> %%
+> %% @doc     Wait for a frame decoded and sent to us by RecvPid. Either
+> %%          wait for a specific frame if SeqNum is an integer, or
+> %%          just any frame if SeqNum is undefined. Note : Only to be
+> %%          used externally by the 'mysql_auth' module.
+> %% @end
+257,269c194,209
+< %% Function: init(Host, Port, User, Password, Database, LogFun,
+< %%                Parent)
+< %%           Host     = string()
+< %%           Port     = integer()
+< %%           User     = string()
+< %%           Password = string()
+< %%           Database = string()
+< %%           LogFun   = undefined | function() of arity 3
+< %%           Parent   = pid() of process starting this mysql_conn
+< %% Descrip.: Connect to a MySQL server, log in and chooses a database.
+< %%           Report result of this to Parent, and then enter loop() if
+< %%           we were successfull.
+< %% Returns : void() | does not return
+---
+> %% @spec    (Host, Port, User, Password, Database, LogFun, Parent) ->
+> %%            void() | does not return
+> %%
+> %%            Host     = string()
+> %%            Port     = integer()
+> %%            User     = string()
+> %%            Password = string()
+> %%            Database = string()
+> %%            LogFun   = undefined | function() of arity 3
+> %%            Parent   = pid() of process starting this mysql_conn
+> %%
+> %% @doc     Connect to a MySQL server, log in and chooses a database.
+> %%          Report result of this to Parent, and then enter loop() if
+> %%          we were successfull.
+> %% @hidden
+> %% @end
+275,282c215,217
+< 		{ok, Version} ->
+< 		    case do_query(Sock, RecvPid, LogFun, "use " ++ Database, Version, [{result_type, binary}]) of
+< 			{error, MySQLRes} ->
+< 			    mysql:log(LogFun, error, "mysql_conn: Failed changing to database ~p : ~p",
+< 				      [Database, mysql:get_result_reason(MySQLRes)]),
+< 			    Parent ! {mysql_conn, self(), {error, failed_changing_database}};
+< 			%% ResultType: data | updated
+< 			{_ResultType, _MySQLRes} ->
+---
+> 		ok ->
+> 		    case do_query(Sock, RecvPid, LogFun, "use " ++ Database) of
+> 			{ok, _Fields, _Rows} ->
+284,285c219
+< 			    State = #state{mysql_version=Version,
+< 					   recv_pid = RecvPid,
+---
+> 			    State = #state{recv_pid = RecvPid,
+290c224,228
+< 			    loop(State)
+---
+> 			    loop(State);
+> 			{error, Reason} ->
+> 			    mysql:log(LogFun, error, "mysql_conn: Failed changing to database ~p : ~p",
+> 				      [Database, Reason]),
+> 			    Parent ! {mysql_conn, self(), {error, failed_changing_database}}
+302,306c240,246
+< %% Function: loop(State)
+< %%           State = state record()
+< %% Descrip.: Wait for signals asking us to perform a MySQL query, or
+< %%           signals that the socket was closed.
+< %% Returns : error | does not return
+---
+> %% @spec    (State) -> error | does not return
+> %%
+> %%            State = #state{}
+> %%
+> %% @doc     Wait for signals asking us to perform a MySQL query, or
+> %%          signals that the socket was closed.
+> %% @end
+311c251
+< 	{fetch, Ref, Query, GenSrvFrom, Options} ->
+---
+> 	{fetch, Query, GenSrvFrom} ->
+314c254
+< 	    Res = do_query(State, Query, Options),
+---
+> 	    Res = do_query(State, Query),
+318c258
+< 		    GenSrvFrom ! {fetch_result, Ref, self(), Res};
+---
+> 		    GenSrvFrom ! {fetch_result, self(), Res};
+320,323d259
+< 		    %% the timer is canceled in wait_fetch_result/2, but we wait on that funtion only if the query 
+< 		    %% was not sent using the mysql gen_server. So we at least should try to cancel the timer here 
+< 		    %% (no warranty, the gen_server can still receive timeout messages)
+< 		    erlang:cancel_timer(Ref),  
+333,334d268
+< 	close ->
+< 	    close_connection(State);
+336,337c270,271
+< 	    mysql:log(State#state.log_fun, error, "mysql_conn: Received unknown signal, exiting : ~p", [Unknown]),
+< 	    close_connection(State),
+---
+> 	    mysql:log(State#state.log_fun, error, "mysql_conn: Received unknown signal, exiting"),
+> 	    mysql:log(State#state.log_fun, debug, "mysql_conn: Unknown signal : ~p", [Unknown]),
+342,350c276,288
+< %% Function: mysql_init(Sock, RecvPid, User, Password, LogFun)
+< %%           Sock     = term(), gen_tcp socket
+< %%           RecvPid  = pid(), mysql_recv process
+< %%           User     = string()
+< %%           Password = string()
+< %%           LogFun   = undefined | function() with arity 3
+< %% Descrip.: Try to authenticate on our new socket.
+< %% Returns : ok | {error, Reason}
+< %%           Reason = string()
+---
+> %% @spec    (Sock, RecvPid, User, Password, LogFun) ->
+> %%            ok | {error, Reason}
+> %%
+> %%            Sock     = term() "gen_tcp socket"
+> %%            RecvPid  = pid() "mysql_recv process"
+> %%            User     = string()
+> %%            Password = string()
+> %%            LogFun   = undefined | function() with arity 3
+> %%
+> %%            Reason = string()
+> %%
+> %% @doc     Try to authenticate on our new socket.
+> %% @end
+355c293
+< 	    {Version, Salt1, Salt2, Caps} = greeting(Packet, LogFun),
+---
+> 	    {Salt1, Salt2, Caps} = greeting(Packet, LogFun),
+365c303
+< 		    {ok,Version};
+---
+> 		    ok;
+382c320
+<     <<Protocol:8, Rest/binary>> = Packet,
+---
+>     <<_Protocol:8, Rest/binary>> = Packet,
+389,391c327,329
+<     mysql:log(LogFun, debug, "mysql_conn: greeting version ~p (protocol ~p) salt ~p caps ~p serverchar ~p salt2 ~p",
+< 	      [Version, Protocol, Salt, Caps, ServerChar, Salt2]),
+<     {normalize_version(Version, LogFun), Salt, Salt2, Caps}.
+---
+>     mysql:log(LogFun, debug, "mysql_conn: greeting version ~p salt ~p caps ~p serverchar ~p salt2 ~p",
+> 	      [Version, Salt, Caps, ServerChar, Salt2]),
+>     {Salt, Salt2, Caps}.
+394c332
+< asciz(Data) when is_binary(Data) ->
+---
+> asciz(Data) when binary(Data) ->
+396c334
+< asciz(Data) when is_list(Data) ->
+---
+> asciz(Data) when list(Data) ->
+403,414c341,353
+< %% Function: get_query_response(LogFun, RecvPid)
+< %%           LogFun  = undefined | function() with arity 3
+< %%           RecvPid = pid(), mysql_recv process
+< %%           Version = integer(), Representing MySQL version used
+< %% Descrip.: Wait for frames until we have a complete query response.
+< %% Returns :   {data, #mysql_result}
+< %%             {updated, #mysql_result}
+< %%             {error, #mysql_result}
+< %%           FieldInfo    = list() of term()
+< %%           Rows         = list() of [string()]
+< %%           AffectedRows = int()
+< %%           Reason       = term()
+---
+> %% @spec    (LogFun, RecvPid) ->
+> %%            {ok, FieldInfo, Rows} |
+> %%            {error, Reason}
+> %%
+> %%            LogFun  = undefined | function() with arity 3
+> %%            RecvPid = pid() "mysql_recv process"
+> %%
+> %%            FieldInfo = [term()]
+> %%            Rows      = [[string()]]
+> %%            Reason    = term()
+> %%
+> %% @doc     Wait for frames until we have a complete query response.
+> %% @end
+416c355
+< get_query_response(LogFun, RecvPid, Version, Options) ->
+---
+> get_query_response(LogFun, RecvPid) ->
+421,423c360
+< 		    %% No Tabular data
+< 		    <<AffectedRows:8, _Rest2/binary>> = Rest,
+< 		    {updated, #mysql_result{affectedrows=AffectedRows}};
+---
+> 		    {ok, [], []};
+426c363
+< 		    {error, #mysql_result{error=binary_to_list(Message)}};
+---
+> 		    {error, binary_to_list(Message)};
+428,429c365
+< 		    %% Tabular data received
+< 		    case get_fields(LogFun, RecvPid, [], Version) of
+---
+> 		    case get_fields(LogFun, RecvPid, []) of
+431,432c367
+< 			    ResultType = get_option(result_type, Options, ?DEFAULT_RESULT_TYPE),
+< 			    case get_rows(Fieldcount, LogFun, RecvPid, ResultType, []) of
+---
+> 			    case get_rows(Fieldcount, LogFun, RecvPid, []) of
+434c369
+< 				    {data, #mysql_result{fieldinfo=Fields, rows=Rows}};
+---
+> 				    {ok, Fields, Rows};
+436c371
+< 				    {error, #mysql_result{error=Reason}}
+---
+> 				    {error, Reason}
+439c374
+< 			    {error, #mysql_result{error=Reason}}
+---
+> 			    {error, Reason}
+443c378
+< 	    {error, #mysql_result{error=Reason}}
+---
+> 	    {error, Reason}
+447,455c382,393
+< %% Function: get_fields(LogFun, RecvPid, [], Version)
+< %%           LogFun  = undefined | function() with arity 3
+< %%           RecvPid = pid(), mysql_recv process
+< %%           Version = integer(), Representing MySQL version used
+< %% Descrip.: Received and decode field information.
+< %% Returns : {ok, FieldInfo} |
+< %%           {error, Reason}
+< %%           FieldInfo = list() of term()
+< %%           Reason    = term()
+---
+> %% @spec    (LogFun, RecvPid, []) ->
+> %%            {ok, FieldInfo} |
+> %%            {error, Reason}
+> %%
+> %%            LogFun  = undefined | function() with arity 3
+> %%            RecvPid = pid() "mysql_recv process"
+> %%
+> %%            FieldInfo = [term()]
+> %%            Reason    = term()
+> %%
+> %% @doc     Received and decode field information.
+> %% @end
+457,458c395
+< %% Support for MySQL 4.0.x:
+< get_fields(LogFun, RecvPid, Res, ?MYSQL_4_0) ->
+---
+> get_fields(LogFun, RecvPid, Res) ->
+477,479d413
+< 			    %% TODO: Check on MySQL 4.0 if types are specified
+< 			    %%       using the same 4.1 formalism and could
+< 			    %%       be expanded to atoms:
+481,514c415
+< 		    get_fields(LogFun, RecvPid, [This | Res], ?MYSQL_4_0)
+< 	    end;
+< 	{error, Reason} ->
+< 	    {error, Reason}
+<     end;
+< %% Support for MySQL 4.1.x and 5.x:
+< get_fields(LogFun, RecvPid, Res, ?MYSQL_4_1) ->
+<     case do_recv(LogFun, RecvPid, undefined) of
+< 	{ok, Packet, _Num} ->
+< 	    case Packet of
+< 		<<254:8>> ->
+< 		    {ok, lists:reverse(Res)};
+< 		<<254:8, Rest/binary>> when size(Rest) < 8 ->
+< 		    {ok, lists:reverse(Res)};
+< 		_ ->
+< 		    {_Catalog, Rest} = get_with_length(Packet),
+< 		    {_Database, Rest2} = get_with_length(Rest),
+< 		    {Table, Rest3} = get_with_length(Rest2),
+< 		    %% OrgTable is the real table name if Table is an alias
+< 		    {_OrgTable, Rest4} = get_with_length(Rest3),
+< 		    {Field, Rest5} = get_with_length(Rest4),
+< 		    %% OrgField is the real field name if Field is an alias
+< 		    {_OrgField, Rest6} = get_with_length(Rest5),
+< 
+< 		    <<_Metadata:8/little, _Charset:16/little,
+< 		     Length:32/little, Type:8/little,
+< 		     _Flags:16/little, _Decimals:8/little,
+< 		     _Rest7/binary>> = Rest6,
+< 
+< 		    This = {binary_to_list(Table),
+< 			    binary_to_list(Field),
+< 			    Length,
+< 			    get_field_datatype(Type)},
+< 		    get_fields(LogFun, RecvPid, [This | Res], ?MYSQL_4_1)
+---
+> 		    get_fields(LogFun, RecvPid, [This | Res])
+521,528c422,433
+< %% Function: get_rows(N, LogFun, RecvPid, [])
+< %%           N       = integer(), number of rows to get
+< %%           LogFun  = undefined | function() with arity 3
+< %%           RecvPid = pid(), mysql_recv process
+< %% Descrip.: Receive and decode a number of rows.
+< %% Returns : {ok, Rows} |
+< %%           {error, Reason}
+< %%           Rows = list() of [string()]
+---
+> %% @spec    (N, LogFun, RecvPid, []) ->
+> %%            {ok, Rows} |
+> %%            {error, Reason}
+> %%
+> %%            N       = integer() "number of rows to get"
+> %%            LogFun  = undefined | function() with arity 3
+> %%            RecvPid = pid() "mysql_recv process"
+> %%
+> %%            Rows = [[string()]]
+> %%
+> %% @doc     Receive and decode a number of rows.
+> %% @end
+530c435
+< get_rows(N, LogFun, RecvPid, ResultType, Res) ->
+---
+> get_rows(N, LogFun, RecvPid, Res) ->
+537,538c442,443
+< 		    {ok, This} = get_row(N, Packet, ResultType, []),
+< 		    get_rows(N, LogFun, RecvPid, ResultType, [This | Res])
+---
+> 		    {ok, This} = get_row(N, Packet, []),
+> 		    get_rows(N, LogFun, RecvPid, [This | Res])
+544d448
+< 
+546c450
+< get_row(0, _Data, _ResultType, Res) ->
+---
+> get_row(0, _Data, Res) ->
+548c452
+< get_row(N, Data, ResultType, Res) ->
+---
+> get_row(N, Data, Res) ->
+554,559c458
+< 		   if
+< 		       ResultType == list ->
+< 			   binary_to_list(Col);
+< 		       ResultType == binary ->
+< 			   Col
+< 		   end
+---
+> 		   binary_to_list(Col)
+561c460,461
+<     get_row(N - 1, Rest, ResultType, [This | Res]).
+---
+>     get_row(N - 1, Rest, [This | Res]).
+> 
+574,579d473
+< close_connection(State) ->
+<     Result = gen_tcp:close(State#state.socket),
+<     mysql:log(State#state.log_fun,  normal, "Closing connection ~p: ~p~n", [State#state.socket, Result]),
+<     Result.
+< 
+< 
+581,588c475,484
+< %% Function: do_query(State, Query)
+< %%           do_query(Sock, RecvPid, LogFun, Query)
+< %%           Sock    = term(), gen_tcp socket
+< %%           RecvPid = pid(), mysql_recv process
+< %%           LogFun  = undefined | function() with arity 3
+< %%           Query   = string()
+< %% Descrip.: Send a MySQL query and block awaiting it's response.
+< %% Returns : result of get_query_response/2 | {error, Reason}
+---
+> %% @spec    (State, Query) do_query(Sock, RecvPid, LogFun, Query) ->
+> %%            result of get_query_response/2 | {error, Reason}
+> %%
+> %%            Sock    = term() "gen_tcp socket"
+> %%            RecvPid = pid() "mysql_recv process"
+> %%            LogFun  = undefined | function() with arity 3
+> %%            Query   = string()
+> %%
+> %% @doc     Send a MySQL query and block awaiting it's response.
+> %% @end
+590c486
+< do_query(State, Query, Options) when is_record(State, state) ->
+---
+> do_query(State, Query) when is_record(State, state) ->
+594,596c490
+< 	     Query,
+< 	     State#state.mysql_version,
+< 	     Options
+---
+> 	     Query
+599,600c493
+< do_query(Sock, RecvPid, LogFun, Query, Version, Options) when is_pid(RecvPid),
+< 							      is_list(Query) ->
+---
+> do_query(Sock, RecvPid, LogFun, Query) when is_pid(RecvPid), is_list(Query) ->
+604c497
+< 	    get_query_response(LogFun, RecvPid, Version, Options);
+---
+> 	    get_query_response(LogFun, RecvPid);
+611,617c504,512
+< %% Function: do_send(Sock, Packet, SeqNum, LogFun)
+< %%           Sock   = term(), gen_tcp socket
+< %%           Packet = binary()
+< %%           SeqNum = integer(), packet sequence number
+< %%           LogFun = undefined | function() with arity 3
+< %% Descrip.: Send a packet to the MySQL server.
+< %% Returns : result of gen_tcp:send/2
+---
+> %% @spec    (Sock, Packet, SeqNum, LogFun) -> result of gen_tcp:send/2
+> %%
+> %%            Sock   = term() "gen_tcp socket"
+> %%            Packet = binary()
+> %%            SeqNum = integer() "packet sequence number"
+> %%            LogFun = undefined | function() with arity 3
+> %%
+> %% @doc     Send a packet to the MySQL server.
+> %% @end
+623,693d517
+< 
+< %%--------------------------------------------------------------------
+< %% Function: normalize_version(Version, LogFun)
+< %%           Version  = string()
+< %%           LogFun   = undefined | function() with arity 3
+< %% Descrip.: Return a flag corresponding to the MySQL version used.
+< %%           The protocol used depends on this flag.
+< %% Returns : Version = string()
+< %%--------------------------------------------------------------------
+< normalize_version([$4,$.,$0|_T], LogFun) ->
+<     mysql:log(LogFun, debug, "Switching to MySQL 4.0.x protocol.~n"),
+<     ?MYSQL_4_0;
+< normalize_version([$4,$.,$1|_T], _LogFun) ->
+<     ?MYSQL_4_1;
+< normalize_version([$5|_T], _LogFun) ->
+<     %% MySQL version 5.x protocol is compliant with MySQL 4.1.x:
+<     ?MYSQL_4_1;
+< normalize_version(_Other, LogFun) ->
+<     mysql:log(LogFun, error, "MySQL version not supported: MySQL Erlang module might not work correctly.~n"),
+<     %% Error, but trying the oldest protocol anyway:
+<     ?MYSQL_4_0.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: get_field_datatype(DataType)
+< %%           DataType = integer(), MySQL datatype
+< %% Descrip.: Return MySQL field datatype as description string
+< %% Returns : String, MySQL datatype
+< %%--------------------------------------------------------------------
+< get_field_datatype(0) ->   'DECIMAL';
+< get_field_datatype(1) ->   'TINY';
+< get_field_datatype(2) ->   'SHORT';
+< get_field_datatype(3) ->   'LONG';
+< get_field_datatype(4) ->   'FLOAT';
+< get_field_datatype(5) ->   'DOUBLE';
+< get_field_datatype(6) ->   'NULL';
+< get_field_datatype(7) ->   'TIMESTAMP';
+< get_field_datatype(8) ->   'LONGLONG';
+< get_field_datatype(9) ->   'INT24';
+< get_field_datatype(10) ->  'DATE';
+< get_field_datatype(11) ->  'TIME';
+< get_field_datatype(12) ->  'DATETIME';
+< get_field_datatype(13) ->  'YEAR';
+< get_field_datatype(14) ->  'NEWDATE';
+< get_field_datatype(16) ->  'BIT';
+< get_field_datatype(246) -> 'DECIMAL';
+< get_field_datatype(247) -> 'ENUM';
+< get_field_datatype(248) -> 'SET';
+< get_field_datatype(249) -> 'TINYBLOB';
+< get_field_datatype(250) -> 'MEDIUM_BLOG';
+< get_field_datatype(251) -> 'LONG_BLOG';
+< get_field_datatype(252) -> 'BLOB';
+< get_field_datatype(253) -> 'VAR_STRING';
+< get_field_datatype(254) -> 'STRING';
+< get_field_datatype(255) -> 'GEOMETRY'.
+< 
+< %%--------------------------------------------------------------------
+< %% Function: get_option(Key1, Options, Default) -> Value1
+< %%           Options = [Option]
+< %%           Option = {Key2, Value2}
+< %%           Key1 = Key2 = atom()
+< %%           Value1 = Value2 = Default = term()
+< %% Descrip.: Return the option associated with Key passed to squery/4
+< %%--------------------------------------------------------------------
+< 
+< get_option(Key, Options, Default) ->
+<     case lists:keysearch(Key, 1, Options) of
+< 	{value, {_, Value}} ->
+< 	    Value;
+< 	false ->
+< 	    Default
+<     end.
+diff ejabberd-modules/mysql/trunk/mysql_recv.erl yxa-1.0/src/mysql/mysql_recv.erl
+3,4c3,4
+< %%% Author  : Fredrik Thulin <ft@it.su.se>
+< %%% Descrip.: Handles data being received on a MySQL socket. Decodes
+---
+> %%% @author   Fredrik Thulin <ft@it.su.se>
+> %%% @doc      Handles data being received on a MySQL socket. Decodes
+7c7,8
+< %%% Created :  4 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+---
+> %%% @since     4 Aug 2005 by Fredrik Thulin <ft@it.su.se>
+> %%% @end
+36a38,39
+> %% @type state() = #state{}.
+> %%                 no description
+52,64c55,71
+< %% Function: start_link(Host, Port, LogFun, Parent)
+< %%           Host = string()
+< %%           Port = integer()
+< %%           LogFun = undefined | function() of arity 3
+< %%           Parent = pid(), process that should get received frames
+< %% Descrip.: Start a process that connects to Host:Port and waits for
+< %%           data. When it has received a MySQL frame, it sends it to
+< %%           Parent and waits for the next frame.
+< %% Returns : {ok, RecvPid, Socket} |
+< %%           {error, Reason}
+< %%           RecvPid = pid(), receiver process pid
+< %%           Socket  = term(), gen_tcp socket
+< %%           Reason  = atom() | string()
+---
+> %% @spec    (Host, Port, LogFun, Parent) ->
+> %%            {ok, RecvPid, Socket} |
+> %%            {error, Reason}
+> %%
+> %%            Host   = string()
+> %%            Port   = integer()
+> %%            LogFun = undefined | function() of arity 3
+> %%            Parent = pid() "process that should get received frames"
+> %%
+> %%            RecvPid = pid() "receiver process pid"
+> %%            Socket  = term() "gen_tcp socket"
+> %%            Reason  = atom() | string()
+> %%
+> %% @doc     Start a process that connects to Host:Port and waits for
+> %%          data. When it has received a MySQL frame, it sends it to
+> %%          Parent and waits for the next frame.
+> %% @end
+89,95c96,105
+< %% Function: init((Host, Port, LogFun, Parent)
+< %%           Host = string()
+< %%           Port = integer()
+< %%           LogFun = undefined | function() of arity 3
+< %%           Parent = pid(), process that should get received frames
+< %% Descrip.: Connect to Host:Port and then enter receive-loop.
+< %% Returns : error | never returns
+---
+> %% @spec    ((Host, Port, LogFun, Parent) -> error | never returns
+> %%
+> %%            Host   = string()
+> %%            Port   = integer()
+> %%            LogFun = undefined | function() of arity 3
+> %%            Parent = pid() "process that should get received frames"
+> %%
+> %% @doc     Connect to Host:Port and then enter receive-loop.
+> %% @hidden
+> %% @end
+115,119c125,131
+< %% Function: loop(State)
+< %%           State = state record()
+< %% Descrip.: The main loop. Wait for data from our TCP socket and act
+< %%           on received data or signals that our socket was closed.
+< %% Returns : error | never returns
+---
+> %% @spec    (State) -> error | never returns
+> %%
+> %%            State = #state{}
+> %%
+> %% @doc     The main loop. Wait for data from our TCP socket and act
+> %%          on received data or signals that our socket was closed.
+> %% @end
+140,145c152,162
+< %% Function: sendpacket(Parent, Data)
+< %%           Parent = pid()
+< %%           Data   = binary()
+< %% Descrip.: Check if we have received one or more complete frames by
+< %%           now, and if so - send them to Parent.
+< %% Returns : Rest = binary()
+---
+> %% @spec    (Parent, Data) ->
+> %%            Rest
+> %%
+> %%            Parent = pid()
+> %%            Data   = binary()
+> %%
+> %%            Rest = binary()
+> %%
+> %% @doc     Check if we have received one or more complete frames by
+> %%          now, and if so - send them to Parent.
+> %% @end
+Only in yxa-1.0/src/mysql/: overview.edoc
+cube:~ hd$ 

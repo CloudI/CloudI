@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,emysql}.
+{packages,[]}.
+{modules,[emysql,emysql_app,emysql_conn_mgr,emysql_statements,emysql_util,
+          emysql_worker]}.

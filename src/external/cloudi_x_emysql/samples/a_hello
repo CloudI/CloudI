@@ -1,0 +1,7 @@
+#! /bin/bash
+# This runs the hello world sample. For windows, see source of a_hello.erl
+#
+# If you have trouble, try the simpler 'b_raw' sample.
+#
+erlc a_hello.erl
+erl -pa ../ebin -s a_hello run -s init stop -noshell

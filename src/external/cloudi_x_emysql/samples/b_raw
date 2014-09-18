@@ -1,0 +1,4 @@
+#! /bin/bash
+# This runs the hello world sample #2. For windows, see source of b_raw.erl
+erlc b_raw.erl
+erl -pa ../ebin -s b_raw run -s init stop -noshell

@@ -1,0 +1,7 @@
+@author Bill Warnecke, Jacob Vorreuter, Henning Diedrich, Jesper Louis Andersen. Contributions by many others.
+
+@title  Emysql - Erlang MySQL driver
+
+@version 0.4.1
+
+@docfile "doc/readme.edoc"

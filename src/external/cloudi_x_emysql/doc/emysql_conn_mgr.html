@@ -1,0 +1,152 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module emysql_conn_mgr</title>
+<link rel="stylesheet" type="text/css" href="emysql-style.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module emysql_conn_mgr</h1>
+<ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_connections-2">add_connections/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#add_pool-1">add_pool/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#find_pool-2">find_pool/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#give_manager_control-1">give_manager_control/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#has_pool-1">has_pool/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#lock_connection-1">lock_connection/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#pass_connection-1">pass_connection/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#pools-0">pools/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#remove_connections-2">remove_connections/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#remove_pool-1">remove_pool/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#replace_connection_as_available-2">replace_connection_as_available/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#replace_connection_as_locked-2">replace_connection_as_locked/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#wait_for_connection-1">wait_for_connection/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#wait_for_connection-2">wait_for_connection/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_connections-2">add_connections/2</a></h3>
+<div class="spec">
+<p><tt>add_connections(PoolId, Conns) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="add_pool-1">add_pool/1</a></h3>
+<div class="spec">
+<p><tt>add_pool(Pool) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(OldVsn, State, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="find_pool-2">find_pool/2</a></h3>
+<div class="spec">
+<p><tt>find_pool(PoolId, Pools) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="give_manager_control-1">give_manager_control/1</a></h3>
+<div class="spec">
+<p><tt>give_manager_control(Socket) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(X1, From, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Msg, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Info, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="has_pool-1">has_pool/1</a></h3>
+<div class="spec">
+<p><tt>has_pool(Pool) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="lock_connection-1">lock_connection/1</a></h3>
+<div class="spec">
+<p><tt>lock_connection(PoolId) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="pass_connection-1">pass_connection/1</a></h3>
+<div class="spec">
+<p><tt>pass_connection(Connection) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="pools-0">pools/0</a></h3>
+<div class="spec">
+<p><tt>pools() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="remove_connections-2">remove_connections/2</a></h3>
+<div class="spec">
+<p><tt>remove_connections(PoolId, Num) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="remove_pool-1">remove_pool/1</a></h3>
+<div class="spec">
+<p><tt>remove_pool(PoolId) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="replace_connection_as_available-2">replace_connection_as_available/2</a></h3>
+<div class="spec">
+<p><tt>replace_connection_as_available(OldConn, NewConn) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="replace_connection_as_locked-2">replace_connection_as_locked/2</a></h3>
+<div class="spec">
+<p><tt>replace_connection_as_locked(OldConn, NewConn) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<div class="spec">
+<p><tt>start_link() -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="wait_for_connection-1">wait_for_connection/1</a></h3>
+<div class="spec">
+<p><tt>wait_for_connection(PoolId) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="wait_for_connection-2">wait_for_connection/2</a></h3>
+<div class="spec">
+<p><tt>wait_for_connection(PoolId, Timeout) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 27 2014, 12:21:24.</i></p>
+</body>
+</html>

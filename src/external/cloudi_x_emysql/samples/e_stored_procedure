@@ -1,0 +1,5 @@
+#! /bin/bash
+# This runs the sample for stored procedures.
+# For windows, see source of e_stored_procedure.erl
+erlc e_stored_procedure.erl
+erl -pa ../ebin -s e_stored_procedure run -s init stop -noshell

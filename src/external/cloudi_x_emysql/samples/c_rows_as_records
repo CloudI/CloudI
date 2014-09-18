@@ -1,0 +1,5 @@
+#! /bin/bash
+# This runs the sample for rows access as records.
+# For windows, see source of c_rows_as_records.erl
+erlc c_rows_as_records.erl
+erl -pa ../ebin -s c_rows_as_records run -s init stop -noshell

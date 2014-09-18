@@ -1,0 +1,5 @@
+#! /bin/bash
+# This runs the sample for loading data from a file.
+# For windows, see source of f_load_from_file.erl
+erlc f_load_from_file.erl
+erl -pa ../ebin -s f_load_from_file run -s init stop -noshell

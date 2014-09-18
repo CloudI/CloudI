@@ -1,0 +1,71 @@
+Copyright (c) 2009-2011
+Bill Warnecke <bill@rupture.com>,
+Jacob Vorreuter <jacob.vorreuter@gmail.com>,
+Henning Diedrich <hd2010@eonblast.com>,
+Eonblast Corporation [http://www.eonblast.com].
+
+Permission is  hereby  granted,  free of charge,  to any person
+obtaining  a copy of this software and associated documentation
+files  (the  "Software"),  to  deal  in  the  Software  without 
+restriction,  including  without limitation  the rights to use,
+copy, modify,  merge,  publish, distribute,  sublicense, and/or 
+sell  copies of the  Software,  and to permit  persons  to whom
+the  Software  is furnished to do so,  subject to the following 
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF  MERCHANTABILITY,  FITNESS  FOR  A  PARTICULAR  PURPOSE  AND
+NONINFRINGEMENT. IN  NO  EVENT  SHALL  THE AUTHORS OR COPYRIGHT
+HOLDERS  BE  LIABLE FOR  ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT,  TORT  OR OTHERWISE,  ARISING
+FROM,  OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+
+Use of Oracle's MySQL Logo in the documentation of this package according
+to Oracle's Logo Usage Guidelines
+
+As retrieved on 01/22/11 from http://www.mysql.de/about/legal/trademark.html:
+
+Use of MySQL Conditional Use Logos
+	
+	Oracle has a family of MySQL Conditional Use Logos for those who
+	wish to show their support for MySQL products and services by
+	displaying such a logo in the user interface of a website. The MySQL
+	Conditional Use Logos may be used without specific written
+	permission from Oracle under these terms of the Third Party Usage
+	Guidelines for Oracle Trademarks, Third Party Usage Guidelines for
+	Oracle Logos, and the following conditions:
+
+	* The use must not be detrimental, i.e., harmful or damaging, to
+	the value of any of the MySQL Marks, or to Oracle, its brand
+	integrity, reputation or goodwill, as determined by Oracle in its
+	sole discretion;
+
+	* The MySQL Conditional Use Logo must be a "clickable" link that
+	leads directly to http://www.mysql.com/;
+
+	* If the website has password-protected areas, the MySQL
+	Conditional Use Logo must be placed only in areas that are not
+	password-protected;
+
+	* If used in an application released under the GPL license, the
+	application must be able to connect directly to a MySQL server;
+
+	* The limited license given herein does not include the right to
+	use any MySQL Conditional Use Logo or any other Oracle Logo as a
+	trademark to promote your own products or services. For example, no
+	Oracle or MySQL Conditional Use Logo may be used on any product
+	packaging or documentation, such as (without limitation) on CD-ROM
+	or diskette labels or packaging, books or other publications. Any
+	such use must be expressly authorized by Oracle in a signed, written
+	agreement;
+
+	* The use of any MySQL Conditional Use Logo under these terms
+	must also comply with applicable provisions of the Third Party Usage
+	Guidelines for Oracle Trademarks and Third Party Usage Guidelines
+	for Oracle Logos.

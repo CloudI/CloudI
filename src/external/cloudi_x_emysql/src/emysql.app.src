@@ -1,12 +1,15 @@
+%% Settings (defaults in include/emysql.hrl):
+%% default_timeout (TIMEOUT = 8000)
+%% lock_timeout (LOCK_TIMEOUT = 5000)
+
 {application, emysql, [
-    {description, "emysql"},
-    {vsn, "1.4"},
-    {modules, [
-		mysql_auth,
-		mysql_conn,
-		mysql,
-		mysql_recv
-    ]},
-    {registered, []},
-    {applications, [kernel, stdlib, crypto]}
+    {description, "Emysql - Erlang MySQL driver"},
+    {vsn, "0.4.1"},
+    {modules, []}, 
+    {mod, {emysql_app, ["%MAKETIME%"]}},
+    {registered, [emysql_conn_mgr, emysql_sup]},
+    {applications, [kernel, stdlib, crypto]},
+    {env, [
+      {default_timeout, 5000},
+      {conn_test_period, 28000}]}
 ]}.

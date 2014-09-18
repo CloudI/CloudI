@@ -1,0 +1,459 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Module emysql</title>
+<link rel="stylesheet" type="text/css" href="emysql-style.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module emysql</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>The main Emysql module.
+
+
+<h2><a name="description">Description</a></h2><p>The main Emysql module.</p>
+ 
+  <p>Emysql is implemented as an Erlang
+  <b>application</b>. The term has a special meaning in Erlang, see
+  <a href="http://www.erlang.org/doc/design_principles/applications.html" target="_top"><tt>http://www.erlang.org/doc/design_principles/applications.html</tt></a></p>
+ 
+  <p>This module exports functions to:
+  <li><b>start</b> and <b>stop</b> the driver (the 'application'),</li>
+  <li><b>execute</b> queries or prepared statements,</li>
+  <li><b>prepare</b> such statements,</li>
+  <li>change the <b>connection pool</b> size.</li></p>
+ 
+  <h4><a name="Sample">Sample</a></h4>
+  <pre>   -module(sample).
+   -export([run/0]).
+ 
+   run() -&gt;
+ 
+       crypto:start(),
+       emysql:start(),
+ 
+       emysql:add_pool(hello_pool, 1,
+           "hello_username", "hello_password", "localhost", 3306,
+           "hello_database", utf8),
+ 
+       emysql:execute(hello_pool,
+           &lt;&lt;"INSERT INTO hello_table SET hello_text = 'Hello World!'"&gt;&gt;),
+ 
+       emysql:prepare(my_stmt, &lt;&lt;"SELECT * from mytable WHERE id = ?"&gt;&gt;),
+ 
+       Result = emysql:execute(mypoolname, my_stmt, [1]).</pre>
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  <p>Under <b>Implementation</b>, you can find details about the  
+inner workings of Emysql. If you are new to Emysql, you may safely ignore  
+them.</p>
+ 
+  start(), stop(), modules() and default_timeout() are one-line 'fascades':
+  <pre>   start() -&gt; application:start(emysql).
+   stop() -&gt; application:stop(emysql).
+   modules() -&gt; emysql_app:modules().
+   default_timeout() -&gt; emysql_app:default_timeout().</pre>
+ 
+  execute() and prepare() are the bulk of the source
+  of this module. A lot gets repeated for default values in lesser arities.
+  The quintessential execute however is this, in execute/2:
+  <pre>   execute(PoolId, Query, Args, Timeout)
+       when (is_list(Query) orelse is_binary(Query)) andalso is_list(Args) andalso is_integer(Timeout) -&gt;
+ 
+           Connection =
+               emysql_conn_mgr:wait_for_connection(PoolId),
+               monitor_work(Connection, Timeout, {emysql_conn, execute, [Connection, Query, Args]});</pre><p>  
+As all executions, it uses the monitor_work/3 function to create a process to  
+asynchronously handle the execution.</p>
+ 
+  The pool-related functions execute brief operations using the primitive
+  functions exported by <code>emysql_conn_mgr</code> and <code>emysql_conn_mgr</code>.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = any()</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#add_pool-2">add_pool/2</a></td><td>Synchronous call to the connection manager to add a pool.</td></tr>
+<tr><td valign="top"><a href="#add_pool-8">add_pool/8</a></td><td>Adds a pool using the default start commands (empty list).</td></tr>
+<tr><td valign="top"><a href="#add_pool-9">add_pool/9</a></td><td>Synchronous call to the connection manager to add a pool.</td></tr>
+<tr><td valign="top"><a href="#affected_rows-1">affected_rows/1</a></td><td>affected_rows/1 extracts the number of affected rows from an OK Packet.</td></tr>
+<tr><td valign="top"><a href="#as_dict-1">as_dict/1</a></td><td>package row data as a dict.</td></tr>
+<tr><td valign="top"><a href="#as_json-1">as_json/1</a></td><td>package row data as erlang json (jsx/jiffy compatible).</td></tr>
+<tr><td valign="top"><a href="#as_proplist-1">as_proplist/1</a></td><td>package row data as a proplist.</td></tr>
+<tr><td valign="top"><a href="#as_record-3">as_record/3</a></td><td>Equivalent to <a href="#as_record-4"><tt>as_record(Res, Recname, Fields, fun (A) -&gt; A end)</tt></a>.
+</td></tr>
+<tr><td valign="top"><a href="#as_record-4">as_record/4</a></td><td>package row data as records.</td></tr>
+<tr><td valign="top"><a href="#decrement_pool_size-2">decrement_pool_size/2</a></td><td>Synchronous call to the connection manager to shrink a pool.</td></tr>
+<tr><td valign="top"><a href="#default_timeout-0">default_timeout/0</a></td><td>Returns the default timeout in milliseconds.</td></tr>
+<tr><td valign="top"><a href="#execute-2">execute/2</a></td><td>Execute a query, prepared statement or a stored procedure.</td></tr>
+<tr><td valign="top"><a href="#execute-3">execute/3</a></td><td>Execute a query, prepared statement or a stored procedure.</td></tr>
+<tr><td valign="top"><a href="#execute-4">execute/4</a></td><td>Execute a query, prepared statement or a stored procedure.</td></tr>
+<tr><td valign="top"><a href="#execute-5">execute/5</a></td><td>Execute a query, prepared statement or a stored procedure - but return immediately, returning the atom 'unavailable', when no connection in the pool is readily available without wait.</td></tr>
+<tr><td valign="top"><a href="#field_names-1">field_names/1</a></td><td>Return the field names of a result packet.</td></tr>
+<tr><td valign="top"><a href="#increment_pool_size-2">increment_pool_size/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#insert_id-1">insert_id/1</a></td><td>insert_id/1 extracts the Insert ID from an OK Packet.</td></tr>
+<tr><td valign="top"><a href="#prepare-2">prepare/2</a></td><td>Prepare a statement.</td></tr>
+<tr><td valign="top"><a href="#remove_pool-1">remove_pool/1</a></td><td>Synchronous call to the connection manager to remove a pool.</td></tr>
+<tr><td valign="top"><a href="#result_type-1">result_type/1</a></td><td>result_type/1 decodes a packet into its type.</td></tr>
+<tr><td valign="top"><a href="#start-0">start/0</a></td><td>Start the Emysql application.</td></tr>
+<tr><td valign="top"><a href="#stop-0">stop/0</a></td><td>Stop the Emysql application.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="add_pool-2">add_pool/2</a></h3>
+<div class="spec">
+<p><tt>add_pool(PoolId, Options) -&gt; Result</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Options = [<a href="#type-option">option()</a>]</tt></li><li><tt><a name="type-option">option()</a> = {size, integer()} | {user, string()} | {password, string()} | {host, string()} | {port, integer()} | {database, string() | undefined} | {encoding, atom()} | {start_cmds, [binary()]} | {connect_timeout, integer()}</tt></li><li><tt>Result = {reply, {error, pool_already_exists}, <a href="#type-state">state()</a>} | {reply, ok, <a href="#type-state">state()</a>}</tt></li></ul></p>
+</div><p><p>Synchronous call to the connection manager to add a pool.</p>
+ 
+  <p>Options:</p>
+ 
+  <p>size - pool size (defaults to 1)  
+user - user to connect with (defaults to "")  
+password - user password (defaults to "")  
+host - host to connect to (defaults to "127.0.0.1")  
+port - the port to connect to (defaults to 3306)  
+database - the database to connect to (defaults to undefined)  
+encoding - the connection encoding (defaults to utf8)  
+start_cmds - a list of commands to execute on connect  
+connect_timeout - millisecond timeout for connect or infinity (default)</p>
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  Refer to add_pool/8 for implementation details.</p>
+
+<h3 class="function"><a name="add_pool-8">add_pool/8</a></h3>
+<div class="spec">
+<p><tt>add_pool(PoolId, Size, User, Password, Host, Port, Database, Encoding) -&gt; Result</tt><br></p>
+</div><p>Equivalent to <a href="#add_pool-9"><tt>add_pool(PoolId, Size, User, Password, Host, Port,
+	 Database, Encoding, [])</tt></a>.</p>
+<p>Adds a pool using the default start commands (empty list).
+ </p>
+
+<h3 class="function"><a name="add_pool-9">add_pool/9</a></h3>
+<div class="spec">
+<p><tt>add_pool(PoolId, Size, User, Password, Host, Port, Database, Encoding, StartCmds) -&gt; Result</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Size = integer()</tt></li><li><tt>User = string()</tt></li><li><tt>Password = string()</tt></li><li><tt>Host = string()</tt></li><li><tt>Port = integer()</tt></li><li><tt>Database = string()</tt></li><li><tt>Encoding = utf8 | latin1</tt></li><li><tt>StartCmds = [binary()]</tt></li><li><tt>Result = {reply, {error, pool_already_exists}, <a href="#type-state">state()</a>} | {reply, ok, <a href="#type-state">state()</a>}</tt></li></ul></p>
+</div><p><p>Synchronous call to the connection manager to add a pool.</p>
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  Creates a pool record, opens n=Size connections and calls
+  emysql_conn_mgr:add_pool() to make the pool known to the pool management.
+  emysql_conn_mgr:add_pool() is translated into a blocking gen-server call.</p>
+
+<h3 class="function"><a name="affected_rows-1">affected_rows/1</a></h3>
+<div class="spec">
+<p><tt>affected_rows(Ok_packet::#ok_packet{}) -&gt; integer()</tt><br></p>
+</div><p>affected_rows/1 extracts the number of affected rows from an OK Packet</p>
+
+<h3 class="function"><a name="as_dict-1">as_dict/1</a></h3>
+<div class="spec">
+<p><tt>as_dict(Result) -&gt; Dict</tt>
+<ul class="definitions"><li><tt>Result = #result_packet{}</tt></li><li><tt>Dict = dict()</tt></li></ul></p>
+</div><p><p>package row data as a dict</p>
+ 
+  <p>-module(fetch_example).</p>
+ 
+  fetch_foo() -&gt;
+   Res = emysql:execute(pool1, "select * from foo"),
+   Res:as_dict(Res).</p>
+
+<h3 class="function"><a name="as_json-1">as_json/1</a></h3>
+<div class="spec">
+<p><tt>as_json(Res) -&gt; any()</tt></p>
+</div><p>package row data as erlang json (jsx/jiffy compatible)</p>
+
+<h3 class="function"><a name="as_proplist-1">as_proplist/1</a></h3>
+<div class="spec">
+<p><tt>as_proplist(Res::Result) -&gt; proplist</tt>
+<ul class="definitions"><li><tt>Result = #result_packet{}</tt></li></ul></p>
+</div><p><p>package row data as a proplist</p>
+ 
+  <p>-module(fetch_example).</p>
+ 
+  fetch_foo() -&gt;
+   Res = emysql:execute(pool1, "select * from foo"),
+   Res:as_proplist(Res).</p>
+
+<h3 class="function"><a name="as_record-3">as_record/3</a></h3>
+<div class="spec">
+<p><tt>as_record(Res, Recname, Fields) -&gt; any()</tt></p>
+</div><p>Equivalent to <a href="#as_record-4"><tt>as_record(Res, Recname, Fields, fun (A) -&gt; A end)</tt></a>.</p>
+
+
+<h3 class="function"><a name="as_record-4">as_record/4</a></h3>
+<div class="spec">
+<p><tt>as_record(Res::Result, Recname::RecordName, Fields, Fun) -&gt; Result</tt>
+<ul class="definitions"><li><tt>Result = #result_packet{}</tt></li><li><tt>RecordName = atom()</tt></li><li><tt>Fields = [atom()]</tt></li><li><tt>Fun = function()</tt></li><li><tt>Result = [Row]</tt></li><li><tt>Row = [<a href="#type-record">record()</a>]</tt></li></ul></p>
+</div><p><p>package row data as records</p>
+ 
+  <p>RecordName is the name of the record to generate.  
+Fields are the field names to generate for each record.</p>
+ 
+  <p>-module(fetch_example).</p>
+ 
+  fetch_foo() -&gt;
+   Res = emysql:execute(pool1, "select * from foo"),
+   Res:as_record(foo, record_info(fields, foo)).</p>
+
+<h3 class="function"><a name="decrement_pool_size-2">decrement_pool_size/2</a></h3>
+<div class="spec">
+<p><tt>decrement_pool_size(PoolId, Num::By) -&gt; ok</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>By = integer()</tt></li></ul></p>
+</div><p><p>Synchronous call to the connection manager to shrink a pool.</p>
+ 
+  <p>This reduces the connections by up to n=By, but it only drops and closes available  
+connections that are not in use at the moment that this function is called. Connections  
+that are waiting for a server response are never dropped. In heavy duty, this function  
+may thus do nothing.</p>
+ 
+  <p>If 'By' is higher than the amount of connections or the amount of available connections,  
+exactly all available connections are dropped and closed.</p>
+ 
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  First gets a list of target connections from emysql_conn_mgr:remove_connections(), then
+  relies on emysql_conn:close_connection(Conn) for the proper closing of connections.</p>
+
+<h3 class="function"><a name="default_timeout-0">default_timeout/0</a></h3>
+<div class="spec">
+<p><tt>default_timeout() -&gt; Timeout</tt>
+<ul class="definitions"><li><tt>Timeout = integer()</tt></li></ul></p>
+</div><p><p>Returns the default timeout in milliseconds. As set in emysql.app.src,  
+or if not set, the value ?TIMEOUT as defined in include/emysql.hrl (8000ms).</p>
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  src/emysql.app.src is a template for the emysql app file from which
+  ebin/emysql.app is created during building, by a sed command in 'Makefile'.</p>
+
+<h3 class="function"><a name="execute-2">execute/2</a></h3>
+<div class="spec">
+<p><tt>execute(PoolId, Query::Query | StmtName) -&gt; Result | [Result]</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Query = binary() | string()</tt></li><li><tt>StmtName = atom()</tt></li><li><tt>Result = <a href="#type-ok_packet">ok_packet()</a> | <a href="#type-result_packet">result_packet()</a> | <a href="#type-error_packet">error_packet()</a></tt></li></ul></p>
+</div><p><p>Execute a query, prepared statement or a stored procedure.</p>
+ 
+  <p>Same as <code>execute(PoolId, Query, [], default_timeout())</code>.</p>
+ 
+  The result is a list for stored procedure execution &gt;= MySQL 4.1
+ </p>
+<p><b>See also:</b> <a href="#execute-3">execute/3</a>, <a href="#execute-4">execute/4</a>, <a href="#execute-5">execute/5</a>, <a href="#prepare-2">prepare/2</a>.</p>
+
+<h3 class="function"><a name="execute-3">execute/3</a></h3>
+<div class="spec">
+<p><tt>execute(PoolId, Query::Query | StmtName, Args::Args | Timeout) -&gt; Result | [Result]</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Query = binary() | string()</tt></li><li><tt>StmtName = atom()</tt></li><li><tt>Args = [any()]</tt></li><li><tt>Timeout = integer() | infinity</tt></li><li><tt>Result = <a href="#type-ok_packet">ok_packet()</a> | <a href="#type-result_packet">result_packet()</a> | <a href="#type-error_packet">error_packet()</a></tt></li></ul></p>
+</div><p><p>Execute a query, prepared statement or a stored procedure.</p>
+ 
+  <p>Same as <code>execute(PoolId, Query, Args, default_timeout())</code>
+  or <code>execute(PoolId, Query, [], Timeout)</code>.</p>
+ 
+  <p>Timeout is the query timeout in milliseconds or the atom infinity.</p>
+ 
+  The result is a list for stored procedure execution &gt;= MySQL 4.1
+ </p>
+<p><b>See also:</b> <a href="#execute-2">execute/2</a>, <a href="#execute-4">execute/4</a>, <a href="#execute-5">execute/5</a>, <a href="#prepare-2">prepare/2</a>.</p>
+
+<h3 class="function"><a name="execute-4">execute/4</a></h3>
+<div class="spec">
+<p><tt>execute(PoolId, Query::Query | StmtName, Args, Timeout) -&gt; Result | [Result]</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Query = binary() | string()</tt></li><li><tt>StmtName = atom()</tt></li><li><tt>Args = [any()]</tt></li><li><tt>Timeout = integer() | infinity</tt></li><li><tt>Result = <a href="#type-ok_packet">ok_packet()</a> | <a href="#type-result_packet">result_packet()</a> | <a href="#type-error_packet">error_packet()</a></tt></li></ul></p>
+</div><p><p>Execute a query, prepared statement or a stored procedure.</p>
+ 
+  <p><ll>
+  <li>Opens a connection,</li>
+  <li>sends the query string, or statement atom, and</li>
+  <li>returns the result packet.</li>
+  </ll></p>
+ 
+  Basically:
+  <pre>  Connection = emysql_conn_mgr:wait_for_connection(PoolId),
+  monitor_work(Connection, Timeout, {emysql_conn, execute, [Connection, Query_or_StmtName, Args]}).</pre><p>  
+Timeout is the query timeout in milliseconds or the atom infinity.</p>
+ 
+  All other execute function eventually call this function.
+ </p>
+<p><b>See also:</b> <a href="#execute-2">execute/2</a>, <a href="#execute-3">execute/3</a>, <a href="#execute-5">execute/5</a>, <a href="#prepare-2">prepare/2</a>.</p>
+
+<h3 class="function"><a name="execute-5">execute/5</a></h3>
+<div class="spec">
+<p><tt>execute(PoolId, Query::Query | StmtName, Args, Timeout, X5::nonblocking) -&gt; Result | [Result]</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li><li><tt>Query = binary() | string()</tt></li><li><tt>StmtName = atom()</tt></li><li><tt>Args = [any()]</tt></li><li><tt>Timeout = integer() | infinity</tt></li><li><tt>Result = <a href="#type-ok_packet">ok_packet()</a> | <a href="#type-result_packet">result_packet()</a> | <a href="#type-error_packet">error_packet()</a></tt></li></ul></p>
+</div><p><p>Execute a query, prepared statement or a stored procedure - but return immediately, returning the atom 'unavailable', when no connection in the pool is readily available without wait.</p>
+ 
+  <p><ll>
+  <li>Checks if a connection is available,</li>
+  <li>returns 'unavailable' if not,</li>
+  <li>else as the other exception functions(): sends the query string, or statement atom, and</li>
+  <li>returns the result packet.</li>
+  </ll></p>
+ 
+  <p>Timeout is the query timeout in milliseconds or the atom infinity.</p>
+ 
+  <h5><a name="Implementation">Implementation</a></h5>
+ 
+  Basically:
+  <pre>  {Connection, connection} = case emysql_conn_mgr:lock_connection(PoolId),
+       monitor_work(Connection, Timeout, {emysql_conn, execute, [Connection, Query_or_StmtName, Args]}).</pre>
+ 
+  <p>The result is a list for stored procedure execution &gt;= MySQL 4.1</p>
+ 
+  All other execute function eventually call this function.
+ </p>
+<p><b>See also:</b> <a href="#execute-2">execute/2</a>, <a href="#execute-3">execute/3</a>, <a href="#execute-4">execute/4</a>, <a href="#prepare-2">prepare/2</a>.</p>
+
+<h3 class="function"><a name="field_names-1">field_names/1</a></h3>
+<div class="spec">
+<p><tt>field_names(Result) -&gt; [Name]</tt>
+<ul class="definitions"><li><tt>Result = #result_packet{}</tt></li><li><tt>Name = binary()</tt></li></ul></p>
+</div><p>Return the field names of a result packet</p>
+
+<h3 class="function"><a name="increment_pool_size-2">increment_pool_size/2</a></h3>
+<div class="spec">
+<p><tt>increment_pool_size(PoolId::atom(), Num::non_neg_integer()) -&gt; ok | {error, list()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="insert_id-1">insert_id/1</a></h3>
+<div class="spec">
+<p><tt>insert_id(Ok_packet::#ok_packet{}) -&gt; integer() | binary()</tt><br></p>
+</div><p>insert_id/1 extracts the Insert ID from an OK Packet</p>
+
+<h3 class="function"><a name="prepare-2">prepare/2</a></h3>
+<div class="spec">
+<p><tt>prepare(StmtName, Statement) -&gt; ok</tt>
+<ul class="definitions"><li><tt>StmtName = atom()</tt></li><li><tt>Statement = binary() | string()</tt></li></ul></p>
+</div><p><p>Prepare a statement.</p>
+ 
+  <p>The atom given by parameter 'StmtName' is bound to the SQL string
+  'Statement'. Calling <code>execute(&lt;Pool&gt;, StmtName, &lt;ParamList&gt;)</code> executes the
+  statement with parameters from <code>&lt;ParamList&gt;</code>.</p>
+ 
+  <p>This is not a mySQL prepared statement, but an implementation on the side of  
+Emysql.</p>
+ 
+  <h4><a name="Sample">Sample</a></h4>
+  <pre>  -module(sample).
+  -export([run/0]).
+ 
+  run() -&gt;
+ 
+   application:start(sasl),
+   crypto:start(),
+   application:start(emysql),
+ 
+   emysql:add_pool(hello_pool, 1,
+       "hello_username", "hello_password", "localhost", 3306,
+       "hello_database", utf8),
+ 
+   emysql:execute(hello_pool,
+       &lt;&lt;"INSERT INTO hello_table SET hello_text = 'Hello World!'"&gt;&gt;),
+ 
+   emysql:prepare(hello_stmt,
+       &lt;&lt;"SELECT * from hello_table WHERE hello_text like ?"&gt;&gt;),
+ 
+   Result = emysql:execute(hello_pool, hello_stmt, ["Hello%"]),
+ 
+    io:format("~n~s~n", [string:chars($-,72)]),
+    io:format("~p~n", [Result]),
+ 
+      ok.</pre>
+  Output:
+  <pre>  {result_packet,32,
+                [{field,2,&lt;&lt;"def"&gt;&gt;,&lt;&lt;"hello_database"&gt;&gt;,
+                         &lt;&lt;"hello_table"&gt;&gt;,&lt;&lt;"hello_table"&gt;&gt;,
+                         &lt;&lt;"hello_text"&gt;&gt;,&lt;&lt;"hello_text"&gt;&gt;,254,&lt;&lt;&gt;&gt;,33,
+                         60,0,0}],
+                 [[&lt;&lt;"Hello World!"&gt;&gt;]],
+                 &lt;&lt;&gt;&gt;}</pre>
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  <p>Hands parameters over to emysql_statements:add/2:
+  <code>emysql_statements:add(StmtName, Statement).</code>, which calls
+  <code>handle_call({add, StmtName, Statement}, _From, State)</code>.</p>
+ 
+  The statement is there added to the Emysql statement GB tree:
+  ... <pre>               State#state{
+                   statements = gb_trees:enter(StmtName, {1, Statement},
+                       State#state.statements)</pre>
+  Execution is called like this:
+  <pre>  execute(Connection, StmtName, Args) when is_atom(StmtName), is_list(Args) -&gt;
+   prepare_statement(Connection, StmtName),
+   case set_params(Connection, 1, Args, undefined) of
+       OK when is_record(OK, ok_packet) -&gt;
+           ParamNamesBin = list_to_binary(string:join([[$@ | integer_to_list(I)] || I &lt;- lists:seq(1, length(Args))], ", ")),
+           StmtNameBin = atom_to_binary(StmtName, utf8),
+           Packet = &lt;&lt;?COM_QUERY, "EXECUTE ", StmtNameBin/binary, " USING ", ParamNamesBin/binary&gt;&gt;,
+           emysql_tcp:send_and_recv_packet(Connection#emysql_connection.socket, Packet, 0);
+       Error -&gt;
+           Error
+   end.</pre>
+ </p>
+<p><b>See also:</b> <a href="emysql_conn.html#execute-3">emysql_conn:execute/3</a>, <a href="emysql_statements.html#add-2">emysql_statements:add/2</a>, <a href="emysql_statements.html#handle-3">emysql_statements:handle/3</a>.</p>
+
+<h3 class="function"><a name="remove_pool-1">remove_pool/1</a></h3>
+<div class="spec">
+<p><tt>remove_pool(PoolId) -&gt; ok</tt>
+<ul class="definitions"><li><tt>PoolId = atom()</tt></li></ul></p>
+</div><p><p>Synchronous call to the connection manager to remove a pool.</p>
+ 
+  <h4><a name="Implementation">Implementation</a></h4>
+ 
+  Relies on emysql_conn:close_connection(Conn) for the proper closing of connections. Feeds
+  any connection in the pool to it, also the locked ones.</p>
+
+<h3 class="function"><a name="result_type-1">result_type/1</a></h3>
+<div class="spec">
+<p><tt>result_type(Ok_packet) -&gt; any()</tt></p>
+</div><p>result_type/1 decodes a packet into its type</p>
+
+<h3 class="function"><a name="start-0">start/0</a></h3>
+<div class="spec">
+<p><tt>start() -&gt; ok</tt><br></p>
+</div><p><p>Start the Emysql application.</p>
+ 
+  <p>Simply calls <code>application:start(emysql).</code></p>
+ 
+  <h4><a name="From_the_Erlang_Manual">From the Erlang Manual</a></h4><p>  
+If the application is not already loaded, the application controller will  
+first load it using application:load/1. It will check the value of the  
+applications key, to ensure that all applications that should be started  
+before this application are running. The application controller then  
+creates an application master for the application. The application master  
+is the group leader of all the processes in the application. The  
+application master starts the application by calling the application  
+callback function start/2 in the module, and with the start argument,  
+defined by the mod key in the .app file.</p>
+ 
+  <p>application:start(Application) is the same as calling  
+application:start(Application, temporary). If a temporary application  
+terminates, this is reported but no other applications are terminated.</p>
+ 
+  See <a href="http://www.erlang.org/doc/design_principles/applications.html" target="_top"><tt>http://www.erlang.org/doc/design_principles/applications.html</tt></a></p>
+
+<h3 class="function"><a name="stop-0">stop/0</a></h3>
+<div class="spec">
+<p><tt>stop() -&gt; ok</tt><br></p>
+</div><p><p>Stop the Emysql application.</p>
+ 
+  <p>Simply calls <code>application:stop(emysql).</code></p>
+ 
+  <h4><a name="From_the_Erlang_Manual">From the Erlang Manual</a></h4><p>  
+It is always possible to stop an application explicitly by calling  
+application:stop/1. Regardless of the mode, no other applications will be  
+affected.</p>
+ 
+  See <a href="http://www.erlang.org/doc/design_principles/applications.html" target="_top"><tt>http://www.erlang.org/doc/design_principles/applications.html</tt></a></p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 27 2014, 12:21:24.</i></p>
+</body>
+</html>
