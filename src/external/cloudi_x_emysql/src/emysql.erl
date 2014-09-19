@@ -672,10 +672,6 @@ result_type(#eof_packet{})    -> eof.
 %% fetch_foo() ->
 %%  Res = emysql:execute(pool1, "select * from foo"),
 %%  Res:as_dict(Res).
--spec as_dict(Result) -> Dict
-  when
-    Result :: #result_packet{},
-    Dict :: dict().
 as_dict(Res) -> emysql_conv:as_dict(Res).
 
 
