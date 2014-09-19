@@ -55,7 +55,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/14,
+-export([start_link/15,
          get_status/1,
          get_status/2]).
 
@@ -100,6 +100,7 @@
         prefix,                        % subscribe/unsubscribe name prefix
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
+        timeout_term,                  % cloudi_service_terminate timeout
         receiver_pid,                  % receiver pid
         duo_mode_pid,                  % dual mode pid
         request_pid = undefined,       % request pid
@@ -129,6 +130,7 @@
         queued_info = queue:new(),     % queue process messages for service
         module,                        % service module
         service_state,                 % service state
+        timeout_term,                  % cloudi_service_terminate timeout
         dispatcher,                    % main dispatcher pid
         request_pid = undefined,       % request pid
         options                        % #config_service_options{}
@@ -142,13 +144,14 @@
 
 start_link(ProcessIndex, ProcessCount, GroupLeader,
            Module, Args, Timeout, Prefix,
-           TimeoutAsync, TimeoutSync, DestRefresh,
-           DestDeny, DestAllow,
+           TimeoutAsync, TimeoutSync, TimeoutTerm,
+           DestRefresh, DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions, Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync), is_pid(Parent)  ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm), is_pid(Parent)  ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -169,8 +172,9 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
             gen_server:start_link(?MODULE,
                                   [ProcessIndex, ProcessCount, GroupLeader,
                                    Module, Args, Timeout, Prefix,
-                                   TimeoutAsync, TimeoutSync, DestRefresh,
-                                   DestDeny, DestAllow, ConfigOptions, Parent],
+                                   TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                   DestRefresh, DestDeny, DestAllow,
+                                   ConfigOptions, Parent],
                                   [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
@@ -188,8 +192,8 @@ get_status(Dispatcher, Timeout) ->
 
 init([ProcessIndex, ProcessCount, GroupLeader,
       Module, Args, Timeout, Prefix,
-      TimeoutAsync, TimeoutSync, DestRefresh,
-      DestDeny, DestAllow,
+      TimeoutAsync, TimeoutSync, TimeoutTerm,
+      DestRefresh, DestDeny, DestAllow,
       #config_service_options{
           duo_mode = DuoMode,
           info_pid_options = InfoPidOptions} = ConfigOptions, Parent]) ->
@@ -207,6 +211,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
             proc_lib:spawn_opt(fun() ->
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
                                               module = Module,
+                                              timeout_term = TimeoutTerm,
                                               dispatcher = Dispatcher,
                                               options = NewConfigOptions})
             end, InfoPidOptions);
@@ -249,6 +254,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
                    prefix = Prefix,
                    timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,
+                   timeout_term = TimeoutTerm,
                    receiver_pid = ReceiverPid,
                    duo_mode_pid = DuoModePid,
                    uuid_generator = UUID,
@@ -1460,7 +1466,18 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     ok = initialize_wait(Timeout),
     {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
                             start_link(Timeout, ProcessDictionary, State),
-    Result = try Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
+    Result = try
+        begin
+            case erlang:function_exported(Module, cloudi_service_init, 4) of
+                true ->
+                    % Cloud >= 1.4.0
+                    Module:cloudi_service_init(Args, Prefix, Timeout,
+                                               DispatcherProxy);
+                false ->
+                    % Cloud =< 1.3.3
+                    Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
+            end
+        end
     catch
         ErrorType:Error ->
             ?LOG_ERROR("init ~p ~p~n~p",
@@ -1479,7 +1496,7 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
             #config_service_options{
                 aspects_init_after = Aspects} = NewConfigOptions,
             NewState = NextState#state{options = NewConfigOptions},
-            case aspects_init(Aspects, Args, Prefix,
+            case aspects_init(Aspects, Args, Prefix, Timeout,
                               ServiceState, Dispatcher) of
                 {ok, NewServiceState} ->
                     erlang:process_flag(trap_exit, true),
@@ -1544,13 +1561,22 @@ terminate(Reason,
           #state{dispatcher = Dispatcher,
                  module = Module,
                  service_state = ServiceState,
+                 timeout_term = TimeoutTerm,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}}) ->
     cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, NewServiceState} = aspects_terminate(Aspects,
-                                              Reason, ServiceState),
-    Module:cloudi_service_terminate(Reason, NewServiceState),
+    {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
+                                              ServiceState),
+    case erlang:function_exported(Module, cloudi_service_terminate, 3) of
+        true ->
+            % Cloud >= 1.4.0
+            Module:cloudi_service_terminate(Reason, TimeoutTerm,
+                                            NewServiceState);
+        false ->
+            % Cloud =< 1.3.3
+            Module:cloudi_service_terminate(Reason, NewServiceState)
+    end,
     ok;
 
 terminate(_, _) ->
@@ -2914,8 +2940,20 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                                     start_link(Timeout,
                                                DispatcherProcessDictionary,
                                                DispatcherState),
-            Result = try Module:cloudi_service_init(Args, Prefix,
-                                                    DispatcherProxy)
+            Result = try
+                begin
+                    case erlang:function_exported(Module,
+                                                  cloudi_service_init, 4) of
+                        true ->
+                            % Cloud >= 1.4.0
+                            Module:cloudi_service_init(Args, Prefix, Timeout,
+                                                       DispatcherProxy);
+                        false ->
+                            % Cloud =< 1.3.3
+                            Module:cloudi_service_init(Args, Prefix,
+                                                       DispatcherProxy)
+                    end
+                end
             catch
                 ErrorType:Error ->
                     ?LOG_ERROR("init ~p ~p~n~p",
@@ -2951,7 +2989,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         queued = undefined,
                         queued_info = undefined,
                         options = NewConfigOptions},
-                    case aspects_init(Aspects, Args, Prefix,
+                    case aspects_init(Aspects, Args, Prefix, Timeout,
                                       ServiceState, Dispatcher) of
                         {ok, NewServiceState} ->
                             erlang:process_flag(trap_exit, true),
@@ -3050,12 +3088,21 @@ duo_mode_format_state(#state_duo{recv_timeouts = RecvTimeouts,
 duo_mode_loop_terminate(Reason, ServiceState,
                         #state_duo{duo_mode_pid = DuoModePid,
                                    module = Module,
+                                   timeout_term = TimeoutTerm,
                                    options = #config_service_options{
                                        aspects_terminate_before = Aspects}}) ->
     cloudi_core_i_services_monitor:terminate_kill(DuoModePid),
-    {ok, NewServiceState} = aspects_terminate(Aspects,
-                                              Reason, ServiceState),
-    Module:cloudi_service_terminate(Reason, NewServiceState),
+    {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
+                                              ServiceState),
+    case erlang:function_exported(Module, cloudi_service_terminate, 3) of
+        true ->
+            % Cloud >= 1.4.0
+            Module:cloudi_service_terminate(Reason, TimeoutTerm,
+                                            NewServiceState);
+        false ->
+            % Cloud =< 1.3.3
+            Module:cloudi_service_terminate(Reason, NewServiceState)
+    end,
     erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
 
@@ -3446,19 +3493,19 @@ duo_process_queues(NewServiceState, State) ->
             NewState
     end.
 
-aspects_init([], _, _, ServiceState, _) ->
+aspects_init([], _, _, _, ServiceState, _) ->
     {ok, ServiceState};
-aspects_init([{M, F} | L], Args, Prefix, ServiceState, Dispatcher) ->
-    case M:F(Args, Prefix, ServiceState, Dispatcher) of
+aspects_init([{M, F} | L], Args, Prefix, Timeout, ServiceState, Dispatcher) ->
+    case M:F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, NewServiceState} ->
-            aspects_init(L, Args, Prefix, NewServiceState, Dispatcher);
+            aspects_init(L, Args, Prefix, Timeout, NewServiceState, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
     end;
-aspects_init([F | L], Args, Prefix, ServiceState, Dispatcher) ->
-    case F(Args, Prefix, ServiceState, Dispatcher) of
+aspects_init([F | L], Args, Prefix, Timeout, ServiceState, Dispatcher) ->
+    case F(Args, Prefix, Timeout, ServiceState, Dispatcher) of
         {ok, NewServiceState} ->
-            aspects_init(L, Args, Prefix, NewServiceState, Dispatcher);
+            aspects_init(L, Args, Prefix, Timeout, NewServiceState, Dispatcher);
         {stop, _, _} = Stop ->
             Stop
     end.

@@ -53,10 +53,10 @@
 -behaviour(cloudi_service).
 
 %% external interface
--export([aspect_init/3,
+-export([aspect_init/4,
          aspect_request/10,
          aspect_request/11,
-         aspect_terminate/2]).
+         aspect_terminate/3]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
@@ -78,7 +78,7 @@
 %%%------------------------------------------------------------------------
 
 % for external services
-aspect_init(CommandLine, _, undefined) ->
+aspect_init(CommandLine, _, _, undefined) ->
     {ok, #state{service = CommandLine}}.
 
 % for external services
@@ -96,15 +96,15 @@ aspect_request(_, _, _, _, _, _, _, TransId, _,
                      elapsed_seconds = elapsed_seconds(TransId)}}.
  
 % for internal and external services
-aspect_terminate(_, #state{service = Service,
-                           elapsed_seconds = undefined} = State) ->
+aspect_terminate(_, _, #state{service = Service,
+                              elapsed_seconds = undefined} = State) ->
     ?LOG_WARN("msg_size 0 requests/second "
               "forwarded for~n~p",
               [Service]),
     {ok, State};
-aspect_terminate(_, #state{service = Service,
-                           request_count = Count,
-                           elapsed_seconds = ElapsedSeconds} = State) ->
+aspect_terminate(_, _, #state{service = Service,
+                              request_count = Count,
+                              elapsed_seconds = ElapsedSeconds} = State) ->
     % to trigger this:
     % cloudi_service_api:services_remove([element(1, S) || S <- element(2, cloudi_service_api:services(infinity)), (element(2, element(2, S)) == "/tests/msg_size/")], infinity).
     ?LOG_INFO("msg_size ~p requests/second "

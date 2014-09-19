@@ -139,6 +139,7 @@
 -type aspect_init_after_internal_f() ::
     fun((Args :: list(),
          Prefix :: cloudi_service:service_name_pattern(),
+         Timeout :: timeout_milliseconds(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
@@ -146,6 +147,7 @@
 -type aspect_init_after_external_f() ::
     fun((CommandLine :: list(string()),
          Prefix :: cloudi:service_name_pattern(),
+         Timeout :: timeout_milliseconds(),
          State :: any()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
@@ -258,6 +260,7 @@
               aspect_info_after_internal/0]).
 -type aspect_terminate_f() ::
     fun((Reason :: any(),
+         Timeout :: timeout_milliseconds(),
          State :: any()) ->
         {ok, State :: any()}).
 -type aspect_terminate_before_internal_f() ::

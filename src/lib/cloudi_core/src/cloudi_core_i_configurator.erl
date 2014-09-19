@@ -895,6 +895,7 @@ service_start_internal(IndexProcess, Pids,
                            prefix = Prefix,
                            timeout_async = TimeoutAsync,
                            timeout_sync = TimeoutSync,
+                           timeout_term = TimeoutTerm,
                            dest_refresh = DestRefresh,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
@@ -907,11 +908,11 @@ service_start_internal(IndexProcess, Pids,
          monitor(cloudi_core_i_spawn, start_internal,
                  [GroupLeader,
                   Module, Args, TimeoutInit,
-                  Prefix, TimeoutAsync, TimeoutSync,
+                  Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, 1,
-                 MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:
                                   service_format(Service),
@@ -940,6 +941,7 @@ service_start_external(IndexProcess, Pids,
                            prefix = Prefix,
                            timeout_async = TimeoutAsync,
                            timeout_sync = TimeoutSync,
+                           timeout_term = TimeoutTerm,
                            dest_refresh = DestRefresh,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
@@ -953,11 +955,11 @@ service_start_external(IndexProcess, Pids,
                  [CountThread,
                   FilePath, Args, Env,
                   Protocol, BufferSize, TimeoutInit,
-                  Prefix, TimeoutAsync, TimeoutSync,
+                  Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, CountThread,
-                 MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:
                                   service_format(Service),

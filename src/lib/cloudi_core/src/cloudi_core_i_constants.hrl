@@ -16,13 +16,14 @@
 % it has not yet been necessary to modify these settings during testing.     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% terminate delay when MaxT == 0
-% (if MaxR == 0, take MaxT as a terminate delay value, i.e., as if MaxR == 1)
--define(TERMINATE_DELAY_DEFAULT,  2000). % milliseconds
+% termination timeout when MaxT == 0
+% (if MaxR == 0, take MaxT as a terminate timeout value, i.e., as if MaxR == 1)
+-define(TIMEOUT_TERMINATE_DEFAULT,  2000). % milliseconds
 % absolute bounds for the terminate function execution time
 % when a service stops or restarts
--define(TERMINATE_DELAY_MIN,  1000). % milliseconds
--define(TERMINATE_DELAY_MAX, 60000). % milliseconds
+-define(TIMEOUT_TERMINATE_MIN,  1000). % milliseconds
+% fail-fast is somewhat arbitrary but failure occurs in 1 minute or less
+-define(TIMEOUT_TERMINATE_MAX, 60000). % milliseconds
 
 % interval at which asynchronous messages are checked
 -define(RECV_ASYNC_INTERVAL, 500). % milliseconds

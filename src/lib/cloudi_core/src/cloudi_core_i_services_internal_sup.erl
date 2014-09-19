@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/13,
+         create_internal/14,
          create_internal_done/3]).
 
 %% supervisor callbacks
@@ -79,11 +79,12 @@ start_link() ->
 
 create_internal(ProcessIndex, ProcessCount, GroupLeader,
                 Module, Args, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync, DestRefresh,
-                DestDeny, DestAllow, ConfigOptions)
+                TimeoutSync, TimeoutAsync, TimeoutTerm,
+                DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutSync), is_integer(TimeoutAsync),
+         is_integer(TimeoutTerm) ->
     true = (DestRefresh == immediate_closest) orelse
            (DestRefresh == lazy_closest) orelse
            (DestRefresh == immediate_furthest) orelse
@@ -103,6 +104,7 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
                                           ProcessCount, GroupLeader,
                                           Module, Args, Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
+                                          TimeoutTerm,
                                           DestRefresh, DestDeny, DestAllow,
                                           ConfigOptions, self()]) of
         {ok, Dispatcher} ->

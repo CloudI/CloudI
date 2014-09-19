@@ -256,12 +256,23 @@
 %%% Callback functions for behavior
 %%%------------------------------------------------------------------------
 
+-ifdef(CLOUDI_SERVICE_NEW). % CloudI >= 1.4.0
+-callback cloudi_service_init(Args :: list(),
+                              Prefix :: service_name_pattern(),
+                              Timeout :: cloudi_service_api:
+                                         timeout_milliseconds(),
+                              Dispatcher :: dispatcher()) ->
+    {ok, State :: any()} |
+    {stop, Reason :: any()} |
+    {stop, Reason :: any(), State :: any()}.
+-else.                      % CloudI =< 1.3.3
 -callback cloudi_service_init(Args :: list(),
                               Prefix :: service_name_pattern(),
                               Dispatcher :: dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
     {stop, Reason :: any(), State :: any()}.
+-endif.
 
 -callback cloudi_service_handle_request(Type :: request_type(),
                                         Name :: service_name(),
@@ -293,9 +304,17 @@
     {noreply, NewState :: any()} |
     {stop, Reason :: any(), NewState :: any()}.
 
+-ifdef(CLOUDI_SERVICE_NEW). % CloudI >= 1.4.0
+-callback cloudi_service_terminate(Reason :: any(),
+                                   Timeout :: cloudi_service_api:
+                                              timeout_milliseconds(),
+                                   State :: any()) ->
+    ok.
+-else.                      % CloudI =< 1.3.3
 -callback cloudi_service_terminate(Reason :: any(),
                                    State :: any()) ->
     ok.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Behavior interface functions

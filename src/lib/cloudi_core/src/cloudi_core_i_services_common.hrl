@@ -535,22 +535,22 @@ check_incoming(ServiceRequest,
         monkey_chaos = NewMonkeyChaos,
         hibernate = NewHibernate}.
 
-aspects_terminate([], _, ServiceState) ->
+aspects_terminate([], _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_terminate([{M, F} = Aspect | L], Reason, ServiceState) ->
-    try {ok, _} = M:F(Reason, ServiceState) of
+aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
+    try {ok, _} = M:F(Reason, TimeoutTerm, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
+            aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
         ErrorType:Error ->
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
                        [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
             {ok, ServiceState}
     end;
-aspects_terminate([F | L], Reason, ServiceState) ->
-    try {ok, _} = F(Reason, ServiceState) of
+aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
+    try {ok, _} = F(Reason, TimeoutTerm, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, NewServiceState)
+            aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
         ErrorType:Error ->
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",

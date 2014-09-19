@@ -397,7 +397,12 @@
 load([I | _] = Path) when is_integer(I) ->
     case file:consult(Path) of
         {ok, Terms} ->
-            new(Terms, #config{uuid_generator = uuid_generator()});
+            case load_verify(Terms) of
+                ok ->
+                    new(Terms, #config{uuid_generator = uuid_generator()});
+                {error, _} = Error ->
+                    Error
+            end;
         {error, enoent} = Error ->
             error_logger:error_msg("configuration file \"~s\" not found",
                                    [Path]),
@@ -418,7 +423,12 @@ load([I | _] = Path) when is_integer(I) ->
             Error
     end;
 load([T | _] = Terms) when is_tuple(T) ->
-    new(Terms, #config{uuid_generator = uuid_generator()});
+    case load_verify(Terms) of
+        ok ->
+            new(Terms, #config{uuid_generator = uuid_generator()});
+        {error, _} = Error ->
+            Error
+    end;
 load(Data) ->
     {error, {configuration_invalid, Data}}.
 
@@ -1327,6 +1337,17 @@ logging(#config{logging = #config_logging{file = File,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+load_verify(Terms) ->
+    UnknownTerms = lists:foldl(fun(ConfigSection, L) ->
+        lists:keydelete(ConfigSection, 1, L)
+    end, Terms, ['services', 'acl', 'nodes', 'logging']),
+    if
+        UnknownTerms == [] ->
+            ok;
+        true ->
+            {error, {configuration_invalid, UnknownTerms}}
+    end.
+
 -spec new(Terms :: list({atom(), any()}),
           Config :: #config{}) ->
     {ok, #config{}} |
@@ -1703,6 +1724,7 @@ services_validate([#internal{
         is_list(Module) ->
             Module
     end,
+    TimeoutTerm = timeout_terminate(MaxT, MaxR),
     case service_name_valid(Prefix, service_internal_prefix_invalid) of
         ok ->
             case services_validate_options_internal(Options, CountProcess) of
@@ -1718,6 +1740,7 @@ services_validate([#internal{
                                            timeout_init = TimeoutInit,
                                            timeout_async = TimeoutAsync,
                                            timeout_sync = TimeoutSync,
+                                           timeout_term = TimeoutTerm,
                                            dest_list_deny = DestListDeny,
                                            dest_list_allow = DestListAllow,
                                            count_process = CountProcess,
@@ -1864,6 +1887,7 @@ services_validate([#external{
         true ->
             BufferSize
     end,
+    TimeoutTerm = timeout_terminate(MaxT, MaxR),
     case service_name_valid(Prefix, service_external_prefix_invalid) of
         ok ->
             case services_validate_options_external(Options, CountProcess) of
@@ -1881,6 +1905,7 @@ services_validate([#external{
                                            timeout_init = TimeoutInit,
                                            timeout_async = TimeoutAsync,
                                            timeout_sync = TimeoutSync,
+                                           timeout_term = TimeoutTerm,
                                            dest_list_deny = DestListDeny,
                                            dest_list_allow = DestListAllow,
                                            count_process = CountProcess,
@@ -1994,6 +2019,17 @@ services_validate([[_| _] = ServicePropList | L], Output, IDs, UUID) ->
 ?CLOUDI_CORE_SUPPORT_EXTERNAL
 services_validate([Service | _], _, _, _) ->
     {error, {service_invalid, Service}}.
+
+timeout_terminate(0, _) ->
+    ?TIMEOUT_TERMINATE_DEFAULT;
+timeout_terminate(MaxT, 0) ->
+    erlang:min(erlang:max((1000 * MaxT) - ?TIMEOUT_DELTA,
+                          ?TIMEOUT_TERMINATE_MIN),
+               ?TIMEOUT_TERMINATE_MAX);
+timeout_terminate(MaxT, MaxR) ->
+    erlang:min(erlang:max(((1000 * MaxT) div MaxR) - ?TIMEOUT_DELTA,
+                          ?TIMEOUT_TERMINATE_MIN),
+               ?TIMEOUT_TERMINATE_MAX).
 
 -spec services_validate_options_internal(OptionsList ::
                                              cloudi_service_api:
@@ -2734,7 +2770,7 @@ services_validate_option_aspects_f([Entry | _], _, _) ->
 
 services_validate_option_aspects_terminate_before(AspectsTerminate,
                                                   AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsTerminate, 2,
+    case services_validate_option_aspects_f(AspectsTerminate, 3,
                                             AutomaticLoading) of
         ok ->
             ok;
@@ -2744,7 +2780,7 @@ services_validate_option_aspects_terminate_before(AspectsTerminate,
 
 services_validate_option_aspects_init_after_internal(AspectsInit,
                                                      AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInit, 4,
+    case services_validate_option_aspects_f(AspectsInit, 5,
                                             AutomaticLoading) of
         ok ->
             ok;
@@ -2840,7 +2876,7 @@ services_validate_option_aspects_internal(AspectsInitAfter,
 
 services_validate_option_aspects_init_after_external(AspectsInit,
                                                      AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInit, 3,
+    case services_validate_option_aspects_f(AspectsInit, 4,
                                             AutomaticLoading) of
         ok ->
             ok;

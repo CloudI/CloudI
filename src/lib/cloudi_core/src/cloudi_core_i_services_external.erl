@@ -55,7 +55,7 @@
 -behaviour(gen_fsm).
 
 %% external interface
--export([start_link/15,
+-export([start_link/16,
          port/2,
          stdout/2,
          stderr/2,
@@ -115,11 +115,13 @@
         process_count,                 % initial count of Erlang processes
         command_line,                  % command line of OS execve
         prefix,                        % subscribe/unsubscribe name prefix
+        timeout_init,                  % for aspects_init_after
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
+        timeout_term,                  % cloudi_service_terminate timeout
         os_pid = undefined,            % os_pid reported by the socket
         keepalive = undefined,         % stores if a keepalive succeeded
-        init_timeout,                  % init timeout handler
+        init_timer,                    % init timeout handler
         uuid_generator,                % transaction id generator
         dest_refresh,                  % immediate_closest | lazy_closest |
                                        % immediate_furthest | lazy_furthest |
@@ -144,15 +146,16 @@
 start_link(Protocol, SocketPath,
            ThreadIndex, ProcessIndex, ProcessCount,
            CommandLine, BufferSize, Timeout, Prefix,
-           TimeoutAsync, TimeoutSync, DestRefresh,
-           DestDeny, DestAllow,
+           TimeoutAsync, TimeoutSync, TimeoutTerm,
+           DestRefresh, DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_list(CommandLine),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync) ->
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm) ->
     true = (Protocol =:= tcp) orelse
            (Protocol =:= udp) orelse
            (Protocol =:= local),
@@ -177,8 +180,9 @@ start_link(Protocol, SocketPath,
                                [Protocol, SocketPath,
                                 ThreadIndex, ProcessIndex, ProcessCount,
                                 CommandLine, BufferSize, Timeout, Prefix,
-                                TimeoutAsync, TimeoutSync, DestRefresh,
-                                DestDeny, DestAllow, ConfigOptions],
+                                TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                DestRefresh, DestDeny, DestAllow,
+                                ConfigOptions],
                                [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
@@ -212,14 +216,14 @@ get_status(Dispatcher, Timeout) ->
 init([Protocol, SocketPath,
       ThreadIndex, ProcessIndex, ProcessCount,
       CommandLine, BufferSize, Timeout, Prefix,
-      TimeoutAsync, TimeoutSync, DestRefresh,
-      DestDeny, DestAllow, ConfigOptions])
+      TimeoutAsync, TimeoutSync, TimeoutTerm,
+      DestRefresh, DestDeny, DestAllow, ConfigOptions])
     when Protocol =:= tcp;
          Protocol =:= udp;
          Protocol =:= local ->
     Dispatcher = self(),
-    InitTimeout = erlang:send_after(Timeout, Dispatcher,
-                                    'cloudi_service_init_timeout'),
+    InitTimer = erlang:send_after(Timeout, Dispatcher,
+                                  'cloudi_service_init_timeout'),
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, State} ->
             cloudi_x_quickrand:seed(),
@@ -259,9 +263,11 @@ init([Protocol, SocketPath,
                          process_count = ProcessCount,
                          command_line = CommandLine,
                          prefix = Prefix,
+                         timeout_init = Timeout,
                          timeout_async = TimeoutAsync,
                          timeout_sync = TimeoutSync,
-                         init_timeout = InitTimeout,
+                         timeout_term = TimeoutTerm,
+                         init_timer = InitTimer,
                          uuid_generator = UUID,
                          dest_refresh = DestRefresh,
                          cpg_data = Groups,
@@ -342,23 +348,25 @@ init([Protocol, SocketPath,
                            service_state = ServiceState,
                            command_line = CommandLine,
                            prefix = Prefix,
-                           init_timeout = InitTimeout,
+                           timeout_init = Timeout,
+                           init_timer = InitTimer,
                            options = #config_service_options{
                                aspects_init_after = Aspects}} = State) ->
     % initialization is now complete because the CloudI API poll function
     % has been called for the first time (i.e., by the service code)
-    erlang:cancel_timer(InitTimeout),
-    case aspects_init(Aspects, CommandLine, Prefix, ServiceState) of
+    erlang:cancel_timer(InitTimer),
+    case aspects_init(Aspects, CommandLine, Prefix, Timeout,
+                      ServiceState) of
         {ok, NewServiceState} ->
             ok = cloudi_core_i_configurator:
                  service_initialized_process(Dispatcher),
             {next_state, 'HANDLE',
              process_queue(State#state{service_state = NewServiceState,
-                                       init_timeout = undefined})};
+                                       init_timer = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
-                         init_timeout = undefined}}
+                         init_timer = undefined}}
     end;
 
 'HANDLE'({'subscribe', Pattern},
@@ -1171,6 +1179,7 @@ terminate(Reason, _,
                  protocol = tcp,
                  listener = Listener,
                  socket = Socket,
+                 timeout_term = TimeoutTerm,
                  os_pid = OsPid,
                  service_state = ServiceState,
                  options = #config_service_options{
@@ -1179,13 +1188,14 @@ terminate(Reason, _,
     catch gen_tcp:close(Socket),
     os_pid_kill(OsPid),
     cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
+    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok;
 
 terminate(Reason, _,
           #state{dispatcher = Dispatcher,
                  protocol = udp,
                  socket = Socket,
+                 timeout_term = TimeoutTerm,
                  os_pid = OsPid,
                  service_state = ServiceState,
                  options = #config_service_options{
@@ -1193,7 +1203,7 @@ terminate(Reason, _,
     catch gen_udp:close(Socket),
     os_pid_kill(OsPid),
     cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
+    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok;
 
 terminate(Reason, _,
@@ -1202,6 +1212,7 @@ terminate(Reason, _,
                  listener = Listener,
                  socket_path = SocketPath,
                  socket = Socket,
+                 timeout_term = TimeoutTerm,
                  os_pid = OsPid,
                  service_state = ServiceState,
                  options = #config_service_options{
@@ -1211,7 +1222,7 @@ terminate(Reason, _,
     os_pid_kill(OsPid),
     catch file:delete(SocketPath),
     cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, _} = aspects_terminate(Aspects, Reason, ServiceState),
+    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok.
 
 code_change(_, StateName, State, _) ->
@@ -1816,19 +1827,19 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % do not close Socket!
     {ok, NewSocket}.
 
-aspects_init([], _, _, ServiceState) ->
+aspects_init([], _, _, _, ServiceState) ->
     {ok, ServiceState};
-aspects_init([{M, F} | L], CommandLine, Prefix, ServiceState) ->
-    case M:F(CommandLine, Prefix, ServiceState) of
+aspects_init([{M, F} | L], CommandLine, Prefix, Timeout, ServiceState) ->
+    case M:F(CommandLine, Prefix, Timeout, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_init(L, CommandLine, Prefix, NewServiceState);
+            aspects_init(L, CommandLine, Prefix, Timeout, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end;
-aspects_init([F | L], CommandLine, Prefix, ServiceState) ->
-    case F(CommandLine, Prefix, ServiceState) of
+aspects_init([F | L], CommandLine, Prefix, Timeout, ServiceState) ->
+    case F(CommandLine, Prefix, Timeout, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_init(L, CommandLine, Prefix, NewServiceState);
+            aspects_init(L, CommandLine, Prefix, Timeout, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end.

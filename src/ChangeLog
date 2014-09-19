@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Modify aspects_init_after and aspects_terminate_before to add a
+      timeout parameter
+    * Add additions to support the cloudi_service_init/4 and
+      cloudi_service_terminate/3 timeout parameter which will become default
+      in CloudI 1.4.0
+        * To use it now, define CLOUDI_SERVICE_NEW for
+          cloudi_core compilation
+    * Add configuration validation to catch unexpected
+      configuration sections
+
 2014-09-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes for cloudi_service_db_mysql

@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/15]).
+         create_external/16]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -79,13 +79,14 @@ start_link() ->
 create_external(Protocol, SocketPath,
                 ThreadIndex, ProcessIndex, ProcessCount,
                 CommandLine, BufferSize, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync, DestRefresh,
-                DestDeny, DestAllow, ConfigOptions)
+                TimeoutSync, TimeoutAsync, TimeoutTerm,
+                DestRefresh, DestDeny, DestAllow, ConfigOptions)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_list(CommandLine),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutSync), is_integer(TimeoutAsync) ->
+         is_integer(TimeoutSync), is_integer(TimeoutAsync),
+         is_integer(TimeoutTerm) ->
     true = (Protocol == tcp) orelse
            (Protocol == udp) orelse
            (Protocol == local),
@@ -108,8 +109,9 @@ create_external(Protocol, SocketPath,
                                 [Protocol, SocketPath,
                                  ThreadIndex, ProcessIndex, ProcessCount,
                                  CommandLine, BufferSize, Timeout, Prefix,
-                                 TimeoutSync, TimeoutAsync, DestRefresh,
-                                 DestDeny, DestAllow, ConfigOptions]) of
+                                 TimeoutSync, TimeoutAsync, TimeoutTerm,
+                                 DestRefresh, DestDeny, DestAllow,
+                                 ConfigOptions]) of
         {ok, Dispatcher} ->
             result(Dispatcher, Timeout);
         {ok, Dispatcher, _} ->

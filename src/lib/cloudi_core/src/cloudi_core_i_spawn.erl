@@ -54,8 +54,8 @@
 -export([environment_lookup/0,
          environment_transform/1,
          environment_transform/2,
-         start_internal/14,
-         start_external/17]).
+         start_internal/15,
+         start_external/18]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -90,11 +90,12 @@ environment_transform(String, EnvironmentLookup) ->
 
 start_internal(ProcessIndex, ProcessCount, GroupLeader,
                Module, Args, Timeout, Prefix,
-               TimeoutAsync, TimeoutSync, DestRefresh,
+               TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm),
          is_record(ConfigOptions, config_service_options),
          is_binary(UUID) ->
     true = (DestRefresh =:= immediate_closest) orelse
@@ -130,8 +131,8 @@ start_internal(ProcessIndex, ProcessCount, GroupLeader,
             % module to be loaded or timeout
             ?CREATE_INTERNAL(ProcessIndex, ProcessCount, GroupLeader,
                              Module, Args, NewTimeout, Prefix,
-                             TimeoutAsync, TimeoutSync, DestRefresh,
-                             DestDeny, DestAllow, ConfigOptions);
+                             TimeoutAsync, TimeoutSync, TimeoutTerm,
+                             DestRefresh, DestDeny, DestAllow, ConfigOptions);
         {error, Reason} ->
             ?LOG_ERROR("loading ~p failed: ~p", [Module, Reason]),
             {error, {service_internal_module_not_loaded, Module}}
@@ -140,13 +141,14 @@ start_internal(ProcessIndex, ProcessCount, GroupLeader,
 start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
-               TimeoutAsync, TimeoutSync, DestRefresh,
+               TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                DestDenyList, DestAllowList, ConfigOptions, UUID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm),
          is_record(ConfigOptions, config_service_options),
          is_binary(UUID) ->
     true = (Protocol =:= tcp) orelse
@@ -199,7 +201,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 Protocol, SocketPath,
                                                 BufferSize, Timeout, Prefix,
                                                 TimeoutAsync, TimeoutSync,
-                                                DestRefresh,
+                                                TimeoutTerm, DestRefresh,
                                                 DestDeny, DestAllow,
                                                 ConfigOptions) of
                         {ok, Pids, Ports} ->
@@ -251,19 +253,19 @@ create_socket_path(TemporaryDirectory, UUID)
     Path.
 
 start_external_thread(0, Pids, Ports,
-                      _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
+                      _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
 
 start_external_thread(I, Pids, Ports,
                       ProcessIndex, ProcessCount, CommandLine,
                       Protocol, SocketPath, BufferSize, Timeout,
-                      Prefix, TimeoutAsync, TimeoutSync,
+                      Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                       DestRefresh, DestDeny, DestAllow,
                       ConfigOptions) ->
     case ?CREATE_EXTERNAL(Protocol, SocketPath,
                           I, ProcessIndex, ProcessCount, CommandLine,
                           BufferSize, Timeout,
-                          Prefix, TimeoutAsync, TimeoutSync,
+                          Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                           DestRefresh, DestDeny, DestAllow,
                           ConfigOptions) of
         {ok, Pid, Port} ->
@@ -271,6 +273,7 @@ start_external_thread(I, Pids, Ports,
                                   ProcessIndex, ProcessCount, CommandLine,
                                   Protocol, SocketPath, BufferSize, Timeout,
                                   Prefix, TimeoutAsync, TimeoutSync,
+                                  TimeoutTerm,
                                   DestRefresh, DestDeny, DestAllow,
                                   ConfigOptions);
         {error, _} = Error ->
@@ -281,13 +284,13 @@ start_external_thread(I, Pids, Ports,
 start_external_threads(ThreadsPerProcess,
                        ProcessIndex, ProcessCount, CommandLine,
                        Protocol, SocketPath, BufferSize, Timeout,
-                       Prefix, TimeoutAsync, TimeoutSync,
+                       Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                        DestRefresh, DestDeny, DestAllow,
                        ConfigOptions) ->
     start_external_thread(ThreadsPerProcess, [], [],
                           ProcessIndex, ProcessCount, CommandLine,
                           Protocol, SocketPath, BufferSize, Timeout,
-                          Prefix, TimeoutAsync, TimeoutSync,
+                          Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                           DestRefresh, DestDeny, DestAllow,
                           ConfigOptions).
 
