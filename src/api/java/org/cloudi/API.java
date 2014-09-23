@@ -89,6 +89,7 @@ public class API
     private static final int MESSAGE_KEEPALIVE           = 8;
     private static final int MESSAGE_REINIT              = 9;
     private static final int MESSAGE_SUBSCRIBE_COUNT     = 10;
+    private static final int MESSAGE_TERM                = 11;
 
     private FileDescriptor fd_in;
     private FileDescriptor fd_out;
@@ -96,6 +97,7 @@ public class API
     private FileOutputStream output;
     private FileInputStream input;
     private boolean initialization_complete;
+    private boolean terminate;
     private HashMap<String,
                     LinkedList< Function9<Integer,
                                           String,
@@ -114,13 +116,16 @@ public class API
     private int process_count_max;
     private int process_count_min;
     private String prefix;
+    private int timeout_initialize;
     private int timeout_async;
     private int timeout_sync;
+    private int timeout_terminate;
     private byte priority_default;
     private boolean request_timeout_adjustment;
 
-    public API(final int thread_index)
-               throws InvalidInputException, MessageDecodingException
+    public API(final int thread_index) throws InvalidInputException,
+                                              MessageDecodingException,
+                                              TerminateException
     {
         final String protocol = System.getenv("CLOUDI_API_INIT_PROTOCOL");
         if (protocol == null)
@@ -153,6 +158,7 @@ public class API
         this.output = new FileOutputStream(this.fd_out);
         this.input = new FileInputStream(this.fd_in);
         this.initialization_complete = false;
+        this.terminate = false;
         this.callbacks = new HashMap<String,
                                      LinkedList< Function9<Integer,
                                                            String,
@@ -168,8 +174,10 @@ public class API
         this.process_count = 0;
         this.process_count_max = 0;
         this.process_count_min = 0;
+        this.timeout_initialize = 5000;
         this.timeout_async = 5000;
         this.timeout_sync = 5000;
+        this.timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
         this.priority_default = 0;
 
         // send the initialization message to the managing Erlang process
@@ -264,6 +272,8 @@ public class API
      * @param  pattern     the service name pattern
      */ 
     public int subscribe_count(final String pattern)
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         OtpOutputStream subscribe_count = new OtpOutputStream();
         subscribe_count.write(OtpExternal.versionTag);
@@ -329,7 +339,8 @@ public class API
      * @return         a transaction ID
      */
     public TransId send_async(String name, byte[] request)
-                              throws MessageDecodingException
+                              throws MessageDecodingException,
+                                     TerminateException
     {
         return send_async(name, ("").getBytes(), request,
                           this.timeout_async, this.priority_default);
@@ -348,7 +359,8 @@ public class API
      */
     public TransId send_async(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
-                              throws MessageDecodingException
+                              throws MessageDecodingException,
+                                     TerminateException
     {
         try
         {
@@ -380,7 +392,8 @@ public class API
      * @return              the response
      */
     public Response send_sync(String name, byte[] request)
-                              throws MessageDecodingException
+                              throws MessageDecodingException,
+                                     TerminateException
     {
         return send_sync(name, ("").getBytes(), request,
                          this.timeout_sync, this.priority_default);
@@ -399,7 +412,8 @@ public class API
      */
     public Response send_sync(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
-                              throws MessageDecodingException
+                              throws MessageDecodingException,
+                                     TerminateException
     {
         try
         {
@@ -431,7 +445,8 @@ public class API
      * @return              transaction IDs
      */
     public List<TransId> mcast_async(String name, byte[] request)
-                                     throws MessageDecodingException
+                                     throws MessageDecodingException,
+                                            TerminateException
     {
         return mcast_async(name, new byte[0], request,
                            this.timeout_async, this.priority_default);
@@ -452,7 +467,8 @@ public class API
     public List<TransId> mcast_async(String name,
                                      byte[] request_info, byte[] request,
                                      Integer timeout, Byte priority)
-                                     throws MessageDecodingException
+                                     throws MessageDecodingException,
+                                            TerminateException
     {
         try
         {
@@ -764,7 +780,8 @@ public class API
      * @return the response
      */
     public Response recv_async()
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(this.timeout_sync, TransIdNull, true);
     }
@@ -776,7 +793,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(timeout, TransIdNull, true);
     }
@@ -788,7 +806,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(byte[] transId)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(this.timeout_sync, transId, true);
     }
@@ -802,7 +821,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(boolean consume)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(this.timeout_sync, TransIdNull, consume);
     }
@@ -815,7 +835,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout, byte[] transId)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(timeout, transId, true);
     }
@@ -830,7 +851,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout, boolean consume)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(timeout, TransIdNull, consume);
     }
@@ -845,7 +867,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(byte[] transId, boolean consume)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         return recv_async(this.timeout_sync, transId, consume);
     }
@@ -861,7 +884,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout, byte[] transId, boolean consume)
-                               throws MessageDecodingException
+                               throws MessageDecodingException,
+                                      TerminateException
     {
         try
         {
@@ -909,6 +933,11 @@ public class API
         return this.prefix;
     }
 
+    public int timeout_initialize()
+    {
+        return this.timeout_initialize;
+    }
+
     public int timeout_async()
     {
         return this.timeout_async;
@@ -919,11 +948,17 @@ public class API
         return this.timeout_sync;
     }
 
+    public int timeout_terminate()
+    {
+        return this.timeout_terminate;
+    }
+
     private void callback(int command, String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] transId, OtpErlangPid pid)
-                          throws MessageDecodingException
+                          throws MessageDecodingException,
+                                 TerminateException
     {
         long request_time_start = 0;
         if (this.request_timeout_adjustment)
@@ -1074,9 +1109,14 @@ public class API
     }
 
     private Object poll_request(boolean external)
-                                throws MessageDecodingException
+                                throws MessageDecodingException,
+                                       TerminateException
     {
-        if (external && ! this.initialization_complete)
+        if (this.terminate)
+        {
+            return null;
+        }
+        else if (external && ! this.initialization_complete)
         {
             OtpOutputStream polling = new OtpOutputStream();
             polling.write(OtpExternal.versionTag);
@@ -1104,8 +1144,10 @@ public class API
                         this.process_count_min = buffer.getInt();
                         int prefixSize = buffer.getInt();
                         this.prefix = API.getString(buffer, prefixSize);
+                        this.timeout_initialize = buffer.getInt();
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
+                        this.timeout_terminate = buffer.getInt();
                         this.priority_default = buffer.get();
                         this.request_timeout_adjustment =
                             (buffer.get() & 0xFF) != 0;
@@ -1199,6 +1241,15 @@ public class API
                             throw new MessageDecodingException();
                         return subscribeCount;
                     }
+                    case MESSAGE_TERM:
+                    {
+                        this.terminate = true;
+                        int timeout = this.timeout_terminate;
+                        if (external)
+                            return null;
+                        else
+                            throw new TerminateException(timeout);
+                    }
                     default:
                         throw new MessageDecodingException();
                 }
@@ -1215,7 +1266,8 @@ public class API
         }
     }
 
-    public Object poll() throws MessageDecodingException
+    public Object poll() throws MessageDecodingException,
+                                TerminateException
     {
         return poll_request(true);
     }
@@ -1556,6 +1608,21 @@ public class API
         MessageDecodingException()
         {
             super("Message Decoding Error");
+        }
+    }
+
+    public static class TerminateException extends Exception
+    {
+        private static final long serialVersionUID = 0L;
+        private int timeout;
+        TerminateException(final int timeout)
+        {
+            super("Terminate");
+            this.timeout = timeout;
+        }
+        public int timeout()
+        {
+            return this.timeout;
         }
     }
 

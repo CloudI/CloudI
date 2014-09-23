@@ -1,6 +1,20 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add timeout_initialize and timeout_terminate as getter functions in
+      each external CloudI API implementation
+    * Add a terminate_exception in each non-C (and non-C++)
+      external CloudI API implementation
+    * Make a pending termination of an external service wait for the
+      timeout_terminate period for the socket to close
+        * The terminate situation is provided by a terminate return value
+          (or exception in non-C (and non-C++)) if execution is processing
+          a service request, otherwise a return occurs from the poll()
+          function call (the terminate_exception object provides the
+          termination timeout value)
+
 2014-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Modify aspects_init_after and aspects_terminate_before to add a

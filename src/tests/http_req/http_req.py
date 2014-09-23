@@ -63,7 +63,7 @@ class Task(threading.Thread):
             assert self.__api.subscribe_count(self.__name + '.xml/get') == 1
 
             result = self.__api.poll()
-            print('exited thread: %d' % result)
+            assert result == None
         except:
             traceback.print_exc(file=sys.stderr)
 

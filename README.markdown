@@ -38,7 +38,7 @@ The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
 (currently C++/C, Java, Python, Ruby, and Erlang):
 
-* `subscribe`, `unsubscribe`
+* `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
 * `recv_async`
 * `return`, `forward`

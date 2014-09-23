@@ -56,18 +56,18 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
-                Task.assert{@api.subscribe_count('ruby.xml/get') == 0}
+                assert{@api.subscribe_count('ruby.xml/get') == 0}
                 @api.subscribe('ruby.xml/get', method(:request))
-                Task.assert{@api.subscribe_count('ruby.xml/get') == 1}
+                assert{@api.subscribe_count('ruby.xml/get') == 1}
 
                 result = @api.poll
-                $stdout.puts "exited thread: #{result}"
+                assert{result == nil}
             end
 
             private
 
-            def self.assert
-                raise "Assertion failed !" unless yield # if $DEBUG
+            def assert(&test)
+                CloudI::API.assert(&test)
             end
 
             def request(command, name, pattern, request_info, request,

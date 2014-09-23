@@ -1565,7 +1565,7 @@ terminate(Reason,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}}) ->
-    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
+    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     case erlang:function_exported(Module, cloudi_service_terminate, 3) of
@@ -3091,7 +3091,7 @@ duo_mode_loop_terminate(Reason, ServiceState,
                                    timeout_term = TimeoutTerm,
                                    options = #config_service_options{
                                        aspects_terminate_before = Aspects}}) ->
-    cloudi_core_i_services_monitor:terminate_kill(DuoModePid),
+    _ = cloudi_core_i_services_monitor:terminate_kill(DuoModePid),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     case erlang:function_exported(Module, cloudi_service_terminate, 3) of

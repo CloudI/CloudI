@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -59,15 +59,15 @@ if __FILE__ == $PROGRAM_NAME
                 @api.subscribe('ruby', method(:request))
 
                 result = @api.poll
-                $stdout.puts "exited thread: #{result}"
+                assert{result == nil}
             end
 
             private
 
             DESTINATION = '/tests/msg_size/erlang'
 
-            def assert
-                raise 'Assertion failed !' unless yield # if $DEBUG
+            def assert(&test)
+                CloudI::API.assert(&test)
             end
 
             def request(command, name, pattern, request_info, request,

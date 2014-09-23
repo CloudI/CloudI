@@ -88,6 +88,7 @@
 -define(MESSAGE_KEEPALIVE,           8).
 -define(MESSAGE_REINIT,              9).
 -define(MESSAGE_SUBSCRIBE_COUNT,    10).
+-define(MESSAGE_TERM,               11).
 
 -record(state,
     {
@@ -115,10 +116,10 @@
         process_count,                 % initial count of Erlang processes
         command_line,                  % command line of OS execve
         prefix,                        % subscribe/unsubscribe name prefix
-        timeout_init,                  % for aspects_init_after
+        timeout_init,                  % pre-poll() timeout
         timeout_async,                 % default timeout for send_async
         timeout_sync,                  % default timeout for send_sync
-        timeout_term,                  % cloudi_service_terminate timeout
+        timeout_term,                  % post-poll() timeout
         os_pid = undefined,            % os_pid reported by the socket
         keepalive = undefined,         % stores if a keepalive succeeded
         init_timer,                    % init timeout handler
@@ -308,8 +309,10 @@ init([Protocol, SocketPath,
               process_index = ProcessIndex,
               process_count = ProcessCount,
               prefix = Prefix,
+              timeout_init = TimeoutInit,
               timeout_async = TimeoutAsync,
               timeout_sync = TimeoutSync,
+              timeout_term = TimeoutTerm,
               options = #config_service_options{
                   priority_default = PriorityDefault,
                   request_timeout_adjustment = RequestTimeoutAdjustment,
@@ -327,14 +330,14 @@ init([Protocol, SocketPath,
     end,
     % first message within the CloudI API received during
     % the object construction or init API function
-    send('init_out'(ProcessIndex, ProcessCount,
-                    ProcessCountMax, ProcessCountMin,
-                    Prefix, TimeoutAsync, TimeoutSync,
-                    PriorityDefault, RequestTimeoutAdjustment),
-         State),
+    ok = send('init_out'(ProcessIndex, ProcessCount,
+                         ProcessCountMax, ProcessCountMin, Prefix,
+                         TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
+                         PriorityDefault, RequestTimeoutAdjustment),
+              State),
     if
         Protocol =:= udp ->
-            send('keepalive_out'(), State),
+            ok = send('keepalive_out'(), State),
             erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp);
         true ->
             ok
@@ -392,7 +395,7 @@ init([Protocol, SocketPath,
                     scope = Scope}} = State) ->
     Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
                                     Dispatcher, infinity),
-    send('subscribe_count_out'(Count), State),
+    ok = send('subscribe_count_out'(Count), State),
     {next_state, 'HANDLE', State};
 
 'HANDLE'({'unsubscribe', Pattern},
@@ -423,7 +426,7 @@ init([Protocol, SocketPath,
             handle_send_async(Name, RequestInfo, Request,
                               Timeout, Priority, 'HANDLE', State);
         false ->
-            send('return_async_out'(), State),
+            ok = send('return_async_out'(), State),
             {next_state, 'HANDLE', State}
     end;
 
@@ -435,7 +438,7 @@ init([Protocol, SocketPath,
             handle_send_sync(Name, RequestInfo, Request,
                              Timeout, Priority, 'HANDLE', State);
         false ->
-            send('return_sync_out'(), State),
+            ok = send('return_sync_out'(), State),
             {next_state, 'HANDLE', State}
     end;
 
@@ -447,7 +450,7 @@ init([Protocol, SocketPath,
             handle_mcast_async(Name, RequestInfo, Request,
                                Timeout, Priority, 'HANDLE', State);
         false ->
-            send('returns_async_out'(), State),
+            ok = send('returns_async_out'(), State),
             {next_state, 'HANDLE', State}
     end;
 
@@ -639,14 +642,15 @@ init([Protocol, SocketPath,
                                        TransId, Consume}),
                     {next_state, 'HANDLE', State};
                 [] ->
-                    send('recv_async_out'(timeout, TransId), State),
+                    ok = send('recv_async_out'(timeout, TransId), State),
                     {next_state, 'HANDLE', State};
                 L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
-                    send('recv_async_out'(ResponseInfo, Response, TransIdPick),
-                         State),
+                    ok = send('recv_async_out'(ResponseInfo, Response,
+                                               TransIdPick),
+                              State),
                     {next_state, 'HANDLE', State#state{
                         async_responses = dict:erase(TransIdPick,
                                                      AsyncResponses)}};
@@ -654,8 +658,9 @@ init([Protocol, SocketPath,
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
                     {ResponseInfo, Response} = dict:fetch(TransIdPick,
                                                           AsyncResponses),
-                    send('recv_async_out'(ResponseInfo, Response, TransIdPick),
-                         State),
+                    ok = send('recv_async_out'(ResponseInfo, Response,
+                                               TransIdPick),
+                              State),
                     {next_state, 'HANDLE', State}
             end;
         true ->
@@ -667,17 +672,17 @@ init([Protocol, SocketPath,
                                        TransId, Consume}),
                     {next_state, 'HANDLE', State};
                 error ->
-                    send('recv_async_out'(timeout, TransId), State),
+                    ok = send('recv_async_out'(timeout, TransId), State),
                     {next_state, 'HANDLE', State};
                 {ok, {ResponseInfo, Response}} when Consume =:= true ->
-                    send('recv_async_out'(ResponseInfo, Response, TransId),
-                         State),
+                    ok = send('recv_async_out'(ResponseInfo, Response, TransId),
+                              State),
                     {next_state, 'HANDLE', State#state{
                         async_responses = dict:erase(TransId,
                                                      AsyncResponses)}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
-                    send('recv_async_out'(ResponseInfo, Response, TransId),
-                         State),
+                    ok = send('recv_async_out'(ResponseInfo, Response, TransId),
+                              State),
                     {next_state, 'HANDLE', State}
             end
     end;
@@ -815,15 +820,17 @@ handle_info({SendType, Name, Pattern, RequestInfo, Request,
         {ok, NextTimeout, NewServiceState} ->
             if
                 SendType =:= 'cloudi_service_send_async' ->
-                    send('send_async_out'(Name, Pattern, RequestInfo, Request,
-                                          NextTimeout, Priority,
-                                          TransId, Source),
-                         State);
+                    ok = send('send_async_out'(Name, Pattern,
+                                               RequestInfo, Request,
+                                               NextTimeout, Priority,
+                                               TransId, Source),
+                              State);
                 SendType =:= 'cloudi_service_send_sync' ->
-                    send('send_sync_out'(Name, Pattern, RequestInfo, Request,
-                                         NextTimeout, Priority,
-                                         TransId, Source),
-                         State)
+                    ok = send('send_sync_out'(Name, Pattern,
+                                              RequestInfo, Request,
+                                              NextTimeout, Priority,
+                                              TransId, Source),
+                              State)
             end,
             AspectsRequestAfterF = fun(AspectsAfter, NewTimeout, Result, S) ->
                 aspects_request_after(AspectsAfter, Type,
@@ -965,11 +972,12 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
             if
                 is_binary(ResponseInfo) =:= false;
                 is_binary(Response) =:= false ->
-                    send('return_sync_out'(timeout, TransId),
-                         State);
+                    ok = send('return_sync_out'(timeout, TransId),
+                              State);
                 true ->
-                    send('return_sync_out'(ResponseInfo, Response, TransId),
-                         State)
+                    ok = send('return_sync_out'(ResponseInfo, Response,
+                                                TransId),
+                              State)
             end,
             {next_state, StateName,
              send_timeout_end(TransId, Pid, State)}
@@ -991,7 +999,7 @@ handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
         error ->
             {next_state, StateName, State};
         {ok, {_, Pid, _}} ->
-            send('return_sync_out'(timeout, TransId), State),
+            ok = send('return_sync_out'(timeout, TransId), State),
             {next_state, StateName,
              send_timeout_end(TransId, Pid, State)}
     end;
@@ -1054,7 +1062,7 @@ handle_info(keepalive_udp, StateName,
 handle_info(keepalive_udp, StateName,
             #state{dispatcher = Dispatcher,
                    keepalive = received} = State) ->
-    send('keepalive_out'(), State),
+    ok = send('keepalive_out'(), State),
     erlang:send_after(?KEEPALIVE_UDP, Dispatcher, keepalive_udp),
     {next_state, StateName, State#state{keepalive = undefined}};
 
@@ -1139,7 +1147,7 @@ handle_info('cloudi_count_process_dynamic_rate', StateName,
 
 handle_info({'cloudi_count_process_dynamic_update', ProcessCount}, StateName,
             State) ->
-    send('reinit_out'(ProcessCount), State),
+    ok = send('reinit_out'(ProcessCount), State),
     {next_state, StateName, State};
 
 handle_info('cloudi_count_process_dynamic_terminate', StateName,
@@ -1176,53 +1184,13 @@ handle_info(Request, StateName, State) ->
 
 terminate(Reason, _,
           #state{dispatcher = Dispatcher,
-                 protocol = tcp,
-                 listener = Listener,
-                 socket = Socket,
                  timeout_term = TimeoutTerm,
-                 os_pid = OsPid,
                  service_state = ServiceState,
                  options = #config_service_options{
-                     aspects_terminate_before = Aspects}}) ->
-    catch gen_tcp:close(Listener),
-    catch gen_tcp:close(Socket),
-    os_pid_kill(OsPid),
-    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
+                     aspects_terminate_before = Aspects}} = State) ->
+    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
     {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
-    ok;
-
-terminate(Reason, _,
-          #state{dispatcher = Dispatcher,
-                 protocol = udp,
-                 socket = Socket,
-                 timeout_term = TimeoutTerm,
-                 os_pid = OsPid,
-                 service_state = ServiceState,
-                 options = #config_service_options{
-                     aspects_terminate_before = Aspects}}) ->
-    catch gen_udp:close(Socket),
-    os_pid_kill(OsPid),
-    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
-    ok;
-
-terminate(Reason, _,
-          #state{dispatcher = Dispatcher,
-                 protocol = local,
-                 listener = Listener,
-                 socket_path = SocketPath,
-                 socket = Socket,
-                 timeout_term = TimeoutTerm,
-                 os_pid = OsPid,
-                 service_state = ServiceState,
-                 options = #config_service_options{
-                     aspects_terminate_before = Aspects}}) ->
-    catch gen_tcp:close(Listener),
-    catch gen_udp:close(Socket),
-    os_pid_kill(OsPid),
-    catch file:delete(SocketPath),
-    cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
-    {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
+    ok = socket_close(Reason, State),
     ok.
 
 code_change(_, StateName, State, _) ->
@@ -1308,7 +1276,8 @@ os_pid_kill(OsPid) ->
     % if the OsPid exists at this point, it is probably stuck.
     % without this kill, the process could just stay around, while
     % being unresponsive and without its Erlang socket pids.
-    os:cmd(cloudi_string:format("kill -9 ~w", [OsPid])).
+    _ = os:cmd(cloudi_string:format("kill -9 ~w", [OsPid])),
+    ok.
 
 handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                   #state{dispatcher = Dispatcher,
@@ -1321,10 +1290,10 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     case destination_get(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
-            send('return_async_out'(), State),
+            ok = send('return_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when RequestNameLookup =:= async ->
-            send('return_async_out'(), State),
+            ok = send('return_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
             erlang:send_after(?SEND_ASYNC_INTERVAL, Dispatcher,
@@ -1333,14 +1302,14 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                                Timeout - ?SEND_ASYNC_INTERVAL, Priority}),
             {next_state, StateName, State};
         {error, _} ->
-            send('return_async_out'(), State),
+            ok = send('return_async_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, Pid} ->
             TransId = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
-            send('return_async_out'(TransId), State),
+            ok = send('return_async_out'(TransId), State),
             {next_state, StateName,
              send_async_timeout_start(Timeout, TransId, Pid, State)}
     end.
@@ -1356,10 +1325,10 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
     case destination_get(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
-            send('return_sync_out'(), State),
+            ok = send('return_sync_out'(), State),
             {next_state, StateName, State};
         {error, _} when RequestNameLookup =:= async ->
-            send('return_sync_out'(), State),
+            ok = send('return_sync_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
             erlang:send_after(?SEND_SYNC_INTERVAL, Dispatcher,
@@ -1368,7 +1337,7 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority, StateName,
                                Timeout - ?SEND_SYNC_INTERVAL, Priority}),
             {next_state, StateName, State};
         {error, _} ->
-            send('return_sync_out'(), State),
+            ok = send('return_sync_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, Pid} ->
             TransId = cloudi_x_uuid:get_v1(UUID),
@@ -1383,7 +1352,7 @@ handle_mcast_async_pids(_Name, _Pattern, _RequestInfo, _Request,
                         _Timeout, _Priority,
                         TransIdList, [],
                         State) ->
-    send('returns_async_out'(lists:reverse(TransIdList)), State),
+    ok = send('returns_async_out'(lists:reverse(TransIdList)), State),
     State;
 handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                         Timeout, Priority,
@@ -1412,10 +1381,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     case destination_all(DestRefresh, Scope, Name, Dispatcher,
                          Groups, Timeout) of
         {error, timeout} ->
-            send('returns_async_out'(), State),
+            ok = send('returns_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when RequestNameLookup =:= async ->
-            send('returns_async_out'(), State),
+            ok = send('returns_async_out'(), State),
             {next_state, StateName, State};
         {error, _} when Timeout >= ?MCAST_ASYNC_INTERVAL ->
             erlang:send_after(?MCAST_ASYNC_INTERVAL, Dispatcher,
@@ -1424,7 +1393,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
                                Timeout - ?MCAST_ASYNC_INTERVAL, Priority}),
             {next_state, StateName, State};
         {error, _} ->
-            send('returns_async_out'(), State),
+            ok = send('returns_async_out'(), State),
             {next_state, StateName, State};
         {ok, Pattern, PidList} ->
             {next_state, StateName,
@@ -1434,13 +1403,14 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     end.
 
 'init_out'(ProcessIndex, ProcessCount,
-           ProcessCountMax, ProcessCountMin,
-           Prefix, TimeoutAsync, TimeoutSync,
+           ProcessCountMax, ProcessCountMin, Prefix,
+           TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
            PriorityDefault, RequestTimeoutAdjustment)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ProcessCountMax), is_integer(ProcessCountMin),
-         is_list(Prefix), is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_integer(PriorityDefault),
+         is_list(Prefix), is_integer(TimeoutInit),
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm), is_integer(PriorityDefault),
          PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
          is_boolean(RequestTimeoutAdjustment) ->
     true = ProcessCount < 4294967296,
@@ -1462,8 +1432,10 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
       ProcessCountMin:32/unsigned-integer-native,
       PrefixSize:32/unsigned-integer-native,
       PrefixBin/binary, 0:8,
+      TimeoutInit:32/unsigned-integer-native,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
+      TimeoutTerm:32/unsigned-integer-native,
       PriorityDefault:8/signed-integer-native,
       RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
 
@@ -1472,6 +1444,9 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     true = ProcessCount < 4294967296,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native>>.
+
+'terminate_out'() ->
+    <<?MESSAGE_TERM:32/unsigned-integer-native>>.
 
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.
@@ -1622,9 +1597,9 @@ send(Data, #state{protocol = Protocol,
                   socket = Socket}) when is_binary(Data) ->
     if
         Protocol =:= tcp; Protocol =:= local ->
-            ok = gen_tcp:send(Socket, Data);
+            gen_tcp:send(Socket, Data);
         Protocol =:= udp ->
-            ok = gen_udp:send(Socket, {127,0,0,1}, Port, Data)
+            gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
 
 recv_timeout_start(Timeout, Priority, TransId, T,
@@ -1671,9 +1646,11 @@ process_queue(#state{dispatcher = Dispatcher,
                         V ->    
                             V       
                     end,
-                    send('send_async_out'(Name, Pattern, RequestInfo, Request,
-                                          Timeout, Priority, TransId, Source),
-                         State),
+                    ok = send('send_async_out'(Name, Pattern,
+                                               RequestInfo, Request,
+                                               Timeout, Priority, TransId,
+                                               Source),
+                              State),
                     AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
                                                Result, S) ->
                         aspects_request_after(AspectsAfter, Type,
@@ -1724,9 +1701,11 @@ process_queue(#state{dispatcher = Dispatcher,
                         V ->    
                             V       
                     end,
-                    send('send_sync_out'(Name, Pattern, RequestInfo, Request,
-                                         Timeout, Priority, TransId, Source),
-                         State),
+                    ok = send('send_sync_out'(Name, Pattern,
+                                              RequestInfo, Request,
+                                              Timeout, Priority, TransId,
+                                              Source),
+                              State),
                     AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
                                                Result, S) ->
                         aspects_request_after(AspectsAfter, Type,
@@ -1800,6 +1779,62 @@ socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
                 port = ThreadIndex,
                 socket_path = ThreadSocketPath,
                 socket_options = SocketOptions}}.
+
+socket_close(Reason, #state{protocol = Protocol,
+                            listener = Listener,
+                            socket_path = SocketPath,
+                            socket = Socket,
+                            timeout_term = TimeoutTerm,
+                            os_pid = OsPid} = State)
+    when Protocol =:= tcp; Protocol =:= local ->
+    if
+        Reason =:= socket_closed ->
+            ok;
+        true ->
+            case send('terminate_out'(), State) of
+                ok ->
+                    receive
+                        {tcp_closed, Socket} ->
+                            ok;
+                        {tcp_error, Socket, _} ->
+                            ok
+                    after
+                        TimeoutTerm ->
+                            ok
+                    end;
+                {error, _} ->
+                    ok
+            end,
+            catch gen_tcp:close(Socket)
+    end,
+    catch gen_tcp:close(Listener),
+    if
+        Protocol =:= local ->
+            catch file:delete(SocketPath);
+        true ->
+            ok
+    end,
+    ok = os_pid_kill(OsPid),
+    ok;
+socket_close(Reason, #state{protocol = udp,
+                            socket = Socket,
+                            timeout_term = TimeoutTerm,
+                            os_pid = OsPid} = State) ->
+    if
+        Reason =:= socket_closed ->
+            ok;
+        true ->
+            case send('terminate_out'(), State) of
+                ok ->
+                    TerminateSleep = erlang:min(?KEEPALIVE_UDP, TimeoutTerm),
+                    receive after TerminateSleep -> ok end;
+                {error, _} ->
+                    ok
+            end,
+            catch gen_udp:close(Socket)
+    end,
+    ok = os_pid_kill(OsPid),
+    ok.
 
 cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % setup an inet socket within Erlang whose file descriptor can be used

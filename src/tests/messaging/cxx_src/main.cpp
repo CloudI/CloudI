@@ -74,6 +74,11 @@ class Input
         {
         }
 
+        uint32_t timeout_terminate() const
+        {
+            return m_api.timeout_terminate();
+        }
+
         OutputData process(bool const & stop, ThreadData & /*data*/)
         {
             int result;
@@ -1046,16 +1051,22 @@ int main(int, char **)
     ThreadPool<Input, ThreadData, Output, OutputData>
         threadPool(thread_count, thread_count, outputObject);
 
+    uint32_t timeout_terminate = 0;
     for (unsigned int i = 0; i < thread_count; ++i)
     {
         Input inputObject(i);
+        if (timeout_terminate == 0)
+        {
+            timeout_terminate = inputObject.timeout_terminate();
+            assert(timeout_terminate >= 1000);
+        }
         bool const result = threadPool.input(inputObject);
         assert(result);
     }
 
     while (outputObject.got_output() == false)
         ::sleep(1);
-    threadPool.exit(3000);
+    threadPool.exit(timeout_terminate - 100);
     return 0;
 }
 

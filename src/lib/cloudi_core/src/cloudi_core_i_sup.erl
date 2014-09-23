@@ -112,9 +112,9 @@ start_link(Config) when is_record(Config, config) ->
          child_specification(cloudi_core_i_logger, Config),
          child_specification(cloudi_core_i_nodes, Config),
          child_specification(cloudi_core_i_services_monitor),
+         child_specification(cloudi_core_i_os_spawn_pool),
          child_specification(cloudi_core_i_services_external_sup),
          child_specification(cloudi_core_i_services_internal_sup),
-         child_specification(cloudi_core_i_os_spawn_pool),
          child_specification(cloudi_core_i_configurator, Config),
          child_specification(cloudi_core_i_services_internal_reload)]).
 -define(CHECK,

@@ -71,6 +71,10 @@ public class Main
         {
             e.printStackTrace(API.err);
         }
+        catch (API.TerminateException e)
+        {
+            API.err.println("terminate before init");
+        }
     }
 }
 

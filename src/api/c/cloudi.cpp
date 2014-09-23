@@ -558,6 +558,7 @@ int cloudi_initialize(cloudi_instance_t * p,
         return cloudi_invalid_input;
     }
     //p->initialization_complete = 0;
+    //p->terminate = 0;
     p->buffer_size = buffer_size;
     p->lookup = new lookup_t();
     p->buffer_send = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
@@ -567,6 +568,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     p->poll_timer = new timer();
     p->request_timer = new timer();
     //p->prefix = 0;
+    p->timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
 
     ::atexit(&exit_handler);
     std::set_terminate(exception_unknown);
@@ -1264,6 +1266,7 @@ static int keepalive(cloudi_instance_t * p)
 #define MESSAGE_KEEPALIVE           8
 #define MESSAGE_REINIT              9
 #define MESSAGE_SUBSCRIBE_COUNT    10
+#define MESSAGE_TERM               11
 
 static void callback(cloudi_instance_t * p,
                      int const command,
@@ -1436,7 +1439,11 @@ static int poll_request(cloudi_instance_t * p,
                         int external)
 {
     int result;
-    if (external && ! p->initialization_complete)
+    if (p->terminate)
+    {
+        return cloudi_success;
+    }
+    else if (external && ! p->initialization_complete)
     {
         result = polling(p);
         if (result)
@@ -1483,8 +1490,11 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_recv, index, p->process_count_max);
                 store_incoming_uint32(buffer_recv, index, p->process_count_min);
                 store_incoming_binary(buffer_recv, index, p->prefix);
+                store_incoming_uint32(buffer_recv, index,
+                                      p->timeout_initialize);
                 store_incoming_uint32(buffer_recv, index, p->timeout_async);
                 store_incoming_uint32(buffer_recv, index, p->timeout_sync);
+                store_incoming_uint32(buffer_recv, index, p->timeout_terminate);
                 store_incoming_int8(buffer_recv, index, p->priority_default);
                 store_incoming_uint8(buffer_recv, index,
                                      p->request_timeout_adjustment);
@@ -1625,6 +1635,14 @@ static int poll_request(cloudi_instance_t * p,
                     ::exit(cloudi_error_read_underflow);
                 p->buffer_recv_index = 0;
                 return cloudi_success;
+            }
+            case MESSAGE_TERM:
+            {
+                p->terminate = 1;
+                if (external)
+                    return cloudi_success;
+                else
+                    return cloudi_terminate;
             }
             default:
             {
@@ -2139,6 +2157,11 @@ char const * API::prefix() const
     return m_api->prefix;
 }
 
+uint32_t API::timeout_initialize() const
+{
+    return m_api->timeout_initialize;
+}
+
 uint32_t API::timeout_async() const
 {
     return m_api->timeout_async;
@@ -2147,6 +2170,11 @@ uint32_t API::timeout_async() const
 uint32_t API::timeout_sync() const
 {
     return m_api->timeout_sync;
+}
+
+uint32_t API::timeout_terminate() const
+{
+    return m_api->timeout_terminate;
 }
 
 int8_t API::priority_default() const

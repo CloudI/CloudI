@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,8 @@ public class Task implements Runnable
      
     public Task(final int thread_index)
                 throws API.InvalidInputException,
-                       API.MessageDecodingException
+                       API.MessageDecodingException,
+                       API.TerminateException
     {
         api = new API(thread_index);
     }
@@ -82,23 +83,20 @@ public class Task implements Runnable
  
     public void run()
     {
-        api.subscribe("java", this, "request");
-        boolean running = true;
-        while (running)
+        try
         {
-            try
-            {
-                Object result = api.poll();
-                if (result == null)
-                    running = false;
-            }
-            catch (API.MessageDecodingException e)
-            {
-                e.printStackTrace(API.err);
-                running = false;
-            }
+            api.subscribe("java", this, "request");
+            Object result = api.poll();
+            assert result == null;
         }
-        API.err.println("exited thread");
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+        }
+        catch (API.TerminateException e)
+        {
+            API.out.println("terminating...");
+        }
     }
 }
 

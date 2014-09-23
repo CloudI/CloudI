@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,7 @@ class _Task(threading.Thread):
             self.__api.subscribe("python", self.flood)
 
             result = self.__api.poll()
-            print('exited thread: %d' % result)
+            assert result == None
         except:
             traceback.print_exc(file=sys.stderr)
 

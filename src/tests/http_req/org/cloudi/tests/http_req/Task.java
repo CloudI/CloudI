@@ -51,7 +51,8 @@ public class Task implements Runnable
      
     public Task(final int thread_index)
                 throws API.InvalidInputException,
-                       API.MessageDecodingException
+                       API.MessageDecodingException,
+                       API.TerminateException
     {
         api = new API(thread_index);
     }
@@ -95,27 +96,22 @@ public class Task implements Runnable
  
     public void run()
     {
-        assert api.subscribe_count("java.xml/get") == 0;
-        api.subscribe("java.xml/get", this, "request");
-        assert api.subscribe_count("java.xml/get") == 1;
-        boolean running = true;
-        while (running)
+        try
         {
-            try
-            {
-                Object result = api.poll();
-                if (result == null)
-                    running = false;
-                else
-                    API.out.println("(java) received: " + result.toString());
-            }
-            catch (API.MessageDecodingException e)
-            {
-                e.printStackTrace(API.err);
-                running = false;
-            }
+            assert api.subscribe_count("java.xml/get") == 0;
+            api.subscribe("java.xml/get", this, "request");
+            assert api.subscribe_count("java.xml/get") == 1;
+            Object result = api.poll();
+            assert result == null;
         }
-        API.err.println("exited thread");
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+        }
+        catch (API.TerminateException e)
+        {
+            API.out.println("terminating...");
+        }
     }
 }
 

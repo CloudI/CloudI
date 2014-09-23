@@ -59,6 +59,7 @@ typedef struct cloudi_instance_t
     int fd_out;
     int use_header;
     int initialization_complete;
+    int terminate;
     uint32_t buffer_size;
     void * lookup;
     void * buffer_send;
@@ -73,8 +74,10 @@ typedef struct cloudi_instance_t
     uint32_t process_count_max;
     uint32_t process_count_min;
     char * prefix;
+    uint32_t timeout_initialize;
     uint32_t timeout_async;
     uint32_t timeout_sync;
+    uint32_t timeout_terminate;
     int8_t priority_default;
     uint8_t request_timeout_adjustment;
     char * response_info;
@@ -118,8 +121,10 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 #define cloudi_get_process_count_max(p)      ((p)->process_count_max)
 #define cloudi_get_process_count_min(p)      ((p)->process_count_min)
 #define cloudi_get_prefix(p)                 ((p)->prefix)
+#define cloudi_get_timeout_initialize(p)     ((p)->timeout_initialize)
 #define cloudi_get_timeout_async(p)          ((p)->timeout_async)
 #define cloudi_get_timeout_sync(p)           ((p)->timeout_sync)
+#define cloudi_get_timeout_terminate(p)      ((p)->timeout_terminate)
 #define cloudi_get_priority_default(p)       ((p)->priority_default)
 
 int cloudi_initialize(cloudi_instance_t * p,
@@ -278,6 +283,7 @@ enum
     // with internal cloudi error conditions
 
     // API specific errors
+    cloudi_terminate                           = 110, // cloudi_error_poll_HUP
     cloudi_timeout                             =   7,
     cloudi_error_function_parameter            =   8,
     cloudi_error_read_underflow                =   9,

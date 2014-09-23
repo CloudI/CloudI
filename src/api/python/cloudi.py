@@ -43,6 +43,7 @@ __all__ = [
     'API',
     'invalid_input_exception',
     'message_decoding_exception',
+    'terminate_exception',
 ]
 
 import sys, os, types, struct, socket, select, threading, inspect, \
@@ -61,6 +62,7 @@ _MESSAGE_RETURNS_ASYNC       = 7
 _MESSAGE_KEEPALIVE           = 8
 _MESSAGE_REINIT              = 9
 _MESSAGE_SUBSCRIBE_COUNT     = 10
+_MESSAGE_TERM                = 11
 
 class API(object):
     ASYNC  =  1
@@ -91,15 +93,19 @@ class API(object):
         else:
             raise invalid_input_exception()
         self.__initializtion_complete = False
+        self.__terminate = False
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
+        self.__timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
         self.__send(term_to_binary(OtpErlangAtom(b'init')))
         (self.__process_index,
          self.__process_count,
          self.__process_count_max,
          self.__process_count_min,
          self.__prefix,
+         self.__timeout_initialize,
          self.__timeout_async, self.__timeout_sync,
+         self.__timeout_terminate,
          self.__priority_default,
          self.__request_timeout_adjustment) = self.__poll_request(False)
 
@@ -298,11 +304,17 @@ class API(object):
     def prefix(self):
         return self.__prefix
 
+    def timeout_initialize(self):
+        return self.__timeout_initialize
+
     def timeout_async(self):
         return self.__timeout_async
 
     def timeout_sync(self):
         return self.__timeout_sync
+
+    def timeout_terminate(self):
+        return self.__timeout_terminate
 
     def __callback(self, command, name, pattern, request_info, request,
                    timeout, priority, trans_id, pid):
@@ -397,7 +409,9 @@ class API(object):
             raise message_decoding_exception()
 
     def __poll_request(self, external):
-        if external and not self.__initializtion_complete:
+        if self.__terminate:
+            return None
+        elif external and not self.__initializtion_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initializtion_complete = True
         ready = False
@@ -422,17 +436,19 @@ class API(object):
                 (processIndex, processCount,
                  processCountMax, processCountMin,
                  prefixSize) = struct.unpack(b'=IIIII', data[i:j])
-                i, j = j, j + prefixSize + 4 + 4 + 1 + 1
-                (prefix, nullTerminator, timeoutAsync, timeoutSync,
+                i, j = j, j + prefixSize + 4 + 4 + 4 + 4 + 1 + 1
+                (prefix, nullTerminator, timeoutInit,
+                 timeoutAsync, timeoutSync, timeoutTerm,
                  priorityDefault,
                  requestTimeoutAdjustment) = struct.unpack(
-                    '=%dscIIbB' % (prefixSize - 1), data[i:j]
+                    '=%dscIIIIbB' % (prefixSize - 1), data[i:j]
                 )
                 if j != len(data):
                     raise message_decoding_exception()
                 return (processIndex, processCount,
                         processCountMax, processCountMin,
-                        prefix.decode('utf-8'), timeoutSync, timeoutAsync,
+                        prefix.decode('utf-8'), timeoutInit,
+                        timeoutSync, timeoutAsync, timeoutTerm,
                         priorityDefault, bool(requestTimeoutAdjustment))
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
@@ -521,6 +537,12 @@ class API(object):
                 if j != len(data):
                     raise message_decoding_exception()
                 return struct.unpack(b'=I', data[i:j])[0]
+            elif command == _MESSAGE_TERM:
+                self.__terminate = True
+                if external:
+                    return None
+                else:
+                    raise terminate_exception(self.__timeout_terminate)
             else:
                 raise message_decoding_exception()
 
@@ -609,6 +631,14 @@ class forward_async_exception(Exception):
 class message_decoding_exception(Exception):
     def __init__(self):
         Exception.__init__(self, 'Message Decoding Error')
+
+class terminate_exception(Exception):
+    def __init__(self, timeout):
+        Exception.__init__(self, 'Terminate')
+        self.__timeout = timeout
+
+    def timeout(self):
+        return self.__timeout
 
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):

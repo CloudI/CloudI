@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -88,7 +88,7 @@ if __FILE__ == $PROGRAM_NAME
                 end
 
                 result = @api.poll
-                $stdout.puts "exited thread: #{result}"
+                assert{result == nil}
             end
 
             private

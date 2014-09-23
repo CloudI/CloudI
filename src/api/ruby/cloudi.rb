@@ -73,11 +73,22 @@ module CloudI
                 raise InvalidInputException
             end
             @initialization_complete = false
+            @terminate = false
             @size = buffer_size_str.to_i
             @callbacks = Hash.new
+            @timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
             send(Erlang.term_to_binary(:init))
             poll_request(false)
         end
+        attr_reader :process_index
+        attr_reader :process_count
+        attr_reader :process_count_max
+        attr_reader :process_count_min
+        attr_reader :prefix
+        attr_reader :timeout_initialize
+        attr_reader :timeout_async
+        attr_reader :timeout_sync
+        attr_reader :timeout_terminate
 
         def self.thread_count
             s = getenv('CLOUDI_API_INIT_THREAD_COUNT')
@@ -114,13 +125,13 @@ module CloudI
         def send_async(name, request,
                        timeout=nil, request_info=nil, priority=nil)
             if timeout.nil?
-                timeout = @timeoutAsync
+                timeout = @timeout_async
             end
             if request_info.nil?
                 request_info = ''
             end
             if priority.nil?
-                priority = @priorityDefault
+                priority = @priority_default
             end
             send(Erlang.term_to_binary([:send_async, name,
                                         OtpErlangBinary.new(request_info),
@@ -132,13 +143,13 @@ module CloudI
         def send_sync(name, request,
                       timeout=nil, request_info=nil, priority=nil)
             if timeout.nil?
-                timeout = @timeoutSync
+                timeout = @timeout_sync
             end
             if request_info.nil?
                 request_info = ''
             end
             if priority.nil?
-                priority = @priorityDefault
+                priority = @priority_default
             end
             send(Erlang.term_to_binary([:send_sync, name,
                                         OtpErlangBinary.new(request_info),
@@ -150,13 +161,13 @@ module CloudI
         def mcast_async(name, request,
                         timeout=nil, request_info=nil, priority=nil)
             if timeout.nil?
-                timeout = @timeoutAsync
+                timeout = @timeout_async
             end
             if request_info.nil?
                 request_info = ''
             end
             if priority.nil?
-                priority = @priorityDefault
+                priority = @priority_default
             end
             send(Erlang.term_to_binary([:mcast_async, name,
                                         OtpErlangBinary.new(request_info),
@@ -179,7 +190,7 @@ module CloudI
 
         def forward_async(name, request_info, request,
                           timeout, priority, trans_id, pid)
-            if @requestTimeoutAdjustment
+            if @request_timeout_adjustment
                 if timeout == @request_timeout
                     elapsed = [0,
                                ((Time.now - @request_timer) * 1000.0).floor].max
@@ -200,7 +211,7 @@ module CloudI
 
         def forward_sync(name, request_info, request,
                          timeout, priority, trans_id, pid)
-            if @requestTimeoutAdjustment
+            if @request_timeout_adjustment
                 if timeout == @request_timeout
                     elapsed = [0,
                                ((Time.now - @request_timer) * 1000.0).floor].max
@@ -233,7 +244,7 @@ module CloudI
 
         def return_async(name, pattern, response_info, response,
                          timeout, trans_id, pid)
-            if @requestTimeoutAdjustment
+            if @request_timeout_adjustment
                 if timeout == @request_timeout
                     elapsed = [0,
                                ((Time.now - @request_timer) * 1000.0).floor].max
@@ -256,7 +267,7 @@ module CloudI
 
         def return_sync(name, pattern, response_info, response,
                         timeout, trans_id, pid)
-            if @requestTimeoutAdjustment
+            if @request_timeout_adjustment
                 if timeout == @request_timeout
                     elapsed = [0,
                                ((Time.now - @request_timer) * 1000.0).floor].max
@@ -279,7 +290,7 @@ module CloudI
 
         def recv_async(timeout=nil, trans_id=nil, consume=true)
             if timeout.nil?
-                timeout = @timeoutSync
+                timeout = @timeout_sync
             end
             if trans_id.nil?
                 trans_id = 0.chr * 16
@@ -290,38 +301,10 @@ module CloudI
             return poll_request(false)
         end
 
-        def process_index
-            return @processIndex
-        end
-
-        def process_count
-            return @processCount
-        end
-
-        def process_count_max
-            return @processCountMax
-        end
-
-        def process_count_min
-            return @processCountMin
-        end
-
-        def prefix
-            return @prefix
-        end
-
-        def timeout_async
-            return @timeoutAsync
-        end
-
-        def timeout_sync
-            return @timeoutSync
-        end
-
         def callback(command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid)
             request_time_start = nil
-            if @requestTimeoutAdjustment
+            if @request_timeout_adjustment
                 @request_timer = Time.now
                 @request_timeout = timeout
             end
@@ -422,7 +405,9 @@ module CloudI
         end
 
         def poll_request(external)
-            if external and not @initialization_complete
+            if @terminate
+                return nil
+            elsif external and not @initialization_complete
                 send(Erlang.term_to_binary(:polling))
                 @initialization_complete = true
             end
@@ -450,18 +435,20 @@ module CloudI
                 when MESSAGE_INIT
                     i += j; j = 4 + 4 + 4 + 4 + 4
                     tmp = data[i, j].unpack('LLLLL')
-                    @processIndex = tmp[0]
-                    @processCount = tmp[1]
-                    @processCountMax = tmp[2]
-                    @processCountMin = tmp[3]
+                    @process_index = tmp[0]
+                    @process_count = tmp[1]
+                    @process_count_max = tmp[2]
+                    @process_count_min = tmp[3]
                     prefixSize = tmp[4]
-                    i += j; j = prefixSize + 4 + 4 + 1 + 1
-                    tmp = data[i, j].unpack("Z#{prefixSize}LLcC")
+                    i += j; j = prefixSize + 4 + 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("Z#{prefixSize}LLLLcC")
                     @prefix = tmp[0]
-                    @timeoutAsync = tmp[1]
-                    @timeoutSync = tmp[2]
-                    @priorityDefault = tmp[3]
-                    @requestTimeoutAdjustment = (tmp[4] != 0)
+                    @timeout_initialize = tmp[1]
+                    @timeout_async = tmp[2]
+                    @timeout_sync = tmp[3]
+                    @timeout_terminate = tmp[4]
+                    @priority_default = tmp[5]
+                    @request_timeout_adjustment = (tmp[6] != 0)
                     i += j
                     if i != data.length
                         raise MessageDecodingException
@@ -547,7 +534,7 @@ module CloudI
                     end
                 when MESSAGE_REINIT
                     i += j; j = 4
-                    @processCount = data[i, j].unpack('L')[0]
+                    @process_count = data[i, j].unpack('L')[0]
                     i += j
                     if i < data.length
                         raise MessageDecodingException
@@ -566,6 +553,13 @@ module CloudI
                         raise MessageDecodingException
                     end
                     return subscribe_count
+                when MESSAGE_TERM
+                    @terminate = true
+                    if external
+                        return nil
+                    else
+                        raise TerminateException.new(@timeout_terminate)
+                    end
                 else
                     raise MessageDecodingException
                 end
@@ -669,6 +663,7 @@ module CloudI
         MESSAGE_KEEPALIVE           = 8
         MESSAGE_REINIT              = 9
         MESSAGE_SUBSCRIBE_COUNT     = 10
+        MESSAGE_TERM                = 11
 
         NULL = 0
 
@@ -693,6 +688,13 @@ module CloudI
     end
 
     class MessageDecodingException < Exception
+    end
+
+    class TerminateException < Exception
+        def initialize(timeout)
+            @timeout = timeout
+        end
+        attr_reader :timeout
     end
 end
 

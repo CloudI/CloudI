@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,8 @@ public class Task implements Runnable
      
     public Task(final int thread_index)
                 throws API.InvalidInputException,
-                       API.MessageDecodingException
+                       API.MessageDecodingException,
+                       API.TerminateException
     {
         this.api = new API(thread_index);
         this.thread_index = thread_index;
@@ -237,7 +238,8 @@ public class Task implements Runnable
                           throws API.ReturnAsyncException,
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
-                                 API.MessageDecodingException
+                                 API.MessageDecodingException,
+                                 API.TerminateException
     {
         API.Response end_check = this.api.recv_async(1000);
         while (new String(end_check.response) == "end")
@@ -462,6 +464,7 @@ public class Task implements Runnable
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
                                  API.MessageDecodingException,
+                                 API.TerminateException,
                                  InterruptedException
     {
         API.out.println("messaging sequence2 start java");
@@ -560,7 +563,8 @@ public class Task implements Runnable
                           throws API.ReturnAsyncException,
                                  API.ReturnSyncException,
                                  API.InvalidInputException,
-                                 API.MessageDecodingException
+                                 API.MessageDecodingException,
+                                 API.TerminateException
     {
         API.out.println("messaging sequence3 start java");
         assert new String(request) == "start";
@@ -618,11 +622,15 @@ public class Task implements Runnable
             }
 
             Object result = api.poll();
-            API.err.println("exited thread: " + result);
+            assert result == null;
         }
         catch (API.MessageDecodingException e)
         {
             e.printStackTrace(API.err);
+        }
+        catch (API.TerminateException e)
+        {
+            API.out.println("terminating...");
         }
     }
 }

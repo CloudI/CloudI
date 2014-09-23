@@ -43,6 +43,7 @@ __all__ = [
     'API',
     'invalid_input_exception',
     'message_decoding_exception',
+    'terminate_exception',
 ]
 
 import sys, os, socket
@@ -53,13 +54,15 @@ class API(object):
     SYNC   = -1
 
     def __init__(self, thread_index):
+        self.__timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
         exception = None
         try:
             self.__api = libcloudi_py.cloudi_c(thread_index)
-        except libcloudi_py.invalid_input_exception as e:
-            exception = str(e)
+        except Exception as e:
+            exception = e
         if exception is not None:
-            raise invalid_input_exception(exception)
+            self.__rethrow_exception(exception)
+        self.__timeout_terminate = self.__api.timeout_terminate()
 
     @staticmethod
     def thread_count():
@@ -72,7 +75,11 @@ class API(object):
         self.__api.subscribe(pattern, Function)
 
     def subscribe_count(self, pattern):
-        return self.__api.subscribe_count(pattern)
+        try:
+            return self.__api.subscribe_count(pattern)
+        except Exception as e:
+            exception = e
+        self.__rethrow_exception(exception)
 
     def unsubscribe(self, pattern):
         self.__api.unsubscribe(pattern)
@@ -86,7 +93,11 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        return self.__api.send_async(name, request, **kwargs)
+        try:
+            return self.__api.send_async(name, request, **kwargs)
+        except Exception as e:
+            exception = e
+        self.__rethrow_exception(exception)
 
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
@@ -97,7 +108,11 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        return self.__api.send_sync(name, request, **kwargs)
+        try:
+            return self.__api.send_sync(name, request, **kwargs)
+        except Exception as e:
+            exception = e
+        self.__rethrow_exception(exception)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -108,7 +123,13 @@ class API(object):
             kwargs['request_info'] = request_info
         if priority is not None:
             kwargs['priority'] = priority
-        trans_ids = self.__api.mcast_async(name, request, **kwargs)
+        exception = None
+        try:
+            trans_ids = self.__api.mcast_async(name, request, **kwargs)
+        except Exception as e:
+            exception = e
+        if exception is not None:
+            self.__rethrow_exception(exception)
         if trans_ids is None:
             return tuple()
         return tuple([
@@ -169,7 +190,11 @@ class API(object):
             kwargs['trans_id'] = trans_id
         if consume is not None:
             kwargs['consume'] = consume
-        return self.__api.recv_async(**kwargs)
+        try:
+            return self.__api.recv_async(**kwargs)
+        except Exception as e:
+            exception = e
+        self.__rethrow_exception(exception)
 
     def process_index(self):
         return self.__api.process_index()
@@ -186,20 +211,36 @@ class API(object):
     def prefix(self):
         return self.__api.prefix()
 
+    def timeout_initialize(self):
+        return self.__api.timeout_initialize()
+
     def timeout_async(self):
         return self.__api.timeout_async()
 
     def timeout_sync(self):
         return self.__api.timeout_sync()
 
+    def timeout_terminate(self):
+        return self.__timeout_terminate
+
     def poll(self):
         exception = None
         try:
             self.__api.poll()
-        except libcloudi_py.error_exception as e:
-            exception = str(e)
+        except Exception as e:
+            exception = e
         if exception is not None:
-            raise message_decoding_exception(exception)
+            self.__rethrow_exception(exception)
+
+    def __rethrow_exception(self, exception):
+        if isinstance(exception, libcloudi_py.message_decoding_exception):
+            raise message_decoding_exception(str(exception))
+        elif isinstance(exception, libcloudi_py.invalid_input_exception):
+            raise invalid_input_exception(str(exception))
+        elif isinstance(exception, libcloudi_py.terminate_exception):
+            raise terminate_exception(self.__timeout_terminate)
+        else:
+            raise exception
 
     def __binary_key_value_parse(self, binary):
         result = {}
@@ -246,6 +287,14 @@ class forward_async_exception(Exception):
 class message_decoding_exception(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
+
+class terminate_exception(Exception):
+    def __init__(self, timeout):
+        Exception.__init__(self, 'Terminate')
+        self.__timeout = timeout
+
+    def timeout(self):
+        return self.__timeout
 
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):

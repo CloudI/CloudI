@@ -1222,9 +1222,13 @@ class API
 
         char const * prefix() const;
 
+        uint32_t timeout_initialize() const;
+
         uint32_t timeout_async() const;
 
         uint32_t timeout_sync() const;
+
+        uint32_t timeout_terminate() const;
 
         int8_t priority_default() const;
 
@@ -1256,6 +1260,7 @@ class API
                 // with internal cloudi error conditions
             
                 // API specific errors
+                terminate                           = 110, // error_poll_HUP
                 timeout                             =   7,
                 error_function_parameter            =   8,
                 error_read_underflow                =   9,
