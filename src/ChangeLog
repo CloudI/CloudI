@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix event consumption based on more testing
+    * Fix http and http_req integration tests for Python 3
+
 2014-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix all external CloudI API implementations to consume events both

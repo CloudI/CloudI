@@ -1188,9 +1188,9 @@ public class API
         if (buffer == null || buffer.remaining() == 0)
             return null;
 
-        while (true)
+        try
         {
-            try
+            while (true)
             {
                 int command;
                 switch (command = buffer.getInt())
@@ -1301,11 +1301,27 @@ public class API
                         return count;
                     }
                     case MESSAGE_TERM:
-                    case MESSAGE_REINIT:
-                    case MESSAGE_KEEPALIVE:
                     {
                         if (! handle_events(external, buffer, command))
                             return null;
+                        assert false;
+                        break;
+                    }
+                    case MESSAGE_REINIT:
+                    {
+                        this.process_count = buffer.getInt();
+                        if (buffer.hasRemaining())
+                            continue;
+                        break;
+                    }
+                    case MESSAGE_KEEPALIVE:
+                    {
+                        OtpOutputStream keepalive = new OtpOutputStream();
+                        keepalive.write(OtpExternal.versionTag);
+                        keepalive.write_any(new OtpErlangAtom("keepalive"));
+                        send(keepalive);
+                        if (buffer.hasRemaining())
+                            continue;
                         break;
                     }
                     default:
@@ -1316,10 +1332,10 @@ public class API
                 if (buffer == null || buffer.remaining() == 0)
                     return null;
             }
-            catch (BufferUnderflowException e)
-            {
-                throw new MessageDecodingException();
-            }
+        }
+        catch (BufferUnderflowException e)
+        {
+            throw new MessageDecodingException();
         }
     }
 

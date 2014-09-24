@@ -70,17 +70,18 @@ class Task(threading.Thread):
     def request(self, command, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
         http_qs = self.__api.request_http_qs_parse(request)
-        value = http_qs.get('value', None)
+        value = http_qs.get(b'value', None)
         if value is None:
             response = """\
 <http_test><error>no value specified</error></http_test>"""
         else:
-            if type(value) == types.ListType:
+            if type(value) == list:
                 value = value[0]
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
         self.__api.return_(command, name, pattern,
-                           '', response, timeout, trans_id, pid)
+                           b'', response.encode('utf-8'),
+                           timeout, trans_id, pid)
 
 if __name__ == '__main__':
     thread_count = API.thread_count()

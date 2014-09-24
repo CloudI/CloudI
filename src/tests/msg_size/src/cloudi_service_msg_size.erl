@@ -96,6 +96,9 @@ aspect_request(_, _, _, _, _, _, _, TransId, _,
                      elapsed_seconds = elapsed_seconds(TransId)}}.
  
 % for internal and external services
+aspect_terminate(_, _, undefined) ->
+    % aspect_init/4 was not called due to init not completing 
+    {ok, undefined};
 aspect_terminate(_, _, #state{service = Service,
                               elapsed_seconds = undefined} = State) ->
     ?LOG_WARN("msg_size 0 requests/second "

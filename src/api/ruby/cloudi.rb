@@ -411,6 +411,8 @@ module CloudI
                 end
                 j = 4
                 command = data[i, j].unpack('L')[0]
+            else
+                j = 4
             end
             loop do
                 case command
@@ -463,9 +465,9 @@ module CloudI
             if data_size == 0
                 return nil
             end
+            i = 0; j = 4
 
             loop do
-                i = 0; j = 4
                 command = data[i, j].unpack('L')[0]
                 case command
                 when MESSAGE_INIT
@@ -572,9 +574,31 @@ module CloudI
                         handle_events(external, data, data_size, i)
                     end
                     return count
-                when MESSAGE_TERM, MESSAGE_REINIT, MESSAGE_KEEPALIVE
+                when MESSAGE_TERM
                     if not handle_events(external, data, data_size, i, command)
                         return nil
+                    end
+                    API.assert{false}
+                when MESSAGE_REINIT
+                    i += j; j = 4
+                    @process_count = data[i, j].unpack('L')[0]
+                    i += j; j = 4
+                    if i == data_size
+                        #
+                    elsif i < data_size
+                        next
+                    else
+                        raise MessageDecodingException
+                    end
+                when MESSAGE_KEEPALIVE
+                    send(Erlang.term_to_binary(:keepalive))
+                    i += j; j = 4
+                    if i == data_size
+                        #
+                    elsif i < data_size
+                        next
+                    else
+                        raise MessageDecodingException
                     end
                 else
                     raise MessageDecodingException
@@ -596,6 +620,7 @@ module CloudI
                 if data_size == 0
                     return nil
                 end
+                i = 0; j = 4
             end
         end
 
@@ -632,8 +657,8 @@ module CloudI
         end
 
         private :callback
-        private :poll_request
         private :handle_events
+        private :poll_request
         private :binary_key_value_parse
         private
 

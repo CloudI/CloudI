@@ -1531,14 +1531,12 @@ static int poll_request(cloudi_instance_t * p,
                       p->buffer_size);
     if (result)
         return result;
+    if (p->buffer_recv_index == 0)
+        return cloudi_error_read_underflow;
+    uint32_t index = 0;
         
     while (true)
     {
-        if (p->buffer_recv_index == 0)
-            return cloudi_error_read_underflow;
-
-        fds[0].revents = 0;
-        uint32_t index = 0;
         uint32_t command = 0;
         store_incoming_uint32(buffer_recv, index, command);
         switch (command)
@@ -1673,13 +1671,47 @@ static int poll_request(cloudi_instance_t * p,
                 return cloudi_success;
             }
             case MESSAGE_TERM:
-            case MESSAGE_REINIT:
-            case MESSAGE_KEEPALIVE:
             {
                 if (! handle_events(p, external, index, result, command))
                     return result;
-                p->buffer_recv_index = 0;
+                assert(false);
                 break;
+            }
+            case MESSAGE_REINIT:
+            {
+                store_incoming_uint32(buffer_recv, index, p->process_count);
+                if (index == p->buffer_recv_index)
+                {
+                    p->buffer_recv_index = 0;
+                    break;
+                }
+                else if (index < p->buffer_recv_index)
+                {
+                    continue;
+                }
+                else
+                {
+                    return cloudi_error_read_underflow;
+                }
+            }
+            case MESSAGE_KEEPALIVE:
+            {
+                result = keepalive(p);
+                if (result)
+                    return false;
+                if (index == p->buffer_recv_index)
+                {
+                    p->buffer_recv_index = 0;
+                    break;
+                }
+                else if (index < p->buffer_recv_index)
+                {
+                    continue;
+                }
+                else
+                {
+                    return cloudi_error_read_underflow;
+                }
             }
             default:
             {
@@ -1712,6 +1744,9 @@ static int poll_request(cloudi_instance_t * p,
                           p->buffer_size);
         if (result)
             return result;
+        if (p->buffer_recv_index == 0)
+            return cloudi_error_read_underflow;
+        index = 0;
     }
 }
 

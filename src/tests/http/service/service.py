@@ -66,9 +66,9 @@ class _Task(threading.Thread):
 
     def text(self, command, name, pattern, request_info, request,
              timeout, priority, trans_id, pid):
-        print('(' + request + ')')
-        assert 'Test Text' == request
-        self.__api.return_(command, name, pattern, '', 'Test Response',
+        print(b'(' + request + b')')
+        assert b'Test Text' == request
+        self.__api.return_(command, name, pattern, b'', b'Test Response',
                            timeout, trans_id, pid)
 
 if __name__ == '__main__':

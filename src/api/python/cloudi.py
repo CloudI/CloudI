@@ -454,9 +454,9 @@ class API(object):
         data_size = len(data)
         if data_size == 0:
             return None # socket was closed
+        i, j = 0, 4
 
         while True:
-            i, j = 0, 4
             command = struct.unpack(b'=I', data[i:j])[0]
             if command == _MESSAGE_INIT:
                 i, j = j, j + 4 + 4 + 4 + 4 + 4
@@ -557,12 +557,30 @@ class API(object):
                     assert external == False
                     self.__handle_events(external, data, data_size, j)
                 return count
-            elif ((command == _MESSAGE_TERM) or
-                  (command == _MESSAGE_REINIT) or
-                  (command == _MESSAGE_KEEPALIVE)):
-                 if not self.__handle_events(external, data, data_size, j,
-                                             command=command):
+            elif command == _MESSAGE_TERM:
+                if not self.__handle_events(external, data, data_size, j,
+                                            command=command):
                     return None
+                assert False
+            elif command == _MESSAGE_REINIT:
+                i, j = j, j + 4
+                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
+                if j == data_size:
+                    pass
+                elif j < data_size:
+                    i, j = j, j + 4
+                    continue
+                else:
+                    raise message_decoding_exception()
+            elif command == _MESSAGE_KEEPALIVE:
+                self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
+                if j == data_size:
+                    pass
+                elif j < data_size:
+                    i, j = j, j + 4
+                    continue
+                else:
+                    raise message_decoding_exception()
             else:
                 raise message_decoding_exception()
 
@@ -578,6 +596,7 @@ class API(object):
             data_size = len(data)
             if data_size == 0:
                 return None # socket was closed
+            i, j = 0, 4
 
     def poll(self):
         return self.__poll_request(True)
