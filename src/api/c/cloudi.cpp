@@ -1434,6 +1434,66 @@ static void store_incoming_uint8(buffer_t const & buffer,
     index += sizeof(uint8_t);
 }
 
+static bool handle_events(cloudi_instance_t * p,
+                          int external, 
+                          uint32_t index,
+                          int & result,
+                          uint32_t command = 0)
+{
+    buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    if (command == 0)
+    {
+        if (index > p->buffer_recv_index)
+        {
+            result = cloudi_error_read_underflow;
+            return false;
+        }
+        store_incoming_uint32(buffer_recv, index, command);
+    }
+    while (true)
+    {
+        switch (command)
+        {
+            case MESSAGE_TERM:
+            {
+                p->terminate = 1;
+                if (external)
+                    result = cloudi_success;
+                else
+                    result = cloudi_terminate;
+                return false;
+            }
+            case MESSAGE_REINIT:
+            {
+                store_incoming_uint32(buffer_recv, index, p->process_count);
+                break;
+            }
+            case MESSAGE_KEEPALIVE:
+            {
+                result = keepalive(p);
+                if (result)
+                    return false;
+                break;
+            }
+            default:
+            {
+                result = cloudi_error_read_underflow;
+                return false;
+            }
+        }
+        if (index > p->buffer_recv_index)
+        {
+            result = cloudi_error_read_underflow;
+            return false;
+        }
+        else if (index == p->buffer_recv_index)
+        {
+            return true;
+        }
+        store_incoming_uint32(buffer_recv, index, command);
+    }
+}
+
 static int poll_request(cloudi_instance_t * p,
                         int timeout,
                         int external)
@@ -1475,11 +1535,11 @@ static int poll_request(cloudi_instance_t * p,
     while (true)
     {
         if (p->buffer_recv_index == 0)
-            ::exit(cloudi_error_read_underflow);
+            return cloudi_error_read_underflow;
 
         fds[0].revents = 0;
         uint32_t index = 0;
-        uint32_t command;
+        uint32_t command = 0;
         store_incoming_uint32(buffer_recv, index, command);
         switch (command)
         {
@@ -1499,7 +1559,11 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint8(buffer_recv, index,
                                      p->request_timeout_adjustment);
                 if (index != p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
+                {
+                    assert(! external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 return cloudi_success;
             }
@@ -1534,7 +1598,11 @@ static int poll_request(cloudi_instance_t * p,
                 char * pid = &buffer_call[index];
                 index += pid_size;
                 if (index != p->buffer_recv_index)
-                    return cloudi_error_read_underflow;
+                {
+                    assert(external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 callback(p, command, name, pattern,
                          request_info, request_info_size,
@@ -1556,7 +1624,11 @@ static int poll_request(cloudi_instance_t * p,
                 p->trans_id = &buffer_recv[index];
                 index += 16;
                 if (index != p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
+                {
+                    assert(! external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 return cloudi_success;
             }
@@ -1566,7 +1638,11 @@ static int poll_request(cloudi_instance_t * p,
                 p->trans_id = &buffer_recv[index];
                 index += 16;
                 if (index != p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
+                {
+                    assert(! external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 return cloudi_success;
             }
@@ -1576,77 +1652,38 @@ static int poll_request(cloudi_instance_t * p,
                 p->trans_id = &buffer_recv[index];
                 index += 16 * p->trans_id_count;
                 if (index != p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
+                {
+                    assert(! external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 return cloudi_success;
-            }
-            case MESSAGE_KEEPALIVE:
-            {
-                if (index > p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
-                result = keepalive(p);
-                if (result)
-                    ::exit(result);
-                if (index < p->buffer_recv_index)
-                {
-                    p->buffer_recv_index -= index;
-                    buffer_recv.move(index, p->buffer_recv_index, 0);
-                    assert(p->use_header == false);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 0)
-                        continue;
-                }
-                else
-                {
-                    p->buffer_recv_index = 0;
-                }
-                break;
-            }
-            case MESSAGE_REINIT:
-            {
-                store_incoming_uint32(buffer_recv, index, p->process_count);
-                if (index > p->buffer_recv_index)
-                {
-                    ::exit(cloudi_error_read_underflow);
-                }
-                else if (index < p->buffer_recv_index)
-                {
-                    p->buffer_recv_index -= index;
-                    buffer_recv.move(index, p->buffer_recv_index, 0);
-                    assert(p->use_header == false);
-                    count = ::poll(fds, 1, 0);
-                    if (count < 0)
-                        return errno_poll();
-                    else if (count == 0)
-                        continue;
-                }
-                else
-                {
-                    p->buffer_recv_index = 0;
-                }
-                break;
             }
             case MESSAGE_SUBSCRIBE_COUNT:
             {
                 store_incoming_uint32(buffer_recv, index, p->subscribe_count);
                 if (index != p->buffer_recv_index)
-                    ::exit(cloudi_error_read_underflow);
+                {
+                    assert(! external);
+                    if (! handle_events(p, external, index, result))
+                        return result;
+                }
                 p->buffer_recv_index = 0;
                 return cloudi_success;
             }
             case MESSAGE_TERM:
+            case MESSAGE_REINIT:
+            case MESSAGE_KEEPALIVE:
             {
-                p->terminate = 1;
-                if (external)
-                    return cloudi_success;
-                else
-                    return cloudi_terminate;
+                if (! handle_events(p, external, index, result, command))
+                    return result;
+                p->buffer_recv_index = 0;
+                break;
             }
             default:
             {
-                ::exit(cloudi_error_read_underflow);
+                return cloudi_error_read_underflow;
             }
         }
 

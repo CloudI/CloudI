@@ -408,6 +408,33 @@ class API(object):
         else:
             raise message_decoding_exception()
 
+    def __handle_events(self, external, data, data_size, j, command=None):
+        if command is None:
+            if j > data_size:
+                raise message_decoding_exception()
+            i, j = j, j + 4
+            command = struct.unpack(b'=I', data[i:j])[0]
+        while True:
+            if command == _MESSAGE_TERM:
+                self.__terminate = True
+                if external:
+                    return False
+                else:
+                    raise terminate_exception(self.__timeout_terminate)
+            elif command == _MESSAGE_REINIT:
+                i, j = j, j + 4
+                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
+            elif command == _MESSAGE_KEEPALIVE:
+                self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
+            else:
+                raise message_decoding_exception()
+            if j > data_size:
+                raise message_decoding_exception()
+            elif j == data_size:
+                return True
+            i, j = j, j + 4
+            command = struct.unpack(b'=I', data[i:j])[0]
+
     def __poll_request(self, external):
         if self.__terminate:
             return None
@@ -424,8 +451,8 @@ class API(object):
 
         data = b''
         data = self.__recv(data)
-
-        if len(data) == 0:
+        data_size = len(data)
+        if data_size == 0:
             return None # socket was closed
 
         while True:
@@ -433,50 +460,53 @@ class API(object):
             command = struct.unpack(b'=I', data[i:j])[0]
             if command == _MESSAGE_INIT:
                 i, j = j, j + 4 + 4 + 4 + 4 + 4
-                (processIndex, processCount,
-                 processCountMax, processCountMin,
-                 prefixSize) = struct.unpack(b'=IIIII', data[i:j])
-                i, j = j, j + prefixSize + 4 + 4 + 4 + 4 + 1 + 1
-                (prefix, nullTerminator, timeoutInit,
-                 timeoutAsync, timeoutSync, timeoutTerm,
-                 priorityDefault,
-                 requestTimeoutAdjustment) = struct.unpack(
-                    '=%dscIIIIbB' % (prefixSize - 1), data[i:j]
+                (process_index, process_count,
+                 process_count_max, process_count_min,
+                 prefix_size) = struct.unpack(b'=IIIII', data[i:j])
+                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1
+                (prefix, null_terminator, timeout_init,
+                 timeout_async, timeout_sync, timeout_term,
+                 priority_default,
+                 request_timeout_adjustment) = struct.unpack(
+                    '=%dscIIIIbB' % (prefix_size - 1), data[i:j]
                 )
-                if j != len(data):
-                    raise message_decoding_exception()
-                return (processIndex, processCount,
-                        processCountMax, processCountMin,
-                        prefix.decode('utf-8'), timeoutInit,
-                        timeoutSync, timeoutAsync, timeoutTerm,
-                        priorityDefault, bool(requestTimeoutAdjustment))
+                if j != data_size:
+                    assert external == False
+                    self.__handle_events(external, data, data_size, j)
+                return (process_index, process_count,
+                        process_count_max, process_count_min,
+                        prefix.decode('utf-8'), timeout_init,
+                        timeout_sync, timeout_async, timeout_term,
+                        priority_default, bool(request_timeout_adjustment))
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
-                nameSize = struct.unpack(b'=I', data[i:j])[0]
-                i, j = j, j + nameSize + 4
-                (name, nullTerminator,
-                 patternSize) = struct.unpack('=%dscI' % (nameSize - 1),
-                                              data[i:j])
-                i, j = j, j + patternSize + 4
-                (pattern, nullTerminator,
-                 request_infoSize) = struct.unpack(
-                    '=%dscI' % (patternSize - 1), data[i:j]
+                name_size = struct.unpack(b'=I', data[i:j])[0]
+                i, j = j, j + name_size + 4
+                (name, null_terminator,
+                 pattern_size) = struct.unpack('=%dscI' % (name_size - 1),
+                                               data[i:j])
+                i, j = j, j + pattern_size + 4
+                (pattern, null_terminator,
+                 request_info_size) = struct.unpack(
+                    '=%dscI' % (pattern_size - 1), data[i:j]
                 )
-                i, j = j, j + request_infoSize + 1 + 4
-                (request_info, nullTerminator,
-                 requestSize) = struct.unpack(
-                    '=%dscI' % request_infoSize, data[i:j]
+                i, j = j, j + request_info_size + 1 + 4
+                (request_info, null_terminator,
+                 request_size) = struct.unpack(
+                    '=%dscI' % request_info_size, data[i:j]
                 )
-                i, j = j, j + requestSize + 1 + 4 + 1 + 16 + 4
-                (request, nullTerminator, timeout, priority, trans_id,
-                 pidSize) = struct.unpack(
-                    '=%dscIb16sI' % requestSize, data[i:j]
+                i, j = j, j + request_size + 1 + 4 + 1 + 16 + 4
+                (request, null_terminator, timeout, priority, trans_id,
+                 pid_size) = struct.unpack(
+                    '=%dscIb16sI' % request_size, data[i:j]
                 )
-                i, j = j, j + pidSize
-                pid = struct.unpack('=%ds' % pidSize, data[i:j])[0]
-                if j != len(data):
-                    raise message_decoding_exception()
+                i, j = j, j + pid_size
+                pid = struct.unpack('=%ds' % pid_size, data[i:j])[0]
+                if j != data_size:
+                    assert external == True
+                    if not self.__handle_events(external, data, data_size, j):
+                        return None
                 data = b''
                 self.__callback(command,
                                 name.decode('utf-8'),
@@ -487,62 +517,52 @@ class API(object):
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
                 i, j = j, j + 4
-                responseInfoSize = struct.unpack(b'=I', data[i:j])[0]
-                i, j = j, j + responseInfoSize + 1 + 4
-                (response_info, nullTerminator,
-                 responseSize) = struct.unpack(
-                    '=%dscI' % responseInfoSize, data[i:j]
+                response_info_size = struct.unpack(b'=I', data[i:j])[0]
+                i, j = j, j + response_info_size + 1 + 4
+                (response_info, null_terminator,
+                 response_size) = struct.unpack(
+                    '=%dscI' % response_info_size, data[i:j]
                 )
-                i, j = j, j + responseSize + 1 + 16
-                if j != len(data):
-                    raise message_decoding_exception()
-                (response, nullTerminator,
+                i, j = j, j + response_size + 1 + 16
+                (response, null_terminator,
                  trans_id) = struct.unpack(
-                    '=%dsc16s' % responseSize, data[i:j]
+                    '=%dsc16s' % response_size, data[i:j]
                 )
+                if j != data_size:
+                    assert external == False
+                    self.__handle_events(external, data, data_size, j)
                 return (response_info, response, trans_id)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
-                if j != len(data):
-                    raise message_decoding_exception()
-                return struct.unpack(b'=16s', data[i:j])[0]
+                trans_id = struct.unpack(b'=16s', data[i:j])[0]
+                if j != data_size:
+                    assert external == False
+                    self.__handle_events(external, data, data_size, j)
+                return trans_id
             elif command == _MESSAGE_RETURNS_ASYNC:
                 i, j = j, j + 4
-                transIdCount = struct.unpack(b'=I', data[i:j])[0]
-                i, j = j, j + 16 * transIdCount
-                if j != len(data):
-                    raise message_decoding_exception()
-                return struct.unpack(b'=' + b'16s' * transIdCount, data[i:j])
-            elif command == _MESSAGE_KEEPALIVE:
-                self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
-                if j < len(data):
-                    raise message_decoding_exception()
-                data = data[j:]
-                if len(data) > 0:
-                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                    if len(IN) == 0:
-                        continue
-            elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4
-                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
-                if j < len(data):
-                    raise message_decoding_exception()
-                data = data[j:]
-                if len(data) > 0:
-                    IN, OUT, EXCEPT = select.select([self.__s],[],[],0)
-                    if len(IN) == 0:
-                        continue
+                trans_id_count = struct.unpack(b'=I', data[i:j])[0]
+                i, j = j, j + 16 * trans_id_count
+                trans_ids = struct.unpack(
+                    b'=' + b'16s' * trans_id_count, data[i:j]
+                )
+                if j != data_size:
+                    assert external == False
+                    self.__handle_events(external, data, data_size, j)
+                return trans_ids
             elif command == _MESSAGE_SUBSCRIBE_COUNT:
                 i, j = j, j + 4
-                if j != len(data):
-                    raise message_decoding_exception()
-                return struct.unpack(b'=I', data[i:j])[0]
-            elif command == _MESSAGE_TERM:
-                self.__terminate = True
-                if external:
+                count = struct.unpack(b'=I', data[i:j])[0]
+                if j != data_size:
+                    assert external == False
+                    self.__handle_events(external, data, data_size, j)
+                return count
+            elif ((command == _MESSAGE_TERM) or
+                  (command == _MESSAGE_REINIT) or
+                  (command == _MESSAGE_KEEPALIVE)):
+                 if not self.__handle_events(external, data, data_size, j,
+                                             command=command):
                     return None
-                else:
-                    raise terminate_exception(self.__timeout_terminate)
             else:
                 raise message_decoding_exception()
 
@@ -555,8 +575,8 @@ class API(object):
                     ready = True
     
             data = self.__recv(data)
-    
-            if len(data) == 0:
+            data_size = len(data)
+            if data_size == 0:
                 return None # socket was closed
 
     def poll(self):
