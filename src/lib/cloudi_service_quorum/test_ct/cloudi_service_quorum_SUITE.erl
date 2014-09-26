@@ -101,6 +101,7 @@ end_per_group(_GroupName, Config) ->
 
 init_per_testcase(TestCase, Config) ->
     error_logger:info_msg("~p init~n", [TestCase]),
+    io:fwrite(standard_io, "~p init~n", [TestCase]),
     {ok, Services} = cloudi_service_api:services(infinity),
     lists:foreach(fun({ServiceId, _}) ->
         cloudi_service_api:services_remove([ServiceId], infinity)
@@ -111,6 +112,7 @@ init_per_testcase(TestCase, Config) ->
 end_per_testcase(TestCase, Config) ->
     error_logger:tty(true),
     error_logger:info_msg("~p end~n", [TestCase]),
+    io:fwrite(standard_io, "~p end~n", [TestCase]),
     Config.
 
 %%%------------------------------------------------------------------------
