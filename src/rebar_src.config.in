@@ -62,6 +62,7 @@
   "external/snappy",
   "external/syslog",
   "lib/cpg",
+  "lib/erlang_term",
   "lib/key2value",
   "lib/keys1value",
   "lib/pqueue",

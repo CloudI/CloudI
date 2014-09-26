@@ -34,6 +34,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
+     -d $(top_srcdir)/lib/erlang_term/src \
      -d $(top_srcdir)/lib/key2value/src \
      -d $(top_srcdir)/lib/keys1value/src \
      -d $(top_srcdir)/lib/pqueue/src \
@@ -151,6 +152,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/pqueue/ebin
 	$(MKDIR_P) lib/quickrand/ebin
 	$(MKDIR_P) lib/cpg/ebin
+	$(MKDIR_P) lib/erlang_term/ebin
 	$(MKDIR_P) lib/uuid/ebin
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) lib/reltool_util/ebin
@@ -273,6 +275,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cpg/src && \
         test ! -e $(SCOPE_EXTERNAL)cpg.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cpg/src/$(SCOPE_EXTERNAL)cpg.app.src || exit 0)
+	(cd $(top_srcdir)/lib/erlang_term/src && \
+        test ! -e $(SCOPE_EXTERNAL)erlang_term.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/erlang_term/src/$(SCOPE_EXTERNAL)erlang_term.app.src || exit 0)
 	(cd $(top_srcdir)/lib/uuid/src && \
         test ! -e $(SCOPE_EXTERNAL)uuid.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/uuid/src/$(SCOPE_EXTERNAL)uuid.app.src || exit 0)
@@ -378,6 +383,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cpg && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cpg/ebin || exit 0)
+	(cd $(top_srcdir)/lib/erlang_term && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/erlang_term/ebin || exit 0)
 	(cd $(top_srcdir)/lib/uuid && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/uuid/ebin || exit 0)
@@ -606,6 +614,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/quickrand/ebin
 	rmdir $(top_builddir)/lib/cpg/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cpg/ebin
+	rmdir $(top_builddir)/lib/erlang_term/ebin || exit 0
+	rm -f $(top_srcdir)/lib/erlang_term/ebin
 	rmdir $(top_builddir)/lib/uuid/ebin || exit 0
 	rm -f $(top_srcdir)/lib/uuid/ebin
 	rmdir $(top_builddir)/lib/trie/ebin || exit 0
@@ -798,6 +808,7 @@ dialyze: all \
               lib/pqueue/ebin/ \
               lib/quickrand/ebin/ \
               lib/cpg/ebin/ \
+              lib/erlang_term/ebin/ \
               lib/uuid/ebin/ \
               lib/trie/ebin/ \
               lib/reltool_util/ebin/ \

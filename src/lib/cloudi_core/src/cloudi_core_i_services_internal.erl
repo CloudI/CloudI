@@ -92,6 +92,8 @@
         queue_requests = true,         % is the request pid busy?
         queued = cloudi_x_pqueue4:new(),     % queued incoming messages
         % unique state elements
+        queued_size = 0,               % queued size in bytes
+        queued_word_size,              % erlang:system_info(wordsize)
         queued_info = queue:new(),     % queue process messages for service
         module,                        % service module
         service_state = undefined,     % service state
@@ -127,6 +129,8 @@
         recv_timeouts = dict:new(),    % tracking for recv timeouts
         queue_requests = true,         % is the request pid busy?
         queued = cloudi_x_pqueue4:new(),     % queued incoming messages
+        queued_size = 0,               % queued size in bytes
+        queued_word_size,              % erlang:system_info(wordsize)
         queued_info = queue:new(),     % queue process messages for service
         module,                        % service module
         service_state,                 % service state
@@ -205,11 +209,13 @@ init([ProcessIndex, ProcessCount, GroupLeader,
             erlang:group_leader(GroupLeader, Dispatcher)
     end,
     cloudi_x_quickrand:seed(),
+    WordSize = erlang:system_info(wordsize),
     NewConfigOptions = check_init_send(ConfigOptions),
     DuoModePid = if
         DuoMode =:= true ->
             proc_lib:spawn_opt(fun() ->
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
+                                              queued_word_size = WordSize,
                                               module = Module,
                                               timeout_term = TimeoutTerm,
                                               dispatcher = Dispatcher,
@@ -248,6 +254,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
             cloudi_x_cpg_data:get_empty_groups()
     end,
     State = #state{dispatcher = Dispatcher,
+                   queued_word_size = WordSize,
                    module = Module,
                    process_index = ProcessIndex,
                    process_count = ProcessCount,
@@ -1085,8 +1092,11 @@ handle_info({Type, _, _, _, _, 0, _, _, _},
 handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
             #state{queue_requests = true,
                    queued = Queue,
+                   queued_size = QueuedSize,
+                   queued_word_size = WordSize,
                    options = #config_service_options{
-                       queue_limit = QueueLimit}} = State)
+                       queue_limit = QueueLimit,
+                       queue_size = QueueSize}} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
@@ -1095,31 +1105,49 @@ handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
         true ->
             true
     end,
+    {QueueSizeOk, Size} = if
+        QueueSize /= undefined ->
+            QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
+            {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
+        true ->
+            {true, 0}
+    end,
     hibernate_check(if
-        QueueLimitOk ->
-            {noreply, recv_timeout_start(Timeout, Priority, TransId, T, State)};
+        QueueLimitOk, QueueSizeOk ->
+            {noreply,
+             recv_timeout_start(Timeout, Priority, TransId,
+                                Size, T, State)};
         true ->
             % message is discarded since too many messages have been queued
             {noreply, State}
     end);
 
-handle_info({'cloudi_service_recv_timeout', Priority, TransId},
+handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
             #state{recv_timeouts = RecvTimeouts,
+                   queue_requests = QueueRequests,
                    queued = Queue,
-                   queue_requests = QueueRequests} = State) ->
-    NewQueue = if
+                   queued_size = QueuedSize} = State) ->
+    {NewQueue, NewQueuedSize} = if
         QueueRequests =:= true ->
-            F = fun({_, _, _, _, _, _, _, Id, _}) -> Id == TransId end,
-            {_, % could be false if a timer message was sent while cancelling
+            F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
+            {Removed,
              NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
-            NextQueue;
+            NextQueuedSize = if
+                Removed =:= true ->
+                    QueuedSize - Size;
+                Removed =:= false ->
+                    % false if a timer message was sent while cancelling
+                    QueuedSize
+            end,
+            {NextQueue, NextQueuedSize};
         true ->
-            Queue
+            {Queue, QueuedSize}
     end,
     hibernate_check({noreply,
                      State#state{
                          recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                         queued = NewQueue}});
+                         queued = NewQueue,
+                         queued_size = NewQueuedSize}});
 
 handle_info({'cloudi_service_return_async',
              Name, Pattern, ResponseInfo, Response,
@@ -2505,29 +2533,33 @@ send_async_active_timeout_start(Timeout, TransId, _Pid,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts)}.
 
-recv_timeout_start(Timeout, Priority, TransId, T,
+recv_timeout_start(Timeout, Priority, TransId, Size, T,
                    #state{recv_timeouts = RecvTimeouts,
                           queued = Queue,
+                          queued_size = QueuedSize,
                           receiver_pid = ReceiverPid} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state{
         recv_timeouts = dict:store(TransId,
             erlang:send_after(Timeout, ReceiverPid,
-                {'cloudi_service_recv_timeout', Priority, TransId}),
+                {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
-        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
+        queued = cloudi_x_pqueue4:in({Size, T}, Priority, Queue),
+        queued_size = QueuedSize + Size}.
 
-duo_recv_timeout_start(Timeout, Priority, TransId, T,
+duo_recv_timeout_start(Timeout, Priority, TransId, Size, T,
                        #state_duo{duo_mode_pid = DuoModePid,
                                   recv_timeouts = RecvTimeouts,
-                                  queued = Queue} = State)
+                                  queued = Queue,
+                                  queued_size = QueuedSize} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state_duo{
         recv_timeouts = dict:store(TransId,
             erlang:send_after(Timeout, DuoModePid,
-                {'cloudi_service_recv_timeout', Priority, TransId}),
+                {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
-        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
+        queued = cloudi_x_pqueue4:in({Size, T}, Priority, Queue),
+        queued_size = QueuedSize + Size}.
 
 recv_asyncs_pick(Results, Consume, AsyncResponses) ->
     recv_asyncs_pick(Results, [], true, false, Consume, AsyncResponses).
@@ -2564,6 +2596,7 @@ process_queue(NewServiceState,
                      recv_timeouts = RecvTimeouts,
                      queue_requests = true,
                      queued = Queue,
+                     queued_size = QueuedSize,
                      module = Module,
                      request_pid = RequestPid,
                      options = ConfigOptions} = State) ->
@@ -2572,9 +2605,11 @@ process_queue(NewServiceState,
             State#state{queue_requests = false,
                         queued = NewQueue,
                         service_state = NewServiceState};
-        {{value, {'cloudi_service_send_async', Name, Pattern,
-                  RequestInfo, Request,
-                  _, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_async', Name, Pattern,
+            RequestInfo, Request,
+            _, Priority, TransId, Source}}}, NewQueue} ->
             Timeout = case erlang:cancel_timer(dict:fetch(TransId,
                                                           RecvTimeouts)) of
                 false ->
@@ -2586,6 +2621,7 @@ process_queue(NewServiceState,
             State#state{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
+                queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
                     {'cloudi_service_request_loop',
                      'send_async', Name, Pattern,
@@ -2594,9 +2630,11 @@ process_queue(NewServiceState,
                      NewServiceState, Dispatcher,
                      Module, NewConfigOptions}, NewConfigOptions, Dispatcher),
                 options = NewConfigOptions};
-        {{value, {'cloudi_service_send_sync', Name, Pattern,
-                  RequestInfo, Request,
-                  _, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_sync', Name, Pattern,
+            RequestInfo, Request,
+            _, Priority, TransId, Source}}}, NewQueue} ->
             Timeout = case erlang:cancel_timer(dict:fetch(TransId,
                                                           RecvTimeouts)) of
                 false ->
@@ -2608,6 +2646,7 @@ process_queue(NewServiceState,
             State#state{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
+                queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
                     {'cloudi_service_request_loop',
                      'send_sync', Name, Pattern,
@@ -3251,8 +3290,11 @@ duo_handle_info({Type, _, _, _, _, 0, _, _, _},
 duo_handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
                 #state_duo{queue_requests = true,
                            queued = Queue,
+                           queued_size = QueuedSize,
+                           queued_word_size = WordSize,
                            options = #config_service_options{
-                               queue_limit = QueueLimit}} = State)
+                               queue_limit = QueueLimit,
+                               queue_size = QueueSize}} = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
@@ -3261,30 +3303,47 @@ duo_handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
         true ->
             true
     end,
+    {QueueSizeOk, Size} = if
+        QueueSize /= undefined ->
+            QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
+            {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
+        true ->
+            {true, 0}
+    end,
     if
-        QueueLimitOk ->
+        QueueLimitOk, QueueSizeOk ->
             {noreply,
-             duo_recv_timeout_start(Timeout, Priority, TransId, T, State)};
+             duo_recv_timeout_start(Timeout, Priority, TransId,
+                                    Size, T, State)};
         true ->
             % message is discarded since too many messages have been queued
             {noreply, State}
     end;
 
-duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId},
+duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
                 #state_duo{recv_timeouts = RecvTimeouts,
                            queue_requests = QueueRequests,
-                           queued = Queue} = State) ->
-    NewQueue = if
+                           queued = Queue,
+                           queued_size = QueuedSize} = State) ->
+    {NewQueue, NewQueuedSize} = if
         QueueRequests =:= true ->
-            F = fun({_, _, _, _, _, _, _, Id, _}) -> Id == TransId end,
-            {_, % could be false if a timer message was sent while cancelling
+            F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
+            {Removed,
              NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
-            NextQueue;
+            NextQueuedSize = if
+                Removed =:= true ->
+                    QueuedSize - Size;
+                Removed =:= false ->
+                    % false if a timer message was sent while cancelling
+                    QueuedSize
+            end,
+            {NextQueue, NextQueuedSize};
         true ->
-            Queue
+            {Queue, QueuedSize}
     end,
     {noreply, State#state_duo{recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                              queued = NewQueue}};
+                              queued = NewQueue,
+                              queued_size = NewQueuedSize}};
 
 duo_handle_info('cloudi_hibernate_rate',
                 #state_duo{dispatcher = Dispatcher,
@@ -3427,6 +3486,7 @@ duo_process_queue(NewServiceState,
                              recv_timeouts = RecvTimeouts,
                              queue_requests = true,
                              queued = Queue,
+                             queued_size = QueuedSize,
                              module = Module,
                              dispatcher = Dispatcher,
                              request_pid = RequestPid,
@@ -3436,9 +3496,11 @@ duo_process_queue(NewServiceState,
             State#state_duo{queue_requests = false,
                             queued = NewQueue,
                             service_state = NewServiceState};
-        {{value, {'cloudi_service_send_async', Name, Pattern,
-                  RequestInfo, Request,
-                  _, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_async', Name, Pattern,
+            RequestInfo, Request,
+            _, Priority, TransId, Source}}}, NewQueue} ->
             Timeout = case erlang:cancel_timer(dict:fetch(TransId,
                                                           RecvTimeouts)) of
                 false ->
@@ -3450,6 +3512,7 @@ duo_process_queue(NewServiceState,
             State#state_duo{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
+                queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
                     {'cloudi_service_request_loop',
                      'send_async', Name, Pattern,
@@ -3458,9 +3521,11 @@ duo_process_queue(NewServiceState,
                      NewServiceState, Dispatcher,
                      Module, NewConfigOptions}, NewConfigOptions, DuoModePid),
                 options = NewConfigOptions};
-        {{value, {'cloudi_service_send_sync', Name, Pattern,
-                  RequestInfo, Request,
-                  _, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_sync', Name, Pattern,
+            RequestInfo, Request,
+            _, Priority, TransId, Source}}}, NewQueue} ->
             Timeout = case erlang:cancel_timer(dict:fetch(TransId,
                                                           RecvTimeouts)) of
                 false ->
@@ -3472,6 +3537,7 @@ duo_process_queue(NewServiceState,
             State#state_duo{
                 recv_timeouts = dict:erase(TransId, RecvTimeouts),
                 queued = NewQueue,
+                queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
                     {'cloudi_service_request_loop',
                      'send_sync', Name, Pattern,

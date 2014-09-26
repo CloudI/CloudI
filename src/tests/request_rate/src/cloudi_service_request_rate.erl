@@ -72,6 +72,8 @@
 %  Ubuntu 12.04.2 LTS (GNU/Linux 3.2.0-29-generic x86_64)
 %  Erlang R16B03-1 (with lock counting, so probably slower than possible)
 %
+%
+% Basic Speed Test:
 % Max Stable (Total) Request Rate (during informal testing):
 %  requests/second dest_refresh_method duo_mode sender receiver
 %             1000           immediate    false      1        1
@@ -84,6 +86,17 @@
 %  duo_mode is set on cloudi_service_request_rate when true
 %  sender is the number of cloudi_service_request_rate processes while
 %  receiver is the number of cloudi_service_http_req processes)
+%
+% Basic Memory Test:
+% Max Stable (Total) Request Rate (during informal testing):
+%  requests/second dest_refresh_method duo_mode sender receiver queue_size(kB)
+%               45           immediate    false      1        1            512 
+%              731           immediate    false      1        1           8192
+%             1114           immediate    false      1        1         131072
+%               28                lazy     true      1        1            512 
+%              435                lazy     true      1        1           8192
+%             7347                lazy     true      1        1         131072
+
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,
@@ -237,18 +250,19 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
                             request_rate_stable = RequestRateStable,
                             request_rate_max = RequestRateMax} = Dynamic,
                    RequestRateComplete, TickLength) ->
-    % result will be within 5%
-    Offset = erlang:max(erlang:round(RequestRateComplete * 0.05) - 1, 0),
+    % result will be within 5% (or 1 request)
+    Offset = erlang:max(erlang:round(RequestRateComplete * 0.05) - 1, 1),
     RequestRateCompleteOffset = erlang:round(RequestRateComplete) + Offset,
     #dynamic{request_rate = RequestRateNew,
              count_stable = CountStableNew} = DynamicNew = if
         RequestRateOld =< RequestRateCompleteOffset ->
+            % success sending the request_rate
             if
                 RequestRateMax =:= undefined ->
                     Dynamic#dynamic{
                         request_rate = RequestRateOld * 2};
                 is_integer(RequestRateMax),
-                RequestRateOld < RequestRateMax ->
+                RequestRateOld =< RequestRateMax ->
                     I = RequestRateMax - RequestRateOld,
                     if
                         I =< Offset ->
@@ -257,25 +271,29 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
                                 request_rate_stable = RequestRateOld};
                         true ->
                             Delta = erlang:max(erlang:round(I / 2.0), 1),
+                            RequestRateNext = RequestRateOld + Delta,
                             Dynamic#dynamic{
-                                request_rate = RequestRateOld + Delta}
+                                request_rate = RequestRateNext}
                     end
             end;
         RequestRateOld > RequestRateCompleteOffset ->
-            if
-                CountStable >= CountStableMax ->
-                    ?LOG_WARN("failed ~p requests/second after ~p ticks",
-                              [RequestRateStable, CountStable + 1]);
-                true ->
-                    ok
-            end,
+            % failed to send the request_rate
             I = RequestRateOld - RequestRateComplete,
             Delta = erlang:max(erlang:round(I / 2.0), 1),
+            RequestRateNext = erlang:max(RequestRateOld - Delta, 1),
+            RequestRateMaxNext = if
+                CountStable >= CountStableMax ->
+                    ?LOG_WARN("failed ~p requests/second after ~p ticks",
+                              [RequestRateStable, CountStable + 1]),
+                    RequestRateStable - 1;
+                true ->
+                    RequestRateOld
+            end,
             Dynamic#dynamic{
                 count_stable = 0,
-                request_rate = erlang:max(RequestRateOld - Delta, 1),
+                request_rate = RequestRateNext,
                 request_rate_stable = undefined,
-                request_rate_max = RequestRateOld}
+                request_rate_max = RequestRateMaxNext}
     end,
     if
         CountStableNew == 0 ->

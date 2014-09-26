@@ -92,7 +92,6 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -type pqueue4() ::
     {integer() | 'empty', % current priority
      integer(),           % total size
@@ -129,76 +128,6 @@
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()},
      {queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue(),
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()}}.
--else.
--type pqueue4() ::
-    {integer() | 'empty', % current priority
-     integer(),           % total size
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     queue:queue(),
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()}}.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -246,7 +175,7 @@ filter(F, P, Q) when is_function(F, 1) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec in(term(), pqueue4()) -> pqueue4().
+-spec in(any(), pqueue4()) -> pqueue4().
 
 in(X, Q) ->
     in(X, 0, Q).
@@ -258,7 +187,7 @@ in(X, Q) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec in(term(), integer(), pqueue4()) -> pqueue4().
+-spec in(any(), integer(), pqueue4()) -> pqueue4().
 
 in(_, P, _)
     when P < -128; P > 128 ->
@@ -362,7 +291,7 @@ new() ->
 %%-------------------------------------------------------------------------
 
 -spec out(pqueue4()) ->
-    {{'value', term()}, pqueue4()} | {'empty', pqueue4()}.
+    {{'value', any()}, pqueue4()} | {'empty', pqueue4()}.
 
 out({empty, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
     {empty, Q};
@@ -377,7 +306,7 @@ out({Pc, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
 %%-------------------------------------------------------------------------
 
 -spec out(integer(), pqueue4()) ->
-    {{'value', term()}, pqueue4()} | {'empty', pqueue4()}.
+    {{'value', any()}, pqueue4()} | {'empty', pqueue4()}.
 
 out(P, _)
     when P < -128; P > 128 ->
@@ -396,7 +325,7 @@ out(P, Q) ->
 %%-------------------------------------------------------------------------
 
 -spec pout(pqueue4()) ->
-    {{'value', term(), integer()}, pqueue4()} | {'empty', pqueue4()}.
+    {{'value', any(), integer()}, pqueue4()} | {'empty', pqueue4()}.
 
 pout({empty, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = Q) ->
     {empty, Q};
@@ -455,7 +384,7 @@ remove_unique(F, P, Q) when is_function(F, 1) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec to_list(pqueue4()) -> list(term()).
+-spec to_list(pqueue4()) -> list().
 
 to_list(Q) ->
     to_list([], out(Q)).
@@ -471,7 +400,7 @@ to_list(L, {{value, Value}, Q}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec to_plist(pqueue4()) -> list({integer(), term()}).
+-spec to_plist(pqueue4()) -> list({integer(), list()}).
 
 to_plist(Q) ->
     to_plist([], [], undefined, pout(Q)).
@@ -11596,15 +11525,9 @@ proper_test_() ->
 %% (based on the implementation of queue:filter/2 which is under the EPL)
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -spec queue_remove_unique(F :: fun((any()) -> boolean()),
                           queue()) ->
     {boolean(), queue()}.
--else.
--spec queue_remove_unique(F :: fun((any()) -> boolean()),
-                          queue:queue()) ->
-    {boolean(), queue:queue()}.
--endif.
 queue_remove_unique(Fun, {R0, F0} = Q)
     when is_function(Fun, 1), is_list(R0), is_list(F0) ->
     case queue_remove_unique_f(Fun, F0) of

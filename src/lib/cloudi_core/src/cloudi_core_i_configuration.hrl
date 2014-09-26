@@ -132,6 +132,11 @@
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined
             :: undefined | pos_integer(),
+        % a limit on the total amount of memory incoming service requests may
+        % consume within the queue while the service is busy,
+        % (configured in kilobytes and stored as bytes)
+        queue_size = undefined
+            :: undefined | pos_integer(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
         dest_refresh_start = ?DEFAULT_DEST_REFRESH_START

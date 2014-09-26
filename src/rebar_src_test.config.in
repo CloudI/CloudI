@@ -34,6 +34,7 @@
   "lib/cloudi_service_work_manager",
   "lib/cloudi_service_zeromq",
   "lib/cpg",
+  "lib/erlang_term",
   "lib/key2value",
   "lib/keys1value",
   "lib/pqueue",

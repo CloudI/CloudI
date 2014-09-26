@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add queue_size service configuration option for both internal and
+      external services so a kilobyte limit can be used for the size of a
+      service queue
+    * Add the erlang_term dependency
+
 2014-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix event consumption based on more testing

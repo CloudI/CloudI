@@ -101,6 +101,8 @@
         queue_requests = true,         % is the external process busy?
         queued = cloudi_x_pqueue4:new(),     % queued incoming requests
         % unique state elements
+        queued_size = 0,               % queued size in bytes
+        queued_word_size,              % erlang:system_info(wordsize)
         protocol,                      % tcp, udp, or local
         port,                          % port number used
         initialize = false,            % ready to send init
@@ -228,6 +230,7 @@ init([Protocol, SocketPath,
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
         {ok, State} ->
             cloudi_x_quickrand:seed(),
+            WordSize = erlang:system_info(wordsize),
             NewConfigOptions =
                 check_init_receive(check_init_send(ConfigOptions)),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
@@ -260,6 +263,7 @@ init([Protocol, SocketPath,
                                       NewConfigOptions),
             {ok, 'CONNECT',
              State#state{dispatcher = Dispatcher,
+                         queued_word_size = WordSize,
                          process_index = ProcessIndex,
                          process_count = ProcessCount,
                          command_line = CommandLine,
@@ -859,8 +863,11 @@ handle_info({SendType, _, _,
              _, _, Timeout, Priority, TransId, _} = T, StateName,
             #state{queue_requests = true,
                    queued = Queue,
+                   queued_size = QueuedSize,
+                   queued_word_size = WordSize,
                    options = #config_service_options{
-                       queue_limit = QueueLimit}} = State)
+                       queue_limit = QueueLimit,
+                       queue_size = QueueSize}} = State)
     when SendType =:= 'cloudi_service_send_async';
          SendType =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
@@ -869,30 +876,47 @@ handle_info({SendType, _, _,
         true ->
             true
     end,
+    {QueueSizeOk, Size} = if
+        QueueSize /= undefined ->
+            QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
+            {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
+        true ->
+            {true, 0}
+    end,
     if
-        QueueLimitOk ->
+        QueueLimitOk, QueueSizeOk ->
             {next_state, StateName,
-             recv_timeout_start(Timeout, Priority, TransId, T, State)};
+             recv_timeout_start(Timeout, Priority, TransId,
+                                Size, T, State)};
         true ->
             {next_state, StateName, State}
     end;
 
-handle_info({'cloudi_service_recv_timeout', Priority, TransId}, StateName,
+handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size}, StateName,
             #state{recv_timeouts = RecvTimeouts,
                    queue_requests = QueueRequests,
-                   queued = Queue} = State) ->
-    NewQueue = if
+                   queued = Queue,
+                   queued_size = QueuedSize} = State) ->
+    {NewQueue, NewQueuedSize} = if
         QueueRequests =:= true ->
-            F = fun({_, _, _, _, _, _, _, Id, _}) -> Id == TransId end,
-            {_, % could be false if a timer message was sent while cancelling
+            F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
+            {Removed,
              NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
-            NextQueue;
+            NextQueuedSize = if
+                Removed =:= true ->
+                    QueuedSize - Size;
+                Removed =:= false ->
+                    % false if a timer message was sent while cancelling
+                    QueuedSize
+            end,
+            {NextQueue, NextQueuedSize};
         true ->
-            Queue
+            {Queue, QueuedSize}
     end,
     {next_state, StateName,
      State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
-                 queued = NewQueue}};
+                 queued = NewQueue,
+                 queued_size = NewQueuedSize}};
 
 handle_info({'cloudi_service_return_async', _Name, _Pattern,
              ResponseInfo, Response, OldTimeout, TransId, Source}, StateName,
@@ -1602,31 +1626,36 @@ send(Data, #state{protocol = Protocol,
             gen_udp:send(Socket, {127,0,0,1}, Port, Data)
     end.
 
-recv_timeout_start(Timeout, Priority, TransId, T,
+recv_timeout_start(Timeout, Priority, TransId, Size, T,
                    #state{dispatcher = Dispatcher,
                           recv_timeouts = RecvTimeouts,
-                          queued = Queue} = State)
+                          queued = Queue,
+                          queued_size = QueuedSize} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state{
         recv_timeouts = dict:store(TransId,
             erlang:send_after(Timeout, Dispatcher,
-                {'cloudi_service_recv_timeout', Priority, TransId}),
+                {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
-        queued = cloudi_x_pqueue4:in(T, Priority, Queue)}.
+        queued = cloudi_x_pqueue4:in({Size, T}, Priority, Queue),
+        queued_size = QueuedSize + Size}.
 
 process_queue(#state{dispatcher = Dispatcher,
                      recv_timeouts = RecvTimeouts,
                      queue_requests = true,
                      queued = Queue,
+                     queued_size = QueuedSize,
                      service_state = ServiceState,
                      options = ConfigOptions} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
         {empty, NewQueue} ->
             State#state{queue_requests = false,
                         queued = NewQueue};
-        {{value, {'cloudi_service_send_async',
-                  Name, Pattern, RequestInfo, Request,
-                  OldTimeout, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_async',
+            Name, Pattern, RequestInfo, Request,
+            OldTimeout, Priority, TransId, Source}}}, NewQueue} ->
             Type = 'send_async',
             NewConfigOptions = check_incoming(true, ConfigOptions),
             #config_service_options{
@@ -1664,6 +1693,7 @@ process_queue(#state{dispatcher = Dispatcher,
                     State#state{recv_timeouts = dict:erase(TransId,
                                                            RecvTimeouts),
                                 queued = NewQueue,
+                                queued_size = QueuedSize - Size,
                                 service_state = NewServiceState,
                                 aspects_request_after_f = AspectsRequestAfterF,
                                 options = NewConfigOptions};
@@ -1679,9 +1709,11 @@ process_queue(#state{dispatcher = Dispatcher,
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
                     State#state{options = NewConfigOptions}
             end;
-        {{value, {'cloudi_service_send_sync',
-                  Name, Pattern, RequestInfo, Request,
-                  OldTimeout, Priority, TransId, Source}}, NewQueue} ->
+        {{value,
+          {Size,
+           {'cloudi_service_send_sync',
+            Name, Pattern, RequestInfo, Request,
+            OldTimeout, Priority, TransId, Source}}}, NewQueue} ->
             Type = 'send_sync',
             NewConfigOptions = check_incoming(true, ConfigOptions),
             #config_service_options{
@@ -1719,6 +1751,7 @@ process_queue(#state{dispatcher = Dispatcher,
                     State#state{recv_timeouts = dict:erase(TransId,
                                                            RecvTimeouts),
                                 queued = NewQueue,
+                                queued_size = QueuedSize - Size,
                                 service_state = NewServiceState,
                                 aspects_request_after_f = AspectsRequestAfterF,
                                 options = NewConfigOptions};
