@@ -84,8 +84,9 @@ run_test(TestDir, LogDir, Config, _File) ->
                  true ->
                      " 2>&1 | tee -a " ++ RawLog
              end,
-
+    Waiter = waiter_start(),
     rebar_utils:sh(Cmd ++ Output, [{env,[{"TESTDIR", TestDir}]}]),
+    waiter_stop(Waiter),
     check_log(Config, RawLog).
 
 clear_log(LogDir, RawLog) ->
@@ -97,6 +98,28 @@ clear_log(LogDir, RawLog) ->
         {error, Reason} ->
             ?ERROR("Could not create log dir - ~p\n", [Reason]),
             ?FAIL
+    end.
+
+waiter_start_loop() ->
+    Interval = 10, % seconds
+    receive
+        done ->
+            ok
+    after
+        Interval * 1000 ->
+            ?CONSOLE("CT was processing for ~w seconds...\n", [Interval]),
+            waiter_start_loop()
+    end.
+
+waiter_start() ->
+    erlang:spawn_link(fun waiter_start_loop/0).
+
+waiter_stop(Pid) ->
+    MonitorRef = erlang:monitor(process, Pid),
+    Pid ! done,
+    receive
+        {'DOWN', MonitorRef, process, Pid, _} ->
+            ok
     end.
 
 %% calling ct with erl does not return non-zero on failure - have to check

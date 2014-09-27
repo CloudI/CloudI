@@ -4,6 +4,8 @@
 2014-09-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update erlang_term
+    * Fix rebar to have output during CT execution pauses so that Travis
+      doesn't kill the build during the testing phase
 
 2014-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
