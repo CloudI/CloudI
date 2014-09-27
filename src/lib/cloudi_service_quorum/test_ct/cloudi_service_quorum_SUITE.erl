@@ -101,7 +101,7 @@ end_per_group(_GroupName, Config) ->
 
 init_per_testcase(TestCase, Config) ->
     error_logger:info_msg("~p init~n", [TestCase]),
-    io:fwrite(standard_error, "~p init~n", [TestCase]),
+    stdout("\r\n~p init\r\n", [TestCase]),
     {ok, Services} = cloudi_service_api:services(infinity),
     lists:foreach(fun({ServiceId, _}) ->
         cloudi_service_api:services_remove([ServiceId], infinity)
@@ -112,7 +112,7 @@ init_per_testcase(TestCase, Config) ->
 end_per_testcase(TestCase, Config) ->
     error_logger:tty(true),
     error_logger:info_msg("~p end~n", [TestCase]),
-    io:fwrite(standard_error, "~p end~n", [TestCase]),
+    stdout("~p end\r\n", [TestCase]),
     Config.
 
 %%%------------------------------------------------------------------------
@@ -357,4 +357,10 @@ request() ->
 
 request_info() ->
     binary(1).
+
+stdout(Format, Args) ->
+    Direct = erlang:open_port({fd, 0, 1}, [out, {line, 256}]),
+    erlang:port_command(Direct, io_lib:format(Format, Args)),
+    erlang:port_close(Direct),
+    ok.
 
