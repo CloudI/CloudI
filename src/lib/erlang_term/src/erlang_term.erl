@@ -103,5 +103,5 @@ byte_size_term(Term, WordSize) ->
             0
     end,
     % stack/register size + heap size + data size
-    (1 + erts_debug:flat_size(Term) + DataSize) * WordSize.
+    (1 + erts_debug:flat_size(Term)) * WordSize + DataSize.
 
