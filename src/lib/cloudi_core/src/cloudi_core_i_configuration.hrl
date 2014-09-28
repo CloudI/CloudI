@@ -131,7 +131,7 @@
         % a limit on the total number of incoming service requests that
         % are queued while the service is busy (limits memory consumption)
         queue_limit = undefined
-            :: undefined | pos_integer(),
+            :: undefined | non_neg_integer(),
         % a limit on the total amount of memory incoming service requests may
         % consume within the queue while the service is busy,
         % (configured in kilobytes and stored as bytes)

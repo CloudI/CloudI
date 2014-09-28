@@ -280,7 +280,8 @@
 
 -type service_options_internal() ::
     list({priority_default, priority()} |
-         {queue_limit, undefined | pos_integer()} |
+         {queue_limit, undefined | non_neg_integer()} |
+         {queue_size, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -329,7 +330,8 @@
          {reload, boolean()}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
-         {queue_limit, undefined | pos_integer()} |
+         {queue_limit, undefined | non_neg_integer()} |
+         {queue_size, undefined | pos_integer()} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
