@@ -93,22 +93,28 @@ cloudi_service_init(_Args, Prefix, Dispatcher) ->
     % newer service names should be preferred to provide a
     % content-type hint as a file extension
     CloudIServiceAPI = lists:foldl(fun({Method, Arity}, Functions) ->
-        F = fun cloudi_service_api:Method/Arity,
         MethodName = erlang:atom_to_list(Method),
         % new service names are (prefix)rpc/(method)(format-extension)
         FormatMethodNew = "rpc/" ++ MethodName ++ ".erl",
         cloudi_service:subscribe(Dispatcher, FormatMethodNew),
-        if
+        Fnew = if
             Arity == 1 ->
                 cloudi_service:subscribe(Dispatcher,
-                                         FormatMethodNew ++ "/get");
+                                         FormatMethodNew ++ "/get"),
+                fun(Arg1) ->
+                    cloudi_service_api_call(Method, Arg1)
+                end;
             Arity == 2 ->
                 cloudi_service:subscribe(Dispatcher,
-                                         FormatMethodNew ++ "/post")
+                                         FormatMethodNew ++ "/post"),
+                fun(Arg1, Arg2) ->
+                    cloudi_service_api_call(Method, Arg1, Arg2)
+                end
         end,
         % old service names are (prefix)(format)/(method)
         FormatMethodOld = "erlang/" ++ MethodName,
         cloudi_service:subscribe(Dispatcher, FormatMethodOld),
+        Fold = fun cloudi_service_api:Method/Arity,
         if
             Arity == 1 ->
                 cloudi_service:subscribe(Dispatcher,
@@ -117,8 +123,8 @@ cloudi_service_init(_Args, Prefix, Dispatcher) ->
                 cloudi_service:subscribe(Dispatcher,
                                          FormatMethodOld ++ "/post")
         end,
-        cloudi_x_trie:store(MethodName ++ ".erl", F,
-            cloudi_x_trie:store(MethodName, F, Functions))
+        cloudi_x_trie:store(MethodName ++ ".erl", Fnew,
+            cloudi_x_trie:store(MethodName, Fold, Functions))
     end, cloudi_x_trie:new(),
     cloudi_x_reltool_util:module_exports(cloudi_service_api)),
     % new service names for JSON-RPC are:
@@ -260,4 +266,33 @@ format_json_rpc(_, undefined, Input, Timeout, Functions) ->
                 null, 0, cloudi_string:term_to_binary(Error), Id
             )
     end.
+
+cloudi_service_api_call(services = Method, Timeout) ->
+    case cloudi_service_api:Method(Timeout) of
+        {ok, L} ->
+            {ok, [{cloudi_x_uuid:uuid_to_string(UUID), Data} ||
+                  {UUID, Data} <- L]};
+        {error, _} = Error ->
+            Error
+    end;
+cloudi_service_api_call(Method, Timeout) ->
+    cloudi_service_api:Method(Timeout).
+
+cloudi_service_api_call(services_search = Method, Input, Timeout) ->
+    case cloudi_service_api:Method(Input, Timeout) of
+        {ok, L} ->
+            {ok, [{cloudi_x_uuid:uuid_to_string(UUID), Data} ||
+                  {UUID, Data} <- L]};
+        {error, _} = Error ->
+            Error
+    end;
+cloudi_service_api_call(services_add = Method, Input, Timeout) ->
+    case cloudi_service_api:Method(Input, Timeout) of
+        {ok, L} ->
+            {ok, [cloudi_x_uuid:uuid_to_string(UUID) || UUID <- L]};
+        {error, _} = Error ->
+            Error
+    end;
+cloudi_service_api_call(Method, Input, Timeout) ->
+    cloudi_service_api:Method(Input, Timeout).
 

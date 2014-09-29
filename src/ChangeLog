@@ -10,6 +10,8 @@
       memory consumption
         * Use it in cloudi_service_http_cowboy and cloudi_service_http_elli
           to minimize connection process memory consumption
+    * Update cloudi_service_api_requests to make the new URL paths provide
+      string UUIDs so the output is more intuitive
 
 2014-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
