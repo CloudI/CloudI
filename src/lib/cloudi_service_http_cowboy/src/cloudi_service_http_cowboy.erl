@@ -400,7 +400,6 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_boolean(UseClientIpPrefix),
     true = is_boolean(UseMethodSuffix),
     false = lists:member($*, Prefix),
-    ContentTypeLookup = cloudi_response_info:lookup_content_type(),
     {_, Scope} = lists:keyfind(groups_scope, 1,
                                cloudi_service:context_options(Dispatcher)),
     Dispatch = cloudi_x_cowboy_router:compile([
@@ -437,8 +436,7 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                     use_websockets = UseWebSockets,
                     use_host_prefix = UseHostPrefix,
                     use_client_ip_prefix = UseClientIpPrefix,
-                    use_method_suffix = UseMethodSuffix,
-                    content_type_lookup = ContentTypeLookup}}]}
+                    use_method_suffix = UseMethodSuffix}}]}
     ]),
     Service = cloudi_service:self(Dispatcher),
     StartFunction = if

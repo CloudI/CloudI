@@ -81,7 +81,6 @@
         use_host_prefix           :: boolean(),
         use_client_ip_prefix      :: boolean(),
         use_method_suffix         :: boolean(),
-        content_type_lookup       :: undefined | cloudi_x_trie:cloudi_x_trie(),
         websocket_state           :: tuple()
     }).
 

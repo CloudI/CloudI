@@ -49,7 +49,6 @@
         output_type,
         default_content_type,
         use_host_prefix,
-        use_method_suffix,
-        content_type_lookup
+        use_method_suffix
     }).
 

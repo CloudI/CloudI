@@ -125,8 +125,7 @@ handle(Req0,
                      status_code_timeout = StatusCodeTimeout,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
-                     use_method_suffix = UseMethodSuffix,
-                     content_type_lookup = ContentTypeLookup
+                     use_method_suffix = UseMethodSuffix
                      } = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
@@ -239,8 +238,7 @@ handle(Req0,
                     {HttpCode,
                      Req} = handle_response(NameIncoming, HeadersOutgoing,
                                             Response, ReqN0, OutputType,
-                                            ContentTypeForced,
-                                            ContentTypeLookup),
+                                            ContentTypeForced),
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                                      [HttpCode, Method,
                                       NameIncoming, NameOutgoing,
@@ -443,7 +441,6 @@ websocket_init(_Transport, Req0,
                              State#cowboy_state{
                                  websocket_ping = WebSocketPingStatus,
                                  websocket_subscriptions = undefined,
-                                 content_type_lookup = undefined,
                                  websocket_state = #websocket_state{
                                      name_incoming = NameIncoming,
                                      name_outgoing = NameOutgoing,
@@ -1180,8 +1177,7 @@ handle_request_multipart_receive([_ | _] = TransIdList, Req,
     end.
 
 handle_response(NameIncoming, HeadersOutgoing0, Response,
-                ReqN, OutputType, ContentTypeForced,
-                ContentTypeLookup) ->
+                ReqN, OutputType, ContentTypeForced) ->
     ResponseBinary = if
         (((OutputType =:= external) orelse
           (OutputType =:= internal)) andalso
@@ -1213,7 +1209,8 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
                 true ->
-                    case cloudi_x_trie:find(Extension, ContentTypeLookup) of
+                    case cloudi_response_info:
+                         lookup_content_type(binary, Extension) of
                         error ->
                             [{<<"content-disposition">>,
                               ["attachment; filename=\"",

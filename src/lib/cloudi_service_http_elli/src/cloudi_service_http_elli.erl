@@ -119,15 +119,13 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseMethodSuffix),
     false = lists:member($*, Prefix),
-    ContentTypeLookup = cloudi_response_info:lookup_content_type(),
     CallbackArgs = #elli_state{dispatcher =
                                    cloudi_service:dispatcher(Dispatcher),
                                context = create_context(Dispatcher),
                                output_type = OutputType,
                                default_content_type = DefaultContentType1,
                                use_host_prefix = UseHostPrefix,
-                               use_method_suffix = UseMethodSuffix,
-                               content_type_lookup = ContentTypeLookup},
+                               use_method_suffix = UseMethodSuffix},
     {ok, ListenerPid} =
         cloudi_x_elli:start_link([{name, undefined},
                                   {callback, cloudi_http_elli_handler},

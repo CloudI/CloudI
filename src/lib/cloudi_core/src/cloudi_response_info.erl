@@ -52,7 +52,8 @@
 
 %% external interface
 -export([lookup_content_type/0,
-         lookup_content_type/1]).
+         lookup_content_type/1,
+         lookup_content_type/2]).
 
 -include("cloudi_response_info.hrl").
 
@@ -86,6 +87,29 @@ lookup_content_type(binary) ->
 lookup_content_type(list) ->
     cloudi_x_trie:new([{E, {T, erlang:binary_to_list(V)}}
                        || {E, {T, V}} <- lookup_content_type_data()]).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Perform a lookup on a file extension with temporary data to minimize memory consumption.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec lookup_content_type(Format :: binary | list,
+                          FileExtension :: string()) ->
+    {ok, {request | attachment, binary() | string()}} | error.
+
+lookup_content_type(Format, FileExtension) ->
+    case lists:keyfind(FileExtension, 1, lookup_content_type_data()) of
+        {_, {Type, Value} = Result} ->
+            if
+                Format =:= binary ->
+                    {ok, Result};
+                Format =:= list ->
+                    {ok, {Type, erlang:binary_to_list(Value)}}
+            end;
+        false ->
+            error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

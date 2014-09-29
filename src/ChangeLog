@@ -6,6 +6,10 @@
     * Update erlang_term
     * Add a script to update mimetypes based on file extensions and use it
       to provide the internal cloudi_core header file
+    * Add cloudi_response_info:lookup_content_type/2 to avoid
+      memory consumption
+        * Use it in cloudi_service_http_cowboy and cloudi_service_http_elli
+          to minimize connection process memory consumption
 
 2014-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -78,8 +78,7 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
                         output_type = OutputType,
                         default_content_type = DefaultContentType,
                         use_host_prefix = UseHostPrefix,
-                        use_method_suffix = UseMethodSuffix,
-                        content_type_lookup = ContentTypeLookup}) ->
+                        use_method_suffix = UseMethodSuffix}) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     Method = cloudi_x_elli_request:method(Req),
     HeadersIncoming0 = cloudi_x_elli_request:headers(Req),
@@ -162,8 +161,7 @@ handle(Req, #elli_state{dispatcher = Dispatcher,
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {HttpCode, _, _} = Result =
                 return_response(NameIncoming, HeadersOutgoing, Response,
-                                OutputType, DefaultContentType,
-                                ContentTypeLookup),
+                                OutputType, DefaultContentType),
             ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                              [HttpCode, Method, NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
@@ -258,8 +256,7 @@ request_time_end_error(HttpCode, Method, NameIncoming,
                 RequestStartMicroSec) / 1000.0, Reason]).
 
 return_response(NameIncoming, HeadersOutgoing, Response,
-                OutputType, DefaultContentType,
-                ContentTypeLookup) ->
+                OutputType, DefaultContentType) ->
     ResponseBinary = if
         (((OutputType =:= external) orelse
           (OutputType =:= internal)) andalso
@@ -282,7 +279,8 @@ return_response(NameIncoming, HeadersOutgoing, Response,
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
                 true ->
-                    case cloudi_x_trie:find(Extension, ContentTypeLookup) of
+                    case cloudi_response_info:
+                         lookup_content_type(binary, Extension) of
                         error ->
                             [{<<"content-disposition">>,
                               erlang:iolist_to_binary([
