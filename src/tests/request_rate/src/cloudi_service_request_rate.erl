@@ -90,12 +90,16 @@
 % Basic Memory Test:
 % Max Stable (Total) Request Rate (during informal testing):
 %  requests/second dest_refresh_method duo_mode sender receiver queue_size(kB)
-%               45           immediate    false      1        1            512 
-%              731           immediate    false      1        1           8192
-%             1114           immediate    false      1        1         131072
-%               28                lazy     true      1        1            512 
-%              435                lazy     true      1        1           8192
-%             7347                lazy     true      1        1         131072
+%              149           immediate    false      1        1            512 
+%             1049           immediate    false      1        1           4096
+%             1125           immediate    false      1        1         131072
+%               97                lazy     true      1        1            512 
+%              772                lazy     true      1        1           4096
+%             8128                lazy     true      1        1         131072
+%
+%  requests/second dest_refresh_method duo_mode sender receiver    queue_limit
+%                1           immediate    false      1        1              0
+%                1                lazy     true      1        1              0
 
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").

@@ -97,7 +97,14 @@ byte_size_terms_in_tuple(I, Size, Term, WordSize) ->
 byte_size_term(Term, WordSize) ->
     DataSize = if
         is_binary(Term) ->
-            erlang:byte_size(Term);
+            BinarySize = erlang:byte_size(Term),
+            if
+                BinarySize > 64 ->
+                    BinarySize;
+                true ->
+                    % in the heap size
+                    0
+            end;
         true ->
             0
     end,
