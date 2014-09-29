@@ -54,6 +54,10 @@
 -export([byte_size/1,
          byte_size/2]).
 
+-compile({no_auto_import,
+          [byte_size/1,
+           byte_size/2]}).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -110,4 +114,29 @@ byte_size_term(Term, WordSize) ->
     end,
     % stack/register size + heap size + data size
     (1 + erts_debug:flat_size(Term)) * WordSize + DataSize.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+internal_test() ->
+    true = (7 == (1 + erts_debug:flat_size(<<1:520>>))),
+    % doesn't work in console shell
+    % (process heap size of binary is excluded
+    %  when executed in the console shell)
+    true = (11 == (1 + erts_debug:flat_size(<<1:512>>))),
+    true = (4 == (1 + erts_debug:flat_size(<<1:8>>))),
+
+    24 = byte_size(<<>>, 8),
+    32 = byte_size(<<"abc">>, 8),
+    32 = byte_size(<<$a, $b, $c>>, 8),
+    8 = byte_size([], 8),
+    24 = byte_size([0], 8),
+    16 = byte_size({}, 8),
+    24 = byte_size({0}, 8),
+    8 = byte_size(0, 8),
+    8 = byte_size(erlang:self(), 8),
+    8 = byte_size(atom, 8),
+    ok.
+
+-endif.
 
