@@ -16,8 +16,8 @@ Size information should match the [Erlang Efficiency Guide memory information](h
   * On 32-bit architectures: 4 words
   * On 64-bit architectures: 3 words
 * Binary: 3..6 + data
-* List: 1 word + `2 word per element` + the size of each element
-* Tuple: 2 words + `1 word per element` + the size of each element
+* List: 1 word + 1 word per element + the size of each element
+* Tuple: 2 words + the size of each element
 * Pid:
   * From local node: 1 word
   * From remote node: 5 words

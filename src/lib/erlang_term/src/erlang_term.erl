@@ -68,17 +68,15 @@ byte_size(Term, WordSize) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-byte_size_terms([] = Term, WordSize) ->
-    byte_size_term(Term, WordSize);
 byte_size_terms(Term, WordSize)
     when is_list(Term) ->
-    byte_size_term(Term, WordSize) +
+    1 * WordSize +
     byte_size_terms_in_list(Term, WordSize);
-byte_size_terms({} = Term, WordSize) ->
-    byte_size_term(Term, WordSize);
+byte_size_terms({}, WordSize) ->
+    2 * WordSize;
 byte_size_terms(Term, WordSize)
     when is_tuple(Term) ->
-    byte_size_term(Term, WordSize) +
+    2 * WordSize +
     byte_size_terms_in_tuple(1, erlang:tuple_size(Term), Term, WordSize);
 byte_size_terms(Term, WordSize) ->
     byte_size_term(Term, WordSize).
@@ -86,6 +84,7 @@ byte_size_terms(Term, WordSize) ->
 byte_size_terms_in_list([], _) ->
     0;
 byte_size_terms_in_list([Term | L], WordSize) ->
+    1 * WordSize +
     byte_size_terms(Term, WordSize) +
     byte_size_terms_in_list(L, WordSize).
 
