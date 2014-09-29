@@ -4,6 +4,8 @@
 2014-09-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update erlang_term
+    * Add a script to update mimetypes based on file extensions and use it
+      to provide the internal cloudi_core header file
 
 2014-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 

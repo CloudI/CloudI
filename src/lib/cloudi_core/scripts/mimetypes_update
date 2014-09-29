@@ -1,0 +1,75 @@
+#!/usr/bin/env escript
+%%!
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+
+% execute the script in its directory for the hard-coded output path
+
+-author('mjtruog [at] gmail (dot) com').
+
+-mode(compile).
+
+main(_) ->
+    {ok, IncludeFile} = file:open("../src/cloudi_response_info.hrl", [write]),
+    Defaults = [{".erl",    {request, <<"application/x-erlang">>}},
+                {".config", {attachment, <<"application/x-erlang">>}},
+                {".txt",    {request, <<"text/plain">>}},
+                {".json",   {request, <<"application/json">>}},
+                {".xml",    {request, <<"text/xml">>}},
+                {".csv",    {request, <<"text/csv">>}},
+                {".htm",    {request, <<"text/html">>}},
+                {".html",   {request, <<"text/html">>}}],
+    ok = shell("curl -O "
+               "http://svn.apache.org/repos"
+               "/asf/httpd/httpd/trunk/docs/conf/mime.types", []),
+    {ok, Pattern} = re:compile("^([a-z]\\S*)\\s*(\\S+.*)$"),
+    {ok, MimeTypesData} = file:read_file("mime.types"),
+    ExtensionsType = lists:filtermap(fun(Line) ->
+        case Line of
+            <<>> ->
+                false;
+            <<$#, _/binary>> ->
+                false;
+            _ ->
+                {match,
+                 [[Type,
+                   Extensions]]} = re:run(Line, Pattern,
+                                          [global,
+                                           {capture, all_but_first, binary}]),
+                ExtensionList = lists:filtermap(fun(Extension) ->
+                    if
+                        Extension /= <<>> ->
+                            {true, [$. | erlang:binary_to_list(Extension)]};
+                        true ->
+                            false
+                    end
+                end, binary:split(Extensions,
+                                  [<<" ">>, <<"\t">>], [global, trim])),
+                {true, {ExtensionList, Type}}
+        end
+    end, binary:split(MimeTypesData, <<"\n">>, [global])),
+    MimeTypes0 = lists:foldl(fun({ExtensionList, Type}, L) ->
+        L ++ [{Extension, {attachment, Type}} || Extension <- ExtensionList]
+    end, [], ExtensionsType),
+    MimeTypesN = lists:foldl(fun({Extension, ModeType}, L) ->
+        lists:keystore(Extension, 1, L, {Extension, ModeType})
+    end, MimeTypes0, Defaults),
+    io:fwrite(IncludeFile,
+              "-define(LOOKUP_CONTENT_TYPE_DATA,~n"
+              "~p).~n",[MimeTypesN]),
+    ok = file:close(IncludeFile),
+    exit_code(0).
+
+shell(Command, Arguments) ->
+    CommandSuffix = " && printf 0 || printf 1",
+    case lists:reverse(os:cmd(lists:flatten(
+        io_lib:format(Command ++ CommandSuffix, Arguments)))) of
+        [$0 | _] ->
+            ok;
+        [$1 | _] ->
+            io:format("\"~s\" failed!~n", [io_lib:format(Command, Arguments)]),
+            error
+    end.
+
+exit_code(ExitCode) ->
+    erlang:halt(ExitCode, [{flush, true}]).
