@@ -4,6 +4,7 @@
 2014-10-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes for Erlang 17.3 changes
+    * Update pqueue
 
 2014-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 

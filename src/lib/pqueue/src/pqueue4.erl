@@ -692,11 +692,15 @@ test() ->
     {empty, Q164} = pqueue4:out(20, Q164),
 
     Queue0 = queue:new(),
+    "{[],[]}" = lists:flatten(io_lib:format("~p", [Queue0])),
     Queue1 = queue:in(1, Queue0),
     Queue2 = queue:in(2, Queue1),
     Queue3 = queue:in(3, Queue2),
     {{value, 1}, _} = queue:out(Queue2),
-    {true, Queue4} = queue_remove_unique(fun(I) -> I == 2 end, Queue3),
+    "{[3,2],[1]}" = lists:flatten(io_lib:format("~p", [Queue3])),
+    {true, {[3],[1]}} = queue_remove_unique(fun(I) -> I == 2 end, {[3,2],[1]}),
+    Queue4 = queue:filter(fun(I) -> not (I == 2) end, Queue3),
+    "{[3],[1]}" = lists:flatten(io_lib:format("~p", [Queue4])),
     2 = queue:len(Queue4),
     {{value, 1}, _} = queue:out(Queue4),
     [1, 3] = queue:to_list(Queue4),
@@ -11596,15 +11600,10 @@ proper_test_() ->
 %% (based on the implementation of queue:filter/2 which is under the EPL)
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
 -spec queue_remove_unique(F :: fun((any()) -> boolean()),
-                          queue()) ->
-    {boolean(), queue()}.
--else.
--spec queue_remove_unique(F :: fun((any()) -> boolean()),
-                          queue:queue()) ->
-    {boolean(), queue:queue()}.
--endif.
+                          Q :: {list(), list()}) ->
+    {boolean(), {list(), list()}}.
+
 queue_remove_unique(Fun, {R0, F0} = Q)
     when is_function(Fun, 1), is_list(R0), is_list(F0) ->
     case queue_remove_unique_f(Fun, F0) of
