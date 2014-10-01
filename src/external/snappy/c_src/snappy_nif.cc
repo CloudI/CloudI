@@ -36,6 +36,14 @@
 
 #define SC_PTR(c) reinterpret_cast<char *>(c)
 
+#if ((ERL_NIF_MAJOR_VERSION == 2) && (ERL_NIF_MINOR_VERSION >= 7)) || \
+    (ERL_NIF_MAJOR_VERSION > 2)
+/* bypass bug in 17.3 release */
+#define DIRTY_SCHEDULERS_VERSION 1
+#else
+#define DIRTY_SCHEDULERS_VERSION 0
+#endif
+
 class SnappyNifSink : public snappy::Sink
 {
     public:
@@ -252,13 +260,44 @@ on_upgrade(ErlNifEnv* /* env */, void** /* priv */, void** /* old_priv */, ERL_N
 
 
 static ErlNifFunc nif_functions[] = {
+#if DIRTY_SCHEDULERS_VERSION == 0
     {"compress", 1, snappy_compress},
     {"decompress", 1, snappy_decompress},
     {"uncompressed_length", 1, snappy_uncompressed_length},
     {"is_valid", 1, snappy_is_valid}
+#else
+    {"compress", 1, snappy_compress, 0},
+    {"decompress", 1, snappy_decompress, 0},
+    {"uncompressed_length", 1, snappy_uncompressed_length, 0},
+    {"is_valid", 1, snappy_is_valid, 0}
+#endif
 };
 
 
+#if DIRTY_SCHEDULERS_VERSION == 1
+#undef ERL_NIF_INIT
+#define ERL_NIF_INIT(NAME, FUNCS, LOAD, RELOAD, UPGRADE, UNLOAD) \
+    ERL_NIF_INIT_PROLOGUE                           \
+    ERL_NIF_INIT_GLOB                               \
+    ERL_NIF_INIT_DECL(NAME);                        \
+    ERL_NIF_INIT_DECL(NAME)                         \
+    {                                               \
+        static ErlNifEntry entry =                  \
+        {                                           \
+        ERL_NIF_MAJOR_VERSION,                      \
+        ERL_NIF_MINOR_VERSION,                      \
+        #NAME,                                      \
+        sizeof(FUNCS) / sizeof(*FUNCS),             \
+        FUNCS,                                      \
+        LOAD, RELOAD, UPGRADE, UNLOAD,              \
+        ERL_NIF_VM_VARIANT,                         \
+        0                                           \
+        };                                          \
+        ERL_NIF_INIT_BODY;                          \
+        return &entry;                              \
+    }                                               \
+    ERL_NIF_INIT_EPILOGUE
+#endif
 ERL_NIF_INIT(snappy, nif_functions, &on_load, &on_reload, &on_upgrade, NULL);
 
 

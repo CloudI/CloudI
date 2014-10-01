@@ -61,6 +61,13 @@
     ERL_NIF_TERM NIF_NAME(name)(ErlNifEnv * env,\
                                 int argc,\
                                 const ERL_NIF_TERM * argv)
+#if ((ERL_NIF_MAJOR_VERSION == 2) && (ERL_NIF_MINOR_VERSION >= 7)) || \
+    (ERL_NIF_MAJOR_VERSION > 2)
+// bypass bug in 17.3 release
+#define DIRTY_SCHEDULERS_VERSION 1
+#else
+#define DIRTY_SCHEDULERS_VERSION 0
+#endif
 
 static bool local_thread_running = true;
 static ErlDrvTid local_thread_id;
@@ -244,9 +251,15 @@ NIF_FUNC(setsockopts)
 
 static ErlNifFunc nif_funcs[] =
 {
+#if DIRTY_SCHEDULERS_VERSION == 0
     {         "local", 1, NIF_NAME(local)},
     {           "set", 2, NIF_NAME(set)},
     {   "setsockopts", 3, NIF_NAME(setsockopts)}
+#else
+    {         "local", 1, NIF_NAME(local),       0},
+    {           "set", 2, NIF_NAME(set),         0},
+    {   "setsockopts", 3, NIF_NAME(setsockopts), 0}
+#endif
 };
 
 static void * local_thread(void * /*data*/);
@@ -445,5 +458,29 @@ static void * local_thread(void * /*data*/)
 }
 #endif
 
+#if DIRTY_SCHEDULERS_VERSION == 1
+#undef ERL_NIF_INIT
+#define ERL_NIF_INIT(NAME, FUNCS, LOAD, RELOAD, UPGRADE, UNLOAD) \
+    ERL_NIF_INIT_PROLOGUE                           \
+    ERL_NIF_INIT_GLOB                               \
+    ERL_NIF_INIT_DECL(NAME);                        \
+    ERL_NIF_INIT_DECL(NAME)                         \
+    {                                               \
+        static ErlNifEntry entry =                  \
+        {                                           \
+        ERL_NIF_MAJOR_VERSION,                      \
+        ERL_NIF_MINOR_VERSION,                      \
+        #NAME,                                      \
+        sizeof(FUNCS) / sizeof(*FUNCS),             \
+        FUNCS,                                      \
+        LOAD, RELOAD, UPGRADE, UNLOAD,              \
+        ERL_NIF_VM_VARIANT,                         \
+        0                                           \
+        };                                          \
+        ERL_NIF_INIT_BODY;                          \
+        return &entry;                              \
+    }                                               \
+    ERL_NIF_INIT_EPILOGUE
+#endif
 ERL_NIF_INIT(cloudi_core_i_socket, nif_funcs, &on_load, 0, 0, &on_unload);
 
