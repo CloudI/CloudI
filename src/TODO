@@ -1,21 +1,15 @@
-Items waiting for after the release of version 1.3.2
+Items waiting for after the release of version 1.3.3
 ----------------------------------------------------
-julia CloudI API
-    * fdio([name::String], fd::Integer[, own::Bool]) -> IOStream
-      name not needed, own == false, then write/read
-    * doesn't yet have an impl of erlang binary term format
-X-HTTP-Method-Override usage in cowboy integration
 Add to http://0install.net/ ?
-Add https://github.com/Amadiro/erlang-statistics integration
-    or something similar
-EC2 automatic node configuration
-    * working with external/nodefinder/ec2nodefinder/
-      but with sane ec2 integration
 Add better database integration
     * add native Riak support
     * add native CouchDB support
     * add MongoDB support
     * add Kyoto Tycoon support?
+julia CloudI API
+    * fdio([name::String], fd::Integer[, own::Bool]) -> IOStream
+      name not needed, own == false, then write/read
+    * doesn't yet have an impl of erlang binary term format
 javascript CloudI API
     * http://nodejs.org/api/net.html#net_new_net_socket_options
 Lua CloudI API

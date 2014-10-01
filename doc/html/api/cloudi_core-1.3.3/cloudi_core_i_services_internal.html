@@ -1,0 +1,139 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_core_i_services_internal</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_core_i_services_internal</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Internal_Service">CloudI Internal Service</a></h3>
+   Erlang process which manages internal service requests and info messages
+   for modules that implement the cloudi_service behavior.
+<p>Copyright © 2011-2014 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.3 Sep 30 2014 14:01:30
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Internal_Service">CloudI Internal Service</a></h3>
+   Erlang process which manages internal service requests and info messages
+   for modules that implement the cloudi_service behavior.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#duo_mode_loop-1">duo_mode_loop/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#duo_mode_loop_init-1">duo_mode_loop_init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#format_status-2">format_status/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_status-1">get_status/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#get_status-2">get_status/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_module_info_loop_hibernate-2">handle_module_info_loop_hibernate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_module_request_loop_hibernate-2">handle_module_request_loop_hibernate/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-15">start_link/15</a></td><td></td></tr>
+<tr><td valign="top"><a href="#system_code_change-4">system_code_change/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#system_continue-3">system_continue/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#system_terminate-4">system_terminate/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="duo_mode_loop-1">duo_mode_loop/1</a></h3>
+<div class="spec">
+<p><tt>duo_mode_loop(State_duo) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="duo_mode_loop_init-1">duo_mode_loop_init/1</a></h3>
+<div class="spec">
+<p><tt>duo_mode_loop_init(State_duo) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="format_status-2">format_status/2</a></h3>
+<div class="spec">
+<p><tt>format_status(Opt, X2) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_status-1">get_status/1</a></h3>
+<div class="spec">
+<p><tt>get_status(Dispatcher) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="get_status-2">get_status/2</a></h3>
+<div class="spec">
+<p><tt>get_status(Dispatcher, Timeout) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request, Client, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(T, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_module_info_loop_hibernate-2">handle_module_info_loop_hibernate/2</a></h3>
+<div class="spec">
+<p><tt>handle_module_info_loop_hibernate(Uses, ResultPid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_module_request_loop_hibernate-2">handle_module_request_loop_hibernate/2</a></h3>
+<div class="spec">
+<p><tt>handle_module_request_loop_hibernate(Uses, ResultPid) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="start_link-15">start_link/15</a></h3>
+<div class="spec">
+<p><tt>start_link(ProcessIndex, ProcessCount, GroupLeader, Module, Args, Timeout, Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh, DestDeny, DestAllow, Config_service_options, Parent) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="system_code_change-4">system_code_change/4</a></h3>
+<div class="spec">
+<p><tt>system_code_change(State, Module, OldVsn, Extra) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="system_continue-3">system_continue/3</a></h3>
+<div class="spec">
+<p><tt>system_continue(Dispatcher, Debug, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="system_terminate-4">system_terminate/4</a></h3>
+<div class="spec">
+<p><tt>system_terminate(Reason, Dispatcher, Debug, State_duo) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(Reason, State) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 30 2014, 14:01:30.</i></p>
+</body>
+</html>

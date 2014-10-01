@@ -16,7 +16,7 @@ To build CloudI from scratch, do the following steps:
 There are two configuration targets to simplify CloudI development:
 
     make clean
-    make clean-configure
+    make distclean
 
 ### Running
 
@@ -35,9 +35,9 @@ To stop CloudI:
 When updating the repository code or committing changes, make sure to first run
 the command:
 
-    make clean-configure
+    make distclean
 
-The `"clean-configure"` makefile target will revert all external dependencies
+The `"distclean"` makefile target will revert all external dependencies
 back to their original filenames, to bring the repository back into its
 original file/directory structure.
 

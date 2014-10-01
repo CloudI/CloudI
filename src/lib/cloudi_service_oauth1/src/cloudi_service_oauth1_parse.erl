@@ -155,8 +155,8 @@ whitespace(<< C, Rest/binary >>, Fun)
 whitespace(Data, Fun) ->
     Fun(Data).
 
-%% @doc Convert [A-Z] characters to lowercase.
-%% @end
+%% Convert [A-Z] characters to lowercase.
+%%
 %% We gain noticeable speed by matching each value directly.
 %-spec char_to_lower(char()) -> char().
 %char_to_lower($A) -> $a;

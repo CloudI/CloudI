@@ -3,7 +3,7 @@
 
 {application, erlang_term,
  [{description, "Erlang Term Info"},
-  {vsn, "0.1.0"},
+  {vsn, "1.3.3"},
   {modules, [erlang_term]},
   {registered, []},
   {applications, [stdlib, kernel]}]}.

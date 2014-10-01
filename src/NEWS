@@ -1,3 +1,64 @@
+September 30, 2014
+  Version 1.3.3 (beta) released.
+  * backwards compatibility difference:
+    * Some minor functions were deprecated in the cloudi_service module and the
+      source code was moved to separate modules
+      (cloudi_environment, cloudi_service_name, cloudi_request,
+       cloudi_request_info, cloudi_key_value)
+    * The CloudI Service API had some functions renamed with the older name
+      deprecated (loglevel_set became logging_level_set and
+      log_redirect became logging_redirect_set)
+    * In version 1.4.0 of CloudI the cloudi_service behaviour will have a
+      Timeout parameter in both the cloudi_service_init callback and the
+      cloudi_service_terminate callback (if you want to start using it now,
+      make sure cloudi_core is compiled with the CLOUDI_SERVICE_NEW define,
+      a CLOUDI_SERVICE_OLD macro will exist in version 1.4.0 to avoid the
+      change so older services can run without modification)
+    * cloudi_service_api_requests now provides simpler URL paths for the
+      CloudI Service API (while continuing to support the older URL paths)
+      (https://github.com/CloudI/CloudI/tree/master/src/service_api#api)
+    * Python 3 usage requires that the request_info, request,
+      response_info, and response data be bytes
+  * Elixir is now supported officially and has an example at
+    https://github.com/CloudI/CloudI/tree/master/examples/Elixir.HelloWorld1
+  * Python 3 is now supported by the Python CloudI API
+    (both the cloudi module and the cloudi_c module)
+  * queue_size is a service configuration option added so any service may
+    limit their incoming service request queue by an amount of memory (in kB)
+    (queue_limit provides a count limit and both can be used together)
+  * Support for Aspects (from AOP, Aspect-Oriented Programming) were added
+    as service configuration options
+    (aspects_init_after, aspects_request_before, aspects_request_after,
+     aspects_info_before, aspects_info_after, aspects_terminate_before)
+    so a series of Erlang (or Elixir) functions can be executed
+    before and/or after a cloudi_service behaviour function is executed and
+    possibly modify the service state (for both internal and external services)
+    (http://cloudi.org/api.html#2_services_add_config_opts_aspects_init_after)
+  * Service initialization and termination are now enforced to be synchronous
+    as described here (for both internal and external services):
+    * initialization must be completed before the next service in a sequence
+      (including the configuration file list of services) is started
+    * termination causes the service to stop and terminate within the
+      termination timeout defined by slightly less than MaxT/MaxR
+      (clamped to [1..60] seconds)
+  * lager formatters and lager backends are now supported as described at
+    http://cloudi.org/api.html#2_logging_formatters_set
+  * cassandra CQL support was added by Irina Guberman
+    (as cloudi_service_db_cassandra_cql)
+  * Added Riak support with the cloudi_service_db_riak service
+  * Added OAuth v1 support with the cloudi_service_db_oauth1 service
+  * The cloudi_service_db_pgsql service now supports
+    3 separate postgres drivers and provides common output for all 3
+    (wg epgsql, semiocast pgsql, and epgsql epgsql (new))
+  * The cloudi_service_db_mysql service was updated to use the
+    Eonblast fork of emysql and supports the same common output as
+    cloudi_service_db_pgsql
+  * cloudi_service_http_cowboy was updated to use Cowboy 1.0.0
+  * cloudi_service_filesystem now supports write operations as append/insert or
+    truncate with byte ranges that can also be used to read
+  * Many bugfixes, other additions, and documentation improvements
+    (see the ChangeLog for more detail)
+
 May 31, 2014
   Version 1.3.2 (beta) released.
   * Fixes for Erlang/OTP 17.0 compilation

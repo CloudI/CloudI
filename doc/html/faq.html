@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.3.2b<br />
-              last updated on May 31<sup>st</sup> 2014</h3></center>
+  <center><h3>version 1.3.3b<br />
+              last updated on September 30<sup>th</sup> 2014</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -49,11 +49,12 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_PrivateCloud" >1.9 - Can I use CloudI as a Private Cloud?</a></li>
     <li><a href="#1_OnlineService">1.10 - Can I use CloudI as an Online Service?</a></li>
     <li><a href="#1_CAP"          >1.11 - What CAP theorem guarantees does CloudI provide?</a></li>
-    <li><a href="#1_REST"         >1.12 - Does CloudI support REST?</a></li>
-    <li><a href="#1_SOA"          >1.13 - Does CloudI provide a Service-Oriented Architecture (SOA)</a></li>
-    <li><a href="#1_Microservices">1.14 - Does CloudI provide a Microservice Architecture?</a></li>
-    <li><a href="#1_Reactive"     >1.15 - Is CloudI Reactive?</a></li>
-    <li><a href="#1_HowAbout"     >1.16 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_Actor"        >1.12 - Does CloudI provide an implementation of the Actor Model?</a></li>
+    <li><a href="#1_REST"         >1.13 - Does CloudI support REST?</a></li>
+    <li><a href="#1_SOA"          >1.14 - Does CloudI provide a Service-Oriented Architecture (SOA)</a></li>
+    <li><a href="#1_Microservices">1.15 - Does CloudI provide a Microservice Architecture?</a></li>
+    <li><a href="#1_Reactive"     >1.16 - Is CloudI Reactive?</a></li>
+    <li><a href="#1_HowAbout"     >1.17 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -140,8 +141,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     configuration, should supervise processes in a fault-tolerant way,
     offer easy integration and should support an arbitrarily large number
     of processes (respectively).  This project offers Cloud functionality
-    facilitated by the <a href="http://en.wikipedia.org/wiki/Erlang_%28programming_language%29" target="_blank">Erlang programming language</a>
-    and its implementation of the <a href="http://en.wikipedia.org/wiki/Actor_model" target="_blank">Actor Model</a>.
+    facilitated by <a href="http://en.wikipedia.org/wiki/Erlang_%28programming_language%29" target="_blank">Erlang</a>.
   </p>
   <p class="paragraph">
     CloudI has an "<font style="font-family: serif">I</font>" suffix for
@@ -267,7 +267,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     CloudI was architected to easily integrate with other services, software,
     and frameworks.  The <a href="api.html#Service">CloudI API</a>
     provides a light-weight interface for
-    creating services in C++/C, Erlang, Java, Python, and Ruby.  By using
+    creating services in C++/C, Erlang, Elixir, Java, Python, and Ruby.
+    By using
     CloudI, external software can become more scalable and fault-tolerant
     by utilizing CloudI's load balancing of CloudI requests.  CloudI
     messaging enforces realtime constraints using timeouts, so that request
@@ -278,7 +279,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     than Erlang receive the isolation of Operating System processes
     and are called external services.  External services can utilize the
     CloudI API with any threading library to achieve greater scalability and
-    reduce internal latency.  The Erlang CloudI API is used to create
+    reduce internal latency.  The Erlang/Elixir CloudI API is used to create
     internal services which utilize light-weight Erlang processes.
     <a href="#6_contents">Examples of using the CloudI API</a>
     are provided as integration tests or internal services.
@@ -383,20 +384,55 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
+  <a name="1_Actor"></a>
+  <h3>1.12 - Does CloudI provide an implementation of the Actor Model?</h3>
+  <p class="paragraph">
+    At a high-level, both the Erlang VM and CloudI implement the Actor Model
+    when the term "Actor Model" is used loosely and the actors are allowed to
+    queue the messages they receive, before the messages are processed.
+  </p>
+  <p class="paragraph">
+    The Erlang VM has been referred to as implementing the
+    <a href="http://en.wikipedia.org/wiki/Actor_model" target="_blank">Actor Model</a>
+    despite the authors of Erlang being unaware of the Actor Model while
+    implementing Erlang (e.g., the paper by <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.226.5767" target="_blank">Rajesh K. Karmani, Gul Agha, "Actors"</a>).
+    However, the Erlang VM does not provide the Actor
+    Model when working with the original definition of the Actor Model as it was
+    provided in <a href="http://ijcai.org/Past%20Proceedings/IJCAI-73/PDF/027B.pdf" target="_blank">Carl Hewitt, Peter Bishop and Richard Steiger. "A Universal Modular Actor Formalism for Artificial Intelligence" (PDF), IJCAI'73</a>.
+    Instead, the Erlang VM provides processes which are most similar to
+    "Fog Cutter" computational agents, based on the paper <a href="http://arxiv.org/abs/1008.1459" target="_blank">by Carl Hewitt, "Actor Model of Computation: Scalable Robust Information Systems"</a>.
+    Unfortunately, no better term currently exists to refer to the design of
+    Erlang processes, aside from a comparison to a "Fog Cutter" computational
+    agent.
+  </p>
+  <p class="paragraph">
+    CloudI services are similar to Erlang processes and Erlang processes are
+    used within the implementation of CloudI services.  However, CloudI
+    services are more dynamic:
+    <ul>
+      <li>CloudI services use service names which match service name patterns. Service name patterns represent any number of CloudI service processes and service requests are automatically split between the available service processes, based on the sending service's destination refresh method.  Erlang/OTP provides naming for Erlang processes, but the names must be unique, so only a one-to-one mapping is allowed.</li>
+      <li>CloudI services can be used transparently within non-Erlang programming languages, but Erlang processes are limited to the Erlang VM.</a>
+      <li>An asynchronous send within a CloudI service initialization can provide a response, which is not the case when using an Erlang process with an Erlang/OTP behaviour.</li>
+      <li>Erlang process creation is statically defined as part of a release creation process which provides a single boot file used during the lifetime of the Erlang VM. CloudI services are always dynamically added (or removed) based on the CloudI configuration and the <a href="api.html#CloudI">CloudI Service API</a> usage.</li>
+      <li><a href="#4_Erlang">etc.</a></li>
+    </ul>
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
   <a name="1_REST"></a>
-  <h3>1.12 - Does CloudI support REST?</h3>
+  <h3>1.13 - Does CloudI support REST?</h3>
   <p class="paragraph">
     Yes!  CloudI is a system that enforces <a href="http://en.wikipedia.org/wiki/Representational_State_Transfer" target="_blank">RESTful development practices</a>.
     A common misconception is that REST requires HTTP usage
     (see <a href="http://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm" target="_blank">Roy Fielding's thesis to understand why this is not the case</a>, <a href="http://www.ics.uci.edu/~taylor/documents/2002-REST-TOIT.pdf" target="_blank">Fielding, Roy T.; Taylor, Richard N. (May 2002), "Principled Design of the Modern Web Architecture" (PDF), ACM Transactions on Internet Technology (TOIT) (New York: Association for Computing Machinery) 2 (2): 115–150, doi:10.1145/514183.514185, ISSN 1533-5399</a>).
-    In CloudI, service requests operate with <a href="http://en.wikipedia.org/wiki/Representational_state_transfer#Architectural_Constraints" target="_blank">REST architectual constraints</a> for better reliability and scalability than
+    In CloudI, service requests operate with <a href="http://en.wikipedia.org/wiki/Representational_state_transfer#Architectural_constraints" target="_blank">REST architectural constraints</a> for better reliability and scalability than
     an ad-hoc brittle server would provide.
     For more details please refer to <a href="#1_WhatIs">"1.4 - What is CloudI?"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_SOA"></a>
-  <h3>1.13 - Does CloudI provide a Service Oriented Architecture (SOA)?</h3>
+  <h3>1.14 - Does CloudI provide a Service Oriented Architecture (SOA)?</h3>
   <p class="paragraph">
     Yes!  CloudI provides a <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a>
     for flexible development, deployment, and maintenance of
@@ -438,7 +474,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_Microservices"></a>
-  <h3>1.14 - Does CloudI provide a Microservice Architecture?</h3>
+  <h3>1.15 - Does CloudI provide a Microservice Architecture?</h3>
   <p class="paragraph">
     Yes!  CloudI provides <a href="http://martinfowler.com/articles/microservices.html" target="_blank">Microservices</a>
     using light-weight messaging to facilitate CloudI
@@ -447,8 +483,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <a href="#6_HTTP">cloudi_service_http_cowboy</a>
     (with other protocol integration relying on other CloudI services).
     The service memory footprint is kept small by relying on Erlang processes
-    for their light-weight messaging (utilizing the Erlang VM's
-    <a href="http://en.wikipedia.org/wiki/Actor_model" target="_blank">Actor Model</a> implementation).
+    for their light-weight messaging (Erlang processes have been referred to
+    elsewhere as "Nanoservices").
   </p>
   <p class="paragraph">
     Using Erlang processes to provide a service abstraction allows all
@@ -462,7 +498,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_Reactive"></a>
-  <h3>1.15 - Is CloudI Reactive?</h3>
+  <h3>1.16 - Is CloudI Reactive?</h3>
   <p class="paragraph">
     Yes!  CloudI is <a href="http://www.reactivemanifesto.org/" target="_blank">Reactive</a>
     due to the scalability and fault-tolerance provided by Erlang combined
@@ -475,7 +511,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <div class="top"><a href="#1_contents">Top</a></div>
 
   <a name="1_HowAbout"></a>
-  <h3>1.16 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.17 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -559,6 +595,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="2_Presentations"></a>
   <h3>2.6 - Presentations</h3>
   <table><tr><td>
+  Version 1.3.2
+  </td><td>
+  <a href="docs/cloudi_meetup_seattle2014.pdf" target="_blank">2014 Erlang/Elixir Meetup Seattle (slides)</a>
+  </td></tr><tr><td>
   Version 1.2.5
   </td><td>
   <a href="docs/cloudi_hackntell_seattle2013.pdf" target="_blank">2013 Hack and Tell Seattle (slides)</a>
@@ -638,7 +678,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     So, that means that the configuration will expect a C compiler,
     a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
     Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R16</a>).
-    CloudI is tested on each release of Erlang (currently 17.0).
+    CloudI is tested on each release of Erlang (currently 17.3).
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -684,6 +724,20 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     --prefix="/path/to/install/"
     </td><td>
     Specify an Installation Path (default="/usr/local/")
+    </td></tr><tr><td>
+    --with-cxx-backtrace
+    </td><td>
+    Provide a C++ backtrace in the CloudI C++ API
+    with the function CloudI::API::backtrace()
+    (not on by default)
+    </td></tr><tr><td>
+    --with-python-version=[2|3]
+    </td><td>
+    Specify the version of python to use (2 is the default)
+    </td></tr><tr><td>
+    --with-python-debug
+    </td><td>
+    Use the debug python executable instead of the normal python executable
     </td></tr><tr><td>
     --with-zeromq
     </td><td>
@@ -817,10 +871,10 @@ sudo cloudi stop
      (ServiceOptionsPropList)</a>},<a href="api.html#2_services_add">
     ...</a>
 ]}.
-{nodes, <a href="api.html#2_nodes_add">[
+{nodes, <a href="api.html#2_nodes_set">[
     'cloudi@hostname1',
     ...
-] % or 'automatic' for automatic LAN node configuration </a>
+] % or 'automatic' for multicast (LAN) node discovery </a>
 }.
 {logging, <a href="api.html#2_loglevel_set">[
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
@@ -1438,7 +1492,7 @@ sudo cloudi stop
     <ul>
       <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development.</li>
       <li>Protocol agnostic transactional communication with a small consistent API (i.e., the <a href="api.html#Service" target="_blank">CloudI API</a>).</li>
-      <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM; Erlang's Actor model is extended into the external languages to eliminate contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
+      <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM which avoids any contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
       <li>All external services are managed with fault-tolerance constraints, in the same way as Erlang/OTP supervisors.</li>
       <li>A service can use service configuration options to easily adjust efficiency and memory consumption (e.g., <a href="api.html#2_services_add_config_opts" target="_blank">queue_limit, hibernate, request_pid_options, etc.</a>).</li>
       <li>Erlang source code within a service can automatically handle more throughput than Erlang/OTP behaviors with <a href="api.html#2_services_add_config_opts" target="_blank">duo_mode</a> set within the service configuration options.</li>
@@ -1478,25 +1532,27 @@ sudo cloudi stop
     service because of the extra binary encoding and decoding when using
     the socket that connects the CloudI Erlang VM to the non-Erlang CloudI
     service Operating System (OS) process' thread.  The preemption of
-    an Erlang VM scheduler thread by a CloudI service OS thread may
+    an Erlang VM scheduler thread (an Erlang process is data
+    executed and scheduled as a user-level thread with the Erlang VM's
+    use of kernel-level threads)
+    by a CloudI service OS thread (a kernel-level thread from the OS) may
     degrade Erlang VM performance because of a mismatch between the
-    kernel scheduler and the Erlang VM scheduler.  The kernel scheduler only
-    knows when data is available to a process while the Erlang VM is able to
-    schedule based on message queue size.  So, the Erlang VM scheduling
-    is able to intelligently schedule CloudI services more so than the
-    kernel scheduling.  However, the problem is unavoidable with current OSes
-    and can be minimized by having a sufficiently large number of non-Erlang
-    CloudI service threads and/or processes created to handle the throughput.
+    kernel scheduler and the Erlang VM scheduler.  The kernel scheduler is
+    slow to preempt OS processes while the Erlang VM is quick to preempt
+    its light-weight processes
+    (<a href="http://jlouisramblings.blogspot.com/2013/01/how-erlang-does-scheduling.html" target="_blank">to pursue soft-realtime low-latency</a>)
+    based on the process' internal reduction count.
     The mismatch between the kernel scheduler and the Erlang VM scheduler is
-    minimized by CloudI's management of CloudI requests, since an external
-    service thread is only provided a single request at a time (and the
-    mismatch is required to provide fault-tolerance by isolating the memory
-    used by external services from the Erlang VM memory).
+    minimized by CloudI's management of CloudI service requests, since an
+    external service thread is only provided a single request at a time
+    (and the mismatch is required to provide fault-tolerance by isolating the
+     memory used by external services from the Erlang VM memory).
   </p>
   <p class="paragraph">
     When the number of requests sent to a service name exceeds the number
-    of service processes, the services will begin to queue new requests while
-    handling older requests (roughly, the distribution of requests to processes
+    of service processes, the destination service processes will begin to
+    queue new requests while
+    handling older requests (the distribution of requests to processes
     is random, so it may queue slightly early).  A priority parameter can be
     used if there is differing importance for various service requests
     (priority is normally used when there is a data dependency that needs to
@@ -1511,16 +1567,31 @@ sudo cloudi stop
   <h3>5.2 - Scalability Considerations</h3>
   <p class="paragraph">
     CloudI uses distributed Erlang for communicating between CloudI
-    nodes (i.e., machines).  Distributed Erlang creates a fully-connected
-    network topology which makes the cluster size of CloudI nodes limited
-    to about 50 to 100 nodes (not yet tested).  The node count limitation
-    could easily be surpassed by using ZeroMQ to bridge CloudI clusters.
-    However, it was anticipated that with multi-core technology
-    advancements, the need for very large CloudI clusters would be
-    diminished in the immediate future.  The databases that CloudI uses
-    are much more likely to need large node counts to facilitate
-    large amounts of data which can be accessed as key/value pairs or
-    with Map/Reduce.
+    nodes (i.e., machines).  By default, distributed Erlang creates a
+    fully-connected network topology by using connections that are called
+    "visible" (since the node connections are commonly visible to other nodes).
+    When all nodes are using visible connections, the cluster size is
+    limited to somewhere between 50 and 100 nodes (when using the <a href="http://www.erlang.org/doc/man/net_kernel.html#set_net_ticktime-1" target="_blank">default net_tick_time</a>
+     of 60 seconds with a common Gigabit Ethernet network).
+  </p>
+  <p class="paragraph">
+    To have a larger network of CloudI nodes, a network topology that is not
+    fully-connected can be created with the nodes configuration items
+    "listen" and "connect" (described in the <a href="api.html#2_nodes_set">nodes_set CloudI Service API</a>
+     documentation).  By setting "connect" to "hidden" the CloudI node will not
+    make a fully-connected network topology and each connection will be a
+    single connection limited to that Erlang node.  To receive service name
+    pattern subscription data from hidden nodes, the "listen" item can be set
+    to "all".  The node connection settings can be used with the node
+    discovery settings to make the network topology creation automatic
+    based on the nodes configuration.
+  </p>
+  <p class="paragraph">
+    ZeroMQ can also be used to bridge CloudI clusters
+    (i.e., with the CloudI service cloudi_service_zeromq).
+    Scaling for capacity planning should often require increasing the
+    database node count more than the CloudI node count, but that depends
+    on the CloudI services and their incoming data rate.
   </p>
   <div class="top"><a href="#5_contents">Top</a></div>
 

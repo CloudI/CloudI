@@ -1,0 +1,75 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_name</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_name</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Service_Name_Creation_and_Parsing">CloudI Service Name Creation and Parsing</a></h3>.
+<p>Copyright © 2014 Michael Truog</p>
+
+<p><b>Version:</b> 1.3.3 Sep 30 2014 14:01:31
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Service_Name_Creation_and_Parsing">CloudI Service Name Creation and Parsing</a></h3>
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#new-2">new/2</a></td><td>
+  <h4><a name="Transform_a_service_name_pattern_with_parameters_into_an_exact_service_name.">Transform a service name pattern with parameters into an exact service name.</a></h4>
+  The pattern input can contain consecutive * wildcard characters because
+  they are only used for a template.</td></tr>
+<tr><td valign="top"><a href="#new-4">new/4</a></td><td>
+  <h4><a name="Transform_a_service_name_pattern_with_parameters_into_an_exact_service_name.">Transform a service name pattern with parameters into an exact service name.</a></h4>
+  The pattern input can contain consecutive * wildcard characters because
+  they are only used for a template.</td></tr>
+<tr><td valign="top"><a href="#parse-2">parse/2</a></td><td>
+  <h4><a name="Parse_a_service_name_pattern_to_return_parameters.">Parse a service name pattern to return parameters.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#parse_with_suffix-2">parse_with_suffix/2</a></td><td>
+  <h4><a name="Parse_a_service_name_pattern_and_return_the_common_suffix.">Parse a service name pattern and return the common suffix.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="new-2">new/2</a></h3>
+<div class="spec">
+<p><tt>new(Pattern::string(), Parameters::[string()]) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing}</tt><br></p>
+</div><p>
+  <h4><a name="Transform_a_service_name_pattern_with_parameters_into_an_exact_service_name.">Transform a service name pattern with parameters into an exact service name.</a></h4>
+  The pattern input can contain consecutive * wildcard characters because
+  they are only used for a template.</p>
+
+<h3 class="function"><a name="new-4">new/4</a></h3>
+<div class="spec">
+<p><tt>new(Pattern::string(), Parameters::[string()], ParametersSelected::[pos_integer()], ParametersStrictMatching::boolean()) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing | parameters_selected_empty | {parameters_selected_ignored, [pos_integer()]} | {parameters_selected_missing, pos_integer()}}</tt><br></p>
+</div><p>
+  <h4><a name="Transform_a_service_name_pattern_with_parameters_into_an_exact_service_name.">Transform a service name pattern with parameters into an exact service name.</a></h4>
+  The pattern input can contain consecutive * wildcard characters because
+  they are only used for a template.</p>
+
+<h3 class="function"><a name="parse-2">parse/2</a></h3>
+<div class="spec">
+<p><tt>parse(Name::string(), Pattern::string()) -&gt; [string()] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_service_name_pattern_to_return_parameters.">Parse a service name pattern to return parameters.</a></h4>
+</p>
+
+<h3 class="function"><a name="parse_with_suffix-2">parse_with_suffix/2</a></h3>
+<div class="spec">
+<p><tt>parse_with_suffix(Name::string(), Pattern::string()) -&gt; {[string()], string()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_service_name_pattern_and_return_the_common_suffix.">Parse a service name pattern and return the common suffix.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 30 2014, 14:01:31.</i></p>
+</body>
+</html>

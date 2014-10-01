@@ -1,0 +1,6 @@
+%% encoding: UTF-8
+{application,cloudi_service_oauth1}.
+{packages,[]}.
+{modules,[cloudi_service_oauth1,cloudi_service_oauth1_data,
+          cloudi_service_oauth1_db,cloudi_service_oauth1_db_pgsql,
+          cloudi_service_oauth1_db_riak,cloudi_service_oauth1_parse]}.

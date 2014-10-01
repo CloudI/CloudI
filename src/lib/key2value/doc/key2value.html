@@ -15,7 +15,7 @@
    Maintain 2 associative lookups for 2 separate keys and 1 value.
 <p>Copyright © 2011-2014 Michael Truog</p>
 
-<p><b>Version:</b> 1.3.2 May 31 2014 19:45:18
+<p><b>Version:</b> 1.3.3 Sep 30 2014 14:04:33
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -31,12 +31,24 @@
 <p><tt>dict_proxy(_Key, _Value) = any()</tt></p>
 <p> dict()/dict:dict() difference</p>
 
-<h3 class="typedecl"><a name="type-key2value">key2value()</a></h3>
-<p><tt>key2value() = <a href="#type-key2value">key2value</a>(any(), any(), any())</tt></p>
+<h3 class="typedecl"><a name="type-key1">key1()</a></h3>
+<p><tt>key1() = any()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-key2">key2()</a></h3>
+<p><tt>key2() = any()</tt></p>
 
 
 <h3 class="typedecl"><a name="type-key2value">key2value()</a></h3>
-<p><tt>key2value(Key1, Key2, Value) = {module(), <a href="#type-dict_proxy">dict_proxy</a>(Key1, {[Key2], Value}), <a href="#type-dict_proxy">dict_proxy</a>(Key2, {[Key1], Value})}</tt></p>
+<p><tt>key2value(Key1, Key2, Value) = <a href="#type-key2value_dict">key2value_dict</a>(Key1, Key2, Value) | #key2value{}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-key2value_dict">key2value_dict()</a></h3>
+<p><tt>key2value_dict(Key1, Key2, Value) = {key2value, dict, <a href="#type-dict_proxy">dict_proxy</a>(Key1, {[Key2], Value}), <a href="#type-dict_proxy">dict_proxy</a>(Key2, {[Key1], Value})}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = any()</tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -49,6 +61,7 @@
 <tr><td valign="top"><a href="#find2-2">find2/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#is_key1-2">is_key1/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#is_key2-2">is_key2/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td></td></tr>
 <tr><td valign="top"><a href="#new-1">new/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#store-4">store/4</a></td><td></td></tr>
 </table>
@@ -57,61 +70,66 @@
 
 <h3 class="function"><a name="erase-3">erase/3</a></h3>
 <div class="spec">
-<p><tt>erase(K1::any(), K2::any(), State::<a href="#type-key2value">key2value()</a>) -&gt; <a href="#type-key2value">key2value()</a></tt><br></p>
+<p><tt>erase(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 
 <h3 class="function"><a name="erase1-2">erase1/2</a></h3>
 <div class="spec">
-<p><tt>erase1(K::any(), State::<a href="#type-key2value">key2value()</a>) -&gt; <a href="#type-key2value">key2value()</a></tt><br></p>
+<p><tt>erase1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 
 <h3 class="function"><a name="erase2-2">erase2/2</a></h3>
 <div class="spec">
-<p><tt>erase2(K::any(), State::<a href="#type-key2value">key2value()</a>) -&gt; <a href="#type-key2value">key2value()</a></tt><br></p>
+<p><tt>erase2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 
 <h3 class="function"><a name="fetch1-2">fetch1/2</a></h3>
 <div class="spec">
-<p><tt>fetch1(K::any(), X2::<a href="#type-key2value">key2value()</a>) -&gt; {list(), any()}</tt><br></p>
+<p><tt>fetch1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="fetch2-2">fetch2/2</a></h3>
 <div class="spec">
-<p><tt>fetch2(K::any(), X2::<a href="#type-key2value">key2value()</a>) -&gt; {list(), any()}</tt><br></p>
+<p><tt>fetch2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {list(), any()}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="find1-2">find1/2</a></h3>
 <div class="spec">
-<p><tt>find1(K::any(), State::<a href="#type-key2value">key2value()</a>) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+<p><tt>find1(K::<a href="#type-key1">key1()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
 </div>
 
 <h3 class="function"><a name="find2-2">find2/2</a></h3>
 <div class="spec">
-<p><tt>find2(K::any(), State::<a href="#type-key2value">key2value()</a>) -&gt; {ok, {list(), any()}} | error</tt><br></p>
+<p><tt>find2(K::<a href="#type-key2">key2()</a>, State::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; {ok, {list(), any()}} | error</tt><br></p>
 </div>
 
 <h3 class="function"><a name="is_key1-2">is_key1/2</a></h3>
 <div class="spec">
-<p><tt>is_key1(K::any(), X2::<a href="#type-key2value">key2value()</a>) -&gt; boolean()</tt><br></p>
+<p><tt>is_key1(K::<a href="#type-key1">key1()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
 </div>
 
 <h3 class="function"><a name="is_key2-2">is_key2/2</a></h3>
 <div class="spec">
-<p><tt>is_key2(K::any(), X2::<a href="#type-key2value">key2value()</a>) -&gt; boolean()</tt><br></p>
+<p><tt>is_key2(K::<a href="#type-key2">key2()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; boolean()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; <a href="#type-key2value_dict">key2value_dict</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Module::atom()) -&gt; {atom(), any(), any()}</tt><br></p>
+<p><tt>new(Module::atom()) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 
 <h3 class="function"><a name="store-4">store/4</a></h3>
 <div class="spec">
-<p><tt>store(K1::any(), K2::any(), V::any(), X4::<a href="#type-key2value">key2value()</a>) -&gt; <a href="#type-key2value">key2value()</a></tt><br></p>
+<p><tt>store(K1::<a href="#type-key1">key1()</a>, K2::<a href="#type-key2">key2()</a>, V::<a href="#type-value">value()</a>, Key2value::<a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)) -&gt; <a href="#type-key2value">key2value</a>(<a href="#type-key1">key1()</a>, <a href="#type-key2">key2()</a>, <a href="#type-value">value()</a>)</tt><br></p>
 </div>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, May 31 2014, 19:45:18.</i></p>
+<p><i>Generated by EDoc, Sep 30 2014, 14:04:33.</i></p>
 </body>
 </html>

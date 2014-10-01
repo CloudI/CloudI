@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,erlang_term}.
+{packages,[]}.
+{modules,[erlang_term]}.

@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,service}.
+{packages,[]}.
+{modules,[service]}.
