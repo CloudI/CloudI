@@ -34,8 +34,8 @@
 -type tag_value() :: condition_meta(tag_output()).
 -type group_value() :: condition_meta(group_output()).
 
--include_lib("erlcloud/include/erlcloud.hrl").
--include_lib("erlcloud/include/erlcloud_ec2.hrl").
+-include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud.hrl").
+-include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud_ec2.hrl").
 
 -record(state,
     {
