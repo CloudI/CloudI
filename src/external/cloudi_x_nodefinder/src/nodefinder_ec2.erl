@@ -34,8 +34,8 @@
 -type tag_value() :: condition_meta(tag_output()).
 -type group_value() :: condition_meta(group_output()).
 
--include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud.hrl").
--include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud_ec2.hrl").
+-include_lib("erlcloud/include/erlcloud.hrl").
+-include_lib("erlcloud/include/erlcloud_ec2.hrl").
 
 -record(state,
     {
@@ -75,7 +75,8 @@ start_link(AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags) ->
 
 -spec discover(Timeout :: pos_integer()) ->
     ok |
-    {error, discover_failed | timeout | noproc | any()}.
+    {error, ec2_connect_failed | ec2_connect_timeout | ec2_unavailable |
+            discover_failed | timeout | noproc | any()}.
 
 discover(Timeout) ->
     try gen_server:call(?MODULE, discover, Timeout)
@@ -151,6 +152,14 @@ handle_call(discover, _From, State) ->
     case do_discover(State) of
         {ok, NewState} ->
             {reply, ok, NewState};
+        {error, {socket_error, {failed_connect, _}}} ->
+            {reply, {error, ec2_connect_failed}, State};
+        {error, {socket_error, socket_closed_remotely}} ->
+            {reply, {error, ec2_connect_failed}, State};
+        {error, {socket_error, timeout}} ->
+            {reply, {error, ec2_connect_timeout}, State};
+        {error, {http_error, 503, "Service Unavailable", _}} ->
+            {reply, {error, ec2_unavailable}, State};
         {error, _} = Error ->
             {stop, Error, {error, discover_failed}, State}
     end;
