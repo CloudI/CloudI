@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve cowboy integration in cloudi_service_http_cowboy
+
 2014-10-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update nodefinder

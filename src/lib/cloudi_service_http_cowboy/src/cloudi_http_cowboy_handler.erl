@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -952,7 +952,7 @@ handle_request(Name, Headers, 'normal', Req,
     BodyOpts = [{length, LengthBodyChunk},
                 {read_length, LengthBodyRead},
                 {read_timeout, TimeoutBody}],
-    {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req, BodyOpts),
+    {ok, Body, NextReq} = handle_request_body(Req, BodyOpts),
     handle_request(Name, Headers, Body, NextReq, State);
 handle_request(Name, Headers, 'application_zip', Req,
                #cowboy_state{
@@ -962,7 +962,7 @@ handle_request(Name, Headers, 'application_zip', Req,
     BodyOpts = [{length, LengthBodyChunk},
                 {read_length, LengthBodyRead},
                 {read_timeout, TimeoutBody}],
-    {ok, Body, NextReq} = cloudi_x_cowboy_req:body(Req, BodyOpts),
+    {ok, Body, NextReq} = handle_request_body(Req, BodyOpts),
     handle_request(Name, Headers, zlib:unzip(Body), NextReq, State);
 handle_request(Name, Headers, 'multipart', Req,
                #cowboy_state{
@@ -1026,12 +1026,18 @@ handle_request(Name, Headers, Body, Req,
             {{cowboy_error, timeout}, Req}
     end.
 
+handle_request_body(Req, BodyOpts) ->
+    case cloudi_x_cowboy_req:body(Req, BodyOpts) of
+        {ok, _, _} = Success ->
+            Success;
+        {error, Reason} ->
+            erlang:exit({cowboy_error, Reason})
+    end.
+
 handle_request_multipart(Name, Headers,
                          Destination, Self, PartHeaderOpts, PartBodyOpts,
                          MultipartId, Req0, State) ->
-    %XXX (may get exported soon)
-    %case cloudi_x_cowboy_req:part(Req0, PartHeaderOpts) of
-    case cloudi_x_cowboy_req:part(Req0) of
+    case cloudi_x_cowboy_req:part(Req0, PartHeaderOpts) of
         {ok, HeadersPart, ReqN} ->
             handle_request_multipart([], 0, Name, Headers, HeadersPart,
                                      Destination, Self,
@@ -1080,9 +1086,7 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                                                            PartBodyList]))
             end,
             {HeadersPartNextN,
-            %XXX (may get exported soon)
-            %ReqN} = case cloudi_x_cowboy_req:part(Req1, PartHeaderOpts) of
-             ReqN} = case cloudi_x_cowboy_req:part(Req1) of
+             ReqN} = case cloudi_x_cowboy_req:part(Req1, PartHeaderOpts) of
                 {ok, HeadersPartNext0, Req2} ->
                     {HeadersPartNext0, Req2};
                 {done, Req2} ->
