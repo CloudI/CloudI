@@ -101,14 +101,18 @@ clear_log(LogDir, RawLog) ->
     end.
 
 waiter_start_loop() ->
+    waiter_start_loop(0).
+
+waiter_start_loop(Elapsed) ->
     Interval = 10, % seconds
     receive
         done ->
             ok
     after
         Interval * 1000 ->
-            ?CONSOLE("CT was processing for ~w seconds...\n", [Interval]),
-            waiter_start_loop()
+            NewElapsed = Elapsed + Interval,
+            ?CONSOLE("CT was processing for ~w seconds...\n", [NewElapsed]),
+            waiter_start_loop(NewElapsed)
     end.
 
 waiter_start() ->
