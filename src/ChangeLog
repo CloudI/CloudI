@@ -4,6 +4,7 @@
 2014-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve cowboy integration in cloudi_service_http_cowboy
+    * Fix cloudi_service_filesystem byterange read bug
 
 2014-10-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 

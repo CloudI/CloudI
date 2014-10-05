@@ -1683,8 +1683,8 @@ contents_ranges_append(ETag, KeyValues, MTime) ->
             RequestedRangeNotSatisfiable
     end.
 
-content_range_read_part(undefined,
-                        ByteStart, ByteEnd, ContentLengthBin, Part) ->
+content_range_read_part_get(undefined,
+                            ByteStart, ByteEnd, ContentLengthBin, Part) ->
     ByteStartBin = erlang:integer_to_binary(ByteStart),
     ByteEndBin = erlang:integer_to_binary(ByteEnd),
     {[{<<"content-range">>,
@@ -1692,8 +1692,8 @@ content_range_read_part(undefined,
          ByteStartBin/binary,(<<"-">>)/binary,
          ByteEndBin/binary,(<<"/">>)/binary,
          ContentLengthBin/binary>>}], Part};
-content_range_read_part(Boundary,
-                        ByteStart, ByteEnd, ContentLengthBin, Part) ->
+content_range_read_part_get(Boundary,
+                            ByteStart, ByteEnd, ContentLengthBin, Part) ->
     ByteStartBin = erlang:integer_to_binary(ByteStart),
     ByteEndBin = erlang:integer_to_binary(ByteEnd),
     [cloudi_x_cow_multipart:part(Boundary,
@@ -1703,6 +1703,30 @@ content_range_read_part(Boundary,
                                      ByteEndBin/binary,(<<"/">>)/binary,
                                      ContentLengthBin/binary>>}]),
      Part].
+
+content_range_read_part_check(ByteStart, ByteEnd, RangeList, Output, Boundary,
+                              ContentLengthBin, ContentLength, Contents) ->
+    ByteSize = ByteEnd - ByteStart + 1,
+    Valid = if
+        ByteStart =< ByteEnd ->
+            ByteSize =< (ContentLength - ByteStart);
+        true ->
+            false
+    end,
+    if
+        Valid =:= true ->
+            Part = binary:part(Contents, ByteStart, ByteSize),
+            Entry = content_range_read_part_get(Boundary, ByteStart, ByteEnd,
+                                                ContentLengthBin, Part),
+            content_range_read(RangeList, [Entry | Output], Boundary,
+                               ContentLengthBin, ContentLength, Contents);
+        Valid =:= false ->
+            {416,
+             [{<<"status">>, <<"416">>},
+              {<<"content-range">>,
+               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
+              contents_ranges_headers(true)], <<>>}
+    end.
 
 content_range_read([_ | L] = RangeList, Contents) ->
     ContentLength = erlang:byte_size(Contents),
@@ -1739,20 +1763,9 @@ content_range_read([{I, infinity} | RangeList], Output, Boundary,
             I
     end,
     ByteEnd = ContentLength - 1,
-    if
-        ByteStart =< ByteEnd ->
-            Part = binary:part(Contents, ByteStart, ByteEnd - ByteStart + 1),
-            Entry = content_range_read_part(Boundary, ByteStart, ByteEnd,
-                                            ContentLengthBin, Part),
-            content_range_read(RangeList, [Entry | Output], Boundary,
-                               ContentLengthBin, ContentLength, Contents);
-        true ->
-            {416,
-             [{<<"status">>, <<"416">>},
-              {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
-              contents_ranges_headers(true)], <<>>}
-    end;
+    content_range_read_part_check(ByteStart, ByteEnd,
+                                  RangeList, Output, Boundary,
+                                  ContentLengthBin, ContentLength, Contents);
 content_range_read([{IStart, IEnd} | RangeList], Output, Boundary,
                    ContentLengthBin, ContentLength, Contents) ->
     ByteStart = if
@@ -1762,20 +1775,9 @@ content_range_read([{IStart, IEnd} | RangeList], Output, Boundary,
             IStart
     end,
     ByteEnd = IEnd,
-    if
-        ByteStart =< ByteEnd ->
-            Part = binary:part(Contents, ByteStart, ByteEnd - ByteStart + 1),
-            Entry = content_range_read_part(Boundary, ByteStart, ByteEnd,
-                                            ContentLengthBin, Part),
-            content_range_read(RangeList, [Entry | Output], Boundary,
-                               ContentLengthBin, ContentLength, Contents);
-        true ->
-            {416,
-             [{<<"status">>, <<"416">>},
-              {<<"content-range">>,
-               <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>} |
-              contents_ranges_headers(true)], <<>>}
-    end;
+    content_range_read_part_check(ByteStart, ByteEnd,
+                                  RangeList, Output, Boundary,
+                                  ContentLengthBin, ContentLength, Contents);
 content_range_read([I | RangeList], Output, Boundary,
                    ContentLengthBin, ContentLength, Contents)
     when is_integer(I) ->
