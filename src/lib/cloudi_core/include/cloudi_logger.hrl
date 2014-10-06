@@ -95,6 +95,12 @@
 -define(LOG_TRACE_APPLY(M, F, A),
     cloudi_core_i_logger_interface:trace_apply(M, F, A)).
 
+-define(LOG_METADATA_GET(),
+    cloudi_core_i_logger:metadata_get()).
+
+-define(LOG_METADATA_SET(L),
+    cloudi_core_i_logger:metadata_set(L)).
+
 -ifndef(FUNCTION).
 -define(FUNCTION,
     erlang:element(2,

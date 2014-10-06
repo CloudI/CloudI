@@ -78,7 +78,8 @@
          t_service_internal_terminate_1/1,
          t_service_internal_terminate_2/1,
          t_service_internal_terminate_3/1,
-         t_service_internal_terminate_4/1]).
+         t_service_internal_terminate_4/1,
+         t_service_internal_log_1/1]).
 
 %% test helpers
 -export([service_increment_aspect_init/5,
@@ -272,7 +273,8 @@ groups() ->
        t_service_internal_terminate_1,
        t_service_internal_terminate_2,
        t_service_internal_terminate_3,
-       t_service_internal_terminate_4]}].
+       t_service_internal_terminate_4,
+       t_service_internal_log_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -458,13 +460,21 @@ init_per_testcase(TestCase, Config)
           [{automatic_loading, false},
            {duo_mode, true}]}]
         ], infinity),
-    [{service_ids, ServiceIds} | Config].
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_log_1) ->
+    init_per_testcase(TestCase),
+    Config.
 
 end_per_testcase(TestCase, Config) ->
     end_per_testcase(TestCase),
-    {value, {_, ServiceIds}, NewConfig} = lists:keytake(service_ids, 1, Config),
-    ok = cloudi_service_api:services_remove(ServiceIds, infinity),
-    NewConfig.
+    case lists:keytake(service_ids, 1, Config) of
+        {value, {_, ServiceIds}, NewConfig} ->
+            ok = cloudi_service_api:services_remove(ServiceIds, infinity),
+            NewConfig;
+        false ->
+            Config
+    end.
 
 %%%------------------------------------------------------------------------
 %%% test cases
@@ -832,3 +842,8 @@ t_service_internal_terminate_3(_Config) ->
 t_service_internal_terminate_4(Config) ->
     t_service_internal_terminate_3(Config).
 
+t_service_internal_log_1(_Config) ->
+    ?LOG_METADATA_SET([{test, t_service_internal_log_1},
+                       {pid, self()} | ?LOG_METADATA_GET()]),
+    ?LOG_INFO("Logging metadata", []),
+    ok.
