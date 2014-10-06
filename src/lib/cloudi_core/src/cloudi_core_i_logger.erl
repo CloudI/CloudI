@@ -396,21 +396,21 @@ format(Msg, Config, _) ->
         {module, undefined},
         {line, undefined}],
     [Node, Pid, Module, Line |
-     _] = cloudi_proplists:take_values(Defaults, MetaData),
+     ExtraMetaData] = cloudi_proplists:take_values(Defaults, MetaData),
     LogMessage = Message,
     if
         Mode =:= legacy ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, [],
+                        Module, Line, ExtraMetaData,
                         indent_space_1(LogMessage));
         Mode =:= legacy_stdout ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, [],
+                        Module, Line, ExtraMetaData,
                         cloudi_string:format(" stdout (pid ~w):~n", [Line]) ++
                         indent_space_2(LogMessage));
         Mode =:= legacy_stderr ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, [],
+                        Module, Line, ExtraMetaData,
                         cloudi_string:format(" stderr (pid ~w):~n", [Line]) ++
                         indent_space_2(LogMessage))
     end.
