@@ -28,7 +28,6 @@ AC_PROG_CXX
 AC_PROG_SED
 AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
-AX_CLOCK_GETTIME
 
 # now in autoconf 2.69
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
@@ -57,21 +56,114 @@ AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
          m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
 
-# c++ boost checks
+AC_ARG_ENABLE([c-support],
+    [AS_HELP_STRING([--enable-c-support],
+                    [Enable the C CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        c_support="true"
+    elif test "x$enableval" = "xno"; then
+        c_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-c-support])
+    fi
+    ], [c_support="true"])
+AC_ARG_ENABLE([cxx-support],
+    [AS_HELP_STRING([--enable-cxx-support],
+                    [Enable the C++ CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        cxx_support="true"
+    elif test "x$enableval" = "xno"; then
+        cxx_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-cxx-support])
+    fi
+    ], [cxx_support="true"])
+AC_ARG_ENABLE([java-support],
+    [AS_HELP_STRING([--enable-java-support],
+                    [Enable the Java CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        java_support="true"
+    elif test "x$enableval" = "xno"; then
+        java_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-java-support])
+    fi
+    ], [java_support="true"])
+AC_ARG_ENABLE([python-support],
+    [AS_HELP_STRING([--enable-python-support],
+                    [Enable the Python CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        python_support="true"
+    elif test "x$enableval" = "xno"; then
+        python_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-python-support])
+    fi
+    ], [python_support="true"])
+AC_ARG_ENABLE([python-c-support],
+    [AS_HELP_STRING([--enable-python-c-support],
+                    [Enable the Python CloudI API with C integration])],
+    [
+    if test "x$enableval" = "xyes"; then
+        python_c_support="true"
+    elif test "x$enableval" = "xno"; then
+        python_c_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-python-c-support])
+    fi
+    ], [python_c_support="true"])
+AC_ARG_ENABLE([ruby-support],
+    [AS_HELP_STRING([--enable-ruby-support],
+                    [Enable the Ruby CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        ruby_support="true"
+    elif test "x$enableval" = "xno"; then
+        ruby_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-ruby-support])
+    fi
+    ], [ruby_support="true"])
+if test "x$c_support" = "xfalse" ; then
+    if test "x$cxx_support" = "xtrue" ; then
+        AC_MSG_ERROR(
+            [--disable-c-support requires --disable-cxx-support])
+    fi
+    if test "x$python_c_support" = "xtrue" ; then
+        AC_MSG_ERROR(
+            [--disable-c-support requires --disable-python-c-support])
+    fi
+fi
+if test "x$cxx_support" = "xfalse" ; then
+    if test "x$python_c_support" = "xtrue" ; then
+        AC_MSG_ERROR(
+            [--disable-cxx-support requires --disable-python-c-support])
+    fi
+fi
+
+# C++ requirements
 AX_BOOST_BASE([1.40], ,
     [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
-AX_BOOST_THREAD
 AX_BOOST_SYSTEM
-AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
-    [AC_MSG_ERROR([boost::exception not found])], ,
-    $PATHS_NONSYSTEM_INC)
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
+    $PATHS_NONSYSTEM_INC)
+# C/C++ CloudI API support
+if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
+        "x$python_c_support" = "xtrue" ; then
+AX_CLOCK_GETTIME
+AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
+    [AC_MSG_ERROR([boost::exception not found])], ,
     $PATHS_NONSYSTEM_INC)
 AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
     [AC_MSG_ERROR([boost::unordered_map not found])], ,
     $PATHS_NONSYSTEM_INC)
-# c++ backtrace check for adding exception information
+AX_BOOST_THREAD
+# C++ CloudI API backtrace support
 AC_ARG_WITH([cxx-backtrace],
     [AS_HELP_STRING([--with-cxx-backtrace@<:@=ARG@:>@],
         [the C++ CloudI API will provide the backtrace from
@@ -83,8 +175,14 @@ AC_ARG_WITH([cxx-backtrace],
         AX_BACKTRACE()
     fi
     ])
+AM_CONDITIONAL([C_SUPPORT], [true])
+else
+AM_CONDITIONAL([C_SUPPORT], [false])
+fi
+AM_CONDITIONAL([CXX_SUPPORT], [test "x$cxx_support" = "xtrue"])
 
-# java checks
+# Java CloudI API support
+if test "x$java_support" = "xtrue" ; then
 AC_SUBST(javadir, ["$datarootdir/java"])
 AC_ARG_VAR([JAVAC],[javac executable])
 AC_ARG_VAR([JAVA],[java executable])
@@ -102,8 +200,11 @@ AX_CHECK_RQRD_CLASS(java.lang.reflect.Constructor, ,
 # new in jdk 5.0
 AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
     [AC_MSG_ERROR([java concurrent not found])])
+fi
+AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
 
-# python check
+# Python CloudI API support
+if test "x$python_support" = "xtrue" -o "x$python_c_support" = "xtrue" ; then
 AC_ARG_WITH([python-debug],
     [AS_HELP_STRING([--with-python-debug@<:@=ARG@:>@],
         [use the debug version of python libraries and the
@@ -149,13 +250,21 @@ elif test "x$PYTHON_VERSION_REQUIRED" = "x3"; then
         [AX_PYTHON_C],
         [AC_MSG_ERROR([Python >= 3.0.0 not found])])
 fi
+AM_CONDITIONAL([PYTHON_SUPPORT], [true])
+else
+AM_CONDITIONAL([PYTHON_SUPPORT], [false])
+fi
+AM_CONDITIONAL([PYTHON_C_SUPPORT], [test "x$python_c_support" = "xtrue"])
 
-# ruby checks
+# Ruby CloudI API support
+if test "x$ruby_support" = "xtrue" ; then
 AC_ARG_VAR([RUBY],[ruby executable])
 AC_PATH_PROGS([RUBY],
               [ruby1.9.4 ruby1.9.3 ruby1.9.2 ruby1.9.1 ruby1.9.0 ruby1.9 ruby])
 AX_PROG_RUBY_VERSION([1.9.0], ,
     [AC_MSG_ERROR([Ruby >= 1.9.0 not found])])
+fi
+AM_CONDITIONAL([RUBY_SUPPORT], [test "x$ruby_support" = "xtrue"])
 
 # erlang checks
 AC_ERLANG_NEED_ERLC()
@@ -200,7 +309,9 @@ fi
 AC_SUBST(REBAR)
 
 # hexpi test
+if test "x$cxx_support" = "xtrue" ; then
 AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
+fi
 
 # ZeroMQ dependency
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
@@ -264,6 +375,7 @@ AC_CONFIG_FILES([
     Makefile
     api/Makefile
     api/c/Makefile
+    api/erlang/Makefile
     api/java/Makefile
     api/java/org/Makefile
     api/java/org/cloudi/Makefile
@@ -273,18 +385,13 @@ AC_CONFIG_FILES([
     api/java/com/ericsson/otp/erlang/Makefile
     api/java/jar/Makefile
     api/python/Makefile
+    api/ruby/Makefile
     lib/Makefile
     lib/cloudi_core/Makefile
     lib/cloudi_core/cxx_src/Makefile
     tests/Makefile
-    tests/flood/Makefile
-    tests/flood/src/Makefile
-    tests/flood/service/Makefile
-    tests/flood/service/jar/Makefile
-    tests/flood/service/org/Makefile
-    tests/flood/service/org/cloudi/Makefile
-    tests/flood/service/org/cloudi/tests/Makefile
-    tests/flood/service/org/cloudi/tests/flood/Makefile
+    tests/echo/Makefile
+    tests/environment/Makefile
     tests/hexpi/Makefile
     tests/hexpi/src/Makefile
     tests/hexpi/cxx_src/Makefile
@@ -321,6 +428,8 @@ AC_CONFIG_FILES([
     tests/msg_size/cxx_src/Makefile
     tests/request_rate/Makefile
     tests/request_rate/src/Makefile
+    tests/websockets/Makefile
+    tests/zeromq/Makefile
     ])
 AC_OUTPUT
 

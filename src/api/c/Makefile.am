@@ -1,6 +1,12 @@
-instdir=$(DESTDIR)$(cloudi_prefix)/api/c/
+#-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
+# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
+
+instdir = "$(DESTDIR)$(cloudi_prefix)/api/c"
 inst_LTLIBRARIES = libcloudi.la
-nodist_inst_HEADERS = cloudi.h cloudi.hpp
+if CXX_SUPPORT
+    CXX_SUPPORT_HEADER = cloudi.hpp
+endif
+nodist_inst_HEADERS = cloudi.h $(CXX_SUPPORT_HEADER)
 
 libcloudi_la_SOURCES = \
     cloudi.cpp \

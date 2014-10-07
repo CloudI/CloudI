@@ -1,5 +1,6 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
+
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = api lib tests
 
@@ -69,6 +70,13 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_riakc/src \
      -d $(top_srcdir)/external/cloudi_x_thrift/src
 
+if PYTHON_SUPPORT
+    PYTHON_TEST_HOOK = api-python-test
+endif
+if RUBY_SUPPORT
+    RUBY_TEST_HOOK = api-ruby-test
+endif
+
 .PHONY: \
     rebar-directories-compile \
     erlang-applications-scope-add \
@@ -86,25 +94,9 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
     test \
     tests \
     cloudi-prefix-install \
-    tests-install \
-    tests-echo-install \
-    tests-environment-install \
-    tests-flood-install \
-    tests-hexpi-install \
-    tests-http-install \
-    tests-http_req-install \
+	api-python-test \
+	api-ruby-test \
     tests-service_api-install \
-    tests-messaging-install \
-    tests-msg_size-install \
-    tests-request_rate-install \
-    tests-websockets-install \
-    tests-zeromq-install \
-    api-install \
-    api-erlang-install \
-    api-c-install \
-    api-java-install \
-    api-python-install \
-    api-ruby-install \
     service_api-install \
     service_api-python-install \
     run
@@ -815,7 +807,6 @@ dialyze: all \
               lib/key2value/ebin/ \
               lib/keys1value/ebin/ \
               tests/hexpi/ebin/ \
-              tests/flood/ebin/ \
               tests/request_rate/ebin/ \
               tests/messaging/ebin/ \
               tests/msg_size/ebin/ \
@@ -858,9 +849,13 @@ xref: all
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
         || exit 0)
 
-test: all
+api-python-test:
 	$(PYTHON) $(top_srcdir)/api/python/tests/erlang_tests.py
+
+api-ruby-test:
 	$(RUBY) $(top_srcdir)/api/ruby/tests/erlang_tests.rb
+
+test: all $(PYTHON_TEST_HOOK) $(RUBY_TEST_HOOK)
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
@@ -871,25 +866,7 @@ uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
 install-exec-hook: cloudi-prefix-install \
-                   tests-install \
-                   tests-echo-install \
-                   tests-environment-install \
-                   tests-flood-install \
-                   tests-hexpi-install \
-                   tests-http-install \
-                   tests-http_req-install \
                    tests-service_api-install \
-                   tests-messaging-install \
-                   tests-msg_size-install \
-                   tests-request_rate-install \
-                   tests-websockets-install \
-                   tests-zeromq-install \
-                   api-install \
-                   api-erlang-install \
-                   api-c-install \
-                   api-java-install \
-                   api-python-install \
-                   api-ruby-install \
                    service_api-install \
                    service_api-python-install \
                    rel/files/app.config
@@ -943,119 +920,10 @@ install-exec-hook: cloudi-prefix-install \
         echo "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/$$subdir1 exists!"; \
     done; done
 	rm -rf $(top_builddir)/rel/cloudi/
-	$(LIBTOOL) --mode=finish "$(DESTDIR)$(cloudi_prefix)/api/c"
-	$(LIBTOOL) --mode=finish --quiet "$(DESTDIR)$(cloudi_prefix)/api/python"
-	$(LIBTOOL) --mode=finish --quiet "$(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv"
 
 cloudi-prefix-install:
 	$(MKDIR_P) "$(DESTDIR)$(bindir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)"
-
-tests-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests"
-
-tests-echo-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/echo"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/echo/echo.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/echo/"
-
-tests-environment-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/environment"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/environment/environment.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/environment/"
-
-tests-flood-install: $(top_builddir)/tests/flood/service/flood \
-                     $(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam \
-                     $(top_builddir)/tests/flood/service/jar/cloudi.jar \
-                     $(top_builddir)/tests/flood/service/jar/flood.jar
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/ebin"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/service"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar"
-	$(INSTALL_DATA) "$(top_builddir)/tests/flood/ebin/cloudi_service_flood.beam" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/flood/ebin/"
-	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
-             "$(top_builddir)/tests/flood/service/flood" \
-             "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/flood/service/jar/flood.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/jar/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/flood/service/flood.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/flood/service/flood.rb" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/flood/service/"
-
-tests-hexpi-install: $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.app \
-                     $(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam \
-                     $(top_builddir)/tests/hexpi/cxx_src/hexpi
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv"
-	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.app" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/hexpi/ebin/cloudi_service_hexpi.beam" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/ebin/"
-	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
-             "$(top_builddir)/tests/hexpi/cxx_src/hexpi" \
-             "$(DESTDIR)$(cloudi_prefix)/tests/hexpi/priv/"
-
-tests-http-install: $(top_builddir)/tests/http/service/jar/cloudi.jar \
-                    $(top_builddir)/tests/http/service/jar/service.jar
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/service/jar"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/input"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/input.zip"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/output"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http/tmp"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http/run.sh" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/http/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/service/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http/service/jar/service.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/service/jar/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http/service/service.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/http/service/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http/service/service.rb" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/service/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http/input/text" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/input/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http/input.zip/text" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/input.zip/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http/output/text" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http/output/"
-
-tests-http_req-install: \
-        $(top_builddir)/tests/http_req/c_src/http_req \
-        $(top_builddir)/tests/http_req/jar/cloudi.jar \
-        $(top_builddir)/tests/http_req/jar/http_req.jar \
-        $(top_builddir)/tests/http_req/ebin/cloudi_service_http_req.beam
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin"
-	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
-             "$(top_builddir)/tests/http_req/c_src/http_req" \
-             "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req_c.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/http_req/http_req.rb" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/http_req/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/cloudi.jar" \
-                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/http_req/jar/http_req.jar" \
-                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/jar/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/http_req/ebin/cloudi_service_http_req.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/ebin/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/index.html" \
-                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/style.css" \
-                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/tests/http_req/public_html/800px-Juliadim2.png" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
-	$(INSTALL_DATA) "$(top_srcdir)/tests/http_req/public_html/websockets.html" \
-                  "$(DESTDIR)$(cloudi_prefix)/tests/http_req/public_html/"
 
 tests-service_api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/service_api"
@@ -1067,126 +935,6 @@ tests-service_api-install:
                       "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
 	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/path.py" \
                       "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
-
-tests-messaging-install: \
-        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence.app \
-        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam \
-        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam \
-        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam \
-        $(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence4.beam \
-        $(top_builddir)/tests/messaging/jar/cloudi.jar \
-        $(top_builddir)/tests/messaging/jar/messaging.jar \
-        $(top_builddir)/tests/messaging/cxx_src/messaging
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence.app" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence1.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence2.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence3.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/messaging/ebin/cloudi_service_messaging_sequence4.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/messaging/jar/messaging.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/messaging/jar/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging_c.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/messaging/messaging.rb" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/messaging/"
-	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
-             "$(top_builddir)/tests/messaging/cxx_src/messaging" \
-             "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv/"
-
-tests-msg_size-install: \
-        $(top_builddir)/tests/msg_size/ebin/cloudi_service_msg_size.beam \
-        $(top_builddir)/tests/msg_size/jar/cloudi.jar \
-        $(top_builddir)/tests/msg_size/jar/msg_size.jar \
-        $(top_builddir)/tests/msg_size/cxx_src/msg_size
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/msg_size/ebin/cloudi_service_msg_size.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/ebin/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/msg_size/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
-	$(INSTALL_DATA) "$(top_builddir)/tests/msg_size/jar/msg_size.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/jar/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size_c.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/msg_size/msg_size.rb" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/"
-	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) \
-             "$(top_builddir)/tests/msg_size/cxx_src/msg_size" \
-             "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv/"
-
-tests-request_rate-install: \
-        $(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.app \
-        $(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.beam
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.app" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin/"
-	$(INSTALL_DATA) \
-        "$(top_builddir)/tests/request_rate/ebin/cloudi_service_request_rate.beam" \
-        "$(DESTDIR)$(cloudi_prefix)/tests/request_rate/ebin/"
-
-tests-websockets-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/websockets"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/websockets/websockets.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/websockets/"
-
-tests-zeromq-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/zeromq"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/zeromq/run.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/zeromq/"
-
-api-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api"
-
-api-erlang-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/erlang"
-	$(INSTALL_DATA) "$(top_srcdir)/api/erlang/README.markdown" \
-                  "$(DESTDIR)$(cloudi_prefix)/api/erlang/"
-
-api-c-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/c"
-
-api-java-install: $(top_builddir)/api/java/jar/cloudi.jar
-	rmdir "$(DESTDIR)$(datarootdir)/java" || exit 0
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/java"
-	$(INSTALL_DATA) "$(top_builddir)/api/java/jar/cloudi.jar" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/java/"
-
-api-python-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/python"
-	$(INSTALL_DATA) "$(top_srcdir)/api/python/erlang.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/python/"
-	$(INSTALL_DATA) "$(top_srcdir)/api/python/cloudi.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/python/"
-	$(INSTALL_DATA) "$(top_srcdir)/api/python/cloudi_c.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/python/"
-
-api-ruby-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api/ruby"
-	$(INSTALL_DATA) "$(top_srcdir)/api/ruby/cloudi.rb" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/ruby/"
-	$(INSTALL_DATA) "$(top_srcdir)/api/ruby/erlang.rb" \
-                    "$(DESTDIR)$(cloudi_prefix)/api/ruby/"
 
 service_api-install:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api"

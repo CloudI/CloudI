@@ -4,6 +4,9 @@
 2014-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add logging metadata in a way that is lager-compatible
+    * Remove the flood integration tests since the functionality is replaced
+      and improved in the request_rate test
+    * Add enable/disable configure switches for programming language support
 
 2014-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

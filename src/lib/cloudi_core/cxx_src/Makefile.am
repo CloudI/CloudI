@@ -1,7 +1,10 @@
-INTERFACE_HEADER=$(srcdir)/../src/cloudi_core_i_os_spawn.hrl
-CURRENT_VERSION=vsn_1
+#-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
+# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 
-instdir=$(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv
+INTERFACE_HEADER = $(srcdir)/../src/cloudi_core_i_os_spawn.hrl
+CURRENT_VERSION = vsn_1
+
+instdir = $(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv
 inst_PROGRAMS = cloudi_os_spawn_vsn_1
 inst_LTLIBRARIES = libcloudi_socket_drv.la
 
@@ -31,3 +34,4 @@ libcloudi_socket_drv_la_CPPFLAGS = \
  $(BOOST_CPPFLAGS) $(CXXFLAGS)
 libcloudi_socket_drv_la_LDFLAGS = -module -avoid-version \
  -export-symbols-regex '(libcloudi_socket_drv|nif_init|on_load|on_unload)'
+

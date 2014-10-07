@@ -24,7 +24,6 @@
 
 # Integration Tests code paths for the default configuration
 -pz tests/hexpi/ebin/
--pz tests/flood/ebin/
 -pz tests/http_req/ebin/
 -pz tests/msg_size/ebin/
 -pz tests/messaging/ebin/
