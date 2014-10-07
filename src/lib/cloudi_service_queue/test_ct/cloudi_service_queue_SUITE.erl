@@ -234,7 +234,7 @@ t_queue_both_1(_Config) ->
          5000, 5000, Timeout, undefined, undefined, 1, 5, 300, []}],
         infinity),
     % confirm the send of 2 requests with cloudi_service_queue in 'both' mode
-    ok = check_queue_both_response(Timeout, 2, Context),
+    ok = check_queue_both_response(Timeout * 2, 2, Context),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIds],
     ok.
