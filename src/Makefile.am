@@ -863,6 +863,7 @@ uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
 install-exec-hook: rel/files/app.config
+	$(MKDIR_P) "$(DESTDIR)$(bindir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_logdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"
