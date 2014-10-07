@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add more usage of the enable/disable configure switches for
+      programming language support
+
 2014-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add logging metadata in a way that is lager-compatible

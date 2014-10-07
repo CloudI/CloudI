@@ -2,7 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = api lib tests
+SUBDIRS = api lib tests service_api
 
 SCOPE_EXTERNAL = cloudi_x_
 SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
@@ -93,12 +93,8 @@ endif
     xref \
     test \
     tests \
-    cloudi-prefix-install \
 	api-python-test \
 	api-ruby-test \
-    tests-service_api-install \
-    service_api-install \
-    service_api-python-install \
     run
 
 all-local: rel/files/app.config \
@@ -753,6 +749,7 @@ distclean-local: rebar-directories-distclean \
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
+	find $(top_srcdir)/service_api -name "Makefile.in" | xargs rm -f
 
 rebar-directories-distclean:
 	rm -f $(top_srcdir)/external/rebar/ebin/*.beam
@@ -865,14 +862,11 @@ tests: test
 uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
-install-exec-hook: cloudi-prefix-install \
-                   tests-service_api-install \
-                   service_api-install \
-                   service_api-python-install \
-                   rel/files/app.config
+install-exec-hook: rel/files/app.config
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_logdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"
+	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/lib"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/releases"
 	(cd "$(DESTDIR)$(cloudi_prefix)" && \
@@ -920,48 +914,6 @@ install-exec-hook: cloudi-prefix-install \
         echo "$(DESTDIR)$(cloudi_prefix)/lib/$$subdir0/$$subdir1 exists!"; \
     done; done
 	rm -rf $(top_builddir)/rel/cloudi/
-
-cloudi-prefix-install:
-	$(MKDIR_P) "$(DESTDIR)$(bindir)"
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)"
-
-tests-service_api-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests/service_api"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/run.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/logging_on.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/logging_off.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
-	$(INSTALL_SCRIPT) "$(top_srcdir)/tests/service_api/path.py" \
-                      "$(DESTDIR)$(cloudi_prefix)/tests/service_api/"
-
-service_api-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api"
-
-service_api-python-install:
-	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib"
-	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/cloudi_service_api.py" \
-                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/"
-	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/jsonrpclib/LICENSE.txt" \
-                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/"
-	$(INSTALL_DATA) "$(top_srcdir)/service_api/python/jsonrpclib/README.md" \
-                    "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/__init__.py" \
-        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonrpc.py" \
-        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/config.py" \
-        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/history.py" \
-        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
-	$(INSTALL_DATA) \
-        "$(top_srcdir)/service_api/python/jsonrpclib/jsonrpclib/jsonclass.py" \
-        "$(DESTDIR)$(cloudi_prefix)/service_api/python/jsonrpclib/jsonrpclib/"
 
 run:
 	@echo

@@ -343,8 +343,17 @@ if test "x$want_service" = "xyes"; then
     AC_SUBST(SERVICE_PATH)
 fi
 
+if test "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
+        "x$java_support" = "xtrue" -a \
+        "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
+        "x$ruby_support" = "xtrue" ; then
+    AC_CONFIG_FILES([cloudi.conf])
+else
+    AC_CONFIG_COMMANDS([cloudi.conf.empty],
+        [echo "{acl,[[]]}. {services,[[]]}. {nodes,[[]]}. {logging,[[]]}." > \
+         cloudi.conf])
+fi
 AC_CONFIG_FILES([
-    cloudi.conf
     rebar_src.config
     rebar_src_test.config
     reltool.config
@@ -389,6 +398,9 @@ AC_CONFIG_FILES([
     lib/Makefile
     lib/cloudi_core/Makefile
     lib/cloudi_core/cxx_src/Makefile
+    service_api/Makefile
+    service_api/python/Makefile
+    service_api/python/jsonrpclib/Makefile
     tests/Makefile
     tests/echo/Makefile
     tests/environment/Makefile
@@ -428,6 +440,7 @@ AC_CONFIG_FILES([
     tests/msg_size/cxx_src/Makefile
     tests/request_rate/Makefile
     tests/request_rate/src/Makefile
+    tests/service_api/Makefile
     tests/websockets/Makefile
     tests/zeromq/Makefile
     ])
