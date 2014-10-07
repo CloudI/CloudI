@@ -148,6 +148,7 @@ fi
 # C++ requirements
 AX_BOOST_BASE([1.40], ,
     [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
+AX_BOOST_THREAD
 AX_BOOST_SYSTEM
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
@@ -162,7 +163,6 @@ AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
 AX_BOOST_CHECK_HEADER(boost/unordered_map.hpp, ,
     [AC_MSG_ERROR([boost::unordered_map not found])], ,
     $PATHS_NONSYSTEM_INC)
-AX_BOOST_THREAD
 # C++ CloudI API backtrace support
 AC_ARG_WITH([cxx-backtrace],
     [AS_HELP_STRING([--with-cxx-backtrace@<:@=ARG@:>@],
