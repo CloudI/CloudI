@@ -156,7 +156,7 @@ prop_quorum_timeout(QuorumTypeProper, _Config) ->
 validate_quorum_timeout(QuorumType, UseResponseInfo,
                         CountProcess, Monkey, RequestInfo, Request) ->
     Context = cloudi:new(),
-    Timeout = 10000,
+    Timeout = 15000,
     CountTimeouts = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountTimeouts,
     ServiceIds0 = services_add(CountTimeouts,
@@ -242,7 +242,7 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
                       CountProcess, Monkey, RequestInfo, Request) ->
 
     Context = cloudi:new(),
-    Timeout = 10000,
+    Timeout = 15000,
     CountCrashes = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountCrashes,
     ServiceIds0 = services_add(CountCrashes,

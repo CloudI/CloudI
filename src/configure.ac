@@ -330,7 +330,7 @@ AC_ARG_WITH([service],
     elif test "x$withval" = "xyes"; then
         want_service="yes"
     else
-        want_service="yes"
+        AC_MSG_ERROR([--with-service needs yes or no, not $withval])
     fi
     ],
     [want_service="yes"])
@@ -343,16 +343,38 @@ if test "x$want_service" = "xyes"; then
     AC_SUBST(SERVICE_PATH)
 fi
 
-if test "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
+AC_ARG_WITH([integration-tests],
+    [AS_HELP_STRING([--with-integration-tests@<:@=ARG@:>@],
+        [include the CloudI integration tests (ARG=yes),
+         or exclude the CloudI integration tests from
+         the installation (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        want_integration_tests="no"
+    elif test "x$withval" = "xyes"; then
+        want_integration_tests="yes"
+    else
+        AC_MSG_ERROR([--with-integration-tests needs yes or no, not $withval])
+    fi
+    ],
+    [want_integration_tests="maybe"])
+if test "x$want_integration_tests" != "xno" -a \
+        "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
         "x$java_support" = "xtrue" -a \
         "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
         "x$ruby_support" = "xtrue" ; then
     AC_CONFIG_FILES([cloudi.conf])
 else
+    if test "x$want_integration_tests" = "xyes" ; then
+        AC_MSG_ERROR([--with-integration-tests=yes
+                      requires all programming languages be enabled])
+    fi
     AC_CONFIG_COMMANDS([cloudi.conf.empty],
         [echo "{acl,[[]]}. {services,[[]]}. {nodes,[[]]}. {logging,[[]]}." > \
          cloudi.conf])
 fi
+AM_CONDITIONAL([INTEGRATION_TESTS], [test "x$want_integration_tests" != "xno"])
 AC_CONFIG_FILES([
     rebar_src.config
     rebar_src_test.config

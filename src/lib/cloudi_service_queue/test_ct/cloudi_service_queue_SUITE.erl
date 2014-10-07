@@ -54,8 +54,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
         Mode =:= request ->
             cloudi_service:subscribe(Dispatcher, "request");
         Mode =:= response ->
-            cloudi_service:subscribe(Dispatcher, "response"),
-            cloudi_service:self(Dispatcher) ! {test, Test}
+            cloudi_service:self(Dispatcher) ! {test, Test},
+            cloudi_service:subscribe(Dispatcher, "response")
     end,
     {ok, #state{mode = Mode,
                 prefix = Prefix}}.
@@ -95,6 +95,7 @@ cloudi_service_handle_info({test, 1},
     Name = ?PREFIX_QUEUE ++ Prefix ++ "request",
     RequestInfo = cloudi_service:request_info_key_value_new([
         {<<"service_name">>, erlang:list_to_binary(Prefix ++ "response")}]),
+    % send 2 requests with the cloudi_service_queue in 'both' mode
     {ok, Id0} = cloudi_service:send_sync(Dispatcher, Name, RequestInfo,
                                          <<?REQUEST1>>, undefined, undefined),
     {ok, Id1} = cloudi_service:send_sync(Dispatcher, Name, RequestInfo,
@@ -123,7 +124,7 @@ groups() ->
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
-     {timetrap, 11000}].
+     {timetrap, 21000}].
 
 init_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
@@ -163,6 +164,10 @@ end_per_testcase(_TestCase, Config) ->
 
 t_queue_destination_1(_Config) ->
     Context = cloudi:new(),
+    RequestInfo = <<>>,
+    Request = <<?REQUEST1>>,
+    Timeout = 10000,
+    Priority = undefined,
     {ok, ServiceIds} = cloudi_service_api:services_add([
         {internal,
          ?PREFIX_TEST,
@@ -183,18 +188,24 @@ t_queue_destination_1(_Config) ->
          [{request_timeout_immediate_max, 0},
           {response_timeout_immediate_max, 0}]}],
         infinity),
-    {ok, <<?RESPONSE1>>} = cloudi:send_sync(Context,
-                                            ?PREFIX_QUEUE ?PREFIX_TEST
-                                            "request", <<?REQUEST1>>),
-    {ok, <<?RESPONSE1>>} = cloudi:send_sync(Context,
-                                            ?PREFIX_QUEUE ?PREFIX_TEST
-                                            "request", <<?REQUEST1>>),
+    % send 2 requests with the cloudi_service_queue in 'destination' mode
+    {ok,
+     <<?RESPONSE1>>} = cloudi:send_sync(Context,
+                                        ?PREFIX_QUEUE ?PREFIX_TEST "request",
+                                        RequestInfo, Request,
+                                        Timeout, Priority),
+    {ok,
+     <<?RESPONSE1>>} = cloudi:send_sync(Context,
+                                        ?PREFIX_QUEUE ?PREFIX_TEST "request",
+                                        RequestInfo, Request,
+                                        Timeout, Priority),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIds],
     ok.
 
 t_queue_both_1(_Config) ->
     Context = cloudi:new(),
+    Timeout = 10000,
     {ok, ServiceIds} = cloudi_service_api:services_add([
         {internal,
          ?PREFIX_TEST,
@@ -220,10 +231,10 @@ t_queue_both_1(_Config) ->
          [{mode, response},
           {test, 1}],
          immediate_closest,
-         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}],
+         5000, 5000, Timeout, undefined, undefined, 1, 5, 300, []}],
         infinity),
-    receive after 10000 -> ok end,
-    {ok, 2} = cloudi:send_sync(Context, ?PREFIX_TEST "response", count),
+    % confirm the send of 2 requests with cloudi_service_queue in 'both' mode
+    ok = check_queue_both_response(Timeout, 2, Context),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIds],
     ok.
@@ -231,4 +242,17 @@ t_queue_both_1(_Config) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+check_queue_both_response(Timeout, _, _)
+    when Timeout =< 0 ->
+    timeout;
+check_queue_both_response(Timeout, Count, Context) ->
+    Interval = 1000,
+    receive after Interval -> ok end,
+    case cloudi:send_sync(Context, ?PREFIX_TEST "response", count) of
+        {ok, Count} ->
+            ok;
+        {ok, _} ->
+            check_queue_both_response(Timeout - Interval, Count, Context)
+    end.
 

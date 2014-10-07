@@ -5,6 +5,10 @@
 
     * Add more usage of the enable/disable configure switches for
       programming language support
+    * Add --with-integration-tests configure script argument so the
+      integration tests don't need to be compiled, installed or executed
+    * Improve the timeout on the cloudi_service_queue CT test
+    * Improve the timeout on the cloudi_service_quorum CT test
 
 2014-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
