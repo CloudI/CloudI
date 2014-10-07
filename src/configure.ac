@@ -148,6 +148,7 @@ fi
 # C++ requirements
 AX_BOOST_BASE([1.40], ,
     [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
+AX_BOOST_THREAD
 AX_BOOST_SYSTEM
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
@@ -156,7 +157,6 @@ AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
 if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
         "x$python_c_support" = "xtrue" ; then
 AX_CLOCK_GETTIME
-AX_BOOST_THREAD
 AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
     [AC_MSG_ERROR([boost::exception not found])], ,
     $PATHS_NONSYSTEM_INC)
