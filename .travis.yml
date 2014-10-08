@@ -14,15 +14,13 @@ services:
 before_install:
   - sudo apt-get update
 # travis takes care of: make autoconf automake libtool g++ git
-#  - sudo apt-get install default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
-  - sudo apt-get install default-jdk libboost-dev libgmp3-dev uuid-dev
+  - sudo apt-get install default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
 before_script:
   - mkdir build
   - cd build
   - ../src/autogen.sh
-#  - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
-  - ../src/configure --disable-cxx-support --disable-python-c-support --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
+  - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
