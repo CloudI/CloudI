@@ -36,8 +36,9 @@ AC_DEFUN([AX_BOOST_THREAD],
 [
     AC_ARG_WITH([boost-thread],
     AS_HELP_STRING([--with-boost-thread@<:@=special-lib@:>@],
-                   [use the Thread library from boost - it is possible to specify a certain library for the linker
-                        e.g. --with-boost-thread=boost_thread-gcc-mt ]),
+                   [use the Thread library from boost -
+                    it is possible to specify a certain library for the linker
+                    e.g. --with-boost-thread=boost_thread-gcc-mt ]),
         [
         if test "$withval" = "no"; then
             want_boost="no"
@@ -46,7 +47,7 @@ AC_DEFUN([AX_BOOST_THREAD],
             ax_boost_user_thread_lib=""
         else
             want_boost="yes"
-        ax_boost_user_thread_lib="$withval"
+            ax_boost_user_thread_lib="$withval"
         fi
         ],
         [want_boost="yes"]
@@ -75,10 +76,11 @@ AC_DEFUN([AX_BOOST_THREAD],
              else
                 CXXFLAGS="-pthread $CXXFLAGS"
              fi
-             AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[@%:@include <boost/thread/thread.hpp>]],
-                                   [[boost::thread_group thrds;
-                                   return 0;]])],
-                   ax_cv_boost_thread=yes, ax_cv_boost_thread=no)
+             AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
+                                    [[@%:@include <boost/thread/thread.hpp>]],
+                                    [[boost::thread_group thrds;
+                                      return 0;]])],
+                               ax_cv_boost_thread=yes, ax_cv_boost_thread=no)
              CXXFLAGS=$CXXFLAGS_SAVE
              AC_LANG_POP([C++])
         ])
@@ -93,7 +95,8 @@ AC_DEFUN([AX_BOOST_THREAD],
 
             AC_SUBST(BOOST_CPPFLAGS)
 
-            AC_DEFINE(HAVE_BOOST_THREAD,,[define if the Boost::Thread library is available])
+            AC_DEFINE(HAVE_BOOST_THREAD,,
+                      [define if the Boost::Thread library is available])
             BOOSTLIBDIR=`echo $BOOST_LDFLAGS | sed -e 's/@<:@^\/@:>@*//'`
 
             LDFLAGS_SAVE=$LDFLAGS
@@ -107,14 +110,16 @@ AC_DEFUN([AX_BOOST_THREAD],
                 for libextension in `ls -r $BOOSTLIBDIR/libboost_thread* 2>/dev/null | sed 's,.*/lib,,' | sed 's,\..*,,'`; do
                      ax_lib=${libextension}
                     AC_CHECK_LIB($ax_lib, exit,
-                                 [BOOST_THREAD_LIB="-l$ax_lib"; AC_SUBST(BOOST_THREAD_LIB) link_thread="yes"; break],
+                                 [BOOST_THREAD_LIB="-l$ax_lib"
+                                  link_thread="yes"; break],
                                  [link_thread="no"])
                 done
                 if test "x$link_thread" != "xyes"; then
                 for libextension in `ls -r $BOOSTLIBDIR/boost_thread* 2>/dev/null | sed 's,.*/,,' | sed 's,\..*,,'`; do
                      ax_lib=${libextension}
                     AC_CHECK_LIB($ax_lib, exit,
-                                 [BOOST_THREAD_LIB="-l$ax_lib"; AC_SUBST(BOOST_THREAD_LIB) link_thread="yes"; break],
+                                 [BOOST_THREAD_LIB="-l$ax_lib"
+                                  link_thread="yes"; break],
                                  [link_thread="no"])
                 done
                 fi
@@ -122,7 +127,8 @@ AC_DEFUN([AX_BOOST_THREAD],
             else
                for ax_lib in $ax_boost_user_thread_lib boost_thread-$ax_boost_user_thread_lib; do
                       AC_CHECK_LIB($ax_lib, exit,
-                                   [BOOST_THREAD_LIB="-l$ax_lib"; AC_SUBST(BOOST_THREAD_LIB) link_thread="yes"; break],
+                                   [BOOST_THREAD_LIB="-l$ax_lib"
+                                    link_thread="yes"; break],
                                    [link_thread="no"])
                   done
 
@@ -132,18 +138,29 @@ AC_DEFUN([AX_BOOST_THREAD],
             fi
             if test "x$link_thread" = "xno"; then
                 AC_MSG_ERROR(Could not link against $ax_lib !)
-                        else
-                           case "x$host_os" in
-                              *bsd* )
-                BOOST_LDFLAGS="-pthread $BOOST_LDFLAGS"
-                              break;
-                              ;;
-                           esac
-
+            else
+                case "x$host_os" in
+                    *bsd* )
+                        BOOST_LDFLAGS="-pthread $BOOST_LDFLAGS"
+                        break;
+                        ;;
+                    solaris )
+                        BOOST_THREAD_LIB="$BOOST_THREAD_LIB -lpthread"
+                        break;
+                        ;;
+                    mingw32 )
+                        break;
+                        ;;
+                    * )
+                        BOOST_THREAD_LIB="$BOOST_THREAD_LIB -lpthread"
+                        break;
+                        ;;
+                esac
+                AC_SUBST(BOOST_THREAD_LIB)
             fi
         fi
 
         CPPFLAGS="$CPPFLAGS_SAVED"
-    LDFLAGS="$LDFLAGS_SAVED"
+        LDFLAGS="$LDFLAGS_SAVED"
     fi
 ])
