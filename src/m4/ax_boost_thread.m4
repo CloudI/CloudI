@@ -31,6 +31,7 @@
 #   warranty.
 
 #serial 27
+# required modifications below
 
 AC_DEFUN([AX_BOOST_THREAD],
 [
@@ -40,9 +41,7 @@ AC_DEFUN([AX_BOOST_THREAD],
                     it is possible to specify a certain library for the linker
                     e.g. --with-boost-thread=boost_thread-gcc-mt ]),
         [
-        if test "$withval" = "no"; then
-            want_boost="no"
-        elif test "$withval" = "yes"; then
+        if test "$withval" = "yes"; then
             want_boost="yes"
             ax_boost_user_thread_lib=""
         else
@@ -76,11 +75,12 @@ AC_DEFUN([AX_BOOST_THREAD],
              else
                 CXXFLAGS="-pthread $CXXFLAGS"
              fi
-             AC_COMPILE_IFELSE([AC_LANG_PROGRAM(
-                                    [[@%:@include <boost/thread/thread.hpp>]],
-                                    [[boost::thread_group thrds;
-                                      return 0;]])],
-                               ax_cv_boost_thread=yes, ax_cv_boost_thread=no)
+             AC_COMPILE_IFELSE([
+                 AC_LANG_PROGRAM(
+                     [[@%:@include <boost/thread/thread.hpp>]],
+                     [[boost::thread_group thrds;
+                       return 0;]])],
+                 ax_cv_boost_thread=yes, ax_cv_boost_thread=no)
              CXXFLAGS=$CXXFLAGS_SAVE
              AC_LANG_POP([C++])
         ])
@@ -110,16 +110,14 @@ AC_DEFUN([AX_BOOST_THREAD],
                 for libextension in `ls -r $BOOSTLIBDIR/libboost_thread* 2>/dev/null | sed 's,.*/lib,,' | sed 's,\..*,,'`; do
                      ax_lib=${libextension}
                     AC_CHECK_LIB($ax_lib, exit,
-                                 [BOOST_THREAD_LIB="-l$ax_lib"
-                                  link_thread="yes"; break],
+                                 [link_thread="yes"; break],
                                  [link_thread="no"])
                 done
                 if test "x$link_thread" != "xyes"; then
                 for libextension in `ls -r $BOOSTLIBDIR/boost_thread* 2>/dev/null | sed 's,.*/,,' | sed 's,\..*,,'`; do
                      ax_lib=${libextension}
                     AC_CHECK_LIB($ax_lib, exit,
-                                 [BOOST_THREAD_LIB="-l$ax_lib"
-                                  link_thread="yes"; break],
+                                 [link_thread="yes"; break],
                                  [link_thread="no"])
                 done
                 fi
@@ -127,8 +125,7 @@ AC_DEFUN([AX_BOOST_THREAD],
             else
                for ax_lib in $ax_boost_user_thread_lib boost_thread-$ax_boost_user_thread_lib; do
                       AC_CHECK_LIB($ax_lib, exit,
-                                   [BOOST_THREAD_LIB="-l$ax_lib"
-                                    link_thread="yes"; break],
+                                   [link_thread="yes"; break],
                                    [link_thread="no"])
                   done
 
@@ -139,6 +136,7 @@ AC_DEFUN([AX_BOOST_THREAD],
             if test "x$link_thread" = "xno"; then
                 AC_MSG_ERROR(Could not link against $ax_lib !)
             else
+                BOOST_THREAD_LIB="-l$ax_lib"
                 case "x$host_os" in
                     *bsd* )
                         BOOST_LDFLAGS="-pthread $BOOST_LDFLAGS"

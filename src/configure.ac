@@ -56,6 +56,7 @@ AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
          m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))
 
+AC_MSG_CHECKING([if the C          CloudI API is enabled])
 AC_ARG_ENABLE([c-support],
     [AS_HELP_STRING([--enable-c-support],
                     [Enable the C CloudI API])],
@@ -68,6 +69,8 @@ AC_ARG_ENABLE([c-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-c-support])
     fi
     ], [c_support="true"])
+AC_MSG_RESULT([$c_support])
+AC_MSG_CHECKING([if the C++        CloudI API is enabled])
 AC_ARG_ENABLE([cxx-support],
     [AS_HELP_STRING([--enable-cxx-support],
                     [Enable the C++ CloudI API])],
@@ -80,6 +83,15 @@ AC_ARG_ENABLE([cxx-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-cxx-support])
     fi
     ], [cxx_support="true"])
+if test "x$cxx_support" = "xtrue" ; then
+    if test "x$c_support" = "xfalse" ; then
+        AC_MSG_RESULT([failed])
+        AC_MSG_ERROR(
+            [--disable-c-support requires --disable-cxx-support])
+    fi
+fi
+AC_MSG_RESULT([$cxx_support])
+AC_MSG_CHECKING([if the Java       CloudI API is enabled])
 AC_ARG_ENABLE([java-support],
     [AS_HELP_STRING([--enable-java-support],
                     [Enable the Java CloudI API])],
@@ -92,6 +104,8 @@ AC_ARG_ENABLE([java-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-java-support])
     fi
     ], [java_support="true"])
+AC_MSG_RESULT([$java_support])
+AC_MSG_CHECKING([if the Python     CloudI API is enabled])
 AC_ARG_ENABLE([python-support],
     [AS_HELP_STRING([--enable-python-support],
                     [Enable the Python CloudI API])],
@@ -104,6 +118,8 @@ AC_ARG_ENABLE([python-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-python-support])
     fi
     ], [python_support="true"])
+AC_MSG_RESULT([$python_support])
+AC_MSG_CHECKING([if the Python/C   CloudI API is enabled])
 AC_ARG_ENABLE([python-c-support],
     [AS_HELP_STRING([--enable-python-c-support],
                     [Enable the Python CloudI API with C integration])],
@@ -116,6 +132,19 @@ AC_ARG_ENABLE([python-c-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-python-c-support])
     fi
     ], [python_c_support="true"])
+if test "x$python_c_support" = "xtrue" ; then
+    if test "x$c_support" = "xfalse" ; then
+        AC_MSG_RESULT([failed])
+        AC_MSG_ERROR(
+            [--disable-c-support requires --disable-python-c-support])
+    elif test "x$cxx_support" = "xfalse" ; then
+        AC_MSG_RESULT([failed])
+        AC_MSG_ERROR(
+            [--disable-cxx-support requires --disable-python-c-support])
+    fi
+fi
+AC_MSG_RESULT([$python_c_support])
+AC_MSG_CHECKING([if the Ruby       CloudI API is enabled])
 AC_ARG_ENABLE([ruby-support],
     [AS_HELP_STRING([--enable-ruby-support],
                     [Enable the Ruby CloudI API])],
@@ -128,27 +157,44 @@ AC_ARG_ENABLE([ruby-support],
         AC_MSG_ERROR([bad value "$enableval" for --enable-ruby-support])
     fi
     ], [ruby_support="true"])
-if test "x$c_support" = "xfalse" ; then
-    if test "x$cxx_support" = "xtrue" ; then
-        AC_MSG_ERROR(
-            [--disable-c-support requires --disable-cxx-support])
+AC_MSG_RESULT([$ruby_support])
+AC_MSG_CHECKING([if the CloudI integration tests should be included])
+AC_ARG_WITH([integration-tests],
+    [AS_HELP_STRING([--with-integration-tests@<:@=ARG@:>@],
+        [include the CloudI integration tests (ARG=yes),
+         or exclude the CloudI integration tests from
+         the installation (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        want_integration_tests="no"
+    elif test "x$withval" = "xyes"; then
+        want_integration_tests="yes"
+    else
+        AC_MSG_ERROR([--with-integration-tests needs yes or no, not $withval])
     fi
-    if test "x$python_c_support" = "xtrue" ; then
-        AC_MSG_ERROR(
-            [--disable-c-support requires --disable-python-c-support])
+    ],
+    [want_integration_tests="maybe"])
+if test "x$want_integration_tests" != "xno" -a \
+        "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
+        "x$java_support" = "xtrue" -a \
+        "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
+        "x$ruby_support" = "xtrue" ; then
+    AM_CONDITIONAL([INTEGRATION_TESTS], [true])
+    integration_tests_included="true"
+else
+    if test "x$want_integration_tests" = "xyes" ; then
+        AC_MSG_ERROR([--with-integration-tests=yes
+                      requires all programming languages be enabled])
     fi
+    AM_CONDITIONAL([INTEGRATION_TESTS], [false])
+    integration_tests_included="false"
 fi
-if test "x$cxx_support" = "xfalse" ; then
-    if test "x$python_c_support" = "xtrue" ; then
-        AC_MSG_ERROR(
-            [--disable-cxx-support requires --disable-python-c-support])
-    fi
-fi
+AC_MSG_RESULT([$integration_tests_included])
 
 # C++ requirements
 AX_BOOST_BASE([1.40], ,
     [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
-AX_BOOST_THREAD
 AX_BOOST_SYSTEM
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
@@ -156,6 +202,7 @@ AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
 # C/C++ CloudI API support
 if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
         "x$python_c_support" = "xtrue" ; then
+AX_BOOST_THREAD
 AX_CLOCK_GETTIME
 AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
     [AC_MSG_ERROR([boost::exception not found])], ,
@@ -173,6 +220,8 @@ AC_ARG_WITH([cxx-backtrace],
     [
     if test "x$withval" = "xyes"; then
         AX_BACKTRACE()
+    elif test "x$withval" != "xno"; then
+        AC_MSG_ERROR([--with-cxx-backtrace needs yes or no, not $withval])
     fi
     ])
 AM_CONDITIONAL([C_SUPPORT], [true])
@@ -216,7 +265,7 @@ AC_ARG_WITH([python-debug],
     elif test "x$withval" = "xyes"; then
         PYTHON_DEBUG="yes"
     else
-        PYTHON_DEBUG="yes"
+        AC_MSG_ERROR([--with-python-debug needs yes or no, not $withval])
     fi
     ],
     [PYTHON_DEBUG="no"])
@@ -343,35 +392,9 @@ if test "x$want_service" = "xyes"; then
     AC_SUBST(SERVICE_PATH)
 fi
 
-AC_ARG_WITH([integration-tests],
-    [AS_HELP_STRING([--with-integration-tests@<:@=ARG@:>@],
-        [include the CloudI integration tests (ARG=yes),
-         or exclude the CloudI integration tests from
-         the installation (ARG=no)
-         @<:@ARG=yes@:>@ ])],
-    [
-    if test "x$withval" = "xno"; then
-        want_integration_tests="no"
-    elif test "x$withval" = "xyes"; then
-        want_integration_tests="yes"
-    else
-        AC_MSG_ERROR([--with-integration-tests needs yes or no, not $withval])
-    fi
-    ],
-    [want_integration_tests="maybe"])
-if test "x$want_integration_tests" != "xno" -a \
-        "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
-        "x$java_support" = "xtrue" -a \
-        "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
-        "x$ruby_support" = "xtrue" ; then
-    AM_CONDITIONAL([INTEGRATION_TESTS], [true])
+if test "x$integration_tests_included" = "xtrue" ; then
     AC_CONFIG_FILES([cloudi.conf])
 else
-    if test "x$want_integration_tests" = "xyes" ; then
-        AC_MSG_ERROR([--with-integration-tests=yes
-                      requires all programming languages be enabled])
-    fi
-    AM_CONDITIONAL([INTEGRATION_TESTS], [false])
     AC_CONFIG_COMMANDS([cloudi.conf.empty],
         [echo "{acl,[[]]}. {services,[[]]}. {nodes,[[]]}. {logging,[[]]}." > \
          cloudi.conf])

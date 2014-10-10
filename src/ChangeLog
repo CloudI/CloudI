@@ -6,6 +6,9 @@
     * Improve boost_thread linking
     * Fix --with-integration-tests usage
     * Increase cloudi_service_quorum CT test timeout due to Travis build
+    * Improve boost autoconf macros
+    * Provide configure script output for the enabled CloudI APIs and
+      whether the integration tests will be included
 
 2014-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

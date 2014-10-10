@@ -14,7 +14,7 @@ services:
 before_install:
   - sudo apt-get update
 # travis takes care of: make autoconf automake libtool g++ git
-  - sudo apt-get install default-jdk libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
+  - sudo apt-get install default-jdk libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
 before_script:
   - mkdir build

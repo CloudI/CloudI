@@ -34,19 +34,17 @@
 #   warranty.
 
 #serial 25
+# required modifications below
 
 AC_DEFUN([AX_BOOST_BASE],
 [
 AC_ARG_WITH([boost],
   [AS_HELP_STRING([--with-boost@<:@=ARG@:>@],
-    [use Boost library from a standard location (ARG=yes),
-     from the specified location (ARG=<path>),
-     or disable it (ARG=no)
+    [use Boost library from a standard location (ARG=yes) or
+     from the specified location (ARG=<path>)
      @<:@ARG=yes@:>@ ])],
     [
-    if test "$withval" = "no"; then
-        want_boost="no"
-    elif test "$withval" = "yes"; then
+    if test "$withval" = "yes"; then
         want_boost="yes"
         ac_boost_path=""
     else
