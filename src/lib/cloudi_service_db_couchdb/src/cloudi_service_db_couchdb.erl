@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_couchdb).
@@ -80,10 +80,10 @@
          invoke_view_keys/5, invoke_view_keys/6]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -121,7 +121,7 @@
 create_database(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                         create_database).
+                     create_database).
 
 -spec create_database(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -132,7 +132,7 @@ create_database(Dispatcher, Name)
 create_database(Dispatcher, Name, Timeout)
     when is_list(Name), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         create_database, Timeout).
+                     create_database, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -148,7 +148,7 @@ create_database(Dispatcher, Name, Timeout)
 delete_database(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                         delete_database).
+                     delete_database).
 
 -spec delete_database(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -159,7 +159,7 @@ delete_database(Dispatcher, Name)
 delete_database(Dispatcher, Name, Timeout)
     when is_list(Name), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         delete_database, Timeout).
+                     delete_database, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -175,7 +175,7 @@ delete_database(Dispatcher, Name, Timeout)
 database_info(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                         database_info).
+                     database_info).
 
 -spec database_info(Dispatcher :: dispatcher(),
                     Name :: string(),
@@ -186,7 +186,7 @@ database_info(Dispatcher, Name)
 database_info(Dispatcher, Name, Timeout)
     when is_list(Name), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         database_info, Timeout).
+                     database_info, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -202,7 +202,7 @@ database_info(Dispatcher, Name, Timeout)
 server_info(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                         server_info).
+                     server_info).
 
 -spec server_info(Dispatcher :: dispatcher(),
                   Name :: string(),
@@ -213,7 +213,7 @@ server_info(Dispatcher, Name)
 server_info(Dispatcher, Name, Timeout)
     when is_list(Name), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         server_info, Timeout).
+                     server_info, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -229,7 +229,7 @@ server_info(Dispatcher, Name, Timeout)
 retrieve_all_dbs(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                         retrieve_all_dbs).
+                     retrieve_all_dbs).
 
 -spec retrieve_all_dbs(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -240,7 +240,7 @@ retrieve_all_dbs(Dispatcher, Name)
 retrieve_all_dbs(Dispatcher, Name, Timeout)
     when is_list(Name), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         retrieve_all_dbs, Timeout).
+                     retrieve_all_dbs, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -261,8 +261,8 @@ create_attachment(Dispatcher, Name, DocumentID, File, ContentType)
     when is_list(Name),
          is_list(DocumentID), is_list(File), is_list(ContentType) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_attachment, DocumentID,
-                          File, ContentType}).
+                     {create_attachment, DocumentID,
+                      File, ContentType}).
 
 -spec create_attachment(Dispatcher :: dispatcher(),
                         Name :: string(),
@@ -278,8 +278,8 @@ create_attachment(Dispatcher, Name, DocumentID, File, ContentType, Timeout)
          is_list(DocumentID), is_list(File), is_list(ContentType),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_attachment, DocumentID,
-                          File, ContentType}, Timeout).
+                     {create_attachment, DocumentID,
+                      File, ContentType}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -297,7 +297,7 @@ create_document(Dispatcher, Name, Doc)
     when is_list(Name),
          is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_document, Doc}).
+                     {create_document, Doc}).
 
 -spec create_document(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -310,7 +310,7 @@ create_document(Dispatcher, Name, Doc, Timeout)
     when is_list(Name),
          is_list(Doc), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_document, Doc}, Timeout).
+                     {create_document, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -329,7 +329,7 @@ create_document_id(Dispatcher, Name, DocumentID, Doc)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_document, DocumentID, Doc}).
+                     {create_document, DocumentID, Doc}).
 
 -spec create_document_id(Dispatcher :: dispatcher(),
                          Name :: string(),
@@ -343,7 +343,7 @@ create_document_id(Dispatcher, Name, DocumentID, Doc, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_document, DocumentID, Doc}, Timeout).
+                     {create_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -361,7 +361,7 @@ create_documents(Dispatcher, Name, Documents)
     when is_list(Name),
          is_list(Documents) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_documents, Documents}).
+                     {create_documents, Documents}).
 
 -spec create_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -374,7 +374,7 @@ create_documents(Dispatcher, Name, Documents, Timeout)
     when is_list(Name),
          is_list(Documents), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_documents, Documents}, Timeout).
+                     {create_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -392,7 +392,7 @@ document_revision(Dispatcher, Name, DocumentID)
     when is_list(Name),
          is_list(DocumentID) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {document_revision, DocumentID}).
+                     {document_revision, DocumentID}).
 
 -spec document_revision(Dispatcher :: dispatcher(),
                         Name :: string(),
@@ -405,7 +405,7 @@ document_revision(Dispatcher, Name, DocumentID, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {document_revision, DocumentID}, Timeout).
+                     {document_revision, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -423,7 +423,7 @@ retrieve_document(Dispatcher, Name, DocumentID)
     when is_list(Name),
          is_list(DocumentID) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {retrieve_document, DocumentID}).
+                     {retrieve_document, DocumentID}).
 
 -spec retrieve_document(Dispatcher :: dispatcher(),
                         Name :: string(),
@@ -436,7 +436,7 @@ retrieve_document(Dispatcher, Name, DocumentID, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {retrieve_document, DocumentID}, Timeout).
+                     {retrieve_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -455,7 +455,7 @@ update_document(Dispatcher, Name, DocumentID, Doc)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {update_document, DocumentID, Doc}).
+                     {update_document, DocumentID, Doc}).
 
 -spec update_document(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -469,7 +469,7 @@ update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {update_document, DocumentID, Doc}, Timeout).
+                     {update_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -489,7 +489,7 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {update_document, DocumentID, Rev, Doc}).
+                     {update_document, DocumentID, Rev, Doc}).
 
 -spec update_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
@@ -505,7 +505,7 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
          is_list(DocumentID), is_list(Rev), is_list(Doc),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {update_document, DocumentID, Rev, Doc}, Timeout).
+                     {update_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -524,7 +524,7 @@ replace_document(Dispatcher, Name, DocumentID, Doc)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {replace_document, DocumentID, Doc}).
+                     {replace_document, DocumentID, Doc}).
 
 -spec replace_document(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -538,7 +538,7 @@ replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {replace_document, DocumentID, Doc}, Timeout).
+                     {replace_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -558,7 +558,7 @@ replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {replace_document, DocumentID, Rev, Doc}).
+                     {replace_document, DocumentID, Rev, Doc}).
 
 -spec replace_document_rev(Dispatcher :: dispatcher(),
                            Name :: string(),
@@ -573,7 +573,7 @@ replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {replace_document, DocumentID, Rev, Doc}, Timeout).
+                     {replace_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -591,7 +591,7 @@ delete_document(Dispatcher, Name, DocumentID)
     when is_list(Name),
          is_list(DocumentID) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_document, DocumentID}).
+                     {delete_document, DocumentID}).
 
 -spec delete_document(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -604,7 +604,7 @@ delete_document(Dispatcher, Name, DocumentID, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_document, DocumentID}, Timeout).
+                     {delete_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -623,7 +623,7 @@ delete_document_rev(Dispatcher, Name, DocumentID, Rev)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_document, DocumentID, Rev}).
+                     {delete_document, DocumentID, Rev}).
 
 -spec delete_document_rev(Dispatcher :: dispatcher(),
                           Name :: string(),
@@ -637,7 +637,7 @@ delete_document_rev(Dispatcher, Name, DocumentID, Rev, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_document, DocumentID, Rev}, Timeout).
+                     {delete_document, DocumentID, Rev}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -655,7 +655,7 @@ delete_documents(Dispatcher, Name, Documents)
     when is_list(Name),
          is_list(Documents) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_documents, Documents}).
+                     {delete_documents, Documents}).
 
 -spec delete_documents(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -668,7 +668,7 @@ delete_documents(Dispatcher, Name, Documents, Timeout)
     when is_list(Name),
          is_list(Documents), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {delete_documents, Documents}, Timeout).
+                     {delete_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -687,7 +687,7 @@ create_views(Dispatcher, Name, DocName, ViewList)
     when is_list(Name),
          is_list(DocName), is_list(ViewList) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName, ViewList}).
+                     {create_view, DocName, ViewList}).
 
 -spec create_views(Dispatcher :: dispatcher(),
                    Name :: string(),
@@ -701,7 +701,7 @@ create_views(Dispatcher, Name, DocName, ViewList, Timeout)
     when is_list(Name),
          is_list(DocName), is_list(ViewList), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName, ViewList}, Timeout).
+                     {create_view, DocName, ViewList}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -721,7 +721,7 @@ create_view(Dispatcher, Name, DocName, ViewName, Data)
     when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Data) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName, ViewName, Data}).
+                     {create_view, DocName, ViewName, Data}).
 
 -spec create_view(Dispatcher :: dispatcher(),
                   Name :: string(),
@@ -737,7 +737,7 @@ create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
          is_list(DocName), is_list(ViewName), is_list(Data),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName, ViewName, Data}, Timeout).
+                     {create_view, DocName, ViewName, Data}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -759,8 +759,7 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data)
          is_list(DocName), is_list(Type),
          is_list(ViewName), is_list(Data) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName,
-                          Type, ViewName, Data}).
+                     {create_view, DocName, Type, ViewName, Data}).
 
 -spec create_view_type(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -777,8 +776,7 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
          is_list(DocName), is_list(Type),
          is_list(ViewName), is_list(Data), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {create_view, DocName,
-                          Type, ViewName, Data}, Timeout).
+                     {create_view, DocName, Type, ViewName, Data}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -797,7 +795,7 @@ invoke_view(Dispatcher, Name, DocName, ViewName)
     when is_list(Name),
          is_list(DocName), is_list(ViewName) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {invoke_view, DocName, ViewName}).
+                     {invoke_view, DocName, ViewName}).
 
 -spec invoke_view(Dispatcher :: dispatcher(),
                   Name :: string(),
@@ -811,7 +809,7 @@ invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
     when is_list(Name),
          is_list(DocName), is_list(ViewName), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {invoke_view, DocName, ViewName}, Timeout).
+                     {invoke_view, DocName, ViewName}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -831,7 +829,7 @@ invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys)
     when is_list(Name),
          is_list(DocName), is_list(ViewName), is_list(Keys) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {invoke_view, DocName, ViewName, Keys}).
+                     {invoke_view, DocName, ViewName, Keys}).
 
 -spec invoke_view_keys(Dispatcher :: dispatcher(),
                        Name :: string(),
@@ -847,13 +845,13 @@ invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys, Timeout)
          is_list(DocName), is_list(ViewName), is_list(Keys),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                         {invoke_view, DocName, ViewName, Keys}, Timeout).
+                     {invoke_view, DocName, ViewName, Keys}, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},
@@ -885,141 +883,146 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                                     Port, Database, Timeout),
                            Request, State);
         'create_database' ->
-            reply_internal(cloudi_x_ecouchdb:create_database_c(Connection, HostName,
-                                                      Port, Database,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_database_c(Connection, HostName,
+                                             Port, Database, Timeout),
                            Request, State);
         'delete_database' ->
-            reply_internal(cloudi_x_ecouchdb:delete_database_c(Connection, HostName,
-                                                      Port, Database,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           delete_database_c(Connection, HostName,
+                                             Port, Database, Timeout),
                            Request, State);
         'database_info' ->
-            reply_internal(cloudi_x_ecouchdb:database_info_c(Connection, HostName,
-                                                    Port, Database,
-                                                    Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           database_info_c(Connection, HostName,
+                                           Port, Database, Timeout),
                            Request, State);
         'server_info' ->
-            reply_internal(cloudi_x_ecouchdb:server_info_c(Connection, HostName, Port,
-                                                  Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           server_info_c(Connection, HostName, Port, Timeout),
                            Request, State);
         'retrieve_all_dbs' ->
-            reply_internal(cloudi_x_ecouchdb:retrieve_all_dbs_c(Connection, HostName,
-                                                       Port, Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           retrieve_all_dbs_c(Connection, HostName,
+                                              Port, Timeout),
                            Request, State);
         {'create_attachment', DocumentID, File, ContentType} ->
-            reply_internal(cloudi_x_ecouchdb:create_attachment_c(Connection, HostName,
-                                                        Port, Database,
-                                                        DocumentID, File,
-                                                        ContentType,
-                                                        Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_attachment_c(Connection, HostName,
+                                               Port, Database,
+                                               DocumentID, File,
+                                               ContentType, Timeout),
                            Request, State);
         {'create_document', Doc} ->
-            reply_internal(cloudi_x_ecouchdb:create_document_c(Connection, HostName,
-                                                      Port, Database, Doc,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_document_c(Connection, HostName,
+                                             Port, Database, Doc, Timeout),
                            Request, State);
         {'create_document', DocumentID, Doc} ->
-            reply_internal(cloudi_x_ecouchdb:create_document_c(Connection, HostName,
-                                                      Port, Database,
-                                                      DocumentID, Doc,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_document_c(Connection, HostName,
+                                             Port, Database,
+                                             DocumentID, Doc, Timeout),
                            Request, State);
         {'create_documents', Documents} ->
-            reply_internal(cloudi_x_ecouchdb:create_documents_c(Connection, HostName,
-                                                       Port, Database,
-                                                       Documents,
-                                                       Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_documents_c(Connection, HostName,
+                                              Port, Database, Documents,
+                                              Timeout),
                            Request, State);
         {'document_revision', DocumentID} ->
-            reply_internal(cloudi_x_ecouchdb:document_revision_c(Connection, HostName,
-                                                        Port, Database,
-                                                        DocumentID,
-                                                        Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           document_revision_c(Connection, HostName,
+                                               Port, Database, DocumentID,
+                                               Timeout),
                            Request, State);
         {'retrieve_document', DocumentID} ->
-            reply_internal(cloudi_x_ecouchdb:retrieve_document_c(Connection, HostName,
-                                                        Port, Database,
-                                                        DocumentID,
-                                                        Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           retrieve_document_c(Connection, HostName,
+                                               Port, Database,
+                                               DocumentID, Timeout),
                            Request, State);
         {'update_document', DocumentID, Doc} ->
-            reply_internal(cloudi_x_ecouchdb:update_document_c(Connection, HostName,
-                                                      Port, Database,
-                                                      DocumentID, Doc,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           update_document_c(Connection, HostName,
+                                             Port, Database,
+                                             DocumentID, Doc, Timeout),
                            Request, State);
         {'update_document', DocumentID, Rev, Doc} ->
-            reply_internal(cloudi_x_ecouchdb:update_document_c(Connection, HostName,
-                                                      Port, Database,
-                                                      DocumentID, Rev, Doc,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           update_document_c(Connection, HostName,
+                                             Port, Database,
+                                             DocumentID, Rev, Doc, Timeout),
                            Request, State);
         {'replace_document', DocumentID, Doc} ->
-            reply_internal(cloudi_x_ecouchdb:replace_document_c(Connection, HostName,
-                                                       Port, Database,
-                                                       DocumentID, Doc,
-                                                       Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           replace_document_c(Connection, HostName,
+                                              Port, Database,
+                                              DocumentID, Doc, Timeout),
                            Request, State);
         {'replace_document', DocumentID, Rev, Doc} ->
-            reply_internal(cloudi_x_ecouchdb:replace_document_c(Connection, HostName,
-                                                       Port, Database,
-                                                       DocumentID, Rev, Doc,
-                                                       Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           replace_document_c(Connection, HostName,
+                                              Port, Database,
+                                              DocumentID, Rev, Doc, Timeout),
                            Request, State);
         {'delete_document', DocumentID} ->
-            reply_internal(cloudi_x_ecouchdb:delete_document_c(Connection, HostName,
-                                                      Port, Database,
-                                                      DocumentID,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           delete_document_c(Connection, HostName,
+                                             Port, Database,
+                                             DocumentID, Timeout),
                            Request, State);
         {'delete_document', DocumentID, Rev} ->
-            reply_internal(cloudi_x_ecouchdb:delete_document_c(Connection, HostName,
-                                                      Port, Database,
-                                                      DocumentID, Rev,
-                                                      Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           delete_document_c(Connection, HostName,
+                                             Port, Database,
+                                             DocumentID, Rev, Timeout),
                            Request, State);
         {'delete_documents', Documents} ->
-            reply_internal(cloudi_x_ecouchdb:delete_documents_c(Connection, HostName,
-                                                       Port, Database,
-                                                       Documents,
-                                                       Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           delete_documents_c(Connection, HostName,
+                                              Port, Database,
+                                              Documents, Timeout),
                            Request, State);
         {'create_view', DocName, ViewList} ->
-            reply_internal(cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port,
-                                                  Database, DocName, ViewList,
-                                                  Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_view_c(Connection, HostName, Port,
+                                         Database, DocName, ViewList, Timeout),
                            Request, State);
         {'create_view', DocName, ViewName, Data} ->
-            reply_internal(cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port,
-                                                  Database, DocName, ViewName,
-                                                  Data, Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_view_c(Connection, HostName, Port,
+                                         Database, DocName, ViewName,
+                                         Data, Timeout),
                            Request, State);
         {'create_view', DocName, Type, ViewName, Data} ->
-            reply_internal(cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port,
-                                                  Database, DocName, Type,
-                                                  ViewName, Data,
-                                                  Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           create_view_c(Connection, HostName, Port,
+                                         Database, DocName, Type,
+                                         ViewName, Data, Timeout),
                            Request, State);
         {'invoke_view', DocName, ViewName} ->
-            reply_internal(cloudi_x_ecouchdb:invoke_view_c(Connection, HostName, Port,
-                                                  Database, DocName, ViewName,
-                                                  Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           invoke_view_c(Connection, HostName, Port,
+                                         Database, DocName, ViewName, Timeout),
                            Request, State);
         {'invoke_view', DocName, ViewName, Keys} ->
-            reply_internal(cloudi_x_ecouchdb:invoke_view_c(Connection, HostName, Port,
-                                                  Database, DocName, ViewName,
-                                                  Keys, Timeout),
+            reply_internal(cloudi_x_ecouchdb:
+                           invoke_view_c(Connection, HostName, Port,
+                                         Database, DocName, ViewName,
+                                         Keys, Timeout),
                            Request, State)
     end.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{connection = Connection}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{connection = Connection}) ->
     cloudi_x_ecouchdb:close(Connection),
     ok.
 
@@ -1057,82 +1060,95 @@ reply_binary(Output, Input, State) ->
 do_query(Query, Connection, HostName, Port, Database, Timeout) ->
     try (case cloudi_string:binary_to_term(Query) of
         'create_database' ->
-            cloudi_x_ecouchdb:create_database_c(Connection, HostName, Port,
-                                       Database, Timeout);
+            cloudi_x_ecouchdb:
+            create_database_c(Connection, HostName, Port,
+                              Database, Timeout);
         'delete_database' ->
-            cloudi_x_ecouchdb:delete_database_c(Connection, HostName, Port,
-                                       Database, Timeout);
+            cloudi_x_ecouchdb:
+            delete_database_c(Connection, HostName, Port,
+                              Database, Timeout);
         % database_info
         % server_info
         % retrieve_all_dbs
         {'create_attachment', DocumentID, File, ContentType}
             when is_list(DocumentID), is_list(File),
                  is_list(ContentType) ->
-            cloudi_x_ecouchdb:create_attachment_c(Connection, HostName, Port,
-                                         Database, DocumentID, File,
-                                         ContentType, Timeout);
+            cloudi_x_ecouchdb:
+            create_attachment_c(Connection, HostName, Port,
+                                Database, DocumentID, File,
+                                ContentType, Timeout);
         {'create_document', DocumentID, Doc}
             when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:create_document_c(Connection, HostName, Port,
-                                       Database, DocumentID, Doc, Timeout);
+            cloudi_x_ecouchdb:
+            create_document_c(Connection, HostName, Port,
+                              Database, DocumentID, Doc, Timeout);
         % create_documents
         % document_revision
         % retrieve_document
         {'update_document', DocumentID, Doc}
             when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:update_document_c(Connection, HostName, Port,
-                                       Database, DocumentID, Doc, Timeout);
+            cloudi_x_ecouchdb:
+            update_document_c(Connection, HostName, Port,
+                              Database, DocumentID, Doc, Timeout);
         {'update_document', DocumentID, Rev, Doc}
             when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-            cloudi_x_ecouchdb:update_document_c(Connection, HostName, Port,
-                                       Database, DocumentID, Rev,
-                                       Doc, Timeout);
+            cloudi_x_ecouchdb:
+            update_document_c(Connection, HostName, Port,
+                              Database, DocumentID, Rev,
+                              Doc, Timeout);
         {'replace_document', DocumentID, Doc}
             when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:replace_document_c(Connection, HostName, Port,
-                                        Database, DocumentID,
-                                        Doc, Timeout);
+            cloudi_x_ecouchdb:
+            replace_document_c(Connection, HostName, Port,
+                               Database, DocumentID, Doc, Timeout);
         {'replace_document', DocumentID, Rev, Doc}
             when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-            cloudi_x_ecouchdb:replace_document_c(Connection, HostName, Port,
-                                        Database, DocumentID, Rev,
-                                        Doc, Timeout);
+            cloudi_x_ecouchdb:
+            replace_document_c(Connection, HostName, Port,
+                               Database, DocumentID, Rev, Doc, Timeout);
         {'delete_document', DocumentID}
             when is_list(DocumentID) ->
-            cloudi_x_ecouchdb:delete_document_c(Connection, HostName, Port,
-                                       Database, DocumentID, Timeout);
+            cloudi_x_ecouchdb:
+            delete_document_c(Connection, HostName, Port,
+                              Database, DocumentID, Timeout);
         {'delete_document', DocumentID, Rev}
             when is_list(DocumentID), is_list(Rev) ->
-            cloudi_x_ecouchdb:delete_document_c(Connection, HostName, Port,
-                                       Database, DocumentID, Rev, Timeout);
+            cloudi_x_ecouchdb:
+            delete_document_c(Connection, HostName, Port,
+                              Database, DocumentID, Rev, Timeout);
         % delete_documents
         {'create_view', DocName, ViewList}
             when is_list(DocName), is_list(ViewList) ->
-            cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                   DocName, ViewList, Timeout);
+            cloudi_x_ecouchdb:
+            create_view_c(Connection, HostName, Port, Database,
+                          DocName, ViewList, Timeout);
         {'create_view', DocName, ViewName, Data}
             when is_list(DocName), is_list(ViewName), is_list(Data) ->
-            cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                   DocName, ViewName, Data, Timeout);
+            cloudi_x_ecouchdb:
+            create_view_c(Connection, HostName, Port, Database,
+                          DocName, ViewName, Data, Timeout);
         {'create_view', DocName, Type, ViewName, Data}
             when is_list(DocName), is_list(Type),
                  is_list(ViewName), is_list(Data) ->
-            cloudi_x_ecouchdb:create_view_c(Connection, HostName, Port, Database,
-                                   DocName, Type, ViewName, Data, Timeout);
+            cloudi_x_ecouchdb:
+            create_view_c(Connection, HostName, Port, Database,
+                          DocName, Type, ViewName, Data, Timeout);
         {'invoke_view', DocName, ViewName}
             when is_list(DocName), is_list(ViewName) ->
-            cloudi_x_ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
-                                   DocName, ViewName, Timeout);
+            cloudi_x_ecouchdb:
+            invoke_view_c(Connection, HostName, Port, Database,
+                          DocName, ViewName, Timeout);
         {'invoke_view', DocName,   ViewName, Keys}
             when is_list(DocName), is_list(ViewName), is_list(Keys) ->
-            cloudi_x_ecouchdb:invoke_view_c(Connection, HostName, Port, Database,
-                                   DocName, ViewName, Keys, Timeout);
+            cloudi_x_ecouchdb:
+            invoke_view_c(Connection, HostName, Port, Database,
+                          DocName, ViewName, Keys, Timeout);
         _ ->
             {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_DEBUG("Invalid couchdb command tuple ~p",
-                       [binary_to_list(Query)]),
+                       [erlang:binary_to_list(Query)]),
             <<>>;
         Result ->
             Result
@@ -1140,7 +1156,7 @@ do_query(Query, Connection, HostName, Port, Database, Timeout) ->
         _:Reason ->
             ?LOG_DEBUG("exception when processing "
                        "couchdb command tuple ~p: ~p",
-                       [binary_to_list(Query), Reason]),
+                       [erlang:binary_to_list(Query), Reason]),
             <<>>
     end.
 

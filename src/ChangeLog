@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the 1.4.0 cloudi_service behaviour changes
+      (use the CLOUDI_SERVICE_OLD to ignore the changes)
+        * cloudi_service_init arity 3 -> 4 (for Timeout)
+        * cloudi_service_terminate arity 2 -> 3 (for Timeout)
+
 2014-10-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve boost_thread linking

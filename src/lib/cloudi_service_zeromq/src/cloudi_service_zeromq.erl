@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2011-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_zeromq).
@@ -56,10 +56,10 @@
 %% external interface
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -104,7 +104,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     {SubscribeL, L1} = cloudi_proplists:partition(subscribe, Args),
     {PublishL, L2} = cloudi_proplists:partition(publish, L1),
     {RequestL, L3} = cloudi_proplists:partition(outbound, L2),
@@ -322,17 +322,19 @@ cloudi_service_handle_info({'timeout_async_active', TransId},
     ok = erlzmq:send(S, <<>>),
     {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{context = Context,
-                                   publish = Publish,
-                                   request = Request,
-                                   push = Push,
-                                   receives = ReceivesZMQ}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{context = Context,
+                                publish = Publish,
+                                request = Request,
+                                push = Push,
+                                receives = ReceivesZMQ}) ->
     cloudi_x_trie:foreach(fun(_, L) ->
         lists:foreach(fun({_, S}) ->
             erlzmq:close(S)

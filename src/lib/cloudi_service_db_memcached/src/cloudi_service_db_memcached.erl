@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_memcached).
@@ -73,10 +73,10 @@
          version/2, version/3]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -292,7 +292,7 @@ replace(Dispatcher, Name, Key, Value)
     when is_list(Name),
          is_binary(Value) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {replace, Key, Value}).
+                     {replace, Key, Value}).
 
 -spec replace(Dispatcher :: dispatcher(),
               Name :: string(),
@@ -305,7 +305,7 @@ replace(Dispatcher, Name, Key, Value, Timeout)
     when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {replace, Key, Value}, Timeout).
+                     {replace, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -324,7 +324,7 @@ replace_exp(Dispatcher, Name, Key, Value, Expiration)
     when is_list(Name),
          is_binary(Value), is_integer(Expiration) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {replace, Key, Value, Expiration}).
+                     {replace, Key, Value, Expiration}).
 
 -spec replace_exp(Dispatcher :: dispatcher(),
                   Name :: string(),
@@ -338,7 +338,7 @@ replace_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
     when is_list(Name),
          is_binary(Value), is_integer(Expiration), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {replace, Key, Value, Expiration}, Timeout).
+                     {replace, Key, Value, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -354,7 +354,7 @@ replace_exp(Dispatcher, Name, Key, Value, Expiration, Timeout)
 delete(Dispatcher, Name, Key)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {delete, Key}).
+                     {delete, Key}).
 
 -spec delete(Dispatcher :: dispatcher(),
              Name :: string(),
@@ -366,7 +366,7 @@ delete(Dispatcher, Name, Key, Timeout)
     when is_list(Name),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {delete, Key}, Timeout).
+                     {delete, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -386,8 +386,7 @@ increment(Dispatcher, Name, Key, Value, Initial, Expiration)
     when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {increment, Key, Value,
-                              Initial, Expiration}).
+                     {increment, Key, Value, Initial, Expiration}).
 
 -spec increment(Dispatcher :: dispatcher(),
                 Name :: string(),
@@ -403,8 +402,7 @@ increment(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
          is_binary(Value), is_binary(Initial), is_integer(Expiration),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {increment, Key, Value,
-                              Initial, Expiration}, Timeout).
+                     {increment, Key, Value, Initial, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -424,8 +422,7 @@ decrement(Dispatcher, Name, Key, Value, Initial, Expiration)
     when is_list(Name),
          is_binary(Value), is_binary(Initial), is_integer(Expiration) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {decrement, Key, Value,
-                              Initial, Expiration}).
+                     {decrement, Key, Value, Initial, Expiration}).
 
 -spec decrement(Dispatcher :: dispatcher(),
                 Name :: string(),
@@ -441,8 +438,7 @@ decrement(Dispatcher, Name, Key, Value, Initial, Expiration, Timeout)
          is_binary(Value), is_binary(Initial), is_integer(Expiration),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {decrement, Key, Value,
-                              Initial, Expiration}, Timeout).
+                     {decrement, Key, Value, Initial, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -460,7 +456,7 @@ append(Dispatcher, Name, Key, Value)
     when is_list(Name),
          is_binary(Value) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {append, Key, Value}).
+                     {append, Key, Value}).
 
 -spec append(Dispatcher :: dispatcher(),
              Name :: string(),
@@ -473,7 +469,7 @@ append(Dispatcher, Name, Key, Value, Timeout)
     when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {append, Key, Value}, Timeout).
+                     {append, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -491,7 +487,7 @@ prepend(Dispatcher, Name, Key, Value)
     when is_list(Name),
          is_binary(Value) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {prepend, Key, Value}).
+                     {prepend, Key, Value}).
 
 -spec prepend(Dispatcher :: dispatcher(),
               Name :: string(),
@@ -504,7 +500,7 @@ prepend(Dispatcher, Name, Key, Value, Timeout)
     when is_list(Name),
          is_binary(Value), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {prepend, Key, Value}, Timeout).
+                     {prepend, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -519,7 +515,7 @@ prepend(Dispatcher, Name, Key, Value, Timeout)
 stats(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             stats).
+                     stats).
 
 -spec stats(Dispatcher :: dispatcher(),
             Name :: string(),
@@ -529,7 +525,7 @@ stats(Dispatcher, Name)
 stats(Dispatcher, Name, Timeout)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             stats, Timeout).
+                     stats, Timeout).
     
 %%-------------------------------------------------------------------------
 %% @doc
@@ -544,7 +540,7 @@ stats(Dispatcher, Name, Timeout)
 flush(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             flush).
+                     flush).
 
 -spec flush(Dispatcher :: dispatcher(),
             Name :: string(),
@@ -555,7 +551,7 @@ flush(Dispatcher, Name, Timeout)
     when is_list(Name),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             flush, Timeout).
+                     flush, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -572,7 +568,7 @@ flush_exp(Dispatcher, Name, Expiration)
     when is_list(Name),
          is_integer(Expiration) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {flush, Expiration}).
+                     {flush, Expiration}).
 
 -spec flush_exp(Dispatcher :: dispatcher(),
                 Name :: string(),
@@ -584,7 +580,7 @@ flush_exp(Dispatcher, Name, Expiration, Timeout)
     when is_list(Name),
          is_integer(Expiration), is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             {flush, Expiration}, Timeout).
+                     {flush, Expiration}, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -599,7 +595,7 @@ flush_exp(Dispatcher, Name, Expiration, Timeout)
 quit(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             quit).
+                     quit).
 
 -spec quit(Dispatcher :: dispatcher(),
            Name :: string(),
@@ -610,7 +606,7 @@ quit(Dispatcher, Name, Timeout)
     when is_list(Name),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             quit, Timeout).
+                     quit, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -625,7 +621,7 @@ quit(Dispatcher, Name, Timeout)
 version(Dispatcher, Name)
     when is_list(Name) ->
     cloudi:send_sync(Dispatcher, Name,
-                             version).
+                     version).
 
 -spec version(Dispatcher :: dispatcher(),
            Name :: string(),
@@ -636,14 +632,14 @@ version(Dispatcher, Name, Timeout)
     when is_list(Name),
          is_integer(Timeout) ->
     cloudi:send_sync(Dispatcher, Name,
-                             version, Timeout).
+                     version, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
 cloudi_service_init([{database, DatabaseName,
-                    [{_,_,_}|_] = HostList}], _Prefix, Dispatcher) ->
+                    [{_,_,_}|_] = HostList}], _Prefix, _Timeout, Dispatcher) ->
     case cloudi_x_ememcached:start_link(HostList) of
         {ok, Pid} when is_pid(Pid) ->
             cloudi_service:subscribe(Dispatcher, DatabaseName),
@@ -660,55 +656,73 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
         Command when is_binary(Command) ->
             {reply, do_query(Command, Process, Timeout), State};
         {'get', Key} ->
-            {reply, cloudi_x_ememcached:get(Process, Key, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    get(Process, Key, Timeout), State};
         {'get_many', Keys} ->
-            {reply, cloudi_x_ememcached:get_many(Process, Keys, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    get_many(Process, Keys, Timeout), State};
         {'add', Key, Value} ->
-            {reply, cloudi_x_ememcached:add(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    add(Process, Key, Value, Timeout), State};
         {'add', Key, Value, Expiration} ->
-            {reply, cloudi_x_ememcached:add_exp(Process, Key, Value, Expiration,
-                                       Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    add_exp(Process, Key, Value, Expiration, Timeout), State};
         {'set', Key, Value} ->
-            {reply, cloudi_x_ememcached:set(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    set(Process, Key, Value, Timeout), State};
         {'set', Key, Value, Expiration} ->
-            {reply, cloudi_x_ememcached:set_exp(Process, Key, Value, Expiration,
-                                       Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    set_exp(Process, Key, Value, Expiration, Timeout), State};
         {'replace', Key, Value} ->
-            {reply, cloudi_x_ememcached:replace(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    replace(Process, Key, Value, Timeout), State};
         {'replace', Key, Value, Expiration} ->
-            {reply, cloudi_x_ememcached:replace_exp(Process, Key, Value, Expiration,
-                                           Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    replace_exp(Process, Key, Value,
+                                Expiration, Timeout), State};
         {'delete', Key} ->
-            {reply, cloudi_x_ememcached:delete(Process, Key, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    delete(Process, Key, Timeout), State};
         {'increment', Key, Value, Initial, Expiration} ->
-            {reply, cloudi_x_ememcached:increment_exp(Process, Key, Value, Initial,
-                                             Expiration, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    increment_exp(Process, Key, Value, Initial,
+                                  Expiration, Timeout), State};
         {'decrement', Key, Value, Initial, Expiration} ->
-            {reply, cloudi_x_ememcached:decrement_exp(Process, Key, Value, Initial,
-                                             Expiration, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    decrement_exp(Process, Key, Value, Initial,
+                                  Expiration, Timeout), State};
         {'append', Key, Value} ->
-            {reply, cloudi_x_ememcached:append(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    append(Process, Key, Value, Timeout), State};
         {'prepend', Key, Value} ->
-            {reply, cloudi_x_ememcached:prepend(Process, Key, Value, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    prepend(Process, Key, Value, Timeout), State};
         'stats' ->
-            {reply, cloudi_x_ememcached:stats(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    stats(Process, Timeout), State};
         'flush' ->
-            {reply, cloudi_x_ememcached:flush(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    flush(Process, Timeout), State};
         {'flush', Expiration} ->
-            {reply, cloudi_x_ememcached:flush_exp(Process, Expiration, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    flush_exp(Process, Expiration, Timeout), State};
         'quit' ->
-            {reply, cloudi_x_ememcached:quit(Process, Timeout), State};
+            {reply, cloudi_x_ememcached:
+                    quit(Process, Timeout), State};
         'version' ->
-            {reply, cloudi_x_ememcached:version(Process, Timeout), State}
+            {reply, cloudi_x_ememcached:
+                    version(Process, Timeout), State}
     end.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{process = Process}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{process = Process}) ->
     erlang:exit(Process, normal),
     ok.
 
@@ -720,62 +734,78 @@ cloudi_service_terminate(_, #state{process = Process}) ->
 do_query(Query, Process, Timeout) ->
     try (case cloudi_string:binary_to_term(Query) of
         {'get', Key} ->
-            cloudi_x_ememcached:get(Process, Key, Timeout);
+            cloudi_x_ememcached:
+            get(Process, Key, Timeout);
         {'get_many', Keys} when is_list(Keys) ->
-            cloudi_x_ememcached:get_many(Process, Keys, Timeout);
+            cloudi_x_ememcached:
+            get_many(Process, Keys, Timeout);
         {'add', Key, Value}
             when is_binary(Value) ->
-            cloudi_x_ememcached:add(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:
+            add(Process, Key, Value, Timeout);
         {'add', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            cloudi_x_ememcached:add_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:
+            add_exp(Process, Key, Value, Expiration, Timeout);
         {'set', Key, Value}
             when is_binary(Value) ->
-            cloudi_x_ememcached:set(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:
+            set(Process, Key, Value, Timeout);
         {'set', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            cloudi_x_ememcached:set_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:
+            set_exp(Process, Key, Value, Expiration, Timeout);
         {'replace', Key, Value}
             when is_binary(Value) ->
-            cloudi_x_ememcached:replace(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:
+            replace(Process, Key, Value, Timeout);
         {'replace', Key, Value, Expiration}
             when is_binary(Value), is_integer(Expiration) ->
-            cloudi_x_ememcached:replace_exp(Process, Key, Value, Expiration, Timeout);
+            cloudi_x_ememcached:
+            replace_exp(Process, Key, Value, Expiration, Timeout);
         {'delete', Key} ->
-            cloudi_x_ememcached:delete(Process, Key, Timeout);
+            cloudi_x_ememcached:
+            delete(Process, Key, Timeout);
         {'increment', Key, Value, Initial, Expiration}
             when is_binary(Value), is_binary(Initial),
                  is_integer(Expiration) ->
-            cloudi_x_ememcached:increment_exp(Process, Key, Value, Initial,
-                                     Expiration, Timeout);
+            cloudi_x_ememcached:
+            increment_exp(Process, Key, Value, Initial, Expiration, Timeout);
         {'decrement', Key, Value, Initial, Expiration}
             when is_binary(Value), is_binary(Initial),
                  is_integer(Expiration) ->
-            cloudi_x_ememcached:decrement_exp(Process, Key, Value, Initial,
-                                     Expiration, Timeout);
+            cloudi_x_ememcached:
+            decrement_exp(Process, Key, Value, Initial, Expiration, Timeout);
         {'append', Key, Value}
             when is_binary(Value) ->
-            cloudi_x_ememcached:append(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:
+            append(Process, Key, Value, Timeout);
         {'prepend', Key, Value}
             when is_binary(Value) ->
-            cloudi_x_ememcached:prepend(Process, Key, Value, Timeout);
+            cloudi_x_ememcached:
+            prepend(Process, Key, Value, Timeout);
         'stats' ->
-            cloudi_x_ememcached:stats(Process, Timeout);
+            cloudi_x_ememcached:
+            stats(Process, Timeout);
         'flush' ->
-            cloudi_x_ememcached:flush(Process, Timeout);
+            cloudi_x_ememcached:
+            flush(Process, Timeout);
         {'flush', Expiration}
             when is_integer(Expiration) ->
-            cloudi_x_ememcached:flush_exp(Process, Expiration, Timeout);
+            cloudi_x_ememcached:
+            flush_exp(Process, Expiration, Timeout);
         'quit' ->
-            cloudi_x_ememcached:quit(Process, Timeout);
+            cloudi_x_ememcached:
+            quit(Process, Timeout);
         'version' ->
-            cloudi_x_ememcached:version(Process, Timeout);
+            cloudi_x_ememcached:
+            version(Process, Timeout);
         _ ->
             {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_DEBUG("Invalid memcached command tuple ~p",
-                       [binary_to_list(Query)]),
+                       [erlang:binary_to_list(Query)]),
             <<>>;
         Result when is_binary(Result) ->
             Result
@@ -783,7 +813,7 @@ do_query(Query, Process, Timeout) ->
         _:Reason ->
             ?LOG_DEBUG("exception when processing "
                        "memcached command tuple ~p: ~p",
-                       [binary_to_list(Query), Reason]),
+                       [erlang:binary_to_list(Query), Reason]),
             <<>>
     end.
 

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -55,10 +55,10 @@
 %% external interface
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
@@ -94,7 +94,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {destinations,               []},
         {add_prefix,                 ?DEFAULT_ADD_PREFIX}],
@@ -189,11 +189,11 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             {noreply, State}
     end.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------

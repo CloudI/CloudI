@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -56,10 +56,10 @@
 %% external interface
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -89,7 +89,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(_Args, Prefix, Dispatcher) ->
+cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
     % newer service names should be preferred to provide a
     % content-type hint as a file extension
     CloudIServiceAPI = lists:foldl(fun({Method, Arity}, Functions) ->
@@ -167,7 +167,7 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------

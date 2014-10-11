@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2009-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_tokyotyrant).
@@ -93,10 +93,10 @@
          update/4, update/5]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -212,7 +212,7 @@ adddouble_parts(Dispatcher, Name, Key, IntegerPart, FractionalPart)
     true = is_list(Key) or is_binary(Key),
     cloudi:send_sync(Dispatcher, Name,
                      {adddouble_parts, Key,
-                              IntegerPart, FractionalPart}).
+                      IntegerPart, FractionalPart}).
 
 -spec adddouble_parts(Dispatcher :: dispatcher(),
                       Name :: string(),
@@ -229,8 +229,8 @@ adddouble_parts(Dispatcher, Name, Key, IntegerPart, FractionalPart, Timeout)
     true = is_list(Key) or is_binary(Key),
     cloudi:send_sync(Dispatcher, Name,
                      {adddouble_parts, Key,
-                              IntegerPart, FractionalPart},
-                             Timeout).
+                      IntegerPart, FractionalPart},
+                     Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1183,7 +1183,8 @@ update(Dispatcher, Name, Key, NewCols, Timeout)
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init([{database, DatabaseName, Args}], _Prefix, Dispatcher) ->
+cloudi_service_init([{database, DatabaseName, Args}],
+                    _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {hostname, ?DEFAULT_HOST_NAME},
         {port, ?DEFAULT_PORT},
@@ -1219,98 +1220,130 @@ cloudi_service_init([{database, DatabaseName, Args}], _Prefix, Dispatcher) ->
     end.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
-                          Timeout, _Priority, _TransId, _Pid,
-                          #state{connection = Connection} = State,
-                          _Dispatcher) ->
+                              Timeout, _Priority, _TransId, _Pid,
+                              #state{connection = Connection} = State,
+                              _Dispatcher) ->
     case Request of
         Command when is_binary(Command) ->
             Output = do_query(Command, Timeout, Connection),
             {reply, cloudi_response:new(Request, Output), State};
         {'addint', Key, Integer} ->
-            {reply, cloudi_x_medici:addint(Connection, Key, Integer, Timeout), State};
+            {reply, cloudi_x_medici:
+                    addint(Connection, Key, Integer, Timeout), State};
         {'adddouble', Key, Double} ->
-            {reply, cloudi_x_medici:adddouble(Connection, Key, Double, Timeout), State};
+            {reply, cloudi_x_medici:
+                    adddouble(Connection, Key, Double, Timeout), State};
         {'adddouble_parts', Key, IntegerPart, FractionalPart} ->
-            {reply, cloudi_x_medici:adddouble_parts(Connection, Key, IntegerPart,
-                                           FractionalPart, Timeout), State};
+            {reply, cloudi_x_medici:
+                    adddouble_parts(Connection, Key, IntegerPart,
+                                    FractionalPart, Timeout), State};
         {'copy', PathName} ->
-            {reply, cloudi_x_medici:copy(Connection, PathName, Timeout), State};
+            {reply, cloudi_x_medici:
+                    copy(Connection, PathName, Timeout), State};
         {'fwmkeys', Prefix, MaxKeys} ->
-            {reply, cloudi_x_medici:fwmkeys(Connection, Prefix, MaxKeys,
-                                   Timeout), State};
+            {reply, cloudi_x_medici:
+                    fwmkeys(Connection, Prefix, MaxKeys, Timeout), State};
         {'get', Key} ->
-            {reply, cloudi_x_medici:get(Connection, Key, Timeout), State};
+            {reply, cloudi_x_medici:
+                    get(Connection, Key, Timeout), State};
         'iterinit' ->
-            {reply, cloudi_x_medici:iterinit(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    iterinit(Connection, Timeout), State};
         'iternext' ->
-            {reply, cloudi_x_medici:iternext(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    iternext(Connection, Timeout), State};
         {'mget', KeyList} ->
-            {reply, cloudi_x_medici:mget(Connection, KeyList, Timeout), State};
+            {reply, cloudi_x_medici:
+                    mget(Connection, KeyList, Timeout), State};
         {'optimize', TuningOptions} ->
-            {reply, cloudi_x_medici:optimize(Connection, TuningOptions, Timeout), State};
+            {reply, cloudi_x_medici:
+                    optimize(Connection, TuningOptions, Timeout), State};
         {'out', Key} ->
-            {reply, cloudi_x_medici:out(Connection, Key, Timeout), State};
+            {reply, cloudi_x_medici:
+                    out(Connection, Key, Timeout), State};
         {'put', Key, Value} ->
-            {reply, cloudi_x_medici:put(Connection, Key, Value, Timeout), State};
+            {reply, cloudi_x_medici:
+                    put(Connection, Key, Value, Timeout), State};
         {'putcat', Key, Value} ->
-            {reply, cloudi_x_medici:putcat(Connection, Key, Value, Timeout), State};
+            {reply, cloudi_x_medici:
+                    putcat(Connection, Key, Value, Timeout), State};
         {'putkeep', Key, Value} ->
-            {reply, cloudi_x_medici:putkeep(Connection, Key, Value, Timeout), State};
+            {reply, cloudi_x_medici:
+                    putkeep(Connection, Key, Value, Timeout), State};
         {'putnr', Key, Value} ->
-            {reply, cloudi_x_medici:putnr(Connection, Key, Value, Timeout), State};
+            {reply, cloudi_x_medici:
+                    putnr(Connection, Key, Value, Timeout), State};
         {'putshl', Key, Value, Width} ->
-            {reply, cloudi_x_medici:putshl(Connection, Key, Value, Width,
-                    Timeout), State};
+            {reply, cloudi_x_medici:
+                    putshl(Connection, Key, Value, Width, Timeout), State};
         {'restore', PathName, TimeStamp} ->
-            {reply, cloudi_x_medici:restore(Connection, PathName, TimeStamp,
-                                   Timeout), State};
+            {reply, cloudi_x_medici:
+                    restore(Connection, PathName, TimeStamp, Timeout), State};
         'rnum' ->
-            {reply, cloudi_x_medici:rnum(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    rnum(Connection, Timeout), State};
         {'setmst', HostName, Port} ->
-            {reply, cloudi_x_medici:setmst(Connection, HostName, Port, Timeout), State};
+            {reply, cloudi_x_medici:
+                    setmst(Connection, HostName, Port, Timeout), State};
         'size' ->
-            {reply, cloudi_x_medici:size(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    size(Connection, Timeout), State};
         'stat' ->
-            {reply, cloudi_x_medici:stat(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    stat(Connection, Timeout), State};
         'sync' ->
-            {reply, cloudi_x_medici:sync(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    sync(Connection, Timeout), State};
         'vanish' ->
-            {reply, cloudi_x_medici:vanish(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    vanish(Connection, Timeout), State};
         {'vsiz', Key} ->
-            {reply, cloudi_x_medici:vsiz(Connection, Key, Timeout), State};
+            {reply, cloudi_x_medici:
+                    vsiz(Connection, Key, Timeout), State};
         'genuid' ->
-            {reply, cloudi_x_medici:genuid(Connection, Timeout), State};
+            {reply, cloudi_x_medici:
+                    genuid(Connection, Timeout), State};
         {'query_add_condition', OldQuery, Column, Op, ExprList} ->
-            {reply, cloudi_x_medici:query_add_condition(Connection, OldQuery, Column,
-                                               Op, ExprList, Timeout), State};
+            {reply, cloudi_x_medici:
+                    query_add_condition(Connection, OldQuery, Column,
+                                        Op, ExprList, Timeout), State};
         {'query_limit', OldQuery, Max} ->
-            {reply, cloudi_x_medici:query_limit(Connection, OldQuery, Max,
-                                       Timeout), State};
+            {reply, cloudi_x_medici:
+                    query_limit(Connection, OldQuery, Max, Timeout), State};
         {'query_limit_skip', OldQuery, Max, Skip} ->
-            {reply, cloudi_x_medici:query_limit_skip(Connection, OldQuery, Max, Skip,
-                                            Timeout), State};
+            {reply, cloudi_x_medici:
+                    query_limit_skip(Connection, OldQuery, Max,
+                                     Skip, Timeout), State};
         {'query_order', OldQuery, Column, Type} ->
-            {reply, cloudi_x_medici:query_order(Connection, OldQuery, Column, Type,
-                                       Timeout), State};
+            {reply, cloudi_x_medici:
+                    query_order(Connection, OldQuery, Column,
+                                Type, Timeout), State};
         {'search', Query} ->
-            {reply, cloudi_x_medici:search(Connection, Query, Timeout), State};
+            {reply, cloudi_x_medici:
+                    search(Connection, Query, Timeout), State};
         {'searchcount', Query} ->
-            {reply, cloudi_x_medici:searchcount(Connection, Query, Timeout), State};
+            {reply, cloudi_x_medici:
+                    searchcount(Connection, Query, Timeout), State};
         {'searchout', Query} ->
-            {reply, cloudi_x_medici:searchout(Connection, Query, Timeout), State};
+            {reply, cloudi_x_medici:
+                    searchout(Connection, Query, Timeout), State};
         {'setindex', Column, Type} ->
-            {reply, cloudi_x_medici:setindex(Connection, Column, Type, Timeout), State};
+            {reply, cloudi_x_medici:
+                    setindex(Connection, Column, Type, Timeout), State};
         {'update', Key, NewCols} ->
-            {reply, cloudi_x_medici:update(Connection, Key, NewCols, Timeout), State}
+            {reply, cloudi_x_medici:
+                    update(Connection, Key, NewCols, Timeout), State}
     end.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{connection = Connection}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{connection = Connection}) ->
     cloudi_x_medici:close(Connection),
     ok.
 
@@ -1325,41 +1358,52 @@ do_query(Query, Timeout, Connection) ->
         {'addint', Key, Integer}
             when is_list(Key), is_integer(Integer);
                  is_binary(Key), is_integer(Integer) ->
-            cloudi_x_medici:addint(Connection, Key, Integer, Timeout);
+            cloudi_x_medici:
+            addint(Connection, Key, Integer, Timeout);
         {'adddouble', Key, Double}
             when is_list(Key), is_float(Double);
                  is_binary(Key), is_float(Double) ->
-            cloudi_x_medici:adddouble(Connection, Key, Double, Timeout);
+            cloudi_x_medici:
+            adddouble(Connection, Key, Double, Timeout);
         {'adddouble_parts', Key, IntegerPart, FractionalPart}
             when is_list(Key), is_integer(IntegerPart),
                                is_integer(FractionalPart);
                  is_binary(Key), is_integer(IntegerPart),
                                  is_integer(FractionalPart) ->
-            cloudi_x_medici:adddouble_parts(Connection, Key,
-                                   IntegerPart, FractionalPart, Timeout);
+            cloudi_x_medici:
+            adddouble_parts(Connection, Key,
+                            IntegerPart, FractionalPart, Timeout);
         {'copy', PathName}
             when is_list(PathName); is_binary(PathName) ->
-            cloudi_x_medici:copy(Connection, PathName, Timeout);
+            cloudi_x_medici:
+            copy(Connection, PathName, Timeout);
         {'fwmkeys', Prefix, MaxKeys}
             when is_list(Prefix), is_integer(MaxKeys);
                  is_binary(Prefix), is_integer(MaxKeys) ->
-            cloudi_x_medici:fwmkeys(Connection, Prefix, MaxKeys, Timeout);
+            cloudi_x_medici:
+            fwmkeys(Connection, Prefix, MaxKeys, Timeout);
         {'get', Key}
             when is_list(Key); is_binary(Key)  ->
-            cloudi_x_medici:get(Connection, Key, Timeout);
+            cloudi_x_medici:
+            get(Connection, Key, Timeout);
         'iterinit' ->
-            cloudi_x_medici:iterinit(Connection, Timeout);
+            cloudi_x_medici:
+            iterinit(Connection, Timeout);
         'iternext' ->
-            cloudi_x_medici:iternext(Connection, Timeout);
+            cloudi_x_medici:
+            iternext(Connection, Timeout);
         {'mget', KeyList}
             when is_list(KeyList) ->
-            cloudi_x_medici:mget(Connection, KeyList, Timeout);
+            cloudi_x_medici:
+            mget(Connection, KeyList, Timeout);
         {'optimize', TuningOptions}
             when is_list(TuningOptions); is_binary(TuningOptions) ->
-            cloudi_x_medici:optimize(Connection, TuningOptions, Timeout);
+            cloudi_x_medici:
+            optimize(Connection, TuningOptions, Timeout);
         {'out', Key}
             when is_list(Key); is_binary(Key) ->
-            cloudi_x_medici:out(Connection, Key, Timeout);
+            cloudi_x_medici:
+            out(Connection, Key, Timeout);
         {'put', Key, Value}
             when is_list(Key), is_integer(Value);
                  is_list(Key), is_float(Value);
@@ -1369,7 +1413,8 @@ do_query(Query, Timeout, Connection) ->
                  is_binary(Key), is_float(Value);
                  is_binary(Key), is_list(Value);
                  is_binary(Key), is_binary(Value) ->
-            cloudi_x_medici:put(Connection, Key, Value, Timeout);
+            cloudi_x_medici:
+            put(Connection, Key, Value, Timeout);
         {'putcat', Key, Value}
             when is_list(Key), is_integer(Value);
                  is_list(Key), is_float(Value);
@@ -1379,7 +1424,8 @@ do_query(Query, Timeout, Connection) ->
                  is_binary(Key), is_float(Value);
                  is_binary(Key), is_list(Value);
                  is_binary(Key), is_binary(Value) ->
-            cloudi_x_medici:putcat(Connection, Key, Value, Timeout);
+            cloudi_x_medici:
+            putcat(Connection, Key, Value, Timeout);
         {'putkeep', Key, Value}
             when is_list(Key), is_integer(Value);
                  is_list(Key), is_float(Value);
@@ -1389,7 +1435,8 @@ do_query(Query, Timeout, Connection) ->
                  is_binary(Key), is_float(Value);
                  is_binary(Key), is_list(Value);
                  is_binary(Key), is_binary(Value) ->
-            cloudi_x_medici:putkeep(Connection, Key, Value, Timeout);
+            cloudi_x_medici:
+            putkeep(Connection, Key, Value, Timeout);
         {'putnr', Key, Value}
             when is_list(Key), is_integer(Value);
                  is_list(Key), is_float(Value);
@@ -1399,7 +1446,8 @@ do_query(Query, Timeout, Connection) ->
                  is_binary(Key), is_float(Value);
                  is_binary(Key), is_list(Value);
                  is_binary(Key), is_binary(Value) ->
-            cloudi_x_medici:putnr(Connection, Key, Value, Timeout);
+            cloudi_x_medici:
+            putnr(Connection, Key, Value, Timeout);
         {'putshl', Key, Value, Width}
             when is_list(Key), is_integer(Value), is_integer(Width);
                  is_list(Key), is_float(Value), is_integer(Width);
@@ -1409,32 +1457,42 @@ do_query(Query, Timeout, Connection) ->
                  is_binary(Key), is_float(Value), is_integer(Width);
                  is_binary(Key), is_list(Value), is_integer(Width);
                  is_binary(Key), is_binary(Value), is_integer(Width) ->
-            cloudi_x_medici:putshl(Connection, Key, Value, Timeout);
+            cloudi_x_medici:
+            putshl(Connection, Key, Value, Timeout);
         {'restore', PathName, TimeStamp}
             when is_list(PathName), is_integer(TimeStamp);
                  is_binary(PathName), is_integer(TimeStamp) ->
-            cloudi_x_medici:restore(Connection, PathName, TimeStamp, Timeout);
+            cloudi_x_medici:
+            restore(Connection, PathName, TimeStamp, Timeout);
         'rnum' ->
-            cloudi_x_medici:rnum(Connection, Timeout);
+            cloudi_x_medici:
+            rnum(Connection, Timeout);
         {'setmst', HostName, Port}
             when is_list(HostName), is_integer(Port);
                  is_binary(HostName), is_integer(Port) ->
-            cloudi_x_medici:setmst(Connection, HostName, Port, Timeout);
+            cloudi_x_medici:
+            setmst(Connection, HostName, Port, Timeout);
         'size' ->
-            cloudi_x_medici:size(Connection, Timeout);
+            cloudi_x_medici:
+            size(Connection, Timeout);
         'stat' ->
-            cloudi_x_medici:stat(Connection, Timeout);
+            cloudi_x_medici:
+            stat(Connection, Timeout);
         'sync' ->
-            cloudi_x_medici:sync(Connection, Timeout);
+            cloudi_x_medici:
+            sync(Connection, Timeout);
         'vanish' ->
-            cloudi_x_medici:vanish(Connection, Timeout);
+            cloudi_x_medici:
+            vanish(Connection, Timeout);
         {'vsiz', Key}
             when is_list(Key); is_binary(Key) ->
-            cloudi_x_medici:vsiz(Connection, Key, Timeout);
+            cloudi_x_medici:
+            vsiz(Connection, Key, Timeout);
 
         % table cloudi_x_medici API
         'genuid' ->
-            cloudi_x_medici:genuid(Connection, Timeout);
+            cloudi_x_medici:
+            genuid(Connection, Timeout);
         {'query_add_condition', OldQuery, Column, Op, ExprList}
             when is_list(OldQuery), is_list(Column),
                  is_atom(Op), is_list(ExprList);
@@ -1444,44 +1502,52 @@ do_query(Query, Timeout, Connection) ->
                  is_tuple(Op), is_list(ExprList);
                  is_list(OldQuery), is_binary(Column),
                  is_tuple(Op), is_list(ExprList) ->
-            cloudi_x_medici:query_add_condition(
-                Connection, OldQuery, Column, Op, ExprList, Timeout);
+            cloudi_x_medici:
+            query_add_condition(Connection, OldQuery, Column, Op,
+                                ExprList, Timeout);
         {'query_limit', OldQuery, Max}
             when is_list(OldQuery), is_integer(Max) ->
-            cloudi_x_medici:query_limit(Connection, OldQuery, Max, Timeout);
+            cloudi_x_medici:
+            query_limit(Connection, OldQuery, Max, Timeout);
         {'query_limit_skip', OldQuery, Max, Skip}
             when is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
-            cloudi_x_medici:query_limit_skip(
-                Connection, OldQuery, Max, Skip, Timeout);
+            cloudi_x_medici:
+            query_limit_skip(Connection, OldQuery, Max, Skip, Timeout);
         {'query_order', OldQuery, Column, Type}
             when is_list(OldQuery), Column == primary, is_atom(Type);
                  is_list(OldQuery), is_list(Column), is_atom(Type);
                  is_list(OldQuery), is_binary(Column), is_atom(Type) ->
-            cloudi_x_medici:query_order(Connection, OldQuery, Column, Type, Timeout);
+            cloudi_x_medici:
+            query_order(Connection, OldQuery, Column, Type, Timeout);
         {'search', SearchQuery}
             when is_list(SearchQuery) ->
-            cloudi_x_medici:search(Connection, SearchQuery, Timeout);
+            cloudi_x_medici:
+            search(Connection, SearchQuery, Timeout);
         {'searchcount', SearchQuery}
             when is_list(SearchQuery) ->
-            cloudi_x_medici:searchcount(Connection, SearchQuery, Timeout);
+            cloudi_x_medici:
+            searchcount(Connection, SearchQuery, Timeout);
         {'searchout', SearchQuery}
             when is_list(SearchQuery) ->
-            cloudi_x_medici:searchout(Connection, SearchQuery, Timeout);
+            cloudi_x_medici:
+            searchout(Connection, SearchQuery, Timeout);
         {'setindex', Column, Type}
             when Column == primary, is_atom(Type);
                  is_list(Column), is_atom(Type);
                  is_binary(Column), is_atom(Type) ->
-            cloudi_x_medici:setindex(Connection, Column, Type, Timeout);
+            cloudi_x_medici:
+            setindex(Connection, Column, Type, Timeout);
         {'update', Key, NewCols}
             when is_list(Key), is_list(NewCols);
                  is_binary(Key), is_list(NewCols) ->
-            cloudi_x_medici:update(Connection, Key, NewCols, Timeout);
+            cloudi_x_medici:
+            update(Connection, Key, NewCols, Timeout);
         _ ->
             {error, invalid_call}
         end) of
         {error, invalid_call} ->
             ?LOG_ERROR("Invalid tokyotyrant command tuple ~p",
-                       [binary_to_list(Query)]),
+                       [erlang:binary_to_list(Query)]),
             <<>>;
             % returns either
             % iolist or a proplist that has binaries for keys and values
@@ -1494,7 +1560,7 @@ do_query(Query, Timeout, Connection) ->
         _:Reason ->
             ?LOG_ERROR("exception when processing "
                        "tokyotyrant command tuple ~p: ~p",
-                       [binary_to_list(Query), Reason]),
+                       [erlang:binary_to_list(Query), Reason]),
             <<>> 
     end.
 

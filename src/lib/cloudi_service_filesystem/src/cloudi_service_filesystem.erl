@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -63,10 +63,10 @@
          notify_clear/2]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("kernel/include/file.hrl").
@@ -286,7 +286,7 @@ notify_clear(Dispatcher, Name) ->
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {directory,                    ?DEFAULT_DIRECTORY},
         {refresh,                      ?DEFAULT_REFRESH},
@@ -589,7 +589,7 @@ cloudi_service_handle_info(refresh,
                           files = NewFiles}};
 
 cloudi_service_handle_info({append_clear, Name, Id},
-                           #state{files = Files} = State, _) ->
+                           #state{files = Files} = State, _Dispatcher) ->
     NewFiles = case cloudi_x_trie:find(Name, Files) of
         {ok, #file{write_appends = Appends} = File} ->
             {value, _, NewAppends} = request_append_take(Id, Appends),
@@ -600,11 +600,11 @@ cloudi_service_handle_info({append_clear, Name, Id},
     end,
     {noreply, State#state{files = NewFiles}};
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------

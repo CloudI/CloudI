@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_riak).
@@ -72,10 +72,10 @@
          object_update/2]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -562,7 +562,7 @@ object_update(Object, Value) ->
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {hostname,                 ?DEFAULT_HOST_NAME},
         {port,                     ?DEFAULT_PORT},
@@ -790,13 +790,15 @@ cloudi_service_handle_info({ping, Ping} = Request,
         _:Error ->
             {stop, {ping_failed, Error}, State}
     end;
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{connection = Connection}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{connection = Connection}) ->
     (catch cloudi_x_riakc_pb_socket:stop(Connection)),
     ok.
 
@@ -994,3 +996,4 @@ driver_debug(Level, Function, Arguments, Result) ->
                      " ~p~n"
                      " = ~p",
                      [Function, Arguments, Result]).
+

@@ -8,7 +8,7 @@
 %%% ```
 %%% The user module should export:
 %%%
-%%%   cloudi_service_init(Args, Prefix, Dispatcher)  
+%%%   cloudi_service_init(Args, Prefix, Timeout, Dispatcher)  
 %%%    ==> {ok, State}
 %%%        {stop, Reason}
 %%%        {stop, Reason, State}
@@ -33,7 +33,8 @@
 %%%        {stop, Reason, NewState} 
 %%%               Reason = restart | shutdown | Term, terminate(State) is called
 %%%
-%%%   cloudi_service_terminate(Reason, State) Let the user module clean up
+%%%   cloudi_service_terminate(Reason, Timeout,
+%%%                            State) Let the user module clean up
 %%%        always called when the service terminates
 %%%
 %%%    ==> ok
@@ -94,7 +95,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -190,10 +191,10 @@
          key_value_find/2,
          key_value_store/3,
          % functions to trigger edoc, until -callback works with edoc
-         'Module:cloudi_service_init'/3,
+         'Module:cloudi_service_init'/4,
          'Module:cloudi_service_handle_request'/11,
          'Module:cloudi_service_handle_info'/3,
-         'Module:cloudi_service_terminate'/2]).
+         'Module:cloudi_service_terminate'/3]).
 
 -include("cloudi_core_i_constants.hrl").
 
@@ -256,18 +257,18 @@
 %%% Callback functions for behavior
 %%%------------------------------------------------------------------------
 
--ifdef(CLOUDI_SERVICE_NEW). % CloudI >= 1.4.0
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
 -callback cloudi_service_init(Args :: list(),
                               Prefix :: service_name_pattern(),
-                              Timeout :: cloudi_service_api:
-                                         timeout_milliseconds(),
                               Dispatcher :: dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
     {stop, Reason :: any(), State :: any()}.
--else.                      % CloudI =< 1.3.3
+-else.                      % CloudI =< 1.4.0
 -callback cloudi_service_init(Args :: list(),
                               Prefix :: service_name_pattern(),
+                              Timeout :: cloudi_service_api:
+                                         timeout_milliseconds(),
                               Dispatcher :: dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
@@ -304,14 +305,14 @@
     {noreply, NewState :: any()} |
     {stop, Reason :: any(), NewState :: any()}.
 
--ifdef(CLOUDI_SERVICE_NEW). % CloudI >= 1.4.0
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
+-callback cloudi_service_terminate(Reason :: any(),
+                                   State :: any()) ->
+    ok.
+-else.                      % CloudI =< 1.4.0
 -callback cloudi_service_terminate(Reason :: any(),
                                    Timeout :: cloudi_service_api:
                                               timeout_milliseconds(),
-                                   State :: any()) ->
-    ok.
--else.                      % CloudI =< 1.3.3
--callback cloudi_service_terminate(Reason :: any(),
                                    State :: any()) ->
     ok.
 -endif.
@@ -2513,12 +2514,14 @@ key_value_store(Key, Value, KeyValues) ->
 
 -spec 'Module:cloudi_service_init'(Args :: list(),
                                    Prefix :: service_name_pattern(),
+                                   Timeout :: cloudi_service_api:
+                                              timeout_milliseconds(),
                                    Dispatcher :: dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
     {stop, Reason :: any(), State :: any()}.
 
-'Module:cloudi_service_init'(_, _, _) ->
+'Module:cloudi_service_init'(_, _, _, _) ->
     {ok, state}.
 
 %%-------------------------------------------------------------------------
@@ -2589,10 +2592,12 @@ key_value_store(Key, Value, KeyValues) ->
 %%-------------------------------------------------------------------------
 
 -spec 'Module:cloudi_service_terminate'(Reason :: any(),
+                                        Timeout :: cloudi_service_api:
+                                                   timeout_milliseconds(),
                                         State :: any()) ->
     ok.
 
-'Module:cloudi_service_terminate'(_, _) ->
+'Module:cloudi_service_terminate'(_, _, _) ->
     ok.
 
 %%%------------------------------------------------------------------------

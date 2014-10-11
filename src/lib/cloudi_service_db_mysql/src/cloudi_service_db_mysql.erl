@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -60,10 +60,10 @@
          transaction/3, transaction/4]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -373,7 +373,7 @@ transaction(Dispatcher, Name, [Query | _] = QueryList, Timeout)
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {database,                 ?DEFAULT_DATABASE},
         {driver,                   ?DEFAULT_DRIVER},
@@ -530,14 +530,16 @@ cloudi_service_handle_info({ping, Ping} = Request, State, Dispatcher) ->
         error ->
             {stop, ping_failed, State}
     end;
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{module = Module,
-                                   connection = Connection}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{module = Module,
+                                connection = Connection}) ->
     driver_close(Module, Connection),
     ok.
 

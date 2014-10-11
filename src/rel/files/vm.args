@@ -22,6 +22,9 @@
 -env ERL_MAX_PORTS 32768
 #+Q 32768 # change for 17.0
 
+## Distributed Erlang buffer size
+#+zdbbl 1024 # kB (valid values are 1 - 2097151)
+
 # Integration Tests code paths for the default configuration
 -pz tests/hexpi/ebin/
 -pz tests/http_req/ebin/

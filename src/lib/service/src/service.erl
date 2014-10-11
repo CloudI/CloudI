@@ -8,7 +8,7 @@
 %%% ```
 %%% The user module should export:
 %%%
-%%%   service_init(Args, Prefix, Dispatcher)  
+%%%   service_init(Args, Prefix, Timeout, Dispatcher)  
 %%%    ==> {ok, State}
 %%%        {stop, Reason}
 %%%        {stop, Reason, State}
@@ -27,7 +27,7 @@
 %%%        {stop, Reason, NewState} 
 %%%               Reason = normal | shutdown | Term, terminate(State) is called
 %%%
-%%%   service_terminate(Reason, State) Let the user module clean up
+%%%   service_terminate(Reason, Timeout, State) Let the user module clean up
 %%%        always called when the service terminates
 %%%
 %%%    ==> ok
@@ -88,7 +88,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(service).
@@ -192,10 +192,10 @@
          key_value_find/2,
          key_value_store/3,
          % functions to trigger edoc, until -callback works with edoc
-         'Module:service_init'/3,
+         'Module:service_init'/4,
          'Module:service_request'/3,
          'Module:service_info'/3,
-         'Module:service_terminate'/2]).
+         'Module:service_terminate'/3]).
 
 -include("service_req.hrl").
 
@@ -256,12 +256,23 @@
     cloudi_service_api:service_internal() |
     cloudi_service_api:service_proplist().
 
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
 -callback service_init(Args :: list(),
                        Prefix :: cloudi_service:service_name_pattern(),
                        Dispatcher :: cloudi_service:dispatcher()) ->
     {'ok', State :: any()} |
     {'stop', Reason :: any()} |
     {'stop', Reason :: any(), State :: any()}.
+-else.                      % CloudI =< 1.4.0
+-callback service_init(Args :: list(),
+                       Prefix :: cloudi_service:service_name_pattern(),
+                       Timeout :: cloudi_service_api:
+                                  timeout_milliseconds(),
+                       Dispatcher :: cloudi_service:dispatcher()) ->
+    {'ok', State :: any()} |
+    {'stop', Reason :: any()} |
+    {'stop', Reason :: any(), State :: any()}.
+-endif.
 
 -callback service_request(ServiceReq :: service_req(),
                           State :: any(),
@@ -280,9 +291,17 @@
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
 
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
 -callback service_terminate(Reason :: any(),
                             State :: any()) ->
     'ok'.
+-else.                      % CloudI =< 1.4.0
+-callback service_terminate(Reason :: any(),
+                            Timeout :: cloudi_service_api:
+                                       timeout_milliseconds(),
+                            State :: any()) ->
+    'ok'.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% Behavior interface functions
@@ -2023,12 +2042,14 @@ key_value_store(Key, Value, KeyValues) ->
 
 -spec 'Module:service_init'(Args :: list(),
                             Prefix :: cloudi_service:service_name_pattern(),
+                            Timeout :: cloudi_service_api:
+                                       timeout_milliseconds(),
                             Dispatcher :: cloudi_service:dispatcher()) ->
     {'ok', State :: any()} |
     {'stop', Reason :: any()} |
     {'stop', Reason :: any(), State :: any()}.
 
-'Module:service_init'(_, _, _) ->
+'Module:service_init'(_, _, _, _) ->
     {ok, state}.
 
 %%-------------------------------------------------------------------------
@@ -2084,10 +2105,12 @@ key_value_store(Key, Value, KeyValues) ->
 %%-------------------------------------------------------------------------
 
 -spec 'Module:service_terminate'(Reason :: any(),
+                                 Timeout :: cloudi_service_api:
+                                            timeout_milliseconds(),
                                  State :: any()) ->
     'ok'.
 
-'Module:service_terminate'(_, _) ->
+'Module:service_terminate'(_, _, _) ->
     'ok'.
 
 %%%------------------------------------------------------------------------

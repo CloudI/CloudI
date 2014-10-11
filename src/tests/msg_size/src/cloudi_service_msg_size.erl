@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_msg_size).
@@ -59,14 +59,15 @@
          aspect_terminate/3]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--record(state, {
+-record(state,
+    {
         service,
         request_count = 0 :: non_neg_integer(),
         elapsed_seconds = undefined :: float() | undefined,
@@ -131,7 +132,7 @@ aspect_terminate(_, _, #state{service = Service,
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(_Args, _Prefix, Dispatcher) ->
+cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "erlang"),
     {ok, #state{service = ?MODULE}}.
 
@@ -155,11 +156,11 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
     {forward, NewName, RequestInfo, NewRequest,
      State#state{suffixes = Suffixes ++ [Suffix]}}.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------

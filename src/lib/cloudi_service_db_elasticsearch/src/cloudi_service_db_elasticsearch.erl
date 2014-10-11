@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
+%%% Copyright(c)2013-2014, Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
-%%% @copyright 2013 Mahesh Paolini-Subramanya
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2014 Mahesh Paolini-Subramanya
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_elasticsearch).
@@ -77,7 +77,8 @@
          delete_doc/5, delete_doc/6,
          search/5, search/6,
          count/3, count/4, count/5, count/6,
-         delete_by_query/3, delete_by_query/4, delete_by_query/5, delete_by_query/6, 
+         delete_by_query/3, delete_by_query/4,
+         delete_by_query/5, delete_by_query/6, 
          %% Index helpers
          status/3,
          refresh/2, refresh/3,
@@ -97,10 +98,10 @@
          get_alias/4]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -118,8 +119,6 @@
 
 -define(ALL, <<"_all">>).
 
-
-
 -type error()           :: {error, Reason :: term()}.
 -type connection()      :: any().
 -type node_name()       :: binary().
@@ -133,16 +132,16 @@
 -type name()            :: cloudi_service:service_name().
 -type database()        :: atom() | string() | binary().
 
--record(state, {
+-record(state,
+    {
         pool_name           :: pool_name(),
         binary_pool_name    :: pool_name(),
         connection          :: connection(),
         binary_connection   :: connection(),
         database            :: database()
-        }).
+    }).
 
 -type response()        :: [tuple()] | error().
-
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -255,7 +254,8 @@ create_index(Dispatcher, Name, Index)
     {ok, response()} |
     {error, any()}.
 create_index(Dispatcher, Name, Index, Doc)
-    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name,
                      {create_index, Index, Doc}).
 
@@ -329,10 +329,12 @@ count(Dispatcher, Name, Doc, Params)
     {ok, boolean()} |
     {error, any()}.
 count(Dispatcher, Name, Index, Doc, Params)
-    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    when is_list(Name), is_binary(Index),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, [Index], [], Doc, Params);
 count(Dispatcher, Name, Indexes, Doc, Params)
-    when is_list(Name), is_list(Indexes), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    when is_list(Name), is_list(Indexes),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     count(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
@@ -371,7 +373,8 @@ delete_by_query(Dispatcher, Name, Doc)
     {ok, boolean()} |
     {error, any()}.
 delete_by_query(Dispatcher, Name, Doc, Params)
-    when is_list(Name), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    when is_list(Name),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, ?ALL, [], Doc, Params).
 
 %% _equiv delete_by_query(Dispatcher, Name, Index, [], Doc, Params).
@@ -380,10 +383,12 @@ delete_by_query(Dispatcher, Name, Doc, Params)
     {ok, boolean()} |
     {error, any()}.
 delete_by_query(Dispatcher, Name, Index, Doc, Params)
-    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    when is_list(Name), is_binary(Index),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, [Index], [], Doc, Params);
 delete_by_query(Dispatcher, Name, Indexes, Doc, Params)
-    when is_list(Name), is_list(Indexes), (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
+    when is_list(Name), is_list(Indexes),
+         (is_binary(Doc) orelse is_list(Doc)), is_list(Params) ->
     delete_by_query(Dispatcher, Name, Indexes, [], Doc, Params).
 
 %% @doc Get the number of matches for a query
@@ -432,7 +437,8 @@ is_type(Dispatcher, Name, Indexes, Types)
     {ok, response()} |
     {error, any()}.
 insert_doc(Dispatcher, Name, Index, Type, Id, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     insert_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
 
 %% @doc Insert a doc into the ElasticSearch cluster
@@ -451,7 +457,8 @@ insert_doc(Dispatcher, Name, Index, Type, Id, Doc, Params)
     {ok, response()} |
     {error, any()}.
 update_doc(Dispatcher, Name, Index, Type, Id, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     update_doc(Dispatcher, Name, Index, Type, Id, Doc, []).
 
 %% @doc Insert a doc into the ElasticSearch cluster
@@ -504,7 +511,8 @@ mget_doc(Dispatcher, Name, Doc)
     {ok, response()} |
     {error, any()}.
 mget_doc(Dispatcher, Name, Index, Doc)
-    when is_list(Name), is_binary(Index), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     mget_doc(Dispatcher, Name, Index, <<>>, Doc).
 
 %% @doc Get a doc from the ElasticSearch cluster
@@ -512,7 +520,8 @@ mget_doc(Dispatcher, Name, Index, Doc)
     {ok, response()} |
     {error, any()}.
 mget_doc(Dispatcher, Name, Index, Type, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name,
                      {mget_doc, Index, Type, Doc}).
 
@@ -538,7 +547,8 @@ delete_doc(Dispatcher, Name, Index, Type, Id, Params)
     {ok, response()} |
     {error, any()}.
 search(Dispatcher, Name, Index, Type, Doc)
-    when is_list(Name), is_binary(Index), is_binary(Type), (is_binary(Doc) orelse is_list(Doc)) ->
+    when is_list(Name), is_binary(Index), is_binary(Type),
+         (is_binary(Doc) orelse is_list(Doc)) ->
     search(Dispatcher, Name, Index, Type, Doc, []).
 
 %% @doc Search for docs in the ElasticSearch cluster
@@ -664,60 +674,84 @@ clear_cache(Dispatcher, Name, Indexes, Params)
     cloudi:send_sync(Dispatcher, Name,
                      {clear_cache, Indexes, Params}).
 %% @doc Insert a mapping into an ElasticSearch index
--spec put_mapping(dispatcher(), name(), index() | [index()], type(), doc()) -> {ok, response()} | {error, any()}.
-put_mapping(Dispatcher, Name, Index, Type, Doc) when is_list(Name), is_binary(Index) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+-spec put_mapping(dispatcher(), name(), index() | [index()], type(), doc()) ->
+    {ok, response()} | {error, any()}.
+put_mapping(Dispatcher, Name, Index, Type, Doc)
+    when is_list(Name), is_binary(Index) andalso is_binary(Type) andalso
+         (is_binary(Doc) orelse is_list(Doc)) ->
     put_mapping(Dispatcher, Name, [Index], Type, Doc);
-put_mapping(Dispatcher, Name, Indexes, Type, Doc) when is_list(Name), is_list(Indexes) andalso is_binary(Type) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+put_mapping(Dispatcher, Name, Indexes, Type, Doc)
+    when is_list(Name), is_list(Indexes) andalso is_binary(Type) andalso
+         (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name, {put_mapping, Indexes, Type, Doc}).
 
 %% @doc Get a mapping from an ElasticSearch index
--spec get_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
-get_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
+-spec get_mapping(dispatcher(), name(), index() | [index()], type()) ->
+    {ok, response()} | {error, any()}.
+get_mapping(Dispatcher, Name, Index, Type)
+    when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
     get_mapping(Dispatcher, Name, [Index], Type);
-get_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name),is_list(Indexes) andalso is_binary(Type) ->
+get_mapping(Dispatcher, Name, Indexes, Type)
+    when is_list(Name),is_list(Indexes) andalso is_binary(Type) ->
     cloudi:send_sync(Dispatcher, Name, {get_mapping, Indexes, Type}).
 
 %% @doc Delete a mapping from an ElasticSearch index
--spec delete_mapping(dispatcher(), name(), index() | [index()], type()) -> {ok, response()} | {error, any()}.
-delete_mapping(Dispatcher, Name, Index, Type) when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
+-spec delete_mapping(dispatcher(), name(), index() | [index()], type()) ->
+    {ok, response()} | {error, any()}.
+delete_mapping(Dispatcher, Name, Index, Type)
+    when is_list(Name), is_binary(Index) andalso is_binary(Type) ->
     delete_mapping(Dispatcher, Name, [Index], Type);
-delete_mapping(Dispatcher, Name, Indexes, Type) when  is_list(Name), is_list(Indexes) andalso is_binary(Type) ->
+delete_mapping(Dispatcher, Name, Indexes, Type)
+    when is_list(Name), is_list(Indexes) andalso is_binary(Type) ->
     cloudi:send_sync(Dispatcher, Name, {delete_mapping, Indexes, Type}).
 
 %% @doc Operate on aliases (as compared to 'alias')
--spec aliases(dispatcher(), name(), doc()) -> {ok, response()} | {error, any()}.
-aliases(Dispatcher, Name, Doc) when is_list(Name), is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
+-spec aliases(dispatcher(), name(), doc()) ->
+    {ok, response()} | {error, any()}.
+aliases(Dispatcher, Name, Doc)
+    when is_list(Name), is_list(Name), (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name, {aliases, Doc}).
 
 %% @doc Insert an alias (as compared to 'aliases')
--spec insert_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
-insert_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+-spec insert_alias(dispatcher(), name(), index(), index()) ->
+    {ok, response()} | {error, any()}.
+insert_alias(Dispatcher, Name, Index, Alias)
+    when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
     cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias}).
 %% @doc Insert an alias with options(as compared to 'aliases')
--spec insert_alias(dispatcher(), name(), index(), index(), doc()) -> {ok, response()} | {error, any()}.
-insert_alias(Dispatcher, Name, Index, Alias, Doc) when  is_list(Name),is_binary(Index) andalso is_binary(Alias) andalso (is_binary(Doc) orelse is_list(Doc)) ->
+-spec insert_alias(dispatcher(), name(), index(), index(), doc()) ->
+    {ok, response()} | {error, any()}.
+insert_alias(Dispatcher, Name, Index, Alias, Doc)
+    when is_list(Name),is_binary(Index) andalso is_binary(Alias) andalso
+         (is_binary(Doc) orelse is_list(Doc)) ->
     cloudi:send_sync(Dispatcher, Name, {insert_alias, Index, Alias, Doc}).
 
 %% @doc Delete an alias (as compared to 'aliases')
--spec delete_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
-delete_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+-spec delete_alias(dispatcher(), name(), index(), index()) ->
+    {ok, response()} | {error, any()}.
+delete_alias(Dispatcher, Name, Index, Alias)
+    when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
     cloudi:send_sync(Dispatcher, Name, {delete_alias, Index, Alias}).
 
 %% @doc Checks if an alias exists (Alias can be a string with a wildcard)
--spec is_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
-is_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+-spec is_alias(dispatcher(), name(), index(), index()) ->
+    {ok, response()} | {error, any()}.
+is_alias(Dispatcher, Name, Index, Alias)
+    when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
     cloudi:send_sync(Dispatcher, Name, {is_alias, Index, Alias}).
 
 %% @doc Gets an alias(or more, based on the string)
--spec get_alias(dispatcher(), name(), index(), index()) -> {ok, response()} | {error, any()}.
-get_alias(Dispatcher, Name, Index, Alias) when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
+-spec get_alias(dispatcher(), name(), index(), index()) ->
+    {ok, response()} | {error, any()}.
+get_alias(Dispatcher, Name, Index, Alias)
+    when is_list(Name), is_binary(Index) andalso is_binary(Alias) ->
     cloudi:send_sync(Dispatcher, Name, {get_alias, Index, Alias}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
             {pool_name, ?DEFAULT_POOL_NAME},
             {pool_options, ?DEFAULT_POOL_OPTIONS},
@@ -731,9 +765,12 @@ cloudi_service_init(Args, _Prefix, Dispatcher) ->
     ConnectionOptions = [{binary_response, false} | ConnectionOptions1],
     BinaryConnectionOptions = [{binary_response, true} | ConnectionOptions1],
 
-    case cloudi_x_erlasticsearch:start_pool(PoolName, PoolOptions, ConnectionOptions) of
+    case cloudi_x_erlasticsearch:start_pool(PoolName, PoolOptions,
+                                            ConnectionOptions) of
         {ok, Connection} ->
-            case cloudi_x_erlasticsearch:start_pool(BinaryPoolName, PoolOptions, BinaryConnectionOptions) of
+            case cloudi_x_erlasticsearch:start_pool(BinaryPoolName,
+                                                    PoolOptions,
+                                                    BinaryConnectionOptions) of
                 {ok, BinaryConnection} -> 
                     cloudi_service:subscribe(Dispatcher, DatabaseName),
                     {ok, #state{pool_name = PoolName,
@@ -763,14 +800,16 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     end.
 
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{pool_name = PoolName,
-                                   binary_pool_name = BinaryPoolName}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{pool_name = PoolName,
+                                binary_pool_name = BinaryPoolName}) ->
     cloudi_x_erlasticsearch:stop_pool(PoolName),
     cloudi_x_erlasticsearch:stop_pool(BinaryPoolName),
     ok.

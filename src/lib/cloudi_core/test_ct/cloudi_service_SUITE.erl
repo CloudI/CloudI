@@ -43,17 +43,17 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 %% CT callbacks
 -export([all/0,
@@ -129,7 +129,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, ?SERVICE_PREFIX1, Dispatcher) ->
+cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
     Defaults = [
         {mode,                             undefined}],
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
@@ -224,15 +224,17 @@ cloudi_service_handle_request(_Type, _Name, _Pattern,
     erlang:exit(crash),
     {noreply, State}.
 
-cloudi_service_handle_info(increment, #state{count = Count} = State, _) ->
+cloudi_service_handle_info(increment,
+                           #state{count = Count} = State, _Dispatcher) ->
     {noreply, State#state{count = Count + 2}};
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {stop, {unexpected_info, Request}, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     % cloudi_service_init/3 caused an exception
     ok;
-cloudi_service_terminate(terminate_sleep_test_1,
+cloudi_service_terminate(terminate_sleep_test_1, _Timeout,
                          #state{mode = terminate_sleep}) ->
     % t_service_internal_terminate_1/1 and
     % t_service_internal_terminate_2/1 result
@@ -240,7 +242,7 @@ cloudi_service_terminate(terminate_sleep_test_1,
     receive after 2000 -> ok end,
     ?LOG_FATAL("execution should never get to this point", []),
     ok;
-cloudi_service_terminate(terminate_sleep_test_2,
+cloudi_service_terminate(terminate_sleep_test_2, _Timeout,
                          #state{mode = terminate_sleep}) ->
     % t_service_internal_terminate_3/1 and
     % t_service_internal_terminate_4/1 result
@@ -248,9 +250,11 @@ cloudi_service_terminate(terminate_sleep_test_2,
     receive after 3000 -> ok end,
     ?LOG_INFO("terminate_sleep_test_2 finished the terminate function", []),
     ok;
-cloudi_service_terminate(_, #state{count = 0}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{count = 0}) ->
     ok;
-cloudi_service_terminate(_, #state{count = 60}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{count = 60}) ->
     % t_service_internal_aspects_1/1 result
     ok.
 

@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2012-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -55,10 +55,10 @@
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
@@ -85,6 +85,8 @@
 
 -callback cloudi_service_map_reduce_new(ModuleReduceArgs :: list(),
                                         Prefix :: string(),
+                                        Timeout :: cloudi_service_api:
+                                                   timeout_milliseconds(),
                                         Dispatcher :: pid()) ->
     {'ok', ModuleReduceState :: any()} |
     {'error', Reason :: any()}.
@@ -122,7 +124,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Defaults = [
         {map_reduce,             ?DEFAULT_MAP_REDUCE_MODULE},
         {map_reduce_args,        ?DEFAULT_MAP_REDUCE_ARGUMENTS},
@@ -140,7 +142,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
             ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
     end,
     cloudi_service:self(Dispatcher) !
-        {init, Prefix, MapReduceModule, MapReduceArguments, Concurrency},
+        {init, Prefix, Timeout,
+         MapReduceModule, MapReduceArguments, Concurrency},
     {ok, undefined}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
@@ -148,7 +151,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
-cloudi_service_handle_info({init, Prefix,
+cloudi_service_handle_info({init, Prefix, Timeout,
                             MapReduceModule, MapReduceArguments, Concurrency},
                            undefined, Dispatcher) ->
     % cloudi_service_map_reduce_new/3 execution occurs outside of
@@ -157,6 +160,7 @@ cloudi_service_handle_info({init, Prefix,
     % only algorithmic initialization
     case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
                                                        Prefix,
+                                                       Timeout,
                                                        Dispatcher) of
         {ok, MapReduceState} ->
             MapCount = cloudi_concurrency:count(Concurrency),
@@ -248,7 +252,9 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     cloudi_service_map_reduce_info(Request, State, Dispatcher).
 
-cloudi_service_terminate(_, _) ->
+cloudi_service_terminate(_Reason, _Timeout, undefined) ->
+    ok;
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
 
 %%%------------------------------------------------------------------------

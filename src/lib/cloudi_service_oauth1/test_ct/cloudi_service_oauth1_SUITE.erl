@@ -4,10 +4,10 @@
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 %% CT callbacks
 -export([all/0,
@@ -39,7 +39,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {mode,                             undefined}],
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
@@ -59,11 +59,11 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
     Response = <<"PHOTO_DATA">>,
     {reply, ResponseInfo, Response, State}.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, _) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------

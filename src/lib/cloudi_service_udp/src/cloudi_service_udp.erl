@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_udp).
@@ -55,10 +55,10 @@
 %% external interface
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -91,7 +91,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, _Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, _Dispatcher) ->
     Defaults = [
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
@@ -156,7 +156,7 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
 cloudi_service_handle_info({return_async_active, _Name, _Pattern,
                             _ResponseInfo, Response, _Timeout, TransId},
                            #state{socket = Socket,
-                                  requests = Requests} = State, _) ->
+                                  requests = Requests} = State, _Dispatcher) ->
     #request{source_address = SourceAddress,
              source_port = SourcePort} = dict:fetch(TransId, Requests),
     send(Socket, SourceAddress, SourcePort, Response),
@@ -164,17 +164,18 @@ cloudi_service_handle_info({return_async_active, _Name, _Pattern,
 
 cloudi_service_handle_info({timeout_async_active, TransId},
                            #state{socket = Socket,
-                                  requests = Requests} = State, _) ->
+                                  requests = Requests} = State, _Dispatcher) ->
     #request{source_address = SourceAddress,
              source_port = SourcePort} = dict:fetch(TransId, Requests),
     send(Socket, SourceAddress, SourcePort, <<>>),
     {noreply, State#state{requests = dict:erase(TransId, Requests)}};
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{socket = Socket}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{socket = Socket}) ->
     catch gen_udp:close(Socket),
     ok.
 

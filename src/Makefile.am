@@ -765,8 +765,8 @@ erlang-applications-scope-remove:
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/scope $(SCOPE_ARGS) -u
 
 dialyze: all \
-         dialyzer.plt
-	$(DIALYZER) --verbose --plt dialyzer.plt \
+         $(top_srcdir)/dialyzer.plt
+	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
@@ -829,8 +829,8 @@ dialyze: all \
 
 dialyzer: dialyze
 
-dialyzer.plt:
-	$(DIALYZER) --build_plt --output_plt dialyzer.plt \
+$(top_srcdir)/dialyzer.plt:
+	$(DIALYZER) --build_plt --output_plt $(top_srcdir)/dialyzer.plt \
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
                        compiler debugger ssl tools
 

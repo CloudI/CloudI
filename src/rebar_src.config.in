@@ -79,7 +79,7 @@
 {erl_opts,
  [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
   {d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER_MAJOR@'},
-  %{d, 'CLOUDI_SERVICE_NEW'}, % cloudi_service behaviour changes in 1.4.0
+  %{d, 'CLOUDI_SERVICE_OLD'}, % ignore cloudi_service behaviour changes in 1.4.0
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
   debug_info,

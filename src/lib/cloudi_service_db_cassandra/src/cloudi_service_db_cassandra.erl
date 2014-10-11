@@ -18,7 +18,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
+%%% Copyright(c)2013-2014, Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
-%%% @copyright 2013 Mahesh Paolini-Subramanya
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2014 Mahesh Paolini-Subramanya
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 -module(cloudi_service_db_cassandra).
 -author('Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>').
@@ -104,10 +104,10 @@
 -export([describe_ring/3]).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_x_erlang_cassandra/include/cloudi_x_erlang_cassandra_types.hrl").
@@ -123,9 +123,6 @@
 -define(DEFAULT_CONNECTION_OPTIONS, [{thrift_host, ?DEFAULT_THRIFT_HOST},
                                      {thrift_port, ?DEFAULT_THRIFT_PORT}
                                     ]).
-
-
-
 
 -type error()           :: {error, Reason :: term()}.
 -type connection_name() :: {any(), any(), string() | binary()} |
@@ -157,12 +154,12 @@
 -type cql_query_id()    :: integer().
 -type compression()     :: binary().
 
--record(state, {
+-record(state,
+    {
         connection_name     :: connection_name()
-        }).
+    }).
 
 -type response()        :: [tuple()] | error().
-
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -254,7 +251,6 @@ system_describe_column_family(Dispatcher, Name, Destination, ColumnFamily) ->
     cloudi:send_sync(Dispatcher, Name,
                      {system_describe_column_family, Destination,
                       ColumnFamily}).
-
 
 %% @doc Drop a column family
 -spec system_drop_column_family(dispatcher(), name(), destination(),
@@ -451,7 +447,7 @@ describe_ring(Dispatcher, Name, Destination) ->
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [{connection_name, ?DEFAULT_CONNECTION_NAME},
                 {pool_options, ?DEFAULT_POOL_OPTIONS},
                 {connection_options, ?DEFAULT_CONNECTION_OPTIONS}],
@@ -488,9 +484,11 @@ cloudi_service_handle_info(Request, State, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, undefined) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         undefined) ->
     ok;
-cloudi_service_terminate(_, #state{connection_name = ConnectionName}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{connection_name = ConnectionName}) ->
     cloudi_x_erlang_cassandra:stop_cql_pool(ConnectionName),
     ok.
 
@@ -523,50 +521,96 @@ process_query(_ConnectionName, {'set_keyspace', Destination}) ->
     cloudi_x_erlang_cassandra:set_keyspace(Destination);
 process_query(_ConnectionName, {'describe_keyspace', Destination}) ->
     cloudi_x_erlang_cassandra:describe_keyspace(Destination);
-process_query(_ConnectionName, {'system_add_keyspace', KeyspaceDefinition}) ->
+process_query(_ConnectionName, {'system_add_keyspace',
+                                KeyspaceDefinition}) ->
     cloudi_x_erlang_cassandra:system_add_keyspace(KeyspaceDefinition);
-process_query(_ConnectionName, {'system_update_keyspace', KeyspaceDefinition}) ->
+process_query(_ConnectionName, {'system_update_keyspace',
+                                KeyspaceDefinition}) ->
     cloudi_x_erlang_cassandra:system_update_keyspace(KeyspaceDefinition);
 process_query(_ConnectionName, {'system_drop_keyspace', Destination}) ->
     cloudi_x_erlang_cassandra:system_drop_keyspace(Destination);
-process_query(_ConnectionName, {'insert', Destination, RowKey, ColumnParent, Column, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:insert(Destination, RowKey, ColumnParent, Column, ConsistencyLevel);
-process_query(_ConnectionName, {'get', Destination, RowKey, ColumnPath, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:get(Destination, RowKey, ColumnPath, ConsistencyLevel);
-process_query(_ConnectionName, {'remove', Destination, RowKey, ColumnPath, ColumnTimestamp, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:remove(Destination, RowKey, ColumnPath, ColumnTimestamp, ConsistencyLevel);
-process_query(_ConnectionName, {'system_add_column_family', ColumnFamilyDefinition}) ->
+process_query(_ConnectionName, {'insert', Destination, RowKey, ColumnParent,
+                                Column, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:insert(Destination, RowKey, ColumnParent,
+                                     Column, ConsistencyLevel);
+process_query(_ConnectionName, {'get', Destination, RowKey, ColumnPath,
+                                ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:get(Destination, RowKey, ColumnPath,
+                                  ConsistencyLevel);
+process_query(_ConnectionName, {'remove', Destination, RowKey, ColumnPath,
+                                ColumnTimestamp, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:remove(Destination, RowKey, ColumnPath,
+                                     ColumnTimestamp, ConsistencyLevel);
+process_query(_ConnectionName, {'system_add_column_family',
+                                ColumnFamilyDefinition}) ->
     cloudi_x_erlang_cassandra:system_add_column_family(ColumnFamilyDefinition);
-process_query(_ConnectionName, {'system_describe_column_family', Destination, ColumnFamily}) ->
-    cloudi_x_erlang_cassandra:system_describe_column_family(Destination, ColumnFamily);
-process_query(_ConnectionName, {'system_drop_column_family', Destination, ColumnFamily}) ->
-    cloudi_x_erlang_cassandra:system_drop_column_family(Destination, ColumnFamily);
-process_query(_ConnectionName, {'system_update_column_family', ColumnFamilyDefinition}) ->
-    cloudi_x_erlang_cassandra:system_update_column_family(ColumnFamilyDefinition);
+process_query(_ConnectionName, {'system_describe_column_family', Destination,
+                                ColumnFamily}) ->
+    cloudi_x_erlang_cassandra:system_describe_column_family(Destination,
+                                                            ColumnFamily);
+process_query(_ConnectionName, {'system_drop_column_family', Destination,
+                                ColumnFamily}) ->
+    cloudi_x_erlang_cassandra:system_drop_column_family(Destination,
+                                                        ColumnFamily);
+process_query(_ConnectionName, {'system_update_column_family',
+                                ColumnFamilyDefinition}) ->
+    cloudi_x_erlang_cassandra:
+    system_update_column_family(ColumnFamilyDefinition);
 process_query(_ConnectionName, {'truncate', Destination, ColumnFamily}) ->
     cloudi_x_erlang_cassandra:truncate(Destination, ColumnFamily);
-process_query(_ConnectionName, {'add', Destination, RowKey, ColumnParent, CounterColumn, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:add(Destination, RowKey, ColumnParent, CounterColumn, ConsistencyLevel);
-process_query(_ConnectionName, {'remove_counter', Destination, RowKey, ColumnPath, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:remove_counter(Destination, RowKey, ColumnPath, ConsistencyLevel);
-process_query(_ConnectionName, {'get_slice', Destination, RowKey, ColumnParent, SlicePredicate, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:get_slice(Destination, RowKey, ColumnParent, SlicePredicate, ConsistencyLevel);
-process_query(_ConnectionName, {'multiget_slice', Destination, RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:multiget_slice(Destination, RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel);
-process_query(_ConnectionName, {'get_count', Destination, RowKey, ColumnParent, SlicePredicate, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:get_count(Destination, RowKey, ColumnParent, SlicePredicate, ConsistencyLevel);
-process_query(_ConnectionName, {'multiget_count', Destination, RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:multiget_count(Destination, RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel);
-process_query(_ConnectionName, {'get_range_slices', Destination, ColumnParent, SlicePredicate, KeyRange, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:get_range_slices(Destination, ColumnParent, SlicePredicate, KeyRange, ConsistencyLevel);
-process_query(_ConnectionName, {'get_indexed_slices', Destination, ColumnParent, IndexClause, SlicePredicate, ConsistencyLevel}) ->
-    cloudi_x_erlang_cassandra:get_indexed_slices(Destination, ColumnParent, IndexClause, SlicePredicate, ConsistencyLevel);
-process_query(ConnectionName, {'execute_cql_query', CqlQuery, Compression}) ->
-    cloudi_x_erlang_cassandra:execute_cql_query(ConnectionName, CqlQuery, Compression);
-process_query(ConnectionName, {'prepare_cql_query', CqlQuery, Compression}) ->
-    cloudi_x_erlang_cassandra:prepare_cql_query(ConnectionName, CqlQuery, Compression);
-process_query(ConnectionName, {'execute_prepared_cql_query', CqlQuery, Values}) ->
-    cloudi_x_erlang_cassandra:execute_prepared_cql_query(ConnectionName, CqlQuery, Values);
+process_query(_ConnectionName, {'add', Destination, RowKey, ColumnParent,
+                                CounterColumn, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:add(Destination, RowKey, ColumnParent,
+                                  CounterColumn, ConsistencyLevel);
+process_query(_ConnectionName, {'remove_counter', Destination, RowKey,
+                                ColumnPath, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:remove_counter(Destination, RowKey,
+                                             ColumnPath, ConsistencyLevel);
+process_query(_ConnectionName, {'get_slice', Destination, RowKey, ColumnParent,
+                                SlicePredicate, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:get_slice(Destination, RowKey, ColumnParent,
+                                        SlicePredicate, ConsistencyLevel);
+process_query(_ConnectionName, {'multiget_slice', Destination, RowKeys,
+                                ColumnParent, SlicePredicate,
+                                ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:multiget_slice(Destination, RowKeys,
+                                             ColumnParent, SlicePredicate,
+                                             ConsistencyLevel);
+process_query(_ConnectionName, {'get_count', Destination, RowKey, ColumnParent,
+                                SlicePredicate, ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:get_count(Destination, RowKey, ColumnParent,
+                                        SlicePredicate, ConsistencyLevel);
+process_query(_ConnectionName, {'multiget_count', Destination, RowKeys,
+                                ColumnParent, SlicePredicate,
+                                ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:multiget_count(Destination, RowKeys,
+                                             ColumnParent, SlicePredicate,
+                                             ConsistencyLevel);
+process_query(_ConnectionName, {'get_range_slices', Destination, ColumnParent,
+                                SlicePredicate, KeyRange,
+                                ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:get_range_slices(Destination, ColumnParent,
+                                               SlicePredicate, KeyRange,
+                                               ConsistencyLevel);
+process_query(_ConnectionName, {'get_indexed_slices', Destination,
+                                ColumnParent, IndexClause, SlicePredicate,
+                                ConsistencyLevel}) ->
+    cloudi_x_erlang_cassandra:
+    get_indexed_slices(Destination,
+                       ColumnParent, IndexClause, SlicePredicate,
+                       ConsistencyLevel);
+process_query(ConnectionName, {'execute_cql_query', CqlQuery,
+                               Compression}) ->
+    cloudi_x_erlang_cassandra:execute_cql_query(ConnectionName, CqlQuery,
+                                                Compression);
+process_query(ConnectionName, {'prepare_cql_query', CqlQuery,
+                               Compression}) ->
+    cloudi_x_erlang_cassandra:prepare_cql_query(ConnectionName, CqlQuery,
+                                                Compression);
+process_query(ConnectionName, {'execute_prepared_cql_query',
+                               CqlQuery, Values}) ->
+    cloudi_x_erlang_cassandra:execute_prepared_cql_query(ConnectionName,
+                                                         CqlQuery, Values);
 process_query(_ConnectionName, {'describe_version'}) ->
     cloudi_x_erlang_cassandra:describe_version();
 process_query(_ConnectionName, {'describe_snitch'}) ->
