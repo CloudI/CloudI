@@ -437,7 +437,7 @@ module Erlang
             i += 1
             arity = data[i].ord
             i += 1
-            return [i, OtpErlangFunction.new(tag, data[old_i,i])]
+            return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
         elsif tag == TAG_NEW_REFERENCE_EXT
             j = data[i,2].unpack('n')[0] * 4
             i += 2
@@ -489,7 +489,7 @@ module Erlang
             i = result[0]; uniq = result[1]
             result = binary_to_term_sequence(i, numfree, data)
             i = result[0]; free = result[1]
-            return [i, OtpErlangFunction.new(tag, data[old_i,i])]
+            return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
         elsif tag == TAG_ATOM_UTF8_EXT
             j = data[i,2].unpack('n')[0]
             i += 2

@@ -44,7 +44,7 @@ AC_ARG_WITH([version],
     elif test "x$withval" = "xyes"; then
         cloudi_prefix="$libdir/cloudi-$VERSION"
     else
-        cloudi_prefix="$libdir/cloudi-$VERSION"
+        AC_MSG_ERROR([--with-version needs yes or no, not $withval])
     fi
     ],
     [cloudi_prefix="$libdir/cloudi-$VERSION"])
