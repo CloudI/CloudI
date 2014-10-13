@@ -43,8 +43,8 @@ exceptions due to their C integration).
 -----------------
 `Dynamic compilation of Erlang modules`
 - `https://github.com/okeuday/dynamic_compile`
-- `commit 993bb0eba609fc80bd7481365febfc05f4eb51e0`
-- `Thu Jan  2 13:08:39 PST 2014`
+- `commit 2684dcf703b6bac70421dff717293772c5da8f05 (v1.0.0)`
+- `Mon Oct 13 13:58:48 PDT 2014`
 - `MIT`
 
 `ecouchdb (erlang_couchdb)`
