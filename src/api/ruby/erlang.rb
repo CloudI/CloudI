@@ -332,7 +332,10 @@ module Erlang
         elsif tag == TAG_SMALL_INTEGER_EXT
             return [i + 1, data[i].ord]
         elsif tag == TAG_INTEGER_EXT
-            value = data[i,4].unpack('i>')[0]
+            value = data[i,4].unpack('N')[0]
+            if 0 != (value & 0x80000000)
+                value = -2147483648 + (value & 0x7fffffff)
+            end
             return [i + 4, value]
         elsif tag == TAG_FLOAT_EXT
             value = data[i,31].partition(0.chr)[0].to_f
@@ -548,8 +551,8 @@ module Erlang
             return [i + 1, data[i].ord]
         elsif tag == TAG_INTEGER_EXT
             value = data[i,4].unpack('N')[0]
-            if value & 0x80000000
-                value = -1 * (value & 0x7fffffff)
+            if 0 != (value & 0x80000000)
+                value = -2147483648 + (value & 0x7fffffff)
             end
             return [i + 4, Fixnum.induced_from(value)]
         else
