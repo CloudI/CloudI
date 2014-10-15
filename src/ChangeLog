@@ -1,9 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
-2014-10-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Small fix for Erlang binary term format in Ruby
+    * Add files_size to the cloudi_service_filesystem configuration arguments
+      to limit the memory consumption of a single service process
+      (providing an absolute limit on the amount of binary data cached in kB)
+
+2014-10-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update dynamic_compile
+    * Fix Ruby Erlang Binary Term Format encoding bug
 
 2014-10-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
