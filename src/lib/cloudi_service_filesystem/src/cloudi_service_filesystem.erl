@@ -143,7 +143,7 @@
         size :: non_neg_integer(),
         path :: string(),
         headers :: list({binary(), binary()}),
-        mtime :: calendar:datetime(),
+        mtime_i :: {calendar:datetime(), non_neg_integer()},
         access :: 'read' | 'write' | 'read_write' | 'none',
         toggle :: boolean(),
         notify = [] :: list(#file_notify{}),
@@ -367,7 +367,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                              size = ContentsSize,
                                              path = FilePath,
                                              headers = Headers,
-                                             mtime = MTime,
+                                             mtime_i = {MTime, 0},
                                              access = Access,
                                              toggle = Toggle},
                                 {FilesSize1,
@@ -417,7 +417,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                      size = 0,
                                      path = FilePath,
                                      headers = Headers,
-                                     mtime = MTimeFake,
+                                     mtime_i = {MTimeFake, 0},
+                                     access = 'read_write',
                                      toggle = Toggle,
                                      write = [truncate]},
                                Files2, Prefix, Dispatcher)
@@ -447,7 +448,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                      size = 0,
                                      path = FilePath,
                                      headers = Headers,
-                                     mtime = MTimeFake,
+                                     mtime_i = {MTimeFake, 0},
+                                     access = 'read_write',
                                      toggle = Toggle,
                                      write = [append]},
                                Files5, Prefix, Dispatcher)
@@ -563,7 +565,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
     case cloudi_x_trie:find(Pattern, Files) of
         {ok, #file{contents = Contents,
                    headers = FileHeaders,
-                   mtime = MTime} = File} ->
+                   mtime_i = MTimeI} = File} ->
             if
                 UseHttpGetSuffix =:= true ->
                     case cloudi_string:afterr($/, Pattern) of
@@ -574,10 +576,10 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                               contents_ranges_headers(true)],
                              <<>>, State};
                         "head" ->
-                            request_header(MTime, Contents, FileHeaders,
+                            request_header(MTimeI, Contents, FileHeaders,
                                            RequestInfo, State);
                         "get" ->
-                            request_read(MTime, Contents, FileHeaders,
+                            request_read(MTimeI, Contents, FileHeaders,
                                          RequestInfo, State);
                         "put" ->
                             request_truncate(File, RequestInfo, Request,
@@ -588,7 +590,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                                            State, Dispatcher)
                     end;
                 UseHttpGetSuffix =:= false ->
-                    request_read(MTime, Contents, FileHeaders,
+                    request_read(MTimeI, Contents, FileHeaders,
                                  RequestInfo, State)
             end;
         error ->
@@ -648,19 +650,19 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request_header(MTime, Contents, FileHeaders, RequestInfo,
+request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                #state{cache = undefined,
                       use_http_get_suffix = true} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
     NowTime = calendar:now_to_universal_time(os:timestamp()),
-    ETag = cache_header_etag(MTime),
-    case contents_ranges_read(ETag, KeyValues, MTime) of
+    ETag = cache_header_etag(MTimeI),
+    case contents_ranges_read(ETag, KeyValues, MTimeI) of
         {206, RangeList} ->
             case content_range_list_check(RangeList, Contents) of
                 {206, Headers} ->
                     {reply,
                      Headers ++
-                     cacheless_headers_data(NowTime, MTime, ETag, true),
+                     cacheless_headers_data(NowTime, MTimeI, ETag, true),
                      <<>>, State};
                 {416, Headers} ->
                     {reply, Headers, <<>>, State}
@@ -670,7 +672,7 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
                  Status == 410 ->
             {reply,
              FileHeaders ++
-             cacheless_headers_data(NowTime, MTime, ETag, true),
+             cacheless_headers_data(NowTime, MTimeI, ETag, true),
              <<>>, State};
         {416, undefined} ->
             {reply,
@@ -681,21 +683,21 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
         {400, undefined} ->
             {reply, [{<<"status">>, <<"400">>}], <<>>, State}
     end;
-request_header(MTime, Contents, FileHeaders, RequestInfo,
+request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                #state{cache = Cache,
                       use_http_get_suffix = true} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
     NowTime = calendar:now_to_universal_time(os:timestamp()),
-    ETag = cache_header_etag(MTime),
-    case cache_status(ETag, KeyValues, MTime) of
+    ETag = cache_header_etag(MTimeI),
+    case cache_status(ETag, KeyValues, MTimeI) of
         200 ->
-            case contents_ranges_read(ETag, KeyValues, MTime) of
+            case contents_ranges_read(ETag, KeyValues, MTimeI) of
                 {206, RangeList} ->
                     case content_range_list_check(RangeList, Contents) of
                         {206, Headers} ->
                             {reply,
                              Headers ++
-                             cache_headers_data(NowTime, MTime,
+                             cache_headers_data(NowTime, MTimeI,
                                                 ETag, Cache, true),
                              <<>>, State};
                         {416, Headers} ->
@@ -706,7 +708,7 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
                          Status == 410 ->
                     {reply,
                      FileHeaders ++
-                     cache_headers_data(NowTime, MTime, ETag, Cache, true),
+                     cache_headers_data(NowTime, MTimeI, ETag, Cache, true),
                      <<>>, State};
                 {416, undefined} ->
                     {reply,
@@ -721,11 +723,11 @@ request_header(MTime, Contents, FileHeaders, RequestInfo,
             % not modified due to caching
             {reply,
              [{<<"status">>, erlang:integer_to_binary(Status)} |
-              cache_headers_empty(NowTime, MTime, true)],
+              cache_headers_empty(NowTime, MTimeI, true)],
              <<>>, State}
     end.
 
-request_read(MTime, Contents, FileHeaders, RequestInfo,
+request_read(MTimeI, Contents, FileHeaders, RequestInfo,
              #state{cache = undefined,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     if
@@ -733,14 +735,14 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
             KeyValues = cloudi_service:
                         request_info_key_value_parse(RequestInfo),
             NowTime = calendar:now_to_universal_time(os:timestamp()),
-            ETag = cache_header_etag(MTime),
-            case contents_ranges_read(ETag, KeyValues, MTime) of
+            ETag = cache_header_etag(MTimeI),
+            case contents_ranges_read(ETag, KeyValues, MTimeI) of
                 {206, RangeList} ->
                     case content_range_read(RangeList, Contents) of
                         {206, Headers, Response} ->
                             {reply,
                              Headers ++
-                             cacheless_headers_data(NowTime, MTime, ETag,
+                             cacheless_headers_data(NowTime, MTimeI, ETag,
                                                     UseHttpGetSuffix),
                              Response, State};
                         {416, Headers, Response} ->
@@ -751,7 +753,7 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
                          Status == 410 ->
                     {reply,
                      FileHeaders ++
-                     cacheless_headers_data(NowTime, MTime, ETag,
+                     cacheless_headers_data(NowTime, MTimeI, ETag,
                                             UseHttpGetSuffix),
                      Contents, State};
                 {416, undefined} ->
@@ -766,23 +768,23 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
         UseHttpGetSuffix =:= false ->
             {reply, Contents, State}
     end;
-request_read(MTime, Contents, FileHeaders, RequestInfo,
+request_read(MTimeI, Contents, FileHeaders, RequestInfo,
              #state{cache = Cache,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     KeyValues = cloudi_service:request_info_key_value_parse(RequestInfo),
     NowTime = calendar:now_to_universal_time(os:timestamp()),
-    ETag = cache_header_etag(MTime),
-    case cache_status(ETag, KeyValues, MTime) of
+    ETag = cache_header_etag(MTimeI),
+    case cache_status(ETag, KeyValues, MTimeI) of
         200 ->
             if
                 UseHttpGetSuffix =:= true ->
-                    case contents_ranges_read(ETag, KeyValues, MTime) of
+                    case contents_ranges_read(ETag, KeyValues, MTimeI) of
                         {206, RangeList} ->
                             case content_range_read(RangeList, Contents) of
                                 {206, Headers, Response} ->
                                     {reply,
                                      Headers ++
-                                     cache_headers_data(NowTime, MTime,
+                                     cache_headers_data(NowTime, MTimeI,
                                                         ETag, Cache,
                                                         UseHttpGetSuffix),
                                      Response, State};
@@ -794,7 +796,7 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
                                  Status == 410 ->
                             {reply,
                              FileHeaders ++
-                             cache_headers_data(NowTime, MTime,
+                             cache_headers_data(NowTime, MTimeI,
                                                 ETag, Cache, UseHttpGetSuffix),
                              Contents, State};
                         {416, undefined} ->
@@ -808,7 +810,7 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
                     end;
                 UseHttpGetSuffix =:= false ->
                     {reply,
-                     cache_headers_data(NowTime, MTime,
+                     cache_headers_data(NowTime, MTimeI,
                                         ETag, Cache, UseHttpGetSuffix),
                      Contents, State}
             end;
@@ -816,27 +818,27 @@ request_read(MTime, Contents, FileHeaders, RequestInfo,
             % not modified due to caching
             {reply,
              [{<<"status">>, erlang:integer_to_binary(Status)} |
-              cache_headers_empty(NowTime, MTime, UseHttpGetSuffix)],
+              cache_headers_empty(NowTime, MTimeI, UseHttpGetSuffix)],
              <<>>, State}
     end.
 
 request_truncate_file(#file{contents = Contents,
                             path = FilePath,
                             headers = FileHeaders,
-                            mtime = MTime} = File,
+                            mtime_i = {MTime, _} = MTimeI} = File,
                       #state{prefix = Prefix,
                              directory_length = DirectoryLength,
                              cache = Cache,
                              files = Files,
                              use_http_get_suffix = true} = State) ->
     FileName = lists:nthtail(DirectoryLength, FilePath),
-    ETag = cache_header_etag(MTime),
+    ETag = cache_header_etag(MTimeI),
     NewFiles = file_refresh(FileName, File, Files, true, Prefix),
     Headers = if
         Cache =:= undefined ->
-            cacheless_headers_data(MTime, MTime, ETag, true);
+            cacheless_headers_data(MTime, MTimeI, ETag, true);
         true ->
-            cache_headers_data(MTime, MTime, ETag, Cache, true)
+            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
     end,
     {reply,
      FileHeaders ++ Headers, Contents,
@@ -844,6 +846,7 @@ request_truncate_file(#file{contents = Contents,
 
 request_truncate(#file{size = OldContentsSize,
                        path = FilePath,
+                       mtime_i = OldMTimeI,
                        write = Write,
                        notify = NotifyL} = File,
                  RequestInfo, Request,
@@ -876,10 +879,11 @@ request_truncate(#file{size = OldContentsSize,
                                                      Dispatcher),
                                     #file_info{mtime = MTime,
                                                access = Access} = FileInfo,
+                                    MTimeI = mtime_i_update(OldMTimeI, MTime),
                                     request_truncate_file(
                                         File#file{contents = NewContents,
                                                   size = NewContentsSize,
-                                                  mtime = MTime,
+                                                  mtime_i = MTimeI,
                                                   access = Access},
                                         State#state{files_size = NewFilesSize});
                                 {error, Reason} ->
@@ -954,6 +958,7 @@ request_append_file([],
                           size = OldContentsSize,
                           path = FilePath,
                           headers = FileHeaders,
+                          mtime_i = OldMTimeI,
                           notify = NotifyL} = File,
                     #state{prefix = Prefix,
                            directory_length = DirectoryLength,
@@ -971,18 +976,19 @@ request_append_file([],
                     file_notify_send(NotifyL, Contents, Dispatcher),
                     #file_info{mtime = MTime,
                                access = Access} = FileInfo,
+                    MTimeI = mtime_i_update(OldMTimeI, MTime),
                     NewFile = File#file{size = ContentsSize,
-                                        mtime = MTime,
+                                        mtime_i = MTimeI,
                                         access = Access},
                     FileName = lists:nthtail(DirectoryLength, FilePath),
                     NewFiles = file_refresh(FileName, NewFile,
                                             Files, true, Prefix),
-                    ETag = cache_header_etag(MTime),
+                    ETag = cache_header_etag(MTimeI),
                     Headers = if
                         Cache =:= undefined ->
-                            cacheless_headers_data(MTime, MTime, ETag, true);
+                            cacheless_headers_data(MTime, MTimeI, ETag, true);
                         true ->
-                            cache_headers_data(MTime, MTime, ETag, Cache, true)
+                            cache_headers_data(MTime, MTimeI, ETag, Cache, true)
                     end,
                     {reply,
                      FileHeaders ++ Headers, Contents,
@@ -1088,7 +1094,7 @@ request_append_file([{Range, Request} | RangeRequests],
     end.
 
 request_append(#file{contents = Contents,
-                     mtime = MTime,
+                     mtime_i = MTimeI,
                      write = Write,
                      write_appends = Appends} = File,
                Name, RequestInfo, Request, Timeout,
@@ -1099,8 +1105,8 @@ request_append(#file{contents = Contents,
         true ->
             KeyValues = cloudi_service:
                         request_info_key_value_parse(RequestInfo),
-            ETag = cache_header_etag(MTime),
-            case contents_ranges_append(ETag, KeyValues, MTime) of
+            ETag = cache_header_etag(MTimeI),
+            case contents_ranges_append(ETag, KeyValues, MTimeI) of
                 {Status, {Range, Id, true, Index}} % last range
                     when Status == 200;
                          Status == 206 ->
@@ -1457,12 +1463,13 @@ files_refresh(Directory, Toggle,
         #file_info{access = Access,
                    mtime = MTime} = FileInfo,
         case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
-            {ok, #file{mtime = MTime} = File0} ->
+            {ok, #file{mtime_i = {MTime, _}} = File0} ->
                 File1 = File0#file{toggle = Toggle},
                 {FilesSize1,
                  file_refresh(FileName, File1, Files1,
                               UseHttpGetSuffix, Prefix)};
             {ok, #file{size = OldContentsSize,
+                       mtime_i = OldMTimeI,
                        notify = NotifyL,
                        write = Write} = File0} ->
                 case file_read_data(FileInfo, FilePath) of
@@ -1471,9 +1478,10 @@ files_refresh(Directory, Toggle,
                                               Contents, FilesSizeLimit) of
                             {ok, ContentsSize, NextFilesSize1} ->
                                 file_notify_send(NotifyL, Contents, Dispatcher),
+                                MTimeI = mtime_i_update(OldMTimeI, MTime),
                                 File1 = File0#file{contents = Contents,
                                                    size = ContentsSize,
-                                                   mtime = MTime,
+                                                   mtime_i = MTimeI,
                                                    access = Access,
                                                    toggle = Toggle},
                                 {NextFilesSize1,
@@ -1512,7 +1520,7 @@ files_refresh(Directory, Toggle,
                                              size = ContentsSize,
                                              path = FilePath,
                                              headers = Headers,
-                                             mtime = MTime,
+                                             mtime_i = {MTime, 0},
                                              access = Access,
                                              toggle = Toggle},
                                 {NextFilesSize1,
@@ -1633,7 +1641,7 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
 read_file_info(FilePath) ->
     file:read_file_info(FilePath, [{time, universal}]).
 
-cache_status(ETag, KeyValues, MTime) ->
+cache_status(ETag, KeyValues, {MTime, _}) ->
     cache_status_0(ETag, KeyValues, MTime).
 
 cache_status_0(ETag, KeyValues, MTime) ->
@@ -1696,9 +1704,14 @@ cache_status_3(KeyValues, MTime) ->
             200
     end.
 
-cache_header_etag(MTime) ->
-    Output = io_lib:format("\"~.16b\"",
-                           [calendar:datetime_to_gregorian_seconds(MTime)]),
+mtime_i_update({MTime, I}, MTime) ->
+    {MTime, I + 1};
+mtime_i_update({_, _}, MTime) ->
+    {MTime, 0}.
+
+cache_header_etag({MTime, I}) ->
+    Output = io_lib:format("\"~.16b~.16b\"",
+                           [calendar:datetime_to_gregorian_seconds(MTime), I]),
     erlang:iolist_to_binary(Output).
 
 cache_header_control(Cache) ->
@@ -1710,7 +1723,7 @@ cache_header_expires(ATime, Cache) ->
     Expires = calendar:gregorian_seconds_to_datetime(Seconds + Cache),
     rfc1123_format(Expires).
 
-cache_headers_data(NowTime, MTime, ETag, Cache, UseHttpGetSuffix) ->
+cache_headers_data(NowTime, {MTime, _}, ETag, Cache, UseHttpGetSuffix) ->
     [{<<"etag">>, ETag},
      {<<"cache-control">>, cache_header_control(Cache)},
      {<<"expires">>, cache_header_expires(NowTime, Cache)},
@@ -1718,12 +1731,12 @@ cache_headers_data(NowTime, MTime, ETag, Cache, UseHttpGetSuffix) ->
      {<<"date">>, rfc1123_format(NowTime)} |
      contents_ranges_headers(UseHttpGetSuffix)].
 
-cache_headers_empty(NowTime, MTime, UseHttpGetSuffix) ->
+cache_headers_empty(NowTime, {MTime, _}, UseHttpGetSuffix) ->
     [{<<"last-modified">>, rfc1123_format(MTime)},
      {<<"date">>, rfc1123_format(NowTime)} |
      contents_ranges_headers(UseHttpGetSuffix)].
 
-cacheless_headers_data(NowTime, MTime, ETag, UseHttpGetSuffix) ->
+cacheless_headers_data(NowTime, {MTime, _}, ETag, UseHttpGetSuffix) ->
     [{<<"etag">>, ETag},
      {<<"last-modified">>, rfc1123_format(MTime)},
      {<<"date">>, rfc1123_format(NowTime)} |
@@ -1740,7 +1753,7 @@ contents_ranges_header_length(Contents) ->
     {<<"content-range">>,
      <<(<<"bytes */">>)/binary, ContentLengthBin/binary>>}.
 
-contents_ranges_read(ETag, KeyValues, MTime) ->
+contents_ranges_read(ETag, KeyValues, {MTime, _}) ->
     contents_ranges_read_0(ETag, KeyValues, MTime).
 
 contents_ranges_read_0(ETag, KeyValues, MTime) ->
@@ -1776,7 +1789,7 @@ contents_ranges_read_1(RangeList, ETag, KeyValues, MTime) ->
             {206, RangeList}
     end.
 
-contents_ranges_append(ETag, KeyValues, MTime) ->
+contents_ranges_append(ETag, KeyValues, {MTime, _}) ->
     Id = case cloudi_service:key_value_find(<<"x-multipart-id">>,
                                             KeyValues) of
         {ok, MultipartId} ->

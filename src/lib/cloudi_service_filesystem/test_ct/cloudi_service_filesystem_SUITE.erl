@@ -67,7 +67,9 @@
          t_filesystem_basic_write_truncate_wcache_1/1,
          t_filesystem_basic_write_append_1/1,
          t_filesystem_basic_write_append_wcache_1/1,
-         t_filesystem_basic_read_cache_1/1]).
+         t_filesystem_basic_read_cache_1/1,
+         t_filesystem_size_limit_1/1,
+         t_filesystem_size_limit_2/1]).
 
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -76,8 +78,12 @@
 % ASCII_FILE created with: file:write_file("ASCII.bin", lists:seq(0, 126)).
 -define(ASCII_FILE, "ASCII.bin").
 -define(WRITABLE_DIRECTORY, "/tmp/").
+-define(WRITABLE_DIRECTORY_PRIVATE, "/tmp/cloudi_service_filesystem_test/").
 -define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
--define(WRITABLE_FILEPATH, ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
+-define(WRITABLE_FILEPATH,
+        ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
+-define(WRITABLE_FILEPATH_PRIVATE,
+        ?WRITABLE_DIRECTORY_PRIVATE ?WRITABLE_FILENAME).
 -define(TIMEOUT, 960000).
 -define(REFRESH, 2400). % ((?TIMEOUT * 2.5) div 1000)
 -define(REFRESH_STRING, "2400").
@@ -97,7 +103,9 @@ groups() ->
        t_filesystem_basic_write_truncate_wcache_1,
        t_filesystem_basic_write_append_1,
        t_filesystem_basic_write_append_wcache_1,
-       t_filesystem_basic_read_cache_1]}].
+       t_filesystem_basic_read_cache_1,
+       t_filesystem_size_limit_1,
+       t_filesystem_size_limit_2]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -105,6 +113,7 @@ suite() ->
 
 init_per_suite(Config) ->
     ?REFRESH = erlang:round(?TIMEOUT * 2.5) div 1000,
+    ok = filelib:ensure_dir(?WRITABLE_FILEPATH_PRIVATE),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 
@@ -238,6 +247,42 @@ init_per_testcase(TestCase, Config)
          {timeout_init, ?TIMEOUT},
          {timeout_sync, ?TIMEOUT}]
         ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_filesystem_size_limit_1) ->
+    file:delete(?WRITABLE_FILEPATH_PRIVATE),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, cloudi_service_filesystem},
+         {args,
+          [{directory, ?WRITABLE_DIRECTORY_PRIVATE},
+           {files_size, 2}, % Kb
+           {write_append,
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+           {use_content_disposition, true}]},
+         {dest_refresh, none},
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_filesystem_size_limit_2) ->
+    file:delete(?WRITABLE_FILEPATH_PRIVATE),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, cloudi_service_filesystem},
+         {args,
+          [{directory, ?WRITABLE_DIRECTORY_PRIVATE},
+           {files_size, 1}, % Kb
+           {write_truncate,
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+           {use_content_disposition, true}]},
+         {dest_refresh, none},
+         {timeout_init, ?TIMEOUT},
+         {timeout_sync, ?TIMEOUT}]
+        ], infinity),
     [{service_ids, ServiceIds} | Config].
 
 end_per_testcase(TestCase, Config) ->
@@ -249,6 +294,9 @@ end_per_testcase(TestCase, Config) ->
         TestCase =:= t_filesystem_basic_write_append_1;
         TestCase =:= t_filesystem_basic_write_append_wcache_1 ->
             ok = file:delete(?WRITABLE_FILEPATH);
+        TestCase =:= t_filesystem_size_limit_1;
+        TestCase =:= t_filesystem_size_limit_2 ->
+            ok = file:delete(?WRITABLE_FILEPATH_PRIVATE);
         true ->
             ok
     end,
@@ -682,18 +730,10 @@ t_filesystem_basic_write_truncate_1(_Config) ->
      Response2} = cloudi:send_sync(Context, ServiceNamePut,
                                    <<>>, Response2,
                                    Timeout, Priority),
-    true = if
-        LastModified0 < LastModified1 ->
-            ETag0 /= ETag1;
-        LastModified0 == LastModified1 ->
-            ETag0 == ETag1
-    end,
-    true = if
-        LastModified1 < LastModified2 ->
-            ETag1 /= ETag2;
-        LastModified1 == LastModified2 ->
-            ETag1 == ETag2
-    end,
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    true = ETag1 /= ETag2,
+    true = LastModified1 =< LastModified2,
     {ok, Response2} = file:read_file(?WRITABLE_FILEPATH),
     {ok,
      [{<<"status">>, <<"400">>}],
@@ -750,18 +790,10 @@ t_filesystem_basic_write_truncate_wcache_1(_Config) ->
      Response2} = cloudi:send_sync(Context, ServiceNamePut,
                                    <<>>, Response2,
                                    Timeout, Priority),
-    true = if
-        LastModified0 < LastModified1 ->
-            ETag0 /= ETag1;
-        LastModified0 == LastModified1 ->
-            ETag0 == ETag1
-    end,
-    true = if
-        LastModified1 < LastModified2 ->
-            ETag1 /= ETag2;
-        LastModified1 == LastModified2 ->
-            ETag1 == ETag2
-    end,
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    true = ETag1 /= ETag2,
+    true = LastModified1 =< LastModified2,
     {ok, Response2} = file:read_file(?WRITABLE_FILEPATH),
     {ok,
      [{<<"status">>, <<"400">>}],
@@ -817,18 +849,10 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response2} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo2, Request2,
                                    Timeout, Priority),
-    true = if
-        LastModified0 < LastModified1 ->
-            ETag0 /= ETag1;
-        LastModified0 == LastModified1 ->
-            ETag0 == ETag1
-    end,
-    true = if
-        LastModified1 < LastModified2 ->
-            ETag1 /= ETag2;
-        LastModified1 == LastModified2 ->
-            ETag1 == ETag2
-    end,
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    true = ETag1 /= ETag2,
+    true = LastModified1 =< LastModified2,
     RequestInfo3 = [{<<"range">>, 
                      <<"bytes="
                        "10-14">>}],
@@ -845,12 +869,8 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response3} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo3, Request3,
                                    Timeout, Priority),
-    true = if
-        LastModified2 < LastModified3 ->
-            ETag2 /= ETag3;
-        LastModified2 == LastModified3 ->
-            ETag2 == ETag3
-    end,
+    true = ETag2 /= ETag3,
+    true = LastModified2 =< LastModified3,
     RequestInfo4 = [{<<"range">>, 
                      <<"bytes="
                        "22-22">>}],
@@ -867,12 +887,8 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response4} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo4, Request4,
                                    Timeout, Priority),
-    true = if
-        LastModified3 < LastModified4 ->
-            ETag3 /= ETag4;
-        LastModified3 == LastModified4 ->
-            ETag3 == ETag4
-    end,
+    true = ETag3 /= ETag4,
+    true = LastModified3 =< LastModified4,
     RequestInfo5 = [{<<"range">>, 
                      <<"bytes="
                        "42-42">>}],
@@ -889,12 +905,8 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response5} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo5, Request5,
                                    Timeout, Priority),
-    true = if
-        LastModified4 < LastModified5 ->
-            ETag4 /= ETag5;
-        LastModified4 == LastModified5 ->
-            ETag4 == ETag5
-    end,
+    true = ETag4 /= ETag5,
+    true = LastModified4 =< LastModified5,
     RequestInfo6 = [{<<"range">>, 
                      <<"bytes="
                        "45-45">>}],
@@ -922,12 +934,8 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response7} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo7, Request7,
                                    Timeout, Priority),
-    true = if
-        LastModified5 < LastModified7 ->
-            ETag5 /= ETag7;
-        LastModified5 == LastModified7 ->
-            ETag5 == ETag7
-    end,
+    true = ETag5 /= ETag7,
+    true = LastModified5 =< LastModified7,
     Request8 = <<" The end.">>,
     Response8 = <<Response7/binary,
                   Request8/binary>>,
@@ -942,12 +950,8 @@ t_filesystem_basic_write_append_1(_Config) ->
      Response8} = cloudi:send_sync(Context, ServiceNamePost,
                                    <<>>, Request8,
                                    Timeout, Priority),
-    true = if
-        LastModified7 < LastModified8 ->
-            ETag7 /= ETag8;
-        LastModified7 == LastModified8 ->
-            ETag7 == ETag8
-    end,
+    true = ETag7 /= ETag8,
+    true = LastModified7 =< LastModified8,
     {ok, Response8} = file:read_file(?WRITABLE_FILEPATH),
     ok.
 
@@ -1004,18 +1008,10 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response2} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo2, Request2,
                                    Timeout, Priority),
-    true = if
-        LastModified0 < LastModified1 ->
-            ETag0 /= ETag1;
-        LastModified0 == LastModified1 ->
-            ETag0 == ETag1
-    end,
-    true = if
-        LastModified1 < LastModified2 ->
-            ETag1 /= ETag2;
-        LastModified1 == LastModified2 ->
-            ETag1 == ETag2
-    end,
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    true = ETag1 /= ETag2,
+    true = LastModified1 =< LastModified2,
     RequestInfo3 = [{<<"range">>, 
                      <<"bytes="
                        "10-14">>}],
@@ -1034,12 +1030,8 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response3} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo3, Request3,
                                    Timeout, Priority),
-    true = if
-        LastModified2 < LastModified3 ->
-            ETag2 /= ETag3;
-        LastModified2 == LastModified3 ->
-            ETag2 == ETag3
-    end,
+    true = ETag2 /= ETag3,
+    true = LastModified2 =< LastModified3,
     RequestInfo4 = [{<<"range">>, 
                      <<"bytes="
                        "22-22">>}],
@@ -1058,12 +1050,8 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response4} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo4, Request4,
                                    Timeout, Priority),
-    true = if
-        LastModified3 < LastModified4 ->
-            ETag3 /= ETag4;
-        LastModified3 == LastModified4 ->
-            ETag3 == ETag4
-    end,
+    true = ETag3 /= ETag4,
+    true = LastModified3 =< LastModified4,
     RequestInfo5 = [{<<"range">>, 
                      <<"bytes="
                        "42-42">>}],
@@ -1082,12 +1070,8 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response5} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo5, Request5,
                                    Timeout, Priority),
-    true = if
-        LastModified4 < LastModified5 ->
-            ETag4 /= ETag5;
-        LastModified4 == LastModified5 ->
-            ETag4 == ETag5
-    end,
+    true = ETag4 /= ETag5,
+    true = LastModified4 =< LastModified5,
     RequestInfo6 = [{<<"range">>, 
                      <<"bytes="
                        "45-45">>}],
@@ -1117,12 +1101,8 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response7} = cloudi:send_sync(Context, ServiceNamePost,
                                    RequestInfo7, Request7,
                                    Timeout, Priority),
-    true = if
-        LastModified5 < LastModified7 ->
-            ETag5 /= ETag7;
-        LastModified5 == LastModified7 ->
-            ETag5 == ETag7
-    end,
+    true = ETag5 /= ETag7,
+    true = LastModified5 =< LastModified7,
     Request8 = <<" The end.">>,
     Response8 = <<Response7/binary,
                   Request8/binary>>,
@@ -1139,12 +1119,8 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
      Response8} = cloudi:send_sync(Context, ServiceNamePost,
                                    <<>>, Request8,
                                    Timeout, Priority),
-    true = if
-        LastModified7 < LastModified8 ->
-            ETag7 /= ETag8;
-        LastModified7 == LastModified8 ->
-            ETag7 == ETag8
-    end,
+    true = ETag7 /= ETag8,
+    true = LastModified7 =< LastModified8,
     {ok, Response8} = file:read_file(?WRITABLE_FILEPATH),
     ok.
 
@@ -1263,6 +1239,105 @@ t_filesystem_basic_read_cache_1(_Config) ->
                                RequestInfo8, Request,
                                Timeout, Priority),
     ok.
+
+t_filesystem_size_limit_1(_Config) ->
+    Context = cloudi:new(),
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
+    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/post",
+    Timeout = undefined, % default
+    Priority = undefined, % default
+    {ok,
+     [{<<"content-type">>, <<"text/plain">>},
+      {<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"etag">>, ETag0},
+      {<<"last-modified">>, LastModified0},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     <<>>} = cloudi:send_sync(Context, ServiceNameGet,
+                              <<>>, <<>>,
+                              Timeout, Priority),
+    {error, enoent} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    Request1 = <<0:8192>>, % 1 Kb
+    {ok,
+     [{<<"content-type">>, <<"text/plain">>},
+      {<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"etag">>, ETag1},
+      {<<"last-modified">>, LastModified1},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     Request1} = cloudi:send_sync(Context, ServiceNamePost,
+                                  <<>>, Request1,
+                                  Timeout, Priority),
+    {ok, Request1} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    Request2 = <<1:8192>>, % 1 Kb
+    Response2 = <<Request1/binary, Request2/binary>>,
+    {ok,
+     [{<<"content-type">>, <<"text/plain">>},
+      {<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"etag">>, ETag2},
+      {<<"last-modified">>, LastModified2},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     Response2} = cloudi:send_sync(Context, ServiceNamePost,
+                                   <<>>, Request2,
+                                   Timeout, Priority),
+    true = ETag1 /= ETag2,
+    true = LastModified1 =< LastModified2,
+    {ok, Response2} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    Request3 = <<2:8>>, % 1 byte
+    {ok,
+     [{<<"status">>, <<"400">>}],
+     <<>>} = cloudi:send_sync(Context, ServiceNamePost,
+                              <<>>, Request3,
+                              Timeout, Priority),
+    ok.
+
+t_filesystem_size_limit_2(_Config) ->
+    Context = cloudi:new(),
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
+    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/put",
+    Timeout = undefined, % default
+    Priority = undefined, % default
+    {ok,
+     [{<<"content-type">>, <<"text/plain">>},
+      {<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"etag">>, ETag0},
+      {<<"last-modified">>, LastModified0},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     <<>>} = cloudi:send_sync(Context, ServiceNameGet,
+                              <<>>, <<>>,
+                              Timeout, Priority),
+    {error, enoent} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    Request1 = <<0:8192>>, % 1 Kb
+    {ok,
+     [{<<"content-type">>, <<"text/plain">>},
+      {<<"content-disposition">>,
+       <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+      {<<"etag">>, ETag1},
+      {<<"last-modified">>, LastModified1},
+      {<<"date">>, _},
+      {<<"accept-ranges">>, <<"bytes">>}],
+     Request1} = cloudi:send_sync(Context, ServiceNamePut,
+                                  <<>>, Request1,
+                                  Timeout, Priority),
+    {ok, Request1} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    true = ETag0 /= ETag1,
+    true = LastModified0 =< LastModified1,
+    Request2 = <<0:8200>>, % 1 Kb + 1 byte
+    {ok,
+     [{<<"status">>, <<"400">>}],
+     <<>>} = cloudi:send_sync(Context, ServiceNamePut,
+                              <<>>, Request2,
+                              Timeout, Priority),
+    ok.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------

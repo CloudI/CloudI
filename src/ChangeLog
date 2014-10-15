@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add more CT tests for cloudi_service_filesystem
+    * Make cloudi_service_filesystem generate etags that are always unique
+      (i.e., more unique than the modification datetime)
+
 2014-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add files_size to the cloudi_service_filesystem configuration arguments
