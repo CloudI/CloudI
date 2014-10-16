@@ -382,6 +382,7 @@ init([Protocol, SocketPath,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
+    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
     case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
@@ -397,6 +398,7 @@ init([Protocol, SocketPath,
                 prefix = Prefix,
                 options = #config_service_options{
                     scope = Scope}} = State) ->
+    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
     Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
                                     Dispatcher, infinity),
     ok = send('subscribe_count_out'(Count), State),
@@ -408,6 +410,7 @@ init([Protocol, SocketPath,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}} = State) ->
+    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
     case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
@@ -425,6 +428,11 @@ init([Protocol, SocketPath,
 'HANDLE'({'send_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = (Priority >= ?PRIORITY_HIGH) andalso
+           (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_async(Name, RequestInfo, Request,
@@ -437,6 +445,11 @@ init([Protocol, SocketPath,
 'HANDLE'({'send_sync', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = (Priority >= ?PRIORITY_HIGH) andalso
+           (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_send_sync(Name, RequestInfo, Request,
@@ -449,6 +462,11 @@ init([Protocol, SocketPath,
 'HANDLE'({'mcast_async', Name, RequestInfo, Request, Timeout, Priority},
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = (Priority >= ?PRIORITY_HIGH) andalso
+           (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
         true ->
             handle_mcast_async(Name, RequestInfo, Request,
@@ -471,6 +489,13 @@ init([Protocol, SocketPath,
                     request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = (Priority >= ?PRIORITY_HIGH) andalso
+           (Priority =< ?PRIORITY_LOW),
+    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
+    true = is_pid(Source),
     Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
     try AspectsRequestAfterF(AspectsAfter, Timeout, Result, ServiceState) of
         {ok, NewTimeout, NewServiceState} ->
@@ -535,6 +560,13 @@ init([Protocol, SocketPath,
                     request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = (Priority >= ?PRIORITY_HIGH) andalso
+           (Priority =< ?PRIORITY_LOW),
+    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
+    true = is_pid(Source),
     Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
     try AspectsRequestAfterF(AspectsAfter, Timeout, Result, ServiceState) of
         {ok, NewTimeout, NewServiceState} ->
@@ -597,6 +629,12 @@ init([Protocol, SocketPath,
                         AspectsAfter}} = State)
     when ReturnType =:= 'return_async';
          ReturnType =:= 'return_sync' ->
+    true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
+    true = is_pid(Source),
     Result = if
         ResponseInfo == <<>>, Response == <<>>,
         Timeout =< ResponseTimeoutImmediateMax ->
@@ -636,8 +674,11 @@ init([Protocol, SocketPath,
 'HANDLE'({'recv_async', Timeout, TransId, Consume},
          #state{dispatcher = Dispatcher,
                 async_responses = AsyncResponses} = State) ->
-    if
-        TransId == <<0:128>> ->
+    true = (Timeout >= 0) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_boolean(Consume),
+    case TransId of
+        <<0:128>> ->
             case dict:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
@@ -667,7 +708,7 @@ init([Protocol, SocketPath,
                               State),
                     {next_state, 'HANDLE', State}
             end;
-        true ->
+        <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> -> % v1 UUID
             case dict:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
