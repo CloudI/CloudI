@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the PHP CloudI API
+    * Add the PHP http_req test
+
+2014-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Resolve minor problems with the Python and Ruby CloudI APIs
+
 2014-10-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add validation to all external service Erlang term data received from

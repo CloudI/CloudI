@@ -7,6 +7,9 @@ endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = org jar
 endif
+if PHP_SUPPORT
+    PHP_INSTALL_HOOK = php-install
+endif
 if PYTHON_SUPPORT
     PYTHON_INSTALL_HOOK = python-install
 endif
@@ -24,6 +27,10 @@ endif
 SUBDIRS = $(C_SUBDIR) $(JAVA_SUBDIR) src
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
 
+php-install:
+	$(MKDIR_P) $(instdir)
+	$(INSTALL_SCRIPT) $(srcdir)/http_req.php $(instdir)
+
 python-install:
 	$(MKDIR_P) $(instdir)
 	$(INSTALL_SCRIPT) $(srcdir)/http_req.py $(instdir)
@@ -36,7 +43,8 @@ ruby-install:
 	$(MKDIR_P) $(instdir)
 	$(INSTALL_SCRIPT) $(srcdir)/http_req.rb $(instdir)
 
-install-exec-hook: $(PYTHON_INSTALL_HOOK) \
+install-exec-hook: $(PHP_INSTALL_HOOK) \
+                   $(PYTHON_INSTALL_HOOK) \
                    $(PYTHON_C_INSTALL_HOOK) \
                    $(RUBY_INSTALL_HOOK)
 	$(MKDIR_P) $(instdir)/public_html

@@ -1756,18 +1756,18 @@ int cloudi_poll(cloudi_instance_t * p,
     return poll_request(p, timeout, 1);
 }
 
-static char const ** binary_key_value_parse(void const * const binary,
-                                            uint32_t const binary_size)
+static char const ** text_key_value_parse(void const * const text,
+                                          uint32_t const text_size)
 {
-    char const * p = reinterpret_cast<char const * const>(binary);
+    char const * p = reinterpret_cast<char const * const>(text);
     realloc_ptr<char const *> result(16, 8192);
     result[0] = p;
     size_t i = 1;
-    for (size_t binary_i = 1; binary_i < binary_size - 1; ++binary_i)
+    for (size_t text_i = 1; text_i < text_size - 1; ++text_i)
     {
-        if (p[binary_i] == '\0')
+        if (p[text_i] == '\0')
         {
-            result[i] = &p[++binary_i];
+            result[i] = &p[++text_i];
             result.reserve(++i + 1);
         }
     }
@@ -1775,7 +1775,7 @@ static char const ** binary_key_value_parse(void const * const binary,
     return result.release();
 }
 
-static void binary_key_value_destroy(char const ** p)
+static void text_key_value_destroy(char const ** p)
 {
     free(p);
 }
@@ -1785,23 +1785,23 @@ static void binary_key_value_destroy(char const ** p)
 char const ** cloudi_request_http_qs_parse(void const * const request,
                                            uint32_t const request_size)
 {
-    return binary_key_value_parse(request, request_size);
+    return text_key_value_parse(request, request_size);
 }
 
 void cloudi_request_http_qs_destroy(char const ** p)
 {
-    binary_key_value_destroy(p);
+    text_key_value_destroy(p);
 }
 
 char const ** cloudi_info_key_value_parse(void const * const message_info,
                                           uint32_t const message_info_size)
 {
-    return binary_key_value_parse(message_info, message_info_size);
+    return text_key_value_parse(message_info, message_info_size);
 }
 
 void cloudi_info_key_value_destroy(char const ** p)
 {
-    binary_key_value_destroy(p);
+    text_key_value_destroy(p);
 }
 
 } // extern C

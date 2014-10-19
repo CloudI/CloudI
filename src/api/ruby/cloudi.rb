@@ -630,9 +630,9 @@ module CloudI
             return poll_request(true)
         end
 
-        def binary_key_value_parse(binary)
+        def text_key_value_parse(text)
             result = {}
-            data = binary.split(NULL.chr)
+            data = text.split(NULL.chr)
             (0...(data.length)).step(2).each do |i|
                 value = result[data[i]]
                 if value == nil
@@ -647,11 +647,11 @@ module CloudI
         end
 
         def request_http_qs_parse(request)
-            return binary_key_value_parse(request)
+            return text_key_value_parse(request)
         end
 
         def info_key_value_parse(message_info)
-            return binary_key_value_parse(message_info)
+            return text_key_value_parse(message_info)
         end
 
         def self.assert
@@ -661,7 +661,7 @@ module CloudI
         private :callback
         private :handle_events
         private :poll_request
-        private :binary_key_value_parse
+        private :text_key_value_parse
         private
 
         def send(data)

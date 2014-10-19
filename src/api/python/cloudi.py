@@ -601,9 +601,9 @@ class API(object):
     def poll(self):
         return self.__poll_request(True)
 
-    def __binary_key_value_parse(self, binary):
+    def __text_key_value_parse(self, text):
         result = {}
-        data = binary.split(b'\0')
+        data = text.split(b'\0')
         for i in range(0, len(data) - 1, 2):
             key = data[i]
             current = result.get(key, None)
@@ -616,10 +616,10 @@ class API(object):
         return result
 
     def request_http_qs_parse(self, request):
-        return self.__binary_key_value_parse(request)
+        return self.__text_key_value_parse(request)
 
     def info_key_value_parse(self, message_info):
-        return self.__binary_key_value_parse(message_info)
+        return self.__text_key_value_parse(message_info)
 
     def __send(self, data):
         if self.__use_header:
