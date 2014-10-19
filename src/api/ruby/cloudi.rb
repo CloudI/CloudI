@@ -430,6 +430,8 @@ module CloudI
                 when MESSAGE_KEEPALIVE
                     send(Erlang.term_to_binary(:keepalive))
                     i += j
+                else
+                    raise MessageDecodingException
                 end
                 if i > data_size
                     raise MessageDecodingException
@@ -625,7 +627,7 @@ module CloudI
         end
 
         def poll
-            poll_request(true)
+            return poll_request(true)
         end
 
         def binary_key_value_parse(binary)
@@ -641,15 +643,15 @@ module CloudI
                     result[data[i]] = [value, data[i + 1]]
                 end
             end
-            result
+            return result
         end
 
         def request_http_qs_parse(request)
-            binary_key_value_parse(request)
+            return binary_key_value_parse(request)
         end
 
         def info_key_value_parse(message_info)
-            binary_key_value_parse(message_info)
+            return binary_key_value_parse(message_info)
         end
 
         def self.assert
@@ -693,7 +695,7 @@ module CloudI
                     end
                 end
             end
-            data
+            return data
         end
 
         MESSAGE_INIT                = 1

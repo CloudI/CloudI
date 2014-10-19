@@ -92,7 +92,7 @@ class API(object):
             self.__use_header = True
         else:
             raise invalid_input_exception()
-        self.__initializtion_complete = False
+        self.__initialization_complete = False
         self.__terminate = False
         self.__size = int(buffer_size_str)
         self.__callbacks = {}
@@ -438,9 +438,9 @@ class API(object):
     def __poll_request(self, external):
         if self.__terminate:
             return None
-        elif external and not self.__initializtion_complete:
+        elif external and not self.__initialization_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
-            self.__initializtion_complete = True
+            self.__initialization_complete = True
         ready = False
         while ready == False:
             IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s])
@@ -464,8 +464,8 @@ class API(object):
                  process_count_max, process_count_min,
                  prefix_size) = struct.unpack(b'=IIIII', data[i:j])
                 i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1
-                (prefix, null_terminator, timeout_init,
-                 timeout_async, timeout_sync, timeout_term,
+                (prefix, null_terminator, timeout_initialize,
+                 timeout_async, timeout_sync, timeout_terminate,
                  priority_default,
                  request_timeout_adjustment) = struct.unpack(
                     '=%dscIIIIbB' % (prefix_size - 1), data[i:j]
@@ -475,8 +475,8 @@ class API(object):
                     self.__handle_events(external, data, data_size, j)
                 return (process_index, process_count,
                         process_count_max, process_count_min,
-                        prefix.decode('utf-8'), timeout_init,
-                        timeout_sync, timeout_async, timeout_term,
+                        prefix.decode('utf-8'), timeout_initialize,
+                        timeout_sync, timeout_async, timeout_terminate,
                         priority_default, bool(request_timeout_adjustment))
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
