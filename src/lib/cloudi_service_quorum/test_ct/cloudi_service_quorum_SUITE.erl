@@ -4,10 +4,10 @@
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 %% CT callbacks
 -export([all/0,
