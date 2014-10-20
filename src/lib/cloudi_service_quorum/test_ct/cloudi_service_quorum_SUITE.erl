@@ -42,7 +42,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(_Args, _Prefix, Dispatcher) ->
+cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "proper"),
     {ok, undefined}.
 
@@ -51,11 +51,11 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, RequestInfo, Request,
                               State, _Dispatcher) ->
     {reply, RequestInfo, Request, State}.
 
-cloudi_service_handle_info(Request, State, _) ->
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, _) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------
@@ -345,7 +345,7 @@ use_response_info() ->
     boolean().
 
 count_process() ->
-    integer(1000, 2000). % number of receiving service instances
+    integer(2000, 3000). % number of receiving service instances
 
 monkey() ->
     float(1.0e-100, 1.0). % percentage of service requests that will fail
