@@ -345,7 +345,7 @@ use_response_info() ->
     boolean().
 
 count_process() ->
-    integer(2000, 3000). % number of receiving service instances
+    integer(1000, 1100). % number of receiving service instances
 
 monkey() ->
     float(1.0e-100, 1.0). % percentage of service requests that will fail
