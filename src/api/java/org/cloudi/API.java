@@ -273,7 +273,8 @@ public class API
      * @param  pattern     the service name pattern
      */ 
     public int subscribe_count(final String pattern)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         OtpOutputStream subscribe_count = new OtpOutputStream();
@@ -340,7 +341,8 @@ public class API
      * @return         a transaction ID
      */
     public TransId send_async(String name, byte[] request)
-                              throws MessageDecodingException,
+                              throws InvalidInputException,
+                                     MessageDecodingException,
                                      TerminateException
     {
         return send_async(name, ("").getBytes(), request,
@@ -360,7 +362,8 @@ public class API
      */
     public TransId send_async(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
-                              throws MessageDecodingException,
+                              throws InvalidInputException,
+                                     MessageDecodingException,
                                      TerminateException
     {
         try
@@ -393,7 +396,8 @@ public class API
      * @return              the response
      */
     public Response send_sync(String name, byte[] request)
-                              throws MessageDecodingException,
+                              throws InvalidInputException,
+                                     MessageDecodingException,
                                      TerminateException
     {
         return send_sync(name, ("").getBytes(), request,
@@ -413,7 +417,8 @@ public class API
      */
     public Response send_sync(String name, byte[] request_info, byte[] request,
                               Integer timeout, Byte priority)
-                              throws MessageDecodingException,
+                              throws InvalidInputException,
+                                     MessageDecodingException,
                                      TerminateException
     {
         try
@@ -446,7 +451,8 @@ public class API
      * @return              transaction IDs
      */
     public List<TransId> mcast_async(String name, byte[] request)
-                                     throws MessageDecodingException,
+                                     throws InvalidInputException,
+                                            MessageDecodingException,
                                             TerminateException
     {
         return mcast_async(name, new byte[0], request,
@@ -468,7 +474,8 @@ public class API
     public List<TransId> mcast_async(String name,
                                      byte[] request_info, byte[] request,
                                      Integer timeout, Byte priority)
-                                     throws MessageDecodingException,
+                                     throws InvalidInputException,
+                                            MessageDecodingException,
                                             TerminateException
     {
         try
@@ -785,7 +792,8 @@ public class API
      * @return the response
      */
     public Response recv_async()
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(this.timeout_sync, TransIdNull, true);
@@ -798,7 +806,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(timeout, TransIdNull, true);
@@ -811,7 +820,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(byte[] trans_id)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(this.timeout_sync, trans_id, true);
@@ -826,7 +836,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(boolean consume)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(this.timeout_sync, TransIdNull, consume);
@@ -840,7 +851,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout, byte[] trans_id)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(timeout, trans_id, true);
@@ -856,7 +868,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(Integer timeout, boolean consume)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(timeout, TransIdNull, consume);
@@ -872,7 +885,8 @@ public class API
      * @return         the response
      */
     public Response recv_async(byte[] trans_id, boolean consume)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         return recv_async(this.timeout_sync, trans_id, consume);
@@ -890,7 +904,8 @@ public class API
      */
     public Response recv_async(Integer timeout, byte[] trans_id,
                                boolean consume)
-                               throws MessageDecodingException,
+                               throws InvalidInputException,
+                                      MessageDecodingException,
                                       TerminateException
     {
         try
@@ -963,7 +978,8 @@ public class API
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)
-                          throws MessageDecodingException,
+                          throws InvalidInputException,
+                                 MessageDecodingException,
                                  TerminateException
     {
         long request_time_start = 0;
@@ -1026,6 +1042,18 @@ public class API
                 }
                 return;
             }
+            catch (InvalidInputException e)
+            {
+                throw e;
+            }
+            catch (MessageDecodingException e)
+            {
+                throw e;
+            }
+            catch (TerminateException e)
+            {
+                throw e;
+            }
             catch (ReturnAsyncException e_return)
             {
                 return;
@@ -1083,6 +1111,18 @@ public class API
                                 timeout, trans_id, pid);
                 }
                 return;
+            }
+            catch (InvalidInputException e)
+            {
+                throw e;
+            }
+            catch (MessageDecodingException e)
+            {
+                throw e;
+            }
+            catch (TerminateException e)
+            {
+                throw e;
             }
             catch (ReturnSyncException e_return)
             {
@@ -1168,7 +1208,8 @@ public class API
     }
 
     private Object poll_request(boolean external)
-                                throws MessageDecodingException,
+                                throws InvalidInputException,
+                                       MessageDecodingException,
                                        TerminateException
     {
         if (this.terminate)
@@ -1339,7 +1380,8 @@ public class API
         }
     }
 
-    public Object poll() throws MessageDecodingException,
+    public Object poll() throws InvalidInputException,
+                                MessageDecodingException,
                                 TerminateException
     {
         return poll_request(true);

@@ -51,11 +51,26 @@ public class Task implements Runnable
     private static final String DESTINATION = "/tests/msg_size/erlang";
      
     public Task(final int thread_index)
-                throws API.InvalidInputException,
-                       API.MessageDecodingException,
-                       API.TerminateException
     {
-        api = new API(thread_index);
+        try
+        {
+            this.api = new API(thread_index);
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.TerminateException e)
+        {
+            API.err.println("terminate msg_size java (before init)");
+            System.exit(1);
+        }
     }
 
     public void request(Integer command, String name, String pattern,
@@ -76,27 +91,27 @@ public class Task implements Runnable
         buffer.putInt(0, i);
         API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
                        i, Task.DESTINATION, timeout);
-        api.forward_(command, Task.DESTINATION,
-                     request_info, request,
-                     timeout, priority, trans_id, pid);
+        this.api.forward_(command, Task.DESTINATION,
+                          request_info, request,
+                          timeout, priority, trans_id, pid);
     }
  
     public void run()
     {
         try
         {
-            api.subscribe("java", this, "request");
-            Object result = api.poll();
+            this.api.subscribe("java", this, "request");
+            Object result = this.api.poll();
             assert result == null;
-        }
-        catch (API.MessageDecodingException e)
-        {
-            e.printStackTrace(API.err);
         }
         catch (API.TerminateException e)
         {
-            API.out.println("terminating...");
         }
+        catch (Exception e)
+        {
+            e.printStackTrace(API.err);
+        }
+        API.out.println("terminate msg_size java");
     }
 }
 

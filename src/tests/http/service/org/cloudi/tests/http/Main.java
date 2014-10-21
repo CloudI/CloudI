@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -66,14 +66,6 @@ public class Main
         catch (API.InvalidInputException e)
         {
             e.printStackTrace(API.err);
-        }
-        catch (API.MessageDecodingException e)
-        {
-            e.printStackTrace(API.err);
-        }
-        catch (API.TerminateException e)
-        {
-            API.err.println("terminate before init");
         }
     }
 }

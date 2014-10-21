@@ -108,8 +108,10 @@ void process_requests(void * p)
     assert(cloudi_get_subscribe_count(&api) == 1);
 
     result = cloudi_poll(&api, -1);
-    if (result != cloudi_success)
+    if (result != cloudi_success &&
+        result != cloudi_terminate)
         fprintf(stderr, "error %d\n", result);
+    fprintf(stdout, "terminate http_req c\n", result);
 
     cloudi_destroy(&api);
 }

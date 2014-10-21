@@ -88,10 +88,14 @@ class Task //extends \Thread
             $result = $this->api->poll();
             assert(is_null($result));
         }
+        catch (\CloudI\TerminateException $e)
+        {
+        }
         catch (Exception $e)
         {
-            echo "{$e->getMessage()}\n{$e}\n";
+            error_log("{$e->getMessage()}\n{$e}\n");
         }
+        echo "terminate messaging php\n";
     }
 
     public function sequence1_abcd($command, $name, $pattern,

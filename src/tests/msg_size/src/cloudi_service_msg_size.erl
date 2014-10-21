@@ -71,7 +71,7 @@
         service,
         request_count = 0 :: non_neg_integer(),
         elapsed_seconds = undefined :: float() | undefined,
-        suffixes = ["cxx", "java", "python", "python_c", "ruby"]
+        suffixes = ["cxx", "java", "php", "python", "python_c", "ruby"]
     }).
 
 %%%------------------------------------------------------------------------
@@ -161,6 +161,7 @@ cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {noreply, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+    ?LOG_INFO("terminate msg_size erlang", []),
     ok.
 
 %%%------------------------------------------------------------------------

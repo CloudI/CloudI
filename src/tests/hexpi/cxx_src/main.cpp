@@ -184,8 +184,11 @@ class Output
 
         void output(OutputData & data)
         {
-            if (data.error())
+            if (data.error() &&
+                data.error() != CloudI::API::return_value::terminate)
+            {
                 std::cerr << "CloudI error " << data.error() << std::endl;
+            }
             m_got_output = true;
         }
 
@@ -218,6 +221,7 @@ int main(int, char **)
 
     while (outputObject.got_output() == false)
         ::sleep(1);
+    std::cout << "terminate hexpi c++" << std::endl;
     threadPool.exit(timeout_terminate - 100);
     return 0;
 }

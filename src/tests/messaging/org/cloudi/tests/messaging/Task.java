@@ -54,11 +54,26 @@ public class Task implements Runnable
     private int thread_index;
      
     public Task(final int thread_index)
-                throws API.InvalidInputException,
-                       API.MessageDecodingException,
-                       API.TerminateException
     {
-        this.api = new API(thread_index);
+        try
+        {
+            this.api = new API(thread_index);
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.TerminateException e)
+        {
+            API.err.println("terminate messaging java (before init)");
+            System.exit(1);
+        }
         this.thread_index = thread_index;
     }
 
@@ -624,14 +639,14 @@ public class Task implements Runnable
             Object result = api.poll();
             assert result == null;
         }
-        catch (API.MessageDecodingException e)
+        catch (API.TerminateException e)
+        {
+        }
+        catch (Exception e)
         {
             e.printStackTrace(API.err);
         }
-        catch (API.TerminateException e)
-        {
-            API.out.println("terminating...");
-        }
+        API.out.println("terminate messaging java");
     }
 }
 

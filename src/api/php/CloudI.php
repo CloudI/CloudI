@@ -43,6 +43,8 @@ namespace CloudI;
 // unbuffered stdout
 for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
 ob_implicit_flush(true);
+// an assert failure needs to cause php to exit
+//assert_options(ASSERT_BAIL);
 
 require dirname(__FILE__) . '/Erlang.php';
 
@@ -236,8 +238,9 @@ class API
         {
             if ($timeout == $this->request_timeout)
             {
-                $elapsed = max(0, floor((microtime(true) -
-                                         $this->request_timer) * 1000.0));
+                $elapsed = max(0, (integer) floor((microtime(true) -
+                                                   $this->request_timer) *
+                                                  1000.0));
                 if ($elapsed > $timeout)
                     $timeout = 0;
                 else
@@ -259,8 +262,9 @@ class API
         {
             if ($timeout == $this->request_timeout)
             {
-                $elapsed = max(0, floor((microtime(true) -
-                                         $this->request_timer) * 1000.0));
+                $elapsed = max(0, (integer) floor((microtime(true) -
+                                                   $this->request_timer) *
+                                                  1000.0));
                 if ($elapsed > $timeout)
                     $timeout = 0;
                 else
@@ -297,8 +301,9 @@ class API
         {
             if ($timeout == $this->request_timeout)
             {
-                $elapsed = max(0, floor((microtime(true) -
-                                         $this->request_timer) * 1000.0));
+                $elapsed = max(0, (integer) floor((microtime(true) -
+                                                   $this->request_timer) *
+                                                  1000.0));
                 if ($elapsed > $timeout)
                 {
                     $response_info = '';
@@ -326,8 +331,9 @@ class API
         {
             if ($timeout == $this->request_timeout)
             {
-                $elapsed = max(0, floor((microtime(true) -
-                                         $this->request_timer) * 1000.0));
+                $elapsed = max(0, (integer) floor((microtime(true) -
+                                                   $this->request_timer) *
+                                                  1000.0));
                 if ($elapsed > $timeout)
                 {
                     $response_info = '';
@@ -445,6 +451,18 @@ class API
                     if (! is_string($response))
                         $response = '';
                 }
+                catch (InvalidInputException $e)
+                {
+                    throw $e;
+                }
+                catch (MessageDecodingException $e)
+                {
+                    throw $e;
+                }
+                catch (TerminateException $e)
+                {
+                    throw $e;
+                }
                 catch (ReturnAsyncException $e)
                 {
                     return;
@@ -503,6 +521,18 @@ class API
                     }
                     if (! is_string($response))
                         $response = '';
+                }
+                catch (InvalidInputException $e)
+                {
+                    throw $e;
+                }
+                catch (MessageDecodingException $e)
+                {
+                    throw $e;
+                }
+                catch (TerminateException $e)
+                {
+                    throw $e;
                 }
                 catch (ReturnSyncException $e)
                 {
@@ -637,16 +667,16 @@ class API
                          $process_count_max,
                          $process_count_min,
                          $prefix_size) = unpack('L5', substr($data, $i, $j));
-                    $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1 + 1;
-                    $tmp = unpack("a{$prefix_size}a/L4b/cc/Cd",
-                                  substr($data, $i, $j));
-                    $prefix = $tmp['a'];
-                    $timeout_initialize = $tmp['b1'];
-                    $timeout_async = $tmp['b2'];
-                    $timeout_sync = $tmp['b3'];
-                    $timeout_terminate = $tmp['b4'];
-                    $priority_default = $tmp['c'];
-                    $request_timeout_adjustment = $tmp['d'];
+                    $i += $j; $j = $prefix_size;
+                    $prefix = substr($data, $i, $j - 1);
+                    $i += $j; $j = 4 + 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L4a/cb/Cc', substr($data, $i, $j));
+                    $timeout_initialize = $tmp['a1'];
+                    $timeout_async = $tmp['a2'];
+                    $timeout_sync = $tmp['a3'];
+                    $timeout_terminate = $tmp['a4'];
+                    $priority_default = $tmp['b'];
+                    $request_timeout_adjustment = $tmp['c'];
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -663,31 +693,33 @@ class API
                 case MESSAGE_SEND_SYNC:
                     $i += $j; $j = 4;
                     list(, $name_size) = unpack('L', substr($data, $i, $j));
-                    $i += $j; $j = $name_size + 4;
-                    $tmp = unpack("a{$name_size}a/Lb", substr($data, $i, $j));
-                    $name = $tmp['a'];
-                    $pattern_size = $tmp['b'];
-                    $i += $j; $j = $pattern_size + 4;
-                    $tmp = unpack("a{$pattern_size}a/Lb",
-                                  substr($data, $i, $j));
-                    $pattern = $tmp['a'];
-                    $request_info_size = $tmp['b'];
-                    $i += $j; $j = $request_info_size + 1 + 4;
-                    $tmp = unpack("a{$request_info_size}a/xb/Lc",
-                                  substr($data, $i, $j));
-                    $request_info = $tmp['a'];
-                    $request_size = $tmp['c'];
-                    $i += $j; $j = $request_size + 1 + 4 + 1 + 16 + 4;
-                    $tmp = unpack("a{$request_size}a/xb/Lc/cd/a16e/Lf",
-                                  substr($data, $i, $j));
-                    $request = $tmp['a'];
-                    $timeout = $tmp['c'];
-                    $priority = $tmp['d'];
-                    $trans_id = $tmp['e'];
-                    $pid_size = $tmp['f'];
+                    $i += $j; $j = $name_size;
+                    $name = substr($data, $i, $j - 1);
+                    $i += $j; $j = 4;
+                    list(, $pattern_size) = unpack('L', substr($data, $i, $j));
+                    $i += $j; $j = $pattern_size;
+                    $pattern = substr($data, $i, $j - 1);
+                    $i += $j; $j = 4;
+                    list(, $request_info_size) = unpack('L',
+                                                        substr($data, $i, $j));
+                    $i += $j; $j = $request_info_size;
+                    $request_info = substr($data, $i, $j);
+                    $i += $j; $j = 4;
+                    $i++; // skip null byte
+                    list(, $request_size) = unpack('L', substr($data, $i, $j));
+                    $i += $j; $j = $request_size;
+                    $request = substr($data, $i, $j);
+                    $i += $j; $j = 4 + 1;
+                    $i++; // skip null byte
+                    $tmp = unpack('La/cb', substr($data, $i, $j));
+                    $timeout = $tmp['a'];
+                    $priority = $tmp['b'];
+                    $i += $j; $j = 16;
+                    $trans_id = substr($data, $i, $j);
+                    $i += $j; $j = 4;
+                    list(, $pid_size) = unpack('L', substr($data, $i, $j));
                     $i += $j; $j = $pid_size;
-                    list(, $pid) = unpack("a{$pid_size}",
-                                          substr($data, $i, $j));
+                    $pid = substr($data, $i, $j);
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -709,16 +741,16 @@ class API
                     $i += $j; $j = 4;
                     list(, $response_info_size) = unpack('L',
                                                          substr($data, $i, $j));
-                    $i += $j; $j = $response_info_size + 1 + 4;
-                    $tmp = unpack("a{$response_info_size}a/xb/Lc",
-                                  substr($data, $i, $j));
-                    $response_info = $tmp['a'];
-                    $response_size = $tmp['c'];
-                    $i += $j; $j = $response_size + 1 + 16;
-                    $tmp = unpack("a{$response_size}a/xb/a16c",
-                                  substr($data, $i, $j));
-                    $response = $tmp['a'];
-                    $trans_id = $tmp['c'];
+                    $i += $j; $j = $response_info_size;
+                    $response_info = substr($data, $i, $j);
+                    $i += $j; $j = 4;
+                    $i++; // skip null byte
+                    list(, $response_size) = unpack('L', substr($data, $i, $j));
+                    $i += $j; $j = $response_size;
+                    $response = substr($data, $i, $j);
+                    $i += $j; $j = 16;
+                    $i++; // skip null byte
+                    $trans_id = substr($data, $i, $j);
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -728,7 +760,7 @@ class API
                     return array($response_info, $response, $trans_id);
                 case MESSAGE_RETURN_ASYNC:
                     $i += $j; $j = 16;
-                    list(, $trans_id) = unpack('a16', substr($data, $i, $j));
+                    $trans_id = substr($data, $i, $j);
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -744,8 +776,7 @@ class API
                     $trans_ids = array();
                     for ($k = 0; $k < $trans_id_count; $k++)
                     {
-                        list(, $trans_id) = unpack('a16',
-                                                   substr($data, $i, $j));
+                        $trans_id = substr($data, $i, $j);
                         $trans_ids[] = $trans_id;
                         $i += $j;
                     }

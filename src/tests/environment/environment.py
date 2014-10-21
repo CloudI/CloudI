@@ -48,7 +48,7 @@ sys.path.append(
 )
 
 import threading, time, traceback
-from cloudi_c import API
+from cloudi_c import API, terminate_exception
 
 class Task(threading.Thread):
     def __init__(self, api):
@@ -61,8 +61,11 @@ class Task(threading.Thread):
             # idle service with no subscriptions
             result = self.__api.poll()
             assert result == None
+        except terminate_exception:
+            pass
         except:
             traceback.print_exc(file=sys.stderr)
+        print('terminate environment python_c')
 
     def __check_environment(self):
         user = os.environ.get('USER')

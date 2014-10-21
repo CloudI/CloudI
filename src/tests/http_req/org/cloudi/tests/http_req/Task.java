@@ -50,11 +50,26 @@ public class Task implements Runnable
     private API api;
      
     public Task(final int thread_index)
-                throws API.InvalidInputException,
-                       API.MessageDecodingException,
-                       API.TerminateException
     {
-        api = new API(thread_index);
+        try
+        {
+            this.api = new API(thread_index);
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.TerminateException e)
+        {
+            API.err.println("terminate http_req java (before init)");
+            System.exit(1);
+        }
     }
 
     public void request(Integer command, String name, String pattern,
@@ -66,7 +81,7 @@ public class Task implements Runnable
                                API.InvalidInputException
     {
         HashMap<String, List<String> > http_qs =
-            api.request_http_qs_parse(request);
+            this.api.request_http_qs_parse(request);
         final List<String> value = http_qs.remove("value");
         String response = null;
         if (value != null)
@@ -89,29 +104,29 @@ public class Task implements Runnable
             response =
                 "<http_test><error>no value specified</error></http_test>";
         }
-        api.return_(command, name, pattern,
-                    ("").getBytes(), response.getBytes(),
-                    timeout, trans_id, pid);
+        this.api.return_(command, name, pattern,
+                         ("").getBytes(), response.getBytes(),
+                         timeout, trans_id, pid);
     }
  
     public void run()
     {
         try
         {
-            assert api.subscribe_count("java.xml/get") == 0;
-            api.subscribe("java.xml/get", this, "request");
-            assert api.subscribe_count("java.xml/get") == 1;
-            Object result = api.poll();
+            assert this.api.subscribe_count("java.xml/get") == 0;
+            this.api.subscribe("java.xml/get", this, "request");
+            assert this.api.subscribe_count("java.xml/get") == 1;
+            Object result = this.api.poll();
             assert result == null;
-        }
-        catch (API.MessageDecodingException e)
-        {
-            e.printStackTrace(API.err);
         }
         catch (API.TerminateException e)
         {
-            API.out.println("terminating...");
         }
+        catch (Exception e)
+        {
+            e.printStackTrace(API.err);
+        }
+        API.out.println("terminate http_req java");
     }
 }
 

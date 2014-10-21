@@ -48,13 +48,14 @@ sys.path.append(
 )
 
 import threading, types, traceback
-from cloudi import API
+from cloudi import API, terminate_exception
 
 class Task(threading.Thread):
-    def __init__(self, api, name):
+    def __init__(self, api, name, exception):
         threading.Thread.__init__(self)
         self.__api = api
         self.__name = name
+        self.__terminate_exception = exception
 
     def run(self):
         try:
@@ -64,8 +65,11 @@ class Task(threading.Thread):
 
             result = self.__api.poll()
             assert result == None
+        except self.__terminate_exception:
+            pass
         except:
             traceback.print_exc(file=sys.stderr)
+        print('terminate http_req %s' % self.__name)
 
     def request(self, command, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
@@ -87,7 +91,8 @@ if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [Task(API(i), 'python') for i in range(thread_count)]
+    threads = [Task(API(i), 'python', terminate_exception)
+               for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

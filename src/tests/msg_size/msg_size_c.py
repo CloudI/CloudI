@@ -47,8 +47,8 @@ sys.path.append(
     )
 )
 
-import threading, struct
-from cloudi_c import API
+import threading, struct, traceback
+from cloudi_c import API, terminate_exception
 
 _DESTINATION = '/tests/msg_size/erlang'
 
@@ -58,10 +58,16 @@ class _Task(threading.Thread):
         self.__api = API(thread_index)
 
     def run(self):
-        self.__api.subscribe('python_c', self.request)
+        try:
+            self.__api.subscribe('python_c', self.request)
 
-        result = self.__api.poll()
-        assert result == None
+            result = self.__api.poll()
+            assert result == None
+        except terminate_exception:
+            pass
+        except:
+            traceback.print_exc(file=sys.stderr)
+        print('terminate msg_size python_c')
 
     def request(self, command, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):

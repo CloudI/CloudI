@@ -1,10 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve the exception handling in the Java, PHP, Python and Ruby
+      CloudI API implementations
+    * Add stdout usage upon terminate for all integration test services
+    * Add more validation of external service Erlang term data received from
+      the external service CloudI API
+    * Fix remaining PHP CloudI API bugs
+
 2014-10-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the PHP messaging test
     * Fix various PHP CloudI API errors
+    * Fix bug when external services log stdout or stderr data
+      that contains a ~ character
 
 2014-10-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 

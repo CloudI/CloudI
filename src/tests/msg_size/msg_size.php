@@ -41,6 +41,8 @@
 
 require dirname(__FILE__) . '/../../api/php/CloudI.php';
 
+define('DESTINATION', '/tests/msg_size/erlang');
+
 class Task //extends \Thread
 {
     private $api;
@@ -54,9 +56,8 @@ class Task //extends \Thread
     {
         try
         {
-            assert($this->api->subscribe_count('php.xml/get') == 0);
-            $this->api->subscribe('php.xml/get', $this, 'request');
-            assert($this->api->subscribe_count('php.xml/get') == 1);
+            $this->api->subscribe('php', $this, 'request');
+
             $result = $this->api->poll();
             assert(is_null($result));
         }
@@ -67,30 +68,22 @@ class Task //extends \Thread
         {
             error_log("{$e->getMessage()}\n{$e}\n");
         }
-        echo "terminate http_req php\n";
+        echo "terminate msg_size php\n";
     }
 
     public function request($command, $name, $pattern, $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
-        $http_qs = $this->api->request_http_qs_parse($request);
-        if (! isset($http_qs['value']))
-        {
-            $response = "\
-<http_test><error>no value specified</error></http_test>";
-        }
+        list(, $i) = unpack('L', substr($request, 0, 4));
+        if ($i == 4294967295)
+            $i = 0;
         else
-        {
-            $value = $http_qs['value'];
-            if (is_array($value))
-                $value = $value[0];
-            $value = intval($value);
-            $response = "\
-<http_test><value>{$value}</value></http_test>";
-        }
-        $this->api->return_($command, $name, $pattern,
-                            '', $response,
-                            $timeout, $trans_id, $pid);
+            $i++;
+        $request = pack('L', $i) . substr($request, 4);
+        echo "forward #{$i} php to " . DESTINATION .
+             " (with timeout {$timeout} ms)\n";
+        $this->api->forward_($command, DESTINATION, $request_info, $request,
+                             $timeout, $priority, $trans_id, $pid);
     }
 }
 

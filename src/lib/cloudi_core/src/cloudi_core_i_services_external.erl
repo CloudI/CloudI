@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -429,8 +429,10 @@ init([Protocol, SocketPath,
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
     true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(Priority),
     true = (Priority >= ?PRIORITY_HIGH) andalso
            (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
@@ -446,8 +448,10 @@ init([Protocol, SocketPath,
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
     true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(Priority),
     true = (Priority >= ?PRIORITY_HIGH) andalso
            (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
@@ -463,8 +467,10 @@ init([Protocol, SocketPath,
          #state{dest_deny = DestDeny,
                 dest_allow = DestAllow} = State) ->
     true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(Priority),
     true = (Priority >= ?PRIORITY_HIGH) andalso
            (Priority =< ?PRIORITY_LOW),
     case destination_allowed(Name, DestDeny, DestAllow) of
@@ -490,8 +496,10 @@ init([Protocol, SocketPath,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(Priority),
     true = (Priority >= ?PRIORITY_HIGH) andalso
            (Priority =< ?PRIORITY_LOW),
     <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
@@ -561,8 +569,10 @@ init([Protocol, SocketPath,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     true = is_list(Name) andalso is_integer(hd(Name)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(Priority),
     true = (Priority >= ?PRIORITY_HIGH) andalso
            (Priority =< ?PRIORITY_LOW),
     <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
@@ -631,6 +641,7 @@ init([Protocol, SocketPath,
          ReturnType =:= 'return_sync' ->
     true = is_list(Name) andalso is_integer(hd(Name)),
     true = is_list(Pattern) andalso is_integer(hd(Pattern)),
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
     <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
@@ -674,6 +685,7 @@ init([Protocol, SocketPath,
 'HANDLE'({'recv_async', Timeout, TransId, Consume},
          #state{dispatcher = Dispatcher,
                 async_responses = AsyncResponses} = State) ->
+    true = is_integer(Timeout),
     true = (Timeout >= 0) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG),
     true = is_boolean(Consume),

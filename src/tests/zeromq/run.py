@@ -47,8 +47,8 @@ sys.path.append(
     )
 )
 
-import threading, socket
-from cloudi import API
+import threading, socket, traceback
+from cloudi import API, terminate_exception
 
 class _Task(threading.Thread):
     def __init__(self, thread_index):
@@ -57,29 +57,36 @@ class _Task(threading.Thread):
         self.__index = thread_index
 
     def run(self):
-        # Unable to receive messages in the 1st thread, because ZeroMQ usage
-        # removes the association between Erlang pids and CloudI API requests
-        # (i.e., otherwise the sending thread could receive the sent
-        #  message, with this test ZeroMQ configuration)
-        if self.__index == 0:
-            print('zeromq zigzag start')
-            self.__api.send_async('/tests/zeromq/zigzag_start',
-                                  b'magic', request_info=b'amazing')
-            print('zeromq chain_inproc start')
-            self.__api.send_async('/tests/zeromq/chain_inproc_start',
-                                  b'inproc', request_info=b'process')
-            print('zeromq chain_ipc start')
-            self.__api.send_async('/tests/zeromq/chain_ipc_start',
-                                  b'ipc', request_info=b'pipes')
-        else:
-            self.__api.subscribe('zigzag_finish',
-                                 self.zigzag_finish)
-            self.__api.subscribe('chain_inproc_finish',
-                                 self.chain_inproc_finish)
-            self.__api.subscribe('chain_ipc_finish',
-                                 self.chain_ipc_finish)
-        result = self.__api.poll()
-        assert result == None
+        try:
+            # Unable to receive messages in the 1st thread,
+            # because ZeroMQ usage removes the association between
+            # Erlang pids and CloudI API requests
+            # (i.e., otherwise the sending thread could receive the sent
+            #  message, with this test ZeroMQ configuration)
+            if self.__index == 0:
+                print('zeromq zigzag start')
+                self.__api.send_async('/tests/zeromq/zigzag_start',
+                                      b'magic', request_info=b'amazing')
+                print('zeromq chain_inproc start')
+                self.__api.send_async('/tests/zeromq/chain_inproc_start',
+                                      b'inproc', request_info=b'process')
+                print('zeromq chain_ipc start')
+                self.__api.send_async('/tests/zeromq/chain_ipc_start',
+                                      b'ipc', request_info=b'pipes')
+            else:
+                self.__api.subscribe('zigzag_finish',
+                                     self.zigzag_finish)
+                self.__api.subscribe('chain_inproc_finish',
+                                     self.chain_inproc_finish)
+                self.__api.subscribe('chain_ipc_finish',
+                                     self.chain_ipc_finish)
+            result = self.__api.poll()
+            assert result == None
+        except terminate_exception:
+            pass
+        except:
+            traceback.print_exc(file=sys.stderr)
+        print('terminate zeromq python')
 
     def zigzag_finish(self, command, name, pattern,
                       request_info, request,

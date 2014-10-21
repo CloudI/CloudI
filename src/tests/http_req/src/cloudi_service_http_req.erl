@@ -99,6 +99,7 @@ cloudi_service_handle_info(Request, State, _Dispatcher) ->
     {noreply, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+    ?LOG_INFO("terminate http_req erlang", []),
     ok.
 
 %%%------------------------------------------------------------------------

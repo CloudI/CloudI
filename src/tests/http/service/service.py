@@ -48,7 +48,7 @@ sys.path.append(
 )
 
 import threading, socket, traceback
-from cloudi import API
+from cloudi import API, terminate_exception
 
 class _Task(threading.Thread):
     def __init__(self, thread_index):
@@ -61,8 +61,11 @@ class _Task(threading.Thread):
 
             result = self.__api.poll()
             assert result == None
+        except terminate_exception:
+            pass
         except:
             traceback.print_exc(file=sys.stderr)
+        print('terminate http python')
 
     def text(self, command, name, pattern, request_info, request,
              timeout, priority, trans_id, pid):

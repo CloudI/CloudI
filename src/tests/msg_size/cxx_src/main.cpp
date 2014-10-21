@@ -102,8 +102,10 @@ int main(int, char **)
     assert(result == cloudi_success);
 
     result = cloudi_poll(&api, -1);
-    if (result != cloudi_success)
+    if (result != cloudi_success &&
+        result != cloudi_terminate)
         std::cerr << "error " << result << std::endl;
+    std::cout << "terminate msg_size c++" << std::endl;
 
     cloudi_destroy(&api);
     return 0;

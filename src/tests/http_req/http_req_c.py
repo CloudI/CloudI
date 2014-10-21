@@ -47,14 +47,15 @@ sys.path.append(
     )
 )
 
-from cloudi_c import API
+from cloudi_c import API, terminate_exception
 from http_req import Task
 
 if __name__ == '__main__':
     thread_count = API.thread_count()
     assert thread_count >= 1
     
-    threads = [Task(API(i), 'python_c') for i in range(thread_count)]
+    threads = [Task(API(i), 'python_c', terminate_exception)
+               for i in range(thread_count)]
     for t in threads:
         t.start()
     for t in threads:

@@ -331,6 +331,12 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
+                rescue InvalidInputException => e
+                    raise e
+                rescue MessageDecodingException => e
+                    raise e
+                rescue TerminateException => e
+                    raise e
                 rescue ReturnAsyncException
                     return
                 rescue ForwardAsyncException
@@ -374,6 +380,12 @@ module CloudI
                     if not response.kind_of?(String)
                         response = ''
                     end
+                rescue InvalidInputException => e
+                    raise e
+                rescue MessageDecodingException => e
+                    raise e
+                rescue TerminateException => e
+                    raise e
                 rescue ReturnSyncException
                     return
                 rescue ForwardSyncException

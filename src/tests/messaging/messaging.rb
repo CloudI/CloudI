@@ -57,38 +57,46 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
-                @api.subscribe('a/b/c/d', method(:sequence1_abcd))
-                @api.subscribe('a/b/c/*', method(:sequence1_abc_))
-                @api.subscribe('a/b/*/d', method(:sequence1_ab_d))
-                @api.subscribe('a/*/c/d', method(:sequence1_a_cd))
-                @api.subscribe('*/b/c/d', method(:sequence1__bcd))
-                @api.subscribe('a/b/*',   method(:sequence1_ab__))
-                @api.subscribe('a/*/d',   method(:sequence1_a__d))
-                @api.subscribe('*/c/d',   method(:sequence1___cd))
-                @api.subscribe('a/*',     method(:sequence1_a___))
-                @api.subscribe('*/d',     method(:sequence1____d))
-                @api.subscribe('*',       method(:sequence1_____))
-                @api.subscribe('sequence1', method(:sequence1))
-                @api.subscribe('e', method(:sequence2_e1))
-                @api.subscribe('e', method(:sequence2_e2))
-                @api.subscribe('e', method(:sequence2_e3))
-                @api.subscribe('e', method(:sequence2_e4))
-                @api.subscribe('e', method(:sequence2_e5))
-                @api.subscribe('e', method(:sequence2_e6))
-                @api.subscribe('e', method(:sequence2_e7))
-                @api.subscribe('e', method(:sequence2_e8))
-                @api.subscribe('sequence2', method(:sequence2))
-                @api.subscribe('f1', method(:sequence3_f1))
-                @api.subscribe('f2', method(:sequence3_f2))
-                @api.subscribe('g1', method(:sequence3_g1))
-                @api.subscribe('sequence3', method(:sequence3))
-                if @thread_index == 0
-                    # start sequence1
-                    @api.send_async(@api.prefix + 'sequence1', 'start')
+                begin
+                    @api.subscribe('a/b/c/d', method(:sequence1_abcd))
+                    @api.subscribe('a/b/c/*', method(:sequence1_abc_))
+                    @api.subscribe('a/b/*/d', method(:sequence1_ab_d))
+                    @api.subscribe('a/*/c/d', method(:sequence1_a_cd))
+                    @api.subscribe('*/b/c/d', method(:sequence1__bcd))
+                    @api.subscribe('a/b/*',   method(:sequence1_ab__))
+                    @api.subscribe('a/*/d',   method(:sequence1_a__d))
+                    @api.subscribe('*/c/d',   method(:sequence1___cd))
+                    @api.subscribe('a/*',     method(:sequence1_a___))
+                    @api.subscribe('*/d',     method(:sequence1____d))
+                    @api.subscribe('*',       method(:sequence1_____))
+                    @api.subscribe('sequence1', method(:sequence1))
+                    @api.subscribe('e', method(:sequence2_e1))
+                    @api.subscribe('e', method(:sequence2_e2))
+                    @api.subscribe('e', method(:sequence2_e3))
+                    @api.subscribe('e', method(:sequence2_e4))
+                    @api.subscribe('e', method(:sequence2_e5))
+                    @api.subscribe('e', method(:sequence2_e6))
+                    @api.subscribe('e', method(:sequence2_e7))
+                    @api.subscribe('e', method(:sequence2_e8))
+                    @api.subscribe('sequence2', method(:sequence2))
+                    @api.subscribe('f1', method(:sequence3_f1))
+                    @api.subscribe('f2', method(:sequence3_f2))
+                    @api.subscribe('g1', method(:sequence3_g1))
+                    @api.subscribe('sequence3', method(:sequence3))
+                    if @thread_index == 0
+                        # start sequence1
+                        @api.send_async(@api.prefix + 'sequence1', 'start')
+                    end
+    
+                    result = @api.poll
+                    assert{result == nil}
+                rescue CloudI::TerminateException
+                    #
+                rescue
+                    $stderr.puts $!.message
+                    $stderr.puts $!.backtrace
                 end
-
-                result = @api.poll
-                assert{result == nil}
+                $stdout.puts 'terminate messaging ruby'
             end
 
             private

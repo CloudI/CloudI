@@ -56,12 +56,20 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
-                assert{@api.subscribe_count('ruby.xml/get') == 0}
-                @api.subscribe('ruby.xml/get', method(:request))
-                assert{@api.subscribe_count('ruby.xml/get') == 1}
+                begin
+                    assert{@api.subscribe_count('ruby.xml/get') == 0}
+                    @api.subscribe('ruby.xml/get', method(:request))
+                    assert{@api.subscribe_count('ruby.xml/get') == 1}
 
-                result = @api.poll
-                assert{result == nil}
+                    result = @api.poll
+                    assert{result == nil}
+                rescue CloudI::TerminateException
+                    #
+                rescue
+                    $stderr.puts $!.message
+                    $stderr.puts $!.backtrace
+                end
+                $stdout.puts 'terminate http_req ruby'
             end
 
             private

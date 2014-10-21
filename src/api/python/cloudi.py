@@ -342,6 +342,12 @@ class API(object):
                         type(response) == str or
                         type(response) == unicode):
                     response = b''
+            except invalid_input_exception as e:
+                raise e
+            except message_decoding_exception as e:
+                raise e
+            except terminate_exception as e:
+                raise e
             except return_async_exception:
                 return
             except return_sync_exception:
@@ -382,6 +388,12 @@ class API(object):
                         type(response) == str or
                         type(response) == unicode):
                     response = b''
+            except invalid_input_exception as e:
+                raise e
+            except message_decoding_exception as e:
+                raise e
+            except terminate_exception as e:
+                raise e
             except return_sync_exception:
                 return
             except return_async_exception:

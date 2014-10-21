@@ -48,11 +48,26 @@ public class Task implements Runnable
     private API api;
      
     public Task(final int thread_index)
-                throws API.InvalidInputException,
-                       API.MessageDecodingException,
-                       API.TerminateException
     {
-        api = new API(thread_index);
+        try
+        {
+            this.api = new API(thread_index);
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.TerminateException e)
+        {
+            API.err.println("terminate http java (before init)");
+            System.exit(1);
+        }
     }
 
     public void text(Integer command, String name, String pattern,
@@ -66,27 +81,27 @@ public class Task implements Runnable
         final String value = new String(request);
         API.out.println("(" + value + ")");
         assert "Test Text" == value : value;
-        api.return_(command, name, pattern,
-                    ("").getBytes(), ("Test Response").getBytes(),
-                    timeout, trans_id, pid);
+        this.api.return_(command, name, pattern,
+                         ("").getBytes(), ("Test Response").getBytes(),
+                         timeout, trans_id, pid);
     }
  
     public void run()
     {
         try
         {
-            api.subscribe("text/post", this, "text");
-            Object result = api.poll();
+            this.api.subscribe("text/post", this, "text");
+            Object result = this.api.poll();
             assert result == null;
-        }
-        catch (API.MessageDecodingException e)
-        {
-            e.printStackTrace(API.err);
         }
         catch (API.TerminateException e)
         {
-            API.out.println("terminating...");
         }
+        catch (Exception e)
+        {
+            e.printStackTrace(API.err);
+        }
+        API.out.println("terminate http java");
     }
 }
 

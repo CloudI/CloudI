@@ -56,10 +56,18 @@ if __FILE__ == $PROGRAM_NAME
             end
 
             def run
-                @api.subscribe("text/post", method(:text))
+                begin
+                    @api.subscribe("text/post", method(:text))
 
-                result = @api.poll
-                assert{result == nil}
+                    result = @api.poll
+                    assert{result == nil}
+                rescue CloudI::TerminateException
+                    #
+                rescue
+                    $stderr.puts $!.message
+                    $stderr.puts $!.backtrace
+                end
+                $stdout.puts 'terminate http ruby'
             end
 
             private
