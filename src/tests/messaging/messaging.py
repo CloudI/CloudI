@@ -54,7 +54,7 @@ class Task(threading.Thread):
     def __init__(self, api, thread_index, name):
         threading.Thread.__init__(self)
         self.__api = api
-        self.__index = thread_index
+        self.__thread_index = thread_index
         self.__name = name
 
     def run(self):
@@ -84,7 +84,7 @@ class Task(threading.Thread):
             self.__api.subscribe('f2', self.__sequence3_f2)
             self.__api.subscribe('g1', self.__sequence3_g1)
             self.__api.subscribe('sequence3', self.__sequence3)
-            if self.__index == 0:
+            if self.__thread_index == 0:
                 # start sequence1
                 self.__api.send_async(
                     self.__api.prefix() + 'sequence1', b'start',

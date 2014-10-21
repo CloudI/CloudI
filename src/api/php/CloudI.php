@@ -40,6 +40,8 @@
 
 namespace CloudI;
 
+// unbuffered stdout
+for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
 ob_implicit_flush(true);
 
 require dirname(__FILE__) . '/Erlang.php';
@@ -151,8 +153,8 @@ class API
     {
         $key = $this->prefix . $pattern;
         assert(array_key_exists($key, $this->callbacks));
-        $value = $this->callbacks[$key];
-        array_pop($value);
+        $value =& $this->callbacks[$key];
+        array_shift($value);
         if (count($value) == 0)
             unset($this->callbacks[$key]);
         $this->send(\Erlang\term_to_binary(
@@ -359,6 +361,51 @@ class API
         return $this->poll_request(false);
     }
 
+    public function process_index()
+    {
+        return $this->process_index;
+    }
+
+    public function process_count()
+    {
+        return $this->process_count;
+    }
+
+    public function process_count_max()
+    {
+        return $this->process_count_max;
+    }
+
+    public function process_count_min()
+    {
+        return $this->process_count_min;
+    }
+
+    public function prefix()
+    {
+        return $this->prefix;
+    }
+
+    public function timeout_initialize()
+    {
+        return $this->timeout_initialize;
+    }
+
+    public function timeout_async()
+    {
+        return $this->timeout_async;
+    }
+
+    public function timeout_sync()
+    {
+        return $this->timeout_sync;
+    }
+
+    public function timeout_terminate()
+    {
+        return $this->timeout_terminate;
+    }
+
     private function callback($command, $name, $pattern,
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
@@ -370,9 +417,9 @@ class API
             $this->request_timeout = $timeout;
         }
         assert(isset($this->callbacks[$pattern]));
-        $function_queue = $this->callbacks[$pattern];
-        $function = array_pop($function_queue);
-        array_push($function_queue, $function);
+        $function_queue =& $this->callbacks[$pattern];
+        $function = array_shift($function_queue);
+        $function_queue[] = $function;
         switch ($command)
         {
             case MESSAGE_SEND_ASYNC:
@@ -390,6 +437,10 @@ class API
                         $response = $response[1];
                         if (! is_string($response_info))
                             $response_info = '';
+                    }
+                    else
+                    {
+                        $response_info = '';
                     }
                     if (! is_string($response))
                         $response = '';
@@ -445,6 +496,10 @@ class API
                         $response = $response[1];
                         if (! is_string($response_info))
                             $response_info = '';
+                    }
+                    else
+                    {
+                        $response_info = '';
                     }
                     if (! is_string($response))
                         $response = '';

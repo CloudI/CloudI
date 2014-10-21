@@ -36,7 +36,7 @@ of a software system (fully or partially) to the Erlang programming language.
 
 The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
-(currently C++/C, Java, Python, Ruby, and Erlang):
+(currently C++/C, Java, PHP, Python, Ruby, and Erlang):
 
 * `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
@@ -46,7 +46,7 @@ Service-Oriented Architecture (SOA) development in any supported language
 External communication that needs to scale (beyond 10,000 connections)
 can use an internal CloudI service (implemented in Erlang) which may do
 processing for one or more external CloudI services
-(implemented C++/C, Java, Python, and/or Ruby)
+(implemented C++/C, Java, PHP, Python, and/or Ruby)
 
 Even if external communication doesn't need to scale, private cloud
 computing tasks (number crunching) can gain fault-tolerance and internal
@@ -63,10 +63,11 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 * `Erlang >= R16 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
+* `PHP >= 5.3.6 (php5/Ubuntu)`
 * `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
 * `Ruby >= 1.9.0 (ruby1.9.1/Ubuntu, ruby19/macports)`
 * `GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)`
-* `boost >= 1.36.0 (libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
+* `boost >= 1.36.0 (libboost-system-dev+libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
 
 Optional (installed/linked statically, automatically):
 
@@ -104,7 +105,7 @@ Integration points:
 * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.erl)
 * Supported databases
   * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.erl)
-  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.erl)
+  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.erl) or [`cloudi_service_db_cassandra_cql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_cassandra_cql/src/cloudi_service_db_cassandra_cql.erl)
   * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.erl)
   * memcached with [`cloudi_service_db_memcached`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.erl)
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)

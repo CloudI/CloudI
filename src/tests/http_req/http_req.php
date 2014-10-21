@@ -52,11 +52,18 @@ class Task //extends \Thread
 
     public function run()
     {
-        assert($this->api->subscribe_count('php.xml/get') == 0);
-        $this->api->subscribe('php.xml/get', $this, 'request');
-        assert($this->api->subscribe_count('php.xml/get') == 1);
-        $result = $this->api->poll();
-        assert(is_null($result));
+        try
+        {
+            assert($this->api->subscribe_count('php.xml/get') == 0);
+            $this->api->subscribe('php.xml/get', $this, 'request');
+            assert($this->api->subscribe_count('php.xml/get') == 1);
+            $result = $this->api->poll();
+            assert(is_null($result));
+        }
+        catch (Exception $e)
+        {
+            echo "{$e->getMessage()}\n{$e}\n";
+        }
     }
 
     public function request($command, $name, $pattern, $request_info, $request,

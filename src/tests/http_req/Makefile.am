@@ -20,6 +20,7 @@ if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
 .PHONY: \
+    php-install \
     python-install \
     python-c-install \
     ruby-install

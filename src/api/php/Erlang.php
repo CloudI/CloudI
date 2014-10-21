@@ -475,7 +475,7 @@ function _binary_to_term($i, $data)
             if (get_class($tail) != 'Erlang\OtpErlangList' or
                 $tail->value != array())
             {
-                array_push($tmp, $tail);
+                $tmp[] = $tail;
                 $tmp = new OtpErlangList($tmp, true);
             }
             else
@@ -562,7 +562,7 @@ function _binary_to_term($i, $data)
                 {
                     list($i, $key) = _binary_to_term($i, $data);
                     list($i, $value) = _binary_to_term($i, $data);
-                    array_push($pairs, array($key, $value));
+                    $pairs[] = array($key, $value);
                 }
             }
             return array($i, new OtpErlangMap($pairs));
@@ -616,7 +616,7 @@ function _binary_to_term_sequence($i, $arity, $data)
         foreach (range(0, $arity - 1) as $arity_index)
         {
             list($i, $element) = _binary_to_term($i, $data);
-            array_push($sequence, $element);
+            $sequence[] = $element;
         }
     }
     return array($i, $sequence);

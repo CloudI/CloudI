@@ -220,7 +220,7 @@ redirect_set(Node) ->
 %% @doc
 %% ===Critical log message.===
 %% which indicates the system has failed and can not continue.
-%% Called with ?LOG_CRITICAL(Format, []).
+%% Called with ?LOG_FATAL(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -229,7 +229,7 @@ redirect_set(Node) ->
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
-            Args :: list()) ->
+            Args :: list() | undefined) ->
     'ok'.
 
 fatal(Mode, Process, Module, Line, Format, Args) ->
@@ -248,7 +248,7 @@ fatal(Mode, Process, Module, Line, Format, Args) ->
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
-            Args :: list()) ->
+            Args :: list() | undefined) ->
     'ok'.
 
 error(Mode, Process, Module, Line, Format, Args) ->
@@ -258,7 +258,7 @@ error(Mode, Process, Module, Line, Format, Args) ->
 %% @doc
 %% ===Warning log message.===
 %% which indicates an unexpected occurance was found in a subsystem.
-%% Called with ?LOG_WARNING(Format, []).
+%% Called with ?LOG_WARN(Format, []).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -267,7 +267,7 @@ error(Mode, Process, Module, Line, Format, Args) ->
            Module :: atom(),
            Line :: integer(),
            Format :: string(),
-           Args :: list()) ->
+           Args :: list() | undefined) ->
     'ok'.
 
 warn(Mode, Process, Module, Line, Format, Args) ->
@@ -286,7 +286,7 @@ warn(Mode, Process, Module, Line, Format, Args) ->
            Module :: atom(),
            Line :: integer(),
            Format :: string(),
-           Args :: list()) ->
+           Args :: list() | undefined) ->
     'ok'.
 
 info(Mode, Process, Module, Line, Format, Args) ->
@@ -305,7 +305,7 @@ info(Mode, Process, Module, Line, Format, Args) ->
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
-            Args :: list()) ->
+            Args :: list() | undefined) ->
     'ok'.
 
 debug(Mode, Process, Module, Line, Format, Args) ->
@@ -324,7 +324,7 @@ debug(Mode, Process, Module, Line, Format, Args) ->
             Module :: atom(),
             Line :: integer(),
             Format :: string(),
-            Args :: list()) ->
+            Args :: list() | undefined) ->
     'ok'.
 
 trace(Mode, Process, Module, Line, Format, Args) ->
@@ -911,11 +911,16 @@ log_message_external(Mode, Process, Level, Module, Line, Format, Args)
         true ->
             ok;
         false ->
-            LogMessage = try cloudi_string:format(Format, Args)
-            catch
-                error:badarg ->
-                    cloudi_string:format("INVALID LOG INPUT: ~p ~p",
-                                         [Format, Args])
+            LogMessage = if
+                is_list(Format), is_integer(hd(Format)), Args =:= undefined ->
+                    Format;
+                true ->
+                    try cloudi_string:format(Format, Args)
+                    catch
+                        error:badarg ->
+                            cloudi_string:format("INVALID LOG INPUT: ~p ~p",
+                                                 [Format, Args])
+                    end
             end,
             MetaData = metadata_get(),
             if
