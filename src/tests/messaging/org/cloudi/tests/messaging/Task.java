@@ -501,6 +501,8 @@ public class Task implements Runnable
             API.TransId e_id = e_ids_itr.next();
             API.Response e_check = this.api.recv_async(e_id.id);
             assert e_id.equals(e_check.id);
+            if (e_check.isEmpty())
+                continue;
             final byte character = e_check.response[0];
             final int index = (character - ((byte) '1')) * 3;
             for (int offset = 0; offset < 3; offset++)
