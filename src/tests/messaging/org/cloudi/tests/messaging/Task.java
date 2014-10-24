@@ -533,7 +533,8 @@ public class Task implements Runnable
                                       API.InvalidInputException
     {
         int request_i = (int) request[0];
-        if (request_i == 4)
+        final byte[] zero = ("0").getBytes();
+        if (request_i == ((int) zero[0]) + 4)
         {
             return ("done").getBytes();
         }

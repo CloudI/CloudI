@@ -912,7 +912,7 @@ log_message_external(Mode, Process, Level, Module, Line, Format, Args)
             ok;
         false ->
             LogMessage = if
-                is_list(Format), is_integer(hd(Format)), Args =:= undefined ->
+                is_list(Format), Args =:= undefined ->
                     Format;
                 true ->
                     try cloudi_string:format(Format, Args)

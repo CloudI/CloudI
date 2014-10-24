@@ -1460,56 +1460,74 @@ public class API
     {
         try
         {
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ByteArrayOutputStream output =
+                new ByteArrayOutputStream(this.buffer_size);
+            int i = 0;
             if (buffer_in != null && buffer_in.hasRemaining())
+            {
+                i += buffer_in.limit() - buffer_in.position();
                 output.write(buffer_in.array(),
                              buffer_in.position(),
                              buffer_in.limit());
+            }
             int read = 0;
             byte[] bytes = new byte[this.buffer_size];
-            boolean consume = true;
+            boolean consume;
+            if (this.use_header)
+                consume = (i < 4);
+            else
+                consume = (i < this.buffer_size);
             while (consume)
             {
                 while ((read = this.input.read(bytes)) == this.buffer_size &&
                        this.input.available() > 0)
+                {
+                    i += this.buffer_size;
                     output.write(bytes, 0, this.buffer_size);
+                }
                 if (read == -1)
+                {
                     return null;
-                output.write(bytes, 0, read);
+                }
+                else if (read > 0)
+                {
+                    i += read;
+                    output.write(bytes, 0, read);
+                }
                 if (this.use_header == false)
                     consume = false;
-                else if (output.size() >= 4)
+                else if (i >= 4)
                     consume = false;
             }
             byte[] result = output.toByteArray();
             ByteBuffer buffer_out = null;
             if (this.use_header)
             {
-                final long length = (result[0] << 24) |
-                                    (result[1] << 16) |
-                                    (result[2] <<  8) |
-                                     result[3];
-                if (output.size() != (length + 4))
+                final int length = ((result[0] & 0xff) << 24) |
+                                   ((result[1] & 0xff) << 16) |
+                                   ((result[2] & 0xff) <<  8) |
+                                    (result[3] & 0xff);
+                assert length > 0 : "negative length!";
+                i -= 4;
+                if (i != length)
                 {
-                    assert output.size() < (length + 4) : "recv overflow";
-                    output = new ByteArrayOutputStream();
-                    output.write(result, 4, result.length - 4);
-                    while (output.size() < length)
+                    assert i < length : "recv overflow";
+                    buffer_out = ByteBuffer.allocate(length);
+                    buffer_out.put(result, 4, i);
+                    while (i < length)
                     {
                         read = this.input.read(bytes, 0,
-                                               Math.min((int) (length -
-                                                               output.size()),
+                                               Math.min(length - i,
                                                         this.buffer_size));
                         if (read == -1)
                             return null;
-                        output.write(bytes, 0, read);
+                        i += read;
+                        buffer_out.put(bytes, 0, read);
                     }
-                    result = output.toByteArray();
-                    buffer_out = ByteBuffer.wrap(result);
                 }
                 else
                 {
-                    buffer_out = ByteBuffer.wrap(result, 4, result.length - 4);
+                    buffer_out = ByteBuffer.wrap(result, 4, i);
                 }
             }
             else
