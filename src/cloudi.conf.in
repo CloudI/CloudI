@@ -304,8 +304,8 @@
         "/tests/http/",
         "@JAVA@",
         "-jar tests/http/service/jar/service.jar"
-        # enable assertions
-        " -ea",
+        % enable assertions
+        " -ea:org.cloudi",
         [],
         none, tcp, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300, []},
@@ -327,8 +327,8 @@
         "/tests/http_req/",
         "@JAVA@",
         "-jar tests/http_req/jar/http_req.jar"
-        # enable assertions
-        " -ea",
+        % enable assertions
+        " -ea:org.cloudi",
         [],
         none, tcp, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
@@ -806,8 +806,8 @@
         "/tests/msg_size/",
         "@JAVA@",
         "-jar tests/msg_size/jar/msg_size.jar"
-        # enable assertions
-        " -ea",
+        % enable assertions
+        " -ea:org.cloudi",
         [],
         immediate_closest, tcp, default,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300,
@@ -925,8 +925,8 @@
         "-jar tests/messaging/jar/messaging.jar"
         % based on http://www.infoq.com/articles/benchmarking-jvm
         " -Xbatch -server -Xmx1G -Xms1G -XX:PermSize=64m -XX:MaxPermSize=64m"
-        # enable assertions
-        " -ea",
+        % enable assertions
+        " -ea:org.cloudi",
         [],
         immediate_local, tcp, default,
         5000, 10000, 10000, [api], undefined, 1, 4, 5, 300,
