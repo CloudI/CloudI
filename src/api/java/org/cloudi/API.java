@@ -1509,9 +1509,8 @@ public class API
                                     (result[3] & 0xff);
                 assert length > 0 : "negative length!";
                 i -= 4;
-                if (i != length)
+                if (i < length)
                 {
-                    assert i < length : "recv overflow";
                     buffer_out = ByteBuffer.allocate(length);
                     buffer_out.put(result, 4, i);
                     while (i < length)
@@ -1524,6 +1523,7 @@ public class API
                         i += read;
                         buffer_out.put(bytes, 0, read);
                     }
+                    buffer_out.rewind();
                 }
                 else
                 {

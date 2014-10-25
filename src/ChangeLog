@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add a fix for new Java CloudI API buffer usage
+
 2014-10-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix bug in java messaging integration test
