@@ -85,8 +85,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/b/c/d");
-        assert new String(request) == "test1";
+        assert pattern.equals(this.api.prefix() + "a/b/c/d");
+        assert new String(request).equals("test1");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -100,9 +100,9 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/b/c/*");
-        assert (new String(request) == "test2") ||
-               (new String(request) == "test3");
+        assert pattern.equals(this.api.prefix() + "a/b/c/*");
+        assert (new String(request).equals("test2")) ||
+               (new String(request).equals("test3"));
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -116,9 +116,9 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/b/*/d");
-        assert (new String(request) == "test4") ||
-               (new String(request) == "test5");
+        assert pattern.equals(this.api.prefix() + "a/b/*/d");
+        assert (new String(request).equals("test4")) ||
+               (new String(request).equals("test5"));
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -132,9 +132,9 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/*/c/d");
-        assert (new String(request) == "test6") ||
-               (new String(request) == "test7");
+        assert pattern.equals(this.api.prefix() + "a/*/c/d");
+        assert (new String(request).equals("test6")) ||
+               (new String(request).equals("test7"));
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -148,9 +148,9 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "*/b/c/d");
-        assert (new String(request) == "test8") ||
-               (new String(request) == "test9");
+        assert pattern.equals(this.api.prefix() + "*/b/c/d");
+        assert (new String(request).equals("test8")) ||
+               (new String(request).equals("test9"));
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -164,8 +164,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/b/*");
-        assert new String(request) == "test10";
+        assert pattern.equals(this.api.prefix() + "a/b/*");
+        assert new String(request).equals("test10");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -179,8 +179,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/*/d");
-        assert new String(request) == "test11";
+        assert pattern.equals(this.api.prefix() + "a/*/d");
+        assert new String(request).equals("test11");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -194,8 +194,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "*/c/d");
-        assert new String(request) == "test12";
+        assert pattern.equals(this.api.prefix() + "*/c/d");
+        assert new String(request).equals("test12");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -209,8 +209,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "a/*");
-        assert new String(request) == "test13";
+        assert pattern.equals(this.api.prefix() + "a/*");
+        assert new String(request).equals("test13");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -224,8 +224,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "*/d");
-        assert new String(request) == "test14";
+        assert pattern.equals(this.api.prefix() + "*/d");
+        assert new String(request).equals("test14");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -239,8 +239,8 @@ public class Task implements Runnable
                                       API.ReturnSyncException,
                                       API.InvalidInputException
     {
-        assert pattern == (this.api.prefix() + "*");
-        assert new String(request) == "test15";
+        assert pattern.equals(this.api.prefix() + "*");
+        assert new String(request).equals("test15");
         this.api.return_(command, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
@@ -257,13 +257,13 @@ public class Task implements Runnable
                                  API.TerminateException
     {
         API.Response end_check = this.api.recv_async(1000);
-        while (new String(end_check.response) == "end")
+        while (new String(end_check.response).equals("end"))
         {
             // consume "end" and sleep
             end_check = this.api.recv_async(1000);
         }
         API.out.println("messaging sequence1 start java");
-        assert new String(request) == "start";
+        assert new String(request).equals("start");
         // n.b., depends on cloudi_constants.hrl having
         // SERVICE_NAME_PATTERN_MATCHING defined
         API.TransId test1_id = this.api.send_async(
@@ -300,63 +300,63 @@ public class Task implements Runnable
         // RECV_ASYNC_STRATEGY == recv_async_select_oldest
         this.api.recv_async(test1_id.id, false);
         API.Response test1_check = this.api.recv_async();
-        assert new String(test1_check.response) == "test1";
+        assert new String(test1_check.response).equals("test1");
         assert test1_id.equals(test1_check.id);
         this.api.recv_async(test2_id.id, false);
         API.Response test2_check = this.api.recv_async();
-        assert new String(test2_check.response) == "test2";
+        assert new String(test2_check.response).equals("test2");
         assert test2_id.equals(test2_check.id);
         this.api.recv_async(test3_id.id, false);
         API.Response test3_check = this.api.recv_async();
-        assert new String(test3_check.response) == "test3";
+        assert new String(test3_check.response).equals("test3");
         assert test3_id.equals(test3_check.id);
         this.api.recv_async(test4_id.id, false);
         API.Response test4_check = this.api.recv_async();
-        assert new String(test4_check.response) == "test4";
+        assert new String(test4_check.response).equals("test4");
         assert test4_id.equals(test4_check.id);
         this.api.recv_async(test5_id.id, false);
         API.Response test5_check = this.api.recv_async();
-        assert new String(test5_check.response) == "test5";
+        assert new String(test5_check.response).equals("test5");
         assert test5_id.equals(test5_check.id);
         this.api.recv_async(test6_id.id, false);
         API.Response test6_check = this.api.recv_async();
-        assert new String(test6_check.response) == "test6";
+        assert new String(test6_check.response).equals("test6");
         assert test6_id.equals(test6_check.id);
         this.api.recv_async(test7_id.id, false);
         API.Response test7_check = this.api.recv_async();
-        assert new String(test7_check.response) == "test7";
+        assert new String(test7_check.response).equals("test7");
         assert test7_id.equals(test7_check.id);
         this.api.recv_async(test8_id.id, false);
         API.Response test8_check = this.api.recv_async();
-        assert new String(test8_check.response) == "test8";
+        assert new String(test8_check.response).equals("test8");
         assert test8_id.equals(test8_check.id);
         this.api.recv_async(test9_id.id, false);
         API.Response test9_check = this.api.recv_async();
-        assert new String(test9_check.response) == "test9";
+        assert new String(test9_check.response).equals("test9");
         assert test9_id.equals(test9_check.id);
         this.api.recv_async(test10_id.id, false);
         API.Response test10_check = this.api.recv_async();
-        assert new String(test10_check.response) == "test10";
+        assert new String(test10_check.response).equals("test10");
         assert test10_id.equals(test10_check.id);
         this.api.recv_async(test11_id.id, false);
         API.Response test11_check = this.api.recv_async();
-        assert new String(test11_check.response) == "test11";
+        assert new String(test11_check.response).equals("test11");
         assert test11_id.equals(test11_check.id);
         this.api.recv_async(test12_id.id, false);
         API.Response test12_check = this.api.recv_async();
-        assert new String(test12_check.response) == "test12";
+        assert new String(test12_check.response).equals("test12");
         assert test12_id.equals(test12_check.id);
         this.api.recv_async(test13_id.id, false);
         API.Response test13_check = this.api.recv_async();
-        assert new String(test13_check.response) == "test13";
+        assert new String(test13_check.response).equals("test13");
         assert test13_id.equals(test13_check.id);
         this.api.recv_async(test14_id.id, false);
         API.Response test14_check = this.api.recv_async();
-        assert new String(test14_check.response) == "test14";
+        assert new String(test14_check.response).equals("test14");
         assert test14_id.equals(test14_check.id);
         this.api.recv_async(test15_id.id, false);
         API.Response test15_check = this.api.recv_async();
-        assert new String(test15_check.response) == "test15";
+        assert new String(test15_check.response).equals("test15");
         assert test15_id.equals(test15_check.id);
         API.out.println("messaging sequence1 end java");
         // start sequence2
@@ -483,7 +483,7 @@ public class Task implements Runnable
                                  InterruptedException
     {
         API.out.println("messaging sequence2 start java");
-        assert new String(request) == "start";
+        assert new String(request).equals("start");
         // the sending process is excluded from the services that receive
         // the asynchronous message, so in this case, the receiving thread
         // will not be called, despite the fact it has subscribed to 'e',
@@ -494,7 +494,9 @@ public class Task implements Runnable
         // 4 * 8 == 32, but only 3 out of 4 threads can receive messages,
         // since 1 thread is sending the mcast_async, so 3 * 8 == 24
         assert e_ids.size() == 24;
-        byte[] e_str_check = new byte[24];
+        byte[] e_str_check = {0, 0, 0, 0, 0, 0, 0, 0,
+                              0, 0, 0, 0, 0, 0, 0, 0,
+                              0, 0, 0, 0, 0, 0, 0, 0};
         Iterator<API.TransId> e_ids_itr = e_ids.iterator(); 
         while (e_ids_itr.hasNext())
         {
@@ -514,7 +516,7 @@ public class Task implements Runnable
                 }
             }
         }
-        assert new String(e_str_check) == "111222333444555666777888999";
+        assert new String(e_str_check).equals("111222333444555666777888");
         API.out.println("messaging sequence2 end java");
         // start sequence3
         this.api.send_async(this.api.prefix() + "sequence3",
@@ -585,15 +587,15 @@ public class Task implements Runnable
                                  API.TerminateException
     {
         API.out.println("messaging sequence3 start java");
-        assert new String(request) == "start";
+        assert new String(request).equals("start");
         API.TransId test1_id = this.api.send_async(this.api.prefix() + "f1",
                                                    ("0").getBytes());
         API.Response test1_check = this.api.recv_async(test1_id.id);
         assert test1_id.equals(test1_check.id);
-        assert new String(test1_check.response) == "done";
+        assert new String(test1_check.response).equals("done");
         API.Response test2_check = this.api.send_sync(this.api.prefix() + "g1",
                                                       ("prefix_").getBytes());
-        assert new String(test2_check.response) == "prefix_suffix";
+        assert new String(test2_check.response).equals("prefix_suffix");
         API.out.println("messaging sequence3 end java");
         // loop to find any infrequent problems, restart sequence1
         this.api.send_async(this.api.prefix() + "sequence1",
