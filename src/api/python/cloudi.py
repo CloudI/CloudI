@@ -107,7 +107,7 @@ class API(object):
          self.__timeout_async, self.__timeout_sync,
          self.__timeout_terminate,
          self.__priority_default,
-         self.__request_timeout_adjustment) = self.__poll_request(False)
+         self.__request_timeout_adjustment) = self.__poll_request(None, False)
 
     @staticmethod
     def thread_count():
@@ -132,7 +132,7 @@ class API(object):
     def subscribe_count(self, pattern):
         self.__send(term_to_binary((OtpErlangAtom(b'subscribe_count'),
                                     pattern)))
-        return self.__poll_request(False)
+        return self.__poll_request(None, False)
 
     def unsubscribe(self, pattern):
         key = self.__prefix + pattern
@@ -156,7 +156,7 @@ class API(object):
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
-        return self.__poll_request(False)
+        return self.__poll_request(None, False)
 
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
@@ -170,7 +170,7 @@ class API(object):
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
-        return self.__poll_request(False)
+        return self.__poll_request(None, False)
 
     def mcast_async(self, name, request,
                     timeout=None, request_info=None, priority=None):
@@ -184,7 +184,7 @@ class API(object):
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
                                     timeout, priority)))
-        return self.__poll_request(False)
+        return self.__poll_request(None, False)
 
     def forward_(self, command, name, request_info, request,
                  timeout, priority, trans_id, pid):
@@ -203,7 +203,8 @@ class API(object):
                       timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = max(0, int(default_timer() - self.__request_timer))
+                elapsed = max(0, int((default_timer() -
+                                      self.__request_timer) * 1000.0))
                 if elapsed > timeout:
                     timeout = 0
                 else:
@@ -219,7 +220,8 @@ class API(object):
                      timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = max(0, int(default_timer() - self.__request_timer))
+                elapsed = max(0, int((default_timer() -
+                                      self.__request_timer) * 1000.0))
                 if elapsed > timeout:
                     timeout = 0
                 else:
@@ -248,7 +250,8 @@ class API(object):
                      timeout, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = max(0, int(default_timer() - self.__request_timer))
+                elapsed = max(0, int((default_timer() -
+                                      self.__request_timer) * 1000.0))
                 if elapsed > timeout:
                     response_info = b''
                     response = b''
@@ -266,7 +269,8 @@ class API(object):
                     timeout, trans_id, pid):
         if self.__request_timeout_adjustment:
             if timeout == self.__request_timeout:
-                elapsed = max(0, int(default_timer() - self.__request_timer))
+                elapsed = max(0, int((default_timer() -
+                                      self.__request_timer) * 1000.0))
                 if elapsed > timeout:
                     response_info = b''
                     response = b''
@@ -287,7 +291,7 @@ class API(object):
             trans_id = b'\0' * 16
         self.__send(term_to_binary((OtpErlangAtom(b'recv_async'), timeout,
                                     OtpErlangBinary(trans_id), consume)))
-        return self.__poll_request(False)
+        return self.__poll_request(None, False)
 
     def process_index(self):
         return self.__process_index
@@ -447,15 +451,27 @@ class API(object):
             i, j = j, j + 4
             command = struct.unpack(b'=I', data[i:j])[0]
 
-    def __poll_request(self, external):
+    def __poll_request(self, timeout, external):
         if self.__terminate:
             return None
         elif external and not self.__initialization_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initialization_complete = True
+
+        poll_timer = None
+        if timeout is None:
+            timeout_value = None
+        elif timeout < 0:
+            timeout_value = None
+        elif timeout == 0:
+            timeout_value = 0
+        elif timeout > 0:
+            poll_timer = default_timer()
+            timeout_value = timeout * 0.001
         ready = False
         while ready == False:
-            IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s])
+            IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
+                                            timeout_value)
             if len(EXCEPT) > 0:
                 return None
             if len(IN) > 0:
@@ -509,7 +525,7 @@ class API(object):
                     '=%dscI' % request_info_size, data[i:j]
                 )
                 i, j = j, j + request_size + 1 + 4 + 1 + 16 + 4
-                (request, null_terminator, timeout, priority, trans_id,
+                (request, null_terminator, request_timeout, priority, trans_id,
                  pid_size) = struct.unpack(
                     '=%dscIb16sI' % request_size, data[i:j]
                 )
@@ -524,7 +540,7 @@ class API(object):
                                 name.decode('utf-8'),
                                 pattern.decode('utf-8'),
                                 request_info, request,
-                                timeout, priority, trans_id,
+                                request_timeout, priority, trans_id,
                                 binary_to_term(pid))
             elif (command == _MESSAGE_RECV_ASYNC or
                   command == _MESSAGE_RETURN_SYNC):
@@ -596,9 +612,24 @@ class API(object):
             else:
                 raise message_decoding_exception()
 
+            if poll_timer is not None:
+                poll_timer_new = default_timer()
+                elapsed = max(0, int((poll_timer_new -
+                                      poll_timer) * 1000.0))
+                poll_timer = poll_timer_new
+                if elapsed >= timeout:
+                    timeout = 0
+                else:
+                    timeout -= elapsed
+            if timeout_value is not None:
+                if timeout == 0:
+                    return None
+                elif timeout > 0:
+                    timeout_value = timeout * 0.001
             ready = False
             while ready == False:
-                IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s])
+                IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
+                                                timeout_value)
                 if len(EXCEPT) > 0:
                     return None
                 if len(IN) > 0:
@@ -610,8 +641,8 @@ class API(object):
                 return None # socket was closed
             i, j = 0, 4
 
-    def poll(self):
-        return self.__poll_request(True)
+    def poll(self, timeout=-1):
+        return self.__poll_request(timeout, True)
 
     def __text_key_value_parse(self, text):
         result = {}

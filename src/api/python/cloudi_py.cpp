@@ -1338,13 +1338,18 @@ python_cloudi_timeout_terminate(PyObject * self, PyObject *)
 }
 
 static PyObject *
-python_cloudi_poll(PyObject * self, PyObject *)
+python_cloudi_poll(PyObject * self, PyObject * args)
 {
     python_cloudi_instance_object * object =
         (python_cloudi_instance_object *) self;
+    int32_t timeout;
+    if (! PyArg_ParseTuple(args, "i:poll", &timeout))
+    {
+        return NULL;
+    }
     int result;
     THREADS_BEGIN;
-    result = object->api->poll();
+    result = object->api->poll(timeout);
     THREADS_END;
     if (result != 0)
     {

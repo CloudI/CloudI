@@ -223,10 +223,12 @@ class API(object):
     def timeout_terminate(self):
         return self.__timeout_terminate
 
-    def poll(self):
+    def poll(self, timeout=-1):
+        if timeout is None:
+            timeout = -1
         exception = None
         try:
-            self.__api.poll()
+            self.__api.poll(timeout)
         except Exception as e:
             exception = e
         if exception is not None:

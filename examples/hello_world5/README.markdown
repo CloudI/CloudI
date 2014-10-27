@@ -33,6 +33,15 @@ may fail without failing fast (running the release, after the release
 was generate successfully), but this is a problem with Erlang application
 dependencies in general.
 
+The usage of the service configuration option `automatic_loading` set to false
+in this example depends on the release being ran with `-mode embedded` as is
+typically done when running an Erlang release.  If the `-mode` command line
+argument is omitted or is provided as `-mode interactive` then
+`automatic_loading` can be set to true or omitted to receive true as the
+default setting.  However, it is irregular to attempt using `-mode interactive`
+when running an Erlang release since it does not pursue fail-fast operation
+with a production deployment.
+
 ## USAGE
 
 To use CloudI services programmatically:

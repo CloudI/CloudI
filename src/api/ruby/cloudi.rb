@@ -78,7 +78,7 @@ module CloudI
             @callbacks = Hash.new
             @timeout_terminate = 1000 # TIMEOUT_TERMINATE_MIN
             send(Erlang.term_to_binary(:init))
-            poll_request(false)
+            poll_request(nil, false)
         end
         attr_reader :process_index
         attr_reader :process_count
@@ -108,7 +108,7 @@ module CloudI
 
         def subscribe_count(pattern)
             send(Erlang.term_to_binary([:subscribe_count, pattern]))
-            return poll_request(false)
+            return poll_request(nil, false)
         end
 
         def unsubscribe(pattern)
@@ -137,7 +137,7 @@ module CloudI
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority]))
-            return poll_request(false)
+            return poll_request(nil, false)
         end
 
         def send_sync(name, request,
@@ -155,7 +155,7 @@ module CloudI
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority]))
-            return poll_request(false)
+            return poll_request(nil, false)
         end
 
         def mcast_async(name, request,
@@ -173,7 +173,7 @@ module CloudI
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority]))
-            return poll_request(false)
+            return poll_request(nil, false)
         end
 
         def forward_(command, name, request_info, request,
@@ -298,7 +298,7 @@ module CloudI
             send(Erlang.term_to_binary([:recv_async, timeout,
                                         OtpErlangBinary.new(trans_id),
                                         consume]))
-            return poll_request(false)
+            return poll_request(nil, false)
         end
 
         def callback(command, name, pattern, request_info, request,
@@ -455,7 +455,7 @@ module CloudI
             end
         end
 
-        def poll_request(external)
+        def poll_request(timeout, external)
             if @terminate
                 return nil
             elsif external and not @initialization_complete
@@ -463,9 +463,20 @@ module CloudI
                 @initialization_complete = true
             end
 
+            poll_timer = nil
+            if timeout.nil?
+                timeout_value = nil
+            elsif timeout < 0
+                timeout_value = nil
+            elsif timeout == 0
+                timeout_value = 0
+            elsif timeout > 0
+                poll_timer = Time.now
+                timeout_value = timeout * 0.001
+            end
             ready = false
             while ready == false
-                result = IO.select([@s], nil, [@s])
+                result = IO.select([@s], nil, [@s], timeout_value)
                 if result[2].length > 0
                     return nil
                 end
@@ -473,7 +484,7 @@ module CloudI
                     ready = true
                 end
             end
-
+        
             data = recv('')
             data_size = data.bytesize
             if data_size == 0
@@ -525,7 +536,7 @@ module CloudI
                     i += j; j = request_size + 1 + 4 + 1 + 16 + 4
                     tmp = data[i, j].unpack("a#{request_size}xLca16L")
                     request = tmp[0]
-                    timeout = tmp[1]
+                    request_timeout = tmp[1]
                     priority = tmp[2]
                     trans_id = tmp[3]
                     pid_size = tmp[4]
@@ -540,7 +551,7 @@ module CloudI
                     end
                     data.clear()
                     callback(command, name, pattern, request_info, request,
-                             timeout, priority, trans_id,
+                             request_timeout, priority, trans_id,
                              Erlang.binary_to_term(pid))
                 when MESSAGE_RECV_ASYNC, MESSAGE_RETURN_SYNC
                     i += j; j = 4
@@ -618,9 +629,28 @@ module CloudI
                     raise MessageDecodingException
                 end
 
+                if not poll_timer.nil?
+                    poll_timer_new = Time.now
+                    elapsed = [0,
+                               ((poll_timer_new -
+                                 poll_timer) * 1000.0).floor].max
+                    poll_timer = poll_timer_new
+                    if elapsed >= timeout
+                        timeout = 0
+                    else
+                        timeout -= elapsed
+                    end
+                end
+                if not timeout_value.nil?
+                    if timeout == 0
+                        return nil
+                    elsif timeout > 0
+                        timeout_value = timeout * 0.001
+                    end
+                end
                 ready = false
                 while ready == false
-                    result = IO.select([@s], nil, [@s])
+                    result = IO.select([@s], nil, [@s], timeout_value)
                     if result[2].length > 0
                         return nil
                     end
@@ -638,8 +668,11 @@ module CloudI
             end
         end
 
-        def poll
-            return poll_request(true)
+        def poll(timeout=nil)
+            if timeout.nil?
+                timeout = -1
+            end
+            return poll_request(timeout, true)
         end
 
         def text_key_value_parse(text)
