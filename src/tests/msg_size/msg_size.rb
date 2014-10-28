@@ -59,7 +59,7 @@ if __FILE__ == $PROGRAM_NAME
                 @api.subscribe('ruby', method(:request))
 
                 result = @api.poll
-                assert{result == nil}
+                assert{result == false}
             end
 
             private

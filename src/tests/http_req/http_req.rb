@@ -62,7 +62,7 @@ if __FILE__ == $PROGRAM_NAME
                     assert{@api.subscribe_count('ruby.xml/get') == 1}
 
                     result = @api.poll
-                    assert{result == nil}
+                    assert{result == false}
                 rescue CloudI::TerminateException
                     #
                 rescue

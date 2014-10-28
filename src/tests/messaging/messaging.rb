@@ -89,7 +89,7 @@ if __FILE__ == $PROGRAM_NAME
                     end
     
                     result = @api.poll
-                    assert{result == nil}
+                    assert{result == false}
                 rescue CloudI::TerminateException
                     #
                 rescue

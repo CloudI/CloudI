@@ -228,7 +228,7 @@ class API(object):
             timeout = -1
         exception = None
         try:
-            self.__api.poll(timeout)
+            return self.__api.poll(timeout)
         except Exception as e:
             exception = e
         if exception is not None:

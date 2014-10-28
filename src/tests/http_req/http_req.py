@@ -64,7 +64,7 @@ class Task(threading.Thread):
             assert self.__api.subscribe_count(self.__name + '.xml/get') == 1
 
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except self.__terminate_exception:
             pass
         except:

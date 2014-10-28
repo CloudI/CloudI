@@ -453,7 +453,7 @@ class API(object):
 
     def __poll_request(self, timeout, external):
         if self.__terminate:
-            return None
+            return False
         elif external and not self.__initialization_complete:
             self.__send(term_to_binary(OtpErlangAtom(b'polling')))
             self.__initialization_complete = True
@@ -468,20 +468,18 @@ class API(object):
         elif timeout > 0:
             poll_timer = default_timer()
             timeout_value = timeout * 0.001
-        ready = False
-        while ready == False:
-            IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
-                                            timeout_value)
-            if len(EXCEPT) > 0:
-                return None
-            if len(IN) > 0:
-                ready = True
+        IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
+                                        timeout_value)
+        if len(IN) == 0:
+            return True
+        if len(EXCEPT) > 0:
+            return False
 
         data = b''
         data = self.__recv(data)
         data_size = len(data)
         if data_size == 0:
-            return None # socket was closed
+            return False # socket was closed
         i, j = 0, 4
 
         while True:
@@ -534,7 +532,7 @@ class API(object):
                 if j != data_size:
                     assert external == True
                     if not self.__handle_events(external, data, data_size, j):
-                        return None
+                        return False
                 data = b''
                 self.__callback(command,
                                 name.decode('utf-8'),
@@ -588,7 +586,7 @@ class API(object):
             elif command == _MESSAGE_TERM:
                 if not self.__handle_events(external, data, data_size, j,
                                             command=command):
-                    return None
+                    return False
                 assert False
             elif command == _MESSAGE_REINIT:
                 i, j = j, j + 4
@@ -623,22 +621,20 @@ class API(object):
                     timeout -= elapsed
             if timeout_value is not None:
                 if timeout == 0:
-                    return None
+                    return True
                 elif timeout > 0:
                     timeout_value = timeout * 0.001
-            ready = False
-            while ready == False:
-                IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
-                                                timeout_value)
-                if len(EXCEPT) > 0:
-                    return None
-                if len(IN) > 0:
-                    ready = True
+            IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
+                                            timeout_value)
+            if len(IN) == 0:
+                return True
+            if len(EXCEPT) > 0:
+                return False
     
             data = self.__recv(data)
             data_size = len(data)
             if data_size == 0:
-                return None # socket was closed
+                return False # socket was closed
             i, j = 0, 4
 
     def poll(self, timeout=-1):

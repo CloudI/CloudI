@@ -81,7 +81,7 @@ class _Task(threading.Thread):
                 self.__api.subscribe('chain_ipc_finish',
                                      self.chain_ipc_finish)
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except terminate_exception:
             pass
         except:

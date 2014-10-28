@@ -1353,9 +1353,16 @@ python_cloudi_poll(PyObject * self, PyObject * args)
     THREADS_END;
     if (result != 0)
     {
-        python_error(result);
-        return NULL;
+        if (result == CloudI::API::return_value::timeout)
+        {
+            return Py_BuildValue("O", Py_True);
+        }
+        else
+        {
+            python_error(result);
+            return NULL;
+        }
     }
-    Py_RETURN_NONE;
+    return Py_BuildValue("O", Py_False);
 }
 

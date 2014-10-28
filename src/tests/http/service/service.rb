@@ -60,7 +60,7 @@ if __FILE__ == $PROGRAM_NAME
                     @api.subscribe("text/post", method(:text))
 
                     result = @api.poll
-                    assert{result == nil}
+                    assert{result == false}
                 rescue CloudI::TerminateException
                     #
                 rescue

@@ -60,7 +60,7 @@ class Task(threading.Thread):
             self.__check_environment()
             # idle service with no subscriptions
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except terminate_exception:
             pass
         except:

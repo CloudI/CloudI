@@ -62,7 +62,7 @@ class Task(threading.Thread):
             self.__api.subscribe('echo/get', self.__request)
 
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except terminate_exception:
             pass
         except:

@@ -65,7 +65,7 @@ class Task(threading.Thread):
                                  self.__disconnect)
 
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except terminate_exception:
             pass
         except:

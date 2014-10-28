@@ -457,7 +457,7 @@ module CloudI
 
         def poll_request(timeout, external)
             if @terminate
-                return nil
+                return false
             elsif external and not @initialization_complete
                 send(Erlang.term_to_binary(:polling))
                 @initialization_complete = true
@@ -474,21 +474,18 @@ module CloudI
                 poll_timer = Time.now
                 timeout_value = timeout * 0.001
             end
-            ready = false
-            while ready == false
-                result = IO.select([@s], nil, [@s], timeout_value)
-                if result[2].length > 0
-                    return nil
-                end
-                if result[0].length > 0
-                    ready = true
-                end
+            result = IO.select([@s], nil, [@s], timeout_value)
+            if result.nil?
+                return true
+            end
+            if result[2].length > 0
+                return false
             end
         
             data = recv('')
             data_size = data.bytesize
             if data_size == 0
-                return nil
+                return false
             end
             i = 0; j = 4
 
@@ -546,7 +543,7 @@ module CloudI
                     if i != data_size
                         API.assert{external == true}
                         if not handle_events(external, data, data_size, i)
-                            return nil
+                            return false
                         end
                     end
                     data.clear()
@@ -601,7 +598,7 @@ module CloudI
                     return count
                 when MESSAGE_TERM
                     if not handle_events(external, data, data_size, i, command)
-                        return nil
+                        return false
                     end
                     API.assert{false}
                 when MESSAGE_REINIT
@@ -643,26 +640,23 @@ module CloudI
                 end
                 if not timeout_value.nil?
                     if timeout == 0
-                        return nil
+                        return true
                     elsif timeout > 0
                         timeout_value = timeout * 0.001
                     end
                 end
-                ready = false
-                while ready == false
-                    result = IO.select([@s], nil, [@s], timeout_value)
-                    if result[2].length > 0
-                        return nil
-                    end
-                    if result[0].length > 0
-                        ready = true
-                    end
+                result = IO.select([@s], nil, [@s], timeout_value)
+                if result.nil?
+                    return true
+                end
+                if result[2].length > 0
+                    return false
                 end
     
                 data = recv(data)
                 data_size = data.bytesize
                 if data_size == 0
-                    return nil
+                    return false
                 end
                 i = 0; j = 4
             end

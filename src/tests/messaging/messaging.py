@@ -92,7 +92,7 @@ class Task(threading.Thread):
                 )
     
             result = self.__api.poll()
-            assert result == None
+            assert result == False
         except self.__terminate_exception:
             pass
         except:
