@@ -119,7 +119,8 @@ class API
              $this->timeout_sync,
              $this->timeout_terminate,
              $this->priority_default,
-             $this->request_timeout_adjustment) = $this->poll_request(false);
+             $this->request_timeout_adjustment
+             ) = $this->poll_request(null, false);
     }
 
     public static function thread_count()
@@ -148,7 +149,7 @@ class API
     {
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('subscribe_count'), $pattern)));
-        return $this->poll_request(false);
+        return $this->poll_request(null, false);
     }
 
     public function unsubscribe($pattern)
@@ -178,7 +179,7 @@ class API
                   new \Erlang\OtpErlangBinary($request_info),
                   new \Erlang\OtpErlangBinary($request),
                   $timeout, $priority)));
-        return $this->poll_request(false);
+        return $this->poll_request(null, false);
     }
 
     public function send_sync($name, $request,
@@ -196,7 +197,7 @@ class API
                   new \Erlang\OtpErlangBinary($request_info),
                   new \Erlang\OtpErlangBinary($request),
                   $timeout, $priority)));
-        return $this->poll_request(false);
+        return $this->poll_request(null, false);
     }
 
     public function mcast_async($name, $request,
@@ -214,7 +215,7 @@ class API
                   new \Erlang\OtpErlangBinary($request_info),
                   new \Erlang\OtpErlangBinary($request),
                   $timeout, $priority)));
-        return $this->poll_request(false);
+        return $this->poll_request(null, false);
     }
 
     public function forward_($command, $name, $request_info, $request,
@@ -364,7 +365,7 @@ class API
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('recv_async'), $timeout,
                   new \Erlang\OtpErlangBinary($trans_id), $consume)));
-        return $this->poll_request(false);
+        return $this->poll_request(null, false);
     }
 
     public function process_index()
@@ -622,11 +623,11 @@ class API
         }
     }
 
-    private function poll_request($external)
+    private function poll_request($timeout, $external)
     {
         if ($this->terminate)
         {
-            return null;
+            return false;
         }
         elseif ($external && ! $this->initialization_complete)
         {
@@ -635,24 +636,39 @@ class API
             $this->initialization_complete = true;
         }
 
-        $ready = false;
-        while ($ready == false)
+        $poll_timer = null;
+        if (is_null($timeout) || $timeout < 0)
         {
-            $result_read = array($this->s);
-            $result_write = null;
-            $result_except = array($this->s);
-            $result = stream_select($result_read, $result_write,
-                                    $result_except, null);
-            if ($result === false || count($result_except) > 0)
-                return null;
-            if (count($result_read) > 0)
-                $ready = true;
+            $timeout_value_secs = null;
+            $timeout_value_usecs = null;
         }
+        elseif ($timeout == 0)
+        {
+            $timeout_value_secs = 0;
+            $timeout_value_usecs = 0;
+        }
+        elseif ($timeout > 0)
+        {
+            $poll_timer = microtime(true);
+            $timeout_value_secs = intval($timeout / 1000);
+            $timeout_value_usecs = intval($timeout -
+                                          ($timeout_value_secs *
+                                           1000)) * 1000;
+        }
+        $result_read = array($this->s);
+        $result_write = null;
+        $result_except = array($this->s);
+        $result = stream_select($result_read, $result_write, $result_except,
+                                $timeout_value_secs, $timeout_value_usecs);
+        if ($result === false || count($result_except) > 0)
+            return false;
+        if (count($result_read) == 0)
+            return true;
 
         $data = $this->recv('');
         $data_size = strlen($data);
         if ($data_size == 0)
-            return null;
+            return false;
         $i = 0; $j = 4;
 
         while (true)
@@ -712,7 +728,7 @@ class API
                     $i += $j; $j = 4 + 1;
                     $i++; // skip null byte
                     $tmp = unpack('La/cb', substr($data, $i, $j));
-                    $timeout = $tmp['a'];
+                    $request_timeout = $tmp['a'];
                     $priority = $tmp['b'];
                     $i += $j; $j = 16;
                     $trans_id = substr($data, $i, $j);
@@ -727,13 +743,13 @@ class API
                         if (! $this->handle_events($external,
                                                    $data, $data_size, $i))
                         {
-                            return null;
+                            return false;
                         }
                     }
                     $data = '';
                     $this->callback($command, $name, $pattern,
                                     $request_info, $request,
-                                    $timeout, $priority, $trans_id,
+                                    $request_timeout, $priority, $trans_id,
                                     \Erlang\binary_to_term($pid));
                     break;
                 case MESSAGE_RECV_ASYNC:
@@ -800,7 +816,7 @@ class API
                     if (! $this->handle_events($external,
                                                $data, $data_size, $i, $command))
                     {
-                        return null;
+                        return false;
                     }
                     assert(false);
                 case MESSAGE_REINIT:
@@ -828,31 +844,52 @@ class API
                     throw new MessageDecodingException();
             }
 
-            $ready = false;
-            while ($ready == false)
+            if (! is_null($poll_timer))
             {
-                $result_read = array($this->s);
-                $result_write = null;
-                $result_except = array($this->s);
-                $result = stream_select($result_read, $result_write,
-                                        $result_except, null);
-                if ($result === false || count($result_except) > 0)
-                    return null;
-                if (count($result_read) > 0)
-                    $ready = true;
+                $poll_timer_new = microtime(true);
+                $elapsed = max(0, (integer) floor(($poll_timer_new -
+                                                   $poll_timer) * 1000.0));
+                $poll_timer = $poll_timer_new;
+                if ($elapsed >= $timeout)
+                    $timeout = 0;
+                else
+                    $timeout -= $elapsed;
             }
+            if (! is_null($timeout_value_secs))
+            {
+                if ($timeout == 0)
+                {
+                    return true;
+                }
+                elseif ($timeout > 0)
+                {
+                    $timeout_value_secs = intval($timeout / 1000);
+                    $timeout_value_usecs = intval($timeout -
+                                                  ($timeout_value_secs *
+                                                   1000)) * 1000;
+                }
+            }
+            $result_read = array($this->s);
+            $result_write = null;
+            $result_except = array($this->s);
+            $result = stream_select($result_read, $result_write, $result_except,
+                                    $timeout_value_secs, $timeout_value_usecs);
+            if ($result === false || count($result_except) > 0)
+                return false;
+            if (count($result_read) == 0)
+                return true;
     
             $data = $this->recv($data);
             $data_size = strlen($data);
             if ($data_size == 0)
-                return null;
+                return false;
             $i = 0; $j = 4;
         }
     }
 
-    public function poll()
+    public function poll($timeout = -1)
     {
-        return $this->poll_request(true);
+        return $this->poll_request($timeout, true);
     }
 
     private function text_key_value_parse($text)
@@ -862,7 +899,7 @@ class API
         $size = count($data);
         if ($size >= 2)
         {
-            foreach (range(0, $size - 2, 2) as $i)
+            foreach (range(0, ($size - $size % 2) - 2, 2) as $i)
             {
                 $key = $data[$i];
                 if (isset($result[$key]))

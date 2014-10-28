@@ -1,11 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add timeout argument to the poll function in the PHP CloudI API
+    * Fix request_info parsing in the PHP CloudI API
+
 2014-10-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add timeout argument to the poll function in both
       the Python CloudI API and the Ruby CloudI API
     * Add more details to the hello_world5 example
+    * Fix request_timeout_adjustment usage with the (pure) Python CloudI API
+      to use the proper time units
 
 2014-10-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -464,9 +464,7 @@ module CloudI
             end
 
             poll_timer = nil
-            if timeout.nil?
-                timeout_value = nil
-            elsif timeout < 0
+            if timeout.nil? or timeout < 0
                 timeout_value = nil
             elsif timeout == 0
                 timeout_value = 0

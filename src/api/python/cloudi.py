@@ -459,9 +459,7 @@ class API(object):
             self.__initialization_complete = True
 
         poll_timer = None
-        if timeout is None:
-            timeout_value = None
-        elif timeout < 0:
+        if timeout is None or timeout < 0:
             timeout_value = None
         elif timeout == 0:
             timeout_value = 0
@@ -470,10 +468,10 @@ class API(object):
             timeout_value = timeout * 0.001
         IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
                                         timeout_value)
-        if len(IN) == 0:
-            return True
         if len(EXCEPT) > 0:
             return False
+        if len(IN) == 0:
+            return True
 
         data = b''
         data = self.__recv(data)
@@ -626,10 +624,10 @@ class API(object):
                     timeout_value = timeout * 0.001
             IN, OUT, EXCEPT = select.select([self.__s],[],[self.__s],
                                             timeout_value)
-            if len(IN) == 0:
-                return True
             if len(EXCEPT) > 0:
                 return False
+            if len(IN) == 0:
+                return True
     
             data = self.__recv(data)
             data_size = len(data)

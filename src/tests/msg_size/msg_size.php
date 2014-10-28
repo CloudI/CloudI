@@ -59,7 +59,7 @@ class Task //extends \Thread
             $this->api->subscribe('php', $this, 'request');
 
             $result = $this->api->poll();
-            assert(is_null($result));
+            assert($result === false);
         }
         catch (\CloudI\TerminateException $e)
         {
