@@ -51,12 +51,19 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.BufferUnderflowException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.Math;
+import java.lang.Thread;
 import com.ericsson.otp.erlang.OtpExternal;
 import com.ericsson.otp.erlang.OtpOutputStream;
 import com.ericsson.otp.erlang.OtpInputStream;
@@ -97,6 +104,7 @@ public class API
     private boolean use_header;
     private FileOutputStream output;
     private FileInputStream input;
+    private ExecutorService poll_timer_executor;
     private boolean initialization_complete;
     private boolean terminate;
     private HashMap<String,
@@ -158,6 +166,7 @@ public class API
         assert this.fd_out != null;
         this.output = new FileOutputStream(this.fd_out);
         this.input = new FileInputStream(this.fd_in);
+        this.poll_timer_executor = Executors.newFixedThreadPool(1);
         this.initialization_complete = false;
         this.terminate = false;
         this.callbacks = new HashMap<String,
@@ -186,7 +195,7 @@ public class API
         init.write(OtpExternal.versionTag);
         init.write_any(new OtpErlangAtom("init"));
         send(init);
-        poll_request(false);
+        poll_request(null, false);
     }
 
     /**
@@ -285,7 +294,7 @@ public class API
         send(subscribe_count);
         try
         {
-            return (Integer) poll_request(false);
+            return (Integer) poll_request(null, false);
         }
         catch (MessageDecodingException e)
         {
@@ -378,7 +387,7 @@ public class API
                                              new OtpErlangInt(priority)};
             send_async.write_any(new OtpErlangTuple(tuple));
             send(send_async);
-            return (TransId) poll_request(false);
+            return (TransId) poll_request(null, false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -433,7 +442,7 @@ public class API
                                              new OtpErlangInt(priority)};
             send_sync.write_any(new OtpErlangTuple(tuple));
             send(send_sync);
-            return (Response) poll_request(false);
+            return (Response) poll_request(null, false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -490,7 +499,7 @@ public class API
                                              new OtpErlangInt(priority)};
             mcast_async.write_any(new OtpErlangTuple(tuple));
             send(mcast_async);
-            return (List<TransId>) poll_request(false);
+            return (List<TransId>) poll_request(null, false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -920,7 +929,7 @@ public class API
                                              new OtpErlangAtom("false")};
             recv_async.write_any(new OtpErlangTuple(tuple));
             send(recv_async);
-            return (Response) poll_request(false);
+            return (Response) poll_request(null, false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -1207,14 +1216,14 @@ public class API
         }
     }
 
-    private Object poll_request(boolean external)
+    private Object poll_request(Integer timeout, boolean external)
                                 throws InvalidInputException,
                                        MessageDecodingException,
                                        TerminateException
     {
         if (this.terminate)
         {
-            return null;
+            return Boolean.FALSE;
         }
         else if (external && ! this.initialization_complete)
         {
@@ -1224,13 +1233,25 @@ public class API
             send(polling);
             this.initialization_complete = true;
         }
-
-        ByteBuffer buffer = recv(null);
-        if (buffer == null || buffer.remaining() == 0)
-            return null;
+        final int timeout_min = 10;
+        Integer timeout_value = null;
+        Long poll_timer = null;
+        if (timeout == null || timeout < 0)
+        {
+            // blocking on read without a timeout
+        }
+        else if (timeout >= 0)
+        {
+            poll_timer = System.nanoTime();
+            timeout_value = java.lang.Math.max(timeout_min, timeout);
+        }
 
         try
         {
+            ByteBuffer buffer = null;
+            buffer = recv(buffer, timeout_value);
+            if (buffer == null)
+                return Boolean.TRUE;
             while (true)
             {
                 int command;
@@ -1256,7 +1277,7 @@ public class API
                             assert ! external;
                             handle_events(external, buffer);
                         }
-                        return null;
+                        return Boolean.FALSE;
                     }
                     case MESSAGE_SEND_ASYNC:
                     case MESSAGE_SEND_SYNC:
@@ -1272,7 +1293,7 @@ public class API
                         int request_size = buffer.getInt();
                         byte[] request = API.getBytes(buffer, request_size);
                         buffer.get();
-                        int timeout = buffer.getInt();
+                        int request_timeout = buffer.getInt();
                         byte priority = buffer.get();
                         byte[] trans_id = API.getBytes(buffer, 16);
                         int pid_size = buffer.getInt();
@@ -1281,10 +1302,10 @@ public class API
                         {
                             assert external;
                             if (! handle_events(external, buffer))
-                                return null;
+                                return Boolean.FALSE;
                         }
                         callback(command, name, pattern, request_info, request,
-                                 timeout, priority, trans_id, pid);
+                                 request_timeout, priority, trans_id, pid);
                         break;
                     }
                     case MESSAGE_RECV_ASYNC:
@@ -1344,7 +1365,7 @@ public class API
                     case MESSAGE_TERM:
                     {
                         if (! handle_events(external, buffer, command))
-                            return null;
+                            return Boolean.FALSE;
                         assert false;
                         break;
                     }
@@ -1368,11 +1389,34 @@ public class API
                     default:
                         throw new MessageDecodingException();
                 }
-    
-                buffer = recv(buffer);
-                if (buffer == null || buffer.remaining() == 0)
-                    return null;
+                if (poll_timer != null)
+                {
+                    long poll_timer_new = System.nanoTime();
+                    final int elapsed = (int) java.lang.Math.max(0,
+                        ((poll_timer_new - poll_timer) * 1e-6));
+                    poll_timer = poll_timer_new;
+                    if (elapsed >= timeout)
+                        timeout = 0;
+                    else
+                        timeout -= elapsed;
+                }
+                if (timeout_value != null)
+                {
+                    if (timeout == 0)
+                        return Boolean.TRUE;
+                    else if (timeout > 0)
+                        timeout_value = java.lang.Math.max(timeout_min,
+                                                           timeout);
+                }
+                buffer = recv(buffer, timeout_value);
+                if (buffer == null)
+                    return Boolean.TRUE;
             }
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace(API.err);
+            throw new MessageDecodingException();
         }
         catch (BufferUnderflowException e)
         {
@@ -1384,7 +1428,14 @@ public class API
                                 MessageDecodingException,
                                 TerminateException
     {
-        return poll_request(true);
+        return poll(-1);
+    }
+
+    public Object poll(int timeout) throws InvalidInputException,
+                                           MessageDecodingException,
+                                           TerminateException
+    {
+        return poll_request(timeout, true);
     }
 
     private HashMap<String, List<String> > binary_key_value_parse(byte[] binary)
@@ -1456,97 +1507,125 @@ public class API
         }
     }
 
-    private ByteBuffer recv(ByteBuffer buffer_in)
+    private ByteBuffer recv(ByteBuffer buffer_in, Integer timeout)
+                            throws IOException
     {
-        try
+        final ByteArrayOutputStream output =
+            new ByteArrayOutputStream(this.buffer_size);
+        int i = 0;
+        if (buffer_in != null && buffer_in.hasRemaining())
         {
-            ByteArrayOutputStream output =
-                new ByteArrayOutputStream(this.buffer_size);
-            int i = 0;
-            if (buffer_in != null && buffer_in.hasRemaining())
+            i += buffer_in.limit() - buffer_in.position();
+            output.write(buffer_in.array(),
+                         buffer_in.position(),
+                         buffer_in.limit());
+        }
+        int read = 0;
+        final byte[] bytes = new byte[this.buffer_size];
+        boolean consume;
+        if (i == 0 && timeout != null)
+        {
+            // simulate poll
+            final FileInputStream input = this.input;
+            Callable<Boolean> poll_timer_task = new Callable<Boolean>()
             {
-                i += buffer_in.limit() - buffer_in.position();
-                output.write(buffer_in.array(),
-                             buffer_in.position(),
-                             buffer_in.limit());
+                @Override
+                public Boolean call() throws Exception
+                {
+                    while (input.available() == 0)
+                        Thread.sleep(10);
+                    return Boolean.TRUE;
+                }
+            };
+            Future<Boolean> poll_timer_future =
+                poll_timer_executor.submit(poll_timer_task);
+            try
+            {
+                poll_timer_future.get(timeout, TimeUnit.MILLISECONDS);
             }
-            int read = 0;
-            byte[] bytes = new byte[this.buffer_size];
-            boolean consume;
-            if (this.use_header)
-                consume = (i < 4);
-            else
-                consume = (i < this.buffer_size);
-            while (consume)
+            catch (TimeoutException e)
             {
-                while ((read = this.input.read(bytes)) == this.buffer_size &&
-                       this.input.available() > 0)
-                {
-                    i += this.buffer_size;
-                    output.write(bytes, 0, this.buffer_size);
-                }
-                if (read == -1)
-                {
-                    return null;
-                }
-                else if (read > 0)
-                {
-                    i += read;
-                    output.write(bytes, 0, read);
-                }
-                if (this.use_header == false)
-                    consume = false;
-                else if (i >= 4)
-                    consume = false;
+                return null;
             }
-            byte[] result = output.toByteArray();
-            ByteBuffer buffer_out = null;
-            if (this.use_header)
+            catch (Exception e)
             {
-                final int length = ((result[0] & 0xff) << 24) |
-                                   ((result[1] & 0xff) << 16) |
-                                   ((result[2] & 0xff) <<  8) |
-                                    (result[3] & 0xff);
-                assert length > 0 : "negative length!";
-                i -= 4;
-                if (i < length)
+                e.printStackTrace(API.err);
+                throw new IOException("poll exception");
+            }
+        }
+        if (this.use_header)
+            consume = (i < 4);
+        else
+            consume = (i < this.buffer_size);
+        while (consume)
+        {
+            while ((read = this.input.read(bytes)) == this.buffer_size &&
+                   this.input.available() > 0)
+            {
+                i += this.buffer_size;
+                output.write(bytes, 0, this.buffer_size);
+            }
+            if (read == -1)
+            {
+                throw new IOException("consume read eof");
+            }
+            else if (read > 0)
+            {
+                i += read;
+                output.write(bytes, 0, read);
+            }
+            if (this.use_header == false)
+                consume = false;
+            else if (i >= 4)
+                consume = false;
+        }
+        final byte[] result = output.toByteArray();
+        ByteBuffer buffer_out = null;
+        if (this.use_header)
+        {
+            final int length = ((result[0] & 0xff) << 24) |
+                               ((result[1] & 0xff) << 16) |
+                               ((result[2] & 0xff) <<  8) |
+                                (result[3] & 0xff);
+            if (length < 0)
+                throw new IOException("negative length");
+            i -= 4;
+            if (i < length)
+            {
+                buffer_out = ByteBuffer.allocate(length);
+                buffer_out.put(result, 4, i);
+                while (i < length)
                 {
-                    buffer_out = ByteBuffer.allocate(length);
-                    buffer_out.put(result, 4, i);
-                    while (i < length)
+                    read = this.input.read(bytes, 0,
+                                      Math.min(length - i, this.buffer_size));
+                    if (read == -1)
                     {
-                        read = this.input.read(bytes, 0,
-                                               Math.min(length - i,
-                                                        this.buffer_size));
-                        if (read == -1)
-                            return null;
+                        throw new IOException("remaining read eof");
+                    }
+                    else if (read > 0)
+                    {
                         i += read;
                         buffer_out.put(bytes, 0, read);
                     }
-                    buffer_out.rewind();
                 }
-                else
-                {
-                    buffer_out = ByteBuffer.wrap(result, 4, i);
-                }
+                buffer_out.rewind();
             }
             else
             {
-                buffer_out = ByteBuffer.wrap(result);
+                buffer_out = ByteBuffer.wrap(result, 4, i);
             }
-            buffer_out.order(ByteOrder.nativeOrder());
-            return buffer_out;
         }
-        catch (IOException e)
+        else
         {
-            e.printStackTrace(API.err);
-            return null;
+            buffer_out = ByteBuffer.wrap(result);
         }
+        buffer_out.order(ByteOrder.nativeOrder());
+        return buffer_out;
     }
 
     private static String getString(ByteBuffer buffer, final int size)
     {
-        String value = new String(API.getBytes(buffer, size - 1));
+        final String value = new String(API.getBytes(buffer, size - 1));
         buffer.position(buffer.position() + 1); // skip the '\0' terminator
         return value;
     }
@@ -1566,7 +1645,7 @@ public class API
 
     private static byte[] getBytes(ByteBuffer buffer, final int size)
     {
-        byte[] data = new byte[size];
+        final byte[] data = new byte[size];
         buffer.get(data, 0, size);
         return data;
     }

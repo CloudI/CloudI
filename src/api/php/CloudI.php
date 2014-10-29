@@ -44,7 +44,7 @@ namespace CloudI;
 for ($i = 0; $i < ob_get_level(); $i++) { ob_end_flush(); }
 ob_implicit_flush(true);
 // an assert failure needs to cause php to exit
-//assert_options(ASSERT_BAIL);
+assert_options(ASSERT_BAIL);
 
 require dirname(__FILE__) . '/Erlang.php';
 

@@ -92,7 +92,7 @@ public class Task implements Runnable
         {
             this.api.subscribe("text/post", this, "text");
             Object result = this.api.poll();
-            assert result == null;
+            assert result == Boolean.FALSE;
         }
         catch (API.TerminateException e)
         {

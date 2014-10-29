@@ -642,7 +642,7 @@ public class Task implements Runnable
             }
 
             Object result = api.poll();
-            assert result == null;
+            assert result == Boolean.FALSE;
         }
         catch (API.TerminateException e)
         {

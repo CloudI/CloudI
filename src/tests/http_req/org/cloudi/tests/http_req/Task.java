@@ -117,7 +117,7 @@ public class Task implements Runnable
             this.api.subscribe("java.xml/get", this, "request");
             assert this.api.subscribe_count("java.xml/get") == 1;
             Object result = this.api.poll();
-            assert result == null;
+            assert result == Boolean.FALSE;
         }
         catch (API.TerminateException e)
         {

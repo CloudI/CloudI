@@ -57,12 +57,8 @@ class Task //extends \Thread
             assert($this->api->subscribe_count('php.xml/get') == 0);
             $this->api->subscribe('php.xml/get', $this, 'request');
             assert($this->api->subscribe_count('php.xml/get') == 1);
-            while ($this->api->poll(5000))
-            {
-                echo "http_req tick php\n";
-            }
-            //$result = $this->api->poll();
-            //assert($result === false);
+            $result = $this->api->poll();
+            assert($result === false);
         }
         catch (\CloudI\TerminateException $e)
         {
