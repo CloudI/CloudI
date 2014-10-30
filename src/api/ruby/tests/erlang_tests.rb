@@ -511,15 +511,15 @@ class EncodeTestCase < Test::Unit::TestCase
             Erlang::term_to_binary("testing multiple words")
         )
         assert_equal("\x83\x6B\x00\x01\x20",
-                         Erlang::term_to_binary(" "))
+                     Erlang::term_to_binary(" "))
         assert_equal("\x83\x6B\x00\x02\x20\x20",
-                         Erlang::term_to_binary("  "))
+                     Erlang::term_to_binary("  "))
         assert_equal("\x83\x6B\x00\x01\x31",
-                         Erlang::term_to_binary("1"))
+                     Erlang::term_to_binary("1"))
         assert_equal("\x83\x6B\x00\x02\x33\x37",
-                         Erlang::term_to_binary("37"))
+                     Erlang::term_to_binary("37"))
         assert_equal("\x83\x6B\x00\x07\x6F\x6E\x65\x20\x3D\x20\x31",
-                         Erlang::term_to_binary("one = 1"))
+                     Erlang::term_to_binary("one = 1"))
         assert_equal(
             "\x83\x6B\x00\x20\x21\x40\x23\x24\x25\x5E\x26\x2A\x28\x29\x5F\x2B" \
             "\x2D\x3D\x5B\x5D\x7B\x7D\x5C\x7C\x3B\x27\x3A\x22\x2C\x2E\x2F\x3C" \
