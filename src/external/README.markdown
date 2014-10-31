@@ -8,7 +8,7 @@ exceptions due to their C integration).
 
 `backward-cpp`
 --------------
-`for creating a backtraces in C++`
+`for creating a backtrace in C++`
 - `https://github.com/bombela/backward-cpp`
 - `commit c486368c543f10127431098a57d04c88a442296f`
 - `Wed Nov 27 12:15:07 PST 2013`
@@ -17,7 +17,7 @@ exceptions due to their C integration).
 `booster (only booster/backtrace.h)`
 ------------------------------------
 `booster/backtrace.h, from booster, from CppCMS,
- for creating a backtraces in C++`
+ for creating a backtrace in C++`
 - `https://svn.code.sf.net/p/cppcms/code/framework/trunk/booster/`
 - `revision r2237 2013-01-06 12:34:05 -0800 (CppCMS 1.0.4)`
 - `Wed Nov 27 12:15:07 PST 2013`
