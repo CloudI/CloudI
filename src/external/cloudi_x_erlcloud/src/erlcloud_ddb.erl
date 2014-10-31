@@ -279,6 +279,8 @@ dynamize_value({s, Value}) when is_binary(Value) ->
     {<<"S">>, Value};
 dynamize_value({s, Value}) when is_list(Value) ->
     {<<"S">>, list_to_binary(Value)};
+dynamize_value({s, Value}) when is_atom(Value) ->
+    {<<"S">>, atom_to_binary(Value, utf8)};
 dynamize_value({n, Value}) when is_number(Value) ->
     {<<"N">>, dynamize_number(Value)};
 dynamize_value({b, Value}) when is_binary(Value) orelse is_list(Value) ->
@@ -297,6 +299,8 @@ dynamize_value(Value) when is_list(Value) ->
     dynamize_value({s, Value});
 dynamize_value(Value) when is_number(Value) ->
     dynamize_value({n, Value});
+dynamize_value(Value) when is_atom(Value) ->
+    dynamize_value({s, atom_to_binary(Value, utf8)});
 dynamize_value(Value) ->
     error({erlcloud_ddb, {invalid_attr_value, Value}}).
 
@@ -328,7 +332,7 @@ dynamize_maybe_list(DynamizeItem, List) when is_list(List) ->
 dynamize_maybe_list(DynamizeItem, Item) ->
     [DynamizeItem(Item)].
 
--spec dynamize_expected_item(in_expected()) -> json_pair().
+-spec dynamize_expected_item(in_expected_item()) -> json_pair().
 dynamize_expected_item({Name, false}) ->
     {Name, [{<<"Exists">>, false}]};
 dynamize_expected_item({Name, Value}) ->
@@ -662,11 +666,11 @@ batch_get_item_record() ->
 
 -type batch_get_item_return() :: ddb_return(#ddb_batch_get_item{}, [erlcloud_ddb:out_item()]).
 
--spec batch_get_item([batch_get_item_request_item()]) -> batch_get_item_return().
+-spec batch_get_item(batch_get_item_request_items()) -> batch_get_item_return().
 batch_get_item(RequestItems) ->
     batch_get_item(RequestItems, [], default_config()).
 
--spec batch_get_item([batch_get_item_request_item()], ddb_opts()) -> batch_get_item_return().
+-spec batch_get_item(batch_get_item_request_items(), ddb_opts()) -> batch_get_item_return().
 batch_get_item(RequestItems, Opts) ->
     batch_get_item(RequestItems, Opts, default_config()).
 
@@ -691,7 +695,7 @@ batch_get_item(RequestItems, Opts) ->
 %% '
 %% @end
 %%------------------------------------------------------------------------------
--spec batch_get_item([batch_get_item_request_item()], ddb_opts(), aws_config()) -> batch_get_item_return().
+-spec batch_get_item(batch_get_item_request_items(), ddb_opts(), aws_config()) -> batch_get_item_return().
 batch_get_item(RequestItems, Opts, Config) ->
     {[], DdbOpts} = opts([], Opts),
     Return = erlcloud_ddb1:batch_get_item(dynamize_batch_get_item_request_items(RequestItems), Config),
@@ -775,11 +779,11 @@ batch_write_item_record() ->
 
 -type batch_write_item_return() :: ddb_return(#ddb_batch_write_item{}, #ddb_batch_write_item{}).
 
--spec batch_write_item([batch_write_item_request_item()]) -> batch_write_item_return().
+-spec batch_write_item(batch_write_item_request_items()) -> batch_write_item_return().
 batch_write_item(RequestItems) ->
     batch_write_item(RequestItems, [], default_config()).
 
--spec batch_write_item([batch_write_item_request_item()], ddb_opts()) -> batch_write_item_return().
+-spec batch_write_item(batch_write_item_request_items(), ddb_opts()) -> batch_write_item_return().
 batch_write_item(RequestItems, Opts) ->
     batch_write_item(RequestItems, Opts, default_config()).
 
@@ -801,7 +805,7 @@ batch_write_item(RequestItems, Opts) ->
 %% '
 %% @end
 %%------------------------------------------------------------------------------
--spec batch_write_item([batch_write_item_request_item()], ddb_opts(), aws_config()) -> batch_write_item_return().
+-spec batch_write_item(batch_write_item_request_items(), ddb_opts(), aws_config()) -> batch_write_item_return().
 batch_write_item(RequestItems, Opts, Config) ->
     {[], DdbOpts} = opts([], Opts),
     Return = erlcloud_ddb1:batch_write_item(dynamize_batch_write_item_request_items(RequestItems), Config),

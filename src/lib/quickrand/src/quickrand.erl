@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2012-2014 Michael Truog
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -145,6 +145,6 @@ strong_uniform(N) when is_integer(N), N > 1 ->
 strong_float() ->
     % 53 bits maximum for double precision floating point representation
     Bytes = 7, % erlang:round(53.0 / 8), % bytes for random number
-    MaxRand = 72057594037927940, % math:pow(2, 7 * 8) - 1, % max random number
+    MaxRand = 72057594037927935, % (2 ** (7 * 8)) - 1 % max random number
     binary:decode_unsigned(crypto:strong_rand_bytes(Bytes)) / MaxRand.
 

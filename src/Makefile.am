@@ -61,6 +61,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_goldrush/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_lager/src \
+     -d $(top_srcdir)/external/cloudi_x_lhttpc/src \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_poolboy/src \
@@ -151,6 +152,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_nodefinder/ebin
 	$(MKDIR_P) external/cloudi_x_erlcloud/ebin
 	$(MKDIR_P) external/cloudi_x_lager/ebin
+	$(MKDIR_P) external/cloudi_x_lhttpc/ebin
 	$(MKDIR_P) external/cloudi_x_jsx/ebin
 	$(MKDIR_P) external/cloudi_x_goldrush/ebin
 	$(MKDIR_P) external/cloudi_x_etokyotyrant/ebin
@@ -407,6 +409,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_lager && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_lager/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_lhttpc && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_lhttpc/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_jsx && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_jsx/ebin || exit 0)
@@ -624,6 +629,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_erlcloud/ebin
 	rmdir $(top_builddir)/external/cloudi_x_lager/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_lager/ebin
+	rmdir $(top_builddir)/external/cloudi_x_lhttpc/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_lhttpc/ebin
 	rmdir $(top_builddir)/external/cloudi_x_jsx/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_jsx/ebin
 	rmdir $(top_builddir)/external/cloudi_x_goldrush/ebin || exit 0

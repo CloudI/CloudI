@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-10-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_api_requests to use new jsx functions
+    * Update quickrand with fix
+    * Update jsx
+    * Update erlcloud
+    * Add lhttpc to external dependencies due to erlcloud
+    * Update version to be 1.4.0-rc.4 so that it is consistent with the
+      http://hex.pm packages
+
 2014-10-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add timeout argument to the poll function in the Java CloudI API

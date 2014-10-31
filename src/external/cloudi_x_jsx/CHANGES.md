@@ -1,3 +1,42 @@
+v2.1.1
+
+* faster generation of json via iolists
+* `repeat_keys` option
+
+v2.1
+
+* force the end of streams with `end_json` in addition to `end_stream`
+* support for encoding erlang datetime tuples to iso8601 format
+* allow a single trailing comma in objects and arrays
+
+v2.0.4
+
+* more typespec adjustments
+
+v2.0.3
+
+* update some typespecs to make them more comprehensive
+
+v2.0.2
+
+* fixes travis-ci spec
+
+v2.0.1
+
+* fix regression in output of empty objects/arrays
+
+v2.0
+
+* jsx is much more pragmatic by default; common json errors are silently
+    ignored (and fixed). stricter parsing must be enabled with options
+* add support for encoding otp 17.0's new maps data type
+* removed `pre_encode` and `post_decode` options in favour of making jsx
+    functions easier to wrap and customize
+* streaming behavior is now disabled by default and must be requested explicitly
+* removed deprecated function names (`to_json`, `to_term`, `term_to_json`, etc) 
+* expanded test coverage
+    
+
 v1.4.5
 
 * various fixes to typespecs uncovered by dialyzer

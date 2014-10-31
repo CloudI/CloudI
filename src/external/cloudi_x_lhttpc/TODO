@@ -1,0 +1,3 @@
+* Add support for HTTP redirects
+* Add proper support for Expect: 100-continue
+* Implement semaphore to enable connection count limits

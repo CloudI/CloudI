@@ -1,0 +1,84 @@
+Version ?:
+* Add support for connect_options
+    * Enables the user to pass socket options, for instance ip and port,
+      that will be used when connecting the socket
+    * Allows the user to specify SSL options during the connect phase
+* Add support for "streaming" of entities
+* Add start/0 and stop/0
+* Fix for unexpected messages after request has been completed
+    * When the client process is trapping exits (which some eunit versions seem
+      to be doing by default) there would be {'EXIT', Pid, normal} messages left
+      after completing requests which came from the lhttpc_client process.
+      These are now avoided.
+* Add rebar support (thanks to Benoit Chesneau)
+* Add support for HTTP basic auth (Filipe Manana)
+* Add support for IPv6 (Filipe Manana)
+* Several URL parsing fixes (Filipe Manana)
+* Add support for proxies via HTTP CONNECT method (Filipe Manana)
+* Add connection limit to the connection pool (Filipe Manana)
+* Add suport for using multiple connection pools - different requests can now
+  use different connection pools (Filipe Manana)
+
+Version 1.2.5:
+* Fix for decoding chunked HTTP responses with extraneous whitespace
+  (thanks to Bob Ippolito)
+    * api.facebook.com includes extra whitespace in its chunked HTTP response
+      length, e.g. "6  \r\n" instead of "6\r\n". 
+
+Version 1.2.4:
+* Fix handling of HTTP response code 304 (patch by Ben Slavin)
+
+Version 1.2.3:
+* Fix handling of unexpected 100 Continue response (patch by Magnus Henoch)
+ 
+Version 1.2.2:
+* Fix Host header, add port number (reported by Benoit Chesneau)
+
+Version 1.2.1:
+* Fix confusion of arguments in request/9 (introduced in 1.2.0)
+
+Version 1.2.0:
+* Add support for options
+    * {connect_timeout, Milliseconds}: Aborts the connect phase after
+      Milliseconds
+    * {send_retry, N}: The client will retry sending the request N times
+      if the connection is closed
+* Add support for downloading chunked transfer encoding
+* More consistent error handling
+    * The client can either return {ok, Result} or {error, Reason}. Reason
+      (which wasn't very well defined before) can now be:
+        * connection_closed: The server closed the connection on us (N times
+          in case it happens just after sending the request) 
+        * connect_timeout: If the TCP stack gives up or we hit the
+          connect_timeout option
+        * timeout: If the overall request timeout value is hit
+    * All other errors (socket, protocol etc. will result in a runtime error)
+* Better connection handling (issues #2 and #3 on bitbucket.org/etc/lhttpc)
+    * Now understands what to do with connections to servers < HTTP/1.1
+    * Now respects "Connection: close" in request headers, which means
+      clients can choose to not use persistent connections
+* RFC Compliance
+    * Fix reading of chunked encoding since section 3.6 claims that "All
+      transfer-coding values are case-insensitive"
+    * Support for responses that doesn't have an entity body (thanks to Steve
+      Ellis)
+        * No body for the HEAD and OPTIONS (unless indicated for the latter)
+          methods
+        * Don't try to read a body when receiving a 204 status
+
+Version 1.1.2:
+* Fix minor error with {active, once} instead of {active, true} in manager
+* Remove socket and try to find another if the manager can't set controlling
+  process due to socket error
+* Improve test suite 
+
+Version 1.1.1:
+* Fix problem with empty lists in dicts when last socket is consumed
+* Improve test suite to include cover report 
+
+Version 1.1.0:
+* Support for configurable connection timeout 
+
+Version 1.0.0:
+* Initial version
+* Persistent connections have hardcoded timeout

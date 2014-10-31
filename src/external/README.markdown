@@ -123,8 +123,8 @@ exceptions due to their C integration).
 `Cloud Service Integration APIs`
 
 - `https://github.com/gleber/erlcloud`
-- `commit 2c47abb3ac8f03d8a3c65778e8957f677da82fd3`
-- `Fri Mar 14 09:50:36 PDT 2014`
+- `commit 858d3bb30fc40a59b302cbe9ae678392aa30caad (master, v0.9.1)`
+- `Fri Oct 31 11:38:46 PDT 2014`
 - `MIT`
 
 `erlcql`
@@ -177,8 +177,8 @@ exceptions due to their C integration).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit d011411c23e9f8c29d98aa1b7a50ddf9709b6a60 (master, v1.4.5)`
-- `Mon Dec 30 13:31:51 PST 2013`
+- `commit 4d549dd8a990e282c3d57c5f73213674c05ebf07 (develop, v2.1.1)`
+- `Fri Oct 31 11:38:46 PDT 2014`
 - `MIT`
 
 `lager`
@@ -189,6 +189,15 @@ exceptions due to their C integration).
 - `commit 169cffd94759e99e2e8870b125861a91e3c1482a (2.0.0)`
 - `Sat May 31 13:14:26 PDT 2014`
 - `Apache License 2.0`
+
+`lhttpc`
+--------
+`A lightweight Erlang HTTP/1.1 client`
+
+- `https://github.com/talko/lhttpc`
+- `commit 2d01a5f9c7543b77bdd57f44c92e72801f46e423 (master)`
+- `Fri Oct 31 11:38:46 PDT 2014`
+- `BSD`
 
 `lz4`
 -----

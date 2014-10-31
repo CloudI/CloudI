@@ -25,6 +25,8 @@
 
 -export([to_json/2, format/2]).
 -export([init/1, handle_event/2]).
+-export([start_json/0, start_json/1]).
+-export([start_object/1, start_array/1, finish/1, insert/2, get_key/1, get_value/1]).
 
 
 -record(config, {
@@ -74,7 +76,6 @@ parse_config([], Config) ->
     Config.
 
 
-
 -define(start_object, <<"{">>).
 -define(start_array, <<"[">>).
 -define(end_object, <<"}">>).
@@ -86,94 +87,49 @@ parse_config([], Config) ->
 -define(newline, <<"\n">>).
 
 
--type state() :: {any(), unicode:charlist(), #config{}}.
+-type state() :: {unicode:charlist(), #config{}}.
 -spec init(Config::proplists:proplist()) -> state().
 
-init(Config) -> {start, [], parse_config(Config)}.
+init(Config) -> {[], parse_config(Config)}.
+
 
 -spec handle_event(Event::any(), State::state()) -> state().
 
-handle_event(Event, {start, Acc, Config}) ->
-    case Event of
-        {Type, Value} -> {[], [Acc, encode(Type, Value, Config)], Config}
-        ; start_object -> {[object_start], [Acc, ?start_object], Config}
-        ; start_array -> {[array_start], [Acc, ?start_array], Config}
-    end;
-handle_event(Event, {[object_start|Stack], Acc, OldConfig = #config{depth = Depth}}) ->
-    Config = OldConfig#config{depth = Depth + 1},
-    case Event of
-        {key, Key} ->
-            {[object_value|Stack], [Acc, indent(Config), encode(string, Key, Config), ?colon, space(Config)], Config}
-        ; end_object ->
-            {Stack, [Acc, ?end_object], OldConfig}
-    end;
-handle_event(Event, {[object_value|Stack], Acc, Config}) ->
-    case Event of
-        {Type, Value} when Type == string; Type == literal;
-                Type == integer; Type == float ->
-            {[key|Stack], [Acc, encode(Type, Value, Config)], Config}
-        ; start_object -> {[object_start, key|Stack], [Acc, ?start_object], Config}
-        ; start_array -> {[array_start, key|Stack], [Acc, ?start_array], Config}
-    end;
-handle_event(Event, {[key|Stack], Acc, Config = #config{depth = Depth}}) ->
-    case Event of
-        {key, Key} ->
-            {[object_value|Stack], [Acc, ?comma, indent_or_space(Config), encode(string, Key, Config), ?colon, space(Config)], Config}
-        ; end_object ->
-            NewConfig = Config#config{depth = Depth - 1},
-            {Stack, [Acc, indent(NewConfig), ?end_object], NewConfig}
-    end;
-handle_event(Event, {[array_start|Stack], Acc, OldConfig = #config{depth = Depth}}) ->
-    Config = OldConfig#config{depth = Depth + 1},
-    case Event of
-        {Type, Value} when Type == string; Type == literal;
-                Type == integer; Type == float ->
-            {[array|Stack], [Acc, indent(Config), encode(Type, Value, Config)], Config}
-        ; start_object -> {[object_start, array|Stack], [Acc, indent(Config), ?start_object], Config}
-        ; start_array -> {[array_start, array|Stack], [Acc, indent(Config), ?start_array], Config}
-        ; end_array -> {Stack, [Acc, ?end_array], OldConfig}
-    end;
-handle_event(Event, {[array|Stack], Acc, Config = #config{depth = Depth}}) ->
-    case Event of
-        {Type, Value} when Type == string; Type == literal;
-                Type == integer; Type == float ->
-            {[array|Stack], [Acc, ?comma, indent_or_space(Config), encode(Type, Value, Config)], Config}
-        ; end_array ->
-            NewConfig = Config#config{depth = Depth - 1},
-            {Stack, [Acc, indent(NewConfig), ?end_array], NewConfig}
-        ; start_object -> {[object_start, array|Stack], [Acc, ?comma, indent_or_space(Config), ?start_object], Config}
-        ; start_array -> {[array_start, array|Stack], [Acc, ?comma, indent_or_space(Config), ?start_array], Config}
-    end;
-handle_event(end_json, {[], Acc, _Config}) -> unicode:characters_to_binary(Acc, utf8).
+handle_event(end_json, State) -> get_value(State);
+
+handle_event(start_object, State) -> start_object(State);
+handle_event(end_object, State) -> finish(State);
+
+handle_event(start_array, State) -> start_array(State);
+handle_event(end_array, State) -> finish(State);
+
+handle_event({Type, Event}, {_, Config} = State) -> insert(encode(Type, Event, Config), State).
 
 
 encode(string, String, _Config) ->
     [?quote, String, ?quote];
+encode(key, Key, _Config) ->
+    [?quote, Key, ?quote];
 encode(literal, Literal, _Config) ->
     erlang:atom_to_list(Literal);
 encode(integer, Integer, _Config) ->
     erlang:integer_to_list(Integer);
 encode(float, Float, _Config) ->
-    [Output] = io_lib:format("~p", [Float]), Output.
+    io_lib:format("~p", [Float]).
 
 
 space(Config) ->
     case Config#config.space of
-        0 -> []
+        0 -> <<>>
         ; X when X > 0 -> binary:copy(?space, X)
     end.
 
 
 indent(Config) ->
     case Config#config.indent of
-        0 -> []
-        ; X when X > 0 ->
-            Indent = binary:copy(?space, X),
-            indent(Indent, Config#config.depth, [?newline])
+        0 -> <<>>
+        ; X when X > 0 -> <<?newline/binary, (binary:copy(?space, X * Config#config.depth))/binary>>
     end.
-
-indent(_Indent, 0, Acc) -> Acc;
-indent(Indent, N, Acc) -> indent(Indent, N - 1, [Acc, Indent]).
 
 
 indent_or_space(Config) ->
@@ -181,6 +137,106 @@ indent_or_space(Config) ->
         true -> indent(Config)
         ; false -> space(Config)
     end.
+
+
+%% internal state is a stack and a config object
+%%  `{Stack, Config}`
+%% the stack is a list of in progress objects/arrays
+%%  `[Current, Parent, Grandparent,...OriginalAncestor]`
+%% an object has the representation on the stack of
+%%  `{object, Object}`
+%% of if there's a key with a yet to be matched value
+%%  `{object, Key, Object}`
+%% an array looks like
+%%  `{array, Array}`
+%% `Object` and `Array` are utf8 encoded binaries
+
+start_json() -> {[], #config{}}.
+
+start_json(Config) when is_list(Config) -> {[], parse_config(Config)}.
+
+%% allocate a new object on top of the stack
+start_object({Stack, Config = #config{depth = Depth}}) ->
+    {[{object, ?start_object}] ++ Stack, Config#config{depth = Depth + 1}}.
+
+%% allocate a new array on top of the stack
+start_array({Stack, Config = #config{depth = Depth}}) ->
+    {[{array, ?start_array}] ++ Stack, Config#config{depth = Depth + 1}}.
+
+%% finish an object or array and insert it into the parent object if it exists
+finish({Stack, Config = #config{depth = Depth}}) ->
+    NewConfig = Config#config{depth = Depth - 1},
+    finish_({Stack, NewConfig}).
+
+finish_({[{object, <<"{">>}], Config}) -> {<<"{}">>, Config};
+finish_({[{array, <<"[">>}], Config}) -> {<<"[]">>, Config};
+finish_({[{object, <<"{">>}|Rest], Config}) -> insert(<<"{}">>, {Rest, Config});
+finish_({[{array, <<"[">>}|Rest], Config}) -> insert(<<"[]">>, {Rest, Config});
+finish_({[{object, Object}], Config}) ->
+    {[Object, indent(Config), ?end_object], Config};
+finish_({[{object, Object}|Rest], Config}) ->
+    insert([Object, indent(Config), ?end_object], {Rest, Config});
+finish_({[{array, Array}], Config}) ->
+    {[Array, indent(Config), ?end_array], Config};
+finish_({[{array, Array}|Rest], Config}) ->
+    insert([Array, indent(Config), ?end_array], {Rest, Config});
+finish_(_) -> erlang:error(badarg).
+
+%% insert a value when there's no parent object or array
+insert(Value, {[], Config}) ->
+    {Value, Config};
+%% insert a key or value into an object or array, autodetects the 'right' thing
+insert(Key, {[{object, Object}|Rest], Config}) ->
+    {[{object, Key, Object}] ++ Rest, Config};
+insert(Value, {[{object, Key, ?start_object}|Rest], Config}) ->
+    {
+        [{object, [
+            ?start_object,
+            indent(Config),
+            Key,
+            ?colon,
+            space(Config),
+            Value
+        ]}] ++ Rest,
+        Config
+    };
+insert(Value, {[{object, Key, Object}|Rest], Config}) ->
+    {
+        [{object, [
+            Object,
+            ?comma,
+            indent_or_space(Config),
+            Key,
+            ?colon,
+            space(Config),
+            Value
+        ]}] ++ Rest,
+        Config
+    };
+insert(Value, {[{array, ?start_array}|Rest], Config}) ->
+    {[{array, [?start_array, indent(Config), Value]}] ++ Rest, Config};
+insert(Value, {[{array, Array}|Rest], Config}) ->
+    {
+        [{array, [Array,
+            ?comma,
+            indent_or_space(Config),
+            Value
+        ]}] ++ Rest,
+        Config
+    };
+insert(_, _) -> erlang:error(badarg).
+
+
+get_key({[{object, Key, _}|_], _}) -> Key;
+get_key(_) -> erlang:error(badarg).
+
+
+get_value({Value, _Config}) ->
+    try unicode:characters_to_binary(Value)
+    catch error:_ -> erlang:error(badarg)
+    end;
+get_value(_) -> erlang:error(badarg).
+
 
 
 %% eunit tests
@@ -215,7 +271,7 @@ config_test_() ->
 
 space_test_() ->
     [
-        {"no space", ?_assertEqual([], space(#config{space=0}))},
+        {"no space", ?_assertEqual(<<>>, space(#config{space=0}))},
         {"one space", ?_assertEqual(<<" ">>, space(#config{space=1}))},
         {"four spaces", ?_assertEqual(<<"    ">>, space(#config{space=4}))}
     ].
@@ -223,21 +279,21 @@ space_test_() ->
 
 indent_test_() ->
     [
-        {"no indent", ?_assertEqual([], indent(#config{indent=0, depth=1}))},
+        {"no indent", ?_assertEqual(<<>>, indent(#config{indent=0, depth=1}))},
         {"indent 1 depth 1", ?_assertEqual(
-            [[?newline], ?space],
+            <<?newline/binary, <<" ">>/binary>>,
             indent(#config{indent=1, depth=1})
         )},
         {"indent 1 depth 2", ?_assertEqual(
-            [[[?newline], ?space], ?space],
+            <<?newline/binary, <<"  ">>/binary>>,
             indent(#config{indent=1, depth=2})
         )},
         {"indent 4 depth 1", ?_assertEqual(
-            [[?newline], <<"    ">>],
+            <<?newline/binary, <<"    ">>/binary>>,
             indent(#config{indent=4, depth=1})
         )},
         {"indent 4 depth 2", ?_assertEqual(
-            [[[?newline], <<"    ">>], <<"    ">>],
+            <<?newline/binary, <<"    ">>/binary, <<"    ">>/binary>>,
             indent(#config{indent=4, depth=2})
         )}
     ].
@@ -250,58 +306,91 @@ indent_or_space_test_() ->
             indent_or_space(#config{space=1, indent=0, depth=1})
         )},
         {"indent so no space", ?_assertEqual(
-            [[?newline], ?space],
+            <<?newline/binary, <<" ">>/binary>>,
             indent_or_space(#config{space=1, indent=1, depth=1})
         )}
     ].
 
 
-format_test_() ->
+encode_test_() ->
     [
-        {"0.0", ?_assert(encode(float, 0.0, #config{}) =:= "0.0")},
-        {"1.0", ?_assert(encode(float, 1.0, #config{}) =:= "1.0")},
-        {"-1.0", ?_assert(encode(float, -1.0, #config{}) =:= "-1.0")},
+        {"0.0", ?_assert(encode(float, 0.0, #config{}) =:= ["0.0"])},
+        {"1.0", ?_assert(encode(float, 1.0, #config{}) =:= ["1.0"])},
+        {"-1.0", ?_assert(encode(float, -1.0, #config{}) =:= ["-1.0"])},
         {"3.1234567890987654321", 
             ?_assert(
-                encode(float, 3.1234567890987654321, #config{}) =:= "3.1234567890987655")
+                encode(float, 3.1234567890987654321, #config{}) =:= ["3.1234567890987655"])
         },
-        {"1.0e23", ?_assert(encode(float, 1.0e23, #config{}) =:= "1.0e23")},
-        {"0.3", ?_assert(encode(float, 3.0/10.0, #config{}) =:= "0.3")},
-        {"0.0001", ?_assert(encode(float, 0.0001, #config{}) =:= "0.0001")},
-        {"0.00001", ?_assert(encode(float, 0.00001, #config{}) =:= "1.0e-5")},
-        {"0.00000001", ?_assert(encode(float, 0.00000001, #config{}) =:= "1.0e-8")},
-        {"1.0e-323", ?_assert(encode(float, 1.0e-323, #config{}) =:= "1.0e-323")},
-        {"1.0e308", ?_assert(encode(float, 1.0e308, #config{}) =:= "1.0e308")},
+        {"1.0e23", ?_assert(encode(float, 1.0e23, #config{}) =:= ["1.0e23"])},
+        {"0.3", ?_assert(encode(float, 3.0/10.0, #config{}) =:= ["0.3"])},
+        {"0.0001", ?_assert(encode(float, 0.0001, #config{}) =:= ["0.0001"])},
+        {"0.00001", ?_assert(encode(float, 0.00001, #config{}) =:= ["1.0e-5"])},
+        {"0.00000001", ?_assert(encode(float, 0.00000001, #config{}) =:= ["1.0e-8"])},
+        {"1.0e-323", ?_assert(encode(float, 1.0e-323, #config{}) =:= ["1.0e-323"])},
+        {"1.0e308", ?_assert(encode(float, 1.0e308, #config{}) =:= ["1.0e308"])},
         {"min normalized float", 
             ?_assert(
-                encode(float, math:pow(2, -1022), #config{}) =:= "2.2250738585072014e-308"
+                encode(float, math:pow(2, -1022), #config{}) =:= ["2.2250738585072014e-308"]
             )
         },
         {"max normalized float", 
             ?_assert(
                 encode(float, (2 - math:pow(2, -52)) * math:pow(2, 1023), #config{}) 
-                    =:= "1.7976931348623157e308"
+                    =:= ["1.7976931348623157e308"]
             )
         },
         {"min denormalized float", 
-            ?_assert(encode(float, math:pow(2, -1074), #config{}) =:= "5.0e-324")
+            ?_assert(encode(float, math:pow(2, -1074), #config{}) =:= ["5.0e-324"])
         },
         {"max denormalized float", 
             ?_assert(
                 encode(float, (1 - math:pow(2, -52)) * math:pow(2, -1022), #config{}) 
-                    =:= "2.225073858507201e-308"
+                    =:= ["2.225073858507201e-308"]
             )
-        }
+        },
+        {"hello world", ?_assert(encode(string, <<"hello world">>, #config{})
+            =:= [<<"\"">>, <<"hello world">>, <<"\"">>]
+        )},
+        {"key", ?_assert(encode(key, <<"key">>, #config{}) =:= [<<"\"">>, <<"key">>, <<"\"">>])},
+        {"1", ?_assert(encode(integer, 1, #config{}) =:= "1")},
+        {"-1", ?_assert(encode(integer, -1, #config{}) =:= "-1")},
+        {"true", ?_assert(encode(literal, true, #config{}) =:= "true")},
+        {"false", ?_assert(encode(literal, false, #config{}) =:= "false")},
+        {"null", ?_assert(encode(literal, null, #config{}) =:= "null")}
     ].
 
 
+format_test_() ->
+    % {minified version, pretty version}
+    Cases = [
+        {"empty object", <<"{}">>, <<"{}">>},
+        {"empty array", <<"[]">>, <<"[]">>},
+        {"single key object", <<"{\"k\":\"v\"}">>, <<"{\n  \"k\": \"v\"\n}">>},
+        {"single member array", <<"[true]">>, <<"[\n  true\n]">>},
+        {"multiple key object",
+            <<"{\"k\":\"v\",\"x\":\"y\"}">>,
+            <<"{\n  \"k\": \"v\",\n  \"x\": \"y\"\n}">>
+        },
+        {"multiple member array",
+            <<"[1.0,2.0,3.0]">>,
+            <<"[\n  1.0,\n  2.0,\n  3.0\n]">>
+        },
+        {"nested structure",
+            <<"[[{},[],true],{\"k\":\"v\",\"x\":\"y\"}]">>,
+            <<"[\n  [\n    {},\n    [],\n    true\n  ],\n  {\n    \"k\": \"v\",\n    \"x\": \"y\"\n  }\n]">>
+        }
+    ],
+    [{Title, ?_assertEqual(Min, jsx:minify(Pretty))} || {Title, Min, Pretty} <- Cases] ++
+        [{Title, ?_assertEqual(Pretty, jsx:prettify(Min))} || {Title, Min, Pretty} <- Cases].
+
+
 handle_event_test_() ->
-    Data = jsx:test_cases(),
+    Data = jsx:test_cases() ++ jsx:special_test_cases(),
     [
         {
             Title, ?_assertEqual(
                 JSON,
-                lists:foldl(fun handle_event/2, {start, [], #config{}}, Events ++ [end_json])
+                lists:foldl(fun handle_event/2, init([]), Events ++ [end_json])
             )
         } || {Title, JSON, _, Events} <- Data
     ].

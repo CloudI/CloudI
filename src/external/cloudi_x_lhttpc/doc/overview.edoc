@@ -1,0 +1,11 @@
+@author Oscar Hellström <oscar@hellstrom.st>
+@doc A lightweight HTTP client.
+The only functions of much interest right now are {@link
+lhttpc:request/4}, {@link lhttpc:request/5}, {@link lhttpc:request/6} and
+{@link lhttpc:request/9}.
+
+<h1>Configuration</h1>
+<h2>`connection_timeout'</h2>
+The maximum time (in milliseconds) the client will keep a TCP connection
+open to a server.
+@end
