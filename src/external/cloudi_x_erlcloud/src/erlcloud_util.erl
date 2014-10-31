@@ -2,7 +2,9 @@
 -export([sha_mac/2, sha256_mac/2,
          md5/1, sha256/1]).
 
--compile(nowarn_deprecated_function).
+-compile({nowarn_deprecated_function,
+          [{crypto, md5, 1}]}).
+-compile(nowarn_deprecated_function). % does not work in R16B03-1
 
 sha_mac(K, S) ->
     try
