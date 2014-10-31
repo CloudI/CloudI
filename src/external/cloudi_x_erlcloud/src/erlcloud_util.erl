@@ -2,6 +2,8 @@
 -export([sha_mac/2, sha256_mac/2,
          md5/1, sha256/1]).
 
+-compile(nowarn_deprecated_function).
+
 sha_mac(K, S) ->
     try
         crypto:hmac(sha, K, S)
