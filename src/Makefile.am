@@ -31,7 +31,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
      -d $(top_srcdir)/lib/cloudi_service_timers/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
-     -d $(top_srcdir)/lib/cloudi_service_work_manager/src \
      -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
@@ -136,7 +135,6 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_tcp/ebin
 	$(MKDIR_P) lib/cloudi_service_timers/ebin
 	$(MKDIR_P) lib/cloudi_service_udp/ebin
-	$(MKDIR_P) lib/cloudi_service_work_manager/ebin
 	$(MKDIR_P) lib/cloudi_service_zeromq/ebin
 	$(MKDIR_P) lib/pqueue/ebin
 	$(MKDIR_P) lib/quickrand/ebin
@@ -250,9 +248,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_udp/src && \
         test ! -e cloudi_service_udp.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_udp/src/cloudi_service_udp.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_service_work_manager/src && \
-        test ! -e cloudi_service_work_manager.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_zeromq/src && \
         test ! -e cloudi_service_zeromq.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src || exit 0)
@@ -358,9 +353,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_udp && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_udp/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_service_work_manager && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_work_manager/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_zeromq && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_zeromq/ebin || exit 0)
@@ -597,8 +589,6 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_timers/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_udp/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_udp/ebin
-	rmdir $(top_builddir)/lib/cloudi_service_work_manager/ebin || exit 0
-	rm -f $(top_srcdir)/lib/cloudi_service_work_manager/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_zeromq/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_zeromq/ebin
 	rmdir $(top_builddir)/lib/pqueue/ebin || exit 0
@@ -799,7 +789,6 @@ dialyze: all \
               lib/cloudi_service_tcp/ebin/ \
               lib/cloudi_service_timers/ebin/ \
               lib/cloudi_service_udp/ebin/ \
-              lib/cloudi_service_work_manager/ebin/ \
               lib/cloudi_service_zeromq/ebin/ \
               lib/pqueue/ebin/ \
               lib/quickrand/ebin/ \

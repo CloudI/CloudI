@@ -445,7 +445,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_timers/src/cloudi_service_timers.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
-    lib/cloudi_service_work_manager/src/cloudi_service_work_manager.app.src
     lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
     lib/service/src/service.app.src
     Makefile

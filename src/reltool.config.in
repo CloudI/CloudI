@@ -72,8 +72,6 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_udp,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_work_manager,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_zeromq,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
