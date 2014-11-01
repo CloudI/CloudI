@@ -233,6 +233,13 @@ exceptions due to their C integration).
 - `Fri Mar  4 00:01:29 PST 2011`
 - `GPL` (build-time dependency only)
 
+`m4/ax_lib_socket_nsl.m4`
+-------------------------
+
+- `http://www.gnu.org/software/autoconf-archive/ax_lib_socket_nsl.html`
+- `Fri Oct 31 20:36:10 PDT 2014`
+- `MIT-like`
+
 `m4/ax_prog_python_version.m4`
 ------------------------------
 `autoconf m4 macros for python detection`

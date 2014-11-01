@@ -11,6 +11,7 @@
     * Update version to be 1.4.0-rc.4 so that it is consistent with the
       http://hex.pm packages
     * Remove cloudi_service_work_manager since it is no longer needed
+    * Add support for Solaris/Illumos
 
 2014-10-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 

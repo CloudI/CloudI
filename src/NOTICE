@@ -97,6 +97,18 @@ external/m4/ax_prog_java_works.m4
   exception to the GPL to apply to your modified version as well.
 
 ----------------------------------------------------------------------- MIT-like
+external/m4/ax_lib_socket_nsl.m4
+
+  Copyright (c) 2008 Russ Allbery <rra@stanford.edu>
+  Copyright (c) 2008 Stepan Kasal <kasal@ucw.cz>
+  Copyright (c) 2008 Warren Young <warren@etr-usa.com>
+
+  Copying and distribution of this file, with or without modification, are
+  permitted in any medium without royalty provided the copyright notice
+  and this notice are preserved. This file is offered as-is, without any
+  warranty.
+
+----------------------------------------------------------------------- MIT-like
 external/m4/ax_prog_jar.m4
 
   Copyright (c) 2008 Egon Willighagen <e.willighagen@science.ru.nl>

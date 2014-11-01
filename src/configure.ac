@@ -207,6 +207,7 @@ fi
 AC_MSG_RESULT([$integration_tests_included])
 
 # C++ requirements
+AX_LIB_SOCKET_NSL
 AX_BOOST_BASE([1.40], ,
     [AC_MSG_ERROR([Boost >= 1.40 not found, see http://boost.org/])])
 AX_BOOST_SYSTEM
