@@ -408,12 +408,11 @@ function _binary_to_term($i, $data)
         case TAG_BIT_BINARY_EXT:
             list(, $j) = unpack('N', substr($data, $i, 4));
             $i += 4;
-            $bits = ord($data[i]);
+            $bits = ord($data[$i]);
             $i += 1;
             return array($i + $j,
                          new OtpErlangBinary(substr($data, $i, $j), $bits));
         case TAG_ATOM_CACHE_REF:
-            
             return array($i + 1, new OtpErlangAtom(ord($data[$i])));
         case TAG_SMALL_INTEGER_EXT:
             return array($i + 1, ord($data[$i]));
