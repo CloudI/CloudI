@@ -388,7 +388,7 @@ function term_to_binary($term, $compressed = false)
             throw new InputException('compressed in [0..9]');
         $data_compressed = gzcompress($data_uncompressed, $compressed);
         $size_uncompressed = strlen($data_uncompressed);
-        return pack("CCN", TAG_VERSION, TAG_COMPRESSED_ZLIB,
+        return pack('CCN', TAG_VERSION, TAG_COMPRESSED_ZLIB,
                     $size_uncompressed) . $data_compressed;
     }
 }

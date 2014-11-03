@@ -265,8 +265,6 @@ class OtpErlangPid(object):
     def __eq__(self, other):
         return self.binary() == other.binary()
 
-# binary_to_term
-
 def binary_to_term(data):
     if type(data) != bytes:
         raise ParseException('not bytes input')
@@ -284,6 +282,22 @@ def binary_to_term(data):
         raise ParseException('missing data')
     except IndexError:
         raise ParseException('missing data')
+
+def term_to_binary(term, compressed=False):
+    data_uncompressed = _term_to_binary(term)
+    if compressed is False:
+        return b_chr(_TAG_VERSION) + data_uncompressed
+    else:
+        if compressed is True:
+            compressed = 6
+        if compressed < 0 or compressed > 9:
+            raise InputException('compressed in [0..9]')
+        data_compressed = zlib.compress(data_uncompressed, compressed)
+        size_uncompressed = len(data_uncompressed)
+        return (
+            b_chr(_TAG_VERSION) + b_chr(_TAG_COMPRESSED_ZLIB) +
+            struct.pack(b'>I', size_uncompressed) + data_compressed
+        )
 
 def _binary_to_term(i, data):
     tag = b_ord(data[i])
@@ -506,24 +520,6 @@ def _binary_to_atom(i, data):
         return (i + j, OtpErlangAtom(atom_name))
     else:
         raise ParseException('invalid atom tag')
-
-# term_to_binary
-
-def term_to_binary(term, compressed=False):
-    data_uncompressed = _term_to_binary(term)
-    if compressed is False:
-        return b_chr(_TAG_VERSION) + data_uncompressed
-    else:
-        if compressed is True:
-            compressed = 6
-        if compressed < 0 or compressed > 9:
-            raise InputException('compressed in [0..9]')
-        data_compressed = zlib.compress(data_uncompressed, compressed)
-        size_uncompressed = len(data_uncompressed)
-        return (
-            b_chr(_TAG_VERSION) + b_chr(_TAG_COMPRESSED_ZLIB) +
-            struct.pack(b'>I', size_uncompressed) + data_compressed
-        )
 
 def _term_to_binary(term):
     if type(term) == bytes:
