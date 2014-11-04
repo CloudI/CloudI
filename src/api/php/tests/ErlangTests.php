@@ -102,7 +102,8 @@ class ListTestCase extends PHPUnit_Framework_TestCase
         $this->assertEquals(new \Erlang\OtpErlangList(array(116, 101,
                                                             115, 116)), $lst);
         $this->assertEquals(array(116, 101, 115, 116), $lst->value);
-        $this->assertEquals('Erlang\OtpErlangList(4,improper=false)',
+        $this->assertEquals('Erlang\OtpErlangList(array(116,101,115,116),' .
+                                                 'improper=false)',
                             (string) $lst);
     }
 }
@@ -115,7 +116,8 @@ class ImproperListTestCase extends PHPUnit_Framework_TestCase
         $this->assertEquals(get_class($lst), 'Erlang\OtpErlangList');
         $this->assertEquals(array(1, 2, 3, 4), $lst->value);
         $this->assertEquals(4, end($lst->value)); reset($lst->value);
-        $this->assertEquals('Erlang\OtpErlangList(4,improper=true)',
+        $this->assertEquals('Erlang\OtpErlangList(array(1,2,3,4),' .
+                                                 'improper=true)',
                             (string) $lst);
     }
     public function test_comparison()

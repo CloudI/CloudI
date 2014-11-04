@@ -170,8 +170,8 @@ class OtpErlangList
     }
     public function __toString()
     {
-        return sprintf('%s(%d,improper=%s)', get_class(),
-                       count($this->value),
+        return sprintf('%s(array(%s),improper=%s)', get_class(),
+                       implode(',', $this->value),
                        $this->improper ? 'true' : 'false');
     }
 }
@@ -303,7 +303,7 @@ class OtpErlangPid
     public function binary()
     {
         return chr(TAG_PID_EXT) . $this->node->binary() .
-               $this->id . $this->serial .$this->creation;
+               $this->id . $this->serial . $this->creation;
     }
     public function __toString()
     {
