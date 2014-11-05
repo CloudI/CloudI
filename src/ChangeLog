@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-11-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix bug with websocket_protocol usage of cloudi_service_http_cowboy
+      to make sure a response arriving from the websocket after a timeout
+      has occurred is ignored
+
 2014-10-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_api_requests to use new jsx functions

@@ -546,7 +546,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                 {ok, ResponseData} ->
                     {ID, ResponseData, Response};
                 error ->
-                    {undefined, undefined, Response} % actually a request
+                    {undefined, timeout, undefined}
             end
     end,
     case LookupData of
@@ -560,6 +560,9 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                                               Info, Value, ResponseF,
                                               WebSocketRequestType, Req,
                                               NameIncoming, State);
+        timeout ->
+            % a response arrived but has already timed-out
+            {ok, Req, State};
         {T, ResponseTimer} ->
             % a response to an outgoing service request that has finished
             websocket_handle_outgoing_response(T, ResponseTimer,
