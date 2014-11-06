@@ -51,7 +51,7 @@ sub task
     my ($api) = @_;
     eval
     {
-        sub task_request
+        my $task_request = sub
         {
             my ($command, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
@@ -77,7 +77,7 @@ sub task
         };
 
         # run
-        $api->subscribe('perl.xml/get', \&task_request);
+        $api->subscribe('perl.xml/get', $task_request);
         my $result = $api->poll();
         CloudI::API->assert($result == 0);
     };

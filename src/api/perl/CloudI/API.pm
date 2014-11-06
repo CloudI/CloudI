@@ -554,7 +554,6 @@ sub _callback
         $self->{_request_timer} = _milliseconds();
         $self->{_request_timeout} = $timeout;
     }
-print "pattern='$pattern'\n";
     my @function_queue = $self->{_callbacks}{$pattern};
     assert(@function_queue);
     my $function = shift(@function_queue);
