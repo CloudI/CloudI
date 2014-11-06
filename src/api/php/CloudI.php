@@ -71,7 +71,6 @@ class API
     private $terminate;
     private $size;
     private $callbacks;
-    private $timeout;
     private $process_index;
     private $process_count;
     private $process_count_max;
@@ -187,7 +186,7 @@ class API
                               $priority = null)
     {
         if (is_null($timeout))
-            $timeout = $this->timeout_async;
+            $timeout = $this->timeout_sync;
         if (is_null($request_info))
             $request_info = '';
         if (is_null($priority))
@@ -417,7 +416,6 @@ class API
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
-        $request_time_start = null;
         if ($this->request_timeout_adjustment)
         {
             $this->request_timer = microtime(true);
@@ -792,8 +790,7 @@ class API
                     $trans_ids = array();
                     for ($k = 0; $k < $trans_id_count; $k++)
                     {
-                        $trans_id = substr($data, $i, $j);
-                        $trans_ids[] = $trans_id;
+                        $trans_ids[] = substr($data, $i, $j);
                         $i += $j;
                     }
                     if ($i != $data_size)

@@ -76,8 +76,8 @@ class Task //extends \Thread
         $http_qs = $this->api->request_http_qs_parse($request);
         if (! isset($http_qs['value']))
         {
-            $response = "\
-<http_test><error>no value specified</error></http_test>";
+            $response =
+"<http_test><error>no value specified</error></http_test>";
         }
         else
         {
@@ -85,8 +85,8 @@ class Task //extends \Thread
             if (is_array($value))
                 $value = $value[0];
             $value = intval($value);
-            $response = "\
-<http_test><value>{$value}</value></http_test>";
+            $response =
+"<http_test><value>{$value}</value></http_test>";
         }
         $this->api->return_($command, $name, $pattern,
                             '', $response,

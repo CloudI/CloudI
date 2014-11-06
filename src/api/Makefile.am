@@ -7,6 +7,9 @@ endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = java
 endif
+if PERL_SUPPORT
+    PERL_SUBDIR = perl
+endif
 if PHP_SUPPORT
     PHP_SUBDIR = php
 endif
@@ -16,7 +19,7 @@ endif
 if RUBY_SUPPORT
     RUBY_SUBDIR = ruby
 endif
-SUBDIRS = $(C_SUBDIR) erlang $(JAVA_SUBDIR) $(PHP_SUBDIR) \
+SUBDIRS = $(C_SUBDIR) erlang $(JAVA_SUBDIR) $(PERL_SUBDIR) $(PHP_SUBDIR) \
           $(PYTHON_SUBDIR) $(RUBY_SUBDIR)
 
 install-exec-hook:

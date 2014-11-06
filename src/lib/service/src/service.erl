@@ -256,14 +256,14 @@
     cloudi_service_api:service_internal() |
     cloudi_service_api:service_proplist().
 
--ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI =< 1.3.3
 -callback service_init(Args :: list(),
                        Prefix :: cloudi_service:service_name_pattern(),
                        Dispatcher :: cloudi_service:dispatcher()) ->
     {'ok', State :: any()} |
     {'stop', Reason :: any()} |
     {'stop', Reason :: any(), State :: any()}.
--else.                      % CloudI =< 1.4.0
+-else.                      % CloudI >= 1.4.0
 -callback service_init(Args :: list(),
                        Prefix :: cloudi_service:service_name_pattern(),
                        Timeout :: cloudi_service_api:
@@ -291,11 +291,11 @@
     {'noreply', NewState :: any()} |
     {'stop', Reason :: any(), NewState :: any()}.
 
--ifdef(CLOUDI_SERVICE_OLD). % CloudI >= 1.3.3
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI =< 1.3.3
 -callback service_terminate(Reason :: any(),
                             State :: any()) ->
     'ok'.
--else.                      % CloudI =< 1.4.0
+-else.                      % CloudI >= 1.4.0
 -callback service_terminate(Reason :: any(),
                             Timeout :: cloudi_service_api:
                                        timeout_milliseconds(),

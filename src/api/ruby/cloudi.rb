@@ -536,7 +536,7 @@ module CloudI
                     trans_id = tmp[3]
                     pid_size = tmp[4]
                     i += j; j = pid_size
-                    pid = data[i, j].unpack("a#{pid_size}")[0]
+                    pid = data[i, j]
                     i += j
                     if i != data_size
                         API.assert{external == true}
@@ -567,7 +567,7 @@ module CloudI
                     return [response_info, response, trans_id]
                 when MESSAGE_RETURN_ASYNC
                     i += j; j = 16
-                    trans_id = data[i, j].unpack('a16')[0]
+                    trans_id = data[i, j]
                     i += j
                     if i != data_size
                         API.assert{external == false}

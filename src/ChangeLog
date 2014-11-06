@@ -6,6 +6,9 @@
     * Fix bug with websocket_protocol usage of cloudi_service_http_cowboy
       to make sure a response arriving from the websocket after a timeout
       has occurred is ignored
+    * Add the source code for the Perl CloudI API
+    * Fix the default send_sync timeout value for both
+      the PHP CloudI API and the Python CloudI API
 
 2014-10-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 

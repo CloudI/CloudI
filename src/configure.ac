@@ -105,6 +105,20 @@ AC_ARG_ENABLE([java-support],
     fi
     ], [java_support="true"])
 AC_MSG_RESULT([$java_support])
+AC_MSG_CHECKING([if the Perl       CloudI API is enabled])
+AC_ARG_ENABLE([perl-support],
+    [AS_HELP_STRING([--enable-perl-support],
+                    [Enable the Perl CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        perl_support="true"
+    elif test "x$enableval" = "xno"; then
+        perl_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-perl-support])
+    fi
+    ], [perl_support="true"])
+AC_MSG_RESULT([$perl_support])
 AC_MSG_CHECKING([if the PHP        CloudI API is enabled])
 AC_ARG_ENABLE([php-support],
     [AS_HELP_STRING([--enable-php-support],
@@ -191,7 +205,8 @@ AC_ARG_WITH([integration-tests],
     [want_integration_tests="maybe"])
 if test "x$want_integration_tests" != "xno" -a \
         "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
-        "x$java_support" = "xtrue" -a "x$php_support" = "xtrue" -a \
+        "x$java_support" = "xtrue" -a "x$perl_support" = "xtrue" -a \
+        "x$php_support" = "xtrue" -a \
         "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
         "x$ruby_support" = "xtrue" ; then
     AM_CONDITIONAL([INTEGRATION_TESTS], [true])
@@ -266,6 +281,13 @@ AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
     [AC_MSG_ERROR([java concurrent not found])])
 fi
 AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
+
+# Perl CloudI API support
+if test "x$perl_support" = "xtrue" ; then
+AC_ARG_VAR([PERL],[perl executable])
+AC_PATH_PROGS([PERL],[perl])
+fi
+AM_CONDITIONAL([PERL_SUPPORT], [test "x$perl_support" = "xtrue"])
 
 # PHP CloudI API support
 if test "x$php_support" = "xtrue" ; then
@@ -460,6 +482,7 @@ AC_CONFIG_FILES([
     api/java/com/ericsson/otp/Makefile
     api/java/com/ericsson/otp/erlang/Makefile
     api/java/jar/Makefile
+    api/perl/Makefile
     api/php/Makefile
     api/python/Makefile
     api/ruby/Makefile

@@ -46,8 +46,7 @@ __all__ = [
     'terminate_exception',
 ]
 
-import sys, os, types, struct, socket, select, threading, inspect, \
-       collections, traceback
+import sys, os, types, struct, socket, select, inspect, collections, traceback
 from timeit import default_timer
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
@@ -161,7 +160,7 @@ class API(object):
     def send_sync(self, name, request,
                   timeout=None, request_info=None, priority=None):
         if timeout is None:
-            timeout = self.__timeout_async
+            timeout = self.__timeout_sync
         if request_info is None:
             request_info = b''
         if priority is None:
@@ -526,7 +525,7 @@ class API(object):
                     '=%dscIb16sI' % request_size, data[i:j]
                 )
                 i, j = j, j + pid_size
-                pid = struct.unpack('=%ds' % pid_size, data[i:j])[0]
+                pid = data[i:j]
                 if j != data_size:
                     assert external == True
                     if not self.__handle_events(external, data, data_size, j):
@@ -558,7 +557,7 @@ class API(object):
                 return (response_info, response, trans_id)
             elif command == _MESSAGE_RETURN_ASYNC:
                 i, j = j, j + 16
-                trans_id = struct.unpack(b'=16s', data[i:j])[0]
+                trans_id = data[i:j]
                 if j != data_size:
                     assert external == False
                     self.__handle_events(external, data, data_size, j)
