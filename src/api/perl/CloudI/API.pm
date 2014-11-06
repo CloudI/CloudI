@@ -48,6 +48,7 @@ $CloudI::API::VERSION = '1.40';
 use POSIX qw(getenv);
 use IO::Handle;
 use Time::HiRes qw(gettimeofday);
+use Scalar::Util qw(blessed);
 
 use constant MESSAGE_INIT              =>  1;
 use constant MESSAGE_SEND_ASYNC        =>  2;
@@ -194,17 +195,15 @@ sub subscribe
         die CloudI::InvalidInputException->new();
     }
     my $key = $self->{_prefix} . $pattern;
-    my @value;
     if (! defined($self->{_callbacks}{$key}))
     {
-        @value = ();
-        $self->{_callbacks}{$key} = @value;
+        $self->{_callbacks}{$key} = ($function);
     }
     else
     {
-        @value = $self->{_callbacks}{$key};
+        my @value = $self->{_callbacks}{$key};
+        push(@value, $function);
     }
-    push(@value, $function);
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('subscribe'), $pattern]));
 }
@@ -224,7 +223,7 @@ sub unsubscribe
     my ($pattern) = @_;
     my $key = $self->{_prefix} . $pattern;
     my @value = $self->{_callbacks}{$key};
-    assert(@value);
+    assert(scalar(@value) > 0);
     shift(@value);
     if (scalar(@value) == 0)
     {
@@ -548,14 +547,13 @@ sub _callback
     my $self = shift;
     my ($command, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    my $request_time_start;
     if ($self->{_request_timeout_adjustment})
     {
         $self->{_request_timer} = _milliseconds();
         $self->{_request_timeout} = $timeout;
     }
     my @function_queue = $self->{_callbacks}{$pattern};
-    assert(@function_queue);
+    assert(scalar(@function_queue) > 0);
     my $function = shift(@function_queue);
     push(@function_queue, $function);
     if ($command == MESSAGE_SEND_ASYNC)
@@ -564,7 +562,6 @@ sub _callback
         my $response;
         eval
         {
-            no strict 'refs';
             ($response_info,
              $response) = &$function(ASYNC, $name, $pattern,
                                      $request_info, $request,
@@ -632,7 +629,6 @@ sub _callback
         my $response;
         eval
         {
-            no strict 'refs';
             ($response_info,
              $response) = &$function(SYNC, $name, $pattern,
                                      $request_info, $request,
@@ -1069,7 +1065,7 @@ sub _text_key_value_parse
     if ($size >= 2)
     {
         use integer;
-        for my $i_step (0 .. ($size / 2))
+        for my $i_step (0 .. (($size / 2) - 1))
         {
             my $i = $i_step * 2;
             my $key = $data[$i];
@@ -1091,7 +1087,7 @@ sub _text_key_value_parse
             }
         }
     }
-    return \%result;
+    return %result;
 }
 
 sub request_http_qs_parse
@@ -1179,7 +1175,7 @@ sub _recv
 sub assert
 {
     my ($test) = @_;
-    $test && die Erlang::Exception->new('Assertion failed !');
+    $test or die Erlang::Exception->new('Assertion failed !');
     return $test;
 }
 

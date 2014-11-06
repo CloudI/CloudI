@@ -56,15 +56,15 @@ sub task
             my ($command, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
             my %http_qs = $api->request_http_qs_parse($request);
-            my $value = $http_qs{'value'};
             my $response;
-            if (! defined($value))
+            if (! defined($http_qs{'value'}))
             {
                 $response =
 "<http_test><error>no value specified</error></http_test>";
             }
             else
             {
+                my $value = $http_qs{'value'};
                 if (ref($value) eq 'ARRAY')
                 {
                     $value = shift(@$value);

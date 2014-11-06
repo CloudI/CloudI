@@ -388,7 +388,7 @@ sub _binary_to_term
                 $pairs{$key} = $value;
             }
         }
-        return ($i, \%pairs);
+        return ($i, %pairs);
     }
     elsif ($tag == TAG_FUN_EXT)
     {
