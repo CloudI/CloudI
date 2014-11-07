@@ -77,7 +77,7 @@ sub task
         # run
         $api->subscribe('perl', $task_request);
         my $result = $api->poll();
-        CloudI::API->assert($result == 0);
+        assert($result == 0);
     };
     my $e = $@;
     if ($e)
@@ -94,14 +94,20 @@ sub task
     print "terminate msg_size perl\n";
 }
 
+sub assert
 {
-    CloudI::API->assert($use_threads);
+    my ($test) = @_;
+    CloudI::API->assert($test);
+}
+
+{
+    assert($use_threads);
     my $thread_count = CloudI::API->thread_count();
     my @threads = ();
     for my $i (0 .. ($thread_count - 1))
     {
         my $t = threads->create(\&task, (CloudI::API->new($i)));
-        CloudI::API->assert(defined($t));
+        assert(defined($t));
         push(@threads, $t);
     }
     for my $t (@threads)

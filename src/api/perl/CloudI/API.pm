@@ -929,7 +929,7 @@ sub _poll_request
                 assert($external == 0);
                 $self->_handle_events($external, $data, $data_size, $i);
             }
-            return \@trans_ids;
+            return @trans_ids;
         }
         elsif ($command == MESSAGE_SUBSCRIBE_COUNT)
         {

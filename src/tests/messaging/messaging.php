@@ -412,12 +412,8 @@ class Task //extends \Thread
                 }
                 sort($e_check_list);
                 $e_check = implode($e_check_list);
-                if ($e_check == '111222333444555666777888')
-                    break;
-                else
-                    echo "invalid! '{$e_check}'!\n";
-                //assert($e_check == '111222333444555666777888');
-                //break;
+                assert($e_check == '111222333444555666777888');
+                break;
             }
             else
             {

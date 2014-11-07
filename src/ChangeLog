@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-11-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Perl CloudI API mcast_async return value
+    * Add Perl messaging integration test
+
 2014-11-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes for the Perl CloudI API and the Perl http_req integration test
