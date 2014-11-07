@@ -1129,7 +1129,7 @@ sub _recv
             $read = read($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
-                die Cloud::MessageDecodingException->new();
+                die CloudI::MessageDecodingException->new();
             }
             $i += $read;
             $data .= $fragment;
@@ -1142,7 +1142,7 @@ sub _recv
             $read = read($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
-                die Cloud::MessageDecodingException->new();
+                die CloudI::MessageDecodingException->new();
             }
             $i += $read;
             $data .= $fragment;
@@ -1156,7 +1156,7 @@ sub _recv
             $read = read($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
-                die Cloud::MessageDecodingException->new();
+                die CloudI::MessageDecodingException->new();
             }
             $data .= $fragment;
             $ready = ($read == $self->{_size});
