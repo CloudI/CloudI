@@ -48,7 +48,7 @@ $Erlang::VERSION = '1.40';
 
 require Compress::Zlib;
 # bigint/bignum caused slowness without enough features to be useful
-use POSIX;
+use POSIX qw(ceil);
 
 # tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 use constant TAG_VERSION => 131;

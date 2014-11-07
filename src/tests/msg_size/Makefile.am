@@ -7,6 +7,9 @@ endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = org jar
 endif
+if PERL_SUPPORT
+    PERL_INSTALL_HOOK = perl-install
+endif
 if PHP_SUPPORT
     PHP_INSTALL_HOOK = php-install
 endif
@@ -20,6 +23,7 @@ if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
 .PHONY: \
+    perl-install \
     php-install \
     python-install \
     python-c-install \
@@ -27,6 +31,10 @@ endif
 
 SUBDIRS = $(CXX_SUBDIR) $(JAVA_SUBDIR) src
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
+
+perl-install:
+	$(MKDIR_P) $(instdir)
+	$(INSTALL_SCRIPT) $(srcdir)/msg_size.pl $(instdir)
 
 php-install:
 	$(MKDIR_P) $(instdir)
@@ -44,7 +52,8 @@ ruby-install:
 	$(MKDIR_P) $(instdir)
 	$(INSTALL_SCRIPT) $(srcdir)/msg_size.rb $(instdir)
 
-install-exec-hook: $(PHP_INSTALL_HOOK) \
+install-exec-hook: $(PERL_INSTALL_HOOK) \
+                   $(PHP_INSTALL_HOOK) \
                    $(PYTHON_INSTALL_HOOK) \
                    $(PYTHON_C_INSTALL_HOOK) \
                    $(RUBY_INSTALL_HOOK)

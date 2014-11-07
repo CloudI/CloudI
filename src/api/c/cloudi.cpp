@@ -1763,12 +1763,15 @@ static char const ** text_key_value_parse(void const * const text,
     realloc_ptr<char const *> result(16, 8192);
     result[0] = p;
     size_t i = 1;
-    for (size_t text_i = 1; text_i < text_size - 1; ++text_i)
+    if (text_size > 1)
     {
-        if (p[text_i] == '\0')
+        for (size_t text_i = 1; text_i < text_size - 1; ++text_i)
         {
-            result[i] = &p[++text_i];
-            result.reserve(++i + 1);
+            if (p[text_i] == '\0')
+            {
+                result[i] = &p[++text_i];
+                result.reserve(++i + 1);
+            }
         }
     }
     result[i] = 0;

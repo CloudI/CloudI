@@ -4,6 +4,10 @@
 2014-11-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes for the Perl CloudI API and the Perl http_req integration test
+    * Fix CloudI C/C++ API functions cloudi_info_key_value_parse,
+      cloudi_request_http_qs_parse, CloudI::API::request_http_qs_parse,
+      and CloudI::API::info_key_value_parse
+    * Add Perl msg_size integration test
 
 2014-11-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 

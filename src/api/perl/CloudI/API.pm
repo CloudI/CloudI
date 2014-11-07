@@ -101,7 +101,6 @@ sub new
     }
     my $s = IO::Handle->new_from_fd($thread_index + 3, 'r+');
     $s->autoflush(1);
-    $s->blocking(0);
     my $use_header;
     if ($protocol eq 'tcp')
     {
@@ -1112,7 +1111,7 @@ sub _send
     {
         $data = pack('N', length($data)) . $data;
     }
-    print { $self->{_s} } $data;
+    syswrite($self->{_s}, $data);
 }
 
 sub _recv
@@ -1126,7 +1125,7 @@ sub _recv
     {
         while ($i < 4)
         {
-            $read = read($self->{_s}, $fragment, $self->{_size});
+            $read = sysread($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
@@ -1139,7 +1138,7 @@ sub _recv
         $data = substr($data, 4);
         while ($i < $total)
         {
-            $read = read($self->{_s}, $fragment, $self->{_size});
+            $read = sysread($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
@@ -1153,7 +1152,7 @@ sub _recv
         my $ready = 1;
         while ($ready)
         {
-            $read = read($self->{_s}, $fragment, $self->{_size});
+            $read = sysread($self->{_s}, $fragment, $self->{_size});
             if (! defined($read) || $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
