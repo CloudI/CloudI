@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -202,12 +202,12 @@ header_content_type(Headers) ->
 
 % format for external services, http headers passed as key-value pairs
 headers_external_incoming(L) ->
-    erlang:iolist_to_binary(lists:reverse(headers_external_incoming([], L))).
+    erlang:iolist_to_binary(headers_external_incoming_text(L)).
 
-headers_external_incoming(Result, []) ->
-    Result;
-headers_external_incoming(Result, [{K, V} | L]) when is_binary(K) ->
-    headers_external_incoming([[K, 0, V, 0] | Result], L).
+headers_external_incoming_text([]) ->
+    [];
+headers_external_incoming_text([{K, V} | L]) when is_binary(K) ->
+    [[K, 0, V, 0] | headers_external_incoming_text(L)].
 
 headers_external_outgoing(<<>>) ->
     [];
@@ -217,26 +217,27 @@ headers_external_outgoing([{_, _} | _] = ResponseInfo) ->
     ResponseInfo;
 headers_external_outgoing(ResponseInfo)
     when is_binary(ResponseInfo) ->
-    headers_external_outgoing(binary:split(ResponseInfo, <<0>>, [global]), []).
+    headers_external_outgoing_text(binary:split(ResponseInfo, <<0>>, [global])).
 
-headers_external_outgoing([<<>>], Result) ->
-    lists:reverse(Result);
-headers_external_outgoing([K, V | L], Result) ->
-    headers_external_outgoing(L, [{K, V} | Result]).
+headers_external_outgoing_text([<<>>]) ->
+    [];
+headers_external_outgoing_text([K, V | L]) ->
+    [{K, V} | headers_external_outgoing_text(L)].
 
 get_query_string_external([]) ->
     <<>>;
 get_query_string_external(QsVals) ->
-    erlang:iolist_to_binary(lists:reverse(lists:foldr(fun({K, V}, L) ->
-        if
-            V =:= true ->
-                [[K, 0, <<"true">>, 0] | L];
-            V =:= false ->
-                [[K, 0, <<"false">>, 0] | L];
-            true ->
-                [[K, 0, V, 0] | L]
-        end
-    end, [], QsVals))).
+    erlang:iolist_to_binary(get_query_string_external_text(QsVals)).
+
+get_query_string_external_text([]) ->
+    [];
+get_query_string_external_text([{K, V} | L]) ->
+    if
+        V =:= true ->
+            [[K, 0, <<"true">>, 0] | get_query_string_external_text(L)];
+        is_binary(V) ->
+            [[K, 0, V, 0] | get_query_string_external_text(L)]
+    end.
 
 request_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
