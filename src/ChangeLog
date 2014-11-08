@@ -5,6 +5,9 @@
 
     * Improve the efficiency of header and query string encoding in
       cloudi_service_http_cowboy and cloudi_service_http_elli
+        * Previously, the query string values that were lists were in the
+          reverse order when using the external format, but now the
+          value order is the same as the query string order
 
 2014-11-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
