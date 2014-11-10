@@ -46,6 +46,11 @@ handle('GET', [<<"hello">>, <<"iolist">>], Req) ->
     Name = elli_request:get_arg(<<"name">>, Req),
     {ok, [], [<<"Hello ">>, Name]};
 
+handle('GET', [<<"decoded-hello">>], Req) ->
+    %% Fetch a URI decoded GET argument from the URL.
+    Name = elli_request:get_arg_decoded(<<"name">>, Req, <<"undefined">>),
+    {ok, [], <<"Hello ", Name/binary>>};
+
 handle('GET', [<<"type">>], Req) ->
     Name = elli_request:get_arg(<<"name">>, Req),
     %% Fetch a header.
@@ -163,6 +168,9 @@ handle('GET', [<<"403">>], _Req) ->
     %% authentication/authorization
     throw({403, [], <<"Forbidden">>});
 
+handle('GET', [<<"invalid_return">>], _Req) ->
+    {invalid_return};
+
 handle(_, _, _Req) ->
     {404, [], <<"Not Found">>}.
 
@@ -216,6 +224,11 @@ handle_event(request_throw, [_Request, _Exception, _Stacktrace], _) -> ok;
 handle_event(request_error, [_Request, _Exception, _Stacktrace], _) -> ok;
 handle_event(request_exit, [_Request, _Exception, _Stacktrace], _) -> ok;
 
+%% invalid_return is sent if the user callback code returns a term not
+%% understood by elli, see elli_http:execute_callback/1.
+%% After triggering this event, a generated response is sent to the user.
+handle_event(invalid_return, [_Request, _ReturnValue], _) -> ok;
+
 
 %% chunk_complete fires when a chunked response is completely
 %% sent. It's identical to the request_complete event, except instead
@@ -228,6 +241,10 @@ handle_event(chunk_complete, [_Request,
 %% request_closed is sent if the client closes the connection when
 %% Elli is waiting for the next request on a keep alive connection.
 handle_event(request_closed, [], _) -> ok;
+
+%% request_timeout is sent if the client times out when
+%% Elli is waiting for the request.
+handle_event(request_timeout, [], _) -> ok;
 
 %% request_parse_error fires if the request is invalid and cannot be
 %% parsed by erlang:decode_packet/3 or it contains a path Elli cannot

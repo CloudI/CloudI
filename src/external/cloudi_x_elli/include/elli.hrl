@@ -29,7 +29,8 @@
                       chunk_complete | request_complete |
                       request_throw | request_error | request_exit |
                       request_closed | request_parse_error |
-                      client_closed | client_timeout.
+                      client_closed | client_timeout |
+                      invalid_return.
 
 -record(req, {
           method :: http_method(),
@@ -40,7 +41,8 @@
           headers :: headers(),
           body :: body(),
           pid :: pid(),
-          socket :: inet:socket()
+          socket :: undefined | elli_tcp:socket(),
+          callback :: callback()
 }).
 
 -define(EXAMPLE_CONF, [{callback, elli_example_callback},

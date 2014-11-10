@@ -1,0 +1,11 @@
+{application, elli_websocket,
+ [
+  {description, "Elli WebSocket Handler."},
+  {vsn, "1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.

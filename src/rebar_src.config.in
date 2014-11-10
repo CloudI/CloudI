@@ -36,6 +36,7 @@
   "external/cloudi_x_dynamic_compile",
   "external/cloudi_x_ecouchdb",
   "external/cloudi_x_elli",
+  "external/cloudi_x_elli_websocket",
   "external/cloudi_x_ememcached",
   "external/cloudi_x_emysql",
   "external/cloudi_x_epgsql",

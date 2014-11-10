@@ -27,8 +27,8 @@ exceptions due to their C integration).
 --------
 `Erlang HTTP Server`
 - `https://github.com/ninenines/cowboy`
-- `commit 021f4f6069e5fae326bdfb0acb12c6500082fa44 (1.0.0)`
-- `Mon Aug 11 10:57:20 PDT 2014`
+- `commit 3d9078018d7f0a83a359b70c698d35e35fbb94f9 (1.0.1)`
+- `Mon Nov 10 09:11:52 PST 2014`
 - `MIT`
 
 `cowlib`
@@ -59,10 +59,18 @@ exceptions due to their C integration).
 `elli`
 ------
 `Erlang HTTP Server`
-- `https://github.com/knutin/elli/`
-- `commit e95fa69d9ad3819b59c707a2d44cee81fed26893 (0.4.1)`
-- `Thu Jun 27 09:13:14 PDT 2013`
+- `https://github.com/knutin/elli`
+- `commit 8c700e734654285885987b164f32e94a39770fac (v1.0.1)`
+- `Mon Nov 10 09:11:52 PST 2014`
 - `MIT`
+
+`elli_websocket`
+----------------
+`Erlang HTTP Server WebSocket support`
+- `https://github.com/mmzeeman/elli_websocket`
+- `commit 2b32995635a12daf0e8d78cbad3248089b7ac14d`
+- `Mon Nov 10 09:11:52 PST 2014`
+- `Apache License 2.0`
 
 `ememcached (previously mcerlang)`
 ----------------------------------

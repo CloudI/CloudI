@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update elli
+    * Add elli_websocket as a dependency for cloudi_service_http_elli
+    * Update cowboy
+
 2014-11-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve the efficiency of header and query string encoding in

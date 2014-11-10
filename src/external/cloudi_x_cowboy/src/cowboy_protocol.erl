@@ -180,6 +180,10 @@ parse_uri(<< "http://", Rest/bits >>, State, Method) ->
 	parse_uri_skip_host(Rest, State, Method);
 parse_uri(<< "https://", Rest/bits >>, State, Method) ->
 	parse_uri_skip_host(Rest, State, Method);
+parse_uri(<< "HTTP://", Rest/bits >>, State, Method) ->
+	parse_uri_skip_host(Rest, State, Method);
+parse_uri(<< "HTTPS://", Rest/bits >>, State, Method) ->
+	parse_uri_skip_host(Rest, State, Method);
 parse_uri(Buffer, State, Method) ->
 	parse_uri_path(Buffer, State, Method, <<>>).
 
@@ -187,6 +191,9 @@ parse_uri_skip_host(<< C, Rest/bits >>, State, Method) ->
 	case C of
 		$\r -> error_terminate(400, State);
 		$/ -> parse_uri_path(Rest, State, Method, <<"/">>);
+		$\s -> parse_version(Rest, State, Method, <<"/">>, <<>>);
+		$? -> parse_uri_query(Rest, State, Method, <<"/">>, <<>>);
+		$# -> skip_uri_fragment(Rest, State, Method, <<"/">>, <<>>);
 		_ -> parse_uri_skip_host(Rest, State, Method)
 	end.
 
