@@ -44,11 +44,16 @@
 %% elli handler state
 -record(elli_state,
     {
-        dispatcher,
-        context,
-        output_type,
-        default_content_type,
-        use_host_prefix,
-        use_method_suffix
+        dispatcher                :: cloudi_service:dispatcher(),
+        context                   :: cloudi:context(),
+        prefix                    :: string(),
+        output_type               :: external | internal | list | binary,
+        content_type_forced       :: undefined | binary(),
+        content_types_accepted    :: undefined | binary:cp(),
+        set_x_forwarded_for       :: boolean(),
+        status_code_timeout       :: 100..599,
+        use_host_prefix           :: boolean(),
+        use_client_ip_prefix      :: boolean(),
+        use_method_suffix         :: boolean()
     }).
 

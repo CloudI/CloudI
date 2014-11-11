@@ -169,7 +169,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Close a cowboy handler socket pid which represents a live connection.===
+%% ===Close a cowboy websocket connection.===
 %% Use the Pid from cloudi_service_handle_request/11.  Otherwise, you can
 %% use either the get_pid function or get_pids function in the cloudi module
 %% (or the cloudi_service module) to find a match for the connection URL.

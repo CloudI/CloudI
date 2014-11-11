@@ -50,11 +50,11 @@
 -module(cloudi_http_elli_handler).
 -author('mjtruog [at] gmail (dot) com').
 
-%-behaviour(elli_handler).
+%-behaviour(cloudi_x_elli_handler).
 
 %% external interface
 
-%% elli_http_handler callbacks
+%% cloudi_x_elli_handler callbacks
 -export([handle/2,
          handle_event/3]).
 
@@ -71,108 +71,144 @@
 %%% Callback functions from elli_handler
 %%%------------------------------------------------------------------------
 
-%% Reply with a normal response. 'ok' can be used instead of '200'
-%%     to signal success.
-handle(Req, #elli_state{dispatcher = Dispatcher,
-                        context = Context,
-                        output_type = OutputType,
-                        default_content_type = DefaultContentType,
-                        use_host_prefix = UseHostPrefix,
-                        use_method_suffix = UseMethodSuffix}) ->
+handle(Req,
+       #elli_state{output_type = OutputType,
+                   content_type_forced = ContentTypeForced,
+                   content_types_accepted = ContentTypesAccepted,
+                   set_x_forwarded_for = SetXForwardedFor,
+                   status_code_timeout = StatusCodeTimeout,
+                   use_host_prefix = UseHostPrefix,
+                   use_client_ip_prefix = UseClientIpPrefix,
+                   use_method_suffix = UseMethodSuffix} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
+    HeadersIncoming0 = headers_to_lower(cloudi_x_elli_request:headers(Req)),
     Method = cloudi_x_elli_request:method(Req),
-    HeadersIncoming0 = cloudi_x_elli_request:headers(Req),
+    QsVals = cloudi_x_elli_request:query_str(Req),
     [PathRaw | _] = binary:split(cloudi_x_elli_request:raw_path(Req),
                                  [<<"?">>]),
-    HostRaw = case lists:keyfind(<<"Host">>, 1, HeadersIncoming0) of
-        {<<"Host">>, H} ->
-            H;
-        false ->
-            undefined
-    end,
-    QsVals = cloudi_x_elli_request:query_str(Req),
-    Body = cloudi_x_elli_request:body(Req),
-    NameIncoming = if
-        UseHostPrefix =:= false; HostRaw =:= undefined ->
-            erlang:binary_to_list(PathRaw);
+    {ClientIpAddr, ClientPort} = Client = peer(Req),
+    NameIncoming = service_name_incoming(UseClientIpPrefix,
+                                         UseHostPrefix,
+                                         PathRaw,
+                                         Client,
+                                         HeadersIncoming0),
+    RequestAccepted = if
+        ContentTypesAccepted =:= undefined ->
+            true;
         true ->
-            erlang:binary_to_list(<<HostRaw/binary, PathRaw/binary>>)
+            header_accept_check(HeadersIncoming0, ContentTypesAccepted)
     end,
-    HeadersIncomingN = [{<<"url-path">>, PathRaw} |
-                        HeadersIncoming0],
-    NameOutgoing = if
-        UseMethodSuffix =:= false ->
-            NameIncoming;
-        Method =:= 'GET' ->
-            NameIncoming ++ "/get";
-        Method =:= 'POST' ->
-            NameIncoming ++ "/post";
-        Method =:= 'PUT' ->
-            NameIncoming ++ "/put";
-        Method =:= 'DELETE' ->
-            NameIncoming ++ "/delete";
-        Method =:= 'HEAD' ->
-            NameIncoming ++ "/head";
-        Method =:= 'TRACE' ->
-            NameIncoming ++ "/trace";
-        Method =:= 'OPTIONS' ->
-            NameIncoming ++ "/options";
-        is_binary(Method) ->
-            NameIncoming ++
-            [$/ | string:to_lower(erlang:binary_to_list(Method))]
-    end,
-    RequestBinary = if
-        Method =:= 'GET' ->
-            if
-                (OutputType =:= external) orelse
-                (OutputType =:= binary) orelse (OutputType =:= list) ->
-                    get_query_string_external(cloudi_x_cow_qs:parse_qs(QsVals));
-                OutputType =:= internal ->
-                    cloudi_x_cow_qs:parse_qs(QsVals)
-            end;
-        Method =:= 'POST'; Method =:= 'PUT' ->
-            % do not pass type information along with the request!
-            % make sure to encourage good design that provides
-            % one type per name (path)
-            case header_content_type(HeadersIncomingN) of
-                <<"application/zip">> ->
-                    zlib:unzip(Body);
-                _ ->
-                    Body
-            end;
-        true ->
-            <<>>
-    end,
-    RequestInfo = if
-        (OutputType =:= external) orelse (OutputType =:= binary) ->
-            headers_external_incoming(HeadersIncomingN);
-        (OutputType =:= internal) orelse (OutputType =:= list) ->
-            HeadersIncomingN
-    end,
-    Request = if
-        (OutputType =:= external) orelse (OutputType =:= internal) orelse
-        (OutputType =:= binary) ->
-            RequestBinary;
-        OutputType =:= list ->
-            erlang:binary_to_list(RequestBinary)
-    end,
-    case send_sync_minimal(Dispatcher, Context,
-                           NameOutgoing, RequestInfo, Request, self()) of
-        {ok, ResponseInfo, Response} ->
-            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-            {HttpCode, _, _} = Result =
-                return_response(NameIncoming, HeadersOutgoing, Response,
-                                OutputType, DefaultContentType),
-            ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                             [HttpCode, Method, NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
-            Result;
-        {error, timeout} ->
-            HttpCode = 504,
+    if
+        RequestAccepted =:= false ->
+            HttpCode = 406,
             ?LOG_WARN_APPLY(fun request_time_end_error/5,
                             [HttpCode, Method, NameIncoming,
-                             RequestStartMicroSec, timeout]),
-            {HttpCode, [], <<>>}
+                             RequestStartMicroSec, not_acceptable]),
+            {HttpCode, [], <<>>};
+        RequestAccepted =:= true ->
+            NameOutgoing = if
+                UseMethodSuffix =:= false ->
+                    NameIncoming;
+                Method =:= 'GET' ->
+                    NameIncoming ++ "/get";
+                Method =:= 'POST' ->
+                    NameIncoming ++ "/post";
+                Method =:= 'PUT' ->
+                    NameIncoming ++ "/put";
+                Method =:= 'DELETE' ->
+                    NameIncoming ++ "/delete";
+                Method =:= 'HEAD' ->
+                    NameIncoming ++ "/head";
+                Method =:= 'TRACE' ->
+                    NameIncoming ++ "/trace";
+                Method =:= 'OPTIONS' ->
+                    NameIncoming ++ "/options";
+                is_binary(Method) ->
+                    NameIncoming ++
+                    [$/ | string:to_lower(erlang:binary_to_list(Method))]
+            end,
+            PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
+            PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),
+            PeerPort = erlang:integer_to_binary(ClientPort),
+            HeadersIncoming1 = [{<<"peer">>, PeerShort},
+                                {<<"peer-port">>, PeerPort},
+                                {<<"source-address">>, PeerLong},
+                                {<<"source-port">>, PeerPort},
+                                {<<"url-path">>, PathRaw} |
+                                HeadersIncoming0],
+            HeadersIncomingN = if
+                SetXForwardedFor =:= true ->
+                    case lists:keyfind(<<"x-forwarded-for">>, 1,
+                                       HeadersIncoming0) of
+                        false ->
+                            [{<<"x-forwarded-for">>, PeerShort} |
+                             HeadersIncoming1];
+                        _ ->
+                            HeadersIncoming1
+
+                    end;
+                SetXForwardedFor =:= false ->
+                    HeadersIncoming1
+            end,
+            Body = if
+                Method =:= 'GET' ->
+                    ParsedQsVals = cloudi_x_cow_qs:parse_qs(QsVals),
+                    if
+                        (OutputType =:= external) orelse
+                        (OutputType =:= binary) orelse (OutputType =:= list) ->
+                            get_query_string_external(ParsedQsVals);
+                        OutputType =:= internal ->
+                            ParsedQsVals
+                    end;
+                Method =:= 'POST'; Method =:= 'PUT' ->
+                    % do not pass type information along with the request!
+                    % make sure to encourage good design that provides
+                    % one type per name (path)
+                    case header_content_type(HeadersIncomingN) of
+                        <<"application/zip">> ->
+                            'application_zip';
+                        _ ->
+                            'normal'
+                    end;
+                (Method =:= 'DELETE') orelse
+                (Method =:= 'HEAD') orelse
+                (Method =:= 'OPTIONS') orelse
+                (Method =:= 'TRACE') orelse
+                (Method == <<"CONNECT">>) ->
+                    <<>>;
+                true ->
+                    'normal'
+            end,
+            case handle_request(NameOutgoing, HeadersIncomingN,
+                                Body, Req, State) of
+                {elli_response, HeadersOutgoing, Response} ->
+                    {HttpCode, _,
+                     _} = Result = handle_response(NameIncoming,
+                                                   HeadersOutgoing,
+                                                   Response, Req, OutputType,
+                                                   ContentTypeForced),
+                    ?LOG_TRACE_APPLY(fun request_time_end_success/5,
+                                     [HttpCode, Method,
+                                      NameIncoming, NameOutgoing,
+                                      RequestStartMicroSec]),
+                    Result;
+                {elli_error, timeout} ->
+                    HttpCode = StatusCodeTimeout,
+                    Result = if
+                        HttpCode =:= 405 ->
+                            % currently not providing a list of valid methods
+                            % (a different HTTP status code is a better
+                            %  choice, since this service name may not exist)
+                            HeadersOutgoing = [{<<"allow">>, <<"">>}],
+                            {HttpCode, HeadersOutgoing, <<>>};
+                        true ->
+                            {HttpCode, [], <<>>}
+                    end,
+                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
+                                    [HttpCode, Method, NameIncoming,
+                                     RequestStartMicroSec, timeout]),
+                    Result
+            end
     end.
 
 %% elli_startup is sent when Elli is starting up. If you are
@@ -246,11 +282,44 @@ handle_event(file_error, [_ErrorReason], _) -> ok.
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+headers_to_lower([] = L) ->
+    L;
+headers_to_lower([{K, V} | Headers]) ->
+    [{to_lower(K), V} | headers_to_lower(Headers)].
+
+peer(#req{socket = {ssl, Socket}}) ->
+    case ssl:peername(Socket) of
+        {ok, Client} ->
+            Client;
+        {error, _} ->
+            erlang:exit(closed)
+    end;
+peer(#req{socket = {plain, Socket}}) ->
+    case inet:peername(Socket) of
+        {ok, Client} ->
+            Client;
+        {error, _} ->
+            erlang:exit(closed)
+    end.
+
+header_accept_check(Headers, ContentTypesAccepted) ->
+    case lists:keyfind(<<"accept">>, 1, Headers) of
+        false ->
+            true;
+        {<<"accept">>, Value} ->
+            case binary:match(Value, ContentTypesAccepted) of
+                nomatch ->
+                    false;
+                _ ->
+                    true
+            end
+    end.
+
 header_content_type(Headers) ->
-    case lists:keyfind(<<"Content-Type">>, 1, Headers) of
+    case lists:keyfind(<<"content-type">>, 1, Headers) of
         false ->
             <<>>;
-        {<<"Content-Type">>, Value} ->
+        {<<"content-type">>, Value} ->
             hd(binary:split(Value, <<",">>))
     end.
 
@@ -258,8 +327,8 @@ header_content_type(Headers) ->
 headers_external_incoming(L) ->
     erlang:iolist_to_binary(headers_external_incoming_text(L)).
 
-headers_external_incoming_text([]) ->
-    [];
+headers_external_incoming_text([] = L) ->
+    L;
 headers_external_incoming_text([{K, V} | L]) when is_binary(K) ->
     [[K, 0, V, 0] | headers_external_incoming_text(L)].
 
@@ -283,8 +352,8 @@ get_query_string_external([]) ->
 get_query_string_external(QsVals) ->
     erlang:iolist_to_binary(get_query_string_external_text(QsVals)).
 
-get_query_string_external_text([]) ->
-    [];
+get_query_string_external_text([] = L) ->
+    L;
 get_query_string_external_text([{K, V} | L]) ->
     if
         V =:= true ->
@@ -310,8 +379,41 @@ request_time_end_error(HttpCode, Method, NameIncoming,
                (cloudi_x_uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
 
-return_response(NameIncoming, HeadersOutgoing, Response,
-                OutputType, DefaultContentType) ->
+handle_request(Name, Headers, 'normal', Req, State) ->
+    Body = cloudi_x_elli_request:body(Req),
+    handle_request(Name, Headers, Body, Req, State);
+handle_request(Name, Headers, 'application_zip', Req, State) ->
+    Body = cloudi_x_elli_request:body(Req),
+    handle_request(Name, Headers, zlib:unzip(Body), Req, State);
+handle_request(Name, Headers, Body, _Req,
+               #elli_state{
+                   dispatcher = Dispatcher,
+                   context = Context,
+                   output_type = OutputType}) ->
+    RequestInfo = if
+        (OutputType =:= external) orelse (OutputType =:= binary) ->
+            headers_external_incoming(Headers);
+        (OutputType =:= internal) orelse (OutputType =:= list) ->
+            Headers
+    end,
+    Request = if
+        (OutputType =:= external) orelse (OutputType =:= internal) orelse
+        (OutputType =:= binary) ->
+            Body;
+        (OutputType =:= list) ->
+            erlang:binary_to_list(Body)
+    end,
+    case send_sync_minimal(Dispatcher, Context,
+                           Name, RequestInfo, Request, self()) of
+        {ok, ResponseInfo, Response} ->
+            HeadersOutgoing = headers_external_outgoing(ResponseInfo),
+            {elli_response, HeadersOutgoing, Response};
+        {error, timeout} ->
+            {elli_error, timeout}
+    end.
+
+handle_response(NameIncoming, HeadersOutgoing0, Response,
+                _Req, OutputType, ContentTypeForced) ->
     ResponseBinary = if
         (((OutputType =:= external) orelse
           (OutputType =:= internal)) andalso
@@ -319,17 +421,26 @@ return_response(NameIncoming, HeadersOutgoing, Response,
         ((OutputType =:= binary) andalso
          is_binary(Response)) ->
             Response;
-        (OutputType =:= list) andalso is_list(Response) ->
+        ((OutputType =:= list) andalso
+         is_list(Response)) ->
             erlang:list_to_binary(Response)
     end,
-    FileName = cloudi_string:afterr($/, NameIncoming, input),
+    {HttpCode, HeadersOutgoingN} = case lists:keytake(<<"status">>, 1,
+                                                      HeadersOutgoing0) of
+        false ->
+            {200, HeadersOutgoing0};
+        {value, {_, Status}, HeadersOutgoing1}
+            when is_binary(Status) ->
+            {erlang:binary_to_integer(hd(binary:split(Status, <<" ">>))),
+             HeadersOutgoing1}
+    end,
     ResponseHeadersOutgoing = if
-        HeadersOutgoing =/= [] ->
-            HeadersOutgoing;
-        DefaultContentType =/= undefined ->
-            [{<<"content-type">>, DefaultContentType}];
+        HeadersOutgoingN =/= [] ->
+            HeadersOutgoingN;
+        ContentTypeForced =/= undefined ->
+            [{<<"content-type">>, ContentTypeForced}];
         true ->
-            Extension = filename:extension(FileName),
+            Extension = filename:extension(NameIncoming),
             if
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
@@ -358,4 +469,81 @@ return_response(NameIncoming, HeadersOutgoing, Response,
     {HttpCode,
      ResponseHeadersOutgoing,
      ResponseBinary}.
+
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Client,
+                      HeadersIncoming)
+    when UseClientIpPrefix =:= true, UseHostPrefix =:= true ->
+    HostRaw = case lists:keyfind(<<"host">>, 1, HeadersIncoming) of
+        {<<"host">>, H} ->
+            H;
+        false ->
+            undefined
+    end,
+    service_name_incoming_merge(Client, HostRaw, PathRaw);
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, Client,
+                      _HeadersIncoming)
+    when UseClientIpPrefix =:= true, UseHostPrefix =:= false ->
+    service_name_incoming_merge(Client, undefined, PathRaw);
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, _Client,
+                      HeadersIncoming)
+    when UseClientIpPrefix =:= false, UseHostPrefix =:= true ->
+    HostRaw = case lists:keyfind(<<"host">>, 1, HeadersIncoming) of
+        {<<"host">>, H} ->
+            H;
+        false ->
+            undefined
+    end,
+    service_name_incoming_merge(undefined, HostRaw, PathRaw);
+service_name_incoming(UseClientIpPrefix, UseHostPrefix, PathRaw, _Client,
+                      _HeadersIncoming)
+    when UseClientIpPrefix =:= false, UseHostPrefix =:= false ->
+    service_name_incoming_merge(undefined, undefined, PathRaw).
+
+service_name_incoming_merge(undefined, undefined, PathRaw) ->
+    erlang:binary_to_list(PathRaw);
+service_name_incoming_merge(undefined, HostRaw, PathRaw) ->
+    erlang:binary_to_list(<<HostRaw/binary, PathRaw/binary>>);
+service_name_incoming_merge({ClientIpAddr, _ClientPort}, undefined, PathRaw) ->
+    cloudi_ip_address:to_string(ClientIpAddr) ++
+    erlang:binary_to_list(PathRaw);
+service_name_incoming_merge({ClientIpAddr, _ClientPort}, HostRaw, PathRaw) ->
+    cloudi_ip_address:to_string(ClientIpAddr) ++
+    erlang:binary_to_list(<<$/, HostRaw/binary, PathRaw/binary>>).
+
+to_lower(Input) when is_binary(Input) ->
+    to_lower(Input, <<>>).
+
+to_lower(<<>>, Output) ->
+    Output;
+to_lower(<<C, Rest/binary>>, Output) ->
+    NewC = if
+        C == $A -> $a;
+        C == $B -> $b;
+        C == $C -> $c;
+        C == $D -> $d;
+        C == $E -> $e;
+        C == $F -> $f;
+        C == $G -> $g;
+        C == $H -> $h;
+        C == $I -> $i;
+        C == $J -> $j;
+        C == $K -> $k;
+        C == $L -> $l;
+        C == $M -> $m;
+        C == $N -> $n;
+        C == $O -> $o;
+        C == $P -> $p;
+        C == $Q -> $q;
+        C == $R -> $r;
+        C == $S -> $s;
+        C == $T -> $t;
+        C == $U -> $u;
+        C == $V -> $v;
+        C == $W -> $w;
+        C == $X -> $x;
+        C == $Y -> $y;
+        C == $Z -> $z;
+        true -> C
+    end,
+    to_lower(Rest, <<Output/binary, NewC>>).
 

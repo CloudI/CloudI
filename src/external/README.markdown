@@ -64,14 +64,6 @@ exceptions due to their C integration).
 - `Mon Nov 10 09:11:52 PST 2014`
 - `MIT`
 
-`elli_websocket`
-----------------
-`Erlang HTTP Server WebSocket support`
-- `https://github.com/mmzeeman/elli_websocket`
-- `commit 2b32995635a12daf0e8d78cbad3248089b7ac14d`
-- `Mon Nov 10 09:11:52 PST 2014`
-- `Apache License 2.0`
-
 `ememcached (previously mcerlang)`
 ----------------------------------
 `Erlang memcached Driver`

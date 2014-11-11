@@ -48,7 +48,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
      -d $(top_srcdir)/external/cloudi_x_ecouchdb/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
-     -d $(top_srcdir)/external/cloudi_x_elli_websocket/src \
      -d $(top_srcdir)/external/cloudi_x_ememcached/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql/src \
@@ -169,7 +168,6 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_cowlib/ebin
 	$(MKDIR_P) external/cloudi_x_ranch/ebin
 	$(MKDIR_P) external/cloudi_x_elli/ebin
-	$(MKDIR_P) external/cloudi_x_elli_websocket/ebin
 	$(MKDIR_P) external/cloudi_x_dynamic_compile/ebin
 	$(MKDIR_P) external/cloudi_x_erlcql/ebin
 	$(MKDIR_P) external/cloudi_x_protobuffs/ebin
@@ -466,9 +464,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_elli && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_elli/ebin || exit 0)
-	(cd $(top_srcdir)/external/cloudi_x_elli_websocket && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/cloudi_x_elli_websocket/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_dynamic_compile && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_dynamic_compile/ebin || exit 0)
@@ -496,9 +491,6 @@ rebar-directories-compile:
 	(cd $(top_builddir)/external/cloudi_x_elli && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/cloudi_x_elli/include || exit 0)
-	(cd $(top_builddir)/external/cloudi_x_elli_websocket && \
-        test ! -e include && \
-        $(LN_S) $(abs_top_srcdir)/external/cloudi_x_elli_websocket/include || exit 0)
 	(cd $(top_builddir)/external/cloudi_x_riak_pb && \
         test ! -e include && \
         $(LN_S) $(abs_top_srcdir)/external/cloudi_x_riak_pb/include || exit 0)
@@ -663,8 +655,6 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_ranch/ebin
 	rmdir $(top_builddir)/external/cloudi_x_elli/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_elli/ebin
-	rmdir $(top_builddir)/external/cloudi_x_elli_websocket/ebin || exit 0
-	rm -f $(top_srcdir)/external/cloudi_x_elli_websocket/ebin
 	rmdir $(top_builddir)/external/cloudi_x_dynamic_compile/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_dynamic_compile/ebin
 	rmdir $(top_builddir)/external/cloudi_x_riak_pb/ebin || exit 0
@@ -694,9 +684,6 @@ rebar-directories-clean: rebar-clean
 	 exit 0)
 	(test -L $(top_builddir)/external/cloudi_x_elli/include && \
 	 rm $(top_builddir)/external/cloudi_x_elli/include || \
-	 exit 0)
-	(test -L $(top_builddir)/external/cloudi_x_elli_websocket/include && \
-	 rm $(top_builddir)/external/cloudi_x_elli_websocket/include || \
 	 exit 0)
 	(test -L $(top_builddir)/external/cloudi_x_riak_pb/include && \
 	 rm $(top_builddir)/external/cloudi_x_riak_pb/include || \
@@ -822,7 +809,6 @@ dialyze: all \
               external/cloudi_x_dynamic_compile/ebin \
               external/cloudi_x_ecouchdb/ebin \
               external/cloudi_x_elli/ebin \
-              external/cloudi_x_elli_websocket/ebin \
               external/cloudi_x_ememcached/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \

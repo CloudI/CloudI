@@ -71,10 +71,6 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
-%%%------------------------------------------------------------------------
-%%% External interface functions
-%%%------------------------------------------------------------------------
-
 -record(websocket_state,
     {
         % for service requests entering CloudI
@@ -90,6 +86,10 @@
         recv_timeouts,      % dict
         queued              % pqueue4
     }).
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_x_cowboy_http_handler
@@ -874,8 +874,8 @@ header_content_type(Headers) ->
 headers_external_incoming(L) ->
     erlang:iolist_to_binary(headers_external_incoming_text(L)).
 
-headers_external_incoming_text([]) ->
-    [];
+headers_external_incoming_text([] = L) ->
+    L;
 headers_external_incoming_text([{K, V} | L]) when is_binary(K) ->
     [[K, 0, V, 0] | headers_external_incoming_text(L)].
 
@@ -901,8 +901,8 @@ get_query_string_external([]) ->
 get_query_string_external(QsVals) ->
     erlang:iolist_to_binary(get_query_string_external_text(QsVals)).
 
-get_query_string_external_text([]) ->
-    [];
+get_query_string_external_text([] = L) ->
+    L;
 get_query_string_external_text([{K, V} | L]) ->
     if
         V =:= true ->
