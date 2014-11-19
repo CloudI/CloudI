@@ -105,6 +105,20 @@ AC_ARG_ENABLE([java-support],
     fi
     ], [java_support="true"])
 AC_MSG_RESULT([$java_support])
+AC_MSG_CHECKING([if the JavaScript CloudI API is enabled])
+AC_ARG_ENABLE([javascript-support],
+    [AS_HELP_STRING([--enable-javascript-support],
+                    [Enable the JavaScript/node.js CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        javascript_support="true"
+    elif test "x$enableval" = "xno"; then
+        javascript_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-javascript-support])
+    fi
+    ], [javascript_support="true"])
+AC_MSG_RESULT([$javascript_support])
 AC_MSG_CHECKING([if the Perl       CloudI API is enabled])
 AC_ARG_ENABLE([perl-support],
     [AS_HELP_STRING([--enable-perl-support],
@@ -205,8 +219,8 @@ AC_ARG_WITH([integration-tests],
     [want_integration_tests="maybe"])
 if test "x$want_integration_tests" != "xno" -a \
         "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
-        "x$java_support" = "xtrue" -a "x$perl_support" = "xtrue" -a \
-        "x$php_support" = "xtrue" -a \
+        "x$java_support" = "xtrue" -a "x$javascript_support" = "xtrue" -a \
+        "x$perl_support" = "xtrue" -a "x$php_support" = "xtrue" -a \
         "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
         "x$ruby_support" = "xtrue" ; then
     AM_CONDITIONAL([INTEGRATION_TESTS], [true])
@@ -281,6 +295,13 @@ AX_CHECK_RQRD_CLASS(java.util.concurrent.ExecutorService, ,
     [AC_MSG_ERROR([java concurrent not found])])
 fi
 AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
+
+# Javascript/node.js CloudI API support
+if test "x$javascript_support" = "xtrue" ; then
+AC_ARG_VAR([NODE],[node executable])
+AC_PATH_PROGS([NODE],[node])
+fi
+AM_CONDITIONAL([JAVASCRIPT_SUPPORT], [test "x$javascript_support" = "xtrue"])
 
 # Perl CloudI API support
 if test "x$perl_support" = "xtrue" ; then
@@ -482,6 +503,7 @@ AC_CONFIG_FILES([
     api/java/com/ericsson/otp/Makefile
     api/java/com/ericsson/otp/erlang/Makefile
     api/java/jar/Makefile
+    api/javascript/Makefile
     api/perl/Makefile
     api/php/Makefile
     api/python/Makefile

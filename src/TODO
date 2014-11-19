@@ -17,10 +17,6 @@ Lua CloudI API
       (within api/python/cloudi_py.cpp)
     * simpler to use https://github.com/vinniefalco/LuaBridge with the
       C++ CloudI API
-Perl CloudI API
-    * all-Perl implementation using updated code for the
-      binary erlang binary term format, similar to
-      http://search.cpan.org/~hio/Erlang-Port-0.04/lib/Erlang/Port.pm
 R CloudI API
     * R w/C++ integration using Rcpp
       http://cran.r-project.org/web/packages/Rcpp/vignettes/Rcpp-introduction.pdf
