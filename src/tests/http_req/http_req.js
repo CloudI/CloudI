@@ -78,9 +78,8 @@ Task.prototype.request = function (command, name, pattern,
         response =
 '<http_test><value>' + value + '</value></http_test>';
     }
-    return response;
-    //this._api.return_(command, name, pattern,
-    //                  '', response, timeout, trans_id, pid);
+    this._api.return_(command, name, pattern,
+                      '', response, timeout, trans_id, pid);
 };
 
 assert(CloudI.API.thread_count() == 1);

@@ -182,6 +182,8 @@ var MESSAGE_TERM                = 11;
 
 CloudI.API = function API (thread_index, callback) {
     var API = this;
+    API.ASYNC = 1;
+    API.SYNC = -1;
     if (typeof thread_index !== 'number') {
         throw new InvalidInputException();
     }
@@ -215,7 +217,6 @@ CloudI.API = function API (thread_index, callback) {
     API._size = parseInt(buffer_size_str);
     API._callbacks = {};
     API._timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
-    API._poll_domain = undefined;
     API._poll_callback = callback;
     API._poll_callbacks_pending = [];
     API._s.on('data', function(data) {
@@ -235,9 +236,6 @@ CloudI.API = function API (thread_index, callback) {
             }
             else if (err instanceof TerminateException) {
                 API._terminate = true;
-                timers.setTimeout(function () {
-                    process.exit(1);
-                }, err.timeout());
             }
             else {
                 API._exception(err);
@@ -253,9 +251,6 @@ CloudI.API = function API (thread_index, callback) {
     });
     API._send(new Erlang.OtpErlangAtom('init'));
 };
-
-CloudI.API.ASYNC = 1;
-CloudI.API.SYNC = -1;
 
 // class method
 CloudI.API.thread_count = function thread_count () {
@@ -376,9 +371,11 @@ CloudI.API.prototype.forward_ = function (command, name, request_info, request,
         case API.ASYNC:
             API.forward_async(name, request_info, request,
                               timeout, priority, trans_id, pid);
+            return;
         case API.SYNC:
             API.forward_sync(name, request_info, request,
                              timeout, priority, trans_id, pid);
+            return;
         default:
             throw new InvalidInputException();
     }
@@ -405,10 +402,7 @@ CloudI.API.prototype.forward_async = function (name, request_info, request,
                    new Erlang.OtpErlangBinary(request),
                    timeout, priority,
                    new Erlang.OtpErlangBinary(trans_id), pid]);
-        var unravel = API._poll_domain.bind(function () {
-            throw new ForwardAsyncException();
-        });
-        unravel();
+        throw new ForwardAsyncException();
     });
 };
 
@@ -433,10 +427,7 @@ CloudI.API.prototype.forward_sync = function (name, request_info, request,
                    new Erlang.OtpErlangBinary(request),
                    timeout, priority,
                    new Erlang.OtpErlangBinary(trans_id), pid]);
-        var unravel = API._poll_domain.bind(function () {
-            throw new ForwardSyncException();
-        });
-        unravel();
+        throw new ForwardSyncException();
     });
 };
 
@@ -448,9 +439,11 @@ CloudI.API.prototype.return_ = function (command, name, pattern,
         case API.ASYNC:
             API.return_async(name, pattern, response_info, response,
                              timeout, trans_id, pid);
+            return;
         case API.SYNC:
             API.return_sync(name, pattern, response_info, response,
                             timeout, trans_id, pid);
+            return;
         default:
             throw new InvalidInputException();
     }
@@ -476,10 +469,7 @@ CloudI.API.prototype.return_async = function (name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
                    timeout, new Erlang.OtpErlangBinary(trans_id), pid]);
-        var unravel = API._poll_domain.bind(function () {
-            throw new ReturnAsyncException();
-        });
-        unravel();
+        throw new ReturnAsyncException();
     });
 };
 
@@ -503,10 +493,7 @@ CloudI.API.prototype.return_sync = function (name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
                    timeout, new Erlang.OtpErlangBinary(trans_id), pid]);
-        var unravel = API._poll_domain.bind(function () {
-            throw new ReturnSyncException();
-        });
-        unravel();
+        throw new ReturnSyncException();
     });
 };
 
@@ -577,9 +564,9 @@ CloudI.API.prototype._callback = function (command, name, pattern,
     switch (command) {
         case MESSAGE_SEND_ASYNC:
             var domain_async = domain.create();
-            API._poll_domain = domain_async;
+            domain_async.name = 'CloudI Async';
             domain_async.on('error', function(err) {
-                API._poll_domain = undefined;
+                domain_async.exit();
                 if (err instanceof InvalidInputException ||
                     err instanceof MessageDecodingException) {
                     process.stderr.write(err.stack + '\n');
@@ -588,9 +575,6 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 }
                 else if (err instanceof TerminateException) {
                     API._terminate = true;
-                    timers.setTimeout(function () {
-                        process.exit(1);
-                    }, err.timeout());
                 }
                 else if (err instanceof ReturnAsyncException) {
                     return;
@@ -622,7 +606,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     }
                 }
             });
-            domain_async.run(function () { process.nextTick(function () {
+            domain_async.enter();
+            process.nextTick(function () {
                 var response = f.obj_f.call(f.obj,
                                             API.ASYNC, name, pattern,
                                             request_info, request,
@@ -630,7 +615,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 if (typeof response === 'undefined') {
                     return;
                 }
-                API._poll_domain = undefined;
+                domain_async.exit();
                 var response_info;
                 if (typeof response === 'object' &&
                     toNativeString.call(response) == '[object Array]') {
@@ -654,13 +639,13 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 catch (err_new) {
                     err_new = undefined;
                 }
-            })});
+            });
             return;
         case MESSAGE_SEND_SYNC:
             var domain_sync = domain.create();
-            API._poll_domain = domain_sync;
+            domain_sync.name = 'CloudI Sync';
             domain_sync.on('error', function(err) {
-                API._poll_domain = undefined;
+                domain_sync.exit();
                 if (err instanceof InvalidInputException ||
                     err instanceof MessageDecodingException) {
                     process.stderr.write(err.stack + '\n');
@@ -669,9 +654,6 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 }
                 else if (err instanceof TerminateException) {
                     API._terminate = true;
-                    timers.setTimeout(function () {
-                        process.exit(1);
-                    }, err.timeout());
                 }
                 else if (err instanceof ReturnAsyncException) {
                     process.stderr.write(err.stack + '\n');
@@ -703,7 +685,8 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                     }
                 }
             });
-            domain_sync.run(function () { process.nextTick(function () {
+            domain_sync.enter();
+            process.nextTick(function () {
                 var response = f.obj_f.call(f.obj,
                                             API.SYNC, name, pattern,
                                             request_info, request,
@@ -711,7 +694,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 if (typeof response === 'undefined') {
                     return;
                 }
-                API._poll_domain = undefined;
+                domain_sync.exit();
                 var response_info;
                 if (typeof response === 'object' &&
                     toNativeString.call(response) == '[object Array]') {
@@ -735,7 +718,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 catch (err_new) {
                     err_new = undefined;
                 }
-            })});
+            });
             return;
         default:
             throw new MessageDecodingException();
@@ -982,7 +965,9 @@ CloudI.API.prototype._poll_wait_retry = function () {
         f(API);
     }
     else {
-        timers.setTimeout(function() { API._poll_wait_retry(); }, 0);
+        timers.setTimeout(function() {
+            API._poll_wait_retry();
+        }, 0);
     }
 };
 
@@ -996,7 +981,9 @@ CloudI.API.prototype._poll_wait = function (f) {
     }
     else {
         API._poll_callbacks_pending.push(f);
-        timers.setTimeout(function() { API._poll_wait_retry(); }, 0);
+        timers.setTimeout(function() {
+            API._poll_wait_retry();
+        }, 0);
     }
 };
 
