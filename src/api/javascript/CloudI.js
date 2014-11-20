@@ -219,13 +219,33 @@ CloudI.API = function API (thread_index, callback) {
     API._timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
     API._poll_callback = callback;
     API._poll_callbacks_pending = [];
+    API._poll_data = undefined;
+    API._poll_data_size = undefined;
+    API._send_pending = false;
     API._s.on('data', function(data) {
         try {
-            var length = unpackUint32big(0, data);
-            if (data.length != 4 + length) {
-                throw new MessageDecodingException();
+            if (API._poll_data === undefined) {
+                API._poll_data_size = 4 + unpackUint32big(0, data);
+                API._poll_data = data;
             }
-            API._poll_request(data);
+            else {
+                data = Buffer.concat([API._poll_data, data]);
+            }
+            if (data.length == API._poll_data_size) {
+                API._poll_data = undefined;
+                API._poll_data_size = undefined;
+                API._poll_request(data);
+            }
+            else if (data.length < API._poll_data_size) {
+                API._poll_data = data;
+            }
+            else if (data.length > API._poll_data_size) {
+                var next_data = data.slice(API._poll_data_size);
+                data = data.slice(0, API._poll_data_size);
+                API._poll_data = next_data;
+                API._poll_data_size = 4 + unpackUint32big(0, next_data);
+                API._poll_request(data);
+            }
         }
         catch (err) {
             if (err instanceof InvalidInputException ||
@@ -1061,6 +1081,20 @@ CloudI.API.prototype._exception = function (err) {
     process.stderr.write(err.stack + '\n');
 };
 
+CloudI.API.prototype._send_chunks = function (data) {
+    var API = this;
+    if (API._send_pending) {
+        timers.setTimeout(function () {
+            API._send_chunks(data);
+        }, 0);
+        return;
+    }
+    API._send_pending = true;
+    API._s.write(data, 'binary', function () {
+        API._send_pending = false;
+    });
+};
+
 CloudI.API.prototype._send = function (terms) {
     var API = this;
     Erlang.term_to_binary(terms, function (err, data) {
@@ -1073,7 +1107,9 @@ CloudI.API.prototype._send = function (terms) {
         if (API._use_header) {
             data = Buffer.concat([packUint32big(data.length), data]);
         }
-        API._s.write(data);
+        process.nextTick(function () {
+            API._send_chunks(data);
+        });
     });
 };
 

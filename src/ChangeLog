@@ -4,6 +4,7 @@
 2014-11-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix return/forward usage in the JavaScript CloudI API
+    * Fix large receives in the JavaScript CloudI API
 
 2014-11-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
