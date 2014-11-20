@@ -71,7 +71,8 @@
         service,
         request_count = 0 :: non_neg_integer(),
         elapsed_seconds = undefined :: float() | undefined,
-        suffixes = ["cxx", "java", "perl", "php", "python", "python_c", "ruby"]
+        suffixes = ["cxx", "java", "javascript",
+                    "perl", "php", "python", "python_c", "ruby"]
     }).
 
 %%%------------------------------------------------------------------------

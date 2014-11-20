@@ -111,7 +111,7 @@
         acceptor,                      % tcp acceptor
         socket_path,                   % local socket filesystem path
         socket_options,                % common socket options
-        socket,                        % data socket
+        socket = undefined,            % data socket
         service_state = undefined,     % service state for aspects
         aspects_request_after_f = undefined, % pending aspects_request_after
         process_index,                 % 0-based index of the Erlang process
@@ -1874,9 +1874,10 @@ socket_close(Reason, #state{protocol = Protocol,
                             os_pid = OsPid} = State)
     when Protocol =:= tcp; Protocol =:= local ->
     if
-        Reason =:= socket_closed ->
+        Reason =:= socket_closed;
+        Socket =:= undefined ->
             ok;
-        true ->
+        is_port(Socket) ->
             case send('terminate_out'(), State) of
                 ok ->
                     receive
@@ -1907,9 +1908,10 @@ socket_close(Reason, #state{protocol = udp,
                             timeout_term = TimeoutTerm,
                             os_pid = OsPid} = State) ->
     if
-        Reason =:= socket_closed ->
+        Reason =:= socket_closed;
+        Socket =:= undefined ->
             ok;
-        true ->
+        is_port(Socket) ->
             case send('terminate_out'(), State) of
                 ok ->
                     TerminateSleep = erlang:min(?KEEPALIVE_UDP, TimeoutTerm),
