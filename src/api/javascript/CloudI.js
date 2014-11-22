@@ -232,6 +232,10 @@ CloudI.API = function API (thread_index, callback) {
     API._poll_data_size = undefined;
     API._s_in.on('data', function(data) {
         try {
+            if (! API._use_header) {
+                API._poll_request(data);
+                return;
+            }
             if (API._poll_data === undefined) {
                 API._poll_data_size = 4 + unpackUint32big(0, data);
                 API._poll_data = data;
@@ -535,6 +539,8 @@ CloudI.API.prototype.recv_async = function (callback,
     consume = typeof consume !== 'undefined' ?
               consume : true;
     this._poll_wait(function (API) {
+        timeout = typeof timeout !== 'undefined' ?
+                  timeout : API._timeout_sync;
         API._poll_callback = callback;
         API._send([new Erlang.OtpErlangAtom('recv_async'), timeout,
                    new Erlang.OtpErlangBinary(trans_id), consume]);
@@ -810,7 +816,7 @@ CloudI.API.prototype._poll_request = function (data) {
                 var prefix_size = unpackUint32(i, data);
                 i += 4;
                 var j = i + prefix_size - 1;
-                API._prefix = data.slice(i, j).toString();
+                API._prefix = data.slice(i, j).toString('binary');
                 i = j + 1;
                 API._timeout_initialize = unpackUint32(i, data);
                 i += 4;
@@ -837,12 +843,12 @@ CloudI.API.prototype._poll_request = function (data) {
                 var name_size = unpackUint32(i, data);
                 i += 4;
                 var j = i + name_size - 1;
-                var name = data.slice(i, j).toString();
+                var name = data.slice(i, j).toString('binary');
                 i = j + 1;
                 var pattern_size = unpackUint32(i, data);
                 i += 4;
                 j = i + pattern_size - 1;
-                var pattern = data.slice(i, j).toString();
+                var pattern = data.slice(i, j).toString('binary');
                 i = j + 1;
                 var request_info_size = unpackUint32(i, data);
                 i += 4;
@@ -1004,7 +1010,8 @@ CloudI.API.prototype._poll_wait = function (f) {
     if (API._terminate) {
         return;
     }
-    else if (API._poll_callback === undefined) {
+    else if (API._poll_callback === undefined &&
+             API._poll_callbacks_pending.length == 0) {
         f(API);
     }
     else {

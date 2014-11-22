@@ -43,16 +43,21 @@ var assert = require('assert');
 
 var DESTINATION = '/tests/msg_size/erlang';
 
-Task = function Task (api) {
-    this._api = api;
+Task = function Task (thread_index) {
+    var Task = this;
+    Task._thread_index = thread_index;
 };
 Task.prototype.run = function () {
+    var Task = this;
     try {
-        this._api.subscribe('javascript', this, this.request);
-        this._api.poll(function (timeout) {
+        new CloudI.API(Task._thread_index, function (api) {
+        Task._api = api;
+        Task._api.subscribe('javascript', Task, Task.request, function () {
+        Task._api.poll(function (timeout) {
             assert(timeout == false);
             process.stdout.write('terminate msg_size javascript\n');
         });
+        });});
     }
     catch (err) {
         if (typeof err.stack !== 'undefined') {
@@ -66,6 +71,7 @@ Task.prototype.run = function () {
 Task.prototype.request = function (command, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
+    var Task = this;
     var i = (new Uint32Array((new Uint8Array([request[0],
                                               request[1],
                                               request[2],
@@ -83,11 +89,11 @@ Task.prototype.request = function (command, name, pattern,
     request[3] = buffer[3];
     process.stdout.write('forward #' + i + ' javascript to ' + DESTINATION +
                          ' (with timeout ' + timeout + ' ms)\n');
-    this._api.forward_(command, DESTINATION, request_info, request,
+    Task._api.forward_(command, DESTINATION, request_info, request,
                        timeout, priority, trans_id, pid);
 };
 
 assert(CloudI.API.thread_count() == 1);
-var thread = new Task(new CloudI.API(0));
+var thread = new Task(0);
 thread.run();
 

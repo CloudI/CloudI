@@ -41,16 +41,22 @@
 var CloudI = require('../../api/javascript/CloudI.js').CloudI;
 var assert = require('assert');
 
-Task = function Task (api) {
-    this._api = api;
+Task = function Task (thread_index) {
+    var Task = this;
+    Task._thread_index = thread_index;
 };
 Task.prototype.run = function () {
+    var Task = this;
     try {
-        this._api.subscribe('javascript.xml/get', this, this.request);
-        this._api.poll(function (timeout) {
+        new CloudI.API(Task._thread_index, function (api) {
+        Task._api = api;
+        Task._api.subscribe('javascript.xml/get', Task, Task.request,
+                            function () {
+        Task._api.poll(function (timeout) {
             assert(timeout == false);
             process.stdout.write('terminate http_req javascript\n');
         });
+        });});
     }
     catch (err) {
         if (typeof err.stack !== 'undefined') {
@@ -64,7 +70,8 @@ Task.prototype.run = function () {
 Task.prototype.request = function (command, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
-    var http_qs = this._api.request_http_qs_parse(request);
+    var Task = this;
+    var http_qs = Task._api.request_http_qs_parse(request);
     var value = http_qs['value'];
     var response;
     if (value === undefined) {
@@ -78,11 +85,11 @@ Task.prototype.request = function (command, name, pattern,
         response =
 '<http_test><value>' + value + '</value></http_test>';
     }
-    this._api.return_(command, name, pattern,
+    Task._api.return_(command, name, pattern,
                       '', response, timeout, trans_id, pid);
 };
 
 assert(CloudI.API.thread_count() == 1);
-var thread = new Task(new CloudI.API(0));
+var thread = new Task(0);
 thread.run();
 
