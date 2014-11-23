@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Log the termination reason when a service is killed after
+      the termination timeout is exceeded
+    * Fix a bug throwing the TerminateException in the Perl CloudI API
+
 2014-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add remaining fixes for JavaScript CloudI API

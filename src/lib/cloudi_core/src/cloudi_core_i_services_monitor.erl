@@ -65,7 +65,7 @@
          pids/2,
          increase/5,
          decrease/5,
-         terminate_kill/1]).
+         terminate_kill/2]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -213,10 +213,10 @@ decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
                                  Pid, Period, RateCurrent,
                                  RateMin, CountProcessMin})).
 
-terminate_kill(Pid)
+terminate_kill(Pid, Reason)
     when is_pid(Pid) ->
     ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                {terminate_kill, Pid})).
+                                {terminate_kill, Pid, Reason})).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -344,11 +344,11 @@ handle_cast({Direction,
             {noreply, State}
     end;
 
-handle_cast({terminate_kill, Pid},
+handle_cast({terminate_kill, Pid, Reason},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            terminate_kill_enforce(ServiceId, Pid, Service),
+            terminate_kill_enforce(ServiceId, Pid, Reason, Service),
             {noreply, State};
         error ->
             {noreply, State}
@@ -458,12 +458,13 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
             {noreply, NewState}
     end;
 
-handle_info({kill, TimeoutTerm, Pid, ServiceId, #service{}}, State) ->
+handle_info({kill, TimeoutTerm, Pid, Reason, ServiceId, #service{}}, State) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            ?LOG_ERROR("Service pid ~p brutal_kill after ~p ms (MaxT/MaxR)~n"
-                       " ~p", [Pid, TimeoutTerm,
-                               cloudi_x_uuid:uuid_to_string(ServiceId)]),
+            ?LOG_ERROR("Service pid ~p brutal_kill (~p)~n"
+                       " ~p after ~p ms (MaxT/MaxR)",
+                       [Pid, Reason,
+                        cloudi_x_uuid:uuid_to_string(ServiceId), TimeoutTerm]),
             erlang:exit(Pid, kill);
         false ->
             ok
@@ -825,10 +826,11 @@ pids_decrease(Count, OldPids, CountProcessCurrent, Rate,
      NewServices} = pids_update(NewServiceL, CountProcess, ServiceId, Services),
     NewServices.
 
-terminate_kill_enforce(ServiceId, Pid,
+terminate_kill_enforce(ServiceId, Pid, Reason,
                        #service{timeout_term = TimeoutTerm} = Service) ->
     erlang:send_after(TimeoutTerm, self(),
-                      {kill, TimeoutTerm, Pid, ServiceId, Service}),
+                      {kill, TimeoutTerm, Pid, Reason,
+                       ServiceId, Service}),
     ok.
 
 terminate_service(ServiceId, Pids, Service, Services) ->
@@ -846,7 +848,8 @@ terminate_service(ServiceId, Pids, Reason,
     NewServices = lists:foldl(fun(P, D) ->
         erlang:exit(P, ShutdownExit),
         erlang:send_after(TimeoutTerm, Self,
-                          {kill, TimeoutTerm, P, ServiceId, Service}),
+                          {kill, TimeoutTerm, P, ShutdownExit,
+                           ServiceId, Service}),
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     NewServices.

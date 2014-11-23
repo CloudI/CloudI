@@ -725,7 +725,8 @@ sub _handle_events
             }
             else
             {
-                die CloudI::TerminateException($self->{_timeout_terminate});
+                die CloudI::TerminateException->new(
+                    $self->{_timeout_terminate});
             }
         }
         elsif ($command == MESSAGE_REINIT)

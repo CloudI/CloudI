@@ -1265,7 +1265,7 @@ terminate(Reason, _,
                  service_state = ServiceState,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}} = State) ->
-    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher),
+    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher, Reason),
     {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, State),
     ok.
