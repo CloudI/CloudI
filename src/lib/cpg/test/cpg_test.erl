@@ -96,7 +96,7 @@ via3_test() ->
     true = is_integer(I4),
     I5 = index(cpg_test_server:pid(ViaName), Pids),
     true = is_integer(I5),
-    true = (I1 /= I2 orelse I2 /= I3 orelse I3 /= I4 orelse I4 /= I5),
+    true = ((I1 /= I2) orelse (I2 /= I3) orelse (I3 /= I4) orelse (I4 /= I5)),
     erlang:unlink(Pid1),
     erlang:unlink(Pid2),
     erlang:unlink(Pid3),
