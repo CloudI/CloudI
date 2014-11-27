@@ -1019,6 +1019,7 @@ int32_t spawn(char protocol,
 
 int main()
 {
+    ::signal(SIGPIPE, SIG_IGN); // write to a broken socket error
     typedef std::vector< copy_ptr<process_data> >::iterator iterator;
     assert(spawn_status::last_value == GEPD::ExitStatus::min);
 
