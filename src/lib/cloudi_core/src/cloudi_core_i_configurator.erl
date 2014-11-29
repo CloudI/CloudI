@@ -343,8 +343,8 @@ handle_call({acl, _}, _,
 
 handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
     case cloudi_core_i_services_monitor:pids(ServiceId, Timeout) of
-        {ok, PidList} ->
-            L = [sets:from_list(cloudi_x_cpg:which_groups(Pid, Timeout))
+        {ok, Scope, PidList} ->
+            L = [sets:from_list(cloudi_x_cpg:which_groups(Scope, Pid, Timeout))
                  || Pid <- PidList],
             {reply, {ok, lists:sort(sets:to_list(sets:union(L)))}, State};
         {error, _} = Error ->
@@ -899,7 +899,8 @@ service_start_internal(IndexProcess, Pids,
                            dest_refresh = DestRefresh,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
-                           options = Options,
+                           options = #config_service_options{
+                               scope = Scope} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service, GroupLeader,
@@ -911,7 +912,7 @@ service_start_internal(IndexProcess, Pids,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
-                 IndexProcess, CountProcess, 1,
+                 IndexProcess, CountProcess, 1, Scope,
                  TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:
@@ -945,7 +946,8 @@ service_start_external(IndexProcess, Pids,
                            dest_refresh = DestRefresh,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
-                           options = Options,
+                           options = #config_service_options{
+                               scope = Scope} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
                            uuid = ID} = Service,
@@ -958,7 +960,7 @@ service_start_external(IndexProcess, Pids,
                   Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
-                 IndexProcess, CountProcess, CountThread,
+                 IndexProcess, CountProcess, CountThread, Scope,
                  TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:

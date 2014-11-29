@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -371,8 +371,8 @@ discovery_check(#config_nodes_discovery{module = Module,
 discovery_stop(undefined) ->
     ok;
 discovery_stop(#config_nodes_discovery{module = Module,
-                                       start_f = StopF,
-                                       start_a = StopA}) ->
+                                       stop_f = StopF,
+                                       stop_a = StopA}) ->
     case erlang:apply(Module, StopF, StopA) of
         ok ->
             ok;
