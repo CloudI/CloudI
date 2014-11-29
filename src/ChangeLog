@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix 1.3.3 bug with count_process_dynamic creating service processes
+      that have a termination timeout which is not set internally,
+      causing CloudI to crash when the new service processes
+      attempt to terminate
+
 2014-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix bad socket handling during external service termination
