@@ -6,6 +6,8 @@
     * Fix bug stopping the node discovery method
     * Fix CloudI Service API service_subscriptions function to handle
       non-default scopes
+    * Fix CloudI Service API services_search function to search within
+      non-default scopes
 
 2014-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 

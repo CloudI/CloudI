@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -656,11 +656,13 @@ services_restart([_ | _] = L, Timeout)
 %% instances on the local Erlang node are searched.  Service names that match
 %% subscriptions of non-service Erlang pids only
 %% (e.g., cloudi_service_http_cowboy websocket connection pids) will not
-%% return the service's configuration with this function.
+%% return the service's configuration with this function.  Provide a scope
+%% within a 2 element tuple with the service name to check a custom scope.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_search(ServiceName :: cloudi:service_name(),
+-spec services_search(Name :: {atom(), cloudi:service_name()} |
+                              cloudi:service_name(),
                       Timeout :: api_timeout_milliseconds()) ->
     {ok, list({service_id(), service_internal()} |
               {service_id(), service_external()})} |
@@ -668,14 +670,21 @@ services_restart([_ | _] = L, Timeout)
      timeout | noproc |
      service_name_invalid}.
 
-services_search([_ | _] = ServiceName, Timeout)
+services_search(Name, Timeout)
     when ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
+    {Scope, ServiceName} = case Name of
+        {ScopeValue, [_ | _] = ServiceNameValue} when is_atom(ScopeValue) ->
+            {?SCOPE_ASSIGN(ScopeValue), ServiceNameValue};
+        [_ | _] = ServiceNameValue ->
+            {?SCOPE_DEFAULT, ServiceNameValue}
+    end,
     try cloudi_x_trie:is_pattern(ServiceName) of
         false ->
-            cloudi_core_i_configurator:services_search(ServiceName, Timeout);
+            cloudi_core_i_configurator:services_search(Scope, ServiceName,
+                                                       Timeout);
         true ->
             {error, service_name_invalid}
     catch

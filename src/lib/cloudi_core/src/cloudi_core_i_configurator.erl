@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -63,7 +63,7 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
-         services_search/2,
+         services_search/3,
          services/1,
          nodes_set/2,
          nodes_get/1,
@@ -169,9 +169,9 @@ services_restart(L, Timeout) ->
                                 {services_restart, L,
                                  timeout_decr(Timeout)}, Timeout)).
 
-services_search(ServiceName, Timeout) ->
+services_search(Scope, ServiceName, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services_search, ServiceName,
+                                {services_search, Scope, ServiceName,
                                  timeout_decr(Timeout)}, Timeout)).
 
 services(Timeout) ->
@@ -378,9 +378,9 @@ handle_call({services_restart, L, Timeout}, _,
             {reply, Error, State}
     end;
 
-handle_call({services_search, ServiceName, Timeout}, _,
+handle_call({services_search, Scope, ServiceName, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_x_cpg:get_local_members(ServiceName, Timeout) of
+    case cloudi_x_cpg:get_local_members(Scope, ServiceName, Timeout) of
         {ok, _, PidList} ->
             case cloudi_core_i_services_monitor:search(PidList, Timeout) of
                 {ok, []} ->
