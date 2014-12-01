@@ -24,11 +24,18 @@ request_lhttpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
 
 request_httpc(URL, Method, Hdrs, <<>>, Timeout, _Config) ->
     HdrsStr = [{binary_to_list(K), binary_to_list(V)} || {K, V} <- Hdrs],
-    httpc:request(Method, {URL, HdrsStr},
-                  [{timeout, Timeout}], []);
+    response_httpc(httpc:request(Method, {URL, HdrsStr},
+                                 [{timeout, Timeout}], []));
 request_httpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
     {value,
      {_, ContentType}, HdrsRest} = lists:keytake(<<"content-type">>, 1, Hdrs),
     HdrsStr = [{binary_to_list(K), binary_to_list(V)} || {K, V} <- HdrsRest],
-    httpc:request(Method, {URL, HdrsStr, binary_to_list(ContentType), Body},
-                  [{timeout, Timeout}], []).
+    response_httpc(httpc:request(Method,
+                                 {URL, HdrsStr,
+                                  binary_to_list(ContentType), Body},
+                                 [{timeout, Timeout}], [])).
+
+response_httpc({ok, {{_HTTPVer, Status, StatusLine}, Headers, Body}}) ->
+    {ok, {{Status, StatusLine}, Headers, Body}};
+response_httpc({error, _} = Error) ->
+    Error.
