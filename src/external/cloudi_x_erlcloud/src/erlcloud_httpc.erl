@@ -25,7 +25,8 @@ request_lhttpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
 request_httpc(URL, Method, Hdrs, <<>>, Timeout, _Config) ->
     HdrsStr = [{binary_to_list(K), binary_to_list(V)} || {K, V} <- Hdrs],
     response_httpc(httpc:request(Method, {URL, HdrsStr},
-                                 [{timeout, Timeout}], []));
+                                 [{timeout, Timeout},
+                                  {body_format, binary}], []));
 request_httpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
     {value,
      {_, ContentType}, HdrsRest} = lists:keytake(<<"content-type">>, 1, Hdrs),
@@ -33,7 +34,8 @@ request_httpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
     response_httpc(httpc:request(Method,
                                  {URL, HdrsStr,
                                   binary_to_list(ContentType), Body},
-                                 [{timeout, Timeout}], [])).
+                                 [{timeout, Timeout},
+                                  {body_format, binary}], [])).
 
 response_httpc({ok, {{_HTTPVer, Status, StatusLine}, Headers, Body}}) ->
     {ok, {{Status, StatusLine}, Headers, Body}};
