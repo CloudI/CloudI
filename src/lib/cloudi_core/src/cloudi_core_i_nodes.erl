@@ -387,8 +387,10 @@ discovery_update(undefined, #config_nodes_discovery{} = NewDiscovery) ->
     discovery_start(NewDiscovery);
 discovery_update(#config_nodes_discovery{} = OldDiscovery, undefined) ->
     discovery_stop(OldDiscovery);
-discovery_update(#config_nodes_discovery{discover_f = OldF},
-                 #config_nodes_discovery{discover_f = OldF}) ->
+discovery_update(#config_nodes_discovery{start_f = OldStartF,
+                                         start_a = OldStartA},
+                 #config_nodes_discovery{start_f = OldStartF,
+                                         start_a = OldStartA}) ->
     ok;
 discovery_update(#config_nodes_discovery{} = OldDiscovery,
                  #config_nodes_discovery{} = NewDiscovery) ->

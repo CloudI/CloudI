@@ -5,6 +5,8 @@
 
     * Update erlcloud and nodefinder after testing tag and security group
       selection with changes for erlcloud 0.9.1
+    * Fix CloudI Service API nodes_set discovery update of parameters
+    * Fix CloudI Service API nodes_get discovery ec2 output of host
 
 2014-12-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 

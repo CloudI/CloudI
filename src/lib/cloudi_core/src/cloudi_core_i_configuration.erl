@@ -1079,7 +1079,7 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
               [{ec2,
                 [{access_key_id, EC2AccessKeyId},
                  {secret_access_key, EC2SecretAccessKey},
-                 {ec2_host, EC2Host},
+                 {host, EC2Host},
                  {groups, EC2Groups},
                  {tags, EC2Tags}]}]} | NodesList6]
     end,
