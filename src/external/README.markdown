@@ -123,8 +123,8 @@ exceptions due to their C integration).
 `Cloud Service Integration APIs`
 
 - `https://github.com/gleber/erlcloud`
-- `commit 858d3bb30fc40a59b302cbe9ae678392aa30caad (master, v0.9.1)`
-- `Fri Oct 31 11:38:46 PDT 2014`
+- `commit 596cbcde53b84f78d76e7427573833daa9201c79`
+- `Tue Dec  2 13:55:25 PST 2014`
 - `MIT`
 
 `erlcql`
@@ -262,8 +262,8 @@ exceptions due to their C integration).
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit 97f077b1ff2d2899f22b5d60b7de3caa58b69842 (v1.3.3.1)`
-- `Fri Oct  3 15:03:27 PDT 2014`
+- `commit 138dfb8e4188fa54c353382c0a389bcb2b03aa38 (v1.4.0-rc.7)`
+- `Tue Dec  2 13:55:25 PST 2014`
 - `BSD`
 
 `pgsql`

@@ -18,6 +18,8 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-include_lib("erlcloud/include/erlcloud_aws.hrl").
+
 -type group_input() :: string().
 -type tag_input() :: {list(string()) | string(), list(string()) | string()} |
                      list(string()) |
@@ -113,6 +115,7 @@ validate_tags(_) ->
 
 init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
     Config = erlcloud_ec2:new(AccessKeyID, SecretAccessKey, EC2Host),
+    NewConfig = Config#aws_config{http_client = httpc},
     Connect = nodefinder_app:connect_type(),
     case preprocess(Tags, tag) of
         {ok, TagsExpressionTree} ->
@@ -122,7 +125,7 @@ init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
                          GroupsExpressionTree == ?NULL_EXPRESSION ->
                     {stop, {error, null_selection}};
                 {ok, GroupsExpressionTree} ->
-                    case do_discover(#state{ec2_config = Config,
+                    case do_discover(#state{ec2_config = NewConfig,
                                             groups = GroupsExpressionTree,
                                             tags = TagsExpressionTree,
                                             nodes = [],
