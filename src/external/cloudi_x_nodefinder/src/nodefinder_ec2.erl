@@ -336,8 +336,14 @@ tags_filter(Merged) ->
 
 process_filter(Group, EC2Instances, group) ->
     lists:filter(fun(Reservation) ->
-        {_, GroupSet} = lists:keyfind(group_set, 1, Reservation),
-        lists:member(Group, GroupSet)
+        {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
+        lists:any(fun(Instance) ->
+            {_, GroupSet} = lists:keyfind(group_set, 1, Instance),
+            lists:any(fun(GroupSetElement) ->
+                {_, GroupId} = lists:keyfind(group_id, 1, GroupSetElement),
+                Group == GroupId
+            end, GroupSet)
+        end, InstancesSet)
     end, EC2Instances);
 process_filter(Tags, EC2Tags, tag) ->
     orddict:filter(fun(_, TagL) ->
@@ -585,38 +591,46 @@ logic_case1_tags_process(TagsInput) ->
             logic_case1_tags(), tag).
 
 logic_case2_groups() ->
-    [[{group_set,
-       ["A", "A/A"]},
-      {instances_set,
-       [[{private_dns_name, "A1"}]]}],
-     [{group_set,
-       ["A", "A/B"]},
-      {instances_set,
-       [[{private_dns_name, "A2"}]]}],
-     [{group_set,
-       ["B", "B/A"]},
-      {instances_set,
-       [[{private_dns_name, "B1"}]]}],
-     [{group_set,
-       ["C", "C/A"]},
-      {instances_set,
-       [[{private_dns_name, "C1"}]]}],
-     [{group_set,
-       ["C", "C/B"]},
-      {instances_set,
-       [[{private_dns_name, "C2"}]]}],
-     [{group_set,
-       ["C", "C/C"]},
-      {instances_set,
-       [[{private_dns_name, "C3"}]]}],
-     [{group_set,
-       ["C", "C/C"]},
-      {instances_set,
-       [[{private_dns_name, "C4"}]]}],
-     [{group_set,
-       ["C", "C/C"]},
-      {instances_set,
-       [[{private_dns_name, "C5"}]]}]].
+    [[{instances_set,
+       [[{group_set,
+          [[{group_id, "A"}],
+           [{group_id, "A/A"}]]},
+         {private_dns_name, "A1"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "A"}],
+           [{group_id, "A/B"}]]},
+         {private_dns_name, "A2"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "B"}],
+           [{group_id, "B/A"}]]},
+         {private_dns_name, "B1"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "C"}],
+           [{group_id, "C/A"}]]},
+         {private_dns_name, "C1"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "C"}],
+           [{group_id, "C/B"}]]},
+         {private_dns_name, "C2"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "C"}],
+           [{group_id, "C/C"}]]},
+         {private_dns_name, "C3"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "C"}],
+           [{group_id, "C/C"}]]},
+         {private_dns_name, "C4"}]]}],
+     [{instances_set,
+       [[{group_set,
+          [[{group_id, "C"}],
+           [{group_id, "C/C"}]]},
+         {private_dns_name, "C5"}]]}]].
 
 logic_case2_groups_preprocess(GroupsInput) ->
     true = is_list(GroupsInput),
