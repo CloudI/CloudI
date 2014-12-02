@@ -15,6 +15,6 @@
                   jsx,
                   lhttpc]},
   {modules, []},
-  {env, [{http_client, httpc}]} % httpc or lhttpc
+  {env, [{http_client, lhttpc}]} % httpc or lhttpc
  ]
 }.

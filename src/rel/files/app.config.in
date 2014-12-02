@@ -13,6 +13,9 @@
     {error_logger_mf_maxfiles, 128},
     {utc_log, true}
   ]},
+ {cloudi_x_erlcloud, [
+    {http_client, httpc}
+  ]},
  {cloudi_x_cpg, [
     {scope, []}
   ]},
