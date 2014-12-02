@@ -34,9 +34,6 @@
 -type tag_value() :: condition_meta(tag_output()).
 -type group_value() :: condition_meta(group_output()).
 
--include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud.hrl").
--include_lib("cloudi_x_erlcloud/include/cloudi_x_erlcloud_ec2.hrl").
-
 -record(state,
     {
         ec2_config,
@@ -44,13 +41,10 @@
         ec2_tagged_instances,
         groups :: list(group_value()),
         tags :: list(tag_value()),
-        tags_filter :: list({key, list(string())} |
-                            {value, list(string())}),
         nodes :: list(node()),
         connect :: visible | hidden
     }).
 
--define(ERLCLOUD_TAG_VALUE_NULL, " ").
 -define(NULL_EXPRESSION, [{'OR', []}]).
 
 %%%------------------------------------------------------------------------
@@ -128,12 +122,9 @@ init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
                          GroupsExpressionTree == ?NULL_EXPRESSION ->
                     {stop, {error, null_selection}};
                 {ok, GroupsExpressionTree} ->
-                    TagsMerged = tags_merge(TagsExpressionTree),
-                    TagsFilter = tags_filter(TagsMerged),
                     case do_discover(#state{ec2_config = Config,
                                             groups = GroupsExpressionTree,
                                             tags = TagsExpressionTree,
-                                            tags_filter = TagsFilter,
                                             nodes = [],
                                             connect = Connect}) of
                         {ok, #state{}} = Success ->
@@ -296,44 +287,6 @@ preprocess([{'OR', ORs}] = L, Type)
 preprocess(L, Type) ->
     preprocess_set([{'OR', L}], Type).
 
-tags_merge_f_values(_, _, []) ->
-    [?ERLCLOUD_TAG_VALUE_NULL];
-tags_merge_f_values(_, V1, V2) ->
-    lists:umerge(V1, V2).
-
-tags_merge_f_value1(K, [], D2) ->
-    tags_merge_f_value1(K, [?ERLCLOUD_TAG_VALUE_NULL], D2);
-tags_merge_f_value1(K, V1, D2) ->
-    orddict:update(K, fun(V2) ->
-                       tags_merge_f_values(K, V1, V2)
-                   end, V1, D2).
-
-tags_merge_f(D1, D2) ->
-    orddict:fold(fun tags_merge_f_value1/3, D2, D1).
-
-tags_merge([], Lookup) ->
-    Lookup;
-tags_merge([{'AND', L1} | L0], Lookup) ->
-    tags_merge(L0, tags_merge(L1, Lookup));
-tags_merge([{'OR', L1} | L0], Lookup) ->
-    tags_merge(L0, tags_merge(L1, Lookup));
-tags_merge([Tags | L0], Lookup) ->
-    tags_merge(L0, tags_merge_f(Tags, Lookup)).
-
-tags_merge(L) ->
-    orddict:to_list(tags_merge(L, orddict:new())).
-
-tags_filter(Merged) ->
-    {Keys, Values} = lists:foldl(fun({K0, V0}, {K1, V1}) ->
-        {lists:umerge(K1, [K0]), lists:umerge(V1, V0)}
-    end, {[], []}, Merged),
-    if
-        Values == [] ->
-            [{key, Keys}];
-        true ->
-            [{key, Keys}, {value, Values}]
-    end.
-
 process_filter(Group, EC2Instances, group) ->
     lists:filter(fun(Reservation) ->
         {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
@@ -348,7 +301,7 @@ process_filter(Group, EC2Instances, group) ->
 process_filter(Tags, EC2Tags, tag) ->
     orddict:filter(fun(_, TagL) ->
         % do any of the tags for an instance match a single requirement
-        lists:any(fun(#ec2_tag{key = Key, value = Value}) ->
+        lists:any(fun({Key, Value}) ->
             case orddict:find(Key, Tags) of
                 {ok, []} ->
                     true;
@@ -393,15 +346,24 @@ process([{'OR', L}], EC2Instances, group) ->
         {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
         update_from_instances_set(InstancesSet, Hosts)
     end, [], process_or(L, lists:usort(EC2Instances), group));
-process([{'OR', L}], EC2Tags, tag) ->
+process([{'OR', L}], EC2Instances, tag) ->
     % output list of instance ids
-    NewEC2Tags = lists:foldl(fun(#ec2_tag{resource_id = Id} = Tag, D) ->
-        InitialValue = [Tag],
-        orddict:update(Id, fun(OldTagL) ->
-                           lists:umerge(OldTagL, InitialValue)
-                       end, InitialValue, D)
-    end, orddict:new(), EC2Tags),
-    [Id || {Id, _} <- orddict:to_list(process_or(L, NewEC2Tags, tag))].
+    EC2Tags = lists:foldl(fun(Reservation, D0) ->
+        {_, InstancesSet} = lists:keyfind(instances_set, 1, Reservation),
+        lists:foldl(fun(Instance, D1) ->
+            {_, Id} = lists:keyfind(instance_id, 1, Instance),
+            {_, TagsSet} = lists:keyfind(tag_set, 1, Instance),
+            lists:foldl(fun(Tag, D2) ->
+                {_, Key} = lists:keyfind(key, 1, Tag),
+                {_, Value} = lists:keyfind(value, 1, Tag),
+                InitialValue = [{Key, Value}],
+                orddict:update(Id, fun(OldTagL) ->
+                                   lists:umerge(OldTagL, InitialValue)
+                               end, InitialValue, D2)
+            end, D1, TagsSet)
+        end, D0, InstancesSet)
+    end, orddict:new(), EC2Instances),
+    [Id || {Id, _} <- orddict:to_list(process_or(L, EC2Tags, tag))].
 
 node_names(Hosts, #state{} = State) ->
     Name = string:sub_word(erlang:atom_to_list(node()), 1, $@),
@@ -421,28 +383,16 @@ ec2_instances_get(#state{ec2_config = Config,
             Error
     end.
 
-ec2_tagged_instances_get_entries(Tags, Filter, Config) ->
-    case erlcloud_ec2:describe_tags([{resource_type, ["instance"]} |
-                                     Filter], Config) of
-        {ok, EC2Tags} ->
-            {ok, process(Tags, EC2Tags, tag)};
-        {error, _} = Error ->
-            Error
-    end.
-
 ec2_tagged_instances_get(#state{tags = ?NULL_EXPRESSION} = State) ->
     {ok, false, State};
-ec2_tagged_instances_get(#state{ec2_config = Config,
+ec2_tagged_instances_get(#state{ec2_instances = EC2Instances,
                                 ec2_tagged_instances = OldResult,
-                                tags = Tags,
-                                tags_filter = Filter} = State) ->
-    case ec2_tagged_instances_get_entries(Tags, Filter, Config) of
-        {ok, OldResult} ->
+                                tags = Tags} = State) ->
+    case process(Tags, EC2Instances, tag) of
+        OldResult ->
             {ok, false, State};
-        {ok, NewResult} ->
-            {ok, true, State#state{ec2_tagged_instances = NewResult}};
-        {error, _} = Error ->
-            Error
+        NewResult ->
+            {ok, true, State#state{ec2_tagged_instances = NewResult}}
     end.
 
 update_from_instance(Instance, Hosts) ->
@@ -531,12 +481,8 @@ update(UpdateGroups, UpdateTags, State) ->
 do_discover(#state{} = State) ->
     case ec2_instances_get(State) of
         {ok, UpdatedGroups, NextState} ->
-            case ec2_tagged_instances_get(NextState) of
-                {ok, UpdatedTags, NewState} ->
-                    update(UpdatedGroups, UpdatedTags, NewState);
-                {error, _} = Error ->
-                    Error
-            end;
+            {ok, UpdatedTags, NewState} = ec2_tagged_instances_get(NextState),
+            update(UpdatedGroups, UpdatedTags, NewState);
         {error, _} = Error ->
             Error
     end.
@@ -556,30 +502,33 @@ pforeach(F, L) ->
 -include_lib("eunit/include/eunit.hrl").
 
 logic_case1_tags() ->
-    [#ec2_tag{resource_id = "A1",
-              key = "A",
-              value = "A"},
-     #ec2_tag{resource_id = "A2",
-              key = "A",
-              value = "B"},
-     #ec2_tag{resource_id = "B1",
-              key = "B",
-              value = "A"},
-     #ec2_tag{resource_id = "C1",
-              key = "C",
-              value = "A"},
-     #ec2_tag{resource_id = "C2",
-              key = "C",
-              value = "B"},
-     #ec2_tag{resource_id = "C3",
-              key = "C",
-              value = "C"},
-     #ec2_tag{resource_id = "C4",
-              key = "C",
-              value = "C"},
-     #ec2_tag{resource_id = "C5",
-              key = "C",
-              value = "C"}].
+    [[{instances_set,
+       [[{instance_id, "A1"},
+         {tag_set,
+          [[{key, "A"}, {value, "A"}]]}],
+        [{instance_id, "A2"},
+         {tag_set,
+          [[{key, "A"}, {value, "B"}]]}]]}],
+     [{instances_set,
+       [[{instance_id, "B1"},
+         {tag_set,
+          [[{key, "B"}, {value, "A"}]]}]]}],
+     [{instances_set,
+       [[{instance_id, "C1"},
+         {tag_set,
+          [[{key, "C"}, {value, "A"}]]}],
+        [{instance_id, "C2"},
+         {tag_set,
+          [[{key, "C"}, {value, "B"}]]}],
+        [{instance_id, "C3"},
+         {tag_set,
+          [[{key, "C"}, {value, "C"}]]}],
+        [{instance_id, "C4"},
+         {tag_set,
+          [[{key, "C"}, {value, "C"}]]}],
+        [{instance_id, "C5"},
+         {tag_set,
+          [[{key, "C"}, {value, "C"}]]}]]}]].
 
 logic_case1_tags_preprocess(TagsInput) ->
     true = is_list(TagsInput),
@@ -771,14 +720,17 @@ logic4_case2_test() ->
 merge1_test() ->
     TagsInput = [{'AND', [{"foobear", "1"}, "foobarish"]}],
     {ok, TagsExpressionTree} = preprocess(TagsInput, tag),
-    TagsMerged = tags_merge(TagsExpressionTree),
-    [{key, ["foobarish", "foobear"]},
-     {value, [" ", "1"]}] = tags_filter(TagsMerged),
     Tags = TagsExpressionTree,
-    {ok, EC2Tags} = {ok,[{ec2_tag,"instanceB","instance","foobarish",[]},
-                         {ec2_tag,"instanceA","instance","foobear","1"},
-                         {ec2_tag,"instanceA","instance","foobarish",[]}]},
-    TaggedInstances = process(Tags, EC2Tags, tag),
+    EC2Instances = [[{instances_set,
+                      [[{instance_id, "instanceB"},
+                        {tag_set,
+                         [[{key, "foobarish"}, {value, ""}]]}]]}],
+                    [{instances_set,
+                      [[{instance_id, "instanceA"},
+                        {tag_set,
+                         [[{key, "foobear"}, {value, "1"}],
+                          [{key, "foobarish"}, {value, ""}]]}]]}]],
+    TaggedInstances = process(Tags, EC2Instances, tag),
     ["instanceA"] = TaggedInstances,
     ok.
 
