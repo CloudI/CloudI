@@ -171,7 +171,7 @@ cluster_state(Destination) ->
 -spec cluster_state(destination(), params()) -> response().
 %% @equiv state(Destination, Params).
 cluster_state(Destination, Params) when is_list(Params) ->
-    cluster_state(Destination, Params).
+    state(Destination, Params).
 
 %% @equiv state(Destination, []).
 -spec state(destination()) -> response().

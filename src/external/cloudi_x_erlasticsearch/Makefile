@@ -11,7 +11,7 @@ PLT_APPS := $(shell ls $(ERL_LIB_DIR) | grep -v interface | sed -e 's/-[0-9.]*//
 
 all: compile
 
-compile:
+compile: deps
 	@rebar compile
 
 deps:
