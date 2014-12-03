@@ -4,6 +4,8 @@
 2014-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update erlasticsearch
+    * Fix C++ backtrace compilation configuration
+    * Enable integration test compilation for the enabled programming languages
 
 2014-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 

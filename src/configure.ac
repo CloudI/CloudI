@@ -223,14 +223,12 @@ if test "x$want_integration_tests" != "xno" -a \
         "x$perl_support" = "xtrue" -a "x$php_support" = "xtrue" -a \
         "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
         "x$ruby_support" = "xtrue" ; then
-    AM_CONDITIONAL([INTEGRATION_TESTS], [true])
     integration_tests_included="true"
 else
     if test "x$want_integration_tests" = "xyes" ; then
         AC_MSG_ERROR([--with-integration-tests=yes
                       requires all programming languages be enabled])
     fi
-    AM_CONDITIONAL([INTEGRATION_TESTS], [false])
     integration_tests_included="false"
 fi
 AC_MSG_RESULT([$integration_tests_included])

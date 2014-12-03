@@ -50,7 +50,9 @@
 AC_DEFUN([AX_BACKTRACE],
 [
     AS_CASE([$host_os],
-            [linux*], [backtrace="backward"],
+            [linux*], [AS_CASE([$host_cpu],
+                               [x86*], [backtrace="backward"],
+                               [*], [backtrace="booster"])],
             [*], [backtrace="booster"])
 
     AC_LANG_PUSH([C++])
