@@ -107,7 +107,6 @@
 %
 % Software:
 %  Fedora 20 (GNU/Linux 3.15.10-201.fc20.ppc64p7 ppc64)
-%  RAM:160GB
 %  Erlang 17.3
 %
 % Max Stable (Total) Request Rate

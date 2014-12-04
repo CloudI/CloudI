@@ -6,6 +6,8 @@
     * Update erlasticsearch
     * Fix C++ backtrace compilation configuration
     * Enable integration test compilation for the enabled programming languages
+    * Split configure flag --with-integration-tests into both
+      --with-integration-tests and --with-integration-tests-ran
 
 2014-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 

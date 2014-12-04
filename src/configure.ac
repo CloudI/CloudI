@@ -216,22 +216,51 @@ AC_ARG_WITH([integration-tests],
         AC_MSG_ERROR([--with-integration-tests needs yes or no, not $withval])
     fi
     ],
-    [want_integration_tests="maybe"])
-if test "x$want_integration_tests" != "xno" -a \
+    [want_integration_tests="yes"])
+if test "x$want_integration_tests" = "xyes"; then
+    integration_tests_included="true"
+else
+    integration_tests_included="false"
+fi
+AC_MSG_RESULT([$integration_tests_included])
+AM_CONDITIONAL([INTEGRATION_TESTS], [$integration_tests_included])
+AC_MSG_CHECKING([if the CloudI integration tests should be ran])
+AC_ARG_WITH([integration-tests-ran],
+    [AS_HELP_STRING([--with-integration-tests-ran@<:@=ARG@:>@],
+        [use the default CloudI configuration to run all the integration tests
+         (ARG=yes), or use a blank CloudI configuration so nothing is ran by
+         default within the installed CloudI configuration (ARG=no)
+         @<:@ARG=yes@:>@ ])],
+    [
+    if test "x$withval" = "xno"; then
+        want_integration_tests_ran="no"
+    elif test "x$withval" = "xyes"; then
+        if test "x$want_integration_tests" = "xno"; then
+            AC_MSG_ERROR([--with-integration-tests-ran=yes
+                          requires --with-integration-tests=yes])
+        fi
+        want_integration_tests_ran="yes"
+    else
+        AC_MSG_ERROR([--with-integration-tests-ran needs yes or no,
+                      not $withval])
+    fi
+    ],
+    [want_integration_tests_ran="$want_integration_tests"])
+if test "x$want_integration_tests_ran" = "xyes" -a \
         "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
         "x$java_support" = "xtrue" -a "x$javascript_support" = "xtrue" -a \
         "x$perl_support" = "xtrue" -a "x$php_support" = "xtrue" -a \
         "x$python_support" = "xtrue" -a "x$python_c_support" = "xtrue" -a \
         "x$ruby_support" = "xtrue" ; then
-    integration_tests_included="true"
+    integration_tests_ran="true"
 else
-    if test "x$want_integration_tests" = "xyes" ; then
-        AC_MSG_ERROR([--with-integration-tests=yes
+    if test "x$want_integration_tests_ran" = "xyes" ; then
+        AC_MSG_ERROR([--with-integration-tests-ran=yes
                       requires all programming languages be enabled])
     fi
-    integration_tests_included="false"
+    integration_tests_ran="false"
 fi
-AC_MSG_RESULT([$integration_tests_included])
+AC_MSG_RESULT([$integration_tests_ran])
 
 # C++ requirements
 AX_LIB_SOCKET_NSL
@@ -455,7 +484,7 @@ if test "x$want_service" = "xyes"; then
     AC_SUBST(SERVICE_PATH)
 fi
 
-if test "x$integration_tests_included" = "xtrue" ; then
+if test "x$integration_tests_ran" = "xtrue" ; then
     AC_CONFIG_FILES([cloudi.conf])
 else
     AC_CONFIG_COMMANDS([cloudi.conf.empty],
