@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -891,7 +892,9 @@ int32_t spawn(char protocol,
                 struct sockaddr_in localhost;
                 localhost.sin_family = domain;
                 localhost.sin_port = htons(ports[i]);
-                localhost.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+                //"127.0.0.1" == htonl(INADDR_LOOPBACK) == 0x0100007f
+                // (in network byte order == big endian for PF_INET)
+                localhost.sin_addr.s_addr = 0x0100007f;
     
                 if (::connect(sockfd,
                               reinterpret_cast<struct sockaddr *>(&localhost),
