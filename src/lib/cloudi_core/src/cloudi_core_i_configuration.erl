@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -99,6 +99,7 @@
      service_internal_count_process_invalid |
      service_internal_max_r_invalid |
      service_internal_max_t_invalid |
+     service_internal_max_t_increase |
      service_internal_options_invalid |
      service_external_invalid |
      service_external_prefix_invalid |
@@ -117,6 +118,7 @@
      service_external_count_thread_invalid |
      service_external_max_r_invalid |
      service_external_max_t_invalid |
+     service_external_max_t_increase |
      service_external_options_invalid |
      service_options_priority_default_invalid |
      service_options_queue_limit_invalid |
@@ -1597,6 +1599,7 @@ services_acl_update_list([E | L], Output, Lookup)
       service_internal_count_process_invalid |
       service_internal_max_r_invalid |
       service_internal_max_t_invalid |
+      service_internal_max_t_increase |
       service_internal_options_invalid |
       service_external_invalid |
       service_external_prefix_invalid |
@@ -1615,6 +1618,7 @@ services_acl_update_list([E | L], Output, Lookup)
       service_external_count_thread_invalid |
       service_external_max_r_invalid |
       service_external_max_t_invalid |
+      service_external_max_t_increase |
       service_external_options_invalid |
       service_options_priority_default_invalid |
       service_options_queue_limit_invalid |
@@ -1711,6 +1715,14 @@ services_validate([#internal{max_r = MaxR} | _], _, _, _)
 services_validate([#internal{max_t = MaxT} | _], _, _, _)
     when not (is_integer(MaxT) andalso MaxT >= 0) ->
     {error, {service_internal_max_t_invalid, MaxT}};
+services_validate([#internal{max_r = MaxR,
+                             max_t = MaxT} | _], _, _, _)
+    when (MaxT > 0) andalso
+         (((MaxR == 0) andalso
+           (?TIMEOUT_TERMINATE_CALC0(MaxT) < ?TIMEOUT_TERMINATE_MIN)) orelse
+          ((MaxR > 0) andalso
+           (?TIMEOUT_TERMINATE_CALC1(MaxT, MaxR) < ?TIMEOUT_TERMINATE_MIN))) ->
+    {error, {service_internal_max_t_increase, MaxT}};
 services_validate([#internal{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_internal_options_invalid, Options}};
@@ -1857,6 +1869,14 @@ services_validate([#external{max_r = MaxR} | _], _, _, _)
 services_validate([#external{max_t = MaxT} | _], _, _, _)
     when not (is_integer(MaxT) andalso MaxT >= 0) ->
     {error, {service_external_max_t_invalid, MaxT}};
+services_validate([#external{max_r = MaxR,
+                             max_t = MaxT} | _], _, _, _)
+    when (MaxT > 0) andalso
+         (((MaxR == 0) andalso
+           (?TIMEOUT_TERMINATE_CALC0(MaxT) < ?TIMEOUT_TERMINATE_MIN)) orelse
+          ((MaxR > 0) andalso
+           (?TIMEOUT_TERMINATE_CALC1(MaxT, MaxR) < ?TIMEOUT_TERMINATE_MIN))) ->
+    {error, {service_external_max_t_increase, MaxT}};
 services_validate([#external{options = Options} | _], _, _, _)
     when not is_list(Options) ->
     {error, {service_external_options_invalid, Options}};
@@ -2034,12 +2054,10 @@ services_validate([Service | _], _, _, _) ->
 timeout_terminate(0, _) ->
     ?TIMEOUT_TERMINATE_DEFAULT;
 timeout_terminate(MaxT, 0) ->
-    erlang:min(erlang:max((1000 * MaxT) - ?TIMEOUT_DELTA,
-                          ?TIMEOUT_TERMINATE_MIN),
+    erlang:min(?TIMEOUT_TERMINATE_CALC0(MaxT),
                ?TIMEOUT_TERMINATE_MAX);
 timeout_terminate(MaxT, MaxR) ->
-    erlang:min(erlang:max(((1000 * MaxT) div MaxR) - ?TIMEOUT_DELTA,
-                          ?TIMEOUT_TERMINATE_MIN),
+    erlang:min(?TIMEOUT_TERMINATE_CALC1(MaxT, MaxR),
                ?TIMEOUT_TERMINATE_MAX).
 
 -spec services_validate_options_internal(OptionsList ::

@@ -450,7 +450,8 @@ fi
 AC_SUBST(REBAR)
 
 # hexpi test
-if test "x$cxx_support" = "xtrue" ; then
+if test "x$want_integration_tests" = "xyes" -a \
+        "x$cxx_support" = "xtrue"; then
 AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 fi
 
