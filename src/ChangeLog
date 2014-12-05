@@ -4,7 +4,6 @@
 2014-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Enforce TIMEOUT_TERMINATE_MIN based on MaxT setting during configuration
-    * Fix erlzmq2 rebar.conf linkage
 
 2014-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 

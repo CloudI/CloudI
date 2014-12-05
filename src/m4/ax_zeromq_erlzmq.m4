@@ -3,7 +3,7 @@
 #
 # SYNOPSIS
 #
-#   AX_ZEROMQ_ERLZMQ
+#   AX_ZEROMQ_ERLZMQ([OTHER-INC_PATHS], [OTHER-LIB_PATHS])
 #
 # DESCRIPTION
 #
@@ -72,6 +72,7 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
         if test -z "$REBAR"; then
             AC_MSG_ERROR([rebar not found!])
         fi
+        AX_UUID($1, $2)
         AC_CONFIG_COMMANDS([zeromq_erlzmq],
             [(cd $SRCDIR/external/zeromq/v$ZEROMQ_VERSION_MAJOR/erlzmq/ && \
               ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS \
@@ -79,8 +80,8 @@ AC_DEFUN([AX_ZEROMQ_ERLZMQ],
               ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH \
               $REBAR compile && \
               echo "erlzmq compiled" || exit 1)],
-            [ZEROMQ_CFLAGS=$ZEROMQ_CFLAGS
-             ZEROMQ_LDFLAGS=$ZEROMQ_LDFLAGS
+            [ZEROMQ_CFLAGS="$ZEROMQ_CFLAGS $UUID_UUID_H_CFLAGS"
+             ZEROMQ_LDFLAGS="$ZEROMQ_LDFLAGS $UUID_LDFLAGS"
              ZEROMQ_LIB_PATH=$ZEROMQ_LIB_PATH
              ZEROMQ_VERSION_MAJOR=$ZEROMQ_VERSION_MAJOR
              ERLANG_ROOT_DIR=$ERLANG_ROOT_DIR
