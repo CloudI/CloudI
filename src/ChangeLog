@@ -4,6 +4,9 @@
 2014-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Enforce TIMEOUT_TERMINATE_MIN based on MaxT setting during configuration
+    * Add compatibility for FreeBSD
+      (tested with 8.3, ports used: devel/{autoconf,automake,libtool,git},
+       math/gmp misc/e2fsprogs-libuuid)
 
 2014-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
