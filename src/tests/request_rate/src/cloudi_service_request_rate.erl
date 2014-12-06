@@ -101,36 +101,6 @@
 %                1           immediate    false      1        1              0
 %                1                lazy     true      1        1              0
 % 
-% Hardware:
-%  IBM POWER System S822 (POWER8) 3.42 GHz 2 cpus, 10 cores, 8 hyper-threads
-%  L2:10x512KB L3:10x8MB L4:DIMMx16MB RAM:160GB:DDR3-1333MHz
-%
-% Software:
-%  Fedora 20 (GNU/Linux 3.15.10-201.fc20.ppc64p7 ppc64)
-%  Erlang 17.3
-%
-% Max Stable (Total) Request Rate
-%  requests/second dest_refresh_method duo_mode sender receiver
-%             1124           immediate    false      1        1
-%             1199                lazy    false      1        1
-%            11500           immediate     true      1        1
-%            12199                lazy     true      1        1
-%            15556                lazy     true      1        2
-%            13995                lazy     true      1        3
-%            13180                lazy     true      1        4
-%            15484                lazy     true      2        2
-%            22635                lazy     true      2        3
-%            22132                lazy     true      2        4
-%            21410                lazy     true      2        5
-%            25743                lazy     true      3        3
-%            30660                lazy     true      3        4
-%            28407                lazy     true      3        5
-%            27915                lazy     true      3        6
-%            31000                lazy     true      4        4
-%            30786                lazy     true      4        5
-%            20734                lazy     true      5        5
-%            33073                lazy     true      5        6
-
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,

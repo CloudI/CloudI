@@ -1,0 +1,56 @@
+ Hardware:
+  IBM POWER System S822 (POWER8) 3.42 GHz 2 cpus, 10 cores, 8 hyper-threads
+  L2:10x512KB L3:10x8MB L4:DIMMx16MB RAM:160GB:DDR3-1333MHz
+
+ Software:
+  Fedora 20 (GNU/Linux 3.15.10-201.fc20.ppc64p7 ppc64)
+  Erlang 17.3
+  CloudI 1.4.0 (2014-12)
+
+ Max Stable (Total) Request Rate: Erlang
+  requests/second dest_refresh_method duo_mode sender receiver
+             1124           immediate    false      1        1
+             1199                lazy    false      1        1
+            11500           immediate     true      1        1
+            12199                lazy     true      1        1
+            15556                lazy     true      1        2
+            13995                lazy     true      1        3
+            13180                lazy     true      1        4
+            15484                lazy     true      2        2
+            22635                lazy     true      2        3
+            22132                lazy     true      2        4
+            21410                lazy     true      2        5
+            25743                lazy     true      3        3
+            30660                lazy     true      3        4
+            28407                lazy     true      3        5
+            27915                lazy     true      3        6
+            31000                lazy     true      4        4
+            30786                lazy     true      4        5
+            20734                lazy     true      5        5
+            33073                lazy     true      5        6
+
+ Max Stable (Total) Request Rate: C (without threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              939           immediate    false      1        1
+              938                lazy    false      1        1
+             8186           immediate     true      1        1
+             8269                lazy     true      1        1
+             9315                lazy     true      1        2
+            11557                lazy     true      1        3
+            11789                lazy     true      1        4
+            11919                lazy     true      2        2
+            11280                lazy     true      2        3
+            14273                lazy     true      2        4
+            19950                lazy     true      2        5
+            20600                lazy     true      2        6
+            13853                lazy     true      3        3
+            16686                lazy     true      3        4
+            14512                lazy     true      3        5
+            25658                lazy     true      3        6
+            24631                lazy     true      3        7
+            23264                lazy     true      3        8
+            15937                lazy     true      4        4
+            13481                lazy     true      4        5
+            15177                lazy     true      5        5
+            17709                lazy     true      5        6
+
