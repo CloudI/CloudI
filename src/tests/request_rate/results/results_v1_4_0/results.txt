@@ -5,7 +5,21 @@
  Software:
   Fedora 20 (GNU/Linux 3.15.10-201.fc20.ppc64p7 ppc64)
   Erlang 17.3
+  Java (java-1.7.0-openjdk-1.7.0.65-2.5.1.2.fc20.ppc64)
   CloudI 1.4.0 (2014-12)
+
+ Test:
+  Use cloudi_service_request_rate to send service requests to the
+  http_req integration test written in a supported programming language.
+  Vary the number of sending service processes and the number of
+  receiving service processes (either threads or OS processes when testing
+  external services) to determine the effect on the maximum stable request
+  rate that can be sustained (for more than 20 seconds with the expectation
+  of maintaining the request rate indefinitely, i.e., the request rate that
+  can be sustained without having any errors).  The destination refresh
+  method (a service configuration parameter, either immediate_closest or
+  lazy_closest) and the duo_mode (a service configuration option) are both
+  settings for the sender (cloudi_service_request_rate).
 
  Max Stable (Total) Request Rate: Erlang
   requests/second dest_refresh_method duo_mode sender receiver
@@ -53,4 +67,30 @@
             13481                lazy     true      4        5
             15177                lazy     true      5        5
             17709                lazy     true      5        6
+
+ Max Stable (Total) Request Rate: Java (with threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              869           immediate     false     1        1
+              858                lazy     false     1        1
+             7794           immediate     true      1        1
+             5728                lazy     true      1        1
+             5560                lazy     true      1        2
+            12002                lazy     true      1        3
+            11212                lazy     true      1        4
+            11287                lazy     true      1        5
+             8662                lazy     true      2        2
+            12052                lazy     true      2        3
+            15354                lazy     true      2        4
+            19351                lazy     true      2        5
+            18988                lazy     true      2        6
+            13043                lazy     true      3        3
+            14507                lazy     true      3        4
+            16993                lazy     true      3        5
+            21649                lazy     true      3        6
+            23286                lazy     true      3        7
+            23201                lazy     true      3        8
+            12191                lazy     true      4        4
+            14815                lazy     true      4        5
+            17562                lazy     true      5        5
+            16766                lazy     true      5        6
 

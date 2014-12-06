@@ -1,12 +1,28 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix http_req C executable compilation
+    * Tested with Fedora 20 on ppc64
+      (configure args:
+       --with-cxx-backtrace --with-zeromq --disable-javascript-support
+       --disable-php-support --disable-ruby-support
+       --with-integration-tests-ran=no)
+
 2014-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Enforce TIMEOUT_TERMINATE_MIN based on MaxT setting during configuration
-    * Add compatibility for FreeBSD
-      (tested with 8.3, ports used: devel/{autoconf,automake,libtool,git}
-       math/gmp misc/e2fsprogs-libuuid)
+    * Add compatibility for FreeBSD 8.3 on amd64
+      (relied on the default install except for extra source code
+       compilation dependencies,
+       ports used:
+       devel/{autoconf,automake,libtool,git}
+       math/gmp misc/e2fsprogs-libuuid,
+       configure args:
+       --with-cxx-backtrace --with-zeromq --disable-javascript-support
+       --disable-php-support --disable-ruby-support --disable-java-support 
+       --with-integration-tests-ran=no)
 
 2014-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
