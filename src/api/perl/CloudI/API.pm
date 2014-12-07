@@ -158,7 +158,10 @@ sub new
 sub DESTROY
 {
     my $self = shift;
-    $self->{_s}->close();
+    if (defined($self->{_s}))
+    {
+        $self->{_s}->close();
+    }
 }
 
 # callable without an object
