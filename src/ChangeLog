@@ -1,11 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2014-12-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Perl CloudI API destructor bug
+
 2014-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix http_req C executable compilation
     * Tested with Fedora 20 on ppc64
-      (configure args:
+      (configure command line arguments:
        --with-cxx-backtrace --with-zeromq --disable-javascript-support
        --disable-php-support --disable-ruby-support
        --with-integration-tests-ran=no)
@@ -18,8 +22,8 @@
        compilation dependencies,
        ports used:
        devel/{autoconf,automake,libtool,git}
-       math/gmp misc/e2fsprogs-libuuid,
-       configure args:
+       math/gmp misc/e2fsprogs-libuuid
+       configure command line arguments:
        --with-cxx-backtrace --with-zeromq --disable-javascript-support
        --disable-php-support --disable-ruby-support --disable-java-support 
        --with-integration-tests-ran=no)

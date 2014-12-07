@@ -6,6 +6,8 @@
   Fedora 20 (GNU/Linux 3.15.10-201.fc20.ppc64p7 ppc64)
   Erlang 17.3
   Java (java-1.7.0-openjdk-1.7.0.65-2.5.1.2.fc20.ppc64)
+  Python 2.7.5
+  Perl 5.18.2
   CloudI 1.4.0 (2014-12)
 
  Test:
@@ -93,4 +95,65 @@
             14815                lazy     true      4        5
             17562                lazy     true      5        5
             16766                lazy     true      5        6
+
+ Max Stable (Total) Request Rate: Python (with threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              948           immediate    false      1        1
+              901                lazy    false      1        1
+             3326           immediate     true      1        1
+             4394                lazy     true      1        1
+             3053                lazy     true      1        2
+             2780                lazy     true      1        3
+
+ Max Stable (Total) Request Rate: Python (without threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              948           immediate    false      1        1
+              901                lazy    false      1        1
+             3326           immediate     true      1        1
+             4394                lazy     true      1        1
+             6061                lazy     true      1        2
+             5062                lazy     true      1        3
+             6865                lazy     true      1        4
+            10534                lazy     true      1        5
+             6794                lazy     true      2        2
+             8657                lazy     true      2        3
+             9183                lazy     true      2        4
+            11549                lazy     true      2        5
+            10720                lazy     true      2        6
+             8043                lazy     true      3        3
+            10825                lazy     true      3        4
+            12456                lazy     true      3        5
+            12287                lazy     true      3        6
+            16425                lazy     true      3        7
+            15848                lazy     true      3        8
+            10737                lazy     true      4        4
+            12460                lazy     true      4        5
+            13031                lazy     true      5        5
+            14064                lazy     true      5        6
+
+ Max Stable (Total) Request Rate: Perl (with threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+             1118           immediate    false      1        1
+             1081                lazy    false      1        1
+             3180           immediate     true      1        1
+             4796                lazy     true      1        1
+             3663                lazy     true      1        2
+             5087                lazy     true      1        3
+             7405                lazy     true      1        4
+             7771                lazy     true      1        5
+             4797                lazy     true      2        2
+             6689                lazy     true      2        3
+             9624                lazy     true      2        4
+            10131                lazy     true      2        5
+             9755                lazy     true      2        6
+             6881                lazy     true      3        3
+             8526                lazy     true      3        4
+             9863                lazy     true      3        5
+            11718                lazy     true      3        6
+            14321                lazy     true      3        7
+            13864                lazy     true      3        8
+             8945                lazy     true      4        4
+            11764                lazy     true      4        5
+            10824                lazy     true      5        5
+            13161                lazy     true      5        6
 

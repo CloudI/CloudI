@@ -66,6 +66,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 * `Javascript >= 0.8.0 (nodejs/Ubuntu)`
   * (node.js [package](https://github.com/joyent/node/wiki/installing-node.js-via-package-manager))
 * `Perl >= 5.10 (perl/Ubuntu)`
+  * `Compress::Zlib (cpan)`
 * `PHP >= 5.3.6 (php5/Ubuntu)`
 * `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
 * `Ruby >= 1.9.0 (ruby1.9.1/Ubuntu, ruby19/macports)`
