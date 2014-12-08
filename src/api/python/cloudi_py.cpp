@@ -711,10 +711,10 @@ class callback : public CloudI::API::function_object_c
                         result_invalid = true;
                     }
                     else if (response_info_size_tmp < 0 ||
-                             response_info_size_tmp >
+                             static_cast<uint32_t>(response_info_size_tmp) >
                              std::numeric_limits<uint32_t>::max() ||
                              response_size_tmp < 0 ||
-                             response_size_tmp >
+                             static_cast<uint32_t>(response_size_tmp) >
                              std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
@@ -738,7 +738,7 @@ class callback : public CloudI::API::function_object_c
                         result_invalid = true;
                     }
                     else if (response_size_tmp < 0 ||
-                             response_size_tmp >
+                             static_cast<uint32_t>(response_size_tmp) >
                              std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
@@ -777,7 +777,7 @@ class callback : public CloudI::API::function_object_c
                     }
 #endif
                     if (response_size_tmp < 0 ||
-                        response_size_tmp >
+                        static_cast<uint32_t>(response_size_tmp) >
                         std::numeric_limits<uint32_t>::max())
                     {
                         result_invalid = true;
