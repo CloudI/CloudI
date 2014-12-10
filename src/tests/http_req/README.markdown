@@ -7,6 +7,9 @@ The following requests are available (see `loadtest/results/*/setup/cloudi.conf`
     http://localhost:8080/tests/http_req/erlang.xml?value=42
     http://localhost:8080/tests/http_req/c.xml?value=42
     http://localhost:8080/tests/http_req/java.xml?value=42
+    http://localhost:8080/tests/http_req/javascript.xml?value=42
+    http://localhost:8080/tests/http_req/perl.xml?value=42
+    http://localhost:8080/tests/http_req/php.xml?value=42
     http://localhost:8080/tests/http_req/python.xml?value=42
     http://localhost:8080/tests/http_req/python_c.xml?value=42
     http://localhost:8080/tests/http_req/ruby.xml?value=42
@@ -15,8 +18,9 @@ Which all give the following response, from the associated programming language:
 
     <http_test><value>42</value></http_test>
 
-The test's task is simple usage of an XML response to a
-HTTP GET request, which requires minimal processing in each programming
+The test's task is simple usage of an XML response to a HTTP GET request
+(based on an older misultin loadtest `[1]`), which requires minimal processing
+in each programming
 language.  The misultin support in CloudI has been removed (in version 1.2.0),
 so now cowboy is the preferred HTTP server with integration provided by
 `cloudi_service_http_cowboy`.  The loadtest results from the version 1.0.0
@@ -35,16 +39,27 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 
 ###Hardware
 
-    Core i7 2670QM 2.2GHz 4 cores, 8 hyper-threads
+####Machine 1 `(<= 1.2.2)`
+
+    Core i7 2670QM 2.2GHz 4 cores, 2 hyperthreads/core
     L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (Socket G2)
+
+####Machine 2 `(1.4.0)`
+
+    Core i7 2700K 3.5GHz 4 cores, 2 hyperthreads/core
+    L2:KB L3:8MB RAM:16GB:DDR3-1333MHz
+    LGA1155
+
+####Network
+
     Gigabit ethernet (Netgear JGS516)
 
 ###Software
 
-    Ubuntu 12.04.2 LTS (GNU/Linux 3.2.0-29-generic x86_64)
+    Ubuntu 12.04 LTS (GNU/Linux 3.2.0-29-generic x86_64)
 
-    Erlang R15B01/R15B02/R16B configuration:
+    Erlang R15B01/R15B02/R16B/R16B03-1/17.3 configuration:
     ./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe
 
 Settings added to /etc/sysctl.conf
@@ -74,7 +89,7 @@ Newer Linux distributions have ACPI control over CPU frequencies which may
 ramp down the CPU speed during a loadtest.  On Ubuntu, you can use the
 package "cpufrequtils" to set the criteria used for adjusting the CPU
 frequency.  Usually, this involves setting the CPU governor to "performance".
-Example configuration modifications are shown below for Ubuntu 12.04.2:
+Example configuration modifications are shown below for Ubuntu 12.04:
 
     cat > /etc/default/cpufrequtils <<EOF
     #!/bin/sh
@@ -150,7 +165,7 @@ Recent connection count test:
 * [`http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/`](http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/)
 
 Interesting historical connection count test:
-* [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
+* `[1]` [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
 
