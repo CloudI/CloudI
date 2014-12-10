@@ -41,13 +41,13 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 
 ####Machine 1 `(<= 1.2.2)`
 
-    Core i7 2670QM 2.2GHz 4 cores, 2 hyperthreads/core
+    Core i7 2670QM 2.2GHz 1 cpu, 4 cores/cpu, 2 hts/core
     L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (Socket G2)
 
 ####Machine 2 `(1.4.0)`
 
-    Core i7 2700K 3.5GHz 4 cores, 2 hyperthreads/core
+    Core i7 2700K 3.5GHz 1 cpu, 4 cores/cpu, 2 hts/core
     L2:KB L3:8MB RAM:16GB:DDR3-1333MHz
     LGA1155
 
@@ -165,10 +165,10 @@ Recent connection count test:
 * [`http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/`](http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/)
 
 Interesting historical connection count test:
-* `[1]` [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
+* [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
 
 XML loadtest data was adapted from previous testing here:
-* [`http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/`](http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/)
+* `[1]` [`http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/`](http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/)
 

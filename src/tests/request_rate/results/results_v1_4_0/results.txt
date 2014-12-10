@@ -1,5 +1,5 @@
  Hardware:
-  IBM POWER System S822 (POWER8) 3.42 GHz 2 cpus, 10 cores, 8 hyper-threads
+  IBM POWER System S822 (POWER8) 3.42 GHz 2 cpus, 10 cores/cpu, 8 hts/core
   L2:10x512KB L3:10x8MB L4:DIMMx16MB RAM:160GB:DDR3-1333MHz
 
  Software:
