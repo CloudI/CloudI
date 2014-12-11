@@ -30,8 +30,9 @@ but the loadtest results from the version 1.1.0 release used both
 version 1.1.0 results showed cowboy performance was superior to misultin and
 justified the removal of misultin in version 1.2.0 (due to the parameterized
 module usage and the lack of active development).
-The CloudI loadtesting uses Tsung to produce dependable loadtesting results
-(see `loadtest/results_v*/*/setup/http_req_*.xml`).
+The CloudI loadtesting uses [Tsung](http://tsung.erlang-projects.org/)
+to produce dependable loadtesting results
+(the Tsung configuration files are at `loadtest/results_v*/*/setup/`).
 
 ##CONFIGURATION
 
@@ -48,8 +49,8 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 ####Machine 2 `(1.4.0)`
 
     Core i7 2700K 3.5GHz 1 cpu, 4 cores/cpu, 2 hts/core
-    L2:KB L3:8MB RAM:16GB:DDR3-1333MHz
-    LGA1155
+    L2:4x256KB L3:8MB RAM:16GB:DDR3-1333MHz
+    Sandy Bridge-HE-4 (LGA1155)
 
 ####Network
 
@@ -59,7 +60,7 @@ The general software configuration files are in `loadtest/results_v*/*/setup/`
 
     Ubuntu 12.04 LTS (GNU/Linux 3.2.0-29-generic x86_64)
 
-    Erlang R15B01/R15B02/R16B/R16B03-1/17.3 configuration:
+    Erlang R15B01/R15B02/R16B/R16B03-1 source compilation configuration:
     ./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe
 
 Settings added to /etc/sysctl.conf
@@ -108,6 +109,8 @@ If the CPU is automatically ramped down during the loadtest due to CPU
 temperature guidelines (check with "cpufreq-info"), you may reset the original
 settings with "service cpufrequtils restart".  Do not use "cpufreq-info"
 during a loadtest, since it skews the results by causing abnormal latency.
+If the CPU is automatically ramped down during the loadtest, the results
+are considered invalid and will likely contain request latency spikes.
 
 ##RESULTS
 
@@ -161,13 +164,11 @@ during a loadtest, since it skews the results by causing abnormal latency.
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
 * [`http://www.mnot.net/blog/2011/05/18/http_benchmark_rules`](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)
 
-Recent connection count test:
-* [`http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/`](http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/)
-
 Interesting historical connection count test:
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-1)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-2)
 * [`http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3`](http://www.metabrew.com/article/a-million-user-comet-application-with-mochiweb-part-3)
+* [`http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/`](http://blog.whatsapp.com/index.php/2012/01/1-million-is-so-2011/)
 
 XML loadtest data was adapted from previous testing here:
 * `[1]` [`http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/`](http://www.ostinelli.net/a-comparison-between-misultin-mochiweb-cowboy-nodejs-and-tornadoweb/)
