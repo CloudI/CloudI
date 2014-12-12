@@ -60,8 +60,8 @@ def print_metrics(file_path, host_name):
         # MAX TRANSACTIONS PER SECOND
         # ('tr_XXX' can be added below)
         'page': [(initialize_max, initialize_count, initialize_count)],
-        #'request': [(initialize_max, initialize_count)],
-        #'connect': [(initialize_max, initialize_count)],
+        #'request': [(initialize_max, initialize_count, initialize_count)],
+        #'connect': [(initialize_max, initialize_count, initialize_count)],
     }
     values_min_max_diff = {}
     values_max = {}
@@ -111,7 +111,7 @@ def print_metrics(file_path, host_name):
                     value_count_per_sec_max[i] = (
                         count_per_sec_max,
                         stable_count + 1,
-                        count + int(line[2]),
+                        int(line[2]) + count,
                     )
                     updated = True
                 if updated:
