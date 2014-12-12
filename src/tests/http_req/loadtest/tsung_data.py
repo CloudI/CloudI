@@ -108,7 +108,8 @@ def print_metrics(file_path, host_name):
           '(trans latency)')
     for name, value_min_mean_max in values_min_mean_max.items():
         (min_min, max_mean, max_max) = value_min_mean_max
-        print('%8s:\t%f\t%f\t%f' % (name, min_min, max_mean, max_max))
+        print('%8s:\t%f\t%f\t%f\tmilliseconds' %
+              (name, min_min, max_mean, max_max))
     print('\t\ttransactions_per_second_max\t\t   ' +
           '(trans throughput)')
     for name, value_count_per_sec_max in values_count_per_sec_max.items():
