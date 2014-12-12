@@ -45,6 +45,7 @@ from optparse import OptionParser
 def print_metrics(file_path, host_name):
     initialize_min = 1e6
     initialize_max = 0
+    initialize_count = 0
     values_min_mean_max = {
         # TRANSACTION LATENCY SUMMARY
         # ('tr_XXX' can be added below)
@@ -52,12 +53,15 @@ def print_metrics(file_path, host_name):
         #'request': (initialize_min, initialize_max, initialize_max),
         #'connect': (initialize_min, initialize_max, initialize_max),
     }
+    count_per_sec_stable_tolerance = 5 # % within current value
+    count_per_sec_stable_count = 180 / 10 # 3 minutes in 10 second increments
+    count_per_sec_history = 10 # entries in list
     values_count_per_sec_max = {
         # MAX TRANSACTIONS PER SECOND
         # ('tr_XXX' can be added below)
-        'page': (initialize_max, ),
-        #'request': (initialize_max, ),
-        #'connect': (initialize_max, ),
+        'page': [(initialize_max, initialize_count)],
+        #'request': [(initialize_max, initialize_count)],
+        #'connect': [(initialize_max, initialize_count)],
     }
     values_min_max_diff = {}
     values_max = {}
@@ -74,6 +78,7 @@ def print_metrics(file_path, host_name):
         values_max['{load,"os_mon@%s"}' % host_name] = (
             initialize_max,
         )
+    count_per_sec_mult = 1.0 - count_per_sec_stable_tolerance / 100.0
     f = open(file_path, 'r')
     lines = csv.reader(f, delimiter=' ')
     for line in lines:
@@ -89,9 +94,26 @@ def print_metrics(file_path, host_name):
             )
         value_count_per_sec_max = values_count_per_sec_max.get(name)
         if value_count_per_sec_max is not None:
-            values_count_per_sec_max[name] = (
-                max(int(line[2]) / 10.0, value_count_per_sec_max[0]),
-            )
+            updated = False
+            count_per_sec = int(line[2]) / 10.0
+            for i, value_count_per_sec in enumerate(value_count_per_sec_max):
+                (count_per_sec_max, stable_count) = value_count_per_sec
+                if count_per_sec > count_per_sec_max:
+                    value_count_per_sec_max.insert(i, (
+                        count_per_sec, 1
+                    ))
+                    updated = True
+                elif count_per_sec > count_per_sec_max * count_per_sec_mult:
+                    value_count_per_sec_max[i] = (
+                        count_per_sec_max, stable_count + 1
+                    )
+                    updated = True
+                if updated:
+                    break
+            if updated:
+                values_count_per_sec_max[name] = (
+                    value_count_per_sec_max[:count_per_sec_history]
+                )
         value_min_max_diff = values_min_max_diff.get(name)
         if value_min_max_diff is not None:
             values_min_max_diff[name] = (
@@ -113,8 +135,14 @@ def print_metrics(file_path, host_name):
     print('\t\ttransactions_per_second_max\t\t   ' +
           '(trans throughput)')
     for name, value_count_per_sec_max in values_count_per_sec_max.items():
-        (count_per_sec_max, ) = value_count_per_sec_max
-        print('%8s:\t%f' % (name, count_per_sec_max))
+        count_per_sec_max_peak = value_count_per_sec_max[0][0]
+        for count_per_sec_max, stable_count in value_count_per_sec_max:
+            if stable_count < count_per_sec_stable_count:
+                continue
+            print('%8s:\t%f -%d%% during %ds (%f peak)' %
+                  (name, count_per_sec_max, count_per_sec_stable_tolerance,
+                   stable_count * 10, count_per_sec_max_peak))
+            break
     if host_name is not None:
         print('\t\ttotal_megabytes\t\t\t\t   ' +
               '(memory)')
