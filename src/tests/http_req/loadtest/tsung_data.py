@@ -60,7 +60,7 @@ def print_latency(file_path):
         if value is not None:
             values[name] = (
                 min(float(line[6]), value[0]), # min min
-                max(float(line[7]), value[1]), # max mean
+                max(float(line[3]), value[1]), # max (10 second) mean
                 max(float(line[5]), value[2]), # max max
             )
     f.close()
