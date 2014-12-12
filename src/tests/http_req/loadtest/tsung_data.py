@@ -99,6 +99,7 @@ def print_metrics(file_path, host_name):
             for i, value_count_per_sec in enumerate(value_count_per_sec_max):
                 (count_per_sec_max, stable_count, count) = value_count_per_sec
                 if count_per_sec > count_per_sec_max:
+                    # only looking at half of the plateau due to storing the max
                     value_count_per_sec_max.insert(i, (
                         count_per_sec,
                         1,
