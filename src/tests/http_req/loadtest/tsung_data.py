@@ -53,13 +53,13 @@ def print_metrics(file_path, host_name):
         #'request': (initialize_min, initialize_max, initialize_max),
         #'connect': (initialize_min, initialize_max, initialize_max),
     }
-    count_per_sec_stable_tolerance = 5 # % within current value
-    count_per_sec_stable_count = 180 / 10 # 3 minutes in 10 second increments
+    count_per_sec_stable_tolerance = 6 # % within current value
+    count_per_sec_stable_count = 120 / 10 # 2 minutes min in 10 second incr
     count_per_sec_history = 10 # entries in list
     values_count_per_sec_max = {
         # MAX TRANSACTIONS PER SECOND
         # ('tr_XXX' can be added below)
-        'page': [(initialize_max, initialize_count)],
+        'page': [(initialize_max, initialize_count, initialize_count)],
         #'request': [(initialize_max, initialize_count)],
         #'connect': [(initialize_max, initialize_count)],
     }
@@ -97,15 +97,20 @@ def print_metrics(file_path, host_name):
             updated = False
             count_per_sec = int(line[2]) / 10.0
             for i, value_count_per_sec in enumerate(value_count_per_sec_max):
-                (count_per_sec_max, stable_count) = value_count_per_sec
+                (count_per_sec_max, stable_count, count) = value_count_per_sec
                 if count_per_sec > count_per_sec_max:
                     value_count_per_sec_max.insert(i, (
-                        count_per_sec, 1
+                        count_per_sec,
+                        1,
+                        int(line[2]) + int(line[8]),
                     ))
                     updated = True
-                elif count_per_sec > count_per_sec_max * count_per_sec_mult:
+                elif (count == int(line[8]) and # must be consecutive
+                      count_per_sec > count_per_sec_max * count_per_sec_mult):
                     value_count_per_sec_max[i] = (
-                        count_per_sec_max, stable_count + 1
+                        count_per_sec_max,
+                        stable_count + 1,
+                        count + int(line[2]),
                     )
                     updated = True
                 if updated:
@@ -136,10 +141,10 @@ def print_metrics(file_path, host_name):
           '(trans throughput)')
     for name, value_count_per_sec_max in values_count_per_sec_max.items():
         count_per_sec_max_peak = value_count_per_sec_max[0][0]
-        for count_per_sec_max, stable_count in value_count_per_sec_max:
+        for count_per_sec_max, stable_count, count in value_count_per_sec_max:
             if stable_count < count_per_sec_stable_count:
                 continue
-            print('%8s:\t%f -%d%% during %ds (%f peak)' %
+            print('%8s:\t%f -%d%% during %ds\t(%f peak)' %
                   (name, count_per_sec_max, count_per_sec_stable_tolerance,
                    stable_count * 10, count_per_sec_max_peak))
             break
