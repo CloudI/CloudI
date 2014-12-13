@@ -53,8 +53,8 @@ def print_metrics(file_path, host_name):
         #'request': (initialize_min, initialize_max, initialize_max),
         #'connect': (initialize_min, initialize_max, initialize_max),
     }
-    count_per_sec_stable_tolerance = 6 # % within current value
-    count_per_sec_stable_count = 120 / 10 # 2 minutes min in 10 second incr
+    count_per_sec_stable_tolerance = 10 # % within current value
+    count_per_sec_stable_count = 60 / 10 # 1 minutes min in 10 second incr
     count_per_sec_history = 10 # entries in list
     values_count_per_sec_max = {
         # MAX TRANSACTIONS PER SECOND
