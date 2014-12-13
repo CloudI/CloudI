@@ -95,27 +95,28 @@ def print_metrics(file_path, host_name):
         value_count_per_sec_max = values_count_per_sec_max.get(name)
         if value_count_per_sec_max is not None:
             updated = False
+            insert_i = None
             count_per_sec = int(line[2]) / 10.0
             for i, value_count_per_sec in enumerate(value_count_per_sec_max):
                 (count_per_sec_max, stable_count, count) = value_count_per_sec
-                if count_per_sec > count_per_sec_max:
-                    # only looking at half of the plateau due to storing the max
-                    value_count_per_sec_max.insert(i, (
-                        count_per_sec,
-                        1,
-                        int(line[2]) + int(line[8]),
-                    ))
-                    updated = True
-                elif (count == int(line[8]) and # must be consecutive
-                      count_per_sec > count_per_sec_max * count_per_sec_mult):
+                if count_per_sec > count_per_sec_max and insert_i is None:
+                    insert_i = i
+                if (count == int(line[8]) and # must be consecutive
+                    count_per_sec > count_per_sec_max * count_per_sec_mult):
                     value_count_per_sec_max[i] = (
                         count_per_sec_max,
                         stable_count + 1,
                         int(line[2]) + count,
                     )
                     updated = True
-                if updated:
-                    break
+            if insert_i is not None:
+                # only looking at half of the plateau due to storing the max
+                value_count_per_sec_max.insert(insert_i, (
+                    count_per_sec,
+                    1,
+                    int(line[2]) + int(line[8]),
+                ))
+                updated = True
             if updated:
                 values_count_per_sec_max[name] = (
                     value_count_per_sec_max[:count_per_sec_history]
