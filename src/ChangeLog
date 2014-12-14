@@ -26,7 +26,7 @@
       (relied on the default install except for extra source code
        compilation dependencies,
        ports used:
-       devel/{autoconf,automake,libtool,git}
+       devel/{autoconf,automake,libtool,git,boost-libs}
        math/gmp misc/e2fsprogs-libuuid
        configure command line arguments:
        --with-cxx-backtrace --with-zeromq --disable-javascript-support
