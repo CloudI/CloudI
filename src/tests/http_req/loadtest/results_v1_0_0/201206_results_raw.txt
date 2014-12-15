@@ -1,0 +1,50 @@
+./201206_20k_10kreqs/erlang/20120624-08:49/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.253174	208.766632	811.270996	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	9633.700000 -10% during 450s	(9633.700000 peak)
+		total_megabytes				   (memory)
+  memory:	955.886719
+		max_max					   (processor)
+     cpu:	62.291139 %
+    load:	0.269531
+./201206_20k_10kreqs/ruby/20120624-18:25/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.341064	3310.959999	3476.813965	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	4098.000000 -10% during 2560s	(4098.000000 peak)
+		total_megabytes				   (memory)
+  memory:	1061.000000
+		max_max					   (processor)
+     cpu:	55.677753 %
+    load:	0.968750
+./201206_20k_10kreqs/java/20120624-16:22/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.271973	233.887149	318.304932	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10060.100000 -10% during 100s	(10060.100000 peak)
+		total_megabytes				   (memory)
+  memory:	1005.679688
+		max_max					   (processor)
+     cpu:	81.926952 %
+    load:	0.218750
+./201206_20k_10kreqs/python/20120624-17:25/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.326172	3021.917045	3181.578125	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	4423.200000 -10% during 1860s	(4423.200000 peak)
+		total_megabytes				   (memory)
+  memory:	1166.636719
+		max_max					   (processor)
+     cpu:	56.987392 %
+    load:	0.300781
+./201206_20k_10kreqs/c/20120624-07:47/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.260010	37.252086	138.062988	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10172.500000 -10% during 140s	(10172.500000 peak)
+		total_megabytes				   (memory)
+  memory:	1051.242188
+		max_max					   (processor)
+     cpu:	77.932607 %
+    load:	0.230469
