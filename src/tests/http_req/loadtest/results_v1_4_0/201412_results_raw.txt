@@ -1,0 +1,620 @@
+./201412_20k_10kreqs_timeout_adj/erlang/20141211-02:03/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.096924	3.062285	24.654053	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10174.800000 -10% during 290s	(10174.800000 peak)
+		total_megabytes				   (memory)
+  memory:	664.957031
+		max_max					   (processor)
+     cpu:	63.276913 %
+    load:	1.160156
+./201412_20k_10kreqs_timeout_adj/php/20141211-17:53/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.107910	2352.833123	2493.925049	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6525.700000 -10% during 60s	(6781.200000 peak)
+		total_megabytes				   (memory)
+  memory:	1511.687500
+		max_max					   (processor)
+     cpu:	61.489866 %
+    load:	1.160156
+./201412_20k_10kreqs_timeout_adj/python/20141211-19:14/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.101074	1795.187011	4588.712891	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6050.600000 -10% during 1030s	(6050.600000 peak)
+		total_megabytes				   (memory)
+  memory:	896.515625
+		max_max					   (processor)
+     cpu:	60.499128 %
+    load:	1.160156
+./201412_20k_10kreqs_timeout_adj/python_c/20141211-18:33/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.105957	6.632425	3015.215088	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10184.700000 -10% during 90s	(10184.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1023.019531
+		max_max					   (processor)
+     cpu:	74.503138 %
+    load:	1.250000
+./201412_20k_10kreqs_timeout_adj/ruby/20141211-19:54/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.088135	1890.872084	2034.196777	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5941.200000 -10% during 580s	(5941.200000 peak)
+		total_megabytes				   (memory)
+  memory:	868.582031
+		max_max					   (processor)
+     cpu:	60.866089 %
+    load:	1.148438
+./201412_20k_10kreqs_timeout_adj/c/20141211-03:18/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.096924	3.696132	27.046143	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10240.700000 -10% during 210s	(10240.700000 peak)
+		total_megabytes				   (memory)
+  memory:	958.429688
+		max_max					   (processor)
+     cpu:	68.278995 %
+    load:	1.160156
+./201412_20k_10kreqs_timeout_adj/perl/20141211-06:29/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.099854	2526.765168	2601.680908	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6253.500000 -10% during 60s	(6747.800000 peak)
+		total_megabytes				   (memory)
+  memory:	994.359375
+		max_max					   (processor)
+     cpu:	60.633544 %
+    load:	1.171875
+./201412_20k_10kreqs_timeout_adj/javascript/20141211-05:27/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.532959	7596.133100	7794.962891	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	2541.800000 -10% during 70s	(2626.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1338.531250
+		max_max					   (processor)
+     cpu:	36.976889 %
+    load:	1.199219
+./201412_20k_10kreqs_timeout_adj/java/20141211-04:06/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.074951	4.208945	3001.911865	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10218.000000 -10% during 260s	(10218.000000 peak)
+		total_megabytes				   (memory)
+  memory:	714.679688
+		max_max					   (processor)
+     cpu:	71.091992 %
+    load:	1.148438
+./201412_20k_10kreqs_default_174_arg2/erlang/20141212-03:34/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.080078	3.242914	3007.451172	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10210.900000 -10% during 130s	(10210.900000 peak)
+		total_megabytes				   (memory)
+  memory:	1237.136719
+		max_max					   (processor)
+     cpu:	65.675057 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg2/php/20141212-18:49/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.088135	2431.882248	2541.303955	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5335.900000 -10% during 180s	(5335.900000 peak)
+		total_megabytes				   (memory)
+  memory:	856.605469
+		max_max					   (processor)
+     cpu:	61.067089 %
+    load:	1.140625
+./201412_20k_10kreqs_default_174_arg2/python/20141212-20:04/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.075195	1850.713055	1991.072998	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5964.200000 -10% during 810s	(5964.200000 peak)
+		total_megabytes				   (memory)
+  memory:	1540.066406
+		max_max					   (processor)
+     cpu:	60.727612 %
+    load:	1.261719
+./201412_20k_10kreqs_default_174_arg2/python_c/20141212-19:28/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.093994	8.301591	57.346924	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10166.300000 -10% during 240s	(10166.300000 peak)
+		total_megabytes				   (memory)
+  memory:	1528.832031
+		max_max					   (processor)
+     cpu:	76.144988 %
+    load:	1.320312
+./201412_20k_10kreqs_default_174_arg2/ruby/20141212-20:42/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.087891	1887.375452	2008.659180	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5820.100000 -10% during 1280s	(5820.100000 peak)
+		total_megabytes				   (memory)
+  memory:	1408.074219
+		max_max					   (processor)
+     cpu:	61.571525 %
+    load:	1.378906
+./201412_20k_10kreqs_default_174_arg2/c/20141212-05:00/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.084961	3.787262	29.170166	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10238.000000 -10% during 170s	(10238.000000 peak)
+		total_megabytes				   (memory)
+  memory:	1241.929688
+		max_max					   (processor)
+     cpu:	69.808307 %
+    load:	1.148438
+./201412_20k_10kreqs_default_174_arg2/perl/20141212-08:16/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.089844	2617.469921	2765.104980	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	4838.800000 -10% during 1800s	(4838.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1439.863281
+		max_max					   (processor)
+     cpu:	61.624800 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg2/javascript/20141212-07:27/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.125977	5884.207331	5980.187012	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	2977.700000 -10% during 60s	(3147.300000 peak)
+		total_megabytes				   (memory)
+  memory:	1501.738281
+		max_max					   (processor)
+     cpu:	46.215338 %
+    load:	1.468750
+./201412_20k_10kreqs_default_174_arg2/java/20141212-06:15/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.098877	4.171142	28.174072	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10209.700000 -10% during 490s	(10209.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1448.312500
+		max_max					   (processor)
+     cpu:	73.055556 %
+    load:	1.218750
+./201412_20k_10kreqs_default_174_arg1/erlang/20141213-03:30/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.088135	3.111554	26.604980	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10273.200000 -10% during 250s	(10273.200000 peak)
+		total_megabytes				   (memory)
+  memory:	1084.460938
+		max_max					   (processor)
+     cpu:	64.408163 %
+    load:	1.140625
+./201412_20k_10kreqs_default_174_arg1/php/20141213-08:32/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.089844	2368.757658	2480.496094	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6483.900000 -10% during 70s	(6627.200000 peak)
+		total_megabytes				   (memory)
+  memory:	942.355469
+		max_max					   (processor)
+     cpu:	60.762835 %
+    load:	1.769531
+./201412_20k_10kreqs_default_174_arg1/python/20141213-20:50/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.088135	1784.660051	1903.652832	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6106.800000 -10% during 790s	(6106.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1320.593750
+		max_max					   (processor)
+     cpu:	60.704130 %
+    load:	1.210938
+./201412_20k_10kreqs_default_174_arg1/python_c/20141213-20:03/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.077881	7.398730	3001.597900	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10271.700000 -10% during 360s	(10271.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1199.640625
+		max_max					   (processor)
+     cpu:	75.805185 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg1/ruby/20141213-21:43/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.097900	1840.601442	1962.205078	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5962.700000 -10% during 1230s	(5962.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1326.972656
+		max_max					   (processor)
+     cpu:	61.473627 %
+    load:	1.179688
+./201412_20k_10kreqs_default_174_arg1/c/20141213-04:44/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.093994	3.775170	3007.985107	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10314.800000 -10% during 290s	(10314.800000 peak)
+		total_megabytes				   (memory)
+  memory:	946.468750
+		max_max					   (processor)
+     cpu:	69.650946 %
+    load:	1.500000
+./201412_20k_10kreqs_default_174_arg1/perl/20141213-07:19/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.085938	2432.621393	5255.883789	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5730.000000 -10% during 60s	(5995.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1572.367188
+		max_max					   (processor)
+     cpu:	61.318507 %
+    load:	1.148438
+./201412_20k_10kreqs_default_174_arg1/javascript/20141213-06:34/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.105957	5688.733125	5882.747070	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	3114.100000 -10% during 60s	(3121.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1420.476562
+		max_max					   (processor)
+     cpu:	42.510876 %
+    load:	1.261719
+./201412_20k_10kreqs_default_174_arg1/java/20141213-05:27/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	3.887173	32.927979	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10126.600000 -10% during 260s	(10126.600000 peak)
+		total_megabytes				   (memory)
+  memory:	1176.261719
+		max_max					   (processor)
+     cpu:	70.939944 %
+    load:	1.148438
+./201412_20k_10kreqs_tcp_timeout_adj/php/20141211-23:25/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	2301.469612	2412.531006	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6473.300000 -10% during 70s	(6958.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1646.421875
+		max_max					   (processor)
+     cpu:	51.251277 %
+    load:	0.300781
+./201412_20k_10kreqs_tcp_timeout_adj/python/20141212-00:54/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.073975	1904.020440	2016.648926	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	8079.000000 -10% during 60s	(8079.000000 peak)
+		total_megabytes				   (memory)
+  memory:	1056.925781
+		max_max					   (processor)
+     cpu:	49.346321 %
+    load:	0.160156
+./201412_20k_10kreqs_tcp_timeout_adj/python_c/20141212-00:13/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.078857	288.303482	472.933838	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	9899.200000 -10% during 230s	(9899.200000 peak)
+		total_megabytes				   (memory)
+  memory:	1191.648438
+		max_max					   (processor)
+     cpu:	69.753086 %
+    load:	0.160156
+./201412_20k_10kreqs_tcp_timeout_adj/ruby/20141212-01:32/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.086182	2052.713698	2194.310059	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	7511.800000 -10% during 80s	(7511.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1001.136719
+		max_max					   (processor)
+     cpu:	49.549665 %
+    load:	0.160156
+./201412_20k_10kreqs_tcp_timeout_adj/c/20141211-20:34/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.099854	9.012447	66.390137	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10045.100000 -10% during 210s	(10045.100000 peak)
+		total_megabytes				   (memory)
+  memory:	961.007812
+		max_max					   (processor)
+     cpu:	60.518807 %
+    load:	0.148438
+./201412_20k_10kreqs_tcp_timeout_adj/perl/20141211-22:45/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.086914	2384.629956	2492.388184	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5945.800000 -10% during 70s	(6693.500000 peak)
+		total_megabytes				   (memory)
+  memory:	1034.246094
+		max_max					   (processor)
+     cpu:	50.783739 %
+    load:	0.570312
+./201412_20k_10kreqs_tcp_timeout_adj/javascript/20141211-22:08/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.236084	6622.422103	6849.906982	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	2801.100000 -10% during 60s	(2849.900000 peak)
+		total_megabytes				   (memory)
+  memory:	1701.882812
+		max_max					   (processor)
+     cpu:	32.284150 %
+    load:	0.160156
+./201412_20k_10kreqs_tcp_timeout_adj/java/20141211-21:10/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.080078	10.925456	3007.476074	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10073.800000 -10% during 110s	(10073.800000 peak)
+		total_megabytes				   (memory)
+  memory:	722.742188
+		max_max					   (processor)
+     cpu:	67.154221 %
+    load:	0.089844
+./201412_20k_10kreqs_default_174_arg1_arg2/erlang/20141213-22:44/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	3.126317	27.148926	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10073.100000 -10% during 280s	(10073.100000 peak)
+		total_megabytes				   (memory)
+  memory:	1067.859375
+		max_max					   (processor)
+     cpu:	62.700661 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg1_arg2/php/20141214-02:27/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.087891	2396.467641	2549.749023	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6616.500000 -10% during 70s	(6684.800000 peak)
+		total_megabytes				   (memory)
+  memory:	960.070312
+		max_max					   (processor)
+     cpu:	61.016949 %
+    load:	1.121094
+./201412_20k_10kreqs_default_174_arg1_arg2/python/20141214-04:10/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.095947	1726.610874	1841.038818	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6059.700000 -10% during 1040s	(6059.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1266.898438
+		max_max					   (processor)
+     cpu:	60.998251 %
+    load:	1.218750
+./201412_20k_10kreqs_default_174_arg1_arg2/python_c/20141214-03:14/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.095215	7.010056	3013.158936	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10224.100000 -10% during 280s	(10224.100000 peak)
+		total_megabytes				   (memory)
+  memory:	1191.753906
+		max_max					   (processor)
+     cpu:	76.025974 %
+    load:	1.148438
+./201412_20k_10kreqs_default_174_arg1_arg2/ruby/20141214-06:23/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.085938	1799.784048	1929.380859	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5976.400000 -10% during 1240s	(5976.400000 peak)
+		total_megabytes				   (memory)
+  memory:	1266.386719
+		max_max					   (processor)
+     cpu:	61.121622 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg1_arg2/c/20141213-23:22/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083008	3.916363	3003.420166	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10232.500000 -10% during 180s	(10232.500000 peak)
+		total_megabytes				   (memory)
+  memory:	938.410156
+		max_max					   (processor)
+     cpu:	69.540458 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg1_arg2/perl/20141214-01:22/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.094971	2338.397538	5200.657227	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5722.600000 -10% during 70s	(6221.400000 peak)
+		total_megabytes				   (memory)
+  memory:	1506.988281
+		max_max					   (processor)
+     cpu:	61.571125 %
+    load:	1.218750
+./201412_20k_10kreqs_default_174_arg1_arg2/javascript/20141214-00:41/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.104980	6002.675228	6117.000977	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	3019.000000 -10% during 210s	(3025.900000 peak)
+		total_megabytes				   (memory)
+  memory:	1588.378906
+		max_max					   (processor)
+     cpu:	46.272979 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174_arg1_arg2/java/20141214-00:01/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.095947	4.679845	3006.375977	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10311.000000 -10% during 330s	(10311.000000 peak)
+		total_megabytes				   (memory)
+  memory:	1199.902344
+		max_max					   (processor)
+     cpu:	71.811993 %
+    load:	1.140625
+./201412_20k_10kreqs_default_174/erlang/20141212-21:25/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.092041	3.324885	3005.223877	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10303.300000 -10% during 190s	(10303.300000 peak)
+		total_megabytes				   (memory)
+  memory:	1230.222656
+		max_max					   (processor)
+     cpu:	64.510067 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174/php/20141213-00:50/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.077881	2476.947068	2568.865967	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5003.000000 -10% during 1320s	(5003.000000 peak)
+		total_megabytes				   (memory)
+  memory:	822.539062
+		max_max					   (processor)
+     cpu:	60.283120 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174/python/20141213-02:08/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.104980	1786.602391	1941.836914	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5962.400000 -10% during 780s	(5962.400000 peak)
+		total_megabytes				   (memory)
+  memory:	1439.199219
+		max_max					   (processor)
+     cpu:	61.362731 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174/python_c/20141213-01:34/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.087158	6.037684	3007.677979	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10253.700000 -10% during 230s	(10253.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1559.996094
+		max_max					   (processor)
+     cpu:	76.559843 %
+    load:	1.238281
+./201412_20k_10kreqs_default_174/ruby/20141213-02:46/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.099121	1912.807149	4790.255859	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5886.000000 -10% during 820s	(5886.000000 peak)
+		total_megabytes				   (memory)
+  memory:	1434.058594
+		max_max					   (processor)
+     cpu:	62.201342 %
+    load:	1.140625
+./201412_20k_10kreqs_default_174/c/20141212-22:04/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	3.658687	3005.739014	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10140.700000 -10% during 120s	(10140.700000 peak)
+		total_megabytes				   (memory)
+  memory:	1217.257812
+		max_max					   (processor)
+     cpu:	69.873249 %
+    load:	1.171875
+./201412_20k_10kreqs_default_174/perl/20141213-00:03/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.103027	2471.074232	2587.489990	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6111.400000 -10% during 60s	(6666.300000 peak)
+		total_megabytes				   (memory)
+  memory:	1555.503906
+		max_max					   (processor)
+     cpu:	61.430090 %
+    load:	1.171875
+./201412_20k_10kreqs_default_174/javascript/20141212-23:25/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.132080	6026.891084	8794.870117	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	3015.100000 -10% during 60s	(3035.500000 peak)
+		total_megabytes				   (memory)
+  memory:	1442.484375
+		max_max					   (processor)
+     cpu:	44.716168 %
+    load:	1.160156
+./201412_20k_10kreqs_default_174/java/20141212-22:40/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	3.801930	3009.641113	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10040.500000 -10% during 140s	(10040.500000 peak)
+		total_megabytes				   (memory)
+  memory:	1451.578125
+		max_max					   (processor)
+     cpu:	71.436142 %
+    load:	1.449219
+./201412_20k_10kreqs_default/erlang/20141210-06:45/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.094971	3.068317	22.944824	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10143.600000 -10% during 430s	(10143.600000 peak)
+		total_megabytes				   (memory)
+  memory:	661.300781
+		max_max					   (processor)
+     cpu:	62.273587 %
+    load:	1.210938
+./201412_20k_10kreqs_default/php/20141210-21:28/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.082031	2339.355903	2445.736084	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	5233.500000 -10% during 1140s	(5233.500000 peak)
+		total_megabytes				   (memory)
+  memory:	1218.281250
+		max_max					   (processor)
+     cpu:	61.413766 %
+    load:	1.371094
+./201412_20k_10kreqs_default/python/20141210-19:42/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.076172	1679.848068	1835.433838	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6133.400000 -10% during 980s	(6133.400000 peak)
+		total_megabytes				   (memory)
+  memory:	921.355469
+		max_max					   (processor)
+     cpu:	60.639871 %
+    load:	1.441406
+./201412_20k_10kreqs_default/python_c/20141210-19:06/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.079102	6.215368	42.447021	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10180.800000 -10% during 220s	(10180.800000 peak)
+		total_megabytes				   (memory)
+  memory:	1019.660156
+		max_max					   (processor)
+     cpu:	74.239643 %
+    load:	1.238281
+./201412_20k_10kreqs_default/ruby/20141210-20:20/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.083984	1776.779532	1927.440186	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6097.400000 -10% during 790s	(6097.400000 peak)
+		total_megabytes				   (memory)
+  memory:	835.269531
+		max_max					   (processor)
+     cpu:	61.468382 %
+    load:	1.160156
+./201412_20k_10kreqs_default/c/20141210-07:39/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.090088	3.537171	27.244873	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10154.800000 -10% during 420s	(10154.800000 peak)
+		total_megabytes				   (memory)
+  memory:	961.214844
+		max_max					   (processor)
+     cpu:	68.311550 %
+    load:	1.140625
+./201412_20k_10kreqs_default/perl/20141210-17:43/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.092041	1578.009421	1709.995117	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	6140.300000 -10% during 1470s	(6821.800000 peak)
+		total_megabytes				   (memory)
+  memory:	935.140625
+		max_max					   (processor)
+     cpu:	59.781920 %
+    load:	1.148438
+./201412_20k_10kreqs_default/javascript/20141210-09:52/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.112061	5741.407239	5815.100098	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	3090.200000 -10% during 70s	(3175.600000 peak)
+		total_megabytes				   (memory)
+  memory:	1425.074219
+		max_max					   (processor)
+     cpu:	45.131086 %
+    load:	1.160156
+./201412_20k_10kreqs_default/java/20141210-09:17/tsung.log:
+		min_min    	max_mean    	max_max	   (trans latency)
+    page:	0.082031	3.890594	30.719971	milliseconds
+		transactions_per_second_max		   (trans throughput)
+    page:	10141.000000 -10% during 190s	(10141.000000 peak)
+		total_megabytes				   (memory)
+  memory:	710.207031
+		max_max					   (processor)
+     cpu:	70.807866 %
+    load:	1.460938
