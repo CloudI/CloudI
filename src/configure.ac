@@ -1,8 +1,8 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
 
-AC_INIT([CloudI], [1.4.0-rc.4], [mjtruog at gmail dot com],
-    [cloudi], [http://cloudi.org/])
+AC_INIT([CloudI], [1.4.0], [mjtruog at gmail dot com],
+        [cloudi], [http://cloudi.org/])
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)

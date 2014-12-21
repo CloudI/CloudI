@@ -427,7 +427,7 @@ find_prefix_longest(_Match, ?TYPE_EMPTY) ->
     error.
 
 find_prefix_longest(?TYPE_H0T0, Key, LastMatch, {I0, I1, Data})
-  when is_integer(H), H >= I0, H =< I1 ->
+    when is_integer(H), H >= I0, H =< I1 ->
     {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
     if
         is_tuple(ChildNode) ->
@@ -435,10 +435,10 @@ find_prefix_longest(?TYPE_H0T0, Key, LastMatch, {I0, I1, Data})
             %% for this prefix, then update the last match to the current
             %% prefix and continue recursing over the trie.
             NewKey = ?TYPE_NEWKEY,
-            NewMatch = case Value of
-                error ->
+            NewMatch = if
+                Value =:= error ->
                     LastMatch;
-                _ ->
+                true ->
                     {NewKey, Value}
             end,
             find_prefix_longest(T, NewKey, NewMatch, ChildNode);
@@ -464,6 +464,56 @@ find_prefix_longest(_Match, _Key, {LastKey, LastValue}, _Node) ->
 
 find_prefix_longest(_Match, _Key, error, _Node) ->
     error.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find all the keys in a trie that are prefixes to the passed string.===
+%% The entries are returned in alphabetical order.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_prefixes(Match :: ?TYPE_NAME(),
+                      Node :: trie()) ->
+    list({?TYPE_NAME(), any()}).
+
+find_prefixes(Match, Node) when is_tuple(Node) ->
+    find_prefixes(Match, ?TYPE_EMPTY, [], Node);
+
+find_prefixes(_Match, ?TYPE_EMPTY) ->
+    [].
+
+find_prefixes(?TYPE_H0T0, Key, Acc, {I0, I1, Data})
+    when is_integer(H), H >= I0, H =< I1 ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            %% If the prefix matched and there are other child leaf nodes
+            %% for this prefix, then add the match to the current list
+            %% and continue recursing over the trie.
+            NewKey = ?TYPE_NEWKEY,
+            NewAcc = if
+                Value =:= error ->
+                    Acc;
+                true ->
+                    [{?TYPE_NEWKEY_REVERSE(NewKey), Value} | Acc]
+            end,
+            find_prefixes(T, NewKey, NewAcc, ChildNode);
+        true ->
+            %% If this is a leaf node and the key for the current node is a
+            %% prefix for the passed value, then add a match on the current
+            %% node. Otherwise, return the last match we had found previously.
+            NewAcc = case ?TYPE_PREFIX(ChildNode, T) of
+                true when Value =/= error ->
+                    [{?TYPE_NEWKEY_REVERSE(?TYPE_NEWKEY, ChildNode), Value} |
+                     Acc];
+                _ ->
+                    Acc
+            end,
+            lists:reverse(NewAcc)
+    end;
+
+find_prefixes(_Match, _Key, Acc, _Node) ->
+    lists:reverse(Acc).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1040,7 +1090,7 @@ to_list(Node) ->
 %%-------------------------------------------------------------------------
 
 -spec to_list_similar(Similar :: ?TYPE_NAME(),
-                      Node :: trie()) -> list(?TYPE_NAME()).
+                      Node :: trie()) -> list({?TYPE_NAME(), any()}).
 
 to_list_similar(Similar, Node) ->
     foldr_similar(Similar,

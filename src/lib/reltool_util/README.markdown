@@ -10,11 +10,18 @@ source code which rebar suppresses.
 `scope` is an escript which moves your Erlang application dependencies
 into their own "scope", so in Erlang, this means that it adds a prefix to
 the application name and all the modules used by the application.  The general
-sequence of operations you would want to use with the scope script are: 1) use the `-r` replace mode to modify internal source code, 2) modify the internal source code manually, if necessary, 3) run the `scope` script normally before compilation, 4) if it is necessary to return the source back to the original state, use the `-u` undo mode to remove the scoped source code and replace it with the original source code.  The `scope` script is meant to be part of a build process 
+sequence of operations you would want to use with the scope script are: 
+
+  1. use the `-r` replace mode to modify internal source code, 
+  2. modify the internal source code manually, if necessary, 
+  3. run the `scope` script normally before compilation, 
+  4. if it is necessary to return the source back to the original state, use the `-u` undo mode to remove the scoped source code and replace it with the original source code.  The `scope` script is meant to be part of a build process 
 so the dependency modifications should be automatic (if the dependencies
-are not convoluted).  Example arguments for normal operation are: `-s cloudi_x_ -p cloudi -b _original -d directory1 -d directory2`.  Dependencies that use
-`include_lib` require that the dependency directory name is changed to
-have the scope, but the script can still add/remove the scope to the
+are not convoluted).  
+
+Example arguments for normal operation are: `-s cloudi_x_ -p cloudi -b _original -d directory1 -d directory2`. 
+Dependencies that use `include_lib` require that the dependency directory name is 
+changed to have the scope, but the script can still add/remove the scope to the
 application and module names normally.
 
 The `reltool_util` source code provides a simple way to start an Erlang

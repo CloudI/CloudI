@@ -22,7 +22,7 @@ when providing a string for the internal service module name.
 To use an Erlang/OTP application or module for an internal service in the code path (if the application name is different from the `cloudi_service` module, use the `application_name` service configuration option):
 
     $ make
-    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/erlang/code_path_add
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_add.erl
     $ cat << EOF > hello_world1_module.conf
     [{internal,
       "/examples/",
@@ -31,8 +31,8 @@ To use an Erlang/OTP application or module for an internal service in the code p
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_module.conf http://localhost:6467/cloudi/api/erlang/services_add
-    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/erlang/code_path_remove
+    $ curl -X POST -d @hello_world1_module.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_remove.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
@@ -48,7 +48,7 @@ module name:
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_app.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_app.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
@@ -63,7 +63,7 @@ To use an Erlang source file path with an internal service implementation:
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_erl.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_erl.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
@@ -78,7 +78,7 @@ To use a compiled Erlang BEAM file path with an internal service implementation:
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_beam.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_beam.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
@@ -94,7 +94,7 @@ same module name as the top-level application:
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_script.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_script.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 
@@ -110,7 +110,7 @@ same module name as the top-level application:
       lazy_closest,
       5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
     EOF
-    $ curl -X POST -d @hello_world1_boot.conf http://localhost:6467/cloudi/api/erlang/services_add
+    $ curl -X POST -d @hello_world1_boot.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
     $ curl http://localhost:6467/examples/hello_world1
     Hello World!
 

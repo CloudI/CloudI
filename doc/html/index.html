@@ -47,7 +47,8 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
   <p>
   CloudI is for back-end server processing tasks that require soft-realtime
   transaction processing external to database usage
-  (in C/C++, Erlang/Elixir, Java, Python and Ruby).  Examples include:
+  (in C/C++, Erlang/Elixir, Java, JavaScript/node.js, Perl, PHP,
+   Python and Ruby).  Examples include:
   <ul>
     <li>REST API Implementation</li>
     <li>Account Management</li>
@@ -62,55 +63,395 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
   </p>
 
   <h2>Quick Start</h2>
-  <p>
-    <h3>Install Quick Start Tools</h3>
+  <div class="tabs">
 
-    <ul>
-      <li>
-        <strong>Ubuntu:</strong> sudo apt-get install wget curl
-      </li>
-      <li>
-        <strong>OSX:</strong>    sudo port install wget curl
-      </li>
-    </ul>
-  </p>
+  <div id="C">
+  <a href="#C">C</a>
+  <div class="tab_contents">
   <p>
-    <h3>Get CloudI Running</h3>
-
+    <ol>
+      <li>
+        A CloudI service written in C is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example C service can be
+        created by executing the following inside your shell:
 <pre>
-$ wget http://sourceforge.net/projects/cloudi/files/latest/download -O cloudi-1.3.3.tar.gz
-$ tar zxvf cloudi-1.3.3.tar.gz
-$ cd cloudi-1.3.3/src
-$ ./configure
-$ make
-$ sudo make install
-$ cd ../..
-$ sudo cloudi start
+cat &lt;&lt; EOF &gt; hello_world.c
+#include "cloudi.h"
+#include &lt;string.h&gt;
+#include &lt;assert.h&gt;
+static void hello_world(cloudi_instance_t * api,
+                        int const command,
+                        char const * const name,
+                        char const * const pattern,
+                        void const * const request_info,
+                        uint32_t const request_info_size,
+                        void const * const request,
+                        uint32_t const request_size,
+                        uint32_t timeout,
+                        int8_t priority,
+                        char const * const trans_id,
+                        char const * const pid,
+                        uint32_t const pid_size)
+{
+    char const * const message = "Hello World!";
+    uint32_t const message_size = strlen(message);
+    cloudi_return(api, command, name, pattern, "", 0,
+                  message, message_size,
+                  timeout, trans_id, pid, pid_size);
+}
+int main(int argc, char ** argv)
+{
+    unsigned int thread_count;
+    int result = cloudi_initialize_thread_count(&amp;thread_count);
+    assert(result == cloudi_success);
+    assert(thread_count == 1);
+    cloudi_instance_t api;
+    result = cloudi_initialize(&amp;api, 0);
+    assert(result == cloudi_success);
+    result = cloudi_subscribe(&amp;api, "hello_world/get",
+                              &amp;hello_world);
+    assert(result == cloudi_success);
+    result = cloudi_poll(&amp;api, -1);
+    cloudi_destroy(&amp;api);
+    return result;
+}
+EOF
 </pre>
-
-    <p>
-      The CloudI tests are now running and consuming your available CPUs.
-    </p>
-
-    <p>
-      The Quick Start guide below shows how to create both an internal (Erlang) CloudI service and an external (Python) CloudI service.
-    </p>
-  </p>
-  <p>
-    <h3>Create an Internal (Erlang) CloudI Service</h3>
-
+      </li>
+      <li>
+        Compile the CloudI service executable:
 <pre>
-$ mkdir cloudi-quickstart
-$ cd cloudi-quickstart
-$ cat &lt;&lt; EOF &gt; hello_world.erl
+gcc -I/usr/local/lib/cloudi-1.4.0/api/c \
+    -L/usr/local/lib/cloudi-1.4.0/api/c \
+    -g -O0 -fexceptions hello_world.c -o hello_world_c -lcloudi
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/c/"},
+  {file_path, "$PWD/hello_world_c"},
+  {env, [{"LD_LIBRARY_PATH",
+          "/usr/local/lib/cloudi-1.4.0/api/c/"},
+         {"DYLD_LIBRARY_PATH",
+          "/usr/local/lib/cloudi-1.4.0/api/c/"}]}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/c/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex C
+        <a href="faq.html#6_C">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- C -->
+
+  <div id="CXX">
+  <a href="#CXX">C++</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in C++ is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example C++ service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.cpp
+#include "cloudi.hpp"
+#include &lt;string&gt;
+#include &lt;cassert&gt;
+class Task
+{
+    public:
+        Task(unsigned int const thread_index) :
+            m_api(thread_index)
+        {
+            int result = 0;
+            result = m_api.subscribe("hello_world/get",
+                                     *this, &amp;Task::hello_world);
+            assert(result == CloudI::API::return_value::success);
+        }
+
+        int run()
+        {
+            return m_api.poll();
+        }
+    private:
+        void hello_world(CloudI::API const &amp; api,
+                         int const command,
+                         std::string const &amp; name,
+                         std::string const &amp; pattern,
+                         void const * const /*request_info*/,
+                         uint32_t const /*request_info_size*/,
+                         void const * const request,
+                         uint32_t const request_size,
+                         uint32_t timeout,
+                         int8_t /*priority*/,
+                         char const * const trans_id,
+                         char const * const pid,
+                         uint32_t const pid_size)
+        {
+            std::string message("Hello World!");
+            api.return_(command, name, pattern, "", 0,
+                        message.c_str(), message.size(),
+                        timeout, trans_id, pid, pid_size);
+        }
+        CloudI::API m_api;
+};
+int main(int, char **)
+{
+    unsigned int const thread_count = CloudI::API::thread_count();
+    assert(thread_count == 1);
+    Task t(0);
+    return t.run();
+}
+EOF
+</pre>
+      </li>
+      <li>
+        Compile the CloudI service executable:
+<pre>
+g++ -I/usr/local/lib/cloudi-1.4.0/api/c \
+    -L/usr/local/lib/cloudi-1.4.0/api/c \
+    -g -O0 hello_world.cpp -o hello_world_cxx -lcloudi
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/cxx/"},
+  {file_path, "$PWD/hello_world_cxx"},
+  {env, [{"LD_LIBRARY_PATH",
+          "/usr/local/lib/cloudi-1.4.0/api/c/"},
+         {"DYLD_LIBRARY_PATH",
+          "/usr/local/lib/cloudi-1.4.0/api/c/"}]}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/cxx/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex C++
+        <a href="faq.html#6_C">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- C++ -->
+
+  <div id="Elixir">
+  <a href="#Elixir">Elixir</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Elixir is called an "internal" service
+        because the service is ran inside the Erlang VM.
+        The example Elixir service can be created by executing the following
+        inside your shell:
+<pre>
+mkdir lib
+cat &lt;&lt; EOF &gt; lib/HelloWorld.ex
+defmodule HelloWorld do
+
+    import CloudILogger
+
+    def cloudi_service_init(_args, _prefix, _timeout,
+                            dispatcher) do
+        :cloudi_service.subscribe(dispatcher, 'hello_world/get')
+        {:ok, :undefined}
+    end
+
+    def cloudi_service_handle_request(_type, _name, _pattern,
+                                      _requestinfo, _request,
+                                      _timeout, _priority,
+                                      _transid, _pid, state,
+                                      _dispatcher) do
+        {:reply, "Hello World!", state}
+    end
+
+    def cloudi_service_handle_info(request, state, _dispatcher) do
+        log_warn('Unknown info "~p"', [request])
+        {:noreply, state}
+    end
+
+    def cloudi_service_terminate(_reason, _timeout, _state) do
+        :ok
+    end
+end
+EOF
+cat &lt;&lt; EOF &gt; mix.exs
+defmodule HelloWorld.Mixfile do
+    use Mix.Project
+
+    def project do
+        [app: :Elixir.HelloWorld,
+         version: "1.4.0",
+         elixirc_paths: ["lib/",
+                         "/usr/local/lib/cloudi-1.4.0/" &lt;&gt;
+                         "lib/cloudi_core-1.4.0/include/"],
+         deps: []]
+    end
+
+    def application do
+        [applications: []]
+    end
+end
+EOF
+</pre>
+      </li>
+      <li>
+        Now compile the CloudI service module.  If the CloudI
+        service needed to utilize other Elixir dependencies they would
+        be added to the mix.exs file.
+<pre>
+mix compile
+</pre>
+      </li>
+      <li>
+        You now have a CloudI service contained within a single Elixir module
+        that may look familiar if you remember how a GenServer behavior works.
+        Instead of using the GenServer behavior, we are using a cloudi_service
+        behavior which provides more features with CloudI service requests.
+        To allow the Erlang VM to find the CloudI service Elixir module that has
+        been compiled, it is necessary to add the current directory to the
+        code path:
+<pre>
+export PWD=`pwd`
+curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld/ebin"' \
+    http://localhost:6464/cloudi/api/rpc/code_path_add.erl
+</pre>
+      </li>
+      <li>
+        If Elixir isn't already in the Erlang VM code search path, add it:
+<pre>
+curl -X POST -d '"/usr/local/lib/elixir/lib/elixir/ebin"' \
+    http://localhost:6464/cloudi/api/rpc/code_path_add.erl
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/elixir/"},
+  {module, 'Elixir.HelloWorld'}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/elixir/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.
+        The available service configuration parameters are described in
+        the <a href="api.html#2_services_add">services_add documentation</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Elixir -->
+
+  <div id="Erlang">
+  <a href="#Erlang">Erlang</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Erlang (or using a language based on
+        core Erlang like Elixir) is called an "internal" service
+        because the service is ran inside the Erlang VM.
+        The example Erlang service can be created by executing the following
+        inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.erl
 -module(hello_world).
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -118,124 +459,813 @@ $ cat &lt;&lt; EOF &gt; hello_world.erl
     {
     }).
 
-cloudi_service_init(_Args, _Prefix, Dispatcher) -&gt;
+cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) -&gt;
     cloudi_service:subscribe(Dispatcher, "hello_world/get"),
     {ok, #state{}}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
+cloudi_service_handle_request(_Type, _Name, _Pattern,
+                              _RequestInfo, _Request,
+                              _Timeout, _Priority,
+                              _TransId, _Pid,
                               #state{} = State, _Dispatcher) -&gt;
     {reply, &lt;&lt;"Hello World!"&gt;&gt;, State}.
 
-cloudi_service_handle_info(Request, State, _) -&gt;
+cloudi_service_handle_info(Request, State, _Dispatcher) -&gt;
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_, #state{}) -&gt;
+cloudi_service_terminate(_Reason, _Timeout, #state{}) -&gt;
     ok.
 EOF
-$ erlc -pz /usr/local/lib/cloudi-1.3.3/lib/cloudi_core-1.3.3 -pz /usr/local/lib/cloudi-1.3.3/lib/cloudi_core-1.3.3/ebin hello_world.erl
 </pre>
-
-    <p>
-      You now have a compiled internal CloudI service which is ready to run.  You can also provide an OTP application file with the same name, if the internal CloudI service has application dependencies.
-    </p>
-  </p>
-  <p>
-    <h3>Run the Internal (Erlang) CloudI Service</h3>
-
-    <p>
-      While you are still in the cloudi-quickstart directory, use the CloudI Service API to run the internal CloudI service.
-    </p>
-
+      </li>
+      <li>
+        Now compile the CloudI service module.  If the CloudI
+        service needed to utilize other Erlang dependencies an Erlang/OTP .app
+        file would be added with the same filename
+        (see the examples <a href="https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme">for more details</a>).
 <pre>
-$ curl -X POST -d '"'`pwd`'"' http://localhost:6467/cloudi/api/erlang/code_path_add
-$ cat &lt;&lt; EOF &gt; hello_world.conf
-[{internal,
-  "/quickstart/hello/",
-  hello_world,
-  [],
-  lazy_closest,
-  5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+erlc -pz /usr/local/lib/cloudi-1.4.0/lib/cloudi_core-1.4.0 \
+    -pz /usr/local/lib/cloudi-1.4.0/lib/cloudi_core-1.4.0/ebin \
+    hello_world.erl
+</pre>
+      </li>
+      <li>
+        You now have a CloudI service contained within a single Erlang module
+        that may look familiar if you remember how a gen_server behavior works.
+        Instead of using the gen_server behavior, we are using a cloudi_service
+        behavior which provides more features with CloudI service requests.
+        To allow the Erlang VM to find the CloudI service Erlang module that has
+        been compiled, it is necessary to add the current directory to the
+        code path:
+<pre>
+curl -X POST -d '"'`pwd`'"' \
+    http://localhost:6464/cloudi/api/rpc/code_path_add.erl
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/erlang/"},
+  {module, hello_world}]]
 EOF
-$ curl -X POST -d @hello_world.conf http://localhost:6467/cloudi/api/erlang/services_add
 </pre>
-
-    <p>
-      These HTTP requests communicate with src/lib/cloudi_services_internal/src/cloudi_service_http_cowboy.erl which runs the cowboy HTTP webserver on port 6467, because of the default CloudI configuration (installed at /usr/local/etc/cloudi/cloudi.conf).  The request becomes a CloudI request, within the cloudi_service_http_cowboy internal CloudI service, which is sent to src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl.  The cloudi_service_api_requests internal CloudI service provides runtime configuration of CloudI.
-    </p>
-
-    <p>
-      You will notice that the syntax used to start the CloudI service in the hello_world.conf file is the same as what is specified in the "services" section of /usr/local/etc/cloudi/cloudi.conf.
-    </p>
-  </p>
-  <p>
-    <h3>Use the Internal (Erlang) CloudI Service</h3>
-
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
 <pre>
-$ curl http://localhost:6467/quickstart/hello/hello_world
-Hello World!
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
-
-    <p>
-      The HTTP GET request has received the "Hello World!" message from your new internal CloudI service.
-    </p>
-
-    <p>
-      You can get the same behavior with an external CloudI service, which is written in a supported programming language, currently: C/C++, Java, Python, or Ruby.
-    </p>
-  </p>
-  <p>
-    <h3>Use an External (Python) CloudI Service</h3>
-
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
 <pre>
-$ cat &lt;&lt; EOF &gt; hello_world.py
+curl http://localhost:6464/quickstart/erlang/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  To get more details on CloudI Erlang integration
+        (i.e., CloudI runtime usage with Erlang) see the
+        <a href="https://github.com/CloudI/CloudI/tree/develop/examples">examples in the source code repository</a>.
+        The available service configuration parameters are described in
+        the <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Erlang <a href="faq.html#6_Erlang">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Erlang -->
+
+  <div id="Java">
+  <a href="#Java">Java</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Java is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example Java service can be
+        created by executing the following inside your shell:
+<pre>
+mkdir -p org/cloudi/tests/hello_world/
+cat &lt;&lt; EOF &gt; org/cloudi/tests/hello_world/Main.java
+package org.cloudi.tests.hello_world;
+
+import org.cloudi.API;
+
+public class Main
+{
+    public static void main(String[] args)
+    {
+        try
+        {
+            final int thread_count = API.thread_count();
+            assert(thread_count == 1);
+            Task t = new Task(0);
+            t.run();
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+        }
+    }
+}
+EOF
+cat &lt;&lt; EOF &gt; org/cloudi/tests/hello_world/Task.java
+package org.cloudi.tests.hello_world;
+
+import com.ericsson.otp.erlang.OtpErlangPid;
+import org.cloudi.API;
+
+public class Task
+{
+    private API api;
+
+    public Task(final int thread_index)
+    {
+        try
+        {
+            this.api = new API(thread_index);
+        }
+        catch (API.InvalidInputException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.MessageDecodingException e)
+        {
+            e.printStackTrace(API.err);
+            System.exit(1);
+        }
+        catch (API.TerminateException e)
+        {
+            System.exit(1);
+        }
+    }
+
+    public Object hello_world(Integer command,
+                              String name, String pattern,
+                              byte[] request_info,
+                              byte[] request,
+                              Integer timeout, Byte priority,
+                              byte[] trans_id, OtpErlangPid pid)
+    {
+        return ("Hello World!").getBytes();
+    }
+
+    public void run()
+    {
+        try
+        {
+            this.api.subscribe("hello_world/get",
+                               this, "hello_world");
+            this.api.poll();
+        }
+        catch (API.TerminateException e)
+        {
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace(API.err);
+        }
+    }
+}
+
+EOF
+cat &lt;&lt; EOF &gt; manifest.txt
+Main-Class: org.cloudi.tests.hello_world.Main
+Class-Path: /usr/local/lib/cloudi-1.4.0/api/java/cloudi.jar
+
+EOF
+</pre>
+      </li>
+      <li>
+        Compile the CloudI service jar:
+<pre>
+cd org/cloudi/tests/hello_world/
+CLASSPATH=/usr/local/lib/cloudi-1.4.0\
+/api/java/cloudi.jar:${CLASSPATH} javac Task.java Main.java
+cd ../../../../
+jar cvfm hello_world.jar manifest.txt org
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export JAVA=`which java`
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/java/"},
+  {file_path, "$JAVA"},
+  {args, "-cp /usr/local/lib/cloudi-1.4.0/api/java/ "
+         "-ea:org.cloudi... -jar $PWD/hello_world.jar"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/java/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Java
+        <a href="faq.html#6_Java">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Java -->
+
+  <div id="JavaScript">
+  <a href="#JavaScript">JavaScript</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in JavaScript is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example JavaScript service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.js
+var CloudI = require('/usr/local/lib/cloudi-1.4.0/' +
+                     'api/javascript/CloudI.js').CloudI;
+var assert = require('assert');
+
+Task = function Task (thread_index) {
+    var Task = this;
+    Task._thread_index = thread_index;
+};
+Task.prototype.run = function () {
+    var Task = this;
+    try {
+        new CloudI.API(Task._thread_index, function (api) {
+        Task._api = api;
+        Task._api.subscribe('hello_world/get', Task,
+                            Task.hello_world,
+                            function () {
+        Task._api.poll(function (timeout) {
+        });
+        });});
+    }
+    catch (err) {
+        if (typeof err.stack !== 'undefined') {
+            process.stderr.write(err.stack + '\n');
+        }
+        else {
+            process.stderr.write(err + '\n');
+        }
+    }
+};
+Task.prototype.hello_world = function (command, name, pattern,
+                                       request_info, request,
+                                       timeout, priority,
+                                       trans_id, pid) {
+    return 'Hello World!';
+};
+
+assert(CloudI.API.thread_count() == 1);
+var thread = new Task(0);
+thread.run();
+EOF
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export NODE=`which node`
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/javascript/"},
+  {file_path, "$NODE"},
+  {args, "$PWD/hello_world.js"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/javascript/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex JavaScript
+        <a href="faq.html#6_JavaScript">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- JavaScript -->
+
+  <div id="Perl">
+  <a href="#Perl">Perl</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Perl is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example Perl service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.pl
+use strict;
+use warnings;
+
+require CloudI::API;
+require CloudI::TerminateException;
+
+sub task
+{
+    my (\$api) = @_;
+    eval
+    {
+        my \$task_hello_world = sub
+        {
+            my (\$command, \$name, \$pattern,
+                \$request_info, \$request,
+                \$timeout, \$priority, \$trans_id, \$pid) = @_;
+            return 'Hello World!';
+        };
+        \$api-&gt;subscribe('hello_world/get', \$task_hello_world);
+        \$api-&gt;poll();
+    };
+    my \$e = \$@;
+    if (\$e)
+    {
+        if (\$e-&gt;isa('CloudI::TerminateException'))
+        {
+            1;
+        }
+        else
+        {
+            print "\$e";
+        }
+    }
+}
+{
+    CloudI::API-&gt;assert(CloudI::API-&gt;thread_count() == 1);
+    task(CloudI::API-&gt;new(0));
+}
+EOF
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export PERL=`which perl`
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/perl/"},
+  {file_path, "$PERL"},
+  {args, "$PWD/hello_world.pl"},
+  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.4.0/api/perl"}]}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/perl/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Perl
+        <a href="faq.html#6_Perl">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Perl -->
+
+  <div id="PHP">
+  <a href="#PHP">PHP</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in PHP is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example PHP service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.php
+&lt;?php 
+
+require '/usr/local/lib/cloudi-1.4.0/api/php/CloudI.php';
+
+class Task
+{
+    private \$api;
+
+    public function __construct(\$api)
+    {
+        \$this-&gt;api = \$api;
+    }
+
+    public function run()
+    {
+        try
+        {
+            \$this-&gt;api-&gt;subscribe('hello_world/get',
+                                        \$this, 'hello_world');
+            \$this-&gt;api-&gt;poll();
+        }
+        catch (\CloudI\TerminateException \$e)
+        {
+        }
+        catch (Exception \$e)
+        {
+            error_log("{\$e-&gt;getMessage()}\n{\$e}\n");
+        }
+    }
+
+    public function hello_world(\$command, \$name, \$pattern,
+                                \$request_info, \$request,
+                                \$timeout, \$priority,
+                                \$trans_id, \$pid)
+    {
+        return 'Hello World!';
+    }
+}
+
+\$thread_count = \CloudI\API::thread_count();
+assert(\$thread_count == 1);
+\$main_thread = new Task(new \CloudI\API(0));
+\$main_thread-&gt;run();
+
+?&gt;
+EOF
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export PHP=`which php`
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/php/"},
+  {file_path, "$PHP"},
+  {args, "$PWD/hello_world.php"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/php/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex PHP
+        <a href="faq.html#6_PHP">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- PHP -->
+
+  <div id="Python">
+  <a href="#Python">Python</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Python is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example Python service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.3.3/api/python/')
-from cloudi_c import API
+sys.path.append('/usr/local/lib/cloudi-1.4.0/api/python/')
+import traceback
+from cloudi import API, terminate_exception
 
 class Task(object):
     def __init__(self):
         self.__api = API(0) # first/only thread == 0
 
     def run(self):
-        self.__api.subscribe("hello_world_python/get", self.__hello_world)
-        result = self.__api.poll()
-        print 'exited:', result
+        try:
+            self.__api.subscribe("hello_world/get",
+                                 self.__hello_world)
+            self.__api.poll()
+        except terminate_exception:
+            pass
+        except:
+            traceback.print_exc(file=sys.stderr)
 
-    def __hello_world(self, command, name, pattern, request_info, request,
+    def __hello_world(self, command, name, pattern,
+                      request_info, request,
                       timeout, priority, trans_id, pid):
         return 'Hello World!'
 
 if __name__ == '__main__':
-    assert API.thread_count() == 1 # simple example, without threads
+    assert API.thread_count() == 1
     task = Task()
     task.run()
 EOF
-$ PYTHON_PATH=`which python`
-$ PWD=`pwd`
-$ cat &lt;&lt; EOF &gt; hello_world_python.conf
-[{external,
-  "/quickstart/hello/",
-  "$PYTHON_PATH",
-  "$PWD/hello_world.py",
-  [],
-  none, tcp, default,
-  5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []}]
-EOF
-$ curl -X POST -d @hello_world_python.conf http://localhost:6467/cloudi/api/erlang/services_add
-$ curl http://localhost:6466/quickstart/hello/hello_world_python
-Hello World!
 </pre>
-
-    <p>
-      You may notice the port number 6466 is different from what was used for the internal CloudI service.  This is a different instance of the cloudi_service_http_cowboy internal CloudI service which forces all outgoing CloudI requests to be binary.  All external CloudI services handle request data and request_info data as binary data, to simplify integration efforts and make service runtime more efficient.  If you had tried to use the port number 6466 for the CloudI Services API, you would have received a timeout, not because binary requests are not accepted, but rather because the cloudi_service_http_cowboy ACL (Access Control List) prevents API requests (with a service name pattern, referred to as api).  Please refer to the <a href="api.html#1_Intro">API documentation</a> for more information.
-    </p>
-
-    <p>
-      You now have an external CloudI service written in Python which is able to perform the same task as your internal CloudI service (written in Erlang).  You can use the same techniques to create other external CloudI services with new or pre-existing source code to gain fault-tolerance and scalability.  Creating CloudI services makes integration tasks simpler and allows your software to grow without limitations!
-    </p>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export PYTHON=`which python`
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/python/"},
+  {file_path, "$PYTHON"},
+  {args, "$PWD/hello_world.py"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/python/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Python
+        <a href="faq.html#6_Python">examples are listed here</a>.
+      </li>
+    </ol>
   </p>
+  </div>
+  </div> <!-- Python -->
+
+  <div id="Ruby">
+  <a href="#Ruby">Ruby</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        A CloudI service written in Ruby is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example Ruby service can be
+        created by executing the following inside your shell:
+<pre>
+cat &lt;&lt; EOF &gt; hello_world.rb
+\$:.unshift '/usr/local/lib/cloudi-1.4.0/api/ruby'
+
+\$DEBUG = false
+
+require 'cloudi'
+
+if __FILE__ == \$PROGRAM_NAME
+    thread_count = CloudI::API.thread_count()
+    CloudI::API.assert{thread_count == 1}
+
+    class Task
+        def initialize(thread_index)
+            @api = CloudI::API.new(thread_index)
+        end
+
+        def run
+            begin
+                @api.subscribe('hello_world/get',
+                               method(:hello_world))
+
+                @api.poll
+            rescue CloudI::TerminateException
+                #
+            rescue
+                \$stderr.puts \$!.message
+                \$stderr.puts \$!.backtrace
+            end
+        end
+
+        private
+
+        def hello_world(command, name, pattern,
+                        request_info, request,
+                        timeout, priority, trans_id, pid)
+            return 'Hello World!';
+        end
+    end
+    begin
+        object = Task.new(0)
+        object.run
+    rescue
+        \$stderr.puts \$!.message
+        \$stderr.puts \$!.backtrace
+    end
+end
+EOF
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre>
+export RUBY=`which ruby` # must be &ge; 1.9
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/ruby/"},
+  {file_path, "$RUBY"},
+  {args, "$PWD/hello_world.rb"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre>
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre>
+curl http://localhost:6464/quickstart/ruby/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Ruby
+        <a href="faq.html#6_Ruby">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Ruby -->
+
+  <div id="quick_start">
+  <a href="#quick_start">Install</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        Get wget and curl if you don't already have them
+        <ul>
+          <li>
+            <strong>(Ubuntu)</strong> sudo apt-get install wget curl
+          </li>
+          <li>
+            <strong>(OSX)</strong>    sudo port install wget curl
+          </li>
+        </ul>
+        <br />
+      </li>
+      <li>
+        Get CloudI running (need
+        <a href="faq.html#3_Options" target="_blank">./configure help?</a>):
+<pre>
+wget --content-disposition \
+    http://sourceforge.net/projects/cloudi/files/latest/download
+tar zxvf cloudi-1.4.0.tar.gz
+cd cloudi-1.4.0/src
+./configure
+make
+sudo make install
+cd ../..
+sudo cloudi start
+</pre>
+      </li>
+      <li>
+        The CloudI integration tests are now running and consuming your
+        available CPUs.  The /usr/local/var/log/cloudi/cloudi.log file provides
+        integration test output.  You can now select a programming language
+        above to create a CloudI service.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Install -->
+
+  </div> <!-- Quick Start tabs -->
 </div>
 
 </body>

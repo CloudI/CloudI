@@ -1,3 +1,13 @@
+December 20, 2014
+  Version 1.4.0 released.
+  * JavaScript/node.js, PHP and Perl are now supported programming languages
+    with their own CloudI API implementations
+  * A Quick Start now has intros for all supported programming languages
+    (http://cloudi.org/#quick_start)
+  * Loadtests were ran (http://cloudi.org/faq.html#5_LoadTesting)
+  * Various bugs were fixed
+    (see the ChangeLog for more detail)
+
 September 30, 2014
   Version 1.3.3 (beta) released.
   * backwards compatibility difference:

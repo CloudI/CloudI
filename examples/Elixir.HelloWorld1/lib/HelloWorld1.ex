@@ -2,7 +2,7 @@ defmodule HelloWorld1 do
 
     import CloudILogger
 
-    def cloudi_service_init(_args, _prefix, dispatcher) do
+    def cloudi_service_init(_args, _prefix, _timeout, dispatcher) do
         :cloudi_service.subscribe(dispatcher, 'hello_world1/get')
         {:ok, :undefined}
     end
@@ -19,7 +19,7 @@ defmodule HelloWorld1 do
         {:noreply, state}
     end
 
-    def cloudi_service_terminate(_reason, _state) do
+    def cloudi_service_terminate(_reason, _timeout, _state) do
         :ok
     end
 end

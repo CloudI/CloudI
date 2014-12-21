@@ -262,8 +262,8 @@ exceptions due to their C integration).
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit 138dfb8e4188fa54c353382c0a389bcb2b03aa38 (v1.4.0-rc.7)`
-- `Tue Dec  2 13:55:25 PST 2014`
+- `commit 55624730989674373df009a9981c3be98f85a259 (v1.4.0)`
+- `Sat Dec 20 14:42:17 PST 2014`
 - `BSD`
 
 `pgsql`

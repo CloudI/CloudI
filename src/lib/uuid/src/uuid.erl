@@ -233,6 +233,7 @@ get_v1(#uuid_state{node_id = NodeId,
     % UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
     Time = ((MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds) * 10 +
            16#01b21dd213814000,
+    % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:12, TimeMid:16, TimeLow:32>> = <<Time:60>>,
     <<TimeLow:32, TimeMid:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits

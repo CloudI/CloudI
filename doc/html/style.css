@@ -148,6 +148,39 @@ pre {
 #content table tr td.api {
     text-align: right;
 }
+#content div.tabs {
+    z-index: 0;
+    position: relative;
+    min-height: 30em; /* quickstart height */
+}
+#content div.tabs > div {
+    display: inline;
+}
+#content div.tabs > div > a {
+    text-decoration: none;
+    padding: 0.2em;
+}
+#content div.tabs > div:not(:target) > a {
+    border-bottom: none;
+}
+#content div.tabs > div > div.tab_contents {
+    z-index: -2;
+    left: 0; top: 1.3em;
+    bottom: 0; right: 0;
+    overflow: auto;
+    padding: 0.3em;
+}
+#content div.tabs > div:not(:target) > div.tab_contents {
+    position: absolute;
+}
+#content div.tabs > div:target > div.tab_contents,
+:target #quick_start > div.tab_contents {
+    z-index: -1;
+    position: absolute;
+}
+#content div.tabs :target {
+    outline: none;
+}
 
 #footer {
     font-size: x-small;

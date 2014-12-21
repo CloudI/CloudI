@@ -54,7 +54,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2010-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @version 1.4.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(btrie).
@@ -69,6 +69,7 @@
          fetch_keys/1,
          fetch_keys_similar/2,
          find_prefix/2,
+         find_prefixes/2,
          find_prefix_longest/2,
          filter/2,
          find/2,

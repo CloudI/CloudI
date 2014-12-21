@@ -78,4 +78,27 @@ pre {
 #content p.code {
     border-left-color: black;
 }
+#content div.tabs > div > a {
+    /* inactive tab colors */
+    border: 1px solid #676767;
+    background: #676767;
+    color: #aaaaaa;
+}
+#content div.tabs > div > a:hover,
+#content div.tabs > div > a:focus {
+    color: #ffffff;
+    background: #000000;
+}
+#content div.tabs > div:target > a,
+:target #quick_start > a {
+    /* active tab colors */
+    border-bottom: 1px solid #333333;
+    background: #ffffff;
+    color: #000000;
+}
+#content div.tabs > div > div.tab_contents {
+    /* hidden tab contents */
+    background: #ffffff;
+    border: 1px solid #676767;
+}
 

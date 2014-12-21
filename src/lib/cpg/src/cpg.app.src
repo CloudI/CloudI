@@ -3,7 +3,7 @@
 
 {application, cpg, 
   [{description, "CloudI Process Groups"},
-   {vsn, "1.3.3"},
+   {vsn, "1.4.0"},
    {modules, [
         cpg,
         cpg_app,
@@ -16,10 +16,8 @@
         ]},
    {registered,[
         % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
-        cpg_default_scope,
+        cpg_default_scope
         % env scope list defines locally registered pids
-        groups_scope1,
-        groups_scope2
         ]},
    {applications, [
         quickrand,
@@ -34,8 +32,6 @@
         {scope, [
             % automatically created scopes to keep process groups separate
             % (each becomes a locally registered name)
-            groups_scope1,
-            groups_scope2
             ]}
         ]}]}.
 
