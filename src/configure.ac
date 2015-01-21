@@ -327,6 +327,9 @@ AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
 if test "x$javascript_support" = "xtrue" ; then
 AC_ARG_VAR([NODE],[node executable])
 AC_PATH_PROGS([NODE],[node])
+if test "x$NODE" = "x" ; then
+    AC_MSG_ERROR([node.js not found])
+fi
 fi
 AM_CONDITIONAL([JAVASCRIPT_SUPPORT], [test "x$javascript_support" = "xtrue"])
 
@@ -334,6 +337,9 @@ AM_CONDITIONAL([JAVASCRIPT_SUPPORT], [test "x$javascript_support" = "xtrue"])
 if test "x$perl_support" = "xtrue" ; then
 AC_ARG_VAR([PERL],[perl executable])
 AC_PATH_PROGS([PERL],[perl])
+if test "x$PERL" = "x" ; then
+    AC_MSG_ERROR([perl not found])
+fi
 fi
 AM_CONDITIONAL([PERL_SUPPORT], [test "x$perl_support" = "xtrue"])
 
@@ -341,6 +347,9 @@ AM_CONDITIONAL([PERL_SUPPORT], [test "x$perl_support" = "xtrue"])
 if test "x$php_support" = "xtrue" ; then
 AC_ARG_VAR([PHP],[php executable])
 AC_PATH_PROGS([PHP],[php])
+if test "x$PHP" = "x" ; then
+    AC_MSG_ERROR([php not found])
+fi
 fi
 AM_CONDITIONAL([PHP_SUPPORT], [test "x$php_support" = "xtrue"])
 

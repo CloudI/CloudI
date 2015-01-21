@@ -5,6 +5,8 @@
 
     * Depend only on the https://github.com/CloudI/loadtests/ repository
       for loadtest results
+    * Fix configure script so that it errors when perl, php, or node.js
+      is not found when the programming language is enabled
 
 2014-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
