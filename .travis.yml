@@ -14,9 +14,8 @@ services:
 before_install:
   - sudo apt-get update
 # travis default image has: make autoconf automake libtool g++ git perl
-  - sudo apt-get install default-jdk libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
+  - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
-  - phpenv global 5.3
 before_script:
   - mkdir build
   - cd build
