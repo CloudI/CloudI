@@ -7,13 +7,15 @@ python:
   - "2.7"
 rvm:
   - 1.9.3
+php:
+  - 5.5
 services:
   - riak
   - cassandra
   - elasticsearch
 before_install:
   - sudo apt-get update
-# travis takes care of: make autoconf automake libtool g++ git
+# travis takes care of: make autoconf automake libtool g++ git perl
   - sudo apt-get install default-jdk libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
 before_script:
