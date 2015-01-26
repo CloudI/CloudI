@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -66,7 +66,7 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
--define(DEFAULT_INTERFACE,                  {127,0,0,1}). % ip address
+-define(DEFAULT_IP,                         {127,0,0,1}). % interface ip address
 -define(DEFAULT_PORT,                              8080).
 -define(DEFAULT_BACKLOG,                            128).
 -define(DEFAULT_NODELAY,                           true).
@@ -194,7 +194,7 @@ close({Pattern, Pid})
 
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {ip,                            ?DEFAULT_INTERFACE},
+        {ip,                            ?DEFAULT_IP},
         {port,                          ?DEFAULT_PORT},
         {backlog,                       ?DEFAULT_BACKLOG},
         {nodelay,                       ?DEFAULT_NODELAY},

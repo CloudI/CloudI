@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-01-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix macro name in cloudi_service_http_cowboy and cloudi_service_http_elli
+
 2015-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Depend only on the https://github.com/CloudI/loadtests/ repository

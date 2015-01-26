@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -65,7 +65,7 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_elli_handler.hrl").
 
--define(DEFAULT_INTERFACE,                  {127,0,0,1}). % ip address
+-define(DEFAULT_IP,                         {127,0,0,1}). % interface ip address
 -define(DEFAULT_PORT,                              8080).
 -define(DEFAULT_ACCEPT_TIMEOUT,               10 * 1000). % milliseconds
 -define(DEFAULT_RECV_TIMEOUT,                 30 * 1000). % milliseconds
@@ -98,7 +98,7 @@
 
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {ip,                            ?DEFAULT_INTERFACE},
+        {ip,                            ?DEFAULT_IP},
         {port,                          ?DEFAULT_PORT},
         {accept_timeout,                ?DEFAULT_ACCEPT_TIMEOUT},
         {recv_timeout,                  ?DEFAULT_RECV_TIMEOUT},
