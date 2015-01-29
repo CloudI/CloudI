@@ -666,29 +666,29 @@
         
         sub task
         {
-            my ($api) = @_;
+            my (\$api) = @_;
             eval
             {
-                my $task_hello_world = sub
+                my \$task_hello_world = sub
                 {
-                    my ($command, $name, $pattern,
-                        $request_info, $request,
-                        $timeout, $priority, $trans_id, $pid) = @_;
+                    my (\$command, \$name, \$pattern,
+                        \$request_info, \$request,
+                        \$timeout, \$priority, \$trans_id, \$pid) = @_;
                     return 'Hello World!';
                 };
-                $api->subscribe('hello_world/get', $task_hello_world);
-                $api->poll();
+                \$api->subscribe('hello_world/get', \$task_hello_world);
+                \$api->poll();
             };
-            my $e = $@;
-            if ($e)
+            my \$e = \$@;
+            if (\$e)
             {
-                if ($e->isa('CloudI::TerminateException'))
+                if (\$e->isa('CloudI::TerminateException'))
                 {
                     1;
                 }
                 else
                 {
-                    print "$e";
+                    print "\$e";
                 }
             }
         }
@@ -749,43 +749,43 @@
         
         class Task
         {
-            private $api;
+            private \$api;
         
-            public function __construct($api)
+            public function __construct(\$api)
             {
-                $this->api = $api;
+                \$this->api = \$api;
             }
         
             public function run()
             {
                 try
                 {
-                    $this->api->subscribe('hello_world/get',
-                                                $this, 'hello_world');
-                    $this->api->poll();
+                    \$this->api->subscribe('hello_world/get',
+                                           \$this, 'hello_world');
+                    \$this->api->poll();
                 }
-                catch (\CloudI\TerminateException $e)
+                catch (\CloudI\TerminateException \$e)
                 {
                 }
-                catch (Exception $e)
+                catch (Exception \$e)
                 {
-                    error_log("{$e->getMessage()}\n{$e}\n");
+                    error_log("{\$e->getMessage()}\n{\$e}\n");
                 }
             }
         
-            public function hello_world($command, $name, $pattern,
-                                        $request_info, $request,
-                                        $timeout, $priority,
-                                        $trans_id, $pid)
+            public function hello_world(\$command, \$name, \$pattern,
+                                        \$request_info, \$request,
+                                        \$timeout, \$priority,
+                                        \$trans_id, \$pid)
             {
                 return 'Hello World!';
             }
         }
         
-        $thread_count = \CloudI\API::thread_count();
-        assert($thread_count == 1);
-        $main_thread = new Task(new \CloudI\API(0));
-        $main_thread->run();
+        \$thread_count = \CloudI\API::thread_count();
+        assert(\$thread_count == 1);
+        \$main_thread = new Task(new \CloudI\API(0));
+        \$main_thread->run();
         
         ?>
         EOF
@@ -908,13 +908,13 @@
     created by executing the following inside your shell:
 
         cat << EOF > hello_world.rb
-        $:.unshift '/usr/local/lib/cloudi-1.4.0/api/ruby'
+        \$:.unshift '/usr/local/lib/cloudi-1.4.0/api/ruby'
         
-        $DEBUG = false
+        \$DEBUG = false
         
         require 'cloudi'
         
-        if __FILE__ == $PROGRAM_NAME
+        if __FILE__ == \$PROGRAM_NAME
             thread_count = CloudI::API.thread_count()
             CloudI::API.assert{thread_count == 1}
         
@@ -932,8 +932,8 @@
                     rescue CloudI::TerminateException
                         #
                     rescue
-                        $stderr.puts $!.message
-                        $stderr.puts $!.backtrace
+                        \$stderr.puts \$!.message
+                        \$stderr.puts \$!.backtrace
                     end
                 end
         
@@ -949,8 +949,8 @@
                 object = Task.new(0)
                 object.run
             rescue
-                $stderr.puts $!.message
-                $stderr.puts $!.backtrace
+                \$stderr.puts \$!.message
+                \$stderr.puts \$!.backtrace
             end
         end
         EOF
