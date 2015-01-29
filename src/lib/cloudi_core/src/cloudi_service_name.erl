@@ -229,8 +229,13 @@ new_select(PatternIn, Parameters,
 
 suffix_parse([], NameOrPattern) ->
     NameOrPattern;
-suffix_parse([$*], _) ->
-    "";
+suffix_parse([$*], [H | Pattern]) ->
+    if
+        H =:= $* ->
+            Pattern;
+        true ->
+            ""
+    end;
 suffix_parse([$*, C | Prefix], [H | Name])
     when H =/= $* ->
     if
@@ -266,6 +271,7 @@ suffix_test() ->
     "." = cloudi_service_name:suffix("*.", "..."),
     % Pattern
     "." = cloudi_service_name:suffix("/*/", "/*/."),
+    "." = cloudi_service_name:suffix("/*", "/*."),
     % errors
     {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "//.")),
     {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "/*")),
