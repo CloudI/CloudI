@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -54,7 +54,8 @@
 -export([new/2,
          new/4,
          parse/2,
-         parse_with_suffix/2]).
+         parse_with_suffix/2,
+         suffix/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -125,6 +126,21 @@ parse(Name, Pattern) ->
 
 parse_with_suffix(Name, Pattern) ->
     cloudi_x_trie:pattern_parse(Pattern, Name, with_suffix).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the suffix of the service name or service pattern based on the service's configured prefix.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec suffix(Prefix :: string(),
+             NameOrPattern :: string()) ->
+    string().
+
+suffix([_ | _] = Prefix, [_ | _] = NameOrPattern) ->
+    suffix_parse(Prefix, NameOrPattern);
+suffix(_, _) ->
+    erlang:exit(badarg).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -211,3 +227,50 @@ new_select(PatternIn, Parameters,
     new_select(PatternIn, [], Parameters,
                ParametersSelected, ParametersStrictMatching).
 
+suffix_parse([], NameOrPattern) ->
+    NameOrPattern;
+suffix_parse([$*], _) ->
+    "";
+suffix_parse([$*, C | Prefix], [H | Name])
+    when H =/= $* ->
+    if
+        C =:= $* ->
+            erlang:exit(badarg);
+        true ->
+            suffix_parse(Prefix, suffix_pattern(Name, C))
+    end;
+suffix_parse([C | Prefix], [C | NameOrPattern]) ->
+    suffix_parse(Prefix, NameOrPattern);
+suffix_parse([_ | _], _) ->
+    erlang:exit(badarg).
+
+suffix_pattern([], _) ->
+    erlang:exit(badarg);
+suffix_pattern([$* | _], _) ->
+    erlang:exit(badarg);
+suffix_pattern([C | Name], C) ->
+    Name;
+suffix_pattern([_ | Name], C) ->
+    suffix_pattern(Name, C).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+suffix_test() ->
+    "." = cloudi_service_name:suffix("//", "//."),
+    % Name
+    "." = cloudi_service_name:suffix("/*/", "/./."),
+    "." = cloudi_service_name:suffix("/*/", "/..../."),
+    "" = cloudi_service_name:suffix("*", "."),
+    "" = cloudi_service_name:suffix("*.", ".."),
+    "." = cloudi_service_name:suffix("*.", "..."),
+    % Pattern
+    "." = cloudi_service_name:suffix("/*/", "/*/."),
+    % errors
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("", ".")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix(".", "")),
+    ok.
+
+-endif.

@@ -59,7 +59,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -94,8 +94,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -163,6 +163,7 @@
          recv_asyncs/4,
          % service configuration
          prefix/1,
+         suffix/2,
          timeout_async/1,
          timeout_sync/1,
          timeout_max/1,
@@ -2191,6 +2192,19 @@ recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList, Consume)
 
 prefix(Dispatcher) ->
     gen_server:call(Dispatcher, prefix, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Service request suffix from a service name or service name pattern.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec suffix(Dispatcher :: dispatcher(),
+             NameOrPattern :: service_name() | service_name_pattern()) ->
+    Suffix :: service_name() | service_name_pattern().
+
+suffix(Dispatcher, NameOrPattern) ->
+    cloudi_service_name:suffix(prefix(Dispatcher), NameOrPattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
