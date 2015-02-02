@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-02-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Tweak node up/down log line format for info list
+
 2015-01-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:suffix/2 and cloudi_service_name:suffix/2 for

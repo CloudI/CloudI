@@ -280,7 +280,7 @@ handle_info({nodeup, Node, InfoList},
         true ->
             ok
     end,
-    ?LOG_INFO("nodeup ~p ~p", [Node, InfoList]),
+    ?LOG_INFO("nodeup ~p~n ~p", [Node, InfoList]),
     {noreply,
      State#state{nodes_alive = lists:umerge(NodesAlive, [Node]),
                  nodes_dead = lists:delete(Node, NodesDead),
@@ -296,7 +296,7 @@ handle_info({nodedown, Node, InfoList},
         true ->
             ok
     end,
-    ?LOG_INFO("nodedown ~p ~p", [Node, InfoList]),
+    ?LOG_INFO("nodedown ~p~n ~p", [Node, InfoList]),
     {noreply, State#state{nodes_alive = lists:delete(Node, NodesAlive),
                           nodes_dead = lists:umerge(NodesDead, [Node])}};
 
