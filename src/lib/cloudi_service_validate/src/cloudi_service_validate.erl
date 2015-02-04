@@ -63,9 +63,9 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_VALIDATE_REQUEST_INFO,  undefined).
--define(DEFAULT_VALIDATE_REQUEST,       undefined).
--define(DEFAULT_VALIDATE_RESPONSE_INFO, undefined).
+-define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
+-define(DEFAULT_VALIDATE_REQUEST,             undefined).
+-define(DEFAULT_VALIDATE_RESPONSE_INFO,       undefined).
 -define(DEFAULT_VALIDATE_RESPONSE,
         fun
             (<<>>, <<>>) ->
@@ -73,9 +73,12 @@
             (_, _) ->
                 true
         end).
--define(DEFAULT_FAILURES_DIE,           false).
--define(DEFAULT_FAILURES_MAX_COUNT,     5).   % (MaxR)
--define(DEFAULT_FAILURES_MAX_PERIOD,    300). % seconds (MaxT)
+-define(DEFAULT_FAILURES_SOURCE_DIE,              false).
+-define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,            5).   % (MaxR)
+-define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,         300). % seconds (MaxT)
+-define(DEFAULT_FAILURES_DEST_DIE,                false).
+-define(DEFAULT_FAILURES_DEST_MAX_COUNT,              5).   % (MaxR)
+-define(DEFAULT_FAILURES_DEST_MAX_PERIOD,           300). % seconds (MaxT)
 
 -record(request,
     {
@@ -83,7 +86,8 @@
         name :: cloudi_service:service_name(),
         pattern :: cloudi_service:service_name_pattern(),
         trans_id :: cloudi_service:trans_id(),
-        pid :: cloudi_service:source()
+        dest :: pid(),
+        source :: cloudi_service:source()
     }).
 
 -record(state,
@@ -92,10 +96,14 @@
         validate_request :: fun((any(), any()) -> boolean()),
         validate_response_info :: fun((any()) -> boolean()),
         validate_response :: fun((any(), any()) -> boolean()),
-        failures_die :: boolean(),
-        failures_max_count :: pos_integer(),
-        failures_max_period :: non_neg_integer(),
-        failures = dict:new(), % pid -> [timestamp]
+        failures_source_die :: boolean(),
+        failures_source_max_count :: pos_integer(),
+        failures_source_max_period :: non_neg_integer(),
+        failures_source = dict:new(), % pid -> [timestamp]
+        failures_dest_die :: boolean(),
+        failures_dest_max_count :: pos_integer(),
+        failures_dest_max_period :: non_neg_integer(),
+        failures_dest = dict:new(), % pid -> [timestamp]
         requests = dict:new() % trans_id -> #request{}
     }).
 
@@ -109,16 +117,20 @@
 
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {validate_request_info,      ?DEFAULT_VALIDATE_REQUEST_INFO},
-        {validate_request,           ?DEFAULT_VALIDATE_REQUEST},
-        {validate_response_info,     ?DEFAULT_VALIDATE_RESPONSE_INFO},
-        {validate_response,          ?DEFAULT_VALIDATE_RESPONSE},
-        {failures_die,               ?DEFAULT_FAILURES_DIE},
-        {failures_max_count,         ?DEFAULT_FAILURES_MAX_COUNT},
-        {failures_max_period,        ?DEFAULT_FAILURES_MAX_PERIOD}],
+        {validate_request_info,         ?DEFAULT_VALIDATE_REQUEST_INFO},
+        {validate_request,              ?DEFAULT_VALIDATE_REQUEST},
+        {validate_response_info,        ?DEFAULT_VALIDATE_RESPONSE_INFO},
+        {validate_response,             ?DEFAULT_VALIDATE_RESPONSE},
+        {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
+        {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
+        {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD},
+        {failures_dest_die,             ?DEFAULT_FAILURES_DEST_DIE},
+        {failures_dest_max_count,       ?DEFAULT_FAILURES_DEST_MAX_COUNT},
+        {failures_dest_max_period,      ?DEFAULT_FAILURES_DEST_MAX_PERIOD}],
     [ValidateRequestInfo0, ValidateRequest0,
      ValidateResponseInfo0, ValidateResponse0,
-     FailuresDie, FailuresMaxCount, FailuresMaxPeriod
+     FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
+     FailuresDstDie, FailuresDstMaxCount, FailuresDstMaxPeriod
      ] = cloudi_proplists:take_values(Defaults, Args),
     ValidateRequestInfo1 = case ValidateRequestInfo0 of
         undefined ->
@@ -182,18 +194,24 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         _ when is_function(ValidateResponse0, 2) ->
             ValidateResponse0
     end,
-    true = is_boolean(FailuresDie),
-    true = is_integer(FailuresMaxCount) andalso (FailuresMaxCount > 0),
-    true = is_integer(FailuresMaxPeriod) andalso (FailuresMaxPeriod >= 0),
+    true = is_boolean(FailuresSrcDie),
+    true = is_integer(FailuresSrcMaxCount) andalso (FailuresSrcMaxCount > 0),
+    true = is_integer(FailuresSrcMaxPeriod) andalso (FailuresSrcMaxPeriod >= 0),
+    true = is_boolean(FailuresDstDie),
+    true = is_integer(FailuresDstMaxCount) andalso (FailuresDstMaxCount > 0),
+    true = is_integer(FailuresDstMaxPeriod) andalso (FailuresDstMaxPeriod >= 0),
     false = cloudi_x_trie:is_pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{validate_request_info = ValidateRequestInfo1,
                 validate_request = ValidateRequest1,
                 validate_response_info = ValidateResponseInfo1,
                 validate_response = ValidateResponse1,
-                failures_die = FailuresDie,
-                failures_max_count = FailuresMaxCount,
-                failures_max_period = FailuresMaxPeriod}}.
+                failures_source_die = FailuresSrcDie,
+                failures_source_max_count = FailuresSrcMaxCount,
+                failures_source_max_period = FailuresSrcMaxPeriod,
+                failures_dest_die = FailuresDstDie,
+                failures_dest_max_count = FailuresDstMaxCount,
+                failures_dest_max_period = FailuresDstMaxPeriod}}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
@@ -205,19 +223,26 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                   RequestInfo, Request) of
         true ->
             [NextName] = cloudi_service:service_name_parse(Name, Pattern),
-            case cloudi_service:send_async_active(Dispatcher, NextName,
-                                                  RequestInfo, Request,
-                                                  Timeout, Priority) of
-                {ok, ValidateTransId} ->
-                    ValidateRequest = #request{type = Type,
-                                               name = Name,
-                                               pattern = Pattern,
-                                               trans_id = TransId,
-                                               pid = Pid},
-                    {noreply,
-                     State#state{requests = dict:store(ValidateTransId,
-                                                       ValidateRequest,
-                                                       Requests)}};
+            case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
+                {ok, {_, NextPid} = PatternPid} ->
+                    case cloudi_service:send_async_active(Dispatcher, NextName,
+                                                          RequestInfo, Request,
+                                                          Timeout, Priority,
+                                                          PatternPid) of
+                        {ok, ValidateTransId} ->
+                            ValidateRequest = #request{type = Type,
+                                                       name = Name,
+                                                       pattern = Pattern,
+                                                       trans_id = TransId,
+                                                       dest = NextPid,
+                                                       source = Pid},
+                            {noreply,
+                             State#state{requests = dict:store(ValidateTransId,
+                                                               ValidateRequest,
+                                                               Requests)}};
+                        {error, timeout} ->
+                            {reply, <<>>, State}
+                    end;
                 {error, timeout} ->
                     {reply, <<>>, State}
             end;
@@ -231,73 +256,119 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 trans_id = ValidateTransId},
                            #state{validate_response_info = ResponseInfoF,
                                   validate_response = ResponseF,
-                                  failures_die = FailuresDie,
-                                  failures_max_count = FailuresMaxCount,
-                                  failures_max_period = FailuresMaxPeriod,
-                                  requests = Requests,
-                                  failures = Failures} = State,
+                                  failures_source_die = FailuresSrcDie,
+                                  failures_source_max_count =
+                                      FailuresSrcMaxCount,
+                                  failures_source_max_period =
+                                      FailuresSrcMaxPeriod,
+                                  failures_source = FailuresSrc,
+                                  failures_dest_die = FailuresDstDie,
+                                  failures_dest_max_count =
+                                      FailuresDstMaxCount,
+                                  failures_dest_max_period =
+                                      FailuresDstMaxPeriod,
+                                  failures_dest = FailuresDst,
+                                  requests = Requests} = State,
                            Dispatcher) ->
     #request{type = Type,
              name = Name,
              pattern = Pattern,
              trans_id = TransId,
-             pid = Pid} = dict:fetch(ValidateTransId, Requests),
+             dest = Dst,
+             source = Src} = dict:fetch(ValidateTransId, Requests),
     NewRequests = dict:erase(ValidateTransId, Requests),
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
             cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
                                           ResponseInfo, Response,
-                                          Timeout, TransId, Pid),
+                                          Timeout, TransId, Src),
             {noreply, State#state{requests = NewRequests}};
         false ->
-            {Dead, NewFailures} = failure(FailuresDie,
-                                          FailuresMaxCount, FailuresMaxPeriod,
-                                          Pid, Failures),
+            {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+                                                FailuresSrcMaxCount,
+                                                FailuresSrcMaxPeriod,
+                                                Src, FailuresSrc),
             if
-                Dead =:= true ->
+                DeadSrc =:= true ->
                     ok;
-                Dead =:= false ->
+                DeadSrc =:= false ->
                     cloudi_service:return_nothrow(Dispatcher,
                                                   Type, Name, Pattern,
                                                   <<>>, <<>>,
-                                                  Timeout, TransId, Pid)
+                                                  Timeout, TransId, Src)
             end,
-            {noreply, State#state{requests = NewRequests,
-                                  failures = NewFailures}}
+            {_, NewFailuresDst} = failure(FailuresDstDie,
+                                          FailuresDstMaxCount,
+                                          FailuresDstMaxPeriod,
+                                          Dst, FailuresDst),
+            {noreply, State#state{failures_source = NewFailuresSrc,
+                                  failures_dest = NewFailuresDst,
+                                  requests = NewRequests}}
     end;
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
-                           #state{failures_die = FailuresDie,
-                                  failures_max_count = FailuresMaxCount,
-                                  failures_max_period = FailuresMaxPeriod,
-                                  requests = Requests,
-                                  failures = Failures} = State,
+                           #state{failures_source_die = FailuresSrcDie,
+                                  failures_source_max_count =
+                                      FailuresSrcMaxCount,
+                                  failures_source_max_period =
+                                      FailuresSrcMaxPeriod,
+                                  failures_source = FailuresSrc,
+                                  failures_dest_die = FailuresDstDie,
+                                  failures_dest_max_count =
+                                      FailuresDstMaxCount,
+                                  failures_dest_max_period =
+                                      FailuresDstMaxPeriod,
+                                  failures_dest = FailuresDst,
+                                  requests = Requests} = State,
                            Dispatcher) ->
     #request{type = Type,
              name = Name,
              pattern = Pattern,
              trans_id = TransId,
-             pid = Pid} = dict:fetch(ValidateTransId, Requests),
+             dest = Dst,
+             source = Src} = dict:fetch(ValidateTransId, Requests),
     NewRequests = dict:erase(ValidateTransId, Requests),
-    {Dead, NewFailures} = failure(FailuresDie,
-                                  FailuresMaxCount, FailuresMaxPeriod,
-                                  Pid, Failures),
+    {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+                                        FailuresSrcMaxCount,
+                                        FailuresSrcMaxPeriod,
+                                        Src, FailuresSrc),
     if
-        Dead =:= true ->
+        DeadSrc =:= true ->
             ok;
-        Dead =:= false ->
+        DeadSrc =:= false ->
             cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
                                           <<>>, <<>>,
-                                          0, TransId, Pid)
+                                          0, TransId, Src)
     end,
-    {noreply, State#state{requests = NewRequests,
-                          failures = NewFailures}};
+    {_, NewFailuresDst} = failure(FailuresDstDie,
+                                  FailuresDstMaxCount,
+                                  FailuresDstMaxPeriod,
+                                  Dst, FailuresDst),
+    {noreply, State#state{failures_source = NewFailuresSrc,
+                          failures_dest = NewFailuresDst,
+                          requests = NewRequests}};
 
 cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
-                           #state{failures = Failures} = State,
+                           #state{failures_source_die = FailuresSrcDie,
+                                  failures_source = FailuresSrc,
+                                  failures_dest_die = FailuresDstDie,
+                                  failures_dest = FailuresDst} = State,
                            _Dispatcher) ->
-    {noreply, State#state{failures = dict:erase(Pid, Failures)}};
+    NewFailuresSrc = if
+        FailuresSrcDie =:= true ->
+            dict:erase(Pid, FailuresSrc);
+        FailuresSrcDie =:= false ->
+            FailuresSrc
+    end,
+    NewFailuresDst = if
+        FailuresDstDie =:= true ->
+            dict:erase(Pid, FailuresDst);
+        FailuresDstDie =:= false ->
+            FailuresDst
+    end,
+    {noreply, State#state{failures_source = NewFailuresSrc,
+                          failures_dest = NewFailuresDst}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -327,11 +398,11 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
             Now = erlang:now(),
             case dict:find(Pid, Failures) of
                 {ok, FailureList} ->
-                    failure_check(Now, [Now | FailureList],
+                    failure_check(Now, FailureList,
                                   MaxCount, MaxPeriod, Pid, Failures);
                 error ->
                     erlang:monitor(process, Pid),
-                    failure_check(Now, [Now],
+                    failure_check(Now, [],
                                   MaxCount, MaxPeriod, Pid, Failures)
             end;
         false ->
@@ -348,13 +419,13 @@ failure_store(FailureList, MaxCount, Pid, Failures) ->
             {false, NewFailures}
     end.
 
-failure_check(_, FailureList, MaxCount, 0, Pid, Failures) ->
-    failure_store(FailureList, MaxCount, Pid, Failures);
+failure_check(Now, FailureList, MaxCount, 0, Pid, Failures) ->
+    failure_store([Now | FailureList], MaxCount, Pid, Failures);
 failure_check(Now, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
     NewFailureList = lists:reverse(lists:dropwhile(fun(T) ->
         erlang:trunc(timer:now_diff(Now, T) * 1.0e-6) > MaxPeriod
     end, lists:reverse(FailureList))),
-    failure_store(NewFailureList, MaxCount, Pid, Failures).
+    failure_store([Now | NewFailureList], MaxCount, Pid, Failures).
 
 failure_kill(Pid) ->
     erlang:exit(Pid, cloudi_service_validate).
