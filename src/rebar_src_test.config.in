@@ -31,6 +31,7 @@
   "lib/cloudi_service_tcp",
   "lib/cloudi_service_timers",
   "lib/cloudi_service_udp",
+  "lib/cloudi_service_validate",
   "lib/cloudi_service_zeromq",
   "lib/cpg",
   "lib/erlang_term",

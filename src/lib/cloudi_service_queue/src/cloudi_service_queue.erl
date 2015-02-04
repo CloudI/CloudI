@@ -179,7 +179,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                              fun(T) ->
                                                 retry(Mode, Dispatcher, T)
                                              end),
-    false = lists:member($*, Prefix),
+    false = cloudi_x_trie:is_pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     DispatcherPid = cloudi_service:dispatcher(Dispatcher),
     {ok, #state{logging = Logging,
