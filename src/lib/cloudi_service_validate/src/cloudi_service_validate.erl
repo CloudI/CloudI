@@ -74,11 +74,23 @@
                 true
         end).
 -define(DEFAULT_FAILURES_SOURCE_DIE,              false).
--define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,            5).   % (MaxR)
--define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,         300). % seconds (MaxT)
+-define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,            2). % see below:
+        % (similar to the MaxR configuration value for services)
+-define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,          60). % seconds, see below:
+        % (similar to the MaxT configuration value for services)
+        % If you want the source service to eventually fail,
+        % use the service's MaxT/MaxR as the failures_source_max_period value
+        % (e.g., 300/5 == 60 seconds).  Can also use the value 'infinity'
+        % to accumulate a failure count indefinitely.
 -define(DEFAULT_FAILURES_DEST_DIE,                false).
--define(DEFAULT_FAILURES_DEST_MAX_COUNT,              5).   % (MaxR)
--define(DEFAULT_FAILURES_DEST_MAX_PERIOD,           300). % seconds (MaxT)
+-define(DEFAULT_FAILURES_DEST_MAX_COUNT,              2). % see below:
+        % (similar to the MaxR configuration value for services)
+-define(DEFAULT_FAILURES_DEST_MAX_PERIOD,            60). % seconds, see below:
+        % (similar to the MaxT configuration value for services)
+        % If you want the destination service to eventually fail,
+        % use the service's MaxT/MaxR as the failures_dest_max_period value
+        % (e.g., 300/5 == 60 seconds).  Can also use the value 'infinity'
+        % to accumulate a failure count indefinitely.
 
 -record(request,
     {
@@ -98,11 +110,11 @@
         validate_response :: fun((any(), any()) -> boolean()),
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
-        failures_source_max_period :: non_neg_integer(),
+        failures_source_max_period :: infinity | pos_integer(),
         failures_source = dict:new(), % pid -> [timestamp]
         failures_dest_die :: boolean(),
         failures_dest_max_count :: pos_integer(),
-        failures_dest_max_period :: non_neg_integer(),
+        failures_dest_max_period :: infinity | pos_integer(),
         failures_dest = dict:new(), % pid -> [timestamp]
         requests = dict:new() % trans_id -> #request{}
     }).
@@ -196,10 +208,14 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     true = is_boolean(FailuresSrcDie),
     true = is_integer(FailuresSrcMaxCount) andalso (FailuresSrcMaxCount > 0),
-    true = is_integer(FailuresSrcMaxPeriod) andalso (FailuresSrcMaxPeriod >= 0),
+    true = (FailuresSrcMaxPeriod =:= infinity) orelse
+           (is_integer(FailuresSrcMaxPeriod) andalso
+            (FailuresSrcMaxPeriod > 0)),
     true = is_boolean(FailuresDstDie),
     true = is_integer(FailuresDstMaxCount) andalso (FailuresDstMaxCount > 0),
-    true = is_integer(FailuresDstMaxPeriod) andalso (FailuresDstMaxPeriod >= 0),
+    true = (FailuresDstMaxPeriod =:= infinity) orelse
+           (is_integer(FailuresDstMaxPeriod) andalso
+            (FailuresDstMaxPeriod > 0)),
     false = cloudi_x_trie:is_pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{validate_request_info = ValidateRequestInfo1,
@@ -419,7 +435,7 @@ failure_store(FailureList, MaxCount, Pid, Failures) ->
             {false, NewFailures}
     end.
 
-failure_check(Now, FailureList, MaxCount, 0, Pid, Failures) ->
+failure_check(Now, FailureList, MaxCount, infinity, Pid, Failures) ->
     failure_store([Now | FailureList], MaxCount, Pid, Failures);
 failure_check(Now, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
     NewFailureList = lists:reverse(lists:dropwhile(fun(T) ->
