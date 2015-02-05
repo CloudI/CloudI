@@ -3,7 +3,7 @@ cloudi_service_db_cassandra_cql
 
 **CloudI DB Cassandra CQL Service**
 
-CloudI layer on top of erlcql from [https://github.com/rpt/erlcql.git](http://)
+CloudI layer on top of erlcql from https://github.com/rpt/erlcql.git
 
 NOTE: set service config `count_process` to desired pool size
 
