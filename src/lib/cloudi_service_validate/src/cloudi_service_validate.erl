@@ -97,11 +97,17 @@
         type :: cloudi_service:request_type(),
         name :: cloudi_service:service_name(),
         pattern :: cloudi_service:service_name_pattern(),
+        timeout :: cloudi_service:timeout_value_milliseconds(),
         trans_id :: cloudi_service:trans_id(),
-        dest :: pid(),
-        source :: cloudi_service:source()
+        source :: cloudi_service:source(),
+        destination :: pid()
     }).
 
+-ifdef(ERLANG_OTP_VER_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
 -record(state,
     {
         validate_request_info :: fun((any()) -> boolean()),
@@ -111,12 +117,15 @@
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
-        failures_source = dict:new(), % pid -> [timestamp]
+        failures_source = dict:new() :: dict_proxy(pid(),
+                                                   list(erlang:timestamp())),
         failures_dest_die :: boolean(),
         failures_dest_max_count :: pos_integer(),
         failures_dest_max_period :: infinity | pos_integer(),
-        failures_dest = dict:new(), % pid -> [timestamp]
-        requests = dict:new() % trans_id -> #request{}
+        failures_dest = dict:new() :: dict_proxy(pid(),
+                                                 list(erlang:timestamp())),
+        requests = dict:new() :: dict_proxy(cloudi_service:trans_id(),
+                                            #request{})
     }).
 
 %%%------------------------------------------------------------------------
@@ -238,10 +247,11 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
     case validate(RequestInfoF, RequestF,
                   RequestInfo, Request) of
         true ->
-            [NextName] = cloudi_service:service_name_parse(Name, Pattern),
+            [ValidateName] = cloudi_service:service_name_parse(Name, Pattern),
             case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
-                {ok, {_, NextPid} = PatternPid} ->
-                    case cloudi_service:send_async_active(Dispatcher, NextName,
+                {ok, {_, DstPid} = PatternPid} ->
+                    case cloudi_service:send_async_active(Dispatcher,
+                                                          ValidateName,
                                                           RequestInfo, Request,
                                                           Timeout, Priority,
                                                           PatternPid) of
@@ -249,9 +259,10 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                             ValidateRequest = #request{type = Type,
                                                        name = Name,
                                                        pattern = Pattern,
+                                                       timeout = Timeout,
                                                        trans_id = TransId,
-                                                       dest = NextPid,
-                                                       source = Pid},
+                                                       source = Pid,
+                                                       destination = DstPid},
                             {noreply,
                              State#state{requests = dict:store(ValidateTransId,
                                                                ValidateRequest,
@@ -290,8 +301,8 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
              name = Name,
              pattern = Pattern,
              trans_id = TransId,
-             dest = Dst,
-             source = Src} = dict:fetch(ValidateTransId, Requests),
+             source = Src,
+             destination = Dst} = dict:fetch(ValidateTransId, Requests),
     NewRequests = dict:erase(ValidateTransId, Requests),
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
@@ -341,9 +352,10 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
     #request{type = Type,
              name = Name,
              pattern = Pattern,
+             timeout = Timeout,
              trans_id = TransId,
-             dest = Dst,
-             source = Src} = dict:fetch(ValidateTransId, Requests),
+             source = Src,
+             destination = Dst} = dict:fetch(ValidateTransId, Requests),
     NewRequests = dict:erase(ValidateTransId, Requests),
     {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
@@ -355,7 +367,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
         DeadSrc =:= false ->
             cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
                                           <<>>, <<>>,
-                                          0, TransId, Src)
+                                          Timeout, TransId, Src)
     end,
     {_, NewFailuresDst} = failure(FailuresDstDie,
                                   FailuresDstMaxCount,
@@ -407,7 +419,7 @@ validate(RInfoF, RF, RInfo, R) ->
     RInfoF(RInfo) andalso RF(RInfo, R).
 
 failure(false, _, _, _, Failures) ->
-    Failures;
+    {false, Failures};
 failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->

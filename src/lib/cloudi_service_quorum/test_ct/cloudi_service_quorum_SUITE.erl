@@ -147,9 +147,8 @@ prop_quorum_timeout(QuorumTypeProper, _Config) ->
             catch
                 Type:Error ->
                     StackTrace = erlang:get_stacktrace(),
-                    error_logger:error_msg("validate_quorum_timeout failed: "
-                                           "~p ~p~n~p~n",
-                                           [Type, Error, StackTrace]),
+                    error_msg("validate_quorum_timeout failed: ~p ~p~n~p~n",
+                              [Type, Error, StackTrace]),
                     false
             end).
 
@@ -194,9 +193,9 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
                                    RequestInfo, Request),
     if
         Result /= ProperResult ->
-            error_logger:error_msg("quorum_timeout (~p, ~p, ~p)~n ~p /= ~p~n",
-                                   [QuorumType, CountProcess, Monkey,
-                                    Result, ProperResult]),
+            error_msg("quorum_timeout (~p, ~p, ~p)~n ~p /= ~p~n",
+                      [QuorumType, CountProcess, Monkey,
+                       Result, ProperResult]),
             false;
         true ->
             true
@@ -232,9 +231,8 @@ prop_quorum_crash(QuorumTypeProper, _Config) ->
             catch
                 Type:Error ->
                     StackTrace = erlang:get_stacktrace(),
-                    error_logger:error_msg("validate_quorum_crash failed: "
-                                           "~p ~p~n~p~n",
-                                           [Type, Error, StackTrace]),
+                    error_msg("validate_quorum_crash failed: ~p ~p~n~p~n",
+                              [Type, Error, StackTrace]),
                     false
             end).
 
@@ -280,9 +278,9 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
                                    RequestInfo, Request),
     if
         Result /= ProperResult ->
-            error_logger:error_msg("quorum_crash (~p, ~p, ~p)~n ~p /= ~p~n",
-                                   [QuorumType, CountProcess, Monkey,
-                                    Result, ProperResult]),
+            error_msg("quorum_crash (~p, ~p, ~p)~n ~p /= ~p~n",
+                      [QuorumType, CountProcess, Monkey,
+                       Result, ProperResult]),
             false;
         true ->
             true
@@ -355,4 +353,10 @@ request() ->
 
 request_info() ->
     binary(1).
+
+error_msg(Format, Args) ->
+    error_logger:tty(true),
+    error_logger:error_msg(Format, Args),
+    error_logger:tty(false),
+    ok.
 
