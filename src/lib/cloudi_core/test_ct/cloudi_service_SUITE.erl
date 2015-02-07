@@ -285,8 +285,9 @@ suite() ->
      {timetrap, 10100}].
 
 init_per_suite(Config) ->
-    ok = cloudi_x_reltool_util:
-             application_start(sasl, [{sasl_error_logger, false}], infinity),
+    ok = cloudi_x_reltool_util:application_start(sasl,
+                                                 [{sasl_error_logger, false}],
+                                                 infinity),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     Config.
 

@@ -752,7 +752,8 @@ distclean-local: rebar-directories-distclean \
            $(top_srcdir)/lib/cloudi_service_http_client/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_queue/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_quorum/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_oauth1/test_ct/logs
+           $(top_srcdir)/lib/cloudi_service_oauth1/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_validate/test_ct/logs
 	find $(top_srcdir)/api -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/lib -name "Makefile.in" | xargs rm -f
 	find $(top_srcdir)/tests -name "Makefile.in" | xargs rm -f
