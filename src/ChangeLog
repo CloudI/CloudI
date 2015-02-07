@@ -5,6 +5,10 @@
 
     * Add validation and failure handling to cloudi_service_quorum
     * Fix cloudi_service_validate
+    * Make sure a failure to validate the request and/or the request info
+      causes a source failure
+    * Add request validation and source failure handling
+      to cloudi_service_router
 
 2015-02-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -282,7 +282,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_dest_max_period = FailuresDstMaxPeriod}}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, TransId, Pid,
+                              Timeout, Priority, TransId, SrcPid,
                               #state{quorum = Quorum,
                                      validate_request_info = RequestInfoF,
                                      validate_request = RequestF} = State,
@@ -319,18 +319,18 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                     end,
                     if
                         CountRequired =:= undefined ->
-                            {reply, <<>>, State};
+                            request_failed(SrcPid, State);
                         true ->
                             mcast(PatternPids, QuorumName,
                                   Type, Name, Pattern, RequestInfo, Request,
-                                  Timeout, Priority, TransId, Pid,
+                                  Timeout, Priority, TransId, SrcPid,
                                   CountRequired, State, Dispatcher)
                     end;
                 {error, timeout} ->
-                    {reply, <<>>, State}
+                    request_failed(SrcPid, State)
             end;
         false ->
-            {reply, <<>>, State}
+            request_failed(SrcPid, State)
     end.
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
@@ -356,13 +356,13 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   pending = Pending} = State,
                            Dispatcher) ->
     #pending{trans_id = TransId,
-             dest = Dst} = dict:fetch(QuorumTransId, Pending),
+             dest = DstPid} = dict:fetch(QuorumTransId, Pending),
     NewPending = dict:erase(QuorumTransId, Pending),
     #request{% return data
              type = Type,
              name = Name,
              pattern = Pattern,
-             source = Src,
+             source = SrcPid,
              % quorum data
              count_required = CountRequired,
              count_total = CountTotal,
@@ -396,7 +396,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                           ResponseInfo,
                                                           Response,
                                                           Timeout, TransId,
-                                                          Src),
+                                                          SrcPid),
                             true;
                         (NewCountResponses == CountTotal) orelse
                         ((NewCountCorrect +
@@ -405,7 +405,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                           Name, Pattern,
                                                           <<>>, <<>>,
                                                           Timeout, TransId,
-                                                          Src),
+                                                          SrcPid),
                             true;
                         true ->
                             Returned
@@ -437,11 +437,11 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
             {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                                 FailuresSrcMaxCount,
                                                 FailuresSrcMaxPeriod,
-                                                Src, FailuresSrc),
+                                                SrcPid, FailuresSrc),
             {_, NewFailuresDst} = failure(FailuresDstDie,
                                           FailuresDstMaxCount,
                                           FailuresDstMaxPeriod,
-                                          Dst, FailuresDst),
+                                          DstPid, FailuresDst),
             NewReturned = if
                 DeadSrc =:= true ->
                     true;
@@ -452,7 +452,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                     cloudi_service:return_nothrow(Dispatcher, Type,
                                                   Name, Pattern,
                                                   <<>>, <<>>,
-                                                  Timeout, TransId, Src),
+                                                  Timeout, TransId, SrcPid),
                     true;
                 true ->
                     Returned
@@ -491,14 +491,14 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
                                   pending = Pending} = State,
                            Dispatcher) ->
     #pending{trans_id = TransId,
-             dest = Dst} = dict:fetch(QuorumTransId, Pending),
+             dest = DstPid} = dict:fetch(QuorumTransId, Pending),
     NewPending = dict:erase(QuorumTransId, Pending),
     #request{% return data
              type = Type,
              name = Name,
              pattern = Pattern,
              timeout = Timeout,
-             source = Src,
+             source = SrcPid,
              % quorum data
              count_required = CountRequired,
              count_total = CountTotal,
@@ -509,11 +509,11 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
     {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
-                                        Src, FailuresSrc),
+                                        SrcPid, FailuresSrc),
     {_, NewFailuresDst} = failure(FailuresDstDie,
                                   FailuresDstMaxCount,
                                   FailuresDstMaxPeriod,
-                                  Dst, FailuresDst),
+                                  DstPid, FailuresDst),
     NewReturned = if
         DeadSrc =:= true ->
             true;
@@ -524,7 +524,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
             cloudi_service:return_nothrow(Dispatcher, Type,
                                           Name, Pattern,
                                           <<>>, <<>>,
-                                          Timeout, TransId, Src),
+                                          Timeout, TransId, SrcPid),
             true;
         true ->
             Returned
@@ -606,7 +606,7 @@ mcast_send([{_, DstPid} = PatternPid | PatternPids],
 
 mcast(PatternPids, QuorumName,
       Type, Name, Pattern, RequestInfo, Request,
-      Timeout, Priority, TransId, Src, CountRequired,
+      Timeout, Priority, TransId, SrcPid, CountRequired,
       #state{requests = Requests,
              pending = Pending} = State, Dispatcher) ->
     {CountSent,
@@ -620,7 +620,7 @@ mcast(PatternPids, QuorumName,
                                               name = Name,
                                               pattern = Pattern,
                                               timeout = Timeout,
-                                              source = Src,
+                                              source = SrcPid,
                                               count_required = CountRequired,
                                               count_total = CountSent,
                                               returned = false},
@@ -633,7 +633,7 @@ mcast(PatternPids, QuorumName,
                                               name = Name,
                                               pattern = Pattern,
                                               timeout = Timeout,
-                                              source = Src,
+                                              source = SrcPid,
                                               count_required = CountRequired,
                                               count_total = CountSent,
                                               returned = true},
@@ -642,14 +642,35 @@ mcast(PatternPids, QuorumName,
                                       pending = NewPending}}
     end.
 
+validate_f_return(Value) when is_boolean(Value) ->
+    Value.
+
 validate(undefined, undefined, _, _) ->
     true;
 validate(undefined, RF, RInfo, R) ->
-    RF(RInfo, R);
+    validate_f_return(RF(RInfo, R));
 validate(RInfoF, undefined, RInfo, _) ->
-    RInfoF(RInfo);
+    validate_f_return(RInfoF(RInfo));
 validate(RInfoF, RF, RInfo, R) ->
-    RInfoF(RInfo) andalso RF(RInfo, R).
+    validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
+
+request_failed(SrcPid,
+               #state{failures_source_die = FailuresSrcDie,
+                      failures_source_max_count = FailuresSrcMaxCount,
+                      failures_source_max_period = FailuresSrcMaxPeriod,
+                      failures_source = FailuresSrc} = State) ->
+    {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
+                                        FailuresSrcMaxCount,
+                                        FailuresSrcMaxPeriod,
+                                        SrcPid, FailuresSrc),
+    if
+        DeadSrc =:= true ->
+            {noreply,
+             State#state{failures_source = NewFailuresSrc}};
+        DeadSrc =:= false ->
+            {reply, <<>>,
+             State#state{failures_source = NewFailuresSrc}}
+    end.
 
 failure(false, _, _, _, Failures) ->
     {false, Failures};
