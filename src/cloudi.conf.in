@@ -195,7 +195,7 @@
      {args, [{map_reduce, cloudi_service_hexpi}, % map-reduce module
              {map_reduce_args, [1, 65536]},  % index start, index end
              {concurrency, 1.5}]},
-     {timeout_init, 10000},
+     {timeout_init, 20000},
      {dest_list_deny, [api]},
      {options, [{request_timeout_adjustment, true}]}],
     % the service below provides a connection to the cloudi_tests PostgreSQL DB

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add timeout usage to cloudi_service_map_reduce for slow disk storage
+
 2015-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Java 7 raw type warning in Java CloudI API
