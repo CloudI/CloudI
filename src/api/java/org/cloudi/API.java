@@ -1657,7 +1657,7 @@ public class API
         Constructor<FileDescriptor> c;
         try
         {
-            Class[] intarg = { Integer.TYPE };
+            Class<?>[] intarg = { Integer.TYPE };
             c = clazz.getDeclaredConstructor(intarg);
         }
         catch (SecurityException e)
