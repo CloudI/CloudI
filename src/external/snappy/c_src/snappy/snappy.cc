@@ -916,7 +916,8 @@ class SnappyArrayWriter {
     char* op = op_;
     const int space_left = op_limit_ - op;
 
-    if (op - base_ <= offset - 1u) {  // -1u catches offset==0
+    if (static_cast<unsigned long>(op - base_) <=
+        static_cast<unsigned long>(offset - 1u)) {  // -1u catches offset==0
       return false;
     }
     if (len <= 16 && offset >= 8 && space_left >= 16) {
