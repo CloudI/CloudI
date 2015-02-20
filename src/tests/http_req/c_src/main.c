@@ -118,7 +118,7 @@ void process_requests(void * p)
 
 int main(int argc, char ** argv)
 {
-    int thread_count;
+    unsigned int thread_count;
     int result = cloudi_initialize_thread_count(&thread_count);
     assert(result == cloudi_success);
     assert(thread_count == 1);
