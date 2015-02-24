@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update nodefinder
+
 2015-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix write_truncate and write_append in cloudi_service_filesystem
