@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -88,6 +88,7 @@
 -define(DEFAULT_WRITE_APPEND,               []). % see below:
         % A list of file service names (provided by this service) that
         % will append to the file contents with the service request data
+        % (n.b., use to update with a range request in bytes)
 -define(DEFAULT_NOTIFY_ONE,                 []). % see below:
         % A list of {Name, NotifyName} entries that provide a mapping from
         % a file service name (provided by this service) to a
@@ -396,7 +397,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Files4 = lists:foldl(fun(Name, Files2) ->
         true = is_list(Name) andalso is_integer(hd(Name)),
         FileName = lists:nthtail(PrefixLength, Name),
-        case cloudi_x_trie:find(Name, Files2) of
+        Pattern = if
+            UseHttpGetSuffix =:= true ->
+                Name ++ "/get";
+            UseHttpGetSuffix =:= false ->
+                Name
+        end,
+        case cloudi_x_trie:find(Pattern, Files2) of
             {ok, #file{access = Access,
                        write = []} = File}
                 when Access =:= read_write ->
@@ -427,7 +434,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Files7 = lists:foldl(fun(Name, Files5) ->
         true = is_list(Name) andalso is_integer(hd(Name)),
         FileName = lists:nthtail(PrefixLength, Name),
-        case cloudi_x_trie:find(Name, Files5) of
+        Pattern = if
+            UseHttpGetSuffix =:= true ->
+                Name ++ "/get";
+            UseHttpGetSuffix =:= false ->
+                Name
+        end,
+        case cloudi_x_trie:find(Pattern, Files5) of
             {ok, #file{access = Access,
                        write = Write} = File}
                 when Access =:= read_write ->
@@ -1037,7 +1050,7 @@ request_append_file([{Range, Request} | RangeRequests],
                 I >= 0 ->
                     I
             end,
-            ByteEnd = ContentLength - 1,
+            ByteEnd = ByteStart + erlang:byte_size(RequestBin) - 1,
             {ByteStart, ByteEnd};
         {IStart, IEnd} ->
             ByteStart = if
@@ -1048,18 +1061,13 @@ request_append_file([{Range, Request} | RangeRequests],
             end,
             ByteEnd = IEnd,
             {ByteStart, ByteEnd};
-        I ->
-            ByteStart = if
-                I < 0 ->
-                    ContentLength + I;
-                I >= 0 ->
-                    I
-            end,
-            ByteEnd = ContentLength - 1,
+        I when I < 0 ->
+            ByteStart = ContentLength + I,
+            ByteEnd = ByteStart + erlang:byte_size(RequestBin) - 1,
             {ByteStart, ByteEnd}
     end,
     if
-        Start =< End, Start =< ContentLength ->
+        Start =< End ->
             NewContents = if
                 End < ContentLength ->
                     StartBinBits = Start * 8,
@@ -1078,6 +1086,11 @@ request_append_file([{Range, Request} | RangeRequests],
                       RequestBin/binary>>;
                 Start == ContentLength ->
                     <<Contents/binary,
+                      RequestBin/binary>>;
+                Start > ContentLength ->
+                    GapBits = (Start - ContentLength) * 8,
+                    <<Contents/binary,
+                      0:GapBits,
                       RequestBin/binary>>
             end,
             request_append_file(RangeRequests,

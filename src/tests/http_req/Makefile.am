@@ -75,4 +75,6 @@ install-exec-hook: $(JAVASCRIPT_INSTALL_HOOK) \
                     $(instdir)/public_html
 	$(INSTALL_DATA) $(srcdir)/public_html/800px-Juliadim2.png \
                     $(instdir)/public_html
+	$(INSTALL_DATA) $(srcdir)/public_html/hexpi.txt \
+                    $(instdir)/public_html
 

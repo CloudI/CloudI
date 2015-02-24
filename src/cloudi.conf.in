@@ -186,55 +186,32 @@
         % (see config_service_options in
         %  lib/cloudi_core/src/cloudi_configuration.hrl)
         [{request_timeout_adjustment, true}]},
-    % the service below manages the Hexidecimal PI test
     % (using the proplist method of specifying the configuration data...
     %  it provides defaults automatically)
     [%{type, internal}, % gets inferred
-     {prefix, "/tests/"},
-     {module, cloudi_service_map_reduce},
-     {args, [{map_reduce, cloudi_service_hexpi}, % map-reduce module
-             {map_reduce_args, [1, 65536]},  % index start, index end
-             {concurrency, 1.5}]},
-     {timeout_init, 20000},
-     {dest_list_deny, [api]},
-     {options, [{request_timeout_adjustment, true}]}],
-    % the service below provides a connection to the cloudi_tests PostgreSQL DB
-    %{internal,
-    %    "/db/pgsql/",
-    %    cloudi_service_db_pgsql,
-    %    [{hostname, "127.0.0.1"},
-    %     {username, "cloudi_tests"},
-    %     {password, "cloudi_tests"},
-    %     {port, 5432},
-    %     {database, "cloudi_tests"}],
-    %    none,
-    %    5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+     {prefix, "/tests/websockets/"},
+     {module, cloudi_service_http_cowboy},
+     {args, 
+      [{port, 6464}, {output, external}, {use_websockets, true},
+       {websocket_connect_sync,
+        "/tests/websockets/bounce/websocket/connect"},
+       {websocket_disconnect_async,
+        "/tests/websockets/bounce/websocket/disconnect"},
+       {websocket_ping, 30000}, % milliseconds
+       {websocket_subscriptions,
+        [% also, subscribe to "on" a "bounce"
+         {"b*u*ce", % <-- valid pattern
+          [{parameters_selected, [1, 2]},
+           {service_name,
+            % wildcards for substitution don't need to be in a valid pattern
+            "**/websocket"}]},
+         % second subscription, "notification"
+         {"b*u*ce",
+          [{parameters_selected, [2, 1]},
+           {service_name,
+            "**tification/websocket"}]}
+         ]}]}],
     % tests/http/ services
-    {internal,
-        "/tests/websockets/",
-        cloudi_service_http_cowboy,
-        [{port, 6464}, {output, external}, {use_websockets, true},
-         {websocket_connect_sync,
-          "/tests/websockets/bounce/websocket/connect"},
-         {websocket_disconnect_async,
-          "/tests/websockets/bounce/websocket/disconnect"},
-         {websocket_ping, 30000}, % milliseconds
-         {websocket_subscriptions,
-          [% also, subscribe to "on" a "bounce"
-           {"b*u*ce", % <-- valid pattern
-            [{parameters_selected, [1, 2]},
-             {service_name,
-              % wildcards for substitution don't need to be in a valid pattern
-              "**/websocket"}]},
-           % second subscription, "notification"
-           {"b*u*ce",
-            [{parameters_selected, [2, 1]},
-             {service_name,
-              "**tification/websocket"}]}
-           ]}],
-        immediate_closest,
-        5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-        []},
     {internal,
         "/tests/http/",
         cloudi_service_http_cowboy,
@@ -440,12 +417,32 @@
         "/tests/http_req/",
         cloudi_service_filesystem,
         [{directory, "tests/http_req/public_html/"},
+         {write_append, ["/tests/http_req/hexpi.txt"]},
          {refresh, 5}, % seconds
          {cache, 300}, % seconds
          {notify_one, [{"/tests/http_req/index.html/get", "/tests/echo/put"}]}
          ],
         immediate_closest,
         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+    %{internal,
+    %    "/db/pgsql/",
+    %    cloudi_service_db_pgsql,
+    %    [{hostname, "127.0.0.1"},
+    %     {username, "cloudi_tests"},
+    %     {password, "cloudi_tests"},
+    %     {port, 5432},
+    %     {database, "cloudi_tests"}],
+    %    none,
+    %    5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
+    % the service below manages the Hexidecimal PI test
+    [{prefix, "/tests/"},
+     {module, cloudi_service_map_reduce},
+     {args, [{map_reduce, cloudi_service_hexpi}, % map-reduce module
+             {map_reduce_args, [1, 65536]},  % index start, index end
+             {concurrency, 1.5}]},
+     {timeout_init, 20000},
+     {dest_list_deny, [api]},
+     {options, [{request_timeout_adjustment, true}]}],
     {external,
         "/tests/websockets/",
         "@PYTHON@",

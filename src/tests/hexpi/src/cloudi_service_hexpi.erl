@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_hexpi).
@@ -61,11 +61,12 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(NAME_PGSQL,          "/db/pgsql/cloudi_tests_proxy").
--define(NAME_MYSQL,          "/db/mysql/cloudi_tests_proxy").
+-define(NAME_PGSQL,          "/db/pgsql/cloudi_tests").
+-define(NAME_MYSQL,          "/db/mysql/cloudi_tests").
 -define(NAME_MEMCACHED,      "/db/memcached").
 -define(NAME_TOKYOTYRANT,    "/db/tokyotyrant").
 -define(NAME_COUCHDB,        "/db/couchdb").
+-define(NAME_FILESYSTEM,     "/tests/http_req/hexpi.txt/post").
 
 % example runtimes for
 % AMD Phenom 9950 Quad-Core, 64bit, linux 2.6.27-14-generic:
@@ -97,7 +98,8 @@
         use_mysql,
         use_memcached,
         use_tokyotyrant,
-        use_couchdb
+        use_couchdb,
+        use_filesystem
     }).
 
 %%%------------------------------------------------------------------------
@@ -196,11 +198,10 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
     <<Iterations:32/unsigned-integer-native,
       _Step:32/unsigned-integer-native,
       IndexBin/binary>> = Request,
-    IndexStr = erlang:binary_to_list(IndexBin),
-    ?LOG_INFO("index ~s result received", [IndexStr]),
+    ?LOG_INFO("index ~s result received", [IndexBin]),
     TaskSize = Iterations / ?MAX_ITERATIONS,
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
-    send_results(IndexStr, PiResult, Pid, State, Dispatcher),
+    send_results(IndexBin, PiResult, ElapsedTime, Pid, State, Dispatcher),
     NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
                                              TargetTime,
                                              ElapsedTime,
@@ -224,43 +225,51 @@ cloudi_service_map_reduce_info(Request, _, _) ->
 
 setup(State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
-    PidPgsql = case cloudi_service:get_pid(Dispatcher,
-                                           ?NAME_PGSQL,
-                                           immediate) of
-        {ok, Pid1} ->
-            Pid1;
+    Pgsql = case cloudi_service:get_pid(Dispatcher,
+                                        ?NAME_PGSQL,
+                                        immediate) of
+        {ok, PatternPid1} ->
+            PatternPid1;
         {error, _} ->
             undefined
     end,
-    PidMysql = case cloudi_service:get_pid(Dispatcher,
-                                           ?NAME_MYSQL,
-                                           immediate) of
-        {ok, Pid2} ->
-            Pid2;
+    Mysql = case cloudi_service:get_pid(Dispatcher,
+                                        ?NAME_MYSQL,
+                                        immediate) of
+        {ok, PatternPid2} ->
+            PatternPid2;
         {error, _} ->
             undefined
     end,
-    PidMemcached = case cloudi_service:get_pid(Dispatcher,
-                                               ?NAME_MEMCACHED,
-                                               immediate) of
-        {ok, Pid3} ->
-            Pid3;
+    Memcached = case cloudi_service:get_pid(Dispatcher,
+                                            ?NAME_MEMCACHED,
+                                            immediate) of
+        {ok, PatternPid3} ->
+            PatternPid3;
         {error, _} ->
             undefined
     end,
-    PidTokyotyrant = case cloudi_service:get_pid(Dispatcher,
-                                                 ?NAME_TOKYOTYRANT,
-                                                 immediate) of
-        {ok, Pid4} ->
-            Pid4;
+    Tokyotyrant = case cloudi_service:get_pid(Dispatcher,
+                                              ?NAME_TOKYOTYRANT,
+                                              immediate) of
+        {ok, PatternPid4} ->
+            PatternPid4;
         {error, _} ->
             undefined
     end,
-    PidCouchdb = case cloudi_service:get_pid(Dispatcher,
-                                             ?NAME_COUCHDB,
+    Couchdb = case cloudi_service:get_pid(Dispatcher,
+                                          ?NAME_COUCHDB,
+                                          immediate) of
+        {ok, PatternPid5} ->
+            PatternPid5;
+        {error, _} ->
+            undefined
+    end,
+    Filesystem = case cloudi_service:get_pid(Dispatcher,
+                                             ?NAME_FILESYSTEM,
                                              immediate) of
-        {ok, Pid5} ->
-            Pid5;
+        {ok, PatternPid6} ->
+            PatternPid6;
         {error, _} ->
             undefined
     end,
@@ -268,37 +277,41 @@ setup(State, Dispatcher) ->
     SQLDrop = sql_drop(),
     SQLCreate = sql_create(),
     if
-        PidPgsql /= undefined ->
+        Pgsql /= undefined ->
             cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLDrop,
-                                      TimeoutAsync, PidPgsql),
+                                      TimeoutAsync, Pgsql),
             cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLCreate,
-                                      TimeoutAsync, PidPgsql);
+                                      TimeoutAsync, Pgsql);
         true ->
             ok
     end,
     if
-        PidMysql /= undefined ->
+        Mysql /= undefined ->
             cloudi_service:send_async(Dispatcher, ?NAME_MYSQL, SQLDrop,
-                                      TimeoutAsync, PidMysql),
+                                      TimeoutAsync, Mysql),
             cloudi_service:send_async(Dispatcher, ?NAME_MYSQL, SQLCreate,
-                                      TimeoutAsync, PidMysql);
+                                      TimeoutAsync, Mysql);
         true ->
             ok
     end,
     State#state{timeout_async = TimeoutAsync,
-                use_pgsql = is_tuple(PidPgsql),
-                use_mysql = is_tuple(PidMysql),
-                use_memcached = is_tuple(PidMemcached),
-                use_tokyotyrant = is_tuple(PidTokyotyrant),
-                use_couchdb = is_tuple(PidCouchdb)}.
+                use_pgsql = is_tuple(Pgsql),
+                use_mysql = is_tuple(Mysql),
+                use_memcached = is_tuple(Memcached),
+                use_tokyotyrant = is_tuple(Tokyotyrant),
+                use_couchdb = is_tuple(Couchdb),
+                use_filesystem = is_tuple(Filesystem)}.
 
-send_results(DigitIndexStr, PiResult, Pid,
+send_results(DigitIndex, PiResult, ElapsedTime, Pid,
              #state{use_pgsql = UsePgsql,
                     use_mysql = UseMysql,
                     use_memcached = UseMemcached,
                     use_tokyotyrant = UseTokyotyrant,
-                    use_couchdb = UseCouchdb}, Dispatcher) ->
-    SQLInsert = sql_insert(DigitIndexStr, PiResult),
+                    use_couchdb = UseCouchdb,
+                    use_filesystem = UseFilesystem}, Dispatcher)
+    when is_binary(DigitIndex), is_binary(PiResult), is_float(ElapsedTime),
+         is_pid(Pid) ->
+    SQLInsert = sql_insert(DigitIndex, PiResult),
     if
         UsePgsql == true ->
             cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLInsert);
@@ -314,21 +327,33 @@ send_results(DigitIndexStr, PiResult, Pid,
     if
         UseMemcached == true ->
             cloudi_service:send_async(Dispatcher, ?NAME_MEMCACHED,
-                                      memcached(DigitIndexStr, PiResult));
+                                      memcached(DigitIndex, PiResult));
         true ->
             ok
     end,
     if
         UseTokyotyrant == true ->
             cloudi_service:send_async(Dispatcher, ?NAME_TOKYOTYRANT,
-                                      tokyotyrant(DigitIndexStr, PiResult));
+                                      tokyotyrant(DigitIndex, PiResult));
         true ->
             ok
     end,
     if
         UseCouchdb == true ->
             cloudi_service:send_async(Dispatcher, ?NAME_COUCHDB,
-                                      couchdb(DigitIndexStr, Pid));
+                                      couchdb(DigitIndex, Pid));
+        true ->
+            ok
+    end,
+    if
+        UseFilesystem == true ->
+            {FilesystemRequestInfo,
+             FilesystemRequest} = filesystem(DigitIndex, PiResult),
+            cloudi_service:send_async(Dispatcher,
+                                      ?NAME_FILESYSTEM,
+                                      FilesystemRequestInfo,
+                                      FilesystemRequest,
+                                      undefined, undefined);
         true ->
             ok
     end,
@@ -343,22 +368,25 @@ sql_create() ->
       "data          TEXT"
       ");">>.
 
-sql_insert(DigitIndexStr, PiResult) ->
-    list_to_binary(cloudi_string:format("INSERT INTO incoming_results "
-                                        "(digit_index, data) "
-                                        "VALUES (~s, '~s');",
-                                        [DigitIndexStr, PiResult])).
+sql_insert(DigitIndex, PiResult) ->
+    cloudi_string:format_to_binary("INSERT INTO incoming_results "
+                                   "(digit_index, data) "
+                                   "VALUES (~s, '~s');",
+                                   [DigitIndex, PiResult]).
 
-memcached(DigitIndexStr, PiResult) ->
-    cloudi_string:format("{set, \"~s\", <<\"~s\">>}",
-                         [DigitIndexStr, PiResult]).
+memcached(DigitIndex, PiResult) ->
+    cloudi_string:format_to_list("{set, \"~s\", <<\"~s\">>}",
+                                 [DigitIndex, PiResult]).
 
-tokyotyrant(DigitIndexStr, PiResult) ->
-    cloudi_string:format("{put, \"~s\", <<\"~s\">>}",
-                         [DigitIndexStr, PiResult]).
+tokyotyrant(DigitIndex, PiResult) ->
+    cloudi_string:format_to_list("{put, \"~s\", <<\"~s\">>}",
+                                 [DigitIndex, PiResult]).
 
-couchdb(DigitIndexStr, Pid) ->
-    cloudi_string:format("{update_document, \"pi_state\","
-                         " [{<<\"~s\", <<\"~s\">>}]}",
-                         [erlang:pid_to_list(Pid), DigitIndexStr]).
+couchdb(DigitIndex, Pid) ->
+    cloudi_string:format_to_list("{update_document, \"pi_state\","
+                                 " [{<<\"~s\", <<\"~s\">>}]}",
+                                 [erlang:pid_to_list(Pid), DigitIndex]).
+
+filesystem(DigitIndex, PiResult) ->
+    {[{<<"range">>, <<"bytes=", DigitIndex/binary, "-">>}], PiResult}.
 

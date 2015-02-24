@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix write_truncate and write_append in cloudi_service_filesystem
+      so they find existing files when using HTTP method
+      suffixes on service names
+    * Add the ability to use write_append in cloudi_service_filesystem
+      with byte ranges that go outside the existing file boundary
+      (gaps are filled with null characters)
+
 2015-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add timeout usage to cloudi_service_map_reduce for slow disk storage

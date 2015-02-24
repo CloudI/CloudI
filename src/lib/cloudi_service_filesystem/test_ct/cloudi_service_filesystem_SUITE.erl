@@ -909,7 +909,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     true = LastModified4 =< LastModified5,
     RequestInfo6 = [{<<"range">>, 
                      <<"bytes="
-                       "45-45">>}],
+                       "45-44">>}],
     {ok,
      [{<<"status">>, <<"416">>},
       {<<"content-range">>, <<"bytes */44">>},
@@ -1074,7 +1074,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     true = LastModified4 =< LastModified5,
     RequestInfo6 = [{<<"range">>, 
                      <<"bytes="
-                       "45-45">>}],
+                       "45-44">>}],
     {ok,
      [{<<"status">>, <<"416">>},
       {<<"content-range">>, <<"bytes */44">>},
