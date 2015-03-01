@@ -154,7 +154,8 @@ handle_call(discover, _From, State) ->
             {reply, {error, ec2_connect_timeout}, State};
         {error, {http_error, 503, "Service Unavailable", _}} ->
             {reply, {error, ec2_unavailable}, State};
-        {error, {http_error, 500, "Internal Server Error", _}} ->
+        {error, {http_error, 500, "Internal Server Error", XMLBinary}} ->
+            error_logger:error_msg("ec2 error: ~s~n", [XMLBinary]),
             {reply, {error, ec2_failed}, State};
         {error, _} = Error ->
             {stop, Error, {error, discover_failed}, State}
