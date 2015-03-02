@@ -84,8 +84,10 @@
 
 -type state() :: #cloudi_task_size{}.
 
--define(TARGET_TIME_ADJUST, 4). % number of incr/decr to cause adjustment
+-define(TARGET_TIME_ADJUST, 4). % number of consecutive incr/decr to
+                                % cause a target time adjustment
 -define(TARGET_TIME_ADJUST_FACTOR, 2.0).
+-define(ELAPSED_TIME_EPSILON, 0.1 / 3600.0). % 100 ms in hours
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -209,8 +211,8 @@ put(Pid, TaskSize, ElapsedTime,
         error ->
             #node{task_size = TaskSizeInitial}
     end,
-    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize,
-                                          TargetTime0, ElapsedTime),
+    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize, TargetTime0,
+                                          ElapsedTime + ?ELAPSED_TIME_EPSILON),
     NewTaskSize = task_size_clamp(TaskSizeSmoothed, TaskSizeMin, TaskSizeMax),
     {NextTargetTimeIncr, TargetTime1} = if
         NewTaskSize < TaskSizeMin + 0.5 ->
