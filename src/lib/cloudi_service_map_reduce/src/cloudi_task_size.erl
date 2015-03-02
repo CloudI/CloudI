@@ -88,6 +88,7 @@
 -define(TARGET_TIME_ADJUST, 4). % number of consecutive incr/decr to
                                 % cause a target time adjustment
 -define(TARGET_TIME_ADJUST_FACTOR, 2.0).
+-define(TARGET_TIME_USAGE_FACTOR, 2.0). % defines task size tolerance
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -143,7 +144,8 @@ get(Pid,
                       target_time = TargetTime,
                       lookup = Lookup})
     when is_pid(Pid) ->
-    Timeout = erlang:round(?TARGET_TIME_ADJUST_FACTOR * TargetTime * 3600000.0),
+    Timeout = erlang:round(?TARGET_TIME_USAGE_FACTOR *
+                           TargetTime * 3600000.0),
     case dict:find(node(Pid), Lookup) of
         {ok, #node{task_size = TaskSize}} ->
             TaskSizeInteger = if
@@ -268,9 +270,10 @@ task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax) ->
     end.
 
 task_size_smoothed(CurrentTaskSize, OldTaskSize,
-                   TargetTime, ElapsedTime, TaskCount)
+                   TargetTimeTotal, ElapsedTime, TaskCount)
     when is_integer(CurrentTaskSize), is_number(OldTaskSize),
-         is_float(TargetTime), is_float(ElapsedTime) ->
+         is_float(TargetTimeTotal), is_float(ElapsedTime) ->
+    TargetTime = TargetTimeTotal / ?TARGET_TIME_USAGE_FACTOR,
     NextTaskSize = CurrentTaskSize * (TargetTime / ElapsedTime),
     Difference = erlang:abs((TargetTime - ElapsedTime) / ElapsedTime),
     % determine the truncated moving average period based on the
