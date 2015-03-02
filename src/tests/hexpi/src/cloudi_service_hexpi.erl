@@ -90,10 +90,10 @@
         index_end,
         done = false,
         step = ?PI_DIGIT_STEP_SIZE,
-        target_time = (1.0 / 3600.0), % hours
-        task_size_initial = (1.0 / ?MAX_ITERATIONS), % percentage
-        task_size_lookup = cloudi_task_size:new(),
-        timeout_async,
+        %target_time = (1.0 / 3600.0), % hours
+        %task_size_initial = (1.0 / ?MAX_ITERATIONS), % percentage
+        %task_size_lookup = cloudi_task_size:new(),
+        task_size,
         use_pgsql,
         use_mysql,
         use_memcached,
@@ -114,9 +114,18 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd],
                               _Prefix, _Timeout, Dispatcher)
     when is_integer(IndexStart), is_integer(IndexEnd),
          is_pid(Dispatcher) ->
+    IterationsMin = 1,
+    IterationsMax = 1000000000,
+    TargetTimeMin = 1.0 / 3600.0, % 1 second, in hours
+    TargetTimeMax = 6.0, % hours
+    TaskSize = cloudi_task_size:new(IterationsMin,
+                                    IterationsMin, IterationsMax,
+                                    TargetTimeMin,
+                                    TargetTimeMin, TargetTimeMax),
     {ok, setup(#state{index = IndexStart,
                       index_start = IndexStart,
-                      index_end = IndexEnd}, Dispatcher)}.
+                      index_end = IndexEnd,
+                      task_size = TaskSize}, Dispatcher)}.
 
 cloudi_service_map_reduce_send(#state{done = true} = State, _) ->
     {done, State};
@@ -124,27 +133,20 @@ cloudi_service_map_reduce_send(#state{destination = Name,
                                       index = Index,
                                       index_end = IndexEnd,
                                       step = Step,
-                                      target_time = TargetTime,
-                                      task_size_initial = TaskSizeInitial,
-                                      task_size_lookup = TaskSizeLookup} =
+                                      task_size = TaskSize} =
                                State,
                                Dispatcher)
     when is_pid(Dispatcher) ->
     case cloudi_service:get_pid(Dispatcher, Name) of
         {ok, {_, Pid} = PatternPid} ->
-            TaskSize = cloudi_task_size:get(TaskSizeInitial, Pid,
-                                            TaskSizeLookup),
-            Iterations = erlang:round(0.5 + TaskSize * ?MAX_ITERATIONS),
-            % determine the size of the task and take the ceiling of the value
-            % (to avoid iterations of 0)
+            {Iterations, TargetTime} = cloudi_task_size:get(Pid, TaskSize),
             IndexStr = erlang:integer_to_list(Index),
             IndexBin = erlang:list_to_binary(IndexStr),
             Request = <<Iterations:32/unsigned-integer-native,
                         Step:32/unsigned-integer-native,
                         IndexBin/binary>>,
-            % TargetTime is the percentage of an hour
-            % (elapsed time is returned this way from the hexpi C++ code)
-            Timeout = erlang:round(0.5 + TargetTime * 3600000.0) + 5000,
+            % TargetTime is in hours
+            Timeout = erlang:round(TargetTime * 3600000.0) + 100,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
             ?LOG_INFO("~p iterations starting at digit ~p",
                       [Iterations, Index]),
@@ -159,8 +161,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
 cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
                                   Timeout, {_, OldPid}],
                                  #state{destination = Name,
-                                        target_time = TargetTime,
-                                        task_size_lookup = TaskSizeLookup} =
+                                        task_size = TaskSize} =
                                  State) ->
 
     case cloudi_service:get_pid(Dispatcher, Name) of
@@ -169,19 +170,11 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
               _Step:32/unsigned-integer-native,
               IndexBin/binary>> = Request,
             IndexStr = erlang:binary_to_list(IndexBin),
-            TaskSize = Iterations / ?MAX_ITERATIONS,
             ?LOG_INFO("index ~s result timeout (after ~p ms)",
                       [IndexStr, Timeout]),
-            % a timeout generates a guess at what the
-            % elapsed time could have been to reduce the task size
-            ElapsedTime = (Timeout / 3600000.0) * 10.0,
-            NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
-                                                     TargetTime,
-                                                     ElapsedTime,
-                                                     OldPid,
-                                                     TaskSizeLookup),
+            NewTaskSize = cloudi_task_size:reduce(OldPid, 0.9, TaskSize),
             {ok, [Dispatcher, Name, Request, Timeout * 2, PatternPid],
-             State#state{task_size_lookup = NewTaskSizeLookup}};
+             State#state{task_size = NewTaskSize}};
         {error, _} = Error ->
             Error
     end.
@@ -190,8 +183,7 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
                                _ResponseInfo, Response,
                                Timeout, TransId,
                                #state{done = Done,
-                                      target_time = TargetTime,
-                                      task_size_lookup = TaskSizeLookup} =
+                                      task_size = TaskSize} =
                                State,
                                Dispatcher)
     when is_integer(Timeout), is_binary(TransId) ->
@@ -199,15 +191,10 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
       _Step:32/unsigned-integer-native,
       IndexBin/binary>> = Request,
     ?LOG_INFO("index ~s result received", [IndexBin]),
-    TaskSize = Iterations / ?MAX_ITERATIONS,
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
     send_results(IndexBin, PiResult, ElapsedTime, Pid, State, Dispatcher),
-    NewTaskSizeLookup = cloudi_task_size:put(TaskSize,
-                                             TargetTime,
-                                             ElapsedTime,
-                                             Pid,
-                                             TaskSizeLookup),
-    NextState = State#state{task_size_lookup = NewTaskSizeLookup},
+    NewTaskSize = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
+    NextState = State#state{task_size = NewTaskSize},
     if
         Done =:= true ->
             {done, NextState};
@@ -294,8 +281,7 @@ setup(State, Dispatcher) ->
         true ->
             ok
     end,
-    State#state{timeout_async = TimeoutAsync,
-                use_pgsql = is_tuple(Pgsql),
+    State#state{use_pgsql = is_tuple(Pgsql),
                 use_mysql = is_tuple(Mysql),
                 use_memcached = is_tuple(Memcached),
                 use_tokyotyrant = is_tuple(Tokyotyrant),
