@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -84,6 +84,7 @@
 %%%------------------------------------------------------------------------
 
 -callback cloudi_service_map_reduce_new(ModuleReduceArgs :: list(),
+                                        Count :: pos_integer(),
                                         Prefix :: string(),
                                         Timeout :: cloudi_service_api:
                                                    timeout_milliseconds(),
@@ -160,12 +161,13 @@ cloudi_service_handle_info({init, Prefix, Timeout,
     % cloudi_service_init/3 to allow send_sync and recv_sync function calls
     % because no Erlang process linking/spawning/etc. should be occurring,
     % only algorithmic initialization
+    MapCount = cloudi_concurrency:count(Concurrency),
     case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArguments,
+                                                       MapCount,
                                                        Prefix,
                                                        Timeout,
                                                        Dispatcher) of
         {ok, MapReduceState} ->
-            MapCount = cloudi_concurrency:count(Concurrency),
             case map_send(MapCount, dict:new(), Dispatcher,
                           MapReduceModule, MapReduceState) of
                 {ok, MapRequests, NewMapReduceState} ->

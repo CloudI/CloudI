@@ -51,7 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/6,
+-export([new/7,
          get/2,
          reduce/3,
          put/4]).
@@ -71,6 +71,7 @@
 
 -record(cloudi_task_size,
     {
+        task_count :: pos_integer(), % count of concurrent tasks
         task_size_initial :: integer(), % count to control task size
         task_size_min :: integer(),
         task_size_max :: integer(),
@@ -87,7 +88,6 @@
 -define(TARGET_TIME_ADJUST, 4). % number of consecutive incr/decr to
                                 % cause a target time adjustment
 -define(TARGET_TIME_ADJUST_FACTOR, 2.0).
--define(ELAPSED_TIME_EPSILON, 0.1 / 3600.0). % 100 ms in hours
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -99,7 +99,8 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(TaskSizeInitial :: integer(),
+-spec new(TaskCount :: pos_integer(),
+          TaskSizeInitial :: integer(),
           TaskSizeMin :: integer(),
           TaskSizeMax :: integer(),
           TargetTimeInitial :: float(),
@@ -107,16 +108,19 @@
           TargetTimeMax :: float()) ->
     state().
 
-new(TaskSizeInitial, TaskSizeMin, TaskSizeMax,
+new(TaskCount,
+    TaskSizeInitial, TaskSizeMin, TaskSizeMax,
     TargetTimeInitial, TargetTimeMin, TargetTimeMax)
-    when is_integer(TaskSizeInitial),
+    when is_integer(TaskCount), TaskCount > 0,
+         is_integer(TaskSizeInitial),
          is_integer(TaskSizeMin), is_integer(TaskSizeMax),
          TaskSizeInitial >= TaskSizeMin, TaskSizeInitial =< TaskSizeMax,
          is_float(TargetTimeInitial), TargetTimeInitial > 0.0,
          is_float(TargetTimeMin), is_float(TargetTimeMax),
          TargetTimeInitial >= TargetTimeMin,
          TargetTimeInitial =< TargetTimeMax ->
-    #cloudi_task_size{task_size_initial = TaskSizeInitial,
+    #cloudi_task_size{task_count = TaskCount,
+                      task_size_initial = TaskSizeInitial,
                       task_size_min = TaskSizeMin,
                       task_size_max = TaskSizeMax,
                       target_time = TargetTimeInitial,
@@ -131,13 +135,15 @@ new(TaskSizeInitial, TaskSizeMin, TaskSizeMax,
 
 -spec get(Pid :: pid(),
           State :: state()) ->
-    {TaskSize :: integer(), TargetTime :: float()}.
+    {TaskSize :: integer(),
+     Timeout :: cloudi_service:timeout_value_milliseconds()}.
 
 get(Pid,
     #cloudi_task_size{task_size_initial = TaskSizeInitial,
                       target_time = TargetTime,
                       lookup = Lookup})
     when is_pid(Pid) ->
+    Timeout = erlang:round(?TARGET_TIME_ADJUST_FACTOR * TargetTime * 3600000.0),
     case dict:find(node(Pid), Lookup) of
         {ok, #node{task_size = TaskSize}} ->
             TaskSizeInteger = if
@@ -146,9 +152,9 @@ get(Pid,
                 is_integer(TaskSize) ->
                     TaskSize
             end,
-            {TaskSizeInteger, TargetTime};
+            {TaskSizeInteger, Timeout};
         error ->
-            {TaskSizeInitial, TargetTime}
+            {TaskSizeInitial, Timeout}
     end.
 
 %%-------------------------------------------------------------------------
@@ -194,7 +200,8 @@ reduce(Pid, Multiplier,
     state().
 
 put(Pid, TaskSize, ElapsedTime,
-    #cloudi_task_size{task_size_initial = TaskSizeInitial,
+    #cloudi_task_size{task_count = TaskCount,
+                      task_size_initial = TaskSizeInitial,
                       task_size_min = TaskSizeMin,
                       task_size_max = TaskSizeMax,
                       target_time = TargetTime0,
@@ -211,8 +218,8 @@ put(Pid, TaskSize, ElapsedTime,
         error ->
             #node{task_size = TaskSizeInitial}
     end,
-    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize, TargetTime0,
-                                          ElapsedTime + ?ELAPSED_TIME_EPSILON),
+    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize,
+                                          TargetTime0, ElapsedTime, TaskCount),
     NewTaskSize = task_size_clamp(TaskSizeSmoothed, TaskSizeMin, TaskSizeMax),
     {NextTargetTimeIncr, TargetTime1} = if
         NewTaskSize < TaskSizeMin + 0.5 ->
@@ -260,7 +267,8 @@ task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax) ->
             TaskSize
     end.
 
-task_size_smoothed(CurrentTaskSize, OldTaskSize, TargetTime, ElapsedTime)
+task_size_smoothed(CurrentTaskSize, OldTaskSize,
+                   TargetTime, ElapsedTime, TaskCount)
     when is_integer(CurrentTaskSize), is_number(OldTaskSize),
          is_float(TargetTime), is_float(ElapsedTime) ->
     NextTaskSize = CurrentTaskSize * (TargetTime / ElapsedTime),
@@ -291,39 +299,38 @@ task_size_smoothed(CurrentTaskSize, OldTaskSize, TargetTime, ElapsedTime)
     %    Difference =< 1.0 ->
     %        product(lists:seq(
     %            floor(math:log(Difference) / math:log(3.0)) * -2 + 1,
-    %        1, -2)) * 8 * erlang:float(Threads);
+    %        1, -2)) * 2 * erlang:float(TaskCount);
     %    true ->
     %        product(lists:seq(
     %            ceil(math:log(Difference) / math:log(50.0)) * 2 + 1,
-    %        1, -2)) * 8 * erlang:float(Threads)
+    %        1, -2)) * 2 * erlang:float(TaskCount)
     %end,
     % smoothing method as separate sequences
-    SmoothingFactor = if
+    SmoothingFactor = TaskCount * (if
         Difference =< 0.0625 ->
-            7560.0;
+            1890.0;
         Difference =< 0.125 ->
-            840.0;
+            210.0;
         Difference =< 0.25 ->
-            120.0;
+            30.0;
         Difference =< 0.5 ->
-            24.0;
+            6.0;
         Difference =< 1.0 ->
-            8.0;
+            2.0;
         Difference =< 50.0 ->                   % = 1.0 * 50
-            24.0;                               % = 8.0 * 3
+            6.0;                                % = 2.0 * 3
         Difference =< 2500.0 ->                 % = 50.0 * 50
-            120.0;                              % = 24.0 * 5
+            30.0;                               % = 6.0 * 5
         Difference =< 125000.0 ->               % = 2500.0 * 50
-            840.0;                              % = 120.0 * 7
+            210.0;                              % = 30.0 * 7
         Difference =< 6250000.0 ->              % = 125000.0 * 50
-            7560.0;                             % = 840.0 * 9
+            1890.0;                             % = 210.0 * 9
         true ->
-            83160.0                             % = 7560.0 * 11
-    end,
+            20790.0                             % = 1890.0 * 11
+    end),
     % perform truncated moving average
-    OldTaskSize +
-    ((NextTaskSize / SmoothingFactor) -
-     (OldTaskSize / SmoothingFactor)).
+    Change = (NextTaskSize - OldTaskSize) / SmoothingFactor,
+    OldTaskSize + Change.
 
 target_time_incr(?TARGET_TIME_ADJUST, TargetTime, TargetTimeMax) ->
     NewTargetTime = erlang:min(TargetTime * ?TARGET_TIME_ADJUST_FACTOR,

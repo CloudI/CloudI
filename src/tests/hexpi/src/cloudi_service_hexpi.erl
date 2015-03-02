@@ -53,7 +53,7 @@
 -behaviour(cloudi_service_map_reduce).
 
 %% cloudi_service_map_reduce callbacks
--export([cloudi_service_map_reduce_new/4,
+-export([cloudi_service_map_reduce_new/5,
          cloudi_service_map_reduce_send/2,
          cloudi_service_map_reduce_resend/2,
          cloudi_service_map_reduce_recv/7,
@@ -78,9 +78,6 @@
 
 % 32 max with current piqpr8_gmp.cpp float precision
 -define(PI_DIGIT_STEP_SIZE, 32).
-% the number of iterations that will totally exceed the time target
-% on all the machines that will be running tasks
--define(MAX_ITERATIONS, 1000000.0).
 
 -record(state,
     {
@@ -90,9 +87,6 @@
         index_end,
         done = false,
         step = ?PI_DIGIT_STEP_SIZE,
-        %target_time = (1.0 / 3600.0), % hours
-        %task_size_initial = (1.0 / ?MAX_ITERATIONS), % percentage
-        %task_size_lookup = cloudi_task_size:new(),
         task_size,
         use_pgsql,
         use_mysql,
@@ -110,7 +104,7 @@
 %%% Callback functions from cloudi_service_map_reduce
 %%%------------------------------------------------------------------------
 
-cloudi_service_map_reduce_new([IndexStart, IndexEnd],
+cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                               _Prefix, _Timeout, Dispatcher)
     when is_integer(IndexStart), is_integer(IndexEnd),
          is_pid(Dispatcher) ->
@@ -118,7 +112,8 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd],
     IterationsMax = 1000000000,
     TargetTimeMin = 1.0 / 3600.0, % 1 second, in hours
     TargetTimeMax = 6.0, % hours
-    TaskSize = cloudi_task_size:new(IterationsMin,
+    TaskSize = cloudi_task_size:new(ConcurrentTaskCount,
+                                    IterationsMin,
                                     IterationsMin, IterationsMax,
                                     TargetTimeMin,
                                     TargetTimeMin, TargetTimeMax),
@@ -139,14 +134,12 @@ cloudi_service_map_reduce_send(#state{destination = Name,
     when is_pid(Dispatcher) ->
     case cloudi_service:get_pid(Dispatcher, Name) of
         {ok, {_, Pid} = PatternPid} ->
-            {Iterations, TargetTime} = cloudi_task_size:get(Pid, TaskSize),
+            {Iterations, Timeout} = cloudi_task_size:get(Pid, TaskSize),
             IndexStr = erlang:integer_to_list(Index),
             IndexBin = erlang:list_to_binary(IndexStr),
             Request = <<Iterations:32/unsigned-integer-native,
                         Step:32/unsigned-integer-native,
                         IndexBin/binary>>,
-            % TargetTime is in hours
-            Timeout = erlang:round(TargetTime * 3600000.0) + 100,
             SendArgs = [Dispatcher, Name, Request, Timeout, PatternPid],
             ?LOG_INFO("~p iterations starting at digit ~p",
                       [Iterations, Index]),
