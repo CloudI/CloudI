@@ -87,7 +87,6 @@
 -define(TARGET_TIME_ADJUST, 4). % number of consecutive incr/decr to
                                 % cause a target time adjustment
 -define(TARGET_TIME_ADJUST_FACTOR, 2.0).
--define(ELAPSED_TIME_EPSILON, 0.1 / 3600.0). % 100 ms in hours
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -142,7 +141,7 @@ get(Pid,
         {ok, #node{task_size = TaskSize}} ->
             TaskSizeInteger = if
                 is_float(TaskSize) ->
-                    erlang:round(TaskSize);
+                    cloudi_math:floor(TaskSize);
                 is_integer(TaskSize) ->
                     TaskSize
             end,
@@ -211,8 +210,8 @@ put(Pid, TaskSize, ElapsedTime,
         error ->
             #node{task_size = TaskSizeInitial}
     end,
-    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize, TargetTime0,
-                                          ElapsedTime + ?ELAPSED_TIME_EPSILON),
+    TaskSizeSmoothed = task_size_smoothed(TaskSize, OldTaskSize,
+                                          TargetTime0, ElapsedTime),
     NewTaskSize = task_size_clamp(TaskSizeSmoothed, TaskSizeMin, TaskSizeMax),
     {NextTargetTimeIncr, TargetTime1} = if
         NewTaskSize < TaskSizeMin + 0.5 ->
@@ -247,7 +246,7 @@ put(Pid, TaskSize, ElapsedTime,
 task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax) ->
     TaskSizeInteger = if
         is_float(TaskSize) ->
-            erlang:round(TaskSize);
+            cloudi_math:floor(TaskSize);
         is_integer(TaskSize) ->
             TaskSize
     end,
