@@ -4,6 +4,8 @@
 2015-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve the hexpi test (avoid task timeouts after task size converges)
+    * cloudi_service_map_reduce behaviour change with function
+      cloudi_service_map_reduce_new changing from arity 4 to 5
 
 2015-03-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
