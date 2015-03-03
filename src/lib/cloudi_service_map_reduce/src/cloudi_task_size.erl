@@ -253,13 +253,9 @@ put(Pid, TaskSize, ElapsedTime,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax) ->
-    TaskSizeInteger = if
-        is_float(TaskSize) ->
-            cloudi_math:floor(TaskSize);
-        is_integer(TaskSize) ->
-            TaskSize
-    end,
+task_size_clamp(TaskSize, TaskSizeMin, TaskSizeMax)
+    when is_float(TaskSize) ->
+    TaskSizeInteger = cloudi_math:floor(TaskSize),
     if
         TaskSizeInteger < TaskSizeMin ->
             TaskSizeMin;
