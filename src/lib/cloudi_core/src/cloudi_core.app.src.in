@@ -37,6 +37,7 @@
         cloudi_lists,
         cloudi_math,
         cloudi_proplists,
+        cloudi_queue,
         cloudi_request,
         cloudi_request_info,
         cloudi_response,
