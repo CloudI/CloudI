@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change cloudi_service_hexpi to use cloudi_queue
+    * Add more verification digits to the hexpi test
+
 2015-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve the hexpi test (avoid task timeouts after task size converges)

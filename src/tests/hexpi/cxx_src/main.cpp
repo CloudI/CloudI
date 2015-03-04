@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -134,7 +134,11 @@ class Input
             }
             std::string pi_result = result.str();
             if (! bbp_pi_verify(digit_index, pi_result))
+            {
+                std::cerr << "index: " << digit_index << ", \"" <<
+                    pi_result << "\" failed validation" << std::endl;
                 return;
+            }
 
             // insert the elapsed time as a 32 bit float
             pi_result.insert(0, "    ");

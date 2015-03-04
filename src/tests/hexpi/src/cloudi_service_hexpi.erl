@@ -60,6 +60,7 @@
          cloudi_service_map_reduce_info/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(NAME_PGSQL,          "/db/pgsql/cloudi_tests").
 -define(NAME_MYSQL,          "/db/mysql/cloudi_tests").
@@ -88,6 +89,7 @@
         done = false,
         step = ?PI_DIGIT_STEP_SIZE,
         task_size,
+        queue,
         use_pgsql,
         use_mysql,
         use_memcached,
@@ -117,10 +119,13 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                                     IterationsMin, IterationsMax,
                                     TargetTimeMin,
                                     TargetTimeMin, TargetTimeMax),
+    Queue = cloudi_queue:new([{retry, 3},
+                              {failures_source_die, true}]),
     {ok, setup(#state{index = IndexStart,
                       index_start = IndexStart,
                       index_end = IndexEnd,
-                      task_size = TaskSize}, Dispatcher)}.
+                      task_size = TaskSize,
+                      queue = Queue}, Dispatcher)}.
 
 cloudi_service_map_reduce_send(#state{done = true} = State, _) ->
     {done, State};
@@ -176,8 +181,7 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
                                _ResponseInfo, Response,
                                Timeout, TransId,
                                #state{done = Done,
-                                      task_size = TaskSize} =
-                               State,
+                                      task_size = TaskSize} = State,
                                Dispatcher)
     when is_integer(Timeout), is_binary(TransId) ->
     <<Iterations:32/unsigned-integer-native,
@@ -185,16 +189,25 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
       IndexBin/binary>> = Request,
     ?LOG_INFO("index ~s result received", [IndexBin]),
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
-    send_results(IndexBin, PiResult, ElapsedTime, Pid, State, Dispatcher),
     NewTaskSize = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
-    NextState = State#state{task_size = NewTaskSize},
+    NewState = send_results(IndexBin, PiResult, ElapsedTime, Pid,
+                            State#state{task_size = NewTaskSize},
+                            Dispatcher),
     if
         Done =:= true ->
-            {done, NextState};
+            {done, NewState};
         true ->
-            {ok, NextState}
+            {ok, NewState}
     end.
 
+cloudi_service_map_reduce_info(#return_async_active{} = Request,
+                               #state{queue = Queue0} = State, Dispatcher) ->
+    {ok, QueueN} = cloudi_queue:recv(Dispatcher, Request, Queue0),
+    {ok, State#state{queue = QueueN}};
+cloudi_service_map_reduce_info(#timeout_async_active{} = Request,
+                               #state{queue = Queue0} = State, Dispatcher) ->
+    {ok, QueueN} = cloudi_queue:timeout(Dispatcher, Request, Queue0),
+    {ok, State#state{queue = QueueN}};
 cloudi_service_map_reduce_info(Request, _, _) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {error, {unknown_info, Request}}.
@@ -203,7 +216,7 @@ cloudi_service_map_reduce_info(Request, _, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-setup(State, Dispatcher) ->
+setup(#state{queue = Queue0} = State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
     Pgsql = case cloudi_service:get_pid(Dispatcher,
                                         ?NAME_PGSQL,
@@ -256,25 +269,28 @@ setup(State, Dispatcher) ->
 
     SQLDrop = sql_drop(),
     SQLCreate = sql_create(),
-    if
+    Queue2 = if
         Pgsql /= undefined ->
-            cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLDrop,
-                                      TimeoutAsync, Pgsql),
-            cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLCreate,
-                                      TimeoutAsync, Pgsql);
+            {ok, Queue1} = cloudi_queue:send(Dispatcher, ?NAME_PGSQL,
+                                             <<SQLDrop/binary,
+                                               SQLCreate/binary>>,
+                                             TimeoutAsync, Pgsql, Queue0),
+            Queue1;
         true ->
-            ok
+            Queue0
     end,
-    if
+    QueueN = if
         Mysql /= undefined ->
-            cloudi_service:send_async(Dispatcher, ?NAME_MYSQL, SQLDrop,
-                                      TimeoutAsync, Mysql),
-            cloudi_service:send_async(Dispatcher, ?NAME_MYSQL, SQLCreate,
-                                      TimeoutAsync, Mysql);
+            {ok, Queue3} = cloudi_queue:send(Dispatcher, ?NAME_MYSQL,
+                                             <<SQLDrop/binary,
+                                               SQLCreate/binary>>,
+                                             TimeoutAsync, Mysql, Queue2),
+            Queue3;
         true ->
-            ok
+            Queue2
     end,
-    State#state{use_pgsql = is_tuple(Pgsql),
+    State#state{queue = QueueN,
+                use_pgsql = is_tuple(Pgsql),
                 use_mysql = is_tuple(Mysql),
                 use_memcached = is_tuple(Memcached),
                 use_tokyotyrant = is_tuple(Tokyotyrant),
@@ -282,61 +298,76 @@ setup(State, Dispatcher) ->
                 use_filesystem = is_tuple(Filesystem)}.
 
 send_results(DigitIndex, PiResult, ElapsedTime, Pid,
-             #state{use_pgsql = UsePgsql,
+             #state{queue = Queue0,
+                    use_pgsql = UsePgsql,
                     use_mysql = UseMysql,
                     use_memcached = UseMemcached,
                     use_tokyotyrant = UseTokyotyrant,
                     use_couchdb = UseCouchdb,
-                    use_filesystem = UseFilesystem}, Dispatcher)
+                    use_filesystem = UseFilesystem} = State, Dispatcher)
     when is_binary(DigitIndex), is_binary(PiResult), is_float(ElapsedTime),
          is_pid(Pid) ->
-    SQLInsert = sql_insert(DigitIndex, PiResult),
-    if
+    Queue2 = if
         UsePgsql == true ->
-            cloudi_service:send_async(Dispatcher, ?NAME_PGSQL, SQLInsert);
+            {ok, Queue1} = cloudi_queue:send(Dispatcher, ?NAME_PGSQL,
+                                             sql_insert(DigitIndex, PiResult),
+                                             Queue0),
+            Queue1;
         true ->
-            ok
+            Queue0
     end,
-    if
+    Queue4 = if
         UseMysql == true ->
-            cloudi_service:send_async(Dispatcher, ?NAME_MYSQL, SQLInsert);
+            {ok, Queue3} = cloudi_queue:send(Dispatcher, ?NAME_MYSQL,
+                                             sql_insert(DigitIndex, PiResult),
+                                             Queue2),
+            Queue3;
         true ->
-            ok
+            Queue2
     end,
-    if
+    Queue6 = if
         UseMemcached == true ->
-            cloudi_service:send_async(Dispatcher, ?NAME_MEMCACHED,
-                                      memcached(DigitIndex, PiResult));
+            {ok, Queue5} = cloudi_queue:send(Dispatcher, ?NAME_MEMCACHED,
+                                             memcached(DigitIndex, PiResult),
+                                             Queue4),
+            Queue5;
         true ->
-            ok
+            Queue4
     end,
-    if
+    Queue8 = if
         UseTokyotyrant == true ->
-            cloudi_service:send_async(Dispatcher, ?NAME_TOKYOTYRANT,
-                                      tokyotyrant(DigitIndex, PiResult));
+            {ok, Queue7} = cloudi_queue:send(Dispatcher,
+                                             ?NAME_TOKYOTYRANT,
+                                             tokyotyrant(DigitIndex, PiResult),
+                                             Queue6),
+            Queue7;
         true ->
-            ok
+            Queue6
     end,
-    if
+    Queue10 = if
         UseCouchdb == true ->
-            cloudi_service:send_async(Dispatcher, ?NAME_COUCHDB,
-                                      couchdb(DigitIndex, Pid));
+            {ok, Queue9} = cloudi_queue:send(Dispatcher, ?NAME_COUCHDB,
+                                             couchdb(DigitIndex, Pid),
+                                             Queue8),
+            Queue9;
         true ->
-            ok
+            Queue8
     end,
-    if
+    QueueN = if
         UseFilesystem == true ->
             {FilesystemRequestInfo,
              FilesystemRequest} = filesystem(DigitIndex, PiResult),
-            cloudi_service:send_async(Dispatcher,
-                                      ?NAME_FILESYSTEM,
-                                      FilesystemRequestInfo,
-                                      FilesystemRequest,
-                                      undefined, undefined);
+            {ok, Queue11} = cloudi_queue:send(Dispatcher,
+                                              ?NAME_FILESYSTEM,
+                                              FilesystemRequestInfo,
+                                              FilesystemRequest,
+                                              undefined, undefined,
+                                              Queue10),
+            Queue11;
         true ->
-            ok
+            Queue10
     end,
-    ok.
+    State#state{queue = QueueN}.
 
 sql_drop() ->
     <<"DROP TABLE IF EXISTS incoming_results;">>.
