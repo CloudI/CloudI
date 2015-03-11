@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ __all__ = [
     'terminate_exception',
 ]
 
-import sys, os, socket
+import sys, os, socket, codecs
 import libcloudi_py
 
 class API(object):
@@ -301,7 +301,7 @@ class terminate_exception(Exception):
 # force unbuffered stdout/stderr handling without external configuration
 class _unbuffered(object):
     def __init__(self, stream):
-        self.__stream = stream
+        self.__stream = codecs.getwriter('UTF-8')(stream)
 
     def write(self, data):
         self.__stream.write(data)

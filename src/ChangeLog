@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix unicode stdout/stderr usage with the Python CloudI API
+
 2015-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change cloudi_service_hexpi to use cloudi_queue
