@@ -2,20 +2,29 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 
 INTERFACE_HEADER = $(srcdir)/../src/cloudi_core_i_os_spawn.hrl
+RLIMIT_HEADER = $(srcdir)/../src/cloudi_core_i_os_rlimit.hrl
 CURRENT_VERSION = vsn_1
 
 instdir = $(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv
 inst_PROGRAMS = cloudi_os_spawn_vsn_1
 inst_LTLIBRARIES = libcloudi_socket_drv.la
 
-BUILT_SOURCES = $(INTERFACE_HEADER)
-CLEANFILES = $(INTERFACE_HEADER)
+BUILT_SOURCES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
+CLEANFILES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
+
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn.h
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) \
          -include $(srcdir)/cloudi_os_spawn.h \
          $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_spawn_hrl.h > $@
+
+$(RLIMIT_HEADER): Makefile \
+                  cloudi_os_rlimit_hrl.h \
+				  $(abs_top_builddir)/config.h
+	$(CXX) \
+         -include $(abs_top_builddir)/config.h \
+         $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_rlimit_hrl.h > $@
 
 cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp assert.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \

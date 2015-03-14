@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -267,6 +267,11 @@
         aspects_terminate_before = []
             :: list(cloudi_service_api:aspect_terminate_before_internal() |
                     cloudi_service_api:aspect_terminate_before_external()),
+
+        % Only Relevant for External Services:
+
+        limit = []
+            :: cloudi_service_api:limit_external(),
 
         % Only Relevant for Internal Services:
 

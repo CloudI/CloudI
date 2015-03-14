@@ -3,21 +3,15 @@
 #
 # SYNOPSIS
 #
-#   AX_CLOCK_GETTIME
+#   AX_CHECK_HEADER_MACRO
 #
 # DESCRIPTION
 #
-#   Determine if clock_gettime exists within librt and if clock_gettime
-#   supports the argument CLOCK_MONOTONIC.
-#
-#   This macro sets:
-#
-#     HAVE_CLOCK_GETTIME_RT (or) HAVE_CLOCK_GETTIME_NONRT
-#     HAVE_CLOCK_GETTIME_MONOTONIC
+#   AX_CHECK_HEADER_MACRO([HEADER], [MACRO])
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2015, Michael Truog
+# Copyright (c) 2015, Michael Truog
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -52,32 +46,24 @@
 # DAMAGE.
 #
 
-AC_DEFUN([AX_CLOCK_GETTIME],
+AC_DEFUN([AX_CHECK_HEADER_MACRO],
 [
-    RT_LIB=""
-    clock_gettime=no
-    AC_CHECK_LIB(rt, clock_gettime,
-        [AC_DEFINE([HAVE_CLOCK_GETTIME_RT], [1],
-            [Define if librt clock_gettime exists])
-         RT_LIB="-lrt"
-         clock_gettime=yes],
-        [AC_CHECK_FUNC([clock_gettime],
-            [AC_DEFINE([HAVE_CLOCK_GETTIME_NONRT], [1],
-                [Define if non-librt clock_gettime exists])
-             clock_gettime=yes])])
-    AC_SUBST(RT_LIB)
-    if test $clock_gettime != no; then
-        AC_MSG_CHECKING(clock_gettime CLOCK_MONOTONIC usability)
-        AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
-#include <unistd.h>
-#include <time.h>
-#if !defined(CLOCK_MONOTONIC) || !defined(_POSIX_MONOTONIC_CLOCK) || (_POSIX_MONOTONIC_CLOCK < 0)
-#error
-#endif
-             ]])],
-            [AC_DEFINE([HAVE_CLOCK_GETTIME_MONOTONIC], [1],
-                [Define if clock_gettime supports CLOCK_MONOTONIC])
-             AC_MSG_RESULT(yes)],
-            [AC_MSG_RESULT(no)])
-    fi
+    AS_IF([eval test x$]AS_TR_SH([ac_cv_header_$1])[ = xyes], [],
+          [AC_CHECK_HEADER($1,
+                           [AC_DEFINE(m4_toupper(AS_TR_SH(HAVE_$1)), 1,
+                                      [Define to 1 if you have
+                                       the <$1> header file.])],
+                           [AC_MSG_ERROR([$1 not found])])])
+
+    AC_MSG_CHECKING(for $2 in $1)
+    AC_PREPROC_IFELSE([AC_LANG_SOURCE([
+@%:@include <$1>
+@%:@if ! defined($2)
+@%:@error
+@%:@endif
+        ])],
+        [AC_MSG_RESULT(yes)
+         AC_DEFINE(m4_toupper(AS_TR_SH(HAVE_$1_$2)), 1,
+                   [Define to 1 if $2 is defined within <$1>])],
+        [AC_MSG_RESULT(no)])
 ])

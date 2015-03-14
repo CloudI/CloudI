@@ -262,6 +262,30 @@ else
 fi
 AC_MSG_RESULT([$integration_tests_ran])
 
+# C requirements
+# setrlimit resource values:
+# IEEE Std 1003.1-2008 (“POSIX.1”)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_CORE)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_CPU)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_DATA)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_FSIZE)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_NOFILE)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_STACK)
+# Common, but not standard (both BSD/SYSV)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_MEMLOCK)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_NPROC)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_RSS)
+# Linux variations
+# (Ubuntu)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_AS)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_MSGQUEUE)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_NICE)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_RTPRIO)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_RTTIME)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_SIGPENDING)
+# (SmartOS)
+AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_VMEM)
+
 # C++ requirements
 AX_LIB_SOCKET_NSL
 AX_BOOST_BASE([1.40], ,

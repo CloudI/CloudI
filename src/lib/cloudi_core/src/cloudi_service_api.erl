@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -278,6 +278,21 @@
               aspect_terminate_before_internal/0,
               aspect_terminate_before_external/0]).
 
+-type limit_external_key() ::
+    as | core | cpu | data | fsize | memlock | msgqueue | nice | nofile |
+    nproc | rss | rtprio | rttime | sigpending | stack | vmem.
+-type limit_external_value() ::
+    undefined |
+    non_neg_integer() | infinity | % sets current
+    list({current, non_neg_integer() | infinity} |
+         {maximum, non_neg_integer() | infinity}).
+-type limit_external() ::
+    system |
+    list({limit_external_key(), limit_external_value()}).
+-export_type([limit_external_key/0,
+              limit_external_value/0,
+              limit_external/0]).
+
 -type service_options_internal() ::
     list({priority_default, priority()} |
          {queue_limit, undefined | non_neg_integer()} |
@@ -361,7 +376,8 @@
          {aspects_init_after, list(aspect_init_after_external())} |
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
-         {aspects_terminate_before, list(aspect_terminate_before_external())}).
+         {aspects_terminate_before, list(aspect_terminate_before_external())} |
+         {limit, limit_external()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 
