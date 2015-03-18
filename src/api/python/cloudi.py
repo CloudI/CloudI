@@ -46,8 +46,7 @@ __all__ = [
     'terminate_exception',
 ]
 
-import sys, os, types, struct, socket, select, codecs, \
-       inspect, collections, traceback
+import sys, os, types, struct, socket, select, inspect, collections, traceback
 from timeit import default_timer
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
@@ -717,17 +716,30 @@ class terminate_exception(Exception):
         return self.__timeout
 
 # force unbuffered stdout/stderr handling without external configuration
-class _unbuffered(object):
-    def __init__(self, stream):
-        self.__stream = codecs.getwriter('UTF-8')(stream)
-
-    def write(self, data):
-        self.__stream.write(data)
-        self.__stream.flush()
-
-    def __getattr__(self, attr):
-        return getattr(self.__stream, attr)
-
-sys.stdout = _unbuffered(sys.stdout)
-sys.stderr = _unbuffered(sys.stderr)
+if sys.stderr.__class__.__name__ != '_unbuffered':
+    class _unbuffered(object):
+        def __init__(self, stream):
+            if int(sys.version[0]) >= 3:
+                import io
+                self.__stream = io.TextIOWrapper(
+                    stream.buffer,
+                    encoding='UTF-8',
+                    errors=stream.errors,
+                    newline=stream.newlines,
+                    line_buffering=stream.line_buffering,
+                    write_through=False,
+                )
+            else:
+                import codecs
+                self.__stream = codecs.getwriter('UTF-8')(stream)
+    
+        def write(self, data):
+            self.__stream.write(data)
+            self.__stream.flush()
+    
+        def __getattr__(self, attr):
+            return getattr(self.__stream, attr)
+    
+    sys.stdout = _unbuffered(sys.stdout)
+    sys.stderr = _unbuffered(sys.stderr)
 

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix integration test problems due to unicode stdout/stderr fix in
+      the Python CloudI API and Python/C CloudI API
+      (now the unbuffered stdout/stderr works with Python 3)
+
 2015-03-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Initial changes for resource limits on OS processes used for
