@@ -56,7 +56,12 @@
 -export([limit_validate/1,
          limit_format/1]).
 
+-include("cloudi_core_i_constants.hrl").
+-ifdef(CLOUDI_CORE_STANDALONE).
+-define(OS_RLIMIT_DEFAULTS, []).
+-else.
 -include("cloudi_core_i_os_rlimit.hrl").
+-endif.
 
 -spec limit_validate(cloudi_service_api:limit_external()) ->
     {ok, list({cloudi_service_api:limit_external_key(),
