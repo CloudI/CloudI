@@ -14,9 +14,9 @@ CLEANFILES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
 
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
-                     cloudi_os_spawn.h
+                     cloudi_os_spawn_api.h
 	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) \
-         -include $(srcdir)/cloudi_os_spawn.h \
+         -include $(srcdir)/cloudi_os_spawn_api.h \
          $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_spawn_hrl.h > $@
 
 $(RLIMIT_HEADER): Makefile \
@@ -26,18 +26,22 @@ $(RLIMIT_HEADER): Makefile \
          -include $(abs_top_builddir)/config.h \
          $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_rlimit_hrl.h > $@
 
-cloudi_os_spawn_vsn_1_SOURCES = port.cpp os_spawn.cpp assert.cpp
+cloudi_os_spawn_vsn_1_SOURCES = cloudi_os_spawn.cpp \
+                                cloudi_os_rlimit.cpp \
+                                assert.cpp \
+								port.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \
  -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
  -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
  -DCURRENT_VERSION=$(CURRENT_VERSION) $(BOOST_CPPFLAGS) \
- -include $(srcdir)/cloudi_os_spawn.h $(CXXFLAGS)
+ -include $(srcdir)/cloudi_os_spawn_api.h $(CXXFLAGS)
 cloudi_os_spawn_vsn_1_LDADD = -lei
 cloudi_os_spawn_vsn_1_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
 
 # no symbols need to be linked, since the Erlang VM already has the
 # necessary functions
-libcloudi_socket_drv_la_SOURCES = cloudi_socket_drv.cpp assert.cpp
+libcloudi_socket_drv_la_SOURCES = cloudi_socket_drv.cpp \
+                                  assert.cpp
 libcloudi_socket_drv_la_CPPFLAGS = \
  -fPIC -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
  $(BOOST_CPPFLAGS) $(CXXFLAGS)

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -37,15 +37,16 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#ifndef OS_SPAWN_H
-#define OS_SPAWN_H
+#ifndef CLOUDI_OS_SPAWN_HPP
+#define CLOUDI_OS_SPAWN_HPP
 
 #include <stdint.h>
 int32_t spawn(char protocol,
               char * socket_path, uint32_t socket_path_len,
               uint32_t * ports, uint32_t ports_len,
+              char * rlimits, uint32_t rlimits_len,
               char * filename, uint32_t filename_len,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len);
 
-#endif // OS_SPAWN_H
+#endif // CLOUDI_OS_SPAWN_HPP

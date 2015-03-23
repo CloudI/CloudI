@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -67,7 +67,7 @@
 -export([spawn/7]).
 -define(ERL_PORT_NAME, "/dev/null").
 -compile({nowarn_unused_function, [{call_port_sync, 3}]}).
-spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports,
+spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
     erlang:exit(badarg).
 -else.

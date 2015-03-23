@@ -16,13 +16,13 @@
 
 // specify the C or C++ include file with the functions that will be called
 // from within the Erlang code
-#define PORT_CXX_FUNCTIONS_HEADER_FILE "os_spawn.hpp"
+#define PORT_CXX_FUNCTIONS_HEADER_FILE "cloudi_os_spawn.hpp"
 
 // specify all the functions to generate bindings for
 //  __________________________________________________________________________
 //  || FUNCTION     || ARITY/TYPES                           || RETURN TYPE ||
 #define PORT_FUNCTIONS \
-    ((spawn,           6, (char, pchar_len, puint32_len, \
+    ((spawn,           7, (char, pchar_len, puint32_len, pchar_len, \
                            pchar_len, pchar_len, pchar_len),    int32_t ))
 
 //////////////////////////////////////////////////////////////////////////////

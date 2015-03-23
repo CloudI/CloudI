@@ -141,10 +141,104 @@ limit_validate_value(Key, [_ | _] = Values, Output) ->
 limit_validate_value(Key, _, _) ->
     {error, {service_options_limit_invalid, Key}}.
 
+% same defines used in the C++ source code
+
+% limit type
+-define(CLOUDI_RLIMIT_AS,               1).
+-define(CLOUDI_RLIMIT_CORE,             2).
+-define(CLOUDI_RLIMIT_CPU,              3).
+-define(CLOUDI_RLIMIT_DATA,             4).
+-define(CLOUDI_RLIMIT_FSIZE,            5).
+-define(CLOUDI_RLIMIT_MEMLOCK,          6).
+-define(CLOUDI_RLIMIT_MSGQUEUE,         7).
+-define(CLOUDI_RLIMIT_NICE,             8).
+-define(CLOUDI_RLIMIT_NOFILE,           9).
+-define(CLOUDI_RLIMIT_NPROC,           10).
+-define(CLOUDI_RLIMIT_RSS,             11).
+-define(CLOUDI_RLIMIT_RTPRIO,          12).
+-define(CLOUDI_RLIMIT_RTTIME,          13).
+-define(CLOUDI_RLIMIT_SIGPENDING,      14).
+-define(CLOUDI_RLIMIT_STACK,           15).
+-define(CLOUDI_RLIMIT_VMEM,            16).
+
+% limit combination
+-define(CLOUDI_RLIMITS_CURRENT_ONLY,    1).
+-define(CLOUDI_RLIMITS_MAXIMUM_ONLY,    2).
+-define(CLOUDI_RLIMITS_CURRENT_MAXIMUM, 3).
+
+% limit special values
+-define(CLOUDI_RLIMITS_VALUE_INFINITY,  16#ffffffffffffffff).
+
 -spec limit_format(L :: list({cloudi_service_api:limit_external_key(),
                               cloudi_service_api:limit_external_value()})) ->
     binary().
 
-limit_format(_L) ->
-    % TODO
-    <<>>.
+limit_format(L) ->
+    erlang:iolist_to_binary(limit_format_list(L)).
+
+limit_format_list([]) ->
+    [];
+limit_format_list([H | L]) ->
+    [limit_format_list_type(H) | limit_format_list(L)].
+
+limit_format_list_type({Type, Values}) ->
+    TypeI = if
+        Type =:= as ->
+            ?CLOUDI_RLIMIT_AS;
+        Type =:= core ->
+            ?CLOUDI_RLIMIT_CORE;
+        Type =:= cpu ->
+            ?CLOUDI_RLIMIT_CPU;
+        Type =:= data ->
+            ?CLOUDI_RLIMIT_DATA;
+        Type =:= fsize ->
+            ?CLOUDI_RLIMIT_FSIZE;
+        Type =:= memlock ->
+            ?CLOUDI_RLIMIT_MEMLOCK;
+        Type =:= msgqueue ->
+            ?CLOUDI_RLIMIT_MSGQUEUE;
+        Type =:= nice ->
+            ?CLOUDI_RLIMIT_NICE;
+        Type =:= nofile ->
+            ?CLOUDI_RLIMIT_NOFILE;
+        Type =:= nproc ->
+            ?CLOUDI_RLIMIT_NPROC;
+        Type =:= rss ->
+            ?CLOUDI_RLIMIT_RSS;
+        Type =:= rtprio ->
+            ?CLOUDI_RLIMIT_RTPRIO;
+        Type =:= rttime ->
+            ?CLOUDI_RLIMIT_RTTIME;
+        Type =:= sigpending ->
+            ?CLOUDI_RLIMIT_SIGPENDING;
+        Type =:= stack ->
+            ?CLOUDI_RLIMIT_STACK;
+        Type =:= vmem ->
+            ?CLOUDI_RLIMIT_VMEM
+    end,
+    Defaults = [
+        {current, undefined},
+        {maximum, undefined}],
+    case cloudi_proplists:take_values(Defaults, Values) of
+        [Current, undefined] ->
+            CurrentI = limit_format_list_value(Current),
+            <<TypeI, ?CLOUDI_RLIMITS_CURRENT_ONLY,
+              CurrentI:64/unsigned-integer-native>>;
+        [undefined, Maximum] ->
+            MaximumI = limit_format_list_value(Maximum),
+            <<TypeI, ?CLOUDI_RLIMITS_MAXIMUM_ONLY,
+              MaximumI:64/unsigned-integer-native>>;
+        [Current, Maximum] ->
+            CurrentI = limit_format_list_value(Current),
+            MaximumI = limit_format_list_value(Maximum),
+            <<TypeI, ?CLOUDI_RLIMITS_CURRENT_MAXIMUM,
+              CurrentI:64/unsigned-integer-native,
+              MaximumI:64/unsigned-integer-native>>
+    end.
+
+limit_format_list_value(infinity) ->
+    ?CLOUDI_RLIMITS_VALUE_INFINITY;
+limit_format_list_value(Value)
+    when is_integer(Value), Value >= 0 ->
+    Value.
+

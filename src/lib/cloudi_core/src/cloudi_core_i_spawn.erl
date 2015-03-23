@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -205,6 +205,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 DestDeny, DestAllow,
                                                 ConfigOptions) of
                         {ok, Pids, Ports} ->
+                            Rlimits = rlimits(ConfigOptions),
                             case cloudi_core_i_pool:
                                  get(cloudi_core_i_os_spawn) of
                                 SpawnProcess when is_pid(SpawnProcess) ->
@@ -219,7 +220,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                     start_external_spawn(SpawnProcess,
                                                          SpawnProtocol,
                                                          SocketPath,
-                                                         Pids, Ports,
+                                                         Pids, Ports, Rlimits,
                                                          ThreadsPerProcess,
                                                          CommandLine,
                                                          NewFilename,
@@ -243,6 +244,9 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+rlimits(#config_service_options{limit = L}) ->
+    cloudi_core_i_os_rlimit:limit_format(L).
 
 create_socket_path(TemporaryDirectory, UUID)
     when is_binary(UUID) ->
@@ -294,7 +298,8 @@ start_external_threads(ThreadsPerProcess,
                           DestRefresh, DestDeny, DestAllow,
                           ConfigOptions).
 
-start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath, Pids, Ports,
+start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
+                     Pids, Ports, Rlimits,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
@@ -305,6 +310,7 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath, Pids, Ports,
                                       SpawnProtocol,
                                       string_terminate(SocketPath),
                                       Ports,
+                                      Rlimits,
                                       string_terminate(Filename),
                                       string_terminate(Arguments),
                                       SpawnEnvironment) of

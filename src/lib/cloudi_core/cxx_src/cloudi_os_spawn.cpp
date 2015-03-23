@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,8 @@
 #include "port.hpp"
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
-#include "os_spawn.hpp"
+#include "cloudi_os_spawn.hpp"
+#include "cloudi_os_rlimit.hpp"
 #include "assert.hpp"
 
 namespace
@@ -786,6 +787,7 @@ namespace
 int32_t spawn(char protocol,
               char * socket_path, uint32_t socket_path_len,
               uint32_t * ports, uint32_t ports_len,
+              char * rlimits, uint32_t rlimits_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len)
@@ -842,6 +844,8 @@ int32_t spawn(char protocol,
         if (::close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
             ::_exit(spawn_status::errno_close());
 
+        if (rlimit(rlimits, rlimits_len))
+            ::_exit(spawn_status::invalid_input);
         char pid_message[1024];
         int pid_message_index = 0;
         if (use_header)

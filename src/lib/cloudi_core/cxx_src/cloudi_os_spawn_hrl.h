@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
 
-// GENERIC ERLANG PORT [DRIVER] VERSION 0.7
+// GENERIC ERLANG PORT [DRIVER] VERSION 0.7 (modified, breaks compatibility)
 // automatically create Erlang functions for C/C++ bindings
 
 //////////////////////////////////////////////////////////////////////////////
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -232,13 +232,15 @@ BOOST_PP_ENUM(BOOST_PP_SEQ_SIZE(FUNCTIONS_SEQUENCE),
 
 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION, _, FUNCTIONS_SEQUENCE)
 
-encode_uint8(Value) when erlang:is_list(Value) ->
-    ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
-    Data = erlang:list_to_binary(ValueList),
-    DataSize = erlang:length(ValueList),
-    <<DataSize:32/unsigned-integer-native, Data/binary>>.
+encode_uint8(Value) when is_list(Value) ->
+    Data = unicode:characters_to_binary(Value),
+    DataSize = erlang:byte_size(Data),
+    <<DataSize:32/unsigned-integer-native, Data/binary>>;
+encode_uint8(Value) when is_binary(Value) ->
+    DataSize = erlang:byte_size(Value),
+    <<DataSize:32/unsigned-integer-native, Value/binary>>.
 
-encode_uint32(Value) when erlang:is_list(Value) ->
+encode_uint32(Value) when is_list(Value) ->
     ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
     DataSize = erlang:length(ValueList),

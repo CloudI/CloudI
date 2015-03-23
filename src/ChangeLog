@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add resource limits on OS processes used for external services
+
 2015-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix integration test problems due to unicode stdout/stderr fix in
