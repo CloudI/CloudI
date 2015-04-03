@@ -460,7 +460,7 @@ validate_get_slice(Config, Keyspace, RowKey, ColumnParent, [FirstColumn | _] = C
     {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
     Context3 = lists:foldl(fun(Column, ContextNext0) ->
-        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
         ContextNext1
     end, Context2, ColumnList),
     % get_slice
@@ -486,7 +486,7 @@ validate_get_range_slices(Config, Keyspace, [FirstRow | _] = RowKeyList, ColumnP
     % insert
     Context3 = lists:foldl(fun(RowKey, ContextNext0) ->
         lists:foldl(fun(Column, ContextNext1) ->
-            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
             ContextNext2
         end, ContextNext0, ColumnList)
     end, Context2, RowKeyList),
@@ -516,7 +516,7 @@ validate_multiget_slice(Config, Keyspace, RowKeyList, ColumnParent, [FirstColumn
     % insert
     Context3 = lists:foldl(fun(RowKey, ContextNext0) ->
         lists:foldl(fun(Column, ContextNext1) ->
-            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
             ContextNext2
         end, ContextNext0, ColumnList)
     end, Context2, RowKeyList),
@@ -545,7 +545,7 @@ validate_get_count(Config, Keyspace, RowKey, ColumnParent, [FirstColumn | _] = C
     {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
     Context3 = lists:foldl(fun(Column, ContextNext0) ->
-        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
         ContextNext1
     end, Context2, ColumnList),
     % get_slice
