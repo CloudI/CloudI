@@ -416,7 +416,7 @@ validate_truncate_column_family(Config, Keyspace, RowKey, ColumnParent, [FirstCo
 validate_insert_column(Config, Keyspace, RowKey, ColumnParent, Column) ->
     Target  = ?config(target, Config),
     {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
-    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context1, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
@@ -656,7 +656,6 @@ validate_remove_counter(Config, Keyspace, RowKey, ColumnParent, CounterColumn) -
     true.
 
 validate_execute_cql_query(Config, Keyspace) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
     {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
     Query = <<"use ", Keyspace/binary, ";">>,
