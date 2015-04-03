@@ -73,7 +73,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type pqueue() ::
     {integer(),
      {queue(), queue(), queue(), queue(), queue(), queue(), queue()},

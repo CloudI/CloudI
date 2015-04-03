@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_reload).
@@ -73,9 +73,6 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include_lib("kernel/include/file.hrl").
-
-% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
--define(GREGORIAN_SECONDS_OFFSET, 62167219200).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -201,9 +198,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 reload_start() ->
-    ReloadStart = calendar:datetime_to_gregorian_seconds(
-        calendar:now_to_universal_time(erlang:now())) -
-        ?GREGORIAN_SECONDS_OFFSET,
+    ReloadStart = cloudi_timestamp:seconds(),
     erlang:send_after(?SERVICE_INTERNAL_RELOAD, self(), reload),
     ReloadStart.
 

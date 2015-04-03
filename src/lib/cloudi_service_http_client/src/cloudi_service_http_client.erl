@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -99,9 +99,12 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type dispatcher() :: cloudi:context() | cloudi_service:dispatcher().
 -type headers() :: list({binary(), binary()}).
 -export_type([headers/0]).
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -109,14 +112,15 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec head(Dispatcher :: dispatcher(),
-           Prefix :: cloudi_service:service_name(),
+-spec head(Agent :: agent(),
+           Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-head(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/head",
+head(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/head",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -125,15 +129,16 @@ head(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec head(Dispatcher :: dispatcher(),
-           Prefix :: cloudi_service:service_name(),
+-spec head(Agent :: agent(),
+           Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary(),
-           Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+           Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-head(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/head",
+head(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/head",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -142,14 +147,15 @@ head(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: dispatcher(),
-          Prefix :: cloudi_service:service_name(),
+-spec get(Agent :: agent(),
+          Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-get(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/get",
+get(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/get",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -158,15 +164,16 @@ get(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: dispatcher(),
-          Prefix :: cloudi_service:service_name(),
+-spec get(Agent :: agent(),
+          Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-get(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/get",
+get(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/get",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -175,14 +182,15 @@ get(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Prefix :: cloudi_service:service_name(),
+-spec put(Agent :: agent(),
+          Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-put(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/put",
+put(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/put",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -191,15 +199,16 @@ put(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Prefix :: cloudi_service:service_name(),
+-spec put(Agent :: agent(),
+          Prefix :: service_name(),
           RequestInfo :: headers(),
           Request :: binary(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-put(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/put",
+put(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/put",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -208,14 +217,15 @@ put(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec post(Dispatcher :: dispatcher(),
-           Prefix :: cloudi_service:service_name(),
+-spec post(Agent :: agent(),
+           Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-post(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/post",
+post(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/post",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -224,15 +234,16 @@ post(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec post(Dispatcher :: dispatcher(),
-           Prefix :: cloudi_service:service_name(),
+-spec post(Agent :: agent(),
+           Prefix :: service_name(),
            RequestInfo :: headers(),
            Request :: binary(),
-           Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+           Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-post(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/post",
+post(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/post",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -241,14 +252,15 @@ post(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trace(Dispatcher :: dispatcher(),
-            Prefix :: cloudi_service:service_name(),
+-spec trace(Agent :: agent(),
+            Prefix :: service_name(),
             RequestInfo :: headers(),
             Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-trace(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/trace",
+trace(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/trace",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -257,15 +269,16 @@ trace(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trace(Dispatcher :: dispatcher(),
-            Prefix :: cloudi_service:service_name(),
+-spec trace(Agent :: agent(),
+            Prefix :: service_name(),
             RequestInfo :: headers(),
             Request :: binary(),
-            Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+            Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-trace(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/trace",
+trace(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/trace",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -274,14 +287,15 @@ trace(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec options(Dispatcher :: dispatcher(),
-              Prefix :: cloudi_service:service_name(),
+-spec options(Agent :: agent(),
+              Prefix :: service_name(),
               RequestInfo :: headers(),
               Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-options(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/options",
+options(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/options",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -290,15 +304,16 @@ options(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec options(Dispatcher :: dispatcher(),
-              Prefix :: cloudi_service:service_name(),
+-spec options(Agent :: agent(),
+              Prefix :: service_name(),
               RequestInfo :: headers(),
               Request :: binary(),
-              Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+              Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-options(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/options",
+options(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/options",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -307,14 +322,15 @@ options(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(Dispatcher :: dispatcher(),
-             Prefix :: cloudi_service:service_name(),
+-spec delete(Agent :: agent(),
+             Prefix :: service_name(),
              RequestInfo :: headers(),
              Request :: binary()) ->
-    {ok, headers(), binary()} | {error, any()}.
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-delete(Dispatcher, Prefix, RequestInfo, Request) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/delete",
+delete(Agent, Prefix, RequestInfo, Request) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/delete",
                             RequestInfo, Request, undefined, undefined)).
 
 %%-------------------------------------------------------------------------
@@ -323,15 +339,16 @@ delete(Dispatcher, Prefix, RequestInfo, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(Dispatcher :: dispatcher(),
-             Prefix :: cloudi_service:service_name(),
+-spec delete(Agent :: agent(),
+             Prefix :: service_name(),
              RequestInfo :: headers(),
              Request :: binary(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, headers(), binary()} | {error, any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {{ok, headers(), binary()} | {error, any()},
+     NewAgent :: agent()}.
 
-delete(Dispatcher, Prefix, RequestInfo, Request, Timeout) ->
-    result(cloudi:send_sync(Dispatcher, Prefix ++ "/delete",
+delete(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    result(cloudi:send_sync(Agent, Prefix ++ "/delete",
                             RequestInfo, Request, Timeout, undefined)).
 
 %%%------------------------------------------------------------------------
@@ -608,13 +625,13 @@ client_debug_end(Level, HttpCode, Method,
                       (cloudi_x_uuid:get_v1_time(os) -
                        RequestStartMicroSec) / 1000.0]).
 
-result({ok, {error, _} = Error}) ->
+result({{ok, {error, _} = Error}, NewAgent}) ->
+    {Error, NewAgent};
+result({{error, _}, _} = Error) ->
     Error;
-result({error, _} = Error) ->
-    Error;
-result({ok, Response}) ->
-    {ok, [], Response};
-result({ok, _, _} = Success) ->
+result({{ok, Response}, NewAgent}) ->
+    {{ok, [], Response}, NewAgent};
+result({{ok, _, _}, _} = Success) ->
     Success.
 
 strip_whitespace(String) when is_binary(String) ->

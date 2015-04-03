@@ -65,76 +65,83 @@ end_per_testcase(_TestCase, Config) ->
 %%%------------------------------------------------------------------------
 
 t_wal_sequence0(Config) ->
-    UUID = cloudi_x_uuid:new(self()),
+    UUID0 = cloudi_x_uuid:new(self()),
     SendF0 = fun({_, _, _, _, _, _, _, _, _, _}) ->
         erlang:exit(queue_file_not_empty)
     end,
     State0 = cloudi_write_ahead_logging:new(?config(file, Config), SendF0),
+    {TransId0, UUID1} = cloudi_x_uuid:get_v1(UUID0),
     % request0
     ChunkRequest0 = {"request0",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId0, undefined},
     {Chunk0, State1} = cloudi_write_ahead_logging:store_start(ChunkRequest0,
                                                               State0),
-    ChunkRequestId0 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId0, UUID2} = cloudi_x_uuid:get_v1(UUID1),
     State2 = cloudi_write_ahead_logging:store_end(ChunkRequestId0,
                                                   Chunk0, State1),
     % request1
+    {TransId1, UUID3} = cloudi_x_uuid:get_v1(UUID2),
     ChunkRequest1 = {"request1",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId1, undefined},
     {Chunk1, State3} = cloudi_write_ahead_logging:store_start(ChunkRequest1,
                                                               State2),
-    ChunkRequestId1 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId1, UUID4} = cloudi_x_uuid:get_v1(UUID3),
     State4 = cloudi_write_ahead_logging:store_end(ChunkRequestId1,
                                                   Chunk1, State3),
     % request2
+    {TransId2, UUID5} = cloudi_x_uuid:get_v1(UUID4),
     ChunkRequest2 = {"request2",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId2, undefined},
     {Chunk2, State5} = cloudi_write_ahead_logging:store_start(ChunkRequest2,
                                                               State4),
-    ChunkRequestId2 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId2, UUID6} = cloudi_x_uuid:get_v1(UUID5),
     State6 = cloudi_write_ahead_logging:store_end(ChunkRequestId2,
                                                   Chunk2, State5),
     % request1 completes
     {{"request1", _, _, _, _, _, _, _, _, _},
      State7} = cloudi_write_ahead_logging:erase(ChunkRequestId1, State6),
     % request3
+    {TransId3, UUID7} = cloudi_x_uuid:get_v1(UUID6),
     ChunkRequest3 = {"request3",
                      undefined, undefined, undefined, undefined, <<0:512>>,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId3, undefined},
     {Chunk3, State8} = cloudi_write_ahead_logging:store_start(ChunkRequest3,
                                                               State7),
-    ChunkRequestId3 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId3, UUID8} = cloudi_x_uuid:get_v1(UUID7),
     State9 = cloudi_write_ahead_logging:store_end(ChunkRequestId3,
                                                   Chunk3, State8),
     % request0 completes
     {{"request0", _, _, _, _, _, _, _, _, _},
      State10} = cloudi_write_ahead_logging:erase(ChunkRequestId0, State9),
     % request4 fails
+    {TransId4, UUID9} = cloudi_x_uuid:get_v1(UUID8),
     ChunkRequest4 = {"request4",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId4, undefined},
     {Chunk4, State11} = cloudi_write_ahead_logging:store_start(ChunkRequest4,
                                                                State10),
     State12 = cloudi_write_ahead_logging:store_fail(Chunk4, State11),
     % request5
+    {TransId5, UUID10} = cloudi_x_uuid:get_v1(UUID9),
     ChunkRequest5 = {"request5",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId5, undefined},
     {Chunk5, State13} = cloudi_write_ahead_logging:store_start(ChunkRequest5,
                                                                State12),
-    ChunkRequestId5 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId5, UUID11} = cloudi_x_uuid:get_v1(UUID10),
     State14 = cloudi_write_ahead_logging:store_end(ChunkRequestId5,
                                                    Chunk5, State13),
     % request6
+    {TransId6, UUID12} = cloudi_x_uuid:get_v1(UUID11),
     ChunkRequest6 = {"request6",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId6, undefined},
     {Chunk6, State15} = cloudi_write_ahead_logging:store_start(ChunkRequest6,
                                                                State14),
-    ChunkRequestId6 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId6, UUID13} = cloudi_x_uuid:get_v1(UUID12),
     _State16 = cloudi_write_ahead_logging:store_end(ChunkRequestId6,
                                                     Chunk6, State15),
     % at this point, the requests (oldest to newest) are:
@@ -150,7 +157,7 @@ t_wal_sequence0(Config) ->
                 ?LOG_TRACE("new1: ~p (age ~p ms): timeout", [T, Age]),
                 {error, timeout};
             true ->
-                NewTransId = cloudi_x_uuid:get_v1(UUID),
+                {NewTransId, _} = cloudi_x_uuid:get_v1(UUID13),
                 ?LOG_TRACE("new1: ~p (age ~p ms):~n"
                            "    resend ~p", [T, Age, NewTransId]),
                 {ok, NewTransId}
@@ -168,7 +175,7 @@ t_wal_sequence0(Config) ->
                 ?LOG_TRACE("new2: ~p (age ~p ms): timeout", [T, Age]),
                 {error, timeout};
             true ->
-                NewTransId = cloudi_x_uuid:get_v1(UUID),
+                {NewTransId, _} = cloudi_x_uuid:get_v1(UUID13),
                 ?LOG_TRACE("new2: ~p (age ~p ms):~n"
                            "    resend ~p", [T, Age, NewTransId]),
                 {ok, NewTransId}
@@ -176,12 +183,13 @@ t_wal_sequence0(Config) ->
     end,
     State18 = cloudi_write_ahead_logging:new(?config(file, Config), SendF2),
     % request7
+    {TransId7, UUID14} = cloudi_x_uuid:get_v1(UUID13),
     ChunkRequest7 = {"request7",
                      undefined, undefined, undefined, undefined, undefined,
-                     5000, undefined, cloudi_x_uuid:get_v1(UUID), undefined},
+                     5000, undefined, TransId7, undefined},
     {Chunk7, State19} = cloudi_write_ahead_logging:store_start(ChunkRequest7,
                                                                State18),
-    ChunkRequestId7 = cloudi_x_uuid:get_v1(UUID),
+    {ChunkRequestId7, _} = cloudi_x_uuid:get_v1(UUID14),
     State20 = cloudi_write_ahead_logging:store_end(ChunkRequestId7,
                                                    Chunk7, State19),
     % order is based on file order

@@ -53,7 +53,7 @@
 		   exp_funs   = sets:new() :: proper_typeserver:mod_exp_funs(),
 		   helper_pid              :: pid()}).
 -type mod_info() :: #mod_info{}.
--type exp_dict() :: dict().
+-type exp_dict() :: any().
 %% dict(mod_name(),'no_data' | {'data',proper_typeserver:mod_exp_types(),
 %%                                     proper_typeserver:mod_exp_funs()})
 

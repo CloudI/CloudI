@@ -85,7 +85,7 @@ key_value_new(RequestInfo) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -spec key_value_parse(RequestInfo :: binary() |
                                      list({any(), any()})) ->
     Result :: dict().

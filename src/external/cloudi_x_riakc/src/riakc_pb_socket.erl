@@ -117,7 +117,7 @@
                 queue_if_disconnected = false :: boolean(), % if true, add requests to queue if disconnected
                 sock :: port(),       % gen_tcp socket
                 active :: #request{} | undefined,     % active request
-                queue :: queue() | undefined,      % queue of pending requests
+                queue :: any(),      % queue of pending requests
                 connects=0 :: non_neg_integer(), % number of successful connects
                 failed=[] :: [connection_failure()],  % breakdown of failed connects
                 connect_timeout=infinity :: timeout(), % timeout of TCP connection

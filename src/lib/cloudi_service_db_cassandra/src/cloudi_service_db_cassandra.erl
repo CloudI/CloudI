@@ -55,7 +55,7 @@
 %%%
 %%% @author Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>
 %%% @copyright 2013-2014 Mahesh Paolini-Subramanya
-%%% @version 1.4.0 {@date} {@time}
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 -module(cloudi_service_db_cassandra).
 -author('Mahesh Paolini-Subramanya <mahesh@dieswaytoofast.com>').
@@ -124,12 +124,11 @@
                                      {thrift_port, ?DEFAULT_THRIFT_PORT}
                                     ]).
 
--type error()           :: {error, Reason :: term()}.
 -type connection_name() :: {any(), any(), string() | binary()} |
                            string() |
                            binary().
--type dispatcher()      :: cloudi_service:dispatcher() | cloudi:context().
--type name()            :: cloudi_service:service_name().
+-type agent()           :: cloudi:agent().
+-type name()            :: cloudi:service_name().
 -type thrift_host()     :: undefined | string().
 -type thrift_port()     :: undefined | integer().
 -type client_name()     :: binary().
@@ -154,293 +153,295 @@
 -type cql_query_id()    :: integer().
 -type compression()     :: binary().
 
+-type external_response(Result) ::
+    {{ok, Result}, NewAgent :: agent()} |
+    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
+
 -record(state,
     {
         connection_name     :: connection_name()
     }).
-
--type response()        :: [tuple()] | error().
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
 %% @doc Set the keyspace to be used by the connection
--spec set_keyspace(dispatcher(), name(), destination()) ->
-    response().
-set_keyspace(Dispatcher, Name, Destination)
+-spec set_keyspace(agent(), name(), destination()) ->
+    external_response(any()).
+set_keyspace(Agent, Name, Destination)
     when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {set_keyspace, Destination}).
 
 %% @doc Describe the keyspace used by the connection
--spec describe_keyspace(dispatcher(), name(), destination()) ->
-    response().
-describe_keyspace(Dispatcher, Name, Destination)
+-spec describe_keyspace(agent(), name(), destination()) ->
+    external_response(any()).
+describe_keyspace(Agent, Name, Destination)
     when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {describe_keyspace, Destination}).
 
 %% @doc Add a keyspace
--spec system_add_keyspace(dispatcher(), name(), keyspace_definition()) ->
-    response().
-system_add_keyspace(Dispatcher, Name, KeyspaceDefinition)
+-spec system_add_keyspace(agent(), name(), keyspace_definition()) ->
+    external_response(any()).
+system_add_keyspace(Agent, Name, KeyspaceDefinition)
     when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {system_add_keyspace, KeyspaceDefinition}).
 
 %% @doc Update a keyspace
--spec system_update_keyspace(dispatcher(), name(), keyspace_definition()) ->
-    response().
-system_update_keyspace(Dispatcher, Name, KeyspaceDefinition)
+-spec system_update_keyspace(agent(), name(), keyspace_definition()) ->
+    external_response(any()).
+system_update_keyspace(Agent, Name, KeyspaceDefinition)
     when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {system_update_keyspace, KeyspaceDefinition}).
 
 %% @doc Remove a keyspace
--spec system_drop_keyspace(dispatcher(), name(), destination()) ->
-    response().
-system_drop_keyspace(Dispatcher, Name, Destination)
+-spec system_drop_keyspace(agent(), name(), destination()) ->
+    external_response(any()).
+system_drop_keyspace(Agent, Name, Destination)
     when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {system_drop_keyspace, Destination}).
 
 %% @doc Insert a column
--spec insert(dispatcher(), name(), destination(),
+-spec insert(agent(), name(), destination(),
              row_key(), column_parent(), column(), consistency_level()) ->
-    response().
-insert(Dispatcher, Name, Destination,
+    external_response(any()).
+insert(Agent, Name, Destination,
        RowKey, ColumnParent, Column, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {insert, Destination, RowKey,
                       ColumnParent, Column, ConsistencyLevel}).
 
 %% @doc Get a column
--spec get(dispatcher(), name(), destination(),
+-spec get(agent(), name(), destination(),
           row_key(), column_path(), consistency_level()) ->
-    response().
-get(Dispatcher, Name, Destination, RowKey, ColumnPath, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    external_response(any()).
+get(Agent, Name, Destination, RowKey, ColumnPath, ConsistencyLevel) ->
+    cloudi:send_sync(Agent, Name,
                      {get, Destination, RowKey, ColumnPath, ConsistencyLevel}).
 
 %% @doc Remove data from the row specified by key at the granularity 
 %%      specified by column_path, and the given timestamp
--spec remove(dispatcher(), name(), destination(),
+-spec remove(agent(), name(), destination(),
              row_key(), column_path(), column_timestamp(),
              consistency_level()) ->
-    response().
-remove(Dispatcher, Name, Destination,
+    external_response(any()).
+remove(Agent, Name, Destination,
        RowKey, ColumnPath, ColumnTimestamp, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {remove, Destination, RowKey, ColumnPath,
                       ColumnTimestamp, ConsistencyLevel}).
 
 %% @doc Add a column family
--spec system_add_column_family(dispatcher(), name(),
+-spec system_add_column_family(agent(), name(),
                                column_family_definition()) ->
-    response().
-system_add_column_family(Dispatcher, Name, ColumnFamilyDefinition) ->
-    cloudi:send_sync(Dispatcher, Name,
+    external_response(any()).
+system_add_column_family(Agent, Name, ColumnFamilyDefinition) ->
+    cloudi:send_sync(Agent, Name,
                      {system_add_column_family, ColumnFamilyDefinition}).
 
 %% @doc Get the column family definition
--spec system_describe_column_family(dispatcher(), name(), destination(),
+-spec system_describe_column_family(agent(), name(), destination(),
                                     column_family()) ->
-    response().
-system_describe_column_family(Dispatcher, Name, Destination, ColumnFamily) ->
-    cloudi:send_sync(Dispatcher, Name,
+    external_response(any()).
+system_describe_column_family(Agent, Name, Destination, ColumnFamily) ->
+    cloudi:send_sync(Agent, Name,
                      {system_describe_column_family, Destination,
                       ColumnFamily}).
 
 %% @doc Drop a column family
--spec system_drop_column_family(dispatcher(), name(), destination(),
+-spec system_drop_column_family(agent(), name(), destination(),
                                 column_family()) ->
-    response().
-system_drop_column_family(Dispatcher, Name, Destination, ColumnFamily) ->
-    cloudi:send_sync(Dispatcher, Name,
+    external_response(any()).
+system_drop_column_family(Agent, Name, Destination, ColumnFamily) ->
+    cloudi:send_sync(Agent, Name,
                      {system_drop_column_family, Destination, ColumnFamily}).
 
 %% @doc Update a column family
--spec system_update_column_family(dispatcher(), name(),
+-spec system_update_column_family(agent(), name(),
                                   column_family_definition()) ->
-    response().
-system_update_column_family(Dispatcher, Name, ColumnFamilyDefinition) ->
-    cloudi:send_sync(Dispatcher, Name,
+    external_response(any()).
+system_update_column_family(Agent, Name, ColumnFamilyDefinition) ->
+    cloudi:send_sync(Agent, Name,
                      {system_update_column_family, ColumnFamilyDefinition}).
 
 %% @doc Remove all rows from a column family
--spec truncate(dispatcher(), name(), destination(), column_family()) ->
-    response().
-truncate(Dispatcher, Name, Destination, ColumnFamily) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec truncate(agent(), name(), destination(), column_family()) ->
+    external_response(any()).
+truncate(Agent, Name, Destination, ColumnFamily) ->
+    cloudi:send_sync(Agent, Name,
                      {truncate, Destination, ColumnFamily}).
 
 %% @doc Increment a counter column
--spec add(dispatcher(), name(), destination(),
+-spec add(agent(), name(), destination(),
           row_key(), column_parent(), counter_column(), consistency_level()) ->
-    response().
-add(Dispatcher, Name, Destination,
+    external_response(any()).
+add(Agent, Name, Destination,
     RowKey, ColumnParent, CounterColumn, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {add, Destination, RowKey, ColumnParent, CounterColumn,
                       ConsistencyLevel}).
 
 %% @doc Remove a counter
--spec remove_counter(dispatcher(), name(), destination(),
+-spec remove_counter(agent(), name(), destination(),
                      row_key(), column_path(), consistency_level()) ->
-    response().
-remove_counter(Dispatcher, Name, Destination,
+    external_response(any()).
+remove_counter(Agent, Name, Destination,
                RowKey, ColumnPath, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {remove_counter, Destination,
                       RowKey, ColumnPath, ConsistencyLevel}).
 
 %% @doc Get a group of columns based on a slice
--spec get_slice(dispatcher(), name(), destination(),
+-spec get_slice(agent(), name(), destination(),
                 row_key(), column_parent(), slice_predicate(),
                 consistency_level()) ->
-    response().
-get_slice(Dispatcher, Name, Destination,
+    external_response(any()).
+get_slice(Agent, Name, Destination,
           RowKey, ColumnParent, SlicePredicate, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {get_slice, Destination,
                       RowKey, ColumnParent, SlicePredicate, ConsistencyLevel}).
 
 %% @doc Get a group of columns based on a slice and a list of rows
--spec multiget_slice(dispatcher(), name(), destination(),
+-spec multiget_slice(agent(), name(), destination(),
                      [row_key()], column_parent(), slice_predicate(),
                      consistency_level()) ->
-    response().
-multiget_slice(Dispatcher, Name, Destination,
+    external_response(any()).
+multiget_slice(Agent, Name, Destination,
                RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel)
     when is_list(RowKeys) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {multiget_slice, Destination,
                       RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel}).
 
 %% @doc Count columns based on a slice
 %%      WARNING: NOT O(1)
--spec get_count(dispatcher(), name(), destination(),
+-spec get_count(agent(), name(), destination(),
                 row_key(), column_parent(), slice_predicate(),
                 consistency_level()) ->
-    response().
-get_count(Dispatcher, Name, Destination,
+    external_response(any()).
+get_count(Agent, Name, Destination,
           RowKey, ColumnParent, SlicePredicate, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {get_count, Destination,
                       RowKey, ColumnParent, SlicePredicate, ConsistencyLevel}).
 
 %% @doc Count columns based on a slice and a list of rows
 %%      WARNING: NOT O(1)
--spec multiget_count(dispatcher(), name(), destination(),
+-spec multiget_count(agent(), name(), destination(),
                      [row_key()], column_parent(), slice_predicate(),
                      consistency_level()) ->
-    response().
-multiget_count(Dispatcher, Name, Destination,
+    external_response(any()).
+multiget_count(Agent, Name, Destination,
                RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel)
     when is_list(RowKeys) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {multiget_count, Destination,
                       RowKeys, ColumnParent, SlicePredicate, ConsistencyLevel}).
 
 %% @doc Get a list of slices for the keys within the specified KeyRange
--spec get_range_slices(dispatcher(), name(), destination(),
+-spec get_range_slices(agent(), name(), destination(),
                        column_parent(), slice_predicate(), key_range(),
                        consistency_level()) ->
-    response().
-get_range_slices(Dispatcher, Name, Destination,
+    external_response(any()).
+get_range_slices(Agent, Name, Destination,
                  ColumnParent, SlicePredicate, KeyRange, ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {get_range_slices, Destination, ColumnParent,
                       SlicePredicate, KeyRange, ConsistencyLevel}).
 
 %% @doc Get a list of slices using IndexRange
--spec get_indexed_slices(dispatcher(), name(), destination(),
+-spec get_indexed_slices(agent(), name(), destination(),
                          column_parent(), slice_predicate(), key_range(),
                          consistency_level()) ->
-    response().
-get_indexed_slices(Dispatcher, Name, Destination,
+    external_response(any()).
+get_indexed_slices(Agent, Name, Destination,
                    ColumnParent, IndexClause, SlicePredicate,
                    ConsistencyLevel) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {get_indexed_slices, Destination,
                       ColumnParent, IndexClause, SlicePredicate,
                       ConsistencyLevel}).
 
 %% @doc Execute a CQL query
--spec execute_cql_query(dispatcher(), name(),
+-spec execute_cql_query(agent(), name(),
                         cql_query(), compression()) ->
-    response().
-execute_cql_query(Dispatcher, Name, CqlQuery, Compression)
+    external_response(any()).
+execute_cql_query(Agent, Name, CqlQuery, Compression)
     when is_binary(CqlQuery) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {execute_cql_query, CqlQuery, Compression}).
 
 %% @doc Prepare a CQL query
--spec prepare_cql_query(dispatcher(), name(),
+-spec prepare_cql_query(agent(), name(),
                         cql_query(), compression()) ->
-    response().
-prepare_cql_query(Dispatcher, Name, CqlQuery, Compression)
+    external_response(any()).
+prepare_cql_query(Agent, Name, CqlQuery, Compression)
     when is_binary(CqlQuery) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {prepare_cql_query, CqlQuery, Compression}).
 
 %% @doc Execute a prepared a CQL query
--spec execute_prepared_cql_query(dispatcher(), name(),
+-spec execute_prepared_cql_query(agent(), name(),
                                  cql_query_id(), list()) ->
-    response().
-execute_prepared_cql_query(Dispatcher, Name, CqlQuery, Values)
+    external_response(any()).
+execute_prepared_cql_query(Agent, Name, CqlQuery, Values)
     when is_integer(CqlQuery), is_list(Values) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {execute_prepared_cql_query, CqlQuery, Values}).
 
 %% @doc Get the Thrift API version
--spec describe_version(dispatcher(), name()) ->
-    response().
-describe_version(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_version(agent(), name()) ->
+    external_response(any()).
+describe_version(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_version}).
 
 %% @doc Get the snitch used for the cluster
--spec describe_snitch(dispatcher(), name()) ->
-    response().
-describe_snitch(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_snitch(agent(), name()) ->
+    external_response(any()).
+describe_snitch(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_snitch}).
 
 %% @doc Get the partitioner used for the cluster
--spec describe_partitioner(dispatcher(), name()) ->
-    response().
-describe_partitioner(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_partitioner(agent(), name()) ->
+    external_response(any()).
+describe_partitioner(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_partitioner}).
 
 %% @doc Get the schema_versions used for the cluster
--spec describe_schema_versions(dispatcher(), name()) ->
-    response().
-describe_schema_versions(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_schema_versions(agent(), name()) ->
+    external_response(any()).
+describe_schema_versions(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_schema_versions}).
 
 %% @doc Get the cluster_name 
--spec describe_cluster_name(dispatcher(), name()) ->
-    response().
-describe_cluster_name(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_cluster_name(agent(), name()) ->
+    external_response(any()).
+describe_cluster_name(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_cluster_name}).
 
 %% @doc Get the list of all the keyspaces
--spec describe_keyspaces(dispatcher(), name()) ->
-    response().
-describe_keyspaces(Dispatcher, Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_keyspaces(agent(), name()) ->
+    external_response(any()).
+describe_keyspaces(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_keyspaces}).
 
 %% @doc Gets the token ring; a map of ranges to host addresses
--spec describe_ring(dispatcher(), name(), destination()) ->
-    response().
-describe_ring(Dispatcher, Name, Destination) ->
-    cloudi:send_sync(Dispatcher, Name,
+-spec describe_ring(agent(), name(), destination()) ->
+    external_response(any()).
+describe_ring(Agent, Name, Destination) ->
+    cloudi:send_sync(Agent, Name,
                      {describe_ring, Destination}).
 
 %%%------------------------------------------------------------------------

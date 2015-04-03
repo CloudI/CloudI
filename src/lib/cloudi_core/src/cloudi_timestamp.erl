@@ -3,13 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Request==
-%%% Request format transform.
+%%% ==Timestamp operations==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,52 +43,93 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_request).
+-module(cloudi_timestamp).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/2,
-         http_qs_parse/1]).
+-export([timestamp/0,
+         seconds/0,
+         seconds_filter/3]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-% TODO: remove old code path?
-new(Input, OutputType)
-    when is_binary(Input) ->
-    if
-        OutputType =:= external ->
-            Input;
-        OutputType =:= internal ->
-            cloudi_string:binary_to_term(Input)
-    end;
-new([I | _] = Input, internal)
-    when is_integer(I) ->
-    cloudi_string:list_to_term(Input);
-new(Input, internal) ->
-    Input.
-
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Parse HTTP Request query string data.===
+%% ===Return an Erlang VM timestamp.===
+%% Not guaranteed to be strictly monotonically increasing
+%% (on Erlang >= 18.0).
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec timestamp() -> erlang:timestamp().
+
 -ifdef(ERLANG_OTP_VERSION_16).
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict().
+timestamp() ->
+    erlang:now().
 -else.
--spec http_qs_parse(Request :: binary() |
-                               list({any(), any()})) ->
-    Result :: dict:dict(binary(), binary()).
+-ifdef(ERLANG_OTP_VERSION_17).
+timestamp() ->
+    erlang:now().
+-else. % necessary for Erlang >= 18.0
+timestamp() ->
+    erlang:timestamp().
+-endif.
 -endif.
 
-http_qs_parse(Request) ->
-    cloudi_request_info:key_value_parse(Request).
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Seconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
+-define(GREGORIAN_SECONDS_OFFSET, 62167219200).
+-ifdef(ERLANG_OTP_VERSION_16).
+seconds() ->
+    calendar:datetime_to_gregorian_seconds(
+        calendar:now_to_universal_time(erlang:now())) -
+        ?GREGORIAN_SECONDS_OFFSET.
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+seconds() ->
+    calendar:datetime_to_gregorian_seconds(
+        calendar:now_to_universal_time(erlang:now())) -
+        ?GREGORIAN_SECONDS_OFFSET.
+-else. % necessary for Erlang >= 18.0
+seconds() ->
+    erlang:system_time(seconds).
+-endif.
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Filter a list of seconds since the UNIX epoch..===
+%% The list is not ordered.
+%% @end
+%%-------------------------------------------------------------------------
+
+seconds_filter(L, SecondsNow, MaxPeriod) ->
+    seconds_filter(L, [], SecondsNow, MaxPeriod).
+
+seconds_filter([], Output, _, _) ->
+    Output;
+seconds_filter([Seconds | L], Output, SecondsNow, MaxPeriod) ->
+    if
+        (SecondsNow < Seconds) orelse
+        ((SecondsNow - Seconds) > MaxPeriod) ->
+            seconds_filter(L, Output, SecondsNow, MaxPeriod);
+        true ->
+            seconds_filter(L, [Seconds | Output], SecondsNow, MaxPeriod)
+    end.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 

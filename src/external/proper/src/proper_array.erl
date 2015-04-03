@@ -36,7 +36,7 @@
 
 %% When parsed by the typeserver, this becomes opaque (it's declared as a simple
 %% type because dialyzer can't handle parametric opaque types yet).
--type array(_T) :: array().
+-type array(_T) :: any().
 
 -type array_size() :: non_neg_integer().
 -type array_indx() :: non_neg_integer().

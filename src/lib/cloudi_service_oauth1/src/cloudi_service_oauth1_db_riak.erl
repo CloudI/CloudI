@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_db_riak).
@@ -260,9 +260,9 @@ riak_configuration_rfc5849_test_data(Dispatcher, Database) ->
                                   "https?://printer.example.com/ready"),
     case cloudi_service_db_riak:new(Dispatcher, Name,
                                     Key, Value, undefined) of
-        {ok, _, _} ->
+        {{ok, _, _}, Dispatcher} ->
             ok;
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -270,9 +270,9 @@ riak_expirations(Dispatcher, Name, Now) ->
     case cloudi_service_db_riak:get_index_range(Dispatcher, Name,
                                                 {binary_index, "expiration"},
                                                 <<"1970">>, Now, undefined) of
-        {ok, Keys, _, _} ->
+        {{ok, Keys, _, _}, Dispatcher} ->
             {ok, Keys};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -280,9 +280,9 @@ riak_delete(_, _, []) ->
     ok;
 riak_delete(Dispatcher, Name, [Key | Keys]) ->
     case cloudi_service_db_riak:delete(Dispatcher, Name, Key, undefined) of
-        ok ->
+        {ok, Dispatcher} ->
             riak_delete(Dispatcher, Name, Keys);
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -317,7 +317,7 @@ riak_signature_methods(Dispatcher, Database, Realm, ConsumerKey, Timeout) ->
     Name = Database ++ ?RIAK_BUCKET_CONFIGURATION,
     Key = consumer_key(ConsumerKey, match_realm(Realm)),
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
-        {ok, Key, Value} ->
+        {{ok, Key, Value}, Dispatcher} ->
             {_, _,
              SignatureMethodPlaintext,
              SignatureMethodHMACSHA1,
@@ -326,17 +326,17 @@ riak_signature_methods(Dispatcher, Database, Realm, ConsumerKey, Timeout) ->
             {ok, {SignatureMethodPlaintext,
                   SignatureMethodHMACSHA1,
                   SignatureMethodRSASHA1}, CallbackRegex};
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             {error, not_found};
-        {siblings, _, _} ->
+        {{siblings, _, _}, Dispatcher} ->
             {error, siblings};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
 riak_token_nonce_check(Dispatcher, Name, Key, Nonce, Timeout) ->
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
-        {ok, Key, Value} ->
+        {{ok, Key, Value}, Dispatcher} ->
             JSON = cloudi_x_jsx:decode(Value),
             case lists:keyfind(<<"nonce_request">>, 1, JSON) of
                 {_, Nonce} ->
@@ -349,16 +349,16 @@ riak_token_nonce_check(Dispatcher, Name, Key, Nonce, Timeout) ->
                             ok
                     end
             end;
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             ok;
-        {siblings, _, _} ->
+        {{siblings, _, _}, Dispatcher} ->
             {error, siblings};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
 riak_token_request_check(Dispatcher, Database,
-                          Realm, ConsumerKey, NonceRequest, Timeout) ->
+                         Realm, ConsumerKey, NonceRequest, Timeout) ->
     NameRequest = Database ++ ?RIAK_BUCKET_TOKEN_REQUEST,
     NameAccess = Database ++ ?RIAK_BUCKET_TOKEN_ACCESS,
     Key = consumer_key(ConsumerKey, match_realm(Realm)),
@@ -400,9 +400,9 @@ riak_token_request_store(Dispatcher, Database,
                 token_indexes(ConsumerKeyMatch, RealmMatch, Expiration)}],
     case cloudi_service_db_riak:new(Dispatcher, Name,
                                     Key, Value, Options, Timeout) of
-        {ok, _, _} ->
+        {{ok, _, _}, Dispatcher} ->
             ok;
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -410,14 +410,14 @@ riak_token_request_find(Dispatcher, Database, TokenRequest, Timeout) ->
     Name = Database ++ ?RIAK_BUCKET_TOKEN_REQUEST,
     Key = match_value(TokenRequest),
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
-        {ok, Key, Value} ->
+        {{ok, Key, Value}, Dispatcher} ->
             JSON = cloudi_x_jsx:decode(Value),
             {_, CallbackURL} = lists:keyfind(<<"callback_url">>, 1, JSON),
             {_, CallbackQS} = lists:keyfind(<<"callback_qs">>, 1, JSON),
             {ok, CallbackURL, CallbackQS};
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             {error, not_found};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -427,7 +427,7 @@ riak_token_request_update(Dispatcher, Database, TokenRequest,
     Key = match_value(TokenRequest),
     case cloudi_service_db_riak:get(Dispatcher, Name, Key,
                                     [{object, true}], Timeout) of
-        {ok, Key, Object} ->
+        {{ok, Key, Object}, Dispatcher} ->
             case cloudi_service_db_riak:object_value(Object) of
                 {ok, Key, Value} ->
                     {TokenRequest, TokenRequestSecret,
@@ -443,9 +443,9 @@ riak_token_request_update(Dispatcher, Database, TokenRequest,
                                                                      NewValue),
                     case cloudi_service_db_riak:put(Dispatcher, Name,
                                                     NewObject, Timeout) of
-                        {ok, _, _} ->
+                        {{ok, _, _}, Dispatcher} ->
                             ok;
-                        {error, _} = Error ->
+                        {{error, _} = Error, Dispatcher} ->
                             Error
                     end;
                 {siblings, _, _} ->
@@ -453,9 +453,9 @@ riak_token_request_update(Dispatcher, Database, TokenRequest,
                 {error, _} = Error ->
                     Error
             end;
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             {error, not_found};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -467,7 +467,7 @@ riak_token_request_verify(Dispatcher, Database,
     TokenRequestMatch = match_value(TokenRequest),
     Key = TokenRequestMatch,
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
-        {ok, Key, Value} ->
+        {{ok, Key, Value}, Dispatcher} ->
             ConsumerKeyMatch = match_value(ConsumerKey),
             RealmMatch = match_realm(Realm),
             SignatureMethodMatch = match_value(SignatureMethod),
@@ -486,11 +486,11 @@ riak_token_request_verify(Dispatcher, Database,
                 _ ->
                     {error, not_found}
             end;
-        {siblings, _, _} ->
+        {{siblings, _, _}, Dispatcher} ->
             {error, siblings};
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             {error, not_found};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -499,9 +499,9 @@ riak_token_request_delete(Dispatcher, Database, TokenRequest, Timeout) ->
     Key = match_value(TokenRequest),
     case cloudi_service_db_riak:delete(Dispatcher, Name,
                                        Key, Timeout) of
-        ok ->
+        {ok, Dispatcher} ->
             ok;
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -526,9 +526,9 @@ riak_token_access_store(Dispatcher, Database,
                 token_indexes(ConsumerKeyMatch, RealmMatch, Expiration)}],
     case cloudi_service_db_riak:new(Dispatcher, Name,
                                     Key, Value, Options, Timeout) of
-        {ok, _, _} ->
+        {{ok, _, _}, Dispatcher} ->
             ok;
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -539,7 +539,7 @@ riak_token_access_verify(Dispatcher, Database,
     TokenAccessMatch = match_value(TokenAccess),
     Key = TokenAccessMatch,
     case cloudi_service_db_riak:get(Dispatcher, Name, Key, Timeout) of
-        {ok, Key, Value} ->
+        {{ok, Key, Value}, Dispatcher} ->
             ConsumerKeyMatch = match_value(ConsumerKey),
             RealmMatch = match_realm(Realm),
             SignatureMethodMatch = match_value(SignatureMethod),
@@ -557,11 +557,11 @@ riak_token_access_verify(Dispatcher, Database,
                 _ ->
                     {error, not_found}
             end;
-        {siblings, _, _} ->
+        {{siblings, _, _}, Dispatcher} ->
             {error, siblings};
-        {error, notfound} ->
+        {{error, notfound}, Dispatcher} ->
             {error, not_found};
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 

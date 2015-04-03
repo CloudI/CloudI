@@ -61,7 +61,7 @@
 %%%
 %%% @author Irina Guberman <irina.guberman@gmail.com>
 %%% @copyright 2014 Irina Guberman
-%%% @version 1.4.0 {@date} {@time}
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 -module(cloudi_service_db_cassandra_cql).
 -author("irinaguberman").
@@ -83,7 +83,8 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_x_erlcql/include/cloudi_x_erlcql.hrl").
 
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
 
 -record(state,
     {
@@ -96,14 +97,6 @@
 -type query() :: binary() | string().
 
 -type query_definition() :: {QueryName :: cql_name(), Query :: query()}.
-
--type args() ::
-    [{service_name, ServiceName :: service_name() } |
-     {connection_options, ConnectionOptions :: connection_options() } |
-     {consistency, Consistency :: consistency()}
-     ].
-
--type service_name() :: {service_name, ServiceName :: string()}.
 
 -type connection_options() ::
     {connection_options,
@@ -124,9 +117,17 @@
          {tracing, Tracing :: boolean()} |
          {parent, Parent :: pid()}
          ]}.
+-type args() ::
+    [{service_name, ServiceName :: service_name() } |
+     {connection_options, ConnectionOptions :: connection_options() } |
+     {consistency, Consistency :: consistency()}
+     ].
+-export_type([connection_options/0,
+              args/0]).
 
--type cloudi_cql_response() ::
-    response() | {error, Reason :: cloudi:error_reason_sync()}.
+-type external_response() ::
+    {response(), NewAgent :: agent()} |
+    {{error, Reason :: cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
 -type cql_request() :: {cql_name(), values()} |
                        {cql_name(), values(), consistency()} |
@@ -140,38 +141,32 @@
 %%% Query: valid CQL query
 %%% QueryName: prepared query id
 
--spec execute_query(dispatcher(), string(), query()) ->
-    cloudi_cql_response().
-execute_query(Dispatcher, Name, Query) ->
-    clean_response(cloudi:send_sync(Dispatcher, Name, {as_binary(Query)})).
+-spec execute_query(agent(), service_name(), query()) ->
+    external_response().
+execute_query(Agent, Name, Query) ->
+    handle_response(cloudi:send_sync(Agent, Name, {as_binary(Query)})).
 
--spec execute_query(dispatcher(), string(), query(), consistency()) ->
-    cloudi_cql_response().
-execute_query(Dispatcher, Name, Query, Consistency) ->
-    clean_response(cloudi:send_sync(Dispatcher, Name,
-                                    {as_binary(Query), Consistency})).
+-spec execute_query(agent(), service_name(), query(), consistency()) ->
+    external_response().
+execute_query(Agent, Name, Query, Consistency) ->
+    handle_response(cloudi:send_sync(Agent, Name,
+                                     {as_binary(Query), Consistency})).
 
--spec execute_prepared_query(dispatcher(), string(), cql_name(), values()) ->
-    cloudi_cql_response().
-execute_prepared_query(Dispatcher, Name, QueryName, Values) ->
-    clean_response(cloudi:send_sync(Dispatcher, Name, {QueryName, Values})).
+-spec execute_prepared_query(agent(), service_name(), cql_name(), values()) ->
+    external_response().
+execute_prepared_query(Agent, Name, QueryName, Values) ->
+    handle_response(cloudi:send_sync(Agent, Name, {QueryName, Values})).
 
--spec execute_prepared_query(dispatcher(), string(), cql_name(),
+-spec execute_prepared_query(agent(), service_name(), cql_name(),
                              values(), consistency()) ->
-    cloudi_cql_response().
-execute_prepared_query(Dispatcher, Name, QueryName, Values, Consistency) ->
-    clean_response(cloudi:send_sync(Dispatcher, Name,
-                                    {QueryName, Values, Consistency})).
+    external_response().
+execute_prepared_query(Agent, Name, QueryName, Values, Consistency) ->
+    handle_response(cloudi:send_sync(Agent, Name,
+                                     {QueryName, Values, Consistency})).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
-
--spec cloudi_service_init(Args :: args(),
-                          _Prefix :: cloudi_service:service_name_pattern(),
-                          _Timeout :: cloudi_service_api:timeout_milliseconds(),
-                          Dispatcher :: dispatcher()) ->
-    {ok, #state{}}.
 
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     [{service_name, ServiceName},
@@ -191,8 +186,8 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
 
     Response = handle_request(ClientPid, Request, Consistency),
 
-    ?DEBUG("Response ~p from erlcql_client for Request ~p",
-           [Response, Request]),
+    ?LOG_DEBUG("Response ~p from erlcql_client for Request ~p",
+               [Response, Request]),
 
     {reply, Response, State}.
 
@@ -237,11 +232,13 @@ handle_request(ClientPid, Request, DefaultConsistency)->
             Response
     end.
 
-clean_response(CloudiResponse)->
-    ?DEBUG("Got response: ~p", [CloudiResponse]),
-    ?DEBUG("Got response: ~p", [CloudiResponse]),
-    case CloudiResponse of {ok, ErlcqlResp} -> ErlcqlResp;
-        _-> CloudiResponse
+handle_response(Result)->
+    ?LOG_DEBUG("Got response: ~p", [Result]),
+    case Result of
+        {{ok, ErlcqlResponse}, Agent} ->
+            {ErlcqlResponse, Agent};
+        {{error, _}, _} -> 
+            Result
     end.
 
 as_binary(Query) when is_binary(Query) -> Query;

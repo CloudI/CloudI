@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -322,22 +322,24 @@ socket_loop_init(DestinationConnect,
                                request_info = RequestInfo} = StateSocket) ->
     receive
         {init, ok} ->
-            if
+            NewStateSocket = if
                 is_list(DestinationConnect) ->
                     case send_sync_minimal(Dispatcher, Context,
                                            DestinationConnect, RequestInfo,
                                            <<"CONNECT">>, self()) of
-                        {ok, ResponseInfo, Response} ->
+                        {{ok, ResponseInfo, Response}, NewContext} ->
                             socket_response_info_check(Socket, ResponseInfo),
-                            socket_send(Response, StateSocket);
-                        {error, timeout} ->
-                            socket_send(<<>>, StateSocket)
+                            socket_send(Response, StateSocket),
+                            StateSocket#state_socket{context = NewContext};
+                        {{error, timeout}, NewContext} ->
+                            socket_send(<<>>, StateSocket),
+                            StateSocket#state_socket{context = NewContext}
                     end;
                 true ->
-                    ok
+                    StateSocket
             end,
             ok = inet:setopts(Socket, [{active, once}]),
-            socket_loop(StateSocket);
+            socket_loop(NewStateSocket);
         {init, Error} ->
             socket_loop_terminate(Error, StateSocket)
     end.
@@ -350,16 +352,19 @@ socket_loop(#state_socket{socket = Socket,
                           request_info = RequestInfo} = StateSocket) ->
     receive
         {tcp, Socket, Request} ->
-            case send_sync_minimal(Dispatcher, Context, Destination,
-                                   RequestInfo, Request, self()) of
-                {ok, ResponseInfo, Response} ->
+            NewStateSocket = case send_sync_minimal(Dispatcher, Context,
+                                                    Destination, RequestInfo,
+                                                    Request, self()) of
+                {{ok, ResponseInfo, Response}, NewContext} ->
                     socket_response_info_check(Socket, ResponseInfo),
-                    socket_send(Response, StateSocket);
-                {error, timeout} ->
-                    socket_send(<<>>, StateSocket)
+                    socket_send(Response, StateSocket),
+                    StateSocket#state_socket{context = NewContext};
+                {{error, timeout}, NewContext} ->
+                    socket_send(<<>>, StateSocket),
+                    StateSocket#state_socket{context = NewContext}
             end,
             ok = inet:setopts(Socket, [{active, once}]),
-            socket_loop(StateSocket);
+            socket_loop(NewStateSocket);
         {tcp_closed, Socket} ->
             socket_loop_terminate(normal, StateSocket)
     after

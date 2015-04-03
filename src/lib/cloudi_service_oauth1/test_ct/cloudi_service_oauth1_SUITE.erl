@@ -197,7 +197,7 @@ end_per_testcase(_TestCase, Config) ->
 
 t_example_without_db_1(_Config) ->
     % OAuth requests based on http://tools.ietf.org/html/rfc5849#section-1.2
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
 
     % (HTTPS from http://tools.ietf.org/html/rfc5849#section-1.2 #1)
     % POST /initiate HTTP/1.1
@@ -233,9 +233,10 @@ t_example_without_db_1(_Config) ->
     Response1 = <<"oauth_token=hh5s93j4hdidpola&"
                   "oauth_token_secret=hdhd0244k9j7ao03&"
                   "oauth_callback_confirmed=true">>,
-    {ok, ResponseInfo1, Response1} = cloudi:send_sync(Context, Name1,
-                                                      RequestInfo1, Request1,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo1, Response1},
+     Context1} = cloudi:send_sync(Context0, Name1,
+                                  RequestInfo1, Request1,
+                                  undefined, undefined),
 
     % (HTTPS from http://tools.ietf.org/html/rfc5849#section-1.2 #2)
     % https://photos.example.net/authorize?oauth_token=hh5s93j4hdidpola
@@ -253,9 +254,10 @@ t_example_without_db_1(_Config) ->
          <<"http://printer.example.com/ready?"
            "oauth_token=hh5s93j4hdidpola&oauth_verifier=hfdp7dh39dks9884">>}],
     Response2 = <<>>,
-    {ok, ResponseInfo2, Response2} = cloudi:send_sync(Context, Name2,
-                                                      RequestInfo2, Request2,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo2, Response2},
+     Context2} = cloudi:send_sync(Context1, Name2,
+                                  RequestInfo2, Request2,
+                                  undefined, undefined),
 
     % (HTTPS from http://tools.ietf.org/html/rfc5849#section-1.2 #3)
     % POST /token HTTP/1.1
@@ -291,14 +293,15 @@ t_example_without_db_1(_Config) ->
         {<<"content-type">>, <<"application/x-www-form-urlencoded">>}],
     Response3 = <<"oauth_token=nnch734d00sl2jdk&"
                   "oauth_token_secret=pfkkdhi9sl3r4s00">>,
-    {ok, ResponseInfo3, Response3} = cloudi:send_sync(Context, Name3,
-                                                      RequestInfo3, Request3,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo3, Response3},
+     _} = cloudi:send_sync(Context2, Name3,
+                           RequestInfo3, Request3,
+                           undefined, undefined),
     ok.
 
 t_example_without_db_2(_Config) ->
     % OAuth requests based on http://tools.ietf.org/html/rfc5849#section-1.2
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
 
     % (HTTP from http://tools.ietf.org/html/rfc5849#section-1.2 #4)
     % GET /photos?file=vacation.jpg&size=original HTTP/1.1
@@ -329,14 +332,15 @@ t_example_without_db_2(_Config) ->
         {<<"content-disposition">>,
          <<"attachment; filename=\"vacation.jpg\"">>}],
     Response4 = <<"PHOTO_DATA">>,
-    {ok, ResponseInfo4, Response4} = cloudi:send_sync(Context, Name4,
-                                                      RequestInfo4, Request4,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo4, Response4},
+     _} = cloudi:send_sync(Context0, Name4,
+                           RequestInfo4, Request4,
+                           undefined, undefined),
     ok.
 
 t_example_with_db_1(_Config) ->
     % OAuth requests based on http://tools.ietf.org/html/rfc5849#section-1.2
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
 
     Consumer = {"dpf43f3p2l4k3l03", "kd94hf93k423kf44", hmac_sha1},
 
@@ -371,9 +375,10 @@ t_example_with_db_1(_Config) ->
     % oauth_callback_confirmed=true
     ResponseInfo1 = [
         {<<"content-type">>, <<"application/x-www-form-urlencoded">>}],
-    {ok, ResponseInfo1, Response1} = cloudi:send_sync(Context, Name1,
-                                                      RequestInfo1, Request1,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo1, Response1},
+     Context1} = cloudi:send_sync(Context0, Name1,
+                                  RequestInfo1, Request1,
+                                  undefined, undefined),
     [TokenRequest, TokenRequestSecret] = token_data(Response1),
 
     % (HTTPS from http://tools.ietf.org/html/rfc5849#section-1.2 #2)
@@ -387,9 +392,10 @@ t_example_with_db_1(_Config) ->
     % http://printer.example.com/ready?
     % oauth_token=hh5s93j4hdidpola&oauth_verifier=hfdp7dh39dks9884
     Response2 = <<>>,
-    {ok, ResponseInfo2, Response2} = cloudi:send_sync(Context, Name2,
-                                                      RequestInfo2, Request2,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo2, Response2},
+     Context2} = cloudi:send_sync(Context1, Name2,
+                                  RequestInfo2, Request2,
+                                  undefined, undefined),
     [{<<"status">>, <<"302">>},
      {<<"location">>, AuthorizeLocation}] = ResponseInfo2,
     Verifier = location_verifier(AuthorizeLocation,
@@ -442,9 +448,10 @@ t_example_with_db_1(_Config) ->
     % oauth_token=nnch734d00sl2jdk&oauth_token_secret=pfkkdhi9sl3r4s00
     ResponseInfo3 = [
         {<<"content-type">>, <<"application/x-www-form-urlencoded">>}],
-    {ok, ResponseInfo3, Response3} = cloudi:send_sync(Context, Name3,
-                                                      RequestInfo3, Request3,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo3, Response3},
+     Context3} = cloudi:send_sync(Context2, Name3,
+                                  RequestInfo3, Request3,
+                                  undefined, undefined),
     [TokenAccess, TokenAccessSecret] = token_data(Response3),
 
     Signature4 = erlang:list_to_binary(cloudi_service_oauth1_data:signature(
@@ -494,17 +501,19 @@ t_example_with_db_1(_Config) ->
         {<<"content-disposition">>,
          <<"attachment; filename=\"vacation.jpg\"">>}],
     Response4 = <<"PHOTO_DATA">>,
-    {ok, ResponseInfo4, Response4} = cloudi:send_sync(Context, Name4,
-                                                      RequestInfo4, Request4,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo4, Response4},
+     Context4} = cloudi:send_sync(Context3, Name4,
+                                  RequestInfo4, Request4,
+                                  undefined, undefined),
 
     timer:sleep(3000), % wait for the access token to expire
     ResponseInfo5 = [{<<"status">>,<<"401">>},
                      {<<"www-authenticate">>,<<"OAuth">>}],
     Response5 = <<>>,
-    {ok, ResponseInfo5, Response5} = cloudi:send_sync(Context, Name4,
-                                                      RequestInfo4, Request4,
-                                                      undefined, undefined),
+    {{ok, ResponseInfo5, Response5},
+     _} = cloudi:send_sync(Context4, Name4,
+                           RequestInfo4, Request4,
+                           undefined, undefined),
     ok.
 
 %%%------------------------------------------------------------------------

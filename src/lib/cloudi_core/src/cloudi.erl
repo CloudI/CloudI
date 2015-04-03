@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -164,8 +164,10 @@
          {groups_scope, atom()} |
          {groups_static, boolean()}).
 -type context() :: #cloudi_context{}.
+-type agent() :: context() | cloudi_service:dispatcher().
 -export_type([options/0,
-              context/0]).
+              context/0,
+              agent/0]).
 
 % only relevant to service modules, but some people just want the shorter names
 -type request_type() :: cloudi_service:request_type().
@@ -183,7 +185,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 -spec new() ->
-    #cloudi_context{}.
+    context().
 
 new() ->
     new([]).
@@ -197,7 +199,7 @@ new() ->
 %% @end
 %%-------------------------------------------------------------------------
 -spec new(Options :: options()) ->
-    #cloudi_context{}.
+    context().
 
 new(Options)
     when is_list(Options) ->
@@ -319,11 +321,11 @@ new(Options)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Refresh destination lookup data.===
-%% Must be called if using a lazy destination refresh method.
-%% The {cloudi_cpg_data, Groups} message must be received and processed
+%% Called when using a lazy destination refresh method.
+%% The {cloudi_cpg_data, Groups} message is stored and processed
 %% by this function.  However, if it isn't processed, the other function
-%% calls will attempt to update the Context based on any pending
-%% destination refresh messages that haven't yet been received.
+%% calls will update the Context based on any pending destination refresh
+%% messages.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -345,14 +347,14 @@ destinations_refresh(#cloudi_context{
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_pid(Context :: context() | cloudi_service:dispatcher(),
+-spec get_pid(Context :: agent(),
               Name :: service_name()) ->
-    {ok, PatternPid :: pattern_pid()} |
-    {error, Reason :: error_reason()}.
+    {{ok, PatternPid :: pattern_pid()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 get_pid(Dispatcher, Name)
     when is_pid(Dispatcher) ->
-    cloudi_service:get_pid(Dispatcher, Name);
+    {cloudi_service:get_pid(Dispatcher, Name), Dispatcher};
 
 get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context, Name) ->
     get_pid(Context, Name, DefaultTimeoutSync).
@@ -363,15 +365,15 @@ get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context, Name) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_pid(Context :: context() | cloudi_service:dispatcher(),
+-spec get_pid(Context :: agent(),
               Name :: service_name(),
               Timeout :: timeout_milliseconds()) ->
-    {ok, PatternPid :: pattern_pid()} |
-    {error, Reason :: error_reason()}.
+    {{ok, PatternPid :: pattern_pid()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 get_pid(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:get_pid(Dispatcher, Name, Timeout);
+    {cloudi_service:get_pid(Dispatcher, Name, Timeout), Dispatcher};
 
 get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
         Name, undefined) ->
@@ -413,14 +415,14 @@ get_pid(#cloudi_context{} = Context, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_pids(Context :: context() | cloudi_service:dispatcher(),
+-spec get_pids(Context :: agent(),
                Name :: service_name()) ->
-    {ok, PatternPids :: list(pattern_pid())} |
-    {error, Reason :: error_reason()}.
+    {{ok, PatternPids :: list(pattern_pid())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 get_pids(Dispatcher, Name)
     when is_pid(Dispatcher) ->
-    cloudi_service:get_pids(Dispatcher, Name);
+    {cloudi_service:get_pids(Dispatcher, Name), Dispatcher};
 
 get_pids(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context, Name) ->
     get_pids(Context, Name, DefaultTimeoutSync).
@@ -431,15 +433,15 @@ get_pids(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context, Name) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_pids(Context :: context() | cloudi_service:dispatcher(),
+-spec get_pids(Context :: agent(),
                Name :: service_name(),
                Timeout :: timeout_milliseconds()) ->
-    {ok, PatternPids :: list(pattern_pid())} |
-    {error, Reason :: error_reason()}.
+    {{ok, PatternPids :: list(pattern_pid())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 get_pids(Dispatcher, Name, Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:get_pids(Dispatcher, Name, Timeout);
+    {cloudi_service:get_pids(Dispatcher, Name, Timeout), Dispatcher};
 
 get_pids(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
          Name, undefined) ->
@@ -480,15 +482,15 @@ get_pids(#cloudi_context{} = Context, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async(Context :: agent(),
                  Name :: service_name(),
                  Request :: request()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_async(Dispatcher, Name, Request);
+    {cloudi_service:send_async(Dispatcher, Name, Request), Dispatcher};
 
 send_async(Context, Name, Request) ->
     send_async(Context, Name, <<>>, Request,
@@ -500,16 +502,17 @@ send_async(Context, Name, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async(Context :: agent(),
                  Name :: service_name(),
                  Request :: request(),
                  Timeout :: timeout_milliseconds()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_async(Dispatcher, Name, Request, Timeout);
+    {cloudi_service:send_async(Dispatcher, Name, Request,
+                               Timeout), Dispatcher};
 
 send_async(Context, Name, Request, Timeout) ->
     send_async(Context, Name, <<>>, Request,
@@ -521,17 +524,18 @@ send_async(Context, Name, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async(Context :: agent(),
                  Name :: service_name(),
                  Request :: request(),
                  Timeout :: timeout_milliseconds(),
                  PatternPid :: pattern_pid() | undefined) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async(Dispatcher, Name, Request, Timeout, PatternPid)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_async(Dispatcher, Name, Request, Timeout, PatternPid);
+    {cloudi_service:send_async(Dispatcher, Name, Request,
+                               Timeout, PatternPid), Dispatcher};
 
 send_async(Context, Name, Request, Timeout, PatternPid) ->
     send_async(Context, Name, <<>>, Request,
@@ -543,20 +547,20 @@ send_async(Context, Name, Request, Timeout, PatternPid) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async(Context :: agent(),
                  Name :: service_name(),
                  RequestInfo :: request_info(),
                  Request :: request(),
                  Timeout :: timeout_milliseconds(),
                  Priority :: priority()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, Priority)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_async(Dispatcher, Name, RequestInfo, Request,
-                              Timeout, Priority);
+    {cloudi_service:send_async(Dispatcher, Name, RequestInfo, Request,
+                               Timeout, Priority), Dispatcher};
 
 send_async(Context, Name, RequestInfo, Request,
            Timeout, Priority) ->
@@ -569,21 +573,21 @@ send_async(Context, Name, RequestInfo, Request,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async(Context :: agent(),
                  Name :: service_name(),
                  RequestInfo :: request_info(),
                  Request :: request(),
                  Timeout :: timeout_milliseconds(),
                  Priority :: priority(),
                  PatternPid :: pattern_pid() | undefined) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, Priority, PatternPid)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_async(Dispatcher, Name, RequestInfo, Request,
-                              Timeout, Priority, PatternPid);
+    {cloudi_service:send_async(Dispatcher, Name, RequestInfo, Request,
+                               Timeout, Priority, PatternPid), Dispatcher};
 
 send_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
            Name, RequestInfo, Request,
@@ -642,11 +646,11 @@ send_async(#cloudi_context{receiver = Receiver,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
-    result(Context, {ok, TransId}).
+    result(Context#cloudi_context{uuid_generator = NewUUID}, {ok, TransId}).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -656,11 +660,11 @@ send_async(#cloudi_context{receiver = Receiver,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async_passive(Context :: agent(),
                          Name :: service_name(),
                          Request :: request()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async_passive(Context, Name, Request) ->
     send_async(Context, Name, Request).
@@ -673,12 +677,12 @@ send_async_passive(Context, Name, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async_passive(Context :: agent(),
                          Name :: service_name(),
                          Request :: request(),
                          Timeout :: timeout_milliseconds()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async_passive(Context, Name, Request, Timeout) ->
     send_async(Context, Name, Request, Timeout).
@@ -691,13 +695,13 @@ send_async_passive(Context, Name, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async_passive(Context :: agent(),
                          Name :: service_name(),
                          Request :: request(),
                          Timeout :: timeout_milliseconds(),
                          PatternPid :: pattern_pid() | undefined) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async_passive(Context, Name, Request, Timeout, PatternPid) ->
     send_async(Context, Name, Request, Timeout, PatternPid).
@@ -710,14 +714,14 @@ send_async_passive(Context, Name, Request, Timeout, PatternPid) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async_passive(Context :: agent(),
                          Name :: service_name(),
                          RequestInfo :: request_info(),
                          Request :: request(),
                          Timeout :: timeout_milliseconds(),
                          Priority :: priority()) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async_passive(Context, Name, RequestInfo, Request,
                    Timeout, Priority) ->
@@ -732,15 +736,15 @@ send_async_passive(Context, Name, RequestInfo, Request,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec send_async_passive(Context :: agent(),
                          Name :: service_name(),
                          RequestInfo :: request_info(),
                          Request :: request(),
                          Timeout :: timeout_milliseconds(),
                          Priority :: priority(),
                          PatternPid :: pattern_pid() | undefined) ->
-    {ok, TransId :: trans_id()} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransId :: trans_id()} |
+     {error, Reason :: error_reason()}, agent()}.
 
 send_async_passive(Context, Name, RequestInfo, Request,
                    Timeout, Priority, PatternPid) ->
@@ -753,16 +757,16 @@ send_async_passive(Context, Name, RequestInfo, Request,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_sync(Context :: context() | cloudi_service:dispatcher(),
+-spec send_sync(Context :: agent(),
                 Name :: service_name(),
                 Request :: request()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response()} |
-    {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response()} |
+     {ok, Response :: response()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 send_sync(Dispatcher, Name, Request)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_sync(Dispatcher, Name, Request);
+    {cloudi_service:send_sync(Dispatcher, Name, Request), Dispatcher};
 
 send_sync(Context, Name, Request) ->
     send_sync(Context, Name, <<>>, Request,
@@ -774,17 +778,18 @@ send_sync(Context, Name, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_sync(Context :: context() | cloudi_service:dispatcher(),
+-spec send_sync(Context :: agent(),
                 Name :: service_name(),
                 Request :: request(),
                 Timeout :: timeout_milliseconds()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response()} |
-    {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response()} |
+     {ok, Response :: response()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 send_sync(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_sync(Dispatcher, Name, Request, Timeout);
+    {cloudi_service:send_sync(Dispatcher, Name, Request,
+                              Timeout), Dispatcher};
 
 send_sync(Context, Name, Request, Timeout) ->
     send_sync(Context, Name, <<>>, Request,
@@ -796,18 +801,19 @@ send_sync(Context, Name, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_sync(Context :: context() | cloudi_service:dispatcher(),
+-spec send_sync(Context :: agent(),
                 Name :: service_name(),
                 Request :: request(),
                 Timeout :: timeout_milliseconds(),
                 PatternPid :: pattern_pid() | undefined) ->
-    {ok, ResponseInfo :: response_info(), Response :: response()} |
-    {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response()} |
+     {ok, Response :: response()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_sync(Dispatcher, Name, Request, Timeout, PatternPid);
+    {cloudi_service:send_sync(Dispatcher, Name, Request,
+                              Timeout, PatternPid), Dispatcher};
 
 send_sync(Context, Name, Request, Timeout, PatternPid) ->
     send_sync(Context, Name, <<>>, Request,
@@ -819,21 +825,21 @@ send_sync(Context, Name, Request, Timeout, PatternPid) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_sync(Context :: context() | cloudi_service:dispatcher(),
+-spec send_sync(Context :: agent(),
                 Name :: service_name(),
                 RequestInfo :: request_info(),
                 Request :: request(),
                 Timeout :: timeout_milliseconds(),
                 Priority :: priority()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response()} |
-    {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response()} |
+     {ok, Response :: response()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_sync(Dispatcher, Name, RequestInfo, Request,
-                             Timeout, Priority);
+    {cloudi_service:send_sync(Dispatcher, Name, RequestInfo, Request,
+                              Timeout, Priority), Dispatcher};
 
 send_sync(Context, Name, RequestInfo, Request,
           Timeout, Priority) ->
@@ -846,22 +852,22 @@ send_sync(Context, Name, RequestInfo, Request,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec send_sync(Context :: context() | cloudi_service:dispatcher(),
+-spec send_sync(Context :: agent(),
                 Name :: service_name(),
                 RequestInfo :: request_info(),
                 Request :: request(),
                 Timeout :: timeout_milliseconds(),
                 Priority :: priority(),
                 PatternPid :: pattern_pid() | undefined) ->
-    {ok, ResponseInfo :: response_info(), Response :: response()} |
-    {ok, Response :: response()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response()} |
+     {ok, Response :: response()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 send_sync(Dispatcher, Name, RequestInfo, Request,
           Timeout, Priority, PatternPid)
     when is_pid(Dispatcher) ->
-    cloudi_service:send_sync(Dispatcher, Name, RequestInfo, Request,
-                             Timeout, Priority, PatternPid);
+    {cloudi_service:send_sync(Dispatcher, Name, RequestInfo, Request,
+                              Timeout, Priority, PatternPid), Dispatcher};
 
 send_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
           Name, RequestInfo, Request,
@@ -920,11 +926,12 @@ send_sync(#cloudi_context{receiver = Receiver,
     when is_list(Name), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Receiver},
-    send_sync_receive(Context, Timeout, TransId).
+    send_sync_receive(Context#cloudi_context{uuid_generator = NewUUID},
+                      Timeout, TransId).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -934,15 +941,15 @@ send_sync(#cloudi_context{receiver = Receiver,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async(Context :: agent(),
                   Name :: service_name(),
                   Request :: request()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async(Dispatcher, Name, Request)
     when is_pid(Dispatcher) ->
-    cloudi_service:mcast_async(Dispatcher, Name, Request);
+    {cloudi_service:mcast_async(Dispatcher, Name, Request), Dispatcher};
 
 mcast_async(Context, Name, Request) ->
     mcast_async(Context, Name, <<>>, Request,
@@ -956,16 +963,17 @@ mcast_async(Context, Name, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async(Context :: agent(),
                   Name :: service_name(),
                   Request :: request(),
                   Timeout :: timeout_milliseconds()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async(Dispatcher, Name, Request, Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:mcast_async(Dispatcher, Name, Request, Timeout);
+    {cloudi_service:mcast_async(Dispatcher, Name, Request,
+                                Timeout), Dispatcher};
 
 mcast_async(Context, Name, Request, Timeout) ->
     mcast_async(Context, Name, <<>>, Request,
@@ -979,20 +987,20 @@ mcast_async(Context, Name, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async(Context :: agent(),
                   Name :: service_name(),
                   RequestInfo :: request_info(),
                   Request :: request(),
                   Timeout :: timeout_milliseconds(),
                   Priority :: priority()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async(Dispatcher, Name, RequestInfo, Request,
             Timeout, Priority)
     when is_pid(Dispatcher) ->
-    cloudi_service:mcast_async(Dispatcher, Name, RequestInfo, Request,
-                               Timeout, Priority);
+    {cloudi_service:mcast_async(Dispatcher, Name, RequestInfo, Request,
+                                Timeout, Priority), Dispatcher};
 
 mcast_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
             Name, RequestInfo, Request, undefined, Priority) ->
@@ -1019,8 +1027,6 @@ mcast_async(#cloudi_context{} = Context,
         dest_refresh = DestRefresh,
         request_name_lookup = RequestNameLookup,
         scope = Scope,
-        receiver = Receiver,
-        uuid_generator = UUID,
         cpg_data = Groups} = NewContext,
     case destination_all(DestRefresh, Scope, Name, Groups,
                          Timeout + ?TIMEOUT_DELTA) of
@@ -1037,14 +1043,9 @@ mcast_async(#cloudi_context{} = Context,
         {error, _} ->
             result(NewContext, {error, timeout});
         {ok, Pattern, PidList} ->
-            TransIdList = lists:map(fun(Pid) ->
-                TransId = cloudi_x_uuid:get_v1(UUID),
-                Pid ! {'cloudi_service_send_async',
-                       Name, Pattern, RequestInfo, Request,
-                       Timeout, Priority, TransId, Receiver},
-                TransId
-            end, PidList),
-            result(NewContext, {ok, TransIdList})
+            mcast_async_pids(NewContext, [], PidList,
+                             Name, Pattern, RequestInfo, Request,
+                             Timeout, Priority)
     end.
 
 %%-------------------------------------------------------------------------
@@ -1055,11 +1056,11 @@ mcast_async(#cloudi_context{} = Context,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async_passive(Context :: agent(),
                           Name :: service_name(),
                           Request :: request()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async_passive(Context, Name, Request) ->
     mcast_async(Context, Name, Request).
@@ -1072,12 +1073,12 @@ mcast_async_passive(Context, Name, Request) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async_passive(Context :: agent(),
                           Name :: service_name(),
                           Request :: request(),
                           Timeout :: timeout_milliseconds()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async_passive(Context, Name, Request, Timeout) ->
     mcast_async(Context, Name, Request, Timeout).
@@ -1090,14 +1091,14 @@ mcast_async_passive(Context, Name, Request, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mcast_async_passive(Context :: context() | cloudi_service:dispatcher(),
+-spec mcast_async_passive(Context :: agent(),
                           Name :: service_name(),
                           RequestInfo :: request_info(),
                           Request :: request(),
                           Timeout :: timeout_milliseconds(),
                           Priority :: priority()) ->
-    {ok, TransIdList :: list(trans_id())} |
-    {error, Reason :: error_reason()}.
+    {{ok, TransIdList :: list(trans_id())} |
+     {error, Reason :: error_reason()}, agent()}.
 
 mcast_async_passive(Context, Name, RequestInfo, Request,
                     Timeout, Priority) ->
@@ -1112,14 +1113,14 @@ mcast_async_passive(Context, Name, RequestInfo, Request,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec recv_async(Context :: context() | cloudi_service:dispatcher()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response(),
-     TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+-spec recv_async(Context :: agent()) ->
+    {{ok, ResponseInfo :: response_info(), Response :: response(),
+      TransId :: trans_id()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 recv_async(Dispatcher)
     when is_pid(Dispatcher) ->
-    cloudi_service:recv_async(Dispatcher);
+    {cloudi_service:recv_async(Dispatcher), Dispatcher};
 
 recv_async(Context) ->
     recv_async(Context, undefined, <<0:128>>).
@@ -1133,15 +1134,15 @@ recv_async(Context) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec recv_async(Context :: context() | cloudi_service:dispatcher(),
+-spec recv_async(Context :: agent(),
                  trans_id() | timeout_milliseconds()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response(),
-     TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response(),
+      TransId :: trans_id()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 recv_async(Dispatcher, TransId_Timeout)
     when is_pid(Dispatcher) ->
-    cloudi_service:recv_async(Dispatcher, TransId_Timeout);
+    {cloudi_service:recv_async(Dispatcher, TransId_Timeout), Dispatcher};
 
 recv_async(Context, TransId)
     when is_binary(TransId) ->
@@ -1166,16 +1167,16 @@ recv_async(Context, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec recv_async(Context :: context() | cloudi_service:dispatcher(),
+-spec recv_async(Context :: agent(),
                  Timeout :: timeout_milliseconds(),
                  TransId :: trans_id()) ->
-    {ok, ResponseInfo :: response_info(), Response :: response(),
-     TransId :: trans_id()} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, ResponseInfo :: response_info(), Response :: response(),
+      TransId :: trans_id()} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher) ->
-    cloudi_service:recv_async(Dispatcher, Timeout, TransId);
+    {cloudi_service:recv_async(Dispatcher, Timeout, TransId), Dispatcher};
 
 recv_async(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
            undefined, TransId) ->
@@ -1214,15 +1215,15 @@ recv_async(#cloudi_context{receiver = Receiver} = Context,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec recv_asyncs(Context :: context() | cloudi_service:dispatcher(),
+-spec recv_asyncs(Context :: agent(),
                   TransIdList :: list(trans_id())) ->
-    {ok, list({ResponseInfo :: response_info(), Response :: response(),
-               TransId :: trans_id()})} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, list({ResponseInfo :: response_info(), Response :: response(),
+                TransId :: trans_id()})} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 recv_asyncs(Dispatcher, TransIdList)
     when is_pid(Dispatcher) ->
-    cloudi_service:recv_asyncs(Dispatcher, TransIdList);
+    {cloudi_service:recv_asyncs(Dispatcher, TransIdList), Dispatcher};
 
 recv_asyncs(Context, TransIdList) ->
     recv_asyncs(Context, undefined, TransIdList).
@@ -1233,16 +1234,16 @@ recv_asyncs(Context, TransIdList) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec recv_asyncs(Context :: context() | cloudi_service:dispatcher(),
+-spec recv_asyncs(Context :: agent(),
                   Timeout :: timeout_milliseconds(),
                   TransIdList :: list(trans_id())) ->
-    {ok, list({ResponseInfo :: response_info(), Response :: response(),
-               TransId :: trans_id()})} |
-    {error, Reason :: error_reason_sync()}.
+    {{ok, list({ResponseInfo :: response_info(), Response :: response(),
+                TransId :: trans_id()})} |
+     {error, Reason :: error_reason_sync()}, agent()}.
 
 recv_asyncs(Dispatcher, Timeout, TransIdList)
     when is_pid(Dispatcher) ->
-    cloudi_service:recv_asyncs(Dispatcher, Timeout, TransIdList);
+    {cloudi_service:recv_asyncs(Dispatcher, Timeout, TransIdList), Dispatcher};
 
 recv_asyncs(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
             undefined, TransIdList) ->
@@ -1271,7 +1272,7 @@ recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec timeout_async(Context :: context() | cloudi_service:dispatcher()) ->
+-spec timeout_async(Context :: agent()) ->
     TimeoutAsync :: cloudi_service_api:timeout_milliseconds().
 
 timeout_async(Dispatcher)
@@ -1287,7 +1288,7 @@ timeout_async(#cloudi_context{timeout_async = DefaultTimeoutAsync}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec timeout_sync(Context :: context() | cloudi_service:dispatcher()) ->
+-spec timeout_sync(Context :: agent()) ->
     TimeoutSync :: cloudi_service_api:timeout_milliseconds().
 
 timeout_sync(Dispatcher)
@@ -1303,7 +1304,7 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec timeout_max(Context :: context() | cloudi_service:dispatcher()) ->
+-spec timeout_max(Context :: agent()) ->
     TimeoutMax :: cloudi_service_api:timeout_milliseconds().
 
 timeout_max(Dispatcher)
@@ -1319,7 +1320,7 @@ timeout_max(#cloudi_context{}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec priority_default(Context :: context() | cloudi_service:dispatcher()) ->
+-spec priority_default(Context :: agent()) ->
     PriorityDefault :: cloudi_service_api:priority().
 
 priority_default(Dispatcher)
@@ -1335,8 +1336,7 @@ priority_default(#cloudi_context{priority_default = PriorityDefault}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec destination_refresh_immediate(Context :: context() |
-                                               cloudi_service:dispatcher()) ->
+-spec destination_refresh_immediate(Context :: agent()) ->
     boolean().
 
 destination_refresh_immediate(Dispatcher)
@@ -1359,8 +1359,7 @@ destination_refresh_immediate(#cloudi_context{
 %% @end
 %%-------------------------------------------------------------------------
 
--spec destination_refresh_lazy(Context :: context() |
-                                          cloudi_service:dispatcher()) ->
+-spec destination_refresh_lazy(Context :: agent()) ->
     boolean().
 
 destination_refresh_lazy(Dispatcher)
@@ -1384,16 +1383,16 @@ destination_refresh_lazy(#cloudi_context{
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trans_id(Context :: context() |
-                          cloudi_service:dispatcher()) ->
-    trans_id().
+-spec trans_id(Context :: agent()) ->
+    {trans_id(), agent()}.
 
 trans_id(Dispatcher)
     when is_pid(Dispatcher) ->
-    cloudi_service:trans_id(Dispatcher);
+    {cloudi_service:trans_id(Dispatcher), Dispatcher};
 
-trans_id(#cloudi_context{uuid_generator = UUID}) ->
-    cloudi_x_uuid:get_v1(UUID).
+trans_id(#cloudi_context{uuid_generator = UUID} = Context) ->
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+    {TransId, Context#cloudi_context{uuid_generator = NewUUID}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1485,6 +1484,25 @@ send_sync_receive(#cloudi_context{
         Timeout ->
             result(Context, {error, timeout})
     end.
+
+mcast_async_pids(Context, TransIdList, [],
+                 _Name, _Pattern, _RequestInfo, _Request,
+                 _Timeout, _Priority) ->
+    result(Context, {ok, lists:reverse(TransIdList)});
+mcast_async_pids(#cloudi_context{
+                     receiver = Receiver,
+                     uuid_generator = UUID} = Context,
+                 TransIdList, [Pid | PidList],
+                 Name, Pattern, RequestInfo, Request,
+                 Timeout, Priority) ->
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+    Pid ! {'cloudi_service_send_async',
+           Name, Pattern, RequestInfo, Request,
+           Timeout, Priority, TransId, Receiver},
+    mcast_async_pids(Context#cloudi_context{uuid_generator = NewUUID},
+                     [TransId | TransIdList], PidList,
+                     Name, Pattern, RequestInfo, Request,
+                     Timeout, Priority).
 
 recv_async_receive_any(#cloudi_context{
                            receiver = Receiver} = Context,
@@ -1581,19 +1599,14 @@ result(#cloudi_context{
            dest_refresh = DestRefresh,
            dest_refresh_delay = DestRefreshDelay,
            scope = Scope,
-           receiver = Receiver,
-           cpg_data = Groups,
-           cpg_data_stale = SendGroups}, Result) ->
+           cpg_data_stale = SendGroups} = Context, Result) ->
     if
         SendGroups =:= true ->
-            % Context is not returned,
-            % so sent the updated Groups that were used
-            Receiver ! {cloudi_cpg_data, Groups},
             ok = destination_refresh_start(DestRefresh,
                                            DestRefreshDelay, Scope),
-            Result;
+            {Result, Context#cloudi_context{cpg_data_stale = false}};
         SendGroups =:= false ->
-            Result
+            {Result, Context}
     end.
 
 destination_refresh_first(DestRefresh, Delay, Scope)

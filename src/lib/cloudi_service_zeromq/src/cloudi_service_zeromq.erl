@@ -70,7 +70,7 @@
                                                     % meta-data through ZeroMQ
                                                     % w/4-byte big endian header
 -type socket() :: {pos_integer(), any()}.
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db).
@@ -85,11 +85,13 @@
         use_key_value :: boolean()
     }).
 
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -97,20 +99,20 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_new(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec kv_new(Agent :: agent(),
+             Name :: service_name(),
              Table :: string() | binary(),
              Value :: any(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), NewValue :: any()} |
-    {error, any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), NewValue :: any()}, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_new(Dispatcher, Name, Table, Value, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_new(Agent, Name, Table, Value, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {new, Table, Value}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -120,19 +122,19 @@ kv_new(Dispatcher, Name, Table, Value, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_delete(Dispatcher :: dispatcher(),
-                Name :: cloudi_service:service_name(),
+-spec kv_delete(Agent :: agent(),
+                Name :: service_name(),
                 Table :: string() | binary(),
-                Timeout :: cloudi_service:timeout_milliseconds()) ->
-    ok |
-    {error, any()}.
+                Timeout :: timeout_milliseconds()) ->
+    {ok, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_delete(Dispatcher, Name, Table, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_delete(Agent, Name, Table, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {delete, Table}, Timeout) of
-        {ok, ok} ->
-            ok;
-        {error, _} = Error ->
+        {{ok, ok}, NewAgent} ->
+            {ok, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -142,20 +144,20 @@ kv_delete(Dispatcher, Name, Table, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_delete(Dispatcher :: dispatcher(),
-                Name :: cloudi_service:service_name(),
+-spec kv_delete(Agent :: agent(),
+                Name :: service_name(),
                 Table :: string() | binary(),
                 Key :: binary(),
-                Timeout :: cloudi_service:timeout_milliseconds()) ->
-    ok |
-    {error, any()}.
+                Timeout :: timeout_milliseconds()) ->
+    {ok, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_delete(Agent, Name, Table, Key, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {delete, Table, Key}, Timeout) of
-        {ok, ok} ->
-            ok;
-        {error, _} = Error ->
+        {{ok, ok}, NewAgent} ->
+            {ok, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -165,19 +167,20 @@ kv_delete(Dispatcher, Name, Table, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_get(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec kv_get(Agent :: agent(),
+             Name :: service_name(),
              Table :: string() | binary(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, list({Key :: binary(), Value :: any()})} |
-    {error, any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {{ok, list({Key :: binary(),
+                Value :: any()})}, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_get(Dispatcher, Name, Table, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_get(Agent, Name, Table, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {get, Table}, Timeout) of
-        {ok, {ok, _} = Success} ->
-            Success;
-        {error, _} = Error ->
+        {{ok, {ok, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -187,20 +190,20 @@ kv_get(Dispatcher, Name, Table, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_get(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec kv_get(Agent :: agent(),
+             Name :: service_name(),
              Table :: string() | binary(),
              Key :: binary(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), Value :: any()} |
-    {error, any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), Value :: any()}, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_get(Dispatcher, Name, Table, Key, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_get(Agent, Name, Table, Key, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {get, Table, Key}, Timeout) of
-        {ok, {ok, Value}} ->
-            {ok, Key, Value};
-        {error, _} = Error ->
+        {{ok, {ok, Value}}, NewAgent} ->
+            {{ok, Key, Value}, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -210,21 +213,21 @@ kv_get(Dispatcher, Name, Table, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec kv_put(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec kv_put(Agent :: agent(),
+             Name :: service_name(),
              Table :: string() | binary(),
              Key :: binary(),
              Value :: any(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), Value :: any()} |
-    {error, any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), Value :: any()}, NewAgent :: agent()} |
+    {{error, any()}, NewAgent :: agent()}.
 
-kv_put(Dispatcher, Name, Table, Key, Value, Timeout) ->
-    case cloudi:send_sync(Dispatcher, Name,
+kv_put(Agent, Name, Table, Key, Value, Timeout) ->
+    case cloudi:send_sync(Agent, Name,
                           {put, Table, Key, Value}, Timeout) of
-        {ok, {ok, NewValue}} ->
-            {ok, Key, NewValue};
-        {error, _} = Error ->
+        {{ok, {ok, NewValue}}, NewAgent} ->
+            {{ok, Key, NewValue}, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 

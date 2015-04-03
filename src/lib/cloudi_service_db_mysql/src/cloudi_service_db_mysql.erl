@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -176,7 +176,13 @@
                          {selected, rows()} |
                          {error, any()}.
 -export_type([common_result/0]).
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type external_response(Result) ::
+    {{ok, Result}, NewAgent :: agent()} |
+    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -184,17 +190,16 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec equery(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec equery(Agent :: agent(),
+             Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list()) ->
-    {'ok', any()} |
-    {'error', any()}.
+    external_response(any()).
 
-equery(Dispatcher, Name, Query, Parameters)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)),
+equery(Agent, Name, Query, Parameters)
+    when (is_binary(Query) orelse is_list(Query)),
          is_list(Parameters) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {Query, Parameters}).
 
 %%-------------------------------------------------------------------------
@@ -203,18 +208,16 @@ equery(Dispatcher, Name, Query, Parameters)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec equery(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec equery(Agent :: agent(),
+             Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {'ok', any()} |
-    {'error', any()}.
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-equery(Dispatcher, Name, Query, Parameters, Timeout)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)),
-         is_list(Parameters), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+equery(Agent, Name, Query, Parameters, Timeout)
+    when (is_binary(Query) orelse is_list(Query)), is_list(Parameters) ->
+    cloudi:send_sync(Agent, Name,
                      {Query, Parameters}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -224,17 +227,15 @@ equery(Dispatcher, Name, Query, Parameters, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec prepare_query(Dispatcher :: dispatcher(),
-                    Name :: cloudi_service:service_name(),
+-spec prepare_query(Agent :: agent(),
+                    Name :: service_name(),
                     Identifier :: atom(),
                     Query :: string() | binary()) ->
-    {'ok', ok} |
-    {'error', any()}.
+    external_response(ok).
 
-prepare_query(Dispatcher, Name, Identifier, Query)
-    when is_list(Name), is_atom(Identifier),
-         (is_binary(Query) orelse is_list(Query)) ->
-    cloudi:send_sync(Dispatcher, Name,
+prepare_query(Agent, Name, Identifier, Query)
+    when is_atom(Identifier), (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      {prepare, Identifier, Query}).
 
 %%-------------------------------------------------------------------------
@@ -244,18 +245,17 @@ prepare_query(Dispatcher, Name, Identifier, Query)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec prepare_query(Dispatcher :: dispatcher(),
-                    Name :: cloudi_service:service_name(),
+-spec prepare_query(Agent :: agent(),
+                    Name :: service_name(),
                     Identifier :: atom(),
                     Query :: string() | binary(),
-                    Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {'ok', ok} |
-    {'error', any()}.
+                    Timeout :: timeout_milliseconds()) ->
+    external_response(ok).
 
-prepare_query(Dispatcher, Name, Identifier, Query, Timeout)
-    when is_list(Name), is_atom(Identifier),
-         (is_binary(Query) orelse is_list(Query)), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+prepare_query(Agent, Name, Identifier, Query, Timeout)
+    when is_atom(Identifier),
+         (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      {prepare, Identifier, Query}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -264,17 +264,15 @@ prepare_query(Dispatcher, Name, Identifier, Query, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec execute_query(Dispatcher :: dispatcher(),
-                    Name :: cloudi_service:service_name(),
+-spec execute_query(Agent :: agent(),
+                    Name :: service_name(),
                     Identifier :: atom(),
                     Arguments :: list()) ->
-    {'ok', any()} |
-    {'error', any()}.
+    external_response(any()).
 
-execute_query(Dispatcher, Name, Identifier, Arguments)
-    when is_list(Name), is_atom(Identifier),
-         is_list(Arguments) ->
-    cloudi:send_sync(Dispatcher, Name,
+execute_query(Agent, Name, Identifier, Arguments)
+    when is_atom(Identifier), is_list(Arguments) ->
+    cloudi:send_sync(Agent, Name,
                      {execute, Identifier, Arguments}).
 
 %%-------------------------------------------------------------------------
@@ -283,18 +281,16 @@ execute_query(Dispatcher, Name, Identifier, Arguments)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec execute_query(Dispatcher :: dispatcher(),
-                    Name :: cloudi_service:service_name(),
+-spec execute_query(Agent :: agent(),
+                    Name :: service_name(),
                     Identifier :: atom(),
                     Arguments :: list(),
-                    Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {'ok', any()} |
-    {'error', any()}.
+                    Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-execute_query(Dispatcher, Name, Identifier, Arguments, Timeout)
-    when is_list(Name), is_atom(Identifier),
-         is_list(Arguments), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+execute_query(Agent, Name, Identifier, Arguments, Timeout)
+    when is_atom(Identifier), is_list(Arguments) ->
+    cloudi:send_sync(Agent, Name,
                      {execute, Identifier, Arguments}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -303,15 +299,14 @@ execute_query(Dispatcher, Name, Identifier, Arguments, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec squery(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec squery(Agent :: agent(),
+             Name :: service_name(),
              Query :: string() | binary()) ->
-    {'ok', any()} |
-    {'error', any()}.
+    external_response(any()).
 
-squery(Dispatcher, Name, Query)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)) ->
-    cloudi:send_sync(Dispatcher, Name,
+squery(Agent, Name, Query)
+    when (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      Query).
 
 %%-------------------------------------------------------------------------
@@ -320,17 +315,15 @@ squery(Dispatcher, Name, Query)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec squery(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec squery(Agent :: agent(),
+             Name :: service_name(),
              Query :: string() | binary(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {'ok', any()} |
-    {'error', any()}.
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-squery(Dispatcher, Name, Query, Timeout)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+squery(Agent, Name, Query, Timeout)
+    when (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      Query, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -339,15 +332,14 @@ squery(Dispatcher, Name, Query, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec transaction(Dispatcher :: dispatcher(),
-                  Name :: cloudi_service:service_name(),
+-spec transaction(Agent :: agent(),
+                  Name :: service_name(),
                   QueryList :: list(string() | binary())) ->
-    {ok, ok | {error, any()}} |
-    {error, any()}.
+    external_response(ok | {error, any()}).
 
-transaction(Dispatcher, Name, [Query | _] = QueryList)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)) ->
-    cloudi:send_sync(Dispatcher, Name,
+transaction(Agent, Name, [Query | _] = QueryList)
+    when (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      QueryList).
 
 %%-------------------------------------------------------------------------
@@ -356,17 +348,15 @@ transaction(Dispatcher, Name, [Query | _] = QueryList)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec transaction(Dispatcher :: dispatcher(),
-                  Name :: cloudi_service:service_name(),
+-spec transaction(Agent :: agent(),
+                  Name :: service_name(),
                   QueryList :: list(string() | binary()),
-                  Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, ok | {error, any()}} |
-    {error, any()}.
+                  Timeout :: timeout_milliseconds()) ->
+    external_response(ok | {error, any()}).
 
-transaction(Dispatcher, Name, [Query | _] = QueryList, Timeout)
-    when is_list(Name), (is_binary(Query) orelse is_list(Query)),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+transaction(Agent, Name, [Query | _] = QueryList, Timeout)
+    when (is_binary(Query) orelse is_list(Query)) ->
+    cloudi:send_sync(Agent, Name,
                      QueryList, Timeout).
 
 %%%------------------------------------------------------------------------

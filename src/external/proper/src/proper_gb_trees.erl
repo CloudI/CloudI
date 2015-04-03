@@ -35,7 +35,7 @@
 
 %% When parsed by the typeserver, this becomes opaque (it's declared as a simple
 %% type because dialyzer can't handle parametric opaque types yet).
--type gb_tree(_K,_V) :: gb_tree().
+-type gb_tree(_K,_V) :: any().
 %% Based on the documentation alone, this is the best we can do.
 -type iterator(_K,_V) :: term().
 

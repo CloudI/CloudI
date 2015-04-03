@@ -1110,7 +1110,7 @@ data_index(Data, Index) ->
     cloudi_x_erlasticsearch:join([BData, BIndex], <<"_">>).
 
 random_name(Name) ->
-    random:seed(erlang:now()),
+    random:seed(os:timestamp()),
     Id = list_to_binary(integer_to_list(random:uniform(999999999))),
     <<Name/binary, Id/binary>>.
 
@@ -1122,7 +1122,7 @@ true_response(Response) ->
     end.
 
 setup_environment() ->
-    random:seed(erlang:now()).
+    random:seed(os:timestamp()).
 
 setup_lager() ->
     cloudi_x_reltool_util:application_start(cloudi_x_lager),

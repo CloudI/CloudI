@@ -174,6 +174,7 @@ elapsed_seconds(TransId) ->
     % (600000 milliseconds timeout value with a
     %  100 millisecond penalty for each forward along with
     %  the added request_timeout_adjustment and any queuing delays)
+    % (assuming the system time doesn't change during the test's execution)
     (cloudi_x_uuid:get_v1_time(os) -
      cloudi_x_uuid:get_v1_time(TransId)) / 1000000.0.
 

@@ -232,7 +232,7 @@
 
 -type type_kind() :: 'type' | 'record'.
 -type type_ref() :: {type_kind(),type_name(),arity()}.
--type substs_dict() :: dict(). %% dict(field_name(),ret_type())
+-type substs_dict() :: any(). %% dict(field_name(),ret_type())
 -type full_type_ref() :: {mod_name(),type_kind(),type_name(),
 			  [ret_type()] | substs_dict()}.
 -type symb_info() :: 'not_symb' | {'orig_abs',abs_type()}.
@@ -260,16 +260,16 @@
 -type next_step() :: 'none' | 'take_head' | {'match_with',pattern()}.
 
 %% @private_type
--type mod_exp_types() :: set(). %% set(imm_type_ref())
--type mod_types() :: dict(). %% dict(type_ref(),type_repr())
+-type mod_exp_types() :: any(). %% set(imm_type_ref())
+-type mod_types() :: any(). %% dict(type_ref(),type_repr())
 %% @private_type
--type mod_exp_funs() :: set(). %% set(fun_ref())
--type mod_specs() :: dict(). %% dict(fun_ref(),fun_repr())
+-type mod_exp_funs() :: any(). %% set(fun_ref())
+-type mod_specs() :: any(). %% dict(fun_ref(),fun_repr())
 -record(state,
-	{cached    = dict:new() :: dict(),   %% dict(imm_type(),fin_type())
-	 exp_types = dict:new() :: dict(),   %% dict(mod_name(),mod_exp_types())
-	 types     = dict:new() :: dict(),   %% dict(mod_name(),mod_types())
-	 exp_specs = dict:new() :: dict()}). %% dict(mod_name(),mod_specs())
+	{cached    = dict:new() :: any(),   %% dict(imm_type(),fin_type())
+	 exp_types = dict:new() :: any(),   %% dict(mod_name(),mod_exp_types())
+	 types     = dict:new() :: any(),   %% dict(mod_name(),mod_types())
+	 exp_specs = dict:new() :: any()}). %% dict(mod_name(),mod_specs())
 -type state() :: #state{}.
 -record(mod_info,
 	{mod_exp_types = sets:new() :: mod_exp_types(),
@@ -280,7 +280,7 @@
 -type mod_info() :: #mod_info{}.
 
 -type stack() :: [full_type_ref() | 'tuple' | 'list' | 'union' | 'fun'].
--type var_dict() :: dict(). %% dict(var_name(),ret_type())
+-type var_dict() :: any(). %% dict(var_name(),ret_type())
 %% @private_type
 -type imm_type() :: {mod_name(),string()}.
 %% @alias
@@ -1054,7 +1054,7 @@ multi_collect_vars({_Mod,_Name,Arity} = FullADTRef, Forms, UsedVars) ->
     CombineVars = fun(L1,L2) -> lists:zipwith(fun erlang:'++'/2, L1, L2) end,
     lists:foldl(CombineVars, UsedVars, MoreUsedVars).
 
--spec update_vars(abs_type(), dict(), boolean()) -> abs_type().
+-spec update_vars(abs_type(), any(), boolean()) -> abs_type().
 %% dict(var_name(),abs_type())
 update_vars({paren_type,Line,[Type]}, VarSubstsDict, UnboundToAny) ->
     {paren_type, Line, [update_vars(Type,VarSubstsDict,UnboundToAny)]};

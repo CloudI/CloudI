@@ -154,7 +154,7 @@ prop_quorum_timeout(QuorumTypeProper, _Config) ->
 
 validate_quorum_timeout(QuorumType, UseResponseInfo,
                         CountProcess, Monkey, RequestInfo, Request) ->
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
     Timeout = 15000,
     CountTimeouts = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountTimeouts,
@@ -184,9 +184,9 @@ validate_quorum_timeout(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}],
         infinity),
     ServiceIdsN = [E | ServiceIds1],
-    Result = cloudi:send_sync(Context, "/quorum/test/proper",
-                              RequestInfo, Request,
-                              Timeout, undefined),
+    {Result, _} = cloudi:send_sync(Context0, "/quorum/test/proper",
+                                   RequestInfo, Request,
+                                   Timeout, undefined),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,
@@ -239,7 +239,7 @@ prop_quorum_crash(QuorumTypeProper, _Config) ->
 validate_quorum_crash(QuorumType, UseResponseInfo,
                       CountProcess, Monkey, RequestInfo, Request) ->
 
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
     Timeout = 15000,
     CountCrashes = count_process_errors(CountProcess, Monkey),
     CountSuccesses = CountProcess - CountCrashes,
@@ -269,9 +269,9 @@ validate_quorum_crash(QuorumType, UseResponseInfo,
             5000, 5000, 5000, undefined, undefined, 1, 0, 0, []}],
         infinity),
     ServiceIdsN = [E | ServiceIds1],
-    Result = cloudi:send_sync(Context, "/quorum/test/proper",
-                              RequestInfo, Request,
-                              Timeout, undefined),
+    {Result, _} = cloudi:send_sync(Context0, "/quorum/test/proper",
+                                   RequestInfo, Request,
+                                   Timeout, undefined),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIdsN],
     ProperResult = result_expected(QuorumType, CountProcess, Monkey,

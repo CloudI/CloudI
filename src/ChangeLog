@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-04-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Erlang 18.0 compatibility fixes
+        * cloudi module now returns a 2 element tuple with the 1st element
+          as the result (the original return value) and the 2nd element
+          as the modified Context or the Dispatcher pid
+          (necessary due to the transaction id being strictly
+           monotonically increasing and to handle the lazy destination
+            refresh updates of service name pattern lookup data)
+            * cloudi:agent() is a new type for cloudi module usage that is
+              a cloudi:context() or a cloudi_service:dispatcher()
+        * service module does not call the cloudi module to retain the same
+          type specification as the cloudi_service module for the return values
+    * Update uuid
+    * Change ERLANG_OTP_VER_ erlc prefix defines to ERLANG_OTP_VERSION_
+
 2015-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add resource limits on OS processes used for external services

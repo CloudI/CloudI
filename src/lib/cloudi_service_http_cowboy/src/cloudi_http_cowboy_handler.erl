@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -234,7 +234,8 @@ handle(Req0,
             end,
             case handle_request(NameOutgoing, HeadersIncomingN,
                                 Body, ReqN, State) of
-                {{cowboy_response, HeadersOutgoing, Response}, ReqN0} ->
+                {{cowboy_response, HeadersOutgoing, Response},
+                 ReqN0, NewState} ->
                     {HttpCode,
                      Req} = handle_response(NameIncoming, HeadersOutgoing,
                                             Response, ReqN0, OutputType,
@@ -243,8 +244,9 @@ handle(Req0,
                                      [HttpCode, Method,
                                       NameIncoming, NameOutgoing,
                                       RequestStartMicroSec]),
-                    {ok, Req, State};
-                {{cowboy_error, timeout}, ReqN0} ->
+                    {ok, Req, NewState};
+                {{cowboy_error, timeout},
+                 ReqN0, NewState} ->
                     HttpCode = StatusCodeTimeout,
                     {ok, Req} = if
                         HttpCode =:= 405 ->
@@ -262,15 +264,16 @@ handle(Req0,
                     ?LOG_WARN_APPLY(fun request_time_end_error/5,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, timeout]),
-                    {ok, Req, State};
-                {{cowboy_error, Reason}, ReqN0} ->
+                    {ok, Req, NewState};
+                {{cowboy_error, Reason},
+                 ReqN0, NewState} ->
                     HttpCode = 500,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                                           ReqN0),
                     ?LOG_WARN_APPLY(fun request_time_end_error/5,
                                     [HttpCode, Method, NameIncoming,
                                      RequestStartMicroSec, Reason]),
-                    {ok, Req, State}
+                    {ok, Req, NewState}
             end
     end.
 
@@ -1001,13 +1004,13 @@ handle_request(Name, Headers, 'multipart', Req,
                                      PartHeaderOpts, PartBodyOpts,
                                      MultipartId, Req, State);
         {error, timeout} ->
-            {{cowboy_error, timeout}, Req}
+            {{cowboy_error, timeout}, Req, State}
     end;
 handle_request(Name, Headers, Body, Req,
                #cowboy_state{
                    dispatcher = Dispatcher,
                    context = Context,
-                   output_type = OutputType}) ->
+                   output_type = OutputType} = State) ->
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
             headers_external_incoming(Headers);
@@ -1023,11 +1026,13 @@ handle_request(Name, Headers, Body, Req,
     end,
     case send_sync_minimal(Dispatcher, Context,
                            Name, RequestInfo, Request, self()) of
-        {ok, ResponseInfo, Response} ->
+        {{ok, ResponseInfo, Response}, NewContext} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-            {{cowboy_response, HeadersOutgoing, Response}, Req};
-        {error, timeout} ->
-            {{cowboy_error, timeout}, Req}
+            {{cowboy_response, HeadersOutgoing, Response},
+             Req, State#cowboy_state{context = NewContext}};
+        {{error, timeout}, NewContext} ->
+            {{cowboy_error, timeout},
+             Req, State#cowboy_state{context = NewContext}}
     end.
 
 handle_request_body(Req, BodyOpts) ->
@@ -1048,7 +1053,7 @@ handle_request_multipart(Name, Headers,
                                      PartHeaderOpts, PartBodyOpts,
                                      MultipartId, ReqN, State);
         {done, ReqN} ->
-            {{cowboy_error, multipart_empty}, ReqN}
+            {{cowboy_error, multipart_empty}, ReqN, State}
     end.
 
 handle_request_multipart(TransIdList, I, Name, Headers, HeadersPart,
@@ -1058,16 +1063,18 @@ handle_request_multipart(TransIdList, I, Name, Headers, HeadersPart,
                                        Destination, Self,
                                        PartHeaderOpts, PartBodyOpts,
                                        MultipartId, Req0, State) of
-        {{ok, TransId}, undefined, ReqN} ->
+        {{ok, TransId}, undefined,
+         ReqN, NewState} ->
             handle_request_multipart_receive(lists:reverse([TransId |
                                                             TransIdList]),
-                                             ReqN, State);
-        {{ok, TransId}, HeadersPartNext, ReqN} ->
+                                             ReqN, NewState);
+        {{ok, TransId}, HeadersPartNext,
+         ReqN, NewState} ->
             handle_request_multipart([TransId | TransIdList], I + 1,
                                      Name, Headers, HeadersPartNext,
                                      Destination, Self,
                                      PartHeaderOpts, PartBodyOpts,
-                                     MultipartId, ReqN, State)
+                                     MultipartId, ReqN, NewState)
     end.
 
 headers_merge(HeadersPart, Headers) ->
@@ -1132,9 +1139,12 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                 (OutputType =:= list) ->
                     erlang:binary_to_list(PartBody)
             end,
-            {send_async_minimal(Dispatcher, Context, Name,
-                                RequestInfo, Request, Destination, Self),
-             HeadersPartNextN, ReqN};
+            {SendResult,
+             NewContext} = send_async_minimal(Dispatcher, Context, Name,
+                                              RequestInfo, Request,
+                                              Destination, Self),
+            {SendResult, HeadersPartNextN,
+             ReqN, State#cowboy_state{context = NewContext}};
         {more, PartBodyChunk, Req1} ->
             handle_request_multipart_send([PartBodyChunk | PartBodyList],
                                           I, Name, Headers, HeadersPart0,
@@ -1143,13 +1153,16 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                                           MultipartId, Req1, State)
     end.
     
-handle_request_multipart_receive_results([], _, [Error | _], Req) ->
-    {Error, Req};
-handle_request_multipart_receive_results([], [Success | _], _, Req) ->
-    {Success, Req};
+handle_request_multipart_receive_results([], _, [Error | _],
+                                         Req, State) ->
+    {Error, Req, State};
+handle_request_multipart_receive_results([], [Success | _], _,
+                                         Req, State) ->
+    {Success, Req, State};
 handle_request_multipart_receive_results([{ResponseInfo, Response, _} |
                                           ResponseList],
-                                         SuccessList, ErrorList, Req) ->
+                                         SuccessList, ErrorList,
+                                         Req, State) ->
     HeadersOutgoing = headers_external_outgoing(ResponseInfo),
     Status = case lists:keyfind(<<"status">>, 1, HeadersOutgoing) of
         {_, V} ->
@@ -1164,24 +1177,29 @@ handle_request_multipart_receive_results([{ResponseInfo, Response, _} |
                                                        HeadersOutgoing,
                                                        Response} |
                                                       SuccessList],
-                                                     ErrorList, Req);
+                                                     ErrorList,
+                                                     Req, State);
         true ->
             handle_request_multipart_receive_results(ResponseList,
                                                      SuccessList,
                                                      [{cowboy_response,
                                                        HeadersOutgoing,
                                                        Response} |
-                                                      ErrorList], Req)
+                                                      ErrorList],
+                                                     Req, State)
     end.
 
 handle_request_multipart_receive([_ | _] = TransIdList, Req,
-                                 #cowboy_state{context = Context}) ->
+                                 #cowboy_state{context = Context} = State) ->
     case recv_asyncs_minimal(Context, TransIdList) of
-        {ok, ResponseList} ->
+        {{ok, ResponseList}, NewContext} ->
             handle_request_multipart_receive_results(ResponseList,
-                                                     [], [], Req);
-        {error, timeout} ->
-            {{cowboy_error, timeout}, Req}
+                                                     [], [], Req,
+                                                     State#cowboy_state{
+                                                         context = NewContext});
+        {{error, timeout}, NewContext} ->
+            {{cowboy_error, timeout}, Req,
+             State#cowboy_state{context = NewContext}}
     end.
 
 handle_response(NameIncoming, HeadersOutgoing0, Response,
@@ -1301,10 +1319,12 @@ websocket_connect_check({async, WebSocketConnectName},
                                 request_info = RequestInfo} = WebSocketState
                             } = State) ->
     Request = websocket_connect_request(OutputType),
-    {ok, TransId} = send_async_minimal(Dispatcher, Context,
-                                       WebSocketConnectName,
-                                       RequestInfo, Request, self()),
+    {{ok, TransId},
+     NewContext} = send_async_minimal(Dispatcher, Context,
+                                      WebSocketConnectName,
+                                      RequestInfo, Request, self()),
     State#cowboy_state{
+        context = NewContext,
         websocket_state = WebSocketState#websocket_state{
             websocket_connect_trans_id = TransId}};
 websocket_connect_check({sync, WebSocketConnectName},
@@ -1317,12 +1337,12 @@ websocket_connect_check({sync, WebSocketConnectName},
                             } = State) ->
     Self = self(),
     Timeout = cloudi:timeout_sync(Context),
-    TransId = cloudi:trans_id(Context),
-    case send_sync_minimal(Dispatcher, Context,
+    {TransId, NextContext} = cloudi:trans_id(Context),
+    case send_sync_minimal(Dispatcher, NextContext,
                            WebSocketConnectName,
                            RequestInfo,
                            websocket_connect_request(OutputType), Self) of
-        {ok, ResponseInfo, Response} ->
+        {{ok, ResponseInfo, Response}, NewContext} ->
             % must provide the response after the websocket_init is done
             Self ! {'cloudi_service_return_async',
                     WebSocketConnectName,
@@ -1330,10 +1350,12 @@ websocket_connect_check({sync, WebSocketConnectName},
                     ResponseInfo, Response,
                     Timeout, TransId, Self},
             State#cowboy_state{
+                context = NewContext,
                 websocket_state = WebSocketState#websocket_state{
                     websocket_connect_trans_id = TransId}};
-        {error, timeout} ->
-            State
+        {{error, timeout}, NewContext} ->
+            State#cowboy_state{
+                context = NewContext}
     end.
 
 websocket_disconnect_request(OutputType)
@@ -1414,25 +1436,29 @@ websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     case send_sync_minimal(Dispatcher, Context,
                            NameOutgoing, RequestInfo, Request, self()) of
-        {ok, ResponseInfo, Response} ->
+        {{ok, ResponseInfo, Response}, NewContext} ->
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             case websocket_terminate_check(ResponseInfo) of
                 true when Response == <<>> ->
-                    {reply, close, Req, State};
+                    {reply, close, Req,
+                     State#cowboy_state{context = NewContext}};
                 true ->
                     {reply, [{WebSocketRequestType,
-                              ResponseF(Response)}, close], Req, State};
+                              ResponseF(Response)}, close], Req,
+                     State#cowboy_state{context = NewContext}};
                 false ->
                     {reply, {WebSocketRequestType,
-                             ResponseF(Response)}, Req, State}
+                             ResponseF(Response)}, Req,
+                     State#cowboy_state{context = NewContext}}
             end;
-        {error, timeout} ->
+        {{error, timeout}, NewContext} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
                             [NameIncoming,
                              RequestStartMicroSec, timeout]),
-            {reply, {WebSocketRequestType, <<>>}, Req, State}
+            {reply, {WebSocketRequestType, <<>>}, Req,
+             State#cowboy_state{context = NewContext}}
     end.
 
 websocket_handle_outgoing_response({SendType,

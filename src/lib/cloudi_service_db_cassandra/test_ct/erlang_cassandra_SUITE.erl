@@ -43,7 +43,17 @@
 
 -define(DEFAULT_THRIFT_HOST, "localhost").
 -define(DEFAULT_THRIFT_PORT, 9160).
--define(EC(Prefix, Target, PoolOptions), {internal, Prefix, cloudi_service_db_cassandra, [{connection_name, Target}, {pool_options, PoolOptions}, {connection_options, [{thrift_host, ?DEFAULT_THRIFT_HOST}, {thrift_port, ?DEFAULT_THRIFT_PORT}]}], immediate_closest, 5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
+-define(EC(Prefix, Target, PoolOptions),
+        {internal,
+         Prefix,
+         cloudi_service_db_cassandra,
+         [{connection_name, Target},
+          {pool_options, PoolOptions},
+          {connection_options,x
+           [{thrift_host, ?DEFAULT_THRIFT_HOST},
+            {thrift_port, ?DEFAULT_THRIFT_PORT}]}],
+         immediate_closest,
+         5000, 5000, 5000, undefined, undefined, 1, 5, 300, []}).
 
 -record(internal,
     {
@@ -86,7 +96,6 @@ init_per_group(_GroupName, Config) ->
     Config.
 
 end_per_group(_GroupName, _Config) ->
-%    Config1 = [{context, cloudi:new()} | Config],
     ok.
 
 
@@ -308,379 +317,366 @@ prop_prepare_and_execute_cql_query(Config) ->
              ?FORALL(Keyspace, keyspace_word(), validate_prepare_and_execute_cql_query(Config, Keyspace))).
 
 t_describe_cluster_name(Config) ->
-    Context  = ?config(context, Config),
-    Target  = ?config(target, Config),
-    {ok, {ok, _Response}} = cloudi:send_sync(Context, Target, {describe_cluster_name}).
+    Context0 = ?config(context, Config),
+    Target = ?config(target, Config),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context0, Target, {describe_cluster_name}).
 
 
 validate_add_drop_keyspace(Config, Keyspace) ->
-    Context  = ?config(context, Config),
-    Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    Target = ?config(target, Config),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context0, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_set_keyspace(Config, Keyspace) ->
-    Context  = ?config(context, Config),
-    Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    Target = ?config(target, Config),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context1, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_describe_keyspace(Config, Keyspace) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, KeyspaceDefinition}} = cloudi:send_sync(Context, Target, {describe_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, KeyspaceDefinition}}, Context1} = cloudi:send_sync(Context0, Target, {describe_keyspace, Keyspace}),
     Keyspace = KeyspaceDefinition#ksDef.name,
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context1, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_update_keyspace(Config, Keyspace) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace, 1),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace, 1),
     % Create a keyspace with replication_factor 1
-    {ok, {ok, KeyspaceDefinition1}} = cloudi:send_sync(Context, Target, {describe_keyspace, Keyspace}),
+    {{ok, {ok, KeyspaceDefinition1}}, Context1} = cloudi:send_sync(Context0, Target, {describe_keyspace, Keyspace}),
     <<"1">> = keyspace_replication_factor(KeyspaceDefinition1),
     % Change it to 2
     KeyspaceDefinition2 = cloudi_x_erlang_cassandra:keyspace_definition(Keyspace, 2),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_update_keyspace, KeyspaceDefinition2}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_update_keyspace, KeyspaceDefinition2}),
     % Validate
-    {ok, {ok, KeyspaceDefinition3}} = cloudi:send_sync(Context, Target, {describe_keyspace, Keyspace}),
+    {{ok, {ok, KeyspaceDefinition3}}, Context3} = cloudi:send_sync(Context2, Target, {describe_keyspace, Keyspace}),
     <<"2">> = keyspace_replication_factor(KeyspaceDefinition3),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context3, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_add_drop_column_family(Config, Keyspace, ColumnFamilyDefinition) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
     % set up the keyspace
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     ColumnFamily = ColumnFamilyDefinition#cfDef.name,
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context3} = cloudi:send_sync(Context2, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context3, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_update_column_family(Config, Keyspace, ColumnFamilyDefinition) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
     % set up the keyspace
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     ColumnFamily = ColumnFamilyDefinition#cfDef.name,
     % update the column family
     ColumnFamilyDefinition2 = ColumnFamilyDefinition#cfDef{gc_grace_seconds = 1000},
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_update_column_family, ColumnFamilyDefinition2}),
-    {ok, {ok, ColumnFamilyDefinition3}} = cloudi:send_sync(Context, Target, {system_describe_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, Context3} = cloudi:send_sync(Context2, Target, {system_update_column_family, ColumnFamilyDefinition2}),
+    {{ok, {ok, ColumnFamilyDefinition3}}, Context4} = cloudi:send_sync(Context3, Target, {system_describe_column_family, Keyspace, ColumnFamily}),
     1000 = ColumnFamilyDefinition3#cfDef.gc_grace_seconds,
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_truncate_column_family(Config, Keyspace, RowKey, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    lists:foreach(fun(Column) ->
-                {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-        end, ColumnList),
+    Context3 = lists:foldl(fun(Column, ContextNext0) ->
+        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
+        ContextNext1
+    end, Context2, ColumnList),
     % truncate
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {truncate, Keyspace, ColumnFamily}),
+    {{ok, {ok, ok}}, Context4} = cloudi:send_sync(Context3, Target, {truncate, Keyspace, ColumnFamily}),
     % Validate
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, []}} = cloudi:send_sync(Context, Target, {get_slice, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, []}}, Context5} = cloudi:send_sync(Context4, Target, {get_slice, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context6} = cloudi:send_sync(Context5, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context6, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_insert_column(Config, Keyspace, RowKey, ColumnParent, Column) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context1, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context3} = cloudi:send_sync(Context2, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context4} = cloudi:send_sync(Context3, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context4, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_get_column(Config, Keyspace, RowKey, ColumnParent, Column) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context3} = cloudi:send_sync(Context2, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
     % get
     ColumnPath = cloudi_x_erlang_cassandra:column_path(ColumnParent#columnParent.column_family,
                                               ColumnParent#columnParent.super_column ,
                                               Column#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {get, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {get, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
     % validate
     Column = Response#columnOrSuperColumn.column,
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_get_slice(Config, Keyspace, RowKey, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    lists:foreach(fun(Column) ->
-                {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-        end, ColumnList),
+    Context3 = lists:foldl(fun(Column, ContextNext0) ->
+        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+        ContextNext1
+    end, Context2, ColumnList),
     % get_slice
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {get_slice, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {get_slice, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
     % validate
     ResponseLength = length(Response), 
     ResponseLength = length(ColumnList),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_get_range_slices(Config, Keyspace, [FirstRow | _] = RowKeyList, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    lists:foreach(fun(RowKey) ->
-                lists:foreach(fun(Column) ->
-                            {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-                    end, ColumnList)
-        end, RowKeyList),
+    Context3 = lists:foldl(fun(RowKey, ContextNext0) ->
+        lists:foldl(fun(Column, ContextNext1) ->
+            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+            ContextNext2
+        end, ContextNext0, ColumnList)
+    end, Context2, RowKeyList),
     % get_slice
     % Not sorted, so, just compare the data in one row
     KeyRange = cloudi_x_erlang_cassandra:key_range(FirstRow, FirstRow),
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {get_range_slices, Keyspace, ColumnParent, SlicePredicate, KeyRange, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {get_range_slices, Keyspace, ColumnParent, SlicePredicate, KeyRange, ?CONSISTENCY_LEVEL}),
     % validate
     KeySlice = lists:keyfind(FirstRow, #keySlice.key, Response),
     ResponseLength = length(KeySlice#keySlice.columns),
     ResponseLength = length(ColumnList),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_multiget_slice(Config, Keyspace, RowKeyList, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    lists:foreach(fun(RowKey) ->
-                lists:foreach(fun(Column) ->
-                            {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-                    end, ColumnList)
-        end, RowKeyList),
+    Context3 = lists:foldl(fun(RowKey, ContextNext0) ->
+        lists:foldl(fun(Column, ContextNext1) ->
+            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+            ContextNext2
+        end, ContextNext0, ColumnList)
+    end, Context2, RowKeyList),
     % get_slice
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {multiget_slice, Keyspace, RowKeyList, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {multiget_slice, Keyspace, RowKeyList, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
     ResponseLength = dict:fold(fun(_Key, Value, Acc) ->
-                length(Value) + Acc
-        end, 0, Response),
+        length(Value) + Acc
+    end, 0, Response),
 
     % validate
     ResponseLength = length(RowKeyList) * length(ColumnList),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_get_count(Config, Keyspace, RowKey, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-     lists:foreach(fun(Column) ->
-                {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-        end, ColumnList),
+    Context3 = lists:foldl(fun(Column, ContextNext0) ->
+        {{ok, {ok, ok}}, ContextNext1} = cloudi:send_sync(ContextNext0, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
+        ContextNext1
+    end, Context2, ColumnList),
     % get_slice
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {get_count, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {get_count, Keyspace, RowKey, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
     Response = length(ColumnList),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_multiget_count(Config, Keyspace, RowKeyList, ColumnParent, [FirstColumn | _] = ColumnList) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    lists:foreach(fun(RowKey) ->
-                lists:foreach(fun(Column) ->
-                            {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL})
-                    end, ColumnList)
-        end, RowKeyList),
+    Context3 = lists:foldl(fun(RowKey, ContextNext0) ->
+        lists:foldl(fun(Column, ContextNext1) ->
+            {{ok, {ok, ok}}, ContextNext2} = cloudi:send_sync(ContextNext1, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
+            ContextNext2
+        end, ContextNext0, ColumnList)
+    end, Context2, RowKeyList),
     % get_slice
     LastColumn = lists:last(ColumnList),
     SlicePredicate = cloudi_x_erlang_cassandra:slice_predicate(undefined, FirstColumn#column.name, LastColumn#column.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {multiget_count, Keyspace, RowKeyList, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context4} = cloudi:send_sync(Context3, Target, {multiget_count, Keyspace, RowKeyList, ColumnParent, SlicePredicate, ?CONSISTENCY_LEVEL}),
     ResponseLength = dict:fold(fun(_Key, Value, Acc) ->
-                Value + Acc
-        end, 0, Response),
+        Value + Acc
+    end, 0, Response),
 
     % validate
     ResponseLength = length(RowKeyList) * length(ColumnList),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
-
 validate_remove_column(Config, Keyspace, RowKey, ColumnParent, Column) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % insert
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context3} = cloudi:send_sync(Context2, Target, {insert, Keyspace, RowKey, ColumnParent, Column, ?CONSISTENCY_LEVEL}),
     % remove
     ColumnPath = cloudi_x_erlang_cassandra:column_path(ColumnParent#columnParent.column_family,
                                               ColumnParent#columnParent.super_column ,
                                               Column#column.name),
     ColumnTimestamp = Column#column.timestamp,
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {remove, Keyspace, RowKey, ColumnPath, ColumnTimestamp, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context4} = cloudi:send_sync(Context3, Target, {remove, Keyspace, RowKey, ColumnPath, ColumnTimestamp, ?CONSISTENCY_LEVEL}),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_add_counter(Config, Keyspace, RowKey, ColumnParent, CounterColumn) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     % create a counter column family
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily, true),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % create the counter, and double it
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context3} = cloudi:send_sync(Context2, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context4} = cloudi:send_sync(Context3, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
     % Validate value
     ColumnPath = cloudi_x_erlang_cassandra:column_path(ColumnParent#columnParent.column_family,
                                               ColumnParent#columnParent.super_column ,
                                               CounterColumn#counterColumn.name),
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {get, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, Response}}, Context5} = cloudi:send_sync(Context4, Target, {get, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
     RCounterColumn = Response#columnOrSuperColumn.counter_column,
     NewCount = RCounterColumn#counterColumn.value,
     NewCount = CounterColumn#counterColumn.value * 2,
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context6} = cloudi:send_sync(Context5, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context6, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_remove_counter(Config, Keyspace, RowKey, ColumnParent, CounterColumn) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {set_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, ok}}, Context1} = cloudi:send_sync(Context0, Target, {set_keyspace, Keyspace}),
     % set up the column family
     ColumnFamily = ColumnParent#columnParent.column_family,
     % create a counter column family
     ColumnFamilyDefinition = cloudi_x_erlang_cassandra:column_family_definition(Keyspace, ColumnFamily, true),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_add_column_family, ColumnFamilyDefinition}),
+    {{ok, {ok, _}}, Context2} = cloudi:send_sync(Context1, Target, {system_add_column_family, ColumnFamilyDefinition}),
     % create the counter
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context3} = cloudi:send_sync(Context2, Target, {add, Keyspace, RowKey, ColumnParent, CounterColumn, ?CONSISTENCY_LEVEL}),
     % Remove the counter
     ColumnPath = cloudi_x_erlang_cassandra:column_path(ColumnParent#columnParent.column_family,
                                               ColumnParent#columnParent.super_column ,
                                               CounterColumn#counterColumn.name),
-    {ok, {ok, ok}} = cloudi:send_sync(Context, Target, {remove_counter, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
+    {{ok, {ok, ok}}, Context4} = cloudi:send_sync(Context3, Target, {remove_counter, Keyspace, RowKey, ColumnPath, ?CONSISTENCY_LEVEL}),
     % cleanup
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, Context5} = cloudi:send_sync(Context4, Target, {system_drop_column_family, Keyspace, ColumnFamily}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context5, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_execute_cql_query(Config, Keyspace) ->
     Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
     Query = <<"use ", Keyspace/binary, ";">>,
-    {ok, {ok, Response}} = cloudi:send_sync(Context, Target, {execute_cql_query, Query, 2}),
+    {{ok, {ok, Response}}, Context1} = cloudi:send_sync(Context0, Target, {execute_cql_query, Query, 2}),
     true = is_record(Response, cqlResult),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context1, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 validate_prepare_and_execute_cql_query(Config, Keyspace) ->
-    Context  = ?config(context, Config),
     Target  = ?config(target, Config),
-    {ok, {ok, _}} = create_keyspace(Config, Keyspace),
+    {{ok, {ok, _}}, Context0} = create_keyspace(Config, Keyspace),
     Query1 = <<"use ", Keyspace/binary, ";">>,
-    {ok, {ok, _Response1}} = cloudi:send_sync(Context, Target, {execute_cql_query, Query1, 2}),
+    {{ok, {ok, _Response1}}, Context1} = cloudi:send_sync(Context0, Target, {execute_cql_query, Query1, 2}),
     Query2 = <<"CREATE COLUMNFAMILY test (KEY int PRIMARY KEY, text_field text);">>,
-    {ok, {ok, _Response2}} = cloudi:send_sync(Context, Target, {execute_cql_query, Query2, 2}),
+    {{ok, {ok, _Response2}}, Context2} = cloudi:send_sync(Context1, Target, {execute_cql_query, Query2, 2}),
     Query3 = <<"insert into test (KEY, text_field) values (?, ?);">>,
-    {ok, {ok, Response3}} = cloudi:send_sync(Context, Target, {prepare_cql_query, Query3, 2}),
-    {ok, {ok, Response4}} = cloudi:send_sync(Context, Target, {execute_prepared_cql_query, Response3#cqlPreparedResult.itemId, [<<"123">>, <<"text">>]}),
+    {{ok, {ok, Response3}}, Context3} = cloudi:send_sync(Context2, Target, {prepare_cql_query, Query3, 2}),
+    {{ok, {ok, Response4}}, Context4} = cloudi:send_sync(Context3, Target, {execute_prepared_cql_query, Response3#cqlPreparedResult.itemId, [<<"123">>, <<"text">>]}),
     true = is_record(Response4, cqlResult),
-    {ok, {ok, _}} = cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}),
+    {{ok, {ok, _}}, _} = cloudi:send_sync(Context4, Target, {system_drop_keyspace, Keyspace}),
     true.
 
 random_name(Name) when is_list(Name) ->
@@ -699,10 +695,10 @@ create_keyspace(Config, Keyspace, ReplicationFactor) ->
     KeyspaceDefinition = cloudi_x_erlang_cassandra:keyspace_definition(Keyspace, ReplicationFactor),
     cloudi:send_sync(Context, Target, {system_add_keyspace, KeyspaceDefinition}).
 
-delete_keyspace(Config, Keyspace) ->
-    Context  = ?config(context, Config),
-    Target  = ?config(target, Config),
-    cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}).
+%delete_keyspace(Config, Keyspace) ->
+%    Context  = ?config(context, Config),
+%    Target  = ?config(target, Config),
+%    cloudi:send_sync(Context, Target, {system_drop_keyspace, Keyspace}).
 
 keyspace_replication_factor(KeyspaceDefinition) ->
     dict:fetch(<<"replication_factor">>, KeyspaceDefinition#ksDef.strategy_options).
@@ -827,11 +823,7 @@ unload_cloudi_service(Prefixes) ->
                             end end, cloudi_services()) end, Prefixes).
 
 setup_cloudi(_Config) ->
-    CloudIConfig = [{acl, []}, {services, []}, {nodes, []},
-                    {logging, [{file, "cloudi.log"}]}],
-    ok = cloudi_x_reltool_util:application_start(cloudi_core,
-                                        [{configuration, CloudIConfig}],1000).
-
+    ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity).
 
 teardown_cloudi(_Config) ->
     cloudi_x_reltool_util:application_stop(cloudi_core).

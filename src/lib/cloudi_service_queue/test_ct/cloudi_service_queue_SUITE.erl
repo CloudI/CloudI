@@ -163,7 +163,7 @@ end_per_testcase(_TestCase, Config) ->
 % service requests should complete for both modes.
 
 t_queue_destination_1(_Config) ->
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
     RequestInfo = <<>>,
     Request = <<?REQUEST1>>,
     Timeout = 10000,
@@ -189,22 +189,22 @@ t_queue_destination_1(_Config) ->
           {response_timeout_immediate_max, 0}]}],
         infinity),
     % send 2 requests with the cloudi_service_queue in 'destination' mode
-    {ok,
-     <<?RESPONSE1>>} = cloudi:send_sync(Context,
-                                        ?PREFIX_QUEUE ?PREFIX_TEST "request",
-                                        RequestInfo, Request,
-                                        Timeout, Priority),
-    {ok,
-     <<?RESPONSE1>>} = cloudi:send_sync(Context,
-                                        ?PREFIX_QUEUE ?PREFIX_TEST "request",
-                                        RequestInfo, Request,
-                                        Timeout, Priority),
+    {{ok, <<?RESPONSE1>>},
+     Context1} = cloudi:send_sync(Context0,
+                                  ?PREFIX_QUEUE ?PREFIX_TEST "request",
+                                  RequestInfo, Request,
+                                  Timeout, Priority),
+    {{ok, <<?RESPONSE1>>},
+     _} = cloudi:send_sync(Context1,
+                           ?PREFIX_QUEUE ?PREFIX_TEST "request",
+                           RequestInfo, Request,
+                           Timeout, Priority),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIds],
     ok.
 
 t_queue_both_1(_Config) ->
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
     Timeout = 10000,
     {ok, ServiceIds} = cloudi_service_api:services_add([
         {internal,
@@ -234,7 +234,7 @@ t_queue_both_1(_Config) ->
          5000, 5000, Timeout, undefined, undefined, 1, 5, 300, []}],
         infinity),
     % confirm the send of 2 requests with cloudi_service_queue in 'both' mode
-    ok = check_queue_both_response(Timeout * 2, 2, Context),
+    ok = check_queue_both_response(Timeout * 2, 2, Context0),
     [cloudi_service_api:services_remove([ServiceId], infinity) ||
      ServiceId <- ServiceIds],
     ok.
@@ -250,9 +250,9 @@ check_queue_both_response(Timeout, Count, Context) ->
     Interval = 1000,
     receive after Interval -> ok end,
     case cloudi:send_sync(Context, ?PREFIX_TEST "response", count) of
-        {ok, Count} ->
+        {{ok, Count}, _} ->
             ok;
-        {ok, _} ->
-            check_queue_both_response(Timeout - Interval, Count, Context)
+        {{ok, _}, NewContext} ->
+            check_queue_both_response(Timeout - Interval, Count, NewContext)
     end.
 

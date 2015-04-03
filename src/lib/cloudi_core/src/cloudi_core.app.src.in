@@ -46,7 +46,8 @@
         cloudi_service,
         cloudi_service_api,
         cloudi_service_name,
-        cloudi_string
+        cloudi_string,
+        cloudi_timestamp
         ]},
    {registered,[
         cloudi_core_i_configurator,

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_riak).
@@ -106,7 +106,6 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
 -type riakc_obj() :: cloudi_x_riakc_obj:cloudi_x_riakc_obj().
 -type index_id() :: {binary_index, string()} | {integer_index, string()}.
 -type indexes() :: list({{binary_index, string()}, list(binary())} |
@@ -134,32 +133,37 @@
                             {atom(), any()} | atom()).
 -export_type([riakc_obj/0, index_id/0, indexes/0]).
 
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a new key/value pair in a bucket.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec new(Agent :: agent(),
+          Name :: service_name(),
           Key :: binary() | undefined,
           Value :: binary(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), NewValue :: binary()} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), NewValue :: binary()} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-new(Dispatcher, Name, Key, Value, Timeout)
+new(Agent, Name, Key, Value, Timeout)
     when (Key =:= undefined) orelse is_binary(Key), is_binary(Value) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {new, Key, Value, []}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {siblings, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {siblings, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -169,28 +173,29 @@ new(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec new(Agent :: agent(),
+          Name :: service_name(),
           Key :: binary() | undefined,
           Value :: binary(),
           Options :: new_options(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), NewValueOrObject :: binary() | riakc_obj()} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), NewValueOrObject :: binary() | riakc_obj()} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-new(Dispatcher, Name, Key, Value, Options, Timeout)
+new(Agent, Name, Key, Value, Options, Timeout)
     when (Key =:= undefined) orelse is_binary(Key), is_binary(Value),
          is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {new, Key, Value, Options}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {siblings, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {siblings, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -200,15 +205,16 @@ new(Dispatcher, Name, Key, Value, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec delete(Agent :: agent(),
+             Name :: service_name(),
              KeyOrObject :: binary() | riakc_obj(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    ok |
-    {error, cloudi_service:error_reason_sync() | any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {ok |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-delete(Dispatcher, Name, KeyOrObject, Timeout) ->
-    delete(Dispatcher, Name, KeyOrObject, [], Timeout).
+delete(Agent, Name, KeyOrObject, Timeout) ->
+    delete(Agent, Name, KeyOrObject, [], Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -216,24 +222,25 @@ delete(Dispatcher, Name, KeyOrObject, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete(Dispatcher :: dispatcher(),
-             Name :: cloudi_service:service_name(),
+-spec delete(Agent :: agent(),
+             Name :: service_name(),
              KeyOrObject :: binary() | riakc_obj(),
              Options :: delete_options(),
-             Timeout :: cloudi_service:timeout_milliseconds()) ->
-    ok |
-    {error, cloudi_service:error_reason_sync() | any()}.
+             Timeout :: timeout_milliseconds()) ->
+    {ok |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-delete(Dispatcher, Name, KeyOrObject, Options, Timeout)
+delete(Agent, Name, KeyOrObject, Options, Timeout)
     when is_binary(KeyOrObject) orelse is_tuple(KeyOrObject),
          is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {delete, KeyOrObject, Options}, Timeout) of
-        {ok, ok} ->
-            ok;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, ok = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -243,19 +250,20 @@ delete(Dispatcher, Name, KeyOrObject, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec get(Agent :: agent(),
+          Name :: service_name(),
           KeyOrObject :: binary() | riakc_obj(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), Value :: binary()} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), Value :: binary()} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-get(Dispatcher, Name, Object, Timeout)
+get(Agent, Name, Object, Timeout)
     when is_tuple(Object) ->
-    get(Dispatcher, Name, cloudi_x_riakc_obj:key(Object), [], Timeout);
-get(Dispatcher, Name, Key, Timeout) ->
-    get(Dispatcher, Name, Key, [], Timeout).
+    get(Agent, Name, cloudi_x_riakc_obj:key(Object), [], Timeout);
+get(Agent, Name, Key, Timeout) ->
+    get(Agent, Name, Key, [], Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -263,26 +271,28 @@ get(Dispatcher, Name, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec get(Agent :: agent(),
+          Name :: service_name(),
           Key :: binary(),
           Options :: get_options(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), ValueOrObject :: binary() | riakc_obj() | undefined} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(),
+          ValueOrObject :: binary() | riakc_obj() | undefined} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-get(Dispatcher, Name, Key, Options, Timeout)
+get(Agent, Name, Key, Options, Timeout)
     when is_binary(Key), is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {get, Key, Options}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {siblings, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {siblings, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -292,18 +302,19 @@ get(Dispatcher, Name, Key, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_index_eq(Dispatcher :: dispatcher(),
-                   Name :: cloudi_service:service_name(),
+-spec get_index_eq(Agent :: agent(),
+                   Name :: service_name(),
                    Index :: index_id() | binary(),
                    Key :: binary() | integer(),
-                   Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Keys :: list(binary()),
-         Terms :: list({integer() | binary(), binary()}),
-         Continuation :: binary()} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                   Timeout :: timeout_milliseconds()) ->
+    {{ok, Keys :: list(binary()),
+          Terms :: list({integer() | binary(), binary()}),
+          Continuation :: binary()} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-get_index_eq(Dispatcher, Name, Index, Key, Timeout) ->
-    get_index_eq(Dispatcher, Name, Index, Key, [], Timeout).
+get_index_eq(Agent, Name, Index, Key, Timeout) ->
+    get_index_eq(Agent, Name, Index, Key, [], Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -311,29 +322,30 @@ get_index_eq(Dispatcher, Name, Index, Key, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_index_eq(Dispatcher :: dispatcher(),
-                   Name :: cloudi_service:service_name(),
+-spec get_index_eq(Agent :: agent(),
+                   Name :: service_name(),
                    Index :: index_id() | binary(),
                    Key :: binary() | integer(),
                    Options :: get_index_eq_options(),
-                   Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Keys :: list(binary()),
-         Terms :: list({integer() | binary(), binary()}),
-         Continuation :: binary()} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                   Timeout :: timeout_milliseconds()) ->
+    {{ok, Keys :: list(binary()),
+          Terms :: list({integer() | binary(), binary()}),
+          Continuation :: binary()} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-get_index_eq(Dispatcher, Name, Index, Key, Options, Timeout)
+get_index_eq(Agent, Name, Index, Key, Options, Timeout)
     when (is_tuple(Index) andalso
           ((element(1, Index) =:= binary_index) orelse
            (element(1, Index) =:= integer_index))) orelse
          is_binary(Index), is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {get_index_eq, Index, Key, Options}, Timeout) of
-        {ok, {ok, _, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -343,19 +355,20 @@ get_index_eq(Dispatcher, Name, Index, Key, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_index_range(Dispatcher :: dispatcher(),
-                      Name :: cloudi_service:service_name(),
+-spec get_index_range(Agent :: agent(),
+                      Name :: service_name(),
                       Index :: index_id() | binary(),
                       KeyStart :: binary() | integer() | list(),
                       KeyEnd :: binary() | integer() | list(),
-                      Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Keys :: list(binary()),
-         Terms :: list({integer() | binary(), binary()}),
-         Continuation :: binary()} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                      Timeout :: timeout_milliseconds()) ->
+    {{ok, Keys :: list(binary()),
+          Terms :: list({integer() | binary(), binary()}),
+          Continuation :: binary()} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-get_index_range(Dispatcher, Name, Index, KeyStart, KeyEnd, Timeout) ->
-    get_index_range(Dispatcher, Name, Index, KeyStart, KeyEnd, [], Timeout).
+get_index_range(Agent, Name, Index, KeyStart, KeyEnd, Timeout) ->
+    get_index_range(Agent, Name, Index, KeyStart, KeyEnd, [], Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -363,31 +376,32 @@ get_index_range(Dispatcher, Name, Index, KeyStart, KeyEnd, Timeout) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_index_range(Dispatcher :: dispatcher(),
-                      Name :: cloudi_service:service_name(),
+-spec get_index_range(Agent :: agent(),
+                      Name :: service_name(),
                       Index :: index_id() | binary(),
                       KeyStart :: binary() | integer() | list(),
                       KeyEnd :: binary() | integer() | list(),
                       Options :: get_index_range_options(),
-                      Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Keys :: list(binary()),
-         Terms :: list({integer() | binary(), binary()}),
-         Continuation :: binary()} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                      Timeout :: timeout_milliseconds()) ->
+    {{ok, Keys :: list(binary()),
+          Terms :: list({integer() | binary(), binary()}),
+          Continuation :: binary()} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-get_index_range(Dispatcher, Name, Index, KeyStart, KeyEnd, Options, Timeout)
+get_index_range(Agent, Name, Index, KeyStart, KeyEnd, Options, Timeout)
     when (is_tuple(Index) andalso
           ((element(1, Index) =:= binary_index) orelse
            (element(1, Index) =:= integer_index))) orelse
          is_binary(Index), is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {get_index_range, Index,
                            KeyStart, KeyEnd, Options}, Timeout) of
-        {ok, {ok, _, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -397,23 +411,24 @@ get_index_range(Dispatcher, Name, Index, KeyStart, KeyEnd, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec put(Agent :: agent(),
+          Name :: service_name(),
           Object :: riakc_obj(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), Object :: riakc_obj()} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), Object :: riakc_obj()} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-put(Dispatcher, Name, Object, Timeout)
+put(Agent, Name, Object, Timeout)
     when is_tuple(Object) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {put, cloudi_x_riakc_obj:key(Object), Object,
                            [{object, true}]}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -423,27 +438,28 @@ put(Dispatcher, Name, Object, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec put(Agent :: agent(),
+          Name :: service_name(),
           Key :: binary(),
           ValueOrObject :: binary() | riakc_obj(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), Value :: binary()} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), Value :: binary()} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-put(Dispatcher, Name, Key, ValueOrObject, Timeout)
+put(Agent, Name, Key, ValueOrObject, Timeout)
     when is_binary(Key),
          is_binary(ValueOrObject) orelse is_tuple(ValueOrObject) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {put, Key, ValueOrObject, []}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {siblings, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {siblings, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -453,29 +469,30 @@ put(Dispatcher, Name, Key, ValueOrObject, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Name :: cloudi_service:service_name(),
+-spec put(Agent :: agent(),
+          Name :: service_name(),
           Key :: binary(),
           ValueOrObject :: binary() | riakc_obj(),
           Options :: put_options(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, Key :: binary(), ValueOrObject :: binary() | riakc_obj()} |
-    {siblings, Key :: binary(), Values :: list(binary())} |
-    {error, cloudi_service:error_reason_sync() | no_value | any()}.
+          Timeout :: timeout_milliseconds()) ->
+    {{ok, Key :: binary(), ValueOrObject :: binary() | riakc_obj()} |
+     {siblings, Key :: binary(), Values :: list(binary())} |
+     {error, cloudi_service:error_reason_sync() | no_value | any()},
+     NewAgent :: agent()}.
 
-put(Dispatcher, Name, Key, ValueOrObject, Options, Timeout)
+put(Agent, Name, Key, ValueOrObject, Options, Timeout)
     when is_binary(Key),
          is_binary(ValueOrObject) orelse is_tuple(ValueOrObject),
          is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {put, Key, ValueOrObject, Options}, Timeout) of
-        {ok, {ok, _, _} = Success} ->
-            Success;
-        {ok, {siblings, _, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {siblings, _, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -486,22 +503,23 @@ put(Dispatcher, Name, Key, ValueOrObject, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec list_buckets(Dispatcher :: dispatcher(),
-                   Name :: cloudi_service:service_name(),
+-spec list_buckets(Agent :: agent(),
+                   Name :: service_name(),
                    Options :: list(),
-                   Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, list(binary())} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                   Timeout :: timeout_milliseconds()) ->
+    {{ok, list(binary())} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-list_buckets(Dispatcher, Name, Options, Timeout)
+list_buckets(Agent, Name, Options, Timeout)
     when is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {list_buckets, Options}, Timeout) of
-        {ok, {ok, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 
@@ -512,22 +530,23 @@ list_buckets(Dispatcher, Name, Options, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec list_keys(Dispatcher :: dispatcher(),
-                Name :: cloudi_service:service_name(),
+-spec list_keys(Agent :: agent(),
+                Name :: service_name(),
                 Options :: list(),
-                Timeout :: cloudi_service:timeout_milliseconds()) ->
-    {ok, list(binary())} |
-    {error, cloudi_service:error_reason_sync() | any()}.
+                Timeout :: timeout_milliseconds()) ->
+    {{ok, list(binary())} |
+     {error, cloudi_service:error_reason_sync() | any()},
+     NewAgent :: agent()}.
 
-list_keys(Dispatcher, Name, Options, Timeout)
+list_keys(Agent, Name, Options, Timeout)
     when is_list(Options) ->
-    case cloudi:send_sync(Dispatcher, Name,
+    case cloudi:send_sync(Agent, Name,
                           {list_keys, Options}, Timeout) of
-        {ok, {ok, _} = Success} ->
-            Success;
-        {ok, {error, _} = Error} ->
-            Error;
-        {error, _} = Error ->
+        {{ok, {ok, _} = Success}, NewAgent} ->
+            {Success, NewAgent};
+        {{ok, {error, _} = Error}, NewAgent} ->
+            {Error, NewAgent};
+        {{error, _}, _} = Error ->
             Error
     end.
 

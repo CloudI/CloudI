@@ -38,7 +38,7 @@
 
 %% When parsed by the typeserver, this becomes opaque (it's declared as a simple
 %% type because dialyzer can't handle parametric opaque types yet).
--type gb_set(_T) :: gb_set().
+-type gb_set(_T) :: any().
 %% Based on the documentation alone, this is the best we can do.
 -type iterator(_T) :: term().
 

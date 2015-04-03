@@ -19,7 +19,7 @@
 %%%
 %%% BSD LICENSE
 %%%
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%%
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -97,15 +97,27 @@
     {
         node_id :: <<_:48>>,
         clock_seq :: 0..16383,
-        timestamp_type :: 'os' | 'erlang'
+        timestamp_type :: 'os' | 'erlang_now' | 'erlang_timestamp' | 'warp',
+        timestamp_last :: integer() % microseconds
     }).
 
 -type uuid() :: <<_:128>>.
+-type timestamp_type() :: 'os' | 'erlang' | 'warp'.
 -type state() :: #uuid_state{}.
 -export_type([uuid/0,
+              timestamp_type/0,
               state/0]).
 
 -include("uuid.hrl").
+
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else. % necessary for Erlang >= 18.0
+-compile({nowarn_deprecated_function,
+          {erlang, now, 0}}).
+-endif.
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -118,7 +130,7 @@
 %%-------------------------------------------------------------------------
 
 -spec new(Pid :: pid()) ->
-    #uuid_state{}.
+    state().
 
 new(Pid) when is_pid(Pid) ->
     new(Pid, [{timestamp_type, erlang}]).
@@ -126,22 +138,26 @@ new(Pid) when is_pid(Pid) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create new UUID state for v1 UUID generation using a specific type of timestamp.===
-%% The timestamp can either be based on erlang:now/0 with erlang or
-%% os:timestamp/0 with os.  erlang:now/0 will make sure all time values are
-%% increasing, even if the system clock changes.  os:timestamp/0 will get the
-%% system clock quickly without modifying the result.
+%% The timestamp can either be based on erlang's adjustment of time
+%% (for only strictly monotonically increasing time values) or the
+%% operating system's time without any adjustment
+%% (with timestamp_type values `erlang' and `os', respectively).
+%% If you want erlang's adjustment of time without enforcement of increasing
+%% time values, use the `warp' timestamp_type value with Erlang >= 18.0.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec new(Pid :: pid(),
-          Options :: 'os' | 'erlang' |
-                     list({timestamp_type, 'os' | 'erlang'} |
+          Options :: timestamp_type() |
+                     list({timestamp_type, timestamp_type()} |
                           {mac_address, list(non_neg_integer())})) ->
-    #uuid_state{}.
+    state().
 
 new(Pid, TimestampType)
     when is_pid(Pid),
-         ((TimestampType =:= erlang) orelse (TimestampType =:= os)) ->
+         ((TimestampType =:= erlang) orelse
+          (TimestampType =:= os) orelse
+          (TimestampType =:= warp)) ->
     new(Pid, [{timestamp_type, TimestampType}]);
 new(Pid, Options)
     when is_pid(Pid), is_list(Options) ->
@@ -205,11 +221,35 @@ new(Pid, Options)
     PidByte3 = PidID3 bxor PidSR2,
     PidByte4 = PidID4 bxor PidSR1,
     ClockSeq = random:uniform(16384) - 1,
+    TimestampTypeInternal = if
+        TimestampType =:= os ->
+            os;
+        TimestampType =:= erlang ->
+            case erlang:function_exported(erlang, system_time, 0) of
+                true ->
+                    % Erlang >= 18.0
+                    erlang_timestamp;
+                false ->
+                    % Erlang < 18.0
+                    erlang_now
+            end;
+        TimestampType =:= warp ->
+            case erlang:function_exported(erlang, system_time, 0) of
+                true ->
+                    % Erlang >= 18.0
+                    warp;
+                false ->
+                    % Erlang < 18.0
+                    erlang:exit(badarg)
+            end
+    end,
+    TimestampLast = timestamp(TimestampTypeInternal),
     #uuid_state{node_id = <<NodeByte1:8, NodeByte2:8,
                             PidByte1:8, PidByte2:8,
                             PidByte3:8, PidByte4:8>>,
                 clock_seq = ClockSeq,
-                timestamp_type = TimestampType}.
+                timestamp_type = TimestampTypeInternal,
+                timestamp_last = TimestampLast}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -217,30 +257,26 @@ new(Pid, Options)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v1(#uuid_state{}) ->
-    uuid().
+-spec get_v1(State :: state()) ->
+    {uuid(), NewState :: state()}.
 
 get_v1(#uuid_state{node_id = NodeId,
                    clock_seq = ClockSeq,
-                   timestamp_type = TimestampType}) ->
-    {MegaSeconds, Seconds, MicroSeconds} = if
-        TimestampType =:= erlang ->
-            erlang:now();
-        TimestampType =:= os ->
-            os:timestamp()
-    end,
+                   timestamp_type = TimestampTypeInternal,
+                   timestamp_last = TimestampLast} = State) ->
+    MicroSeconds = timestamp(TimestampTypeInternal, TimestampLast),
     % 16#01b21dd213814000 is the number of 100-ns intervals between the
-    % UUID epoch 1582-10-15 00:00:00 and the Unix epoch 1970-01-01 00:00:00.
-    Time = ((MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds) * 10 +
-           16#01b21dd213814000,
+    % UUID epoch 1582-10-15 00:00:00 and the UNIX epoch 1970-01-01 00:00:00.
+    Time = MicroSeconds * 10 + 16#01b21dd213814000,
     % will be larger than 60 bits after 5236-03-31 21:21:00
     <<TimeHigh:12, TimeMid:16, TimeLow:32>> = <<Time:60>>,
-    <<TimeLow:32, TimeMid:16,
-      0:1, 0:1, 0:1, 1:1,  % version 1 bits
-      TimeHigh:12,
-      1:1, 0:1,            % RFC 4122 variant bits
-      ClockSeq:14,
-      NodeId/binary>>.
+    {<<TimeLow:32, TimeMid:16,
+       0:1, 0:1, 0:1, 1:1,  % version 1 bits
+       TimeHigh:12,
+       1:1, 0:1,            % RFC 4122 variant bits
+       ClockSeq:14,
+       NodeId/binary>>,
+     State#uuid_state{timestamp_last = MicroSeconds}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -262,26 +298,27 @@ get_v1_time() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v1_time('os' | 'erlang' | #uuid_state{} | uuid()) ->
+-spec get_v1_time(timestamp_type() | state() | uuid()) ->
     non_neg_integer().
 
 get_v1_time(erlang) ->
-    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+    case erlang:function_exported(erlang, system_time, 0) of
+        true ->
+            % Erlang >= 18.0
+            timestamp(erlang_timestamp);
+        false ->
+            % Erlang < 18.0
+            timestamp(erlang_now)
+    end;
 
 get_v1_time(os) ->
-    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
-    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+    timestamp(os);
 
-get_v1_time(#uuid_state{timestamp_type = TimestampType}) ->
-    get_v1_time(TimestampType);
+get_v1_time(warp) ->
+    timestamp(warp);
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Get the time value from a v1 UUID.===
-%% The result is an integer in microseconds.
-%% @end
-%%-------------------------------------------------------------------------
+get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
+    timestamp(TimestampTypeInternal);
 
 get_v1_time(Value)
     when is_binary(Value), byte_size(Value) == 16 ->
@@ -292,7 +329,7 @@ get_v1_time(Value)
       _:14,
       _:48>> = Value,
     <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
-    ((Time - 16#01b21dd213814000) div 10). % microseconds since epoch
+    ((Time - 16#01b21dd213814000) div 10). % microseconds since UNIX epoch
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -896,27 +933,14 @@ is_uuid(_) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Increment the clock sequence of v1 UUID state.===
-%% The RFC said to increment the clock sequence counter
-%% if the system clock was set backwards.  However, erlang:now/0 always
-%% provides increasing time values, so this function is not necessary
-%% when the system clock changes.  Since the version 1 node id contains the
-%% Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
-%% bitwise-xor operation, the node id is specific to both the Erlang node
-%% and the Erlang node lifetime (the PID Creation is different after a node
-%% crash). Therefore, it is unclear why this function would be necessary
-%% within this Erlang implementation of v1 UUID generation (if the system
-%% is always running). The only event that seems to require this function's
-%% usage is if the v1 UUID has been stored and retrieved where both actions
-%% occurred at a point with a system clock change inbetween or possibly
-%% on different machines with a large difference in system clocks
-%% (i.e., in some situation that isn't handled by the Erlang VM, so
-%%  possibly if an external distribution mechanism was used between
-%%  Erlang VMs, not connected with distributed Erlang).
+%% Call to increment the clock sequence counter after the system clock has
+%% been set backwards (see the RFC).  This is only necessary
+%% if the `os' or `warp' timestamp_type is used.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec increment(State :: #uuid_state{}) ->
-    #uuid_state{}.
+-spec increment(State :: state()) ->
+    NewState :: state().
 
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
@@ -1007,7 +1031,7 @@ test() ->
            ((V1Time2Amicro + 605) == V1Time2Bmicro),
     true = V1ClockSeq1 /= V1ClockSeq2,
     true = V1NodeId1 == V1NodeId2,
-    V1uuid3 = uuid:get_v1(uuid:new(self(), erlang)),
+    {V1uuid3, _} = uuid:get_v1(uuid:new(self(), erlang)),
     V1uuid3timeB = uuid:get_v1_time(erlang),
     V1uuid3timeA = uuid:get_v1_time(V1uuid3),
     true = (V1uuid3timeA < V1uuid3timeB) and
@@ -1020,7 +1044,7 @@ test() ->
         uuid:string_to_uuid("7134eede-c23b-11e2-a4a7-38607751fca5"))),
     true = is_number(uuid:get_v1_time(
         uuid:string_to_uuid("717003c0-c23b-11e2-83a4-38607751fca5"))),
-    V1uuid4 = uuid:get_v1(uuid:new(self(), os)),
+    {V1uuid4, _} = uuid:get_v1(uuid:new(self(), os)),
     V1uuid4timeB = uuid:get_v1_time(os),
     V1uuid4timeA = uuid:get_v1_time(V1uuid4),
     true = (V1uuid4timeA < V1uuid4timeB) and
@@ -1158,6 +1182,36 @@ test() ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+-compile({inline,
+          [{timestamp,1},
+           {timestamp,2},
+           {int_to_hex,1},
+           {hex_to_int,1}]}).
+
+timestamp(erlang_now) ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+timestamp(erlang_timestamp) ->
+    erlang:system_time(micro_seconds);
+timestamp(os) ->
+    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+timestamp(warp) ->
+    erlang:system_time(micro_seconds).
+
+timestamp(os, _) ->
+    timestamp(os);
+timestamp(warp, _) ->
+    timestamp(warp);
+timestamp(TimestampTypeInternal, TimestampLast) ->
+    TimestampNext = timestamp(TimestampTypeInternal),
+    if
+        TimestampNext > TimestampLast ->
+            TimestampNext;
+        true ->
+            TimestampLast + 1
+    end.
+
 int_to_hex_list(I, N) when is_integer(I), I >= 0 ->
     int_to_hex_list([], I, 1, N).
 
@@ -1171,8 +1225,6 @@ int_to_hex_list(L, I, Count, N)
     int_to_hex_list_pad([int_to_hex(I) | L], N - Count);
 int_to_hex_list(L, I, Count, N) ->
     int_to_hex_list([int_to_hex(I rem 16) | L], I div 16, Count + 1, N).
-
--compile({inline, [{int_to_hex,1}, {hex_to_int,1}]}).
 
 int_to_hex(I) when 0 =< I, I =< 9 ->
     I + $0;

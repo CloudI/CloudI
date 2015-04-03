@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2009-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_tokyotyrant).
@@ -122,11 +122,16 @@
         connection
     }).
 
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type external_response(Result) ::
+    {{ok, Result}, NewAgent :: agent()} |
+    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -134,30 +139,28 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec addint(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec addint(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Integer :: integer()) ->
-    any().
+    external_response(any()).
 
-addint(Dispatcher, Name, Key, Integer)
-    when is_list(Name),
-         is_integer(Integer) ->
-    cloudi:send_sync(Dispatcher, Name,
+addint(Agent, Name, Key, Integer)
+    when is_integer(Integer) ->
+    cloudi:send_sync(Agent, Name,
                      {addint, Key, Integer}).
 
--spec addint(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec addint(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Integer :: integer(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-addint(Dispatcher, Name, Key, Integer, Timeout)
-    when is_list(Name),
-         is_integer(Integer), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+addint(Agent, Name, Key, Integer, Timeout)
+    when is_integer(Integer) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {addint, Key, Integer}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -166,31 +169,29 @@ addint(Dispatcher, Name, Key, Integer, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec adddouble(Dispatcher :: dispatcher(),
-                Name :: string(),
+-spec adddouble(Agent :: agent(),
+                Name :: service_name(),
                 Key :: iolist(),
                 Double :: float()) ->
-    any().
+    external_response(any()).
 
-adddouble(Dispatcher, Name, Key, Double)
-    when is_list(Name),
-         is_float(Double) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+adddouble(Agent, Name, Key, Double)
+    when is_float(Double) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {adddouble, Key, Double}).
 
--spec adddouble(Dispatcher :: dispatcher(),
-                Name :: string(),
+-spec adddouble(Agent :: agent(),
+                Name :: service_name(),
                 Key :: iolist(),
                 Double :: float(),
-                Timeout :: pos_integer()) ->
-    any().
+                Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-adddouble(Dispatcher, Name, Key, Double, Timeout)
-    when is_list(Name),
-         is_float(Double), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+adddouble(Agent, Name, Key, Double, Timeout)
+    when is_float(Double) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {adddouble, Key, Double}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -199,35 +200,32 @@ adddouble(Dispatcher, Name, Key, Double, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec adddouble_parts(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec adddouble_parts(Agent :: agent(),
+                      Name :: service_name(),
                       Key :: iolist(),
                       IntegerPart :: integer(),
                       FractionalPart :: integer()) ->
-    any().
+    external_response(any()).
 
-adddouble_parts(Dispatcher, Name, Key, IntegerPart, FractionalPart)
-    when is_list(Name),
-         is_integer(IntegerPart), is_integer(FractionalPart) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+adddouble_parts(Agent, Name, Key, IntegerPart, FractionalPart)
+    when is_integer(IntegerPart), is_integer(FractionalPart) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {adddouble_parts, Key,
                       IntegerPart, FractionalPart}).
 
--spec adddouble_parts(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec adddouble_parts(Agent :: agent(),
+                      Name :: service_name(),
                       Key :: iolist(),
                       IntegerPart :: integer(),
                       FractionalPart :: integer(),
-                      Timeout :: pos_integer()) ->
-    any().
+                      Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-adddouble_parts(Dispatcher, Name, Key, IntegerPart, FractionalPart, Timeout)
-    when is_list(Name),
-         is_integer(IntegerPart), is_integer(FractionalPart),
-         is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+adddouble_parts(Agent, Name, Key, IntegerPart, FractionalPart, Timeout)
+    when is_integer(IntegerPart), is_integer(FractionalPart) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {adddouble_parts, Key,
                       IntegerPart, FractionalPart},
                      Timeout).
@@ -238,27 +236,25 @@ adddouble_parts(Dispatcher, Name, Key, IntegerPart, FractionalPart, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec copy(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec copy(Agent :: agent(),
+           Name :: service_name(),
            PathName :: string()) ->
-    any().
+    external_response(any()).
 
-copy(Dispatcher, Name, PathName)
-    when is_list(Name) ->
-    true = is_list(PathName) or is_binary(PathName),
-    cloudi:send_sync(Dispatcher, Name,
+copy(Agent, Name, PathName) ->
+    true = is_list(PathName) orelse is_binary(PathName),
+    cloudi:send_sync(Agent, Name,
                      {copy, PathName}).
 
--spec copy(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec copy(Agent :: agent(),
+           Name :: service_name(),
            PathName :: string(),
-           Timeout :: pos_integer()) ->
-    any().
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-copy(Dispatcher, Name, PathName, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(PathName) or is_binary(PathName),
-    cloudi:send_sync(Dispatcher, Name,
+copy(Agent, Name, PathName, Timeout) ->
+    true = is_list(PathName) orelse is_binary(PathName),
+    cloudi:send_sync(Agent, Name,
                      {copy, PathName}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -267,31 +263,29 @@ copy(Dispatcher, Name, PathName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec fwmkeys(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec fwmkeys(Agent :: agent(),
+              Name :: service_name(),
               Prefix :: iolist(),
               MaxKeys :: non_neg_integer()) ->
-    any().
+    external_response(any()).
 
-fwmkeys(Dispatcher, Name, Prefix, MaxKeys)
-    when is_list(Name),
-         is_integer(MaxKeys) ->
-    true = is_list(Prefix) or is_binary(Prefix),
-    cloudi:send_sync(Dispatcher, Name,
+fwmkeys(Agent, Name, Prefix, MaxKeys)
+    when is_integer(MaxKeys) ->
+    true = is_list(Prefix) orelse is_binary(Prefix),
+    cloudi:send_sync(Agent, Name,
                      {fwmkeys, Prefix, MaxKeys}).
 
--spec fwmkeys(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec fwmkeys(Agent :: agent(),
+              Name :: service_name(),
               Prefix :: iolist(),
               MaxKeys :: non_neg_integer(),
-              Timeout :: pos_integer()) ->
-    any().
+              Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-fwmkeys(Dispatcher, Name, Prefix, MaxKeys, Timeout)
-    when is_list(Name),
-         is_integer(MaxKeys), is_integer(Timeout) ->
-    true = is_list(Prefix) or is_binary(Prefix),
-    cloudi:send_sync(Dispatcher, Name,
+fwmkeys(Agent, Name, Prefix, MaxKeys, Timeout)
+    when is_integer(MaxKeys) ->
+    true = is_list(Prefix) orelse is_binary(Prefix),
+    cloudi:send_sync(Agent, Name,
                      {fwmkeys, Prefix, MaxKeys}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -300,27 +294,25 @@ fwmkeys(Dispatcher, Name, Prefix, MaxKeys, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec get(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist()) ->
-    any().
+    external_response(any()).
 
-get(Dispatcher, Name, Key)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+get(Agent, Name, Key) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {get, Key}).
 
--spec get(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec get(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist(),
-          Timeout :: pos_integer()) ->
-    any().
+          Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-get(Dispatcher, Name, Key, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+get(Agent, Name, Key, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {get, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -329,23 +321,21 @@ get(Dispatcher, Name, Key, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec iterinit(Dispatcher :: dispatcher(),
-               Name :: string()) ->
-    any().
+-spec iterinit(Agent :: agent(),
+               Name :: service_name()) ->
+    external_response(any()).
 
-iterinit(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+iterinit(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      iterinit).
 
--spec iterinit(Dispatcher :: dispatcher(),
-               Name :: string(),
-               Timeout :: pos_integer()) ->
-    any().
+-spec iterinit(Agent :: agent(),
+               Name :: service_name(),
+               Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-iterinit(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+iterinit(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      iterinit, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -354,23 +344,21 @@ iterinit(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec iternext(Dispatcher :: dispatcher(),
-               Name :: string()) ->
-    any().
+-spec iternext(Agent :: agent(),
+               Name :: service_name()) ->
+    external_response(any()).
 
-iternext(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+iternext(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      iternext).
 
--spec iternext(Dispatcher :: dispatcher(),
-               Name :: string(),
-               Timeout :: pos_integer()) ->
-    any().
+-spec iternext(Agent :: agent(),
+               Name :: service_name(),
+               Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-iternext(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+iternext(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      iternext, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -379,27 +367,25 @@ iternext(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec mget(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec mget(Agent :: agent(),
+           Name :: service_name(),
            KeyList :: list(iolist())) ->
-    any().
+    external_response(any()).
 
-mget(Dispatcher, Name, KeyList)
-    when is_list(Name),
-         is_list(KeyList) ->
-    cloudi:send_sync(Dispatcher, Name,
+mget(Agent, Name, KeyList)
+    when is_list(KeyList) ->
+    cloudi:send_sync(Agent, Name,
                      {mget, KeyList}).
 
--spec mget(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec mget(Agent :: agent(),
+           Name :: service_name(),
            KeyList :: list(iolist()),
-           Timeout :: pos_integer()) ->
-    any().
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-mget(Dispatcher, Name, KeyList, Timeout)
-    when is_list(Name),
-         is_list(KeyList), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+mget(Agent, Name, KeyList, Timeout)
+    when is_list(KeyList) ->
+    cloudi:send_sync(Agent, Name,
                      {mget, KeyList}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -408,27 +394,25 @@ mget(Dispatcher, Name, KeyList, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec optimize(Dispatcher :: dispatcher(),
-               Name :: string(),
+-spec optimize(Agent :: agent(),
+               Name :: service_name(),
                TuningOptions :: iolist()) ->
-    any().
+    external_response(any()).
 
-optimize(Dispatcher, Name, TuningOptions)
-    when is_list(Name) ->
-    true = is_list(TuningOptions) or is_binary(TuningOptions),
-    cloudi:send_sync(Dispatcher, Name,
+optimize(Agent, Name, TuningOptions) ->
+    true = is_list(TuningOptions) orelse is_binary(TuningOptions),
+    cloudi:send_sync(Agent, Name,
                      {optimize, TuningOptions}).
 
--spec optimize(Dispatcher :: dispatcher(),
-               Name :: string(),
+-spec optimize(Agent :: agent(),
+               Name :: service_name(),
                TuningOptions :: iolist(),
-               Timeout :: pos_integer()) ->
-    any().
+               Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-optimize(Dispatcher, Name, TuningOptions, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(TuningOptions) or is_binary(TuningOptions),
-    cloudi:send_sync(Dispatcher, Name,
+optimize(Agent, Name, TuningOptions, Timeout) ->
+    true = is_list(TuningOptions) orelse is_binary(TuningOptions),
+    cloudi:send_sync(Agent, Name,
                      {optimize, TuningOptions}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -437,27 +421,25 @@ optimize(Dispatcher, Name, TuningOptions, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec out(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec out(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist()) ->
-    any().
+    external_response(any()).
 
-out(Dispatcher, Name, Key)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+out(Agent, Name, Key) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {out, Key}).
 
--spec out(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec out(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist(),
-          Timeout :: pos_integer()) ->
-    any().
+          Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-out(Dispatcher, Name, Key, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+out(Agent, Name, Key, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {out, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -466,33 +448,31 @@ out(Dispatcher, Name, Key, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec put(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec put(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist(),
           Value :: integer() | float() | list() | binary()) ->
-    any().
+    external_response(any()).
 
-put(Dispatcher, Name, Key, Value)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+put(Agent, Name, Key, Value) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {put, Key, Value}).
 
--spec put(Dispatcher :: dispatcher(),
-          Name :: string(),
+-spec put(Agent :: agent(),
+          Name :: service_name(),
           Key :: iolist(),
           Value :: integer() | float() | list() | binary(),
-          Timeout :: pos_integer()) ->
-    any().
+          Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-put(Dispatcher, Name, Key, Value, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+put(Agent, Name, Key, Value, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {put, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -501,33 +481,31 @@ put(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec putcat(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec putcat(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Value :: integer() | float() | list() | binary()) ->
-    any().
+    external_response(any()).
 
-putcat(Dispatcher, Name, Key, Value)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putcat(Agent, Name, Key, Value) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putcat, Key, Value}).
 
--spec putcat(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec putcat(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Value :: integer() | float() | list() | binary(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-putcat(Dispatcher, Name, Key, Value, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putcat(Agent, Name, Key, Value, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putcat, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -536,33 +514,31 @@ putcat(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec putkeep(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec putkeep(Agent :: agent(),
+              Name :: service_name(),
               Key :: iolist(),
               Value :: integer() | float() | list() | binary()) ->
-    any().
+    external_response(any()).
 
-putkeep(Dispatcher, Name, Key, Value)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putkeep(Agent, Name, Key, Value) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putkeep, Key, Value}).
 
--spec putkeep(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec putkeep(Agent :: agent(),
+              Name :: service_name(),
               Key :: iolist(),
               Value :: integer() | float() | list() | binary(),
-              Timeout :: pos_integer()) ->
-    any().
+              Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-putkeep(Dispatcher, Name, Key, Value, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putkeep(Agent, Name, Key, Value, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putkeep, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -571,33 +547,31 @@ putkeep(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec putnr(Dispatcher :: dispatcher(),
-            Name :: string(),
+-spec putnr(Agent :: agent(),
+            Name :: service_name(),
             Key :: iolist(),
             Value :: integer() | float() | list() | binary()) ->
-    any().
+    external_response(any()).
 
-putnr(Dispatcher, Name, Key, Value)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putnr(Agent, Name, Key, Value) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putnr, Key, Value}).
 
--spec putnr(Dispatcher :: dispatcher(),
-            Name :: string(),
+-spec putnr(Agent :: agent(),
+            Name :: service_name(),
             Key :: iolist(),
             Value :: integer() | float() | list() | binary(),
-            Timeout :: pos_integer()) ->
-    any().
+            Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-putnr(Dispatcher, Name, Key, Value, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putnr(Agent, Name, Key, Value, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putnr, Key, Value}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -606,38 +580,36 @@ putnr(Dispatcher, Name, Key, Value, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec putshl(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec putshl(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Value :: integer() | float() | list() | binary(),
              Width :: integer()) ->
-    any().
+    external_response(any()).
 
-putshl(Dispatcher, Name, Key, Value, Width)
-    when is_list(Name),
-         is_integer(Width) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putshl(Agent, Name, Key, Value, Width)
+    when is_integer(Width) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putshl, Key, Value, Width}).
 
 
--spec putshl(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec putshl(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              Value :: integer() | float() | list() | binary(),
              Width :: integer(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-putshl(Dispatcher, Name, Key, Value, Width, Timeout)
-    when is_list(Name),
-         is_integer(Width), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    true = is_integer(Value) or is_float(Value) or
-           is_list(Value) or is_binary(Value),
-    cloudi:send_sync(Dispatcher, Name,
+putshl(Agent, Name, Key, Value, Width, Timeout)
+    when is_integer(Width) ->
+    true = is_list(Key) orelse is_binary(Key),
+    true = is_integer(Value) orelse is_float(Value) or
+           is_list(Value) orelse is_binary(Value),
+    cloudi:send_sync(Agent, Name,
                      {putshl, Key, Value, Width}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -646,31 +618,29 @@ putshl(Dispatcher, Name, Key, Value, Width, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec restore(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec restore(Agent :: agent(),
+              Name :: service_name(),
               PathName :: iolist(),
               TimeStamp :: integer()) ->
-    any().
+    external_response(any()).
 
-restore(Dispatcher, Name, PathName, TimeStamp)
-    when is_list(Name),
-         is_integer(TimeStamp) ->
-    true = is_list(PathName) or is_binary(PathName),
-    cloudi:send_sync(Dispatcher, Name,
+restore(Agent, Name, PathName, TimeStamp)
+    when is_integer(TimeStamp) ->
+    true = is_list(PathName) orelse is_binary(PathName),
+    cloudi:send_sync(Agent, Name,
                      {restore, PathName, TimeStamp}).
 
--spec restore(Dispatcher :: dispatcher(),
-              Name :: string(),
+-spec restore(Agent :: agent(),
+              Name :: service_name(),
               PathName :: iolist(),
               TimeStamp :: integer(),
-              Timeout :: pos_integer()) ->
-    any().
+              Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-restore(Dispatcher, Name, PathName, TimeStamp, Timeout)
-    when is_list(Name),
-         is_integer(TimeStamp), is_integer(Timeout) ->
-    true = is_list(PathName) or is_binary(PathName),
-    cloudi:send_sync(Dispatcher, Name,
+restore(Agent, Name, PathName, TimeStamp, Timeout)
+    when is_integer(TimeStamp) ->
+    true = is_list(PathName) orelse is_binary(PathName),
+    cloudi:send_sync(Agent, Name,
                      {restore, PathName, TimeStamp}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -679,23 +649,21 @@ restore(Dispatcher, Name, PathName, TimeStamp, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec rnum(Dispatcher :: dispatcher(),
-           Name :: string()) ->
-    any().
+-spec rnum(Agent :: agent(),
+           Name :: service_name()) ->
+    external_response(any()).
 
-rnum(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+rnum(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      rnum).
 
--spec rnum(Dispatcher :: dispatcher(),
-           Name :: string(),
-           Timeout :: pos_integer()) ->
-    any().
+-spec rnum(Agent :: agent(),
+           Name :: service_name(),
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-rnum(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+rnum(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      rnum, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -704,31 +672,29 @@ rnum(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec setmst(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec setmst(Agent :: agent(),
+             Name :: service_name(),
              Host :: iolist(),
              Port :: integer()) ->
-    any().
+    external_response(any()).
 
-setmst(Dispatcher, Name, HostName, Port)
-    when is_list(Name),
-         is_integer(Port) ->
-    true = is_list(HostName) or is_binary(HostName),
-    cloudi:send_sync(Dispatcher, Name,
+setmst(Agent, Name, HostName, Port)
+    when is_integer(Port) ->
+    true = is_list(HostName) orelse is_binary(HostName),
+    cloudi:send_sync(Agent, Name,
                      {setmst, HostName, Port}).
 
--spec setmst(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec setmst(Agent :: agent(),
+             Name :: service_name(),
              Host :: iolist(),
              Port :: integer(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-setmst(Dispatcher, Name, HostName, Port, Timeout)
-    when is_list(Name),
-         is_integer(Port), is_integer(Timeout) ->
-    true = is_list(HostName) or is_binary(HostName),
-    cloudi:send_sync(Dispatcher, Name,
+setmst(Agent, Name, HostName, Port, Timeout)
+    when is_integer(Port) ->
+    true = is_list(HostName) orelse is_binary(HostName),
+    cloudi:send_sync(Agent, Name,
                      {setmst, HostName, Port}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -737,23 +703,21 @@ setmst(Dispatcher, Name, HostName, Port, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec size(Dispatcher :: dispatcher(),
-           Name :: string()) ->
-    any().
+-spec size(Agent :: agent(),
+           Name :: service_name()) ->
+    external_response(any()).
 
-size(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+size(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      size).
 
--spec size(Dispatcher :: dispatcher(),
-           Name :: string(),
-           Timeout :: pos_integer()) ->
-    any().
+-spec size(Agent :: agent(),
+           Name :: service_name(),
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-size(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+size(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      size, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -762,23 +726,21 @@ size(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec stat(Dispatcher :: dispatcher(),
-           Name :: string()) ->
-    any().
+-spec stat(Agent :: agent(),
+           Name :: service_name()) ->
+    external_response(any()).
 
-stat(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+stat(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      stat).
 
--spec stat(Dispatcher :: dispatcher(),
-           Name :: string(),
-           Timeout :: pos_integer()) ->
-    any().
+-spec stat(Agent :: agent(),
+           Name :: service_name(),
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-stat(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+stat(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      stat, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -787,23 +749,21 @@ stat(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec sync(Dispatcher :: dispatcher(),
-           Name :: string()) ->
-    any().
+-spec sync(Agent :: agent(),
+           Name :: service_name()) ->
+    external_response(any()).
 
-sync(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+sync(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      sync).
 
--spec sync(Dispatcher :: dispatcher(),
-           Name :: string(),
-           Timeout :: pos_integer()) ->
-    any().
+-spec sync(Agent :: agent(),
+           Name :: service_name(),
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-sync(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+sync(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      sync, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -812,23 +772,21 @@ sync(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec vanish(Dispatcher :: dispatcher(),
-             Name :: string()) ->
-    any().
+-spec vanish(Agent :: agent(),
+             Name :: service_name()) ->
+    external_response(any()).
 
-vanish(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+vanish(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      vanish).
 
--spec vanish(Dispatcher :: dispatcher(),
-             Name :: string(),
-             Timeout :: pos_integer()) ->
-    any().
+-spec vanish(Agent :: agent(),
+             Name :: service_name(),
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-vanish(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+vanish(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      vanish, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -837,27 +795,25 @@ vanish(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec vsiz(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec vsiz(Agent :: agent(),
+           Name :: service_name(),
            Key :: iolist()) ->
-    any().
+    external_response(any()).
 
-vsiz(Dispatcher, Name, Key)
-    when is_list(Name) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+vsiz(Agent, Name, Key) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {vsiz, Key}).
 
--spec vsiz(Dispatcher :: dispatcher(),
-           Name :: string(),
+-spec vsiz(Agent :: agent(),
+           Name :: service_name(),
            Key :: iolist(),
-           Timeout :: pos_integer()) ->
-    any().
+           Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-vsiz(Dispatcher, Name, Key, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+vsiz(Agent, Name, Key, Timeout) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {vsiz, Key}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -866,23 +822,21 @@ vsiz(Dispatcher, Name, Key, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec genuid(Dispatcher :: dispatcher(),
-             Name :: string()) ->
-    any().
+-spec genuid(Agent :: agent(),
+             Name :: service_name()) ->
+    external_response(any()).
 
-genuid(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+genuid(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      genuid).
 
--spec genuid(Dispatcher :: dispatcher(),
-             Name :: string(),
-             Timeout :: pos_integer()) ->
-    any().
+-spec genuid(Agent :: agent(),
+             Name :: service_name(),
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-genuid(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+genuid(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      genuid, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -891,38 +845,36 @@ genuid(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec query_add_condition(Dispatcher :: dispatcher(),
-                              Name :: string(),
-                              OldQuery :: list(),
-                              Column :: iolist(),
-                              Op :: atom(),
-                              ExprList :: list()) ->
-    any().
+-spec query_add_condition(Agent :: agent(),
+                          Name :: service_name(),
+                          OldQuery :: list(),
+                          Column :: iolist(),
+                          Op :: atom(),
+                          ExprList :: list()) ->
+    external_response(any()).
 
-query_add_condition(Dispatcher, Name, OldQuery, Column, Op, ExprList)
-    when is_list(Name),
-         is_list(OldQuery), is_list(ExprList) ->
-    true = is_list(Column) or is_binary(Column),
-    true = is_atom(Op) or is_tuple(Op),
-    cloudi:send_sync(Dispatcher, Name,
+query_add_condition(Agent, Name, OldQuery, Column, Op, ExprList)
+    when is_list(OldQuery), is_list(ExprList) ->
+    true = is_list(Column) orelse is_binary(Column),
+    true = is_atom(Op) orelse is_tuple(Op),
+    cloudi:send_sync(Agent, Name,
                      {query_add_condition,
                       OldQuery, Column, Op, ExprList}).
 
--spec query_add_condition(Dispatcher :: dispatcher(),
-                              Name :: string(),
+-spec query_add_condition(Agent :: agent(),
+                              Name :: service_name(),
                               OldQuery :: list(),
                               Column :: iolist(),
                               Op :: atom(),
                               ExprList :: list(),
-                              Timeout :: pos_integer()) ->
-    any().
+                              Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-query_add_condition(Dispatcher, Name, OldQuery, Column, Op, ExprList, Timeout)
-    when is_list(Name),
-         is_list(OldQuery), is_list(ExprList), is_integer(Timeout) ->
-    true = is_list(Column) or is_binary(Column),
-    true = is_atom(Op) or is_tuple(Op),
-    cloudi:send_sync(Dispatcher, Name,
+query_add_condition(Agent, Name, OldQuery, Column, Op, ExprList, Timeout)
+    when is_list(OldQuery), is_list(ExprList) ->
+    true = is_list(Column) orelse is_binary(Column),
+    true = is_atom(Op) orelse is_tuple(Op),
+    cloudi:send_sync(Agent, Name,
                      {query_add_condition,
                       OldQuery, Column, Op, ExprList}, Timeout).
 
@@ -932,29 +884,27 @@ query_add_condition(Dispatcher, Name, OldQuery, Column, Op, ExprList, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec query_limit(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec query_limit(Agent :: agent(),
+                  Name :: service_name(),
                   OldQuery :: list(),
                   Max :: integer()) ->
-    any().
+    external_response(any()).
 
-query_limit(Dispatcher, Name, OldQuery, Max)
-    when is_list(Name),
-         is_list(OldQuery), is_integer(Max) ->
-    cloudi:send_sync(Dispatcher, Name,
+query_limit(Agent, Name, OldQuery, Max)
+    when is_list(OldQuery), is_integer(Max) ->
+    cloudi:send_sync(Agent, Name,
                      {query_limit, OldQuery, Max}).
 
--spec query_limit(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec query_limit(Agent :: agent(),
+                  Name :: service_name(),
                   OldQuery :: list(),
                   Max :: integer(),
-                  Timeout :: pos_integer()) ->
-    any().
+                  Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-query_limit(Dispatcher, Name, OldQuery, Max, Timeout)
-    when is_list(Name),
-         is_list(OldQuery), is_integer(Max), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+query_limit(Agent, Name, OldQuery, Max, Timeout)
+    when is_list(OldQuery), is_integer(Max) ->
+    cloudi:send_sync(Agent, Name,
                      {query_limit, OldQuery, Max}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -963,32 +913,29 @@ query_limit(Dispatcher, Name, OldQuery, Max, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec query_limit_skip(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec query_limit_skip(Agent :: agent(),
+                       Name :: service_name(),
                        OldQuery :: list(),
                        Max :: integer(),
                        Skip :: integer()) ->
-    any().
+    external_response(any()).
 
-query_limit_skip(Dispatcher, Name, OldQuery, Max, Skip)
-    when is_list(Name),
-         is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
-    cloudi:send_sync(Dispatcher, Name,
+query_limit_skip(Agent, Name, OldQuery, Max, Skip)
+    when is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
+    cloudi:send_sync(Agent, Name,
                      {query_limit_skip, OldQuery, Max, Skip}).
 
--spec query_limit_skip(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec query_limit_skip(Agent :: agent(),
+                       Name :: service_name(),
                        OldQuery :: list(),
                        Max :: integer(),
                        Skip :: integer(),
-                       Timeout :: pos_integer()) ->
-    any().
+                       Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-query_limit_skip(Dispatcher, Name, OldQuery, Max, Skip, Timeout)
-    when is_list(Name),
-         is_list(OldQuery), is_integer(Max), is_integer(Skip),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+query_limit_skip(Agent, Name, OldQuery, Max, Skip, Timeout)
+    when is_list(OldQuery), is_integer(Max), is_integer(Skip) ->
+    cloudi:send_sync(Agent, Name,
                      {query_limit_skip, OldQuery, Max, Skip}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -997,33 +944,31 @@ query_limit_skip(Dispatcher, Name, OldQuery, Max, Skip, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec query_order(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec query_order(Agent :: agent(),
+                  Name :: service_name(),
                   OldQuery :: list(),
                   Column :: 'primary' | iolist(),
                   Type :: atom()) ->
-    any().
+    external_response(any()).
 
-query_order(Dispatcher, Name, OldQuery, Column, Type)
-    when is_list(Name),
-         is_list(OldQuery), is_atom(Type) ->
-    true = (Column == primary) or is_list(Column) or is_binary(Column),
-    cloudi:send_sync(Dispatcher, Name,
+query_order(Agent, Name, OldQuery, Column, Type)
+    when is_list(OldQuery), is_atom(Type) ->
+    true = (Column == primary) orelse is_list(Column) orelse is_binary(Column),
+    cloudi:send_sync(Agent, Name,
                      {query_order, OldQuery, Column, Type}).
 
--spec query_order(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec query_order(Agent :: agent(),
+                  Name :: service_name(),
                   OldQuery :: list(),
                   Column :: 'primary' | iolist(),
                   Type :: atom(),
-                  Timeout :: pos_integer()) ->
-    any().
+                  Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-query_order(Dispatcher, Name, OldQuery, Column, Type, Timeout)
-    when is_list(Name),
-         is_list(OldQuery), is_atom(Type), is_integer(Timeout) ->
-    true = (Column == primary) or is_list(Column) or is_binary(Column),
-    cloudi:send_sync(Dispatcher, Name,
+query_order(Agent, Name, OldQuery, Column, Type, Timeout)
+    when is_list(OldQuery), is_atom(Type) ->
+    true = (Column == primary) orelse is_list(Column) orelse is_binary(Column),
+    cloudi:send_sync(Agent, Name,
                      {query_order, OldQuery, Column, Type}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1032,27 +977,25 @@ query_order(Dispatcher, Name, OldQuery, Column, Type, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec search(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec search(Agent :: agent(),
+             Name :: service_name(),
              Query :: list()) ->
-    any().
+    external_response(any()).
 
-search(Dispatcher, Name, Query)
-    when is_list(Name),
-         is_list(Query) ->
-    cloudi:send_sync(Dispatcher, Name,
+search(Agent, Name, Query)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {search, Query}).
 
--spec search(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec search(Agent :: agent(),
+             Name :: service_name(),
              Query :: list(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-search(Dispatcher, Name, Query, Timeout)
-    when is_list(Name),
-         is_list(Query), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+search(Agent, Name, Query, Timeout)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {search, Query}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1061,27 +1004,25 @@ search(Dispatcher, Name, Query, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec searchcount(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec searchcount(Agent :: agent(),
+                  Name :: service_name(),
                   Query :: list()) ->
-    any().
+    external_response(any()).
 
-searchcount(Dispatcher, Name, Query)
-    when is_list(Name),
-         is_list(Query) ->
-    cloudi:send_sync(Dispatcher, Name,
+searchcount(Agent, Name, Query)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {searchcount, Query}).
 
--spec searchcount(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec searchcount(Agent :: agent(),
+                  Name :: service_name(),
                   Query :: list(),
-                  Timeout :: pos_integer()) ->
-    any().
+                  Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-searchcount(Dispatcher, Name, Query, Timeout)
-    when is_list(Name),
-         is_list(Query), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+searchcount(Agent, Name, Query, Timeout)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {searchcount, Query}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1090,27 +1031,25 @@ searchcount(Dispatcher, Name, Query, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec searchout(Dispatcher :: dispatcher(),
-                Name :: string(),
+-spec searchout(Agent :: agent(),
+                Name :: service_name(),
                 Query :: list()) ->
-    any().
+    external_response(any()).
 
-searchout(Dispatcher, Name, Query)
-    when is_list(Name),
-         is_list(Query) ->
-    cloudi:send_sync(Dispatcher, Name,
+searchout(Agent, Name, Query)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {searchout, Query}).
 
--spec searchout(Dispatcher :: dispatcher(),
-                Name :: string(),
+-spec searchout(Agent :: agent(),
+                Name :: service_name(),
                 Query :: list(),
-                Timeout :: pos_integer()) ->
-    any().
+                Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-searchout(Dispatcher, Name, Query, Timeout)
-    when is_list(Name),
-         is_list(Query), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+searchout(Agent, Name, Query, Timeout)
+    when is_list(Query) ->
+    cloudi:send_sync(Agent, Name,
                      {searchout, Query}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1119,31 +1058,29 @@ searchout(Dispatcher, Name, Query, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec setindex(Dispatcher :: dispatcher(),
-               Name :: string(),
+-spec setindex(Agent :: agent(),
+               Name :: service_name(),
                Column :: 'primary' | iolist(),
                Type :: atom()) ->
-    any().
+    external_response(any()).
 
-setindex(Dispatcher, Name, Column, Type)
-    when is_list(Name),
-         is_atom(Type) ->
-    true = (Column == primary) or is_list(Column) or is_binary(Column),
-    cloudi:send_sync(Dispatcher, Name,
+setindex(Agent, Name, Column, Type)
+    when is_atom(Type) ->
+    true = (Column == primary) orelse is_list(Column) orelse is_binary(Column),
+    cloudi:send_sync(Agent, Name,
                      {setindex, Column, Type}).
 
--spec setindex(Dispatcher :: dispatcher(),
-               Name :: string(),
+-spec setindex(Agent :: agent(),
+               Name :: service_name(),
                Column :: 'primary' | iolist(),
                Type :: atom(),
-               Timeout :: 'undefined' | pos_integer()) ->
-    any().
+               Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-setindex(Dispatcher, Name, Column, Type, Timeout)
-    when is_list(Name),
-         is_atom(Type), is_integer(Timeout) ->
-    true = (Column == primary) or is_list(Column) or is_binary(Column),
-    cloudi:send_sync(Dispatcher, Name,
+setindex(Agent, Name, Column, Type, Timeout)
+    when is_atom(Type) ->
+    true = (Column == primary) orelse is_list(Column) orelse is_binary(Column),
+    cloudi:send_sync(Agent, Name,
                      {setindex, Column, Type}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -1152,31 +1089,29 @@ setindex(Dispatcher, Name, Column, Type, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec update(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              NewCols :: list()) ->
-    any().
+    external_response(any()).
 
-update(Dispatcher, Name, Key, NewCols)
-    when is_list(Name),
-         is_list(NewCols) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+update(Agent, Name, Key, NewCols)
+    when is_list(NewCols) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {update, Key, NewCols}).
 
--spec update(Dispatcher :: dispatcher(),
-             Name :: string(),
+-spec update(Agent :: agent(),
+             Name :: service_name(),
              Key :: iolist(),
              NewCols :: list(),
-             Timeout :: pos_integer()) ->
-    any().
+             Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-update(Dispatcher, Name, Key, NewCols, Timeout)
-    when is_list(Name),
-         is_list(NewCols), is_integer(Timeout) ->
-    true = is_list(Key) or is_binary(Key),
-    cloudi:send_sync(Dispatcher, Name,
+update(Agent, Name, Key, NewCols, Timeout)
+    when is_list(NewCols) ->
+    true = is_list(Key) orelse is_binary(Key),
+    cloudi:send_sync(Agent, Name,
                      {update, Key, NewCols}, Timeout).
 
 %%%------------------------------------------------------------------------

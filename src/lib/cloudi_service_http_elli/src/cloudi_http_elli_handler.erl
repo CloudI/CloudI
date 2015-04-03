@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -405,10 +405,10 @@ handle_request(Name, Headers, Body, _Req,
     end,
     case send_sync_minimal(Dispatcher, Context,
                            Name, RequestInfo, Request, self()) of
-        {ok, ResponseInfo, Response} ->
+        {{ok, ResponseInfo, Response}, _} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {elli_response, HeadersOutgoing, Response};
-        {error, timeout} ->
+        {{error, timeout}, _} ->
             {elli_error, timeout}
     end.
 

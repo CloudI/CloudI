@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2009-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_couchdb).
@@ -101,11 +101,16 @@
         timeout = undefined
     }).
 
--type dispatcher() :: cloudi_service:dispatcher() | cloudi:context().
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type external_response(Result) ::
+    {{ok, Result}, NewAgent :: agent()} |
+    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -113,25 +118,21 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_database(Dispatcher :: dispatcher(),
-                      Name :: string()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec create_database(Agent :: agent(),
+                      Name :: service_name()) ->
+    external_response(any()).
 
-create_database(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_database(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      create_database).
 
--spec create_database(Dispatcher :: dispatcher(),
-                      Name :: string(),
-                      Timeout :: pos_integer()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec create_database(Agent :: agent(),
+                      Name :: service_name(),
+                      Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-create_database(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_database(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      create_database, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -140,25 +141,21 @@ create_database(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_database(Dispatcher :: dispatcher(),
-                      Name :: string()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec delete_database(Agent :: agent(),
+                      Name :: service_name()) ->
+    external_response(any()).
 
-delete_database(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_database(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      delete_database).
 
--spec delete_database(Dispatcher :: dispatcher(),
-                      Name :: string(),
-                      Timeout :: pos_integer()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec delete_database(Agent :: agent(),
+                      Name :: service_name(),
+                      Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-delete_database(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_database(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      delete_database, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -167,25 +164,21 @@ delete_database(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec database_info(Dispatcher :: dispatcher(),
-                    Name :: string()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec database_info(Agent :: agent(),
+                    Name :: service_name()) ->
+    external_response(any()).
 
-database_info(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+database_info(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      database_info).
 
--spec database_info(Dispatcher :: dispatcher(),
-                    Name :: string(),
-                    Timeout :: pos_integer()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec database_info(Agent :: agent(),
+                    Name :: service_name(),
+                    Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-database_info(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+database_info(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      database_info, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -194,25 +187,21 @@ database_info(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec server_info(Dispatcher :: dispatcher(),
-                  Name :: string()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec server_info(Agent :: agent(),
+                  Name :: service_name()) ->
+    external_response(any()).
 
-server_info(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+server_info(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      server_info).
 
--spec server_info(Dispatcher :: dispatcher(),
-                  Name :: string(),
-                  Timeout :: pos_integer()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec server_info(Agent :: agent(),
+                  Name :: service_name(),
+                  Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-server_info(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+server_info(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      server_info, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -221,25 +210,21 @@ server_info(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec retrieve_all_dbs(Dispatcher :: dispatcher(),
-                       Name :: string()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec retrieve_all_dbs(Agent :: agent(),
+                       Name :: service_name()) ->
+    external_response(any()).
 
-retrieve_all_dbs(Dispatcher, Name)
-    when is_list(Name) ->
-    cloudi:send_sync(Dispatcher, Name,
+retrieve_all_dbs(Agent, Name) ->
+    cloudi:send_sync(Agent, Name,
                      retrieve_all_dbs).
 
--spec retrieve_all_dbs(Dispatcher :: dispatcher(),
-                       Name :: string(),
-                       Timeout :: pos_integer()) ->
-    {'ok', any()} |
-    {'error', any()}.
+-spec retrieve_all_dbs(Agent :: agent(),
+                       Name :: service_name(),
+                       Timeout :: timeout_milliseconds()) ->
+    external_response(any()).
 
-retrieve_all_dbs(Dispatcher, Name, Timeout)
-    when is_list(Name), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+retrieve_all_dbs(Agent, Name, Timeout) ->
+    cloudi:send_sync(Agent, Name,
                      retrieve_all_dbs, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -249,35 +234,30 @@ retrieve_all_dbs(Dispatcher, Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_attachment(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec create_attachment(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string(),
                         File :: string(),
                         ContentType :: string()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_attachment(Dispatcher, Name, DocumentID, File, ContentType)
-    when is_list(Name),
-         is_list(DocumentID), is_list(File), is_list(ContentType) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_attachment(Agent, Name, DocumentID, File, ContentType)
+    when is_list(DocumentID), is_list(File), is_list(ContentType) ->
+    cloudi:send_sync(Agent, Name,
                      {create_attachment, DocumentID,
                       File, ContentType}).
 
--spec create_attachment(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec create_attachment(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string(),
                         File :: string(),
                         ContentType :: string(),
-                        Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                        Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_attachment(Dispatcher, Name, DocumentID, File, ContentType, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(File), is_list(ContentType),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_attachment(Agent, Name, DocumentID, File, ContentType, Timeout)
+    when is_list(DocumentID), is_list(File), is_list(ContentType) ->
+    cloudi:send_sync(Agent, Name,
                      {create_attachment, DocumentID,
                       File, ContentType}, Timeout).
 
@@ -287,29 +267,25 @@ create_attachment(Dispatcher, Name, DocumentID, File, ContentType, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec create_document(Agent :: agent(),
+                      Name :: service_name(),
                       Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_document(Dispatcher, Name, Doc)
-    when is_list(Name),
-         is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_document(Agent, Name, Doc)
+    when is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {create_document, Doc}).
 
--spec create_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec create_document(Agent :: agent(),
+                      Name :: service_name(),
                       Doc :: list(),
-                      Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                      Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_document(Dispatcher, Name, Doc, Timeout)
-    when is_list(Name),
-         is_list(Doc), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_document(Agent, Name, Doc, Timeout)
+    when is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {create_document, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -318,31 +294,27 @@ create_document(Dispatcher, Name, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_document_id(Dispatcher :: dispatcher(),
-                         Name :: string(),
+-spec create_document_id(Agent :: agent(),
+                         Name :: service_name(),
                          DocumentID :: string(),
                          Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_document_id(Dispatcher, Name, DocumentID, Doc)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_document_id(Agent, Name, DocumentID, Doc)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {create_document, DocumentID, Doc}).
 
--spec create_document_id(Dispatcher :: dispatcher(),
-                         Name :: string(),
+-spec create_document_id(Agent :: agent(),
+                         Name :: service_name(),
                          DocumentID :: string(),
                          Doc :: list(),
-                         Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                         Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_document_id(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_document_id(Agent, Name, DocumentID, Doc, Timeout)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {create_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -351,29 +323,25 @@ create_document_id(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_documents(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec create_documents(Agent :: agent(),
+                       Name :: service_name(),
                        Documents :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_documents(Dispatcher, Name, Documents)
-    when is_list(Name),
-         is_list(Documents) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_documents(Agent, Name, Documents)
+    when is_list(Documents) ->
+    cloudi:send_sync(Agent, Name,
                      {create_documents, Documents}).
 
--spec create_documents(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec create_documents(Agent :: agent(),
+                       Name :: service_name(),
                        Documents :: list(),
-                       Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_documents(Dispatcher, Name, Documents, Timeout)
-    when is_list(Name),
-         is_list(Documents), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_documents(Agent, Name, Documents, Timeout)
+    when is_list(Documents) ->
+    cloudi:send_sync(Agent, Name,
                      {create_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -382,29 +350,25 @@ create_documents(Dispatcher, Name, Documents, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec document_revision(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec document_revision(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string()) ->
-    {'ok', {any(), any()}} |
-    {'error', any()}.
+    external_response({any(), any()}).
 
-document_revision(Dispatcher, Name, DocumentID)
-    when is_list(Name),
-         is_list(DocumentID) ->
-    cloudi:send_sync(Dispatcher, Name,
+document_revision(Agent, Name, DocumentID)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {document_revision, DocumentID}).
 
--spec document_revision(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec document_revision(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string(),
-                        Timeout :: pos_integer()) ->
-    {'ok', {any(), any()}} |
-    {'error', any()}.
+                        Timeout :: timeout_milliseconds()) ->
+    external_response({any(), any()}).
 
-document_revision(Dispatcher, Name, DocumentID, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+document_revision(Agent, Name, DocumentID, Timeout)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {document_revision, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -413,29 +377,25 @@ document_revision(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec retrieve_document(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec retrieve_document(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-retrieve_document(Dispatcher, Name, DocumentID)
-    when is_list(Name),
-         is_list(DocumentID) ->
-    cloudi:send_sync(Dispatcher, Name,
+retrieve_document(Agent, Name, DocumentID)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {retrieve_document, DocumentID}).
 
--spec retrieve_document(Dispatcher :: dispatcher(),
-                        Name :: string(),
+-spec retrieve_document(Agent :: agent(),
+                        Name :: service_name(),
                         DocumentID :: string(),
-                        Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                        Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-retrieve_document(Dispatcher, Name, DocumentID, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+retrieve_document(Agent, Name, DocumentID, Timeout)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {retrieve_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -444,31 +404,27 @@ retrieve_document(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec update_document(Agent :: agent(),
+                      Name :: service_name(),
                       DocumentID :: string(),
                       Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-update_document(Dispatcher, Name, DocumentID, Doc)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+update_document(Agent, Name, DocumentID, Doc)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {update_document, DocumentID, Doc}).
 
--spec update_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec update_document(Agent :: agent(),
+                      Name :: service_name(),
                       DocumentID :: string(),
                       Doc :: list(),
-                      Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                      Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+update_document(Agent, Name, DocumentID, Doc, Timeout)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {update_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -477,34 +433,29 @@ update_document(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_document_rev(Dispatcher :: dispatcher(),
-                          Name :: string(),
+-spec update_document_rev(Agent :: agent(),
+                          Name :: service_name(),
                           DocumentID :: string(),
                           Rev :: string(),
                           Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+update_document_rev(Agent, Name, DocumentID, Rev, Doc)
+    when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {update_document, DocumentID, Rev, Doc}).
 
--spec update_document_rev(Dispatcher :: dispatcher(),
-                          Name :: string(),
+-spec update_document_rev(Agent :: agent(),
+                          Name :: service_name(),
                           DocumentID :: string(),
                           Rev :: string(),
                           Doc :: list(),
-                          Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                          Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Rev), is_list(Doc),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+update_document_rev(Agent, Name, DocumentID, Rev, Doc, Timeout)
+    when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {update_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -513,31 +464,27 @@ update_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace_document(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec replace_document(Agent :: agent(),
+                       Name :: service_name(),
                        DocumentID :: string(),
                        Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-replace_document(Dispatcher, Name, DocumentID, Doc)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+replace_document(Agent, Name, DocumentID, Doc)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {replace_document, DocumentID, Doc}).
 
--spec replace_document(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec replace_document(Agent :: agent(),
+                       Name :: service_name(),
                        DocumentID :: string(),
                        Doc :: list(),
-                       Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Doc), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+replace_document(Agent, Name, DocumentID, Doc, Timeout)
+    when is_list(DocumentID), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {replace_document, DocumentID, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -546,33 +493,30 @@ replace_document(Dispatcher, Name, DocumentID, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec replace_document_rev(Dispatcher :: dispatcher(),
-                           Name :: string(),
+-spec replace_document_rev(Agent :: agent(),
+                           Name :: service_name(),
                            DocumentID :: string(),
                            Rev :: string(),
                            Doc :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-    cloudi:send_sync(Dispatcher, Name,
+replace_document_rev(Agent, Name, DocumentID, Rev, Doc)
+    when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+    cloudi:send_sync(Agent, Name,
                      {replace_document, DocumentID, Rev, Doc}).
 
--spec replace_document_rev(Dispatcher :: dispatcher(),
-                           Name :: string(),
+-spec replace_document_rev(Agent :: agent(),
+                           Name :: service_name(),
                            DocumentID :: string(),
                            Rev :: string(),
                            Doc :: list(),
-                           Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                           Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
+replace_document_rev(Agent, Name, DocumentID, Rev, Doc, Timeout)
     when is_list(Name),
          is_list(DocumentID), is_list(Rev), is_list(Doc), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {replace_document, DocumentID, Rev, Doc}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -581,29 +525,25 @@ replace_document_rev(Dispatcher, Name, DocumentID, Rev, Doc, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec delete_document(Agent :: agent(),
+                      Name :: service_name(),
                       DocumentID :: string()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-delete_document(Dispatcher, Name, DocumentID)
-    when is_list(Name),
-         is_list(DocumentID) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_document(Agent, Name, DocumentID)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_document, DocumentID}).
 
--spec delete_document(Dispatcher :: dispatcher(),
-                      Name :: string(),
+-spec delete_document(Agent :: agent(),
+                      Name :: service_name(),
                       DocumentID :: string(),
-                      Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                      Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-delete_document(Dispatcher, Name, DocumentID, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_document(Agent, Name, DocumentID, Timeout)
+    when is_list(DocumentID) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_document, DocumentID}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -612,31 +552,27 @@ delete_document(Dispatcher, Name, DocumentID, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_document_rev(Dispatcher :: dispatcher(),
-                          Name :: string(),
+-spec delete_document_rev(Agent :: agent(),
+                          Name :: service_name(),
                           DocumentID :: string(),
                           Rev :: string()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-delete_document_rev(Dispatcher, Name, DocumentID, Rev)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Rev) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_document_rev(Agent, Name, DocumentID, Rev)
+    when is_list(DocumentID), is_list(Rev) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_document, DocumentID, Rev}).
 
--spec delete_document_rev(Dispatcher :: dispatcher(),
-                          Name :: string(),
+-spec delete_document_rev(Agent :: agent(),
+                          Name :: service_name(),
                           DocumentID :: string(),
                           Rev :: string(),
-                          Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                          Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-delete_document_rev(Dispatcher, Name, DocumentID, Rev, Timeout)
-    when is_list(Name),
-         is_list(DocumentID), is_list(Rev), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_document_rev(Agent, Name, DocumentID, Rev, Timeout)
+    when is_list(DocumentID), is_list(Rev) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_document, DocumentID, Rev}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -645,29 +581,25 @@ delete_document_rev(Dispatcher, Name, DocumentID, Rev, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_documents(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec delete_documents(Agent :: agent(),
+                       Name :: service_name(),
                        Documents :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-delete_documents(Dispatcher, Name, Documents)
-    when is_list(Name),
-         is_list(Documents) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_documents(Agent, Name, Documents)
+    when is_list(Documents) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_documents, Documents}).
 
--spec delete_documents(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec delete_documents(Agent :: agent(),
+                       Name :: service_name(),
                        Documents :: list(),
-                       Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-delete_documents(Dispatcher, Name, Documents, Timeout)
-    when is_list(Name),
-         is_list(Documents), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+delete_documents(Agent, Name, Documents, Timeout)
+    when is_list(Documents) ->
+    cloudi:send_sync(Agent, Name,
                      {delete_documents, Documents}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -676,31 +608,27 @@ delete_documents(Dispatcher, Name, Documents, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_views(Dispatcher :: dispatcher(),
-                   Name :: string(),
+-spec create_views(Agent :: agent(),
+                   Name :: service_name(),
                    DocName :: string(),
                    ViewList :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_views(Dispatcher, Name, DocName, ViewList)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewList) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_views(Agent, Name, DocName, ViewList)
+    when is_list(DocName), is_list(ViewList) ->
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, ViewList}).
 
--spec create_views(Dispatcher :: dispatcher(),
-                   Name :: string(),
+-spec create_views(Agent :: agent(),
+                   Name :: service_name(),
                    DocName :: string(),
                    ViewList :: list(),
-                   Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                   Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_views(Dispatcher, Name, DocName, ViewList, Timeout)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewList), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_views(Agent, Name, DocName, ViewList, Timeout)
+    when is_list(DocName), is_list(ViewList) ->
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, ViewList}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -709,34 +637,29 @@ create_views(Dispatcher, Name, DocName, ViewList, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_view(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec create_view(Agent :: agent(),
+                  Name :: service_name(),
                   DocName :: string(),
                   ViewName :: string(),
                   Data :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_view(Dispatcher, Name, DocName, ViewName, Data)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName), is_list(Data) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_view(Agent, Name, DocName, ViewName, Data)
+    when is_list(DocName), is_list(ViewName), is_list(Data) ->
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, ViewName, Data}).
 
--spec create_view(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec create_view(Agent :: agent(),
+                  Name :: service_name(),
                   DocName :: string(),
                   ViewName :: string(),
                   Data :: list(),
-                  Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                  Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName), is_list(Data),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_view(Agent, Name, DocName, ViewName, Data, Timeout)
+    when is_list(DocName), is_list(ViewName), is_list(Data) ->
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, ViewName, Data}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -745,37 +668,33 @@ create_view(Dispatcher, Name, DocName, ViewName, Data, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec create_view_type(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec create_view_type(Agent :: agent(),
+                       Name :: service_name(),
                        DocName :: string(),
                        Type :: string(),
                        ViewName :: string(),
                        Data :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data)
-    when is_list(Name),
-         is_list(DocName), is_list(Type),
+create_view_type(Agent, Name, DocName, Type, ViewName, Data)
+    when is_list(DocName), is_list(Type),
          is_list(ViewName), is_list(Data) ->
-    cloudi:send_sync(Dispatcher, Name,
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, Type, ViewName, Data}).
 
--spec create_view_type(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec create_view_type(Agent :: agent(),
+                       Name :: service_name(),
                        DocName :: string(),
                        Type :: string(),
                        ViewName :: string(),
                        Data :: list(),
-                       Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
-    when is_list(Name),
-         is_list(DocName), is_list(Type),
-         is_list(ViewName), is_list(Data), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+create_view_type(Agent, Name, DocName, Type, ViewName, Data, Timeout)
+    when is_list(DocName), is_list(Type),
+         is_list(ViewName), is_list(Data) ->
+    cloudi:send_sync(Agent, Name,
                      {create_view, DocName, Type, ViewName, Data}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -784,31 +703,27 @@ create_view_type(Dispatcher, Name, DocName, Type, ViewName, Data, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec invoke_view(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec invoke_view(Agent :: agent(),
+                  Name :: service_name(),
                   DocName :: string(),
                   ViewName :: string()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-invoke_view(Dispatcher, Name, DocName, ViewName)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName) ->
-    cloudi:send_sync(Dispatcher, Name,
+invoke_view(Agent, Name, DocName, ViewName)
+    when is_list(DocName), is_list(ViewName) ->
+    cloudi:send_sync(Agent, Name,
                      {invoke_view, DocName, ViewName}).
 
--spec invoke_view(Dispatcher :: dispatcher(),
-                  Name :: string(),
+-spec invoke_view(Agent :: agent(),
+                  Name :: service_name(),
                   DocName :: string(),
                   ViewName :: string(),
-                  Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                  Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName), is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+invoke_view(Agent, Name, DocName, ViewName, Timeout)
+    when is_list(DocName), is_list(ViewName) ->
+    cloudi:send_sync(Agent, Name,
                      {invoke_view, DocName, ViewName}, Timeout).
 
 %%-------------------------------------------------------------------------
@@ -817,34 +732,29 @@ invoke_view(Dispatcher, Name, DocName, ViewName, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec invoke_view_keys(Dispatcher :: dispatcher(),
-                       Name :: string(),
+-spec invoke_view_keys(Agent :: agent(),
+                       Name :: service_name(),
                        DocName :: string(),
                        ViewName :: string(),
                        Keys :: list()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+    external_response({'json', {'struct', list()}}).
 
-invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName), is_list(Keys) ->
-    cloudi:send_sync(Dispatcher, Name,
+invoke_view_keys(Agent, Name, DocName, ViewName, Keys)
+    when is_list(DocName), is_list(ViewName), is_list(Keys) ->
+    cloudi:send_sync(Agent, Name,
                      {invoke_view, DocName, ViewName, Keys}).
 
--spec invoke_view_keys(Dispatcher :: dispatcher(),
+-spec invoke_view_keys(Agent :: agent(),
                        Name :: string(),
                        DocName :: string(),
                        ViewName :: string(),
                        Keys :: list(),
-                       Timeout :: pos_integer()) ->
-    {'ok', {'json', {'struct', list()}}} |
-    {'error', any()}.
+                       Timeout :: timeout_milliseconds()) ->
+    external_response({'json', {'struct', list()}}).
 
-invoke_view_keys(Dispatcher, Name, DocName, ViewName, Keys, Timeout)
-    when is_list(Name),
-         is_list(DocName), is_list(ViewName), is_list(Keys),
-         is_integer(Timeout) ->
-    cloudi:send_sync(Dispatcher, Name,
+invoke_view_keys(Agent, Name, DocName, ViewName, Keys, Timeout)
+    when is_list(DocName), is_list(ViewName), is_list(Keys) ->
+    cloudi:send_sync(Agent, Name,
                      {invoke_view, DocName, ViewName, Keys}, Timeout).
 
 %%%------------------------------------------------------------------------

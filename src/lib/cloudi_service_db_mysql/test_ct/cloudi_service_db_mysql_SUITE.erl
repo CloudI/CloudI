@@ -85,47 +85,54 @@ end_per_testcase(_TestCase, Config) ->
 %%%------------------------------------------------------------------------
 
 t_table_create_1(_Config) ->
-    Context = cloudi:new(),
+    Context0 = cloudi:new(),
     % (last SQL command result is returned with the common interface,
     %  not the whole list)
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     Context1} = cloudi_service_db_mysql:squery(Context0,
         ?DB_EONBLAST,
         <<"DROP TABLE IF EXISTS incoming_results; "
           "CREATE TABLE incoming_results ("
           "digit_index   NUMERIC(30) PRIMARY KEY,"
           "data          TEXT"
           ");">>),
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     Context2} = cloudi_service_db_mysql:squery(Context1,
         ?DB_EONBLAST,
         "DROP TABLE IF EXISTS incoming_results; "
         "CREATE TABLE incoming_results ("
         "digit_index   NUMERIC(30) PRIMARY KEY,"
         "data          TEXT"
         ");"),
-    {ok, ok} = cloudi_service_db_mysql:transaction(Context,
+    {{ok, ok},
+     Context3} = cloudi_service_db_mysql:transaction(Context2,
         ?DB_EONBLAST,
         [<<"DROP TABLE IF EXISTS incoming_results;">>,
          <<"CREATE TABLE incoming_results ("
            "digit_index   NUMERIC(30) PRIMARY KEY,"
            "data          TEXT"
            ");">>]),
-    {ok, ok} = cloudi_service_db_mysql:transaction(Context,
+    {{ok, ok},
+     Context4} = cloudi_service_db_mysql:transaction(Context3,
         ?DB_EONBLAST,
         [<<"INSERT INTO incoming_results (digit_index, data) "
            "VALUES (1, 'one');">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
            "VALUES (2, 'two');">>]),
-    {ok, {selected, RowsEONBLAST}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {selected, RowsEONBLAST}},
+     Context5} = cloudi_service_db_mysql:squery(Context4,
         ?DB_EONBLAST, <<"SELECT * FROM incoming_results">>),
     [{1,<<"one">>},
      {2,<<"two">>}] = RowsEONBLAST,
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     _} = cloudi_service_db_mysql:squery(Context5,
         ?DB_EONBLAST, "DROP TABLE incoming_results"),
     ok.
 
 t_table_create_2(_Config) ->
-    Context = cloudi:new(),
-    {ok, {error, Message1}} = cloudi_service_db_mysql:transaction(Context,
+    Context0 = cloudi:new(),
+    {{ok, {error, Message1}},
+     _} = cloudi_service_db_mysql:transaction(Context0,
         ?DB_EONBLAST,
         [<<"CREATE TABLE incoming_results ("
            "digit_index   NUMERIC(30) PRIMARY KEY,"
@@ -139,8 +146,9 @@ t_table_create_2(_Config) ->
     ok.
 
 t_table_query_1(_Config) ->
-    Context = cloudi:new(),
-    {ok, ok} = cloudi_service_db_mysql:transaction(Context,
+    Context0 = cloudi:new(),
+    {{ok, ok},
+     Context1} = cloudi_service_db_mysql:transaction(Context0,
         ?DB_EONBLAST,
         [<<"DROP TABLE IF EXISTS incoming_results;">>,
          <<"CREATE TABLE incoming_results ("
@@ -155,17 +163,20 @@ t_table_query_1(_Config) ->
            "VALUES (3, 'three');">>,
          <<"INSERT INTO incoming_results (digit_index, data) "
            "VALUES (4, 'four');">>]),
-    {ok, {selected, RowsEONBLAST}} = cloudi_service_db_mysql:equery(Context,
+    {{ok, {selected, RowsEONBLAST}},
+     Context2} = cloudi_service_db_mysql:equery(Context1,
         ?DB_EONBLAST, <<"SELECT * FROM incoming_results "
                         "WHERE digit_index = ?">>, [2]),
     [{2,<<"two">>}] = RowsEONBLAST,
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     _} = cloudi_service_db_mysql:squery(Context2,
         ?DB_EONBLAST, <<"DROP TABLE incoming_results">>),
     ok.
 
 t_table_query_2(_Config) ->
-    Context = cloudi:new(),
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    Context0 = cloudi:new(),
+    {{ok, {updated, 0}},
+     Context1} = cloudi_service_db_mysql:squery(Context0,
         ?DB_EONBLAST,
         <<"DROP TABLE IF EXISTS binary_results; "
           "CREATE TABLE binary_results ("
@@ -173,37 +184,45 @@ t_table_query_2(_Config) ->
           "data          BLOB"
           ");">>),
     Binary = <<16#DE, 16#AD, 16#BE, 16#EF>>,
-    {ok, {updated, 1}} = cloudi_service_db_mysql:equery(Context,
+    {{ok, {updated, 1}},
+     Context2} = cloudi_service_db_mysql:equery(Context1,
         ?DB_EONBLAST, <<"INSERT INTO binary_results (digit_index, data) "
                         "VALUES (1, ?)">>, [Binary]),
-    {ok, {updated, 1}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 1}},
+     Context3} = cloudi_service_db_mysql:squery(Context2,
         ?DB_EONBLAST, <<"INSERT INTO binary_results (digit_index, data) "
                         "VALUES (2, X'DEADBEEF')">>),
-    {ok, {selected, RowsEONBLAST}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {selected, RowsEONBLAST}},
+     Context4} = cloudi_service_db_mysql:squery(Context3,
         ?DB_EONBLAST, <<"SELECT * FROM binary_results">>),
     BinaryEONBLAST = Binary,
     [{1,BinaryEONBLAST},
      {2,BinaryEONBLAST}] = RowsEONBLAST,
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     _} = cloudi_service_db_mysql:squery(Context4,
         ?DB_EONBLAST, <<"DROP TABLE binary_results">>),
     ok.
 
 t_table_query_3(_Config) ->
-    Context = cloudi:new(),
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    Context0 = cloudi:new(),
+    {{ok, {updated, 0}},
+     Context1} = cloudi_service_db_mysql:squery(Context0,
         ?DB_EONBLAST,
         <<"DROP TABLE IF EXISTS incoming_results; "
           "CREATE TABLE incoming_results ("
           "digit_index   NUMERIC(30) PRIMARY KEY,"
           "data          TEXT NULL"
           ");">>),
-    {ok, {updated, 1}} = cloudi_service_db_mysql:equery(Context,
+    {{ok, {updated, 1}},
+     Context2} = cloudi_service_db_mysql:equery(Context1,
         ?DB_EONBLAST, <<"INSERT INTO incoming_results (digit_index, data) "
                         "VALUES (1, ?)">>, [null]),
-    {ok, {selected, RowsEONBLAST}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {selected, RowsEONBLAST}},
+     Context3} = cloudi_service_db_mysql:squery(Context2,
         ?DB_EONBLAST, <<"SELECT * FROM incoming_results">>),
     [{1,undefined}] = RowsEONBLAST,
-    {ok, {updated, 0}} = cloudi_service_db_mysql:squery(Context,
+    {{ok, {updated, 0}},
+     _} = cloudi_service_db_mysql:squery(Context3,
         ?DB_EONBLAST, <<"DROP TABLE incoming_results">>),
     ok.
 

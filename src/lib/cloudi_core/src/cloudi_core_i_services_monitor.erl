@@ -78,7 +78,7 @@
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
@@ -98,7 +98,7 @@
         pids :: list(pid()),
         monitor :: reference(),
         restart_count = 0 :: non_neg_integer(),
-        restart_times = [] :: list(erlang:timestamp()),
+        restart_times = [] :: list(integer()),
         timeout_term :: cloudi_service_api:timeout_milliseconds(),
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
@@ -499,7 +499,7 @@ restart_stage2(#service{service_m = M,
                         restart_times = []} = Service,
                Services, State, ServiceId, OldPid) ->
     % first restart
-    Now = erlang:now(),
+    SecondsNow = cloudi_timestamp:seconds(),
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = 1)~n"
@@ -511,7 +511,7 @@ restart_stage2(#service{service_m = M,
                 Service#service{pids = Pids,
                                 monitor = erlang:monitor(process, Pid),
                                 restart_count = 1,
-                                restart_times = [Now]}, Services),
+                                restart_times = [SecondsNow]}, Services),
             ok = initialize(Pids),
             NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
@@ -524,7 +524,7 @@ restart_stage2(#service{service_m = M,
                     Service#service{pids = Pids,
                                     monitor = erlang:monitor(process, P),
                                     restart_count = 1,
-                                    restart_times = [Now]}, D)
+                                    restart_times = [SecondsNow]}, D)
             end, Services, Pids),
             ok = initialize(Pids),
             NextServices;
@@ -533,7 +533,7 @@ restart_stage2(#service{service_m = M,
                        [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
-                                      restart_times = [Now]},
+                                      restart_times = [SecondsNow]},
                       ServiceId,
                       OldPid},
             Services
@@ -547,10 +547,9 @@ restart_stage2(#service{restart_count = RestartCount,
                Services, State, ServiceId, OldPid)
     when MaxR == RestartCount ->
     % last restart?
-    Now = erlang:now(),
-    NewRestartTimes = lists:reverse(lists:dropwhile(fun(T) ->
-        erlang:trunc(timer:now_diff(Now, T) * 1.0e-6) > MaxT
-    end, lists:reverse(RestartTimes))),
+    SecondsNow = cloudi_timestamp:seconds(),
+    NewRestartTimes = cloudi_timestamp:seconds_filter(RestartTimes,
+                                                      SecondsNow, MaxT),
     NewRestartCount = erlang:length(NewRestartTimes),
     if
         NewRestartCount < RestartCount ->
@@ -573,9 +572,9 @@ restart_stage2(#service{service_m = M,
                         restart_times = RestartTimes} = Service,
                Services, State, ServiceId, OldPid) ->
     % typical restart scenario
-    Now = erlang:now(),
+    SecondsNow = cloudi_timestamp:seconds(),
     R = RestartCount + 1,
-    T = erlang:trunc(timer:now_diff(Now, lists:last(RestartTimes)) * 1.0e-6),
+    T = erlang:max(SecondsNow - lists:min(RestartTimes), 0),
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN("successful restart (R = ~p, T = ~p elapsed seconds)~n"
@@ -587,7 +586,8 @@ restart_stage2(#service{service_m = M,
                 Service#service{pids = Pids,
                                 monitor = erlang:monitor(process, Pid),
                                 restart_count = R,
-                                restart_times = [Now | RestartTimes]},
+                                restart_times = [SecondsNow |
+                                                 RestartTimes]},
                 Services),
             ok = initialize(Pids),
             NextServices;
@@ -601,7 +601,8 @@ restart_stage2(#service{service_m = M,
                     Service#service{pids = Pids,
                                     monitor = erlang:monitor(process, P),
                                     restart_count = R,
-                                    restart_times = [Now | RestartTimes]}, D)
+                                    restart_times = [SecondsNow |
+                                                     RestartTimes]}, D)
             end, Services, Pids),
             ok = initialize(Pids),
             NextServices;
@@ -610,7 +611,8 @@ restart_stage2(#service{service_m = M,
                        [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
-                                      restart_times = [Now | RestartTimes]},
+                                      restart_times = [SecondsNow |
+                                                       RestartTimes]},
                       ServiceId,
                       OldPid},
             Services

@@ -35,7 +35,7 @@
 
 %% When parsed by the typeserver, this becomes opaque (it's declared as a simple
 %% type because dialyzer can't handle parametric opaque types yet).
--type queue(_T) :: queue().
+-type queue(_T) :: any().
 
 %% This header is only included so that the strip_types parse transform will be
 %% applied to this file as well.

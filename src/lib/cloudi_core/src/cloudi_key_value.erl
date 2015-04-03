@@ -56,7 +56,7 @@
          store/3]).
 
 % used for accessing RequestInfo data
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type key_values(Key, Value) :: list({Key, Value}) |
                                 dict().
 -else.

@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -752,7 +752,8 @@ handle_call(context_options, _,
 
 handle_call(trans_id, _,
             #state{uuid_generator = UUID} = State) ->
-    hibernate_check({reply, cloudi_x_uuid:get_v1(UUID), State});
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+    hibernate_check({reply, TransId, State#state{uuid_generator = NewUUID}});
 
 handle_call({get_status, Timeout}, _,
             #state{dispatcher = Dispatcher,
@@ -1786,25 +1787,27 @@ handle_send_async(Name, RequestInfo, Request,
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {ok, Pattern, Pid} ->
-            TransId = cloudi_x_uuid:get_v1(UUID),
+            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, ReceiverPid},
             gen_server:reply(Client, {ok, TransId}),
             {noreply,
-             send_async_timeout_start(Timeout, TransId, Pid, State)}
+             send_async_timeout_start(Timeout, TransId, Pid,
+                                      State#state{uuid_generator = NewUUID})}
     end.
 
 handle_send_async_pid(Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, Pid,
                       #state{receiver_pid = ReceiverPid,
                              uuid_generator = UUID} = State) ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
     {reply, {ok, TransId},
-     send_async_timeout_start(Timeout, TransId, Pid, State)}.
+     send_async_timeout_start(Timeout, TransId, Pid,
+                              State#state{uuid_generator = NewUUID})}.
 
 handle_send_async_active(Name, RequestInfo, Request,
                          Timeout, Priority, Client,
@@ -1834,30 +1837,33 @@ handle_send_async_active(Name, RequestInfo, Request,
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {ok, Pattern, Pid} ->
-            TransId = cloudi_x_uuid:get_v1(UUID),
+            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, ReceiverPid},
             gen_server:reply(Client, {ok, TransId}),
             {noreply,
-             send_async_active_timeout_start(Timeout, TransId, Pid, State)}
+             send_async_active_timeout_start(Timeout, TransId, Pid,
+                                             State#state{
+                                                 uuid_generator = NewUUID})}
     end.
 
 handle_send_async_active_pid(Name, Pattern, RequestInfo, Request,
                              Timeout, Priority, OldTransId, Pid,
                              #state{receiver_pid = ReceiverPid,
                                     uuid_generator = UUID} = State) ->
-    TransId = if
+    {TransId, NewUUID} = if
         OldTransId =:= undefined ->
             cloudi_x_uuid:get_v1(UUID);
         true ->
-            OldTransId
+            {OldTransId, UUID}
     end,
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
     {reply, {ok, TransId},
-     send_async_active_timeout_start(Timeout, TransId, Pid, State)}.
+     send_async_active_timeout_start(Timeout, TransId, Pid,
+                                     State#state{uuid_generator = NewUUID})}.
 
 handle_send_sync(Name, RequestInfo, Request,
                  Timeout, Priority, Client,
@@ -1887,24 +1893,26 @@ handle_send_sync(Name, RequestInfo, Request,
             gen_server:reply(Client, {error, timeout}),
             {noreply, State};
         {ok, Pattern, Pid} ->
-            TransId = cloudi_x_uuid:get_v1(UUID),
+            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_sync',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, ReceiverPid},
             {noreply,
-             send_sync_timeout_start(Timeout, TransId, Pid, Client, State)}
+             send_sync_timeout_start(Timeout, TransId, Pid, Client,
+                                     State#state{uuid_generator = NewUUID})}
     end.
 
 handle_send_sync_pid(Name, Pattern, RequestInfo, Request,
                      Timeout, Priority, Pid, Client,
                      #state{receiver_pid = ReceiverPid,
                             uuid_generator = UUID} = State) ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_sync',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
     {noreply,
-     send_sync_timeout_start(Timeout, TransId, Pid, Client, State)}.
+     send_sync_timeout_start(Timeout, TransId, Pid, Client,
+                             State#state{uuid_generator = NewUUID})}.
 
 handle_mcast_async_pids(_Name, _Pattern, _RequestInfo, _Request,
                         _Timeout, _Priority,
@@ -1918,17 +1926,18 @@ handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                         TransIdList, [Pid | PidList], Client,
                         #state{receiver_pid = ReceiverPid,
                                uuid_generator = UUID} = State) ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
+    NewState = send_async_timeout_start(Timeout,
+                                        TransId,
+                                        Pid,
+                                        State#state{uuid_generator = NewUUID}),
     handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                             Timeout, Priority,
                             [TransId | TransIdList], PidList, Client,
-                            send_async_timeout_start(Timeout,
-                                                     TransId,
-                                                     Pid,
-                                                     State)).
+                            NewState).
 
 handle_mcast_async(Name, RequestInfo, Request,
                    Timeout, Priority, Client,
@@ -1975,17 +1984,17 @@ handle_mcast_async_pids_active(Name, Pattern, RequestInfo, Request,
                                TransIdList, [Pid | PidList], Client,
                                #state{receiver_pid = ReceiverPid,
                                       uuid_generator = UUID} = State) ->
-    TransId = cloudi_x_uuid:get_v1(UUID),
+    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, ReceiverPid},
+    NewState = send_async_active_timeout_start(Timeout, TransId, Pid,
+                                               State#state{
+                                                   uuid_generator = NewUUID}),
     handle_mcast_async_pids_active(Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority,
                                    [TransId | TransIdList], PidList, Client,
-                                   send_async_active_timeout_start(Timeout,
-                                                                   TransId,
-                                                                   Pid,
-                                                                   State)).
+                                   NewState).
 
 handle_mcast_async_active(Name, RequestInfo, Request,
                           Timeout, Priority, Client,

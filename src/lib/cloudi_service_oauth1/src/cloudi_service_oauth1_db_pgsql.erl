@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_db_pgsql).
@@ -327,12 +327,12 @@ pgsql_create_schema(Dispatcher, Database) ->
                 ?PGSQL_TABLE_TOKEN_ACCESS " (consumer_key, realm);">>
                 ],
     case cloudi_service_db_pgsql:transaction(Dispatcher, Database, Schema) of
-        {ok, ok} ->
+        {{ok, ok}, Dispatcher}  ->
             ok;
-        {ok, {error, <<"relation \"" ?PGSQL_TABLE_CONFIGURATION "\" "
-                       "already exists">>}} ->
+        {{ok, {error, <<"relation \"" ?PGSQL_TABLE_CONFIGURATION "\" "
+                        "already exists">>}}, Dispatcher} ->
             ok;
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error
     end.
 
@@ -348,14 +348,14 @@ pgsql_configuration_rfc5849_test_data(Dispatcher, Database) ->
                          "'kd94hf93k423kf44', NULL, "
                          "'https?://printer.example.com/ready');">>],
     case cloudi_service_db_pgsql:transaction(Dispatcher, Database, Inserts) of
-        {ok, ok} ->
+        {{ok, ok}, Dispatcher} ->
             ok;
-        {ok, {error, <<Exists:160/bits, _/binary>>}}
+        {{ok, {error, <<Exists:160/bits, _/binary>>}}, _}
             when Exists == <<"duplicate key value ">> ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -365,11 +365,11 @@ pgsql_tokens_clean(Dispatcher, Database) ->
               <<"DELETE FROM " ?PGSQL_TABLE_TOKEN_ACCESS " "
                 "WHERE expiration < CURRENT_TIMESTAMP;">>],
     case cloudi_service_db_pgsql:transaction(Dispatcher, Database, Delete) of
-        {ok, ok} ->
+        {{ok, ok}, Dispatcher} ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -382,13 +382,14 @@ pgsql_signature_methods(Dispatcher, Database, Realm, ConsumerKey, Timeout) ->
                "WHERE realm = lower($1) AND consumer_key = $2">>,
     case cloudi_service_db_pgsql:equery(Dispatcher, Database, Select,
                                         [Realm, ConsumerKey], Timeout) of
-        {ok, {selected, []}} ->
+        {{ok, {selected, []}}, Dispatcher} ->
             {error, not_found};
-        {ok, {selected, [{PLAINTEXT, HMAC_SHA1, RSA_SHA1, CallbackRegex}]}} ->
+        {{ok, {selected,
+               [{PLAINTEXT, HMAC_SHA1, RSA_SHA1, CallbackRegex}]}}, Dispatcher} ->
             {ok, {PLAINTEXT, HMAC_SHA1, RSA_SHA1}, CallbackRegex};
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -409,13 +410,13 @@ pgsql_token_request_check(Dispatcher, Database,
     case cloudi_service_db_pgsql:equery(Dispatcher, Database, Select,
                                         [Realm, ConsumerKey,
                                          NonceRequest], Timeout) of
-        {ok, {selected, []}} ->
+        {{ok, {selected, []}}, Dispatcher} ->
             ok;
-        {ok, {selected, [_]}} ->
+        {{ok, {selected, [_]}}, Dispatcher} ->
             {error, nonce_exists};
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -441,11 +442,11 @@ pgsql_token_request_store(Dispatcher, Database,
                                          CallbackURL, CallbackQS,
                                          pgsql_interval(ExpirationSeconds)],
                                         Timeout) of
-        {ok, {updated, 1}} ->
+        {{ok, {updated, 1}}, Dispatcher} ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -455,13 +456,13 @@ pgsql_token_request_find(Dispatcher, Database, TokenRequest, Timeout) ->
                "WHERE token_request = $1">>,
     case cloudi_service_db_pgsql:equery(Dispatcher, Database, Select,
                                         [TokenRequest], Timeout) of
-        {ok, {selected, []}} ->
+        {{ok, {selected, []}}, Dispatcher} ->
             {error, not_found};
-        {ok, {selected, [{CallbackURL, CallbackQS}]}} ->
+        {{ok, {selected, [{CallbackURL, CallbackQS}]}}, Dispatcher} ->
             {ok, CallbackURL, CallbackQS};
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -472,11 +473,11 @@ pgsql_token_request_update(Dispatcher, Database, TokenRequest,
                "WHERE token_request = $1">>,
     case cloudi_service_db_pgsql:equery(Dispatcher, Database, Update,
                                         [TokenRequest, Verifier], Timeout) of
-        {ok, {updated, 1}} ->
+        {{ok, {updated, 1}}, Dispatcher} ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -495,14 +496,14 @@ pgsql_token_request_verify(Dispatcher, Database,
                                         [Realm, ConsumerKey, SignatureMethod,
                                          Timestamp, NonceAccess,
                                          TokenRequest, Verifier], Timeout) of
-        {ok, {selected, []}} ->
+        {{ok, {selected, []}}, Dispatcher} ->
             {error, not_found};
-        {ok, {selected, [{ClientSharedSecret, NonceRequest,
-                          TokenRequestSecret}]}} ->
+        {{ok, {selected, [{ClientSharedSecret, NonceRequest,
+                           TokenRequestSecret}]}}, Dispatcher} ->
             {ok, ClientSharedSecret, NonceRequest, TokenRequestSecret};
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -511,11 +512,11 @@ pgsql_token_request_delete(Dispatcher, Database, TokenRequest, Timeout) ->
                "WHERE token_request = $1">>,
     case cloudi_service_db_pgsql:equery(Dispatcher, Database, Delete,
                                         [TokenRequest], Timeout) of
-        {ok, {updated, 1}} ->
+        {{ok, {updated, 1}}, Dispatcher} ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -538,11 +539,11 @@ pgsql_token_access_store(Dispatcher, Database,
                                          TokenAccess, TokenAccessSecret,
                                          pgsql_interval(ExpirationSeconds)],
                                         Timeout) of
-        {ok, {updated, 1}} ->
+        {{ok, {updated, 1}}, Dispatcher} ->
             ok;
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 
@@ -559,13 +560,13 @@ pgsql_token_access_verify(Dispatcher, Database,
                                         [Realm, ConsumerKey, SignatureMethod,
                                          Timestamp, Nonce,
                                          TokenAccess], Timeout) of
-        {ok, {selected, []}} ->
+        {{ok, {selected, []}}, Dispatcher} ->
             {error, not_found};
-        {ok, {selected, [{ClientSharedSecret, TokenAccessSecret}]}} ->
+        {{ok, {selected, [{ClientSharedSecret, TokenAccessSecret}]}}, Dispatcher} ->
             {ok, ClientSharedSecret, TokenAccessSecret};
-        {ok, {error, _} = Error} ->
+        {{ok, {error, _} = Error}, Dispatcher} ->
             Error; % database error
-        {error, _} = Error ->
+        {{error, _} = Error, Dispatcher} ->
             Error % database driver error
     end.
 

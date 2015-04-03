@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2009-2015 Michael Truog
+%%% @version 1.4.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -779,7 +779,7 @@ format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
         MetaData == [] ->
             "";
         true ->
-            io_lib:format("~p", [MetaData]) ++ "\n"
+            io_lib:format("~p~n", [MetaData])
     end,
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     cloudi_string:format("~4..0w-~2..0w-~2..0wT"
@@ -906,7 +906,7 @@ log_message_formatters(Level, Timestamp, Node, Pid,
 
 log_message_external(Mode, Process, Level, Module, Line, Format, Args)
     when is_atom(Level), is_atom(Module), is_integer(Line) ->
-    Timestamp = erlang:now(),
+    Timestamp = cloudi_timestamp:timestamp(),
     case flooding_logger(Timestamp) of
         true ->
             ok;
@@ -946,7 +946,8 @@ flooding_logger(Timestamp2) ->
             Count2 = Count1 + 1,
             MicroSecondsElapsed = timer:now_diff(Timestamp2, Timestamp1),
             if
-                MicroSecondsElapsed > 10000000 ->
+                (MicroSecondsElapsed > 10000000) orelse
+                (MicroSecondsElapsed < 0) ->
                     erlang:put(cloudi_logger, {Timestamp2, 1}),
                     false;
                 (MicroSecondsElapsed / Count2) < ?LOGGER_FLOODING_DELTA ->
@@ -965,7 +966,8 @@ log_message_internal_t0(LevelCheck, Line, Format, Args,
     case log_level_allowed(Level, LevelCheck) of
         true ->
             LogMessage = cloudi_string:format(Format, Args),
-            log_message_internal(LevelCheck, erlang:now(), node(), self(),
+            log_message_internal(LevelCheck,
+                                 cloudi_timestamp:timestamp(), node(), self(),
                                  ?MODULE, Line, [], LogMessage, State);
         false ->
             {ok, State}
@@ -980,7 +982,8 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
         true ->
             LogMessage = cloudi_string:format(Format, Args),
             gen_server:cast(Destination,
-                            {LevelCheck, erlang:now(), node(), self(),
+                            {LevelCheck,
+                             cloudi_timestamp:timestamp(), node(), self(),
                              ?MODULE, Line, [], LogMessage});
         false ->
             ok

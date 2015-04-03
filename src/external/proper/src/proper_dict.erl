@@ -39,7 +39,7 @@
 
 %% When parsed by the typeserver, this becomes opaque (it's declared as a simple
 %% type because dialyzer can't handle parametric opaque types yet).
--type dict(_K,_V) :: dict().
+-type dict(_K,_V) :: any().
 
 %% Here are some valid symbolic calls that could be automatically produced using
 %% this module's exported functions, for the type dict(atom(),integer()):

@@ -103,7 +103,7 @@
         destination :: pid()
     }).
 
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
@@ -444,14 +444,14 @@ failure(false, _, _, _, Failures) ->
 failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            Now = erlang:now(),
+            SecondsNow = cloudi_timestamp:seconds(),
             case dict:find(Pid, Failures) of
                 {ok, FailureList} ->
-                    failure_check(Now, FailureList,
+                    failure_check(SecondsNow, FailureList,
                                   MaxCount, MaxPeriod, Pid, Failures);
                 error ->
                     erlang:monitor(process, Pid),
-                    failure_check(Now, [],
+                    failure_check(SecondsNow, [],
                                   MaxCount, MaxPeriod, Pid, Failures)
             end;
         false ->
@@ -468,13 +468,12 @@ failure_store(FailureList, MaxCount, Pid, Failures) ->
             {false, NewFailures}
     end.
 
-failure_check(Now, FailureList, MaxCount, infinity, Pid, Failures) ->
-    failure_store([Now | FailureList], MaxCount, Pid, Failures);
-failure_check(Now, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
-    NewFailureList = lists:reverse(lists:dropwhile(fun(T) ->
-        erlang:trunc(timer:now_diff(Now, T) * 1.0e-6) > MaxPeriod
-    end, lists:reverse(FailureList))),
-    failure_store([Now | NewFailureList], MaxCount, Pid, Failures).
+failure_check(SecondsNow, FailureList, MaxCount, infinity, Pid, Failures) ->
+    failure_store([SecondsNow | FailureList], MaxCount, Pid, Failures);
+failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
+    NewFailureList = cloudi_timestamp:seconds_filter(FailureList,
+                                                     SecondsNow, MaxPeriod),
+    failure_store([SecondsNow | NewFailureList], MaxCount, Pid, Failures).
 
 failure_kill(Pid) ->
     erlang:exit(Pid, cloudi_service_validate).

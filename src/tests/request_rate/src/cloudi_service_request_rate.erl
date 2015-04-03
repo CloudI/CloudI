@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -109,7 +109,7 @@
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
 -define(DEFAULT_TICK_STABLE_COUNT,           4). % dynamic attempts for stable
 
--ifdef(ERLANG_OTP_VER_16).
+-ifdef(ERLANG_OTP_VERSION_16).
 -type dict_proxy(_Key, _Value) :: dict().
 -else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
@@ -220,7 +220,8 @@ cloudi_service_handle_info({tick, T1},
                                   request_count = RequestCountIn,
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
-    Elapsed = timer:now_diff(erlang:now(), T1) / 1000000.0, % seconds
+    Elapsed = timer:now_diff(cloudi_timestamp:timestamp(),
+                             T1) / 1000000.0, % seconds
     RequestRateComplete = RequestCountIn / Elapsed,
     {RequestCountOut,
      RequestRateNew} = request_count_sent(RequestRate,

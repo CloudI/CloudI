@@ -49,8 +49,8 @@
    ["@abs_top_srcdir@/lib",
     "@abs_top_srcdir@/external"]}]}.
 {erl_opts,
- [{d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER@'},
-  {d, 'ERLANG_OTP_VER_@ERLANG_OTP_VER_MAJOR@'},
+ [{d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER@'},
+  {d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER_MAJOR@'},
   %{d, 'CLOUDI_SERVICE_OLD'}, % ignore cloudi_service behaviour changes in 1.4.0
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
