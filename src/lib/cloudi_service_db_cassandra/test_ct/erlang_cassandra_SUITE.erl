@@ -49,7 +49,7 @@
          cloudi_service_db_cassandra,
          [{connection_name, Target},
           {pool_options, PoolOptions},
-          {connection_options,x
+          {connection_options,
            [{thrift_host, ?DEFAULT_THRIFT_HOST},
             {thrift_port, ?DEFAULT_THRIFT_PORT}]}],
          immediate_closest,
