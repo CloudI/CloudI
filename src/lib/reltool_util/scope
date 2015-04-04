@@ -790,7 +790,7 @@ help() ->
 "~n"
 "    -d DIR           Source directory of an application for input files~n"
 "    -s SCOPE         Scope to apply~n"
-"    -i SCOPE         Scope to ignore~n"
+"    -p SCOPE         Scope to ignore~n"
 "    -b SUFFIX        Set the subdirectory name suffix for file backups~n"
 "                     (default=\"~s\")~n"
 "    -c DIR           Add a directory to the include path~n"

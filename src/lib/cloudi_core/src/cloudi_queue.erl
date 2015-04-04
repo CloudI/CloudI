@@ -136,6 +136,10 @@
         % (e.g., 300/5 == 60 seconds).  Can also use the value 'infinity'
         % to accumulate a failure count indefinitely.
 
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
 -type options() ::
     list({retry, non_neg_integer()} |
          {validate_request_info,

@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_future and cloudi_service_future to provide Futures
+
 2015-04-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Erlang 18.0 compatibility fixes
