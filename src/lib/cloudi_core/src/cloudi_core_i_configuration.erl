@@ -3442,7 +3442,8 @@ nodes_options(Nodes0, Value) ->
             {error, {node_connect_invalid, Connect}};
         [_, _, _, _, _, TimestampType, _ | _]
             when not ((TimestampType =:= erlang) orelse
-                      (TimestampType =:= os)) ->
+                      (TimestampType =:= os) orelse
+                      (TimestampType =:= warp)) ->
             {error, {node_timestamp_type_invalid, TimestampType}};
         [_, _, _, _, _, _, Discovery | _]
             when not ((Discovery =:= undefined) orelse

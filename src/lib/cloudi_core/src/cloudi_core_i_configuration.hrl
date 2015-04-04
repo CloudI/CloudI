@@ -403,7 +403,7 @@
             :: visible | hidden,
         % what timestamp is used for generating service request transaction ids
         timestamp_type = erlang
-            :: erlang | os,
+            :: erlang | os | warp,
         % discovery format (with defaults) is:
         %
         % [{multicast,
