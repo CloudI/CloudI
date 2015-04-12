@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-04-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix limit service configuration option bug
+
 2015-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the CloudI Service API nodes_set timestamp_type option 'warp'

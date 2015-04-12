@@ -187,6 +187,8 @@ int rlimit(char * rlimits, uint32_t rlimits_len)
         uint8_t const type = *reinterpret_cast<uint8_t *>(&rlimits[i++]);
         uint8_t const format = *reinterpret_cast<uint8_t *>(&rlimits[i++]);
         int const resource_type = type_value(type);
+        if (resource_type == -1)
+            return -1;
         switch (format)
         {
             case CLOUDI_RLIMITS_CURRENT_ONLY:
@@ -194,11 +196,13 @@ int rlimit(char * rlimits, uint32_t rlimits_len)
                     *reinterpret_cast<uint64_t *>(&rlimits[i]));
                 i += sizeof(uint64_t);
                 result = rlimit_maximum_get(resource_type, element);
+                break;
             case CLOUDI_RLIMITS_MAXIMUM_ONLY:
                 element.rlim_max = rlimit_value(
                     *reinterpret_cast<uint64_t *>(&rlimits[i]));
                 i += sizeof(uint64_t);
                 result = rlimit_current_get(resource_type, element);
+                break;
             case CLOUDI_RLIMITS_CURRENT_MAXIMUM:
                 element.rlim_cur = rlimit_value(
                     *reinterpret_cast<uint64_t *>(&rlimits[i]));
@@ -206,6 +210,10 @@ int rlimit(char * rlimits, uint32_t rlimits_len)
                 element.rlim_max = rlimit_value(
                     *reinterpret_cast<uint64_t *>(&rlimits[i]));
                 i += sizeof(uint64_t);
+                break;
+            default:
+                assert(false);
+                return -1;
         }
         if (result)
         {
