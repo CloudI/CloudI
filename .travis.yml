@@ -13,7 +13,7 @@ services:
   - elasticsearch
 before_install:
   - sudo apt-get update
-# travis default image has: make autoconf automake libtool g++ git perl
+# travis default image has: make autoconf automake libtool g++ git perl python python-dev
   - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
   - rm rebar.config
 before_script:
