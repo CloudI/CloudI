@@ -1,0 +1,84 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_future</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_future</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Futures">CloudI Futures</a></h3>.
+<p>Copyright © 2015 Michael Truog</p>
+
+<p><b>Version:</b> 1.5.0 Apr 12 2015 20:34:50
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Futures">CloudI Futures</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = fun((<a href="cloudi.html#type-agent">cloudi:agent()</a>) -&gt; {{ok, <a href="cloudi.html#type-response_info">cloudi:response_info()</a>, <a href="cloudi.html#type-response">cloudi:response()</a>} | {ok, <a href="cloudi.html#type-response">cloudi:response()</a>} | {error, <a href="cloudi.html#type-error_reason_sync">cloudi:error_reason_sync()</a>}, <a href="cloudi.html#type-agent">cloudi:agent()</a>})</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#new-3">new/3</a></td><td>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-4">new/4</a></td><td>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-5">new/5</a></td><td>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-6">new/6</a></td><td>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-7">new/7</a></td><td>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="new-3">new/3</a></h3>
+<div class="spec">
+<p><tt>new(Agent::<a href="cloudi.html#type-agent">cloudi:agent()</a>, Name::<a href="cloudi.html#type-service_name">cloudi:service_name()</a>, Request::<a href="cloudi.html#type-request">cloudi:request()</a>) -&gt; {<a href="#type-value">value()</a>, <a href="cloudi.html#type-agent">cloudi:agent()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-4">new/4</a></h3>
+<div class="spec">
+<p><tt>new(Agent::<a href="cloudi.html#type-agent">cloudi:agent()</a>, Name::<a href="cloudi.html#type-service_name">cloudi:service_name()</a>, Request::<a href="cloudi.html#type-request">cloudi:request()</a>, Timeout::<a href="cloudi.html#type-timeout_milliseconds">cloudi:timeout_milliseconds()</a>) -&gt; {<a href="#type-value">value()</a>, <a href="cloudi.html#type-agent">cloudi:agent()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-5">new/5</a></h3>
+<div class="spec">
+<p><tt>new(Agent::<a href="cloudi.html#type-agent">cloudi:agent()</a>, Name::<a href="cloudi.html#type-service_name">cloudi:service_name()</a>, Request::<a href="cloudi.html#type-request">cloudi:request()</a>, Timeout::<a href="cloudi.html#type-timeout_milliseconds">cloudi:timeout_milliseconds()</a>, PatternPid::<a href="cloudi.html#type-pattern_pid">cloudi:pattern_pid()</a>) -&gt; {<a href="#type-value">value()</a>, <a href="cloudi.html#type-agent">cloudi:agent()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-6">new/6</a></h3>
+<div class="spec">
+<p><tt>new(Agent::<a href="cloudi.html#type-agent">cloudi:agent()</a>, Name::<a href="cloudi.html#type-service_name">cloudi:service_name()</a>, RequestInfo::<a href="cloudi.html#type-request_info">cloudi:request_info()</a>, Request::<a href="cloudi.html#type-request">cloudi:request()</a>, Timeout::<a href="cloudi.html#type-timeout_milliseconds">cloudi:timeout_milliseconds()</a>, Priority::<a href="cloudi.html#type-priority">cloudi:priority()</a>) -&gt; {<a href="#type-value">value()</a>, <a href="cloudi.html#type-agent">cloudi:agent()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-7">new/7</a></h3>
+<div class="spec">
+<p><tt>new(Agent::<a href="cloudi.html#type-agent">cloudi:agent()</a>, Name::<a href="cloudi.html#type-service_name">cloudi:service_name()</a>, RequestInfo::<a href="cloudi.html#type-request_info">cloudi:request_info()</a>, Request::<a href="cloudi.html#type-request">cloudi:request()</a>, Timeout::<a href="cloudi.html#type-timeout_milliseconds">cloudi:timeout_milliseconds()</a>, Priority::<a href="cloudi.html#type-priority">cloudi:priority()</a>, PatternPid::<a href="cloudi.html#type-pattern_pid">cloudi:pattern_pid()</a> | undefined) -&gt; {<a href="#type-value">value()</a>, <a href="cloudi.html#type-agent">cloudi:agent()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_future.">Create a future.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Apr 12 2015, 20:34:50.</i></p>
+</body>
+</html>

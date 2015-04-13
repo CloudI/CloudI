@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Erlang_UUID_Generation">Erlang UUID Generation</a></h3>
    <a href="http://www.ietf.org/rfc/rfc4122.txt" target="_top"><tt>http://www.ietf.org/rfc/rfc4122.txt</tt></a> is the reference for official UUIDs.
-<p>Copyright © 2011-2014 Michael Truog</p>
+<p>Copyright © 2011-2015 Michael Truog</p>
 
-<p><b>Version:</b> 1.3.2 Sep 30 2014 14:04:49
+<p><b>Version:</b> 1.4.1 Apr 12 2015 17:05:53
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -36,6 +36,10 @@
 
 <h3 class="typedecl"><a name="type-state">state()</a></h3>
 <p><tt>state() = #uuid_state{}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-timestamp_type">timestamp_type()</a></h3>
+<p><tt>timestamp_type() = os | erlang | warp</tt></p>
 
 
 <h3 class="typedecl"><a name="type-uuid">uuid()</a></h3>
@@ -98,8 +102,8 @@ because multiple function calls are necessary)</p>.</td></tr>
   implementations.</td></tr>
 <tr><td valign="top"><a href="#increment-1">increment/1</a></td><td>
   <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state.">Increment the clock sequence of v1 UUID state.</a></h4>
-  The RFC said to increment the clock sequence counter
-  if the system clock was set backwards.</td></tr>
+  Call to increment the clock sequence counter after the system clock has
+  been set backwards (see the RFC).</td></tr>
 <tr><td valign="top"><a href="#is_uuid-1">is_uuid/1</a></td><td>
   <h4><a name="Is_the_binary_a_UUID?">Is the binary a UUID?</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_v1-1">is_v1/1</a></td><td>
@@ -116,8 +120,10 @@ because multiple function calls are necessary)</p>.</td></tr>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#new-2">new/2</a></td><td>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
-  The timestamp can either be based on erlang:now/0 with erlang or
-  os:timestamp/0 with os.</td></tr>
+  The timestamp can either be based on erlang's adjustment of time
+  (for only strictly monotonically increasing time values) or the
+  operating system's time without any adjustment
+  (with timestamp_type values <code>erlang</code> and <code>os</code>, respectively).</td></tr>
 <tr><td valign="top"><a href="#string_to_uuid-1">string_to_uuid/1</a></td><td>
   <h4><a name="Convert_a_string_representation_to_a_UUID.">Convert a string representation to a UUID.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#test-0">test/0</a></td><td>
@@ -134,7 +140,7 @@ because multiple function calls are necessary)</p>.</td></tr>
 
 <h3 class="function"><a name="get_v1-1">get_v1/1</a></h3>
 <div class="spec">
-<p><tt>get_v1(Uuid_state::#uuid_state{}) -&gt; <a href="#type-uuid">uuid()</a></tt><br></p>
+<p><tt>get_v1(State::<a href="#type-state">state()</a>) -&gt; {<a href="#type-uuid">uuid()</a>, NewState::<a href="#type-state">state()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_v1_UUID.">Get a v1 UUID.</a></h4>
 </p>
@@ -148,7 +154,7 @@ because multiple function calls are necessary)</p>.</td></tr>
 
 <h3 class="function"><a name="get_v1_time-1">get_v1_time/1</a></h3>
 <div class="spec">
-<p><tt>get_v1_time(Uuid_state::os | erlang | #uuid_state{} | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
+<p><tt>get_v1_time(Uuid_state::<a href="#type-timestamp_type">timestamp_type()</a> | <a href="#type-state">state()</a> | <a href="#type-uuid">uuid()</a>) -&gt; non_neg_integer()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_current_time_value_in_a_manner_consistent_with_the_v1_UUID.">Get the current time value in a manner consistent with the v1 UUID.</a></h4>
   The result is an integer in microseconds.</p>
@@ -290,25 +296,12 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="increment-1">increment/1</a></h3>
 <div class="spec">
-<p><tt>increment(State::#uuid_state{}) -&gt; #uuid_state{}</tt><br></p>
+<p><tt>increment(State::<a href="#type-state">state()</a>) -&gt; NewState::<a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Increment_the_clock_sequence_of_v1_UUID_state.">Increment the clock sequence of v1 UUID state.</a></h4>
-  The RFC said to increment the clock sequence counter
-  if the system clock was set backwards.  However, erlang:now/0 always
-  provides increasing time values, so this function is not necessary
-  when the system clock changes.  Since the version 1 node id contains the
-  Erlang PID ID, Serial, and Creation numbers in a (non-destructive)
-  bitwise-xor operation, the node id is specific to both the Erlang node
-  and the Erlang node lifetime (the PID Creation is different after a node
-  crash). Therefore, it is unclear why this function would be necessary
-  within this Erlang implementation of v1 UUID generation (if the system
-  is always running). The only event that seems to require this function's
-  usage is if the v1 UUID has been stored and retrieved where both actions
-  occurred at a point with a system clock change inbetween or possibly
-  on different machines with a large difference in system clocks
-  (i.e., in some situation that isn't handled by the Erlang VM, so
-   possibly if an external distribution mechanism was used between
-   Erlang VMs, not connected with distributed Erlang).</p>
+  Call to increment the clock sequence counter after the system clock has
+  been set backwards (see the RFC).  This is only necessary
+  if the <code>os</code> or <code>warp</code> timestamp_type is used.</p>
 
 <h3 class="function"><a name="is_uuid-1">is_uuid/1</a></h3>
 <div class="spec">
@@ -354,20 +347,22 @@ R - trunc(R).</p>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Pid::pid()) -&gt; #uuid_state{}</tt><br></p>
+<p><tt>new(Pid::pid()) -&gt; <a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation.">Create new UUID state for v1 UUID generation.</a></h4>
 </p>
 
 <h3 class="function"><a name="new-2">new/2</a></h3>
 <div class="spec">
-<p><tt>new(Pid::pid(), Options::os | erlang | [{timestamp_type, os | erlang} | {mac_address, [non_neg_integer()]}]) -&gt; #uuid_state{}</tt><br></p>
+<p><tt>new(Pid::pid(), Options::<a href="#type-timestamp_type">timestamp_type()</a> | [{timestamp_type, <a href="#type-timestamp_type">timestamp_type()</a>} | {mac_address, [non_neg_integer()]}]) -&gt; <a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Create_new_UUID_state_for_v1_UUID_generation_using_a_specific_type_of_timestamp.">Create new UUID state for v1 UUID generation using a specific type of timestamp.</a></h4>
-  The timestamp can either be based on erlang:now/0 with erlang or
-  os:timestamp/0 with os.  erlang:now/0 will make sure all time values are
-  increasing, even if the system clock changes.  os:timestamp/0 will get the
-  system clock quickly without modifying the result.</p>
+  The timestamp can either be based on erlang's adjustment of time
+  (for only strictly monotonically increasing time values) or the
+  operating system's time without any adjustment
+  (with timestamp_type values <code>erlang</code> and <code>os</code>, respectively).
+  If you want erlang's adjustment of time without enforcement of increasing
+  time values, use the <code>warp</code> timestamp_type value with Erlang &gt;= 18.0.</p>
 
 <h3 class="function"><a name="string_to_uuid-1">string_to_uuid/1</a></h3>
 <div class="spec">
@@ -406,6 +401,6 @@ R - trunc(R).</p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Sep 30 2014, 14:04:49.</i></p>
+<p><i>Generated by EDoc, Apr 12 2015, 17:05:53.</i></p>
 </body>
 </html>

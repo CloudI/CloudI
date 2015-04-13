@@ -1,3 +1,43 @@
+April 12, 2015
+  Version 1.5.0 released.
+  * backwards compatibility difference:
+    * cloudi module (Erlang/Elixir-only usage) now returns a 2 element tuple
+      with the 1st element as the result (original return value) and the
+      2nd element as the modified Context data (or the Dispatcher pid if a
+      Dispatcher pid was provided instead of a Context)
+      * Was a necessary change to keep the transaction id time as
+        strictly monotonically increasing with the changes in Erlang 18.x
+        that deprecate erlang:now/0
+      * Allows a lazy destination refresh to update the service name lookup
+        data so the developer doesn't need to handle the update manually
+      * The change impacted the return value of internal service
+        external interface functions
+      * The service application was changed to depend only on the
+        cloudi_service module instead of the cloudi module to
+        make its usage clearer and avoid Dispatcher pid value handling
+      * Despite the return value changes, only the minor version number
+        of CloudI was incremented due to the interfaces being outside the
+        main documentation
+  * External services can now set OS process resource limits with the
+    'limit' service configuration option
+    (http://cloudi.org/api.html#2_services_add_config_opts_limit)
+  * A few new CloudI data structures:
+    cloudi_queue, cloudi_future, cloudi_service_future
+    (cloudi_queue can handle service request validation, failures, and retries
+     with in-memory internal service data)
+    (cloudi_future and cloudi_service_future provide Futures for
+     Erlang processes (sending to CloudI services) and
+     internal CloudI services, respectively)
+  * cloudi_service_validate is a new CloudI service for validating
+    service requests with the requests using the service as a proxy
+    (similar functionality was added to cloudi_service_quorum and
+     cloudi_service_router, though cloudi_service_router is forwarding
+     the service request instead of sending it)
+  * The Python CloudI API now handles unicode stdout/stderr data properly
+    (immediate flushing of stdout/stderr is now fixed for Python 3 usage)
+  * Bugs were fixed and more documentation was added
+    (see the ChangeLog for more detail)
+
 December 20, 2014
   Version 1.4.0 released.
   * JavaScript/node.js, PHP and Perl are now supported programming languages
@@ -6,7 +46,6 @@ December 20, 2014
     (http://cloudi.org/#quick_start)
   * Loadtests were ran (http://cloudi.org/faq.html#5_LoadTesting)
   * Various bugs were fixed
-    (see the ChangeLog for more detail)
 
 September 30, 2014
   Version 1.3.3 (beta) released.

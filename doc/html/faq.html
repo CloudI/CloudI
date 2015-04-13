@@ -5,7 +5,6 @@
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="faq, cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
-  <meta content="This document copyright 2009-2014 by Michael Truog" name="copyright" />
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="stylesheet" type="text/css" title="print"
         href="print.css" />
@@ -32,8 +31,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.4.0<br />
-              last updated on December 20<sup>th</sup> 2014</h3></center>
+  <center><h3>version 1.5.0<br />
+              last updated on April 12<sup>th</sup> 2015</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -94,6 +93,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#4_ThreadSafe" >4.11 - Is the CloudI API thread-safe?</a></li>
     <li><a href="#4_Speed"      >4.12 - How can CloudI requests take advantage of cache coherency, minimum network latency, and any logical grouping?</a></li>
     <li><a href="#4_Erlang"     >4.13 - Why not just use Erlang directly?</a></li>
+    <li><a href="#4_Null"       >4.14 - What is a null response (How do timeouts occur)?</a></li>
   </ul>
   <a name="5_contents"></a>
   <h2>5 - Migrating to CloudI</h2>
@@ -428,8 +428,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl" target="_blank">cloudi_service_quorum</a>.
     The service request responses will be checked to make sure they
     pass the initialized quorum requirement and the service request will
-    fail (providing a null response) if quorum is not obtained during the
-    service request timeout period.
+    fail (providing a <a href="faq.html#4_Null">null response</a>)
+    if quorum is not obtained during the service request timeout period.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -1090,7 +1090,7 @@ sudo cloudi stop
     ...
 ] % or 'automatic' for multicast (LAN) node discovery </a>
 }.
-{logging, <a href="api.html#2_loglevel_set">[
+{logging, <a href="api.html#2_logging_level_set">[
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     {redirect, undefined or (Node)}
 ]</a>}.
@@ -1737,6 +1737,40 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
+  <a name="4_Null"></a>
+  <h3>4.14 - What is a null response (How do timeouts occur)?</h3>
+  <p class="paragraph">
+    A null response is when a service responds to a service request with
+    both ResponseInfo and Response set to a binary of size 0.
+    The sender of the service request will see the null response as a timeout.
+  </p>
+  <p class="paragraph">
+    Whether a service request is completely asynchronous is determined
+    by the service that handles the request (i.e., by returning a null response
+    the service that handles the request is making the service request
+    asynchronous, due to it having control of the request at that point in
+    time).  When a null response is used, the sender will not know whether the
+    service request was handled or if the timeout expired.
+    (By using the phrase "completely asynchronous" above, the service name
+    lookup blocking for the timeout period is ignored due to being a typical
+    fault-tolerance requirement, though blocking can be disabled with the
+    <a href="api.html#2_services_add_config_opts">'request_name_lookup'
+    service configuration option</a>.)
+  </p>
+  <p class="paragraph">
+    To avoid blocking the sender for the timeout period when a null response is
+    used the <a href="api.html#2_services_add_config_opts">'response_timeout_immediate_max' service configuration option</a>
+    can be set to change how large a timeout value must be to provide the
+    null response to the sender (i.e., some timeouts are short enough that
+    there is no need to provide the null response, due to it wasting
+    computational time, since it is the same as a timeout).  The timeout value
+    will also be influenced by the <a href="api.html#2_services_add_config_opts">'request_timeout_adjustment' service configuration option</a>
+    (due to it decreasing the timeout value based on the time spent
+     handling the service request, i.e., not just the time spent before the
+     service request is handled (which always reduces the timeout value)).
+  </p>
+  <div class="top"><a href="#4_contents">Top</a></div>
+
   <hr \>
   <h2>5 - Migrating to CloudI</h2>
 
@@ -1900,7 +1934,7 @@ sudo cloudi stop
     loadtesting results can be compared when making CloudI integration
     decisions.  Below are summaries specific to past releases:
     <ul>
-      <li><a href="https://github.com/CloudI/CloudI/raw/develop/src/tests/http_req/loadtest/results_v1_4_0/201412_summary.pdf" target="_blank">1.4.0 summary</a></li>
+      <li><a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_summary.pdf" target="_blank">1.4.0 summary</a></li>
       <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf" target="_blank">1.2.2 summary</a></li>
       <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">1.2.1 summary</a></li>
       <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">1.1.0 summary</a></li>
@@ -1916,7 +1950,7 @@ sudo cloudi stop
   </p>
   <p>
     The latency graphs below show service request performance during the 1.4.0
-    <a href="https://github.com/CloudI/CloudI/tree/develop/src/tests/http_req/loadtest/results_v1_4_0/201412_tsung_output.tar.bz2" target="_blank">Tsung loadtests</a>
+    <a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_tsung_output.tar.bz2" target="_blank">Tsung loadtests</a>
     of 20k connections at 10k req/s
     (with Erlang R16B03-1 and Ubuntu 12.04.5 using CloudI cowboy integration):
     <ul>
@@ -1994,8 +2028,8 @@ sudo cloudi stop
     C++ library as a link-time dependency.  When compiling an executable that
     uses the C CloudI API with a C compiler, the '-fexceptions' C compiler
     flag is required to make sure source code is included to provide handling
-    of C++ exceptions.  Some of the integration tests that provide example
-    usage of the C++/C
+    of C++ exceptions (add it to the CFLAGS).  Some of the integration tests
+    that provide example usage of the C++/C
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C, no threads)

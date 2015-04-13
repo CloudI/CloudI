@@ -1,6 +1,6 @@
 {application, key2value,
   [{description, "2-way Set Associative Map Data Structure"},
-   {vsn, "1.4.0"},
+   {vsn, "1.5.0"},
    {modules, [key2value]},
    {registered, []},
    {applications, [kernel, stdlib]}]}.

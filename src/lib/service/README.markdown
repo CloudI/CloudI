@@ -1,5 +1,7 @@
 #`service` Behavior
 
+[![Build Status](https://secure.travis-ci.org/CloudI/service.png?branch=master)](http://travis-ci.org/CloudI/service)
+
 A minimal Erlang behavior for creating CloudI internal services.
 
 ## LICENSE
@@ -20,6 +22,7 @@ Then implement the service behavior interface:
     
     -callback service_init(Args :: list(),
                            Prefix :: cloudi_service:service_name_pattern(),
+                           Timeout :: cloudi_service_api:timeout_milliseconds(),
                            Dispatcher :: cloudi_service:dispatcher()) ->
         {'ok', State :: any()} |
         {'stop', Reason :: any()} |
@@ -43,8 +46,14 @@ Then implement the service behavior interface:
         {'stop', Reason :: any(), NewState :: any()}.
     
     -callback service_terminate(Reason :: any(),
+                                Timeout :: cloudi_service_api:timeout_milliseconds(),
                                 State :: any()) ->
         'ok'.
+
+Otherwise, everything is normal CloudI service integration with usage
+of the `service` module (instead of the `cloudi` module or the
+`cloudi_service` module).  To see documentation about CloudI service
+integration, [go here](https://github.com/CloudI/CloudI#integration).
 
 ## CONTACT
 
@@ -52,5 +61,6 @@ Michael Truog (mjtruog [at] gmail (dot) com)
 
 ## THANKS
 
-* Juan Jose Comellas (interface ideas)
+* Juan Jose Comellas (interface ideas, fixes)
+* Drew Varner (fixes)
 

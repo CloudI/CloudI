@@ -5,7 +5,6 @@
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
   <meta content="api, cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
-  <meta content="This document copyright 2013-2014 by Michael Truog" name="copyright" />
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="stylesheet" type="text/css" title="print"
         href="print.css" />
@@ -32,8 +31,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.4.0<br />
-              last updated on December 20<sup>th</sup> 2014</h3></center>
+  <center><h3>version 1.5.0<br />
+              last updated on April 12<sup>th</sup> 2015</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -209,10 +208,10 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     The <a href="#1_return">return</a> function is used to respond to a
     service request and terminate the current request handler
     (i.e., the service request is finished, at that point).
-    A service can <a href="#1_return">return</a> a null response if the sending
+    A service can <a href="#1_return">return</a> a
+    <a href="faq.html#4_Null">null response</a> if the sending
     service should not receive a response, which can be used for typical
-    response-less publish functionality (a null response is when both the
-    ResponseInfo and Response parameters are an empty binary of size 0).
+    response-less publish functionality.
     The <a href="#1_forward">forward</a>
     function provides a new destination for the same service request,
     delaying the request's completion, but still terminating the current
@@ -337,13 +336,13 @@ CloudI::API.thread_count()
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.4.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.5.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.4.0/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.5.0/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1125,7 +1124,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.4.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1215,8 +1214,7 @@ CloudI::API.mcast_async(name, request,
     request_name_lookup to 'async').  The result of
     the function call is a list of TransIds (one TransId per service request).
     If a publish request is required, the destination service should
-    have a null response (a null response is when both the
-    ResponseInfo and Response parameters are an empty binary of size 0),
+    have a <a href="faq.html#4_Null">null response</a>,
     so that the service request response is ignored.
   </p>
   <p>
@@ -1347,7 +1345,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.4.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1617,7 +1615,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.4.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.5.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1720,7 +1718,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.4.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.5.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1807,7 +1805,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.4.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.5.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -2040,9 +2038,8 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     20000
   </td><td>
     Maximum timeout (in milliseconds) considered "immediate".  Larger timeouts
-    will send a null response instead of discarding a null response
-    (a null response is when both the ResponseInfo and Response parameters
-     are an empty binary of size 0).
+    will send a <a href="faq.html#4_Null">null response</a>
+    instead of discarding a <a href="faq.html#4_Null">null response</a>.
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_count_process_dynamic">
     count_process_dynamic
@@ -2087,6 +2084,18 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     application configuration.  When set to a list ([])
     <a href="#2_services_add_config_opts_monkey_chaos">
     options can be provided</a>.
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_limit">
+    limit</a>
+  </td><td>
+    []
+  </td><td>
+    (external services only) A list of <a href="#2_services_add_config_opts_limit">resource limits to set</a>
+    for the OS processes created for an external service.  If set to 'system',
+    use the settings within the cloudi_core Erlang application configuration.
+    The resource limits are based on what the OS supports
+    (the supported resource limits can be found in the <a href="http://manpages.ubuntu.com/manpages/natty/man2/setrlimit.2.html" target="_blank">setrlimit</a>
+    manpage).
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_aspects_init_after">
     aspects_init_after</a>
@@ -2153,8 +2162,8 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     <a href="#2_services_add_config_opts_aspects_terminate_before">
     Erlang functions</a> to call in-order before the
     service termination (before an internal service has
-    executed cloudi_service_terminate/2 or an external service
-    Erlang processes terminate).
+    executed cloudi_service_terminate/2 or an external service's
+    process terminates).
   </td></tr><tr><td>
     duo_mode
   </td><td>
@@ -2327,6 +2336,93 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     The probability that a service process will be terminated at a random
     point during the day.
+  </td></tr></table>
+  <a name="2_services_add_config_opts_limit"></a>
+  <h4>limit: (see your OS manpage for setrlimit to check availability)</h4>
+  <p class="paragraph">
+    The value for any option can be an integer or 'infinity' to set the
+    current limit or a list to set both the current and the maximum
+    (setting the maximum requires that CloudI is running with user
+     permission to set the maximum limit)
+    (e.g., {limit, [{stack, [{current, 8388608}, {maximum, infinity}]}]}).
+  </p>
+  <table><tr><th>
+    Option
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    as
+  </td><td>
+    The maximum size allowed for an OS process' virtual memory (address space)
+    in bytes (total available memory).
+  </td></tr><tr><td>
+    core
+  </td><td>
+    The size allowed for generating a core dump file in bytes from an
+    OS process that crashes.
+  </td></tr><tr><td>
+    cpu
+  </td><td>
+    An absolute CPU time limit in seconds for an OS process.
+  </td></tr><tr><td>
+    data
+  </td><td>
+    The maximum size allowed for an OS process' data segment (initialized data,
+    uninitialized data and heap data) in bytes.
+  </td></tr><tr><td>
+    fsize
+  </td><td>
+    The maximum size allowed for any file that the OS process may use
+    in bytes.
+  </td></tr><tr><td>
+    memlock
+  </td><td>
+    The maximum size allowed for an OS process to lock into RAM in bytes.
+  </td></tr><tr><td>
+    msgqueue
+  </td><td>
+    The maximum size allowed for an OS process to allocate for POSIX
+    message queues is bytes.
+  </td></tr><tr><td>
+    nice
+  </td><td>
+    A ceiling on an OS process' nice value (20 - ceiling == value where
+    -20 &le; ceiling &le; 20).
+  </td></tr><tr><td>
+    nofile
+  </td><td>
+    A value one greater than the maximum number of file descriptors the OS
+    process may use.
+  </td></tr><tr><td>
+    nproc
+  </td><td>
+    The maximum number of OS processes that may be created by the OS process.
+  </td></tr><tr><td>
+    rss
+  </td><td>
+    The maximum size of the OS process' resident set (the number of
+    virtual pages resident in RAM) in pages.
+  </td></tr><tr><td>
+    rtprio
+  </td><td>
+    A ceiling on an OS process' real-time priority setting.
+  </td></tr><tr><td>
+    rttime
+  </td><td>
+    An absolute CPU time limit to consume without making a blocking system call
+    in microseconds for an OS process.
+  </td></tr><tr><td>
+    sigpending
+  </td><td>
+    The maximum number of signals that may be queued by the OS process.
+  </td></tr><tr><td>
+    stack
+  </td><td>
+    The maximum size of an OS process' stack in bytes.
+  </td></tr><tr><td>
+    vmem
+  </td><td>
+    The maximum size of an OS process' mapped address space in bytes.
   </td></tr></table>
   <a name="2_services_add_config_opts_aspects_init_after"></a>
   <h4>aspects_init_after:</h4>
@@ -2691,7 +2787,9 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6467/cloudi/api/rpc/
   </td><td>
     What timestamp to use for generating unique service request
     transaction ids:
-    'erlang' or 'os' (weaker, discouraged)
+    'erlang' (strictly monotonically increasing time) or
+    'os' (OS time, weakest ordering possible)
+    (or 'warp' if you are using Erlang &ge; 18 (time adjusted gradually))
   </td></tr><tr><td>
     <a href="#2_nodes_set_config_discovery">
     discovery</a>

@@ -1,6 +1,6 @@
 {application, trie,
   [{description, "Trie Data Structure"},
-   {vsn, "1.4.0"},
+   {vsn, "1.5.0"},
    {modules, [btrie, trie]},
    {registered, []},
    {applications, [stdlib]}]}.

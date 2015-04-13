@@ -1,0 +1,148 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_queue</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_queue</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Send_Queue">CloudI Send Queue</a></h3><p>   
+For internal services that need to have successful service request sends   
+(i.e., a timeout does not occur because a response is received within the    
+timeout period) with each send done asynchronously and all tracking done   
+with in-memory data.</p>.
+<p>Copyright © 2015 Michael Truog</p>
+
+<p><b>Version:</b> 1.4.1 Apr 12 2015 20:34:50
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Send_Queue">CloudI Send Queue</a></h3><p>   
+For internal services that need to have successful service request sends   
+(i.e., a timeout does not occur because a response is received within the    
+timeout period) with each send done asynchronously and all tracking done   
+with in-memory data.</p>
+  
+   <p>The data is not queued within this module's internal data structure,   
+but like all service requests, the queueing occurs in the destination   
+service process.  This module's internal data provides tracking based   
+on the service request transaction id so many asynchronous service   
+requests may be easily managed concurrently.  The alternative is to rely   
+on synchronous service requests and increase the sending service's   
+process count as necessary for concurrency, which is a simpler approach.   
+So, cloudi_queue usage is necessary when multiple service requests must   
+be sent concurrently and every request must receive a response   
+(receiving a response is the only proof the transaction was successful).</p>
+  
+   Only one instance of cloudi_queue is necessary within a service's state
+   due to the transaction id being globally unique.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [{retry, non_neg_integer()} | {validate_request_info, fun((RequestInfo::<a href="cloudi_service.html#type-request_info">cloudi_service:request_info()</a>) -&gt; boolean()) | {Module1::module(), Function1::atom()}} | {validate_request, fun((RequestInfo::<a href="cloudi_service.html#type-request_info">cloudi_service:request_info()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>) -&gt; boolean()) | {Module2::module(), Function2::atom()}} | {validate_response_info, fun((ResponseInfo::<a href="cloudi_service.html#type-response_info">cloudi_service:response_info()</a>) -&gt; boolean()) | {Module3::module(), Function3::atom()}} | {validate_response, fun((ResponseInfo::<a href="cloudi_service.html#type-response_info">cloudi_service:response_info()</a>, Response::<a href="cloudi_service.html#type-response">cloudi_service:response()</a>) -&gt; boolean()) | {Module4::module(), Function4::atom()}} | {failures_source_die, boolean()} | {failures_source_max_count, pos_integer()} | {failures_source_max_period, infinity | pos_integer()}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #cloudi_queue{retry_max = undefined | non_neg_integer(), validate_request_info = undefined | fun((any()) -&gt; boolean()), validate_request = undefined | fun((any(), any()) -&gt; boolean()), validate_response_info = undefined | fun((any()) -&gt; boolean()), validate_response = undefined | fun((any(), any()) -&gt; boolean()), failures_source_die = undefined | boolean(), failures_source_max_count = undefined | pos_integer(), failures_source_max_period = undefined | infinity | pos_integer(), failures_source = [<a href="erlang.html#type-timestamp">erlang:timestamp()</a>], requests = any()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_a_CloudI_queue.">Create a CloudI queue.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_a_CloudI_queue.">Create a CloudI queue.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#recv-3">recv/3</a></td><td>
+  <h4><a name="Receive_a_service_request.">Receive a service request.</a></h4>
+  Must be called from the <code>cloudi_service_handle_info/3</code> callback function.</td></tr>
+<tr><td valign="top"><a href="#send-4">send/4</a></td><td>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-5">send/5</a></td><td>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-6">send/6</a></td><td>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-7">send/7</a></td><td>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-8">send/8</a></td><td>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#timeout-3">timeout/3</a></td><td>
+  <h4><a name="A_service_request_timeout.">A service request timeout.</a></h4>
+  <code>ok</code> is returned if a service request is retried.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>
+  <h4><a name="Create_a_CloudI_queue.">Create a CloudI queue.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Options::<a href="#type-options">options()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>
+  <h4><a name="Create_a_CloudI_queue.">Create a CloudI queue.</a></h4>
+</p>
+
+<h3 class="function"><a name="recv-3">recv/3</a></h3>
+<div class="spec">
+<p><tt>recv(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Return_async_active::#return_async_active{name = undefined | <a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, pattern = undefined | <a href="cloudi_service.html#type-service_name_pattern">cloudi_service:service_name_pattern()</a>, response_info = undefined | <a href="cloudi_service.html#type-response_info">cloudi_service:response_info()</a>, response = undefined | <a href="cloudi_service.html#type-response">cloudi_service:response()</a>, timeout = undefined | <a href="cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>, trans_id = undefined | <a href="cloudi_service.html#type-trans_id">cloudi_service:trans_id()</a>}, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Receive_a_service_request.">Receive a service request.</a></h4>
+  Must be called from the <code>cloudi_service_handle_info/3</code> callback function.</p>
+
+<h3 class="function"><a name="send-4">send/4</a></h3>
+<div class="spec">
+<p><tt>send(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Name::<a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-5">send/5</a></h3>
+<div class="spec">
+<p><tt>send(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Name::<a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>, Timeout::<a href="cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-6">send/6</a></h3>
+<div class="spec">
+<p><tt>send(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Name::<a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>, Timeout::<a href="cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>, PatternPid::<a href="cloudi_service.html#type-pattern_pid">cloudi_service:pattern_pid()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-7">send/7</a></h3>
+<div class="spec">
+<p><tt>send(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Name::<a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, RequestInfo::<a href="cloudi_service.html#type-request_info">cloudi_service:request_info()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>, Timeout::<a href="cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>, Priority::<a href="cloudi_service.html#type-priority">cloudi_service:priority()</a>, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-8">send/8</a></h3>
+<div class="spec">
+<p><tt>send(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Name::<a href="cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, RequestInfo::<a href="cloudi_service.html#type-request_info">cloudi_service:request_info()</a>, Request::<a href="cloudi_service.html#type-request">cloudi_service:request()</a>, Timeout::<a href="cloudi_service.html#type-timeout_milliseconds">cloudi_service:timeout_milliseconds()</a>, Priority::<a href="cloudi_service.html#type-priority">cloudi_service:priority()</a>, PatternPid::<a href="cloudi_service.html#type-pattern_pid">cloudi_service:pattern_pid()</a> | undefined, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Send_a_service_request.">Send a service request.</a></h4>
+</p>
+
+<h3 class="function"><a name="timeout-3">timeout/3</a></h3>
+<div class="spec">
+<p><tt>timeout(Dispatcher::<a href="cloudi_service.html#type-dispatcher">cloudi_service:dispatcher()</a>, Timeout_async_active::#timeout_async_active{trans_id = undefined | <a href="cloudi_service.html#type-trans_id">cloudi_service:trans_id()</a>}, State::<a href="#type-state">state()</a>) -&gt; {ok, NewState::<a href="#type-state">state()</a>} | {{error, Reason::<a href="cloudi_service.html#type-error_reason">cloudi_service:error_reason()</a>}, NewState::<a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="A_service_request_timeout.">A service request timeout.</a></h4>
+  <code>ok</code> is returned if a service request is retried. Must be called from the
+  <code>cloudi_service_handle_info/3</code> callback function.</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Apr 12 2015, 20:34:50.</i></p>
+</body>
+</html>
