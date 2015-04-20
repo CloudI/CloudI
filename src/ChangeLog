@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Small updates due to version change
+
 2015-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.5.0 released
