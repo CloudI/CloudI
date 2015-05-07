@@ -287,7 +287,8 @@
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % service request handling Erlang process
         request_pid_options = []
-            :: list({fullsweep_after, non_neg_integer()} |
+            :: list({priority, low | normal | high} |
+                    {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()}),
         % how many info messages should restart the Erlang process used for
@@ -298,7 +299,8 @@
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % info message handling Erlang process
         info_pid_options = []
-            :: list({fullsweep_after, non_neg_integer()} |
+            :: list({priority, low | normal | high} |
+                    {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()}),
         % use two Erlang processes instead of one for an internal service to

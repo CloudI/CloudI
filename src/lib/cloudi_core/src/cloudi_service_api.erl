@@ -332,12 +332,14 @@
          {application_name, undefined | atom()} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
-          list({fullsweep_after, non_neg_integer()} |
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()})} |
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
-          list({fullsweep_after, non_neg_integer()} |
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()})} |
          {duo_mode, boolean()} |

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -2839,6 +2839,16 @@ services_validate_option_pid_options([{min_bin_vheap_size, V} = PidOption |
                                       OptionsList], Output)
     when is_integer(V), V >= 0 ->
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([{priority, V} = PidOption |
+                                      OptionsList], Output)
+    when (V =:= high) orelse (V =:= low) orelse (V =:= normal) ->
+    NewOutput = if
+        V =:= normal ->
+            Output; % default
+        true ->
+            [PidOption | Output]
+    end,
+    services_validate_option_pid_options(OptionsList, NewOutput);
 services_validate_option_pid_options([PidOption | _], _) ->
     {error, {service_options_pid_invalid, PidOption}}.
 
