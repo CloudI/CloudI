@@ -2842,13 +2842,7 @@ services_validate_option_pid_options([{min_bin_vheap_size, V} = PidOption |
 services_validate_option_pid_options([{priority, V} = PidOption |
                                       OptionsList], Output)
     when (V =:= high) orelse (V =:= low) orelse (V =:= normal) ->
-    NewOutput = if
-        V =:= normal ->
-            Output; % default
-        true ->
-            [PidOption | Output]
-    end,
-    services_validate_option_pid_options(OptionsList, NewOutput);
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([PidOption | _], _) ->
     {error, {service_options_pid_invalid, PidOption}}.
 
