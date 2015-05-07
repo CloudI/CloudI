@@ -124,7 +124,7 @@
         % (undefined means no check occurs)
 -define(DEFAULT_REQUEST_RATE,          dynamic). % requests/second
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
--define(DEFAULT_TICK_STABLE_COUNT,           4). % dynamic attempts for stable
+-define(DEFAULT_TICK_STABLE_COUNT,          24). % dynamic attempts for stable
 
 -ifdef(ERLANG_OTP_VERSION_16).
 -type dict_proxy(_Key, _Value) :: dict().
