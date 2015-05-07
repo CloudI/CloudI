@@ -143,6 +143,7 @@
 
 -record(state,
     {
+        process_index :: non_neg_integer(),
         name :: string(),
         request_info :: any(),
         request :: any(),
@@ -213,8 +214,10 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             RequestRate0
     end,
     true = is_integer(TickLength) andalso (TickLength >= 1000),
+    ProcessIndex = cloudi_service:process_index(Dispatcher),
     tick_start(Dispatcher),
-    {ok, #state{name = Name,
+    {ok, #state{process_index = ProcessIndex,
+                name = Name,
                 request_info = RequestInfoN,
                 request = RequestN,
                 response_info = ResponseInfoN,
@@ -272,7 +275,8 @@ cloudi_service_handle_info(tick,
                           request_fail = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info({tick, T1},
-                           #state{name = Name,
+                           #state{process_index = ProcessIndex,
+                                  name = Name,
                                   request_info = RequestInfo,
                                   request = Request,
                                   request_rate = RequestRate,
@@ -291,8 +295,9 @@ cloudi_service_handle_info({tick, T1},
     RequestRateComplete = RequestSuccessIn / Elapsed,
     {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate,
-                                            RequestRateComplete, TickLength),
-    request_rate_output(RequestRateNew, Elapsed, RequestRateComplete, Name),
+                                          RequestRateComplete, TickLength),
+    request_rate_output(RequestRateNew, Elapsed,
+                        RequestRateComplete, Name, ProcessIndex),
     tick_send(TickLength, Dispatcher),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request, Dispatcher),
@@ -401,27 +406,31 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
 request_count_sent(RequestRate, _, TickLength) ->
     {request_count_sent(RequestRate, TickLength), RequestRate}.
 
-request_rate_output_log(RequestRate, Elapsed, RequestRateComplete, Name) ->
-    ?LOG_INFO("~p requests/second~n"
+request_rate_output_log(RequestRate, Elapsed,
+                        RequestRateComplete, Name, ProcessIndex) ->
+    ?LOG_INFO("~3.. w: ~p requests/second~n"
               "(to ~s,~n"
               " during ~p seconds,~n"
               " sent ~p requests/second)",
-              [erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
+              [ProcessIndex,
+               erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
                erlang:round(Elapsed * 10.0) / 10.0, RequestRate]).
 
 request_rate_output(#dynamic{count_stable_max = CountStableMax,
                              count_stable = CountStable,
                              request_rate_stable = RequestRateStable},
-                    Elapsed, RequestRateComplete, Name) ->
+                    Elapsed, RequestRateComplete, Name, ProcessIndex) ->
     if
-        CountStable >= CountStableMax ->
-            request_rate_output_log(RequestRateStable,
-                                    Elapsed, RequestRateComplete, Name);
+        CountStable == CountStableMax ->
+            request_rate_output_log(RequestRateStable, Elapsed,
+                                    RequestRateComplete, Name, ProcessIndex);
         true ->
             ok
     end;
-request_rate_output(RequestRate, Elapsed, RequestRateComplete, Name) ->
-    request_rate_output_log(RequestRate, Elapsed, RequestRateComplete, Name).
+request_rate_output(RequestRate, Elapsed,
+                    RequestRateComplete, Name, ProcessIndex) ->
+    request_rate_output_log(RequestRate, Elapsed,
+                            RequestRateComplete, Name, ProcessIndex).
 
 tick_start(Dispatcher) ->
     erlang:send_after(500, cloudi_service:self(Dispatcher), tick),
