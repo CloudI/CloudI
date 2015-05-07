@@ -5,6 +5,7 @@
 
     * Add request_info, response_info, and response configuration
       arguments to cloudi_service_request_rate to make it more flexible
+    * Improve the logging and defaults used by cloudi_service_request_rate
 
 2015-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 

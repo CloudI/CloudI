@@ -259,14 +259,16 @@ cloudi_service_handle_info(#timeout_async_active{},
                            _Dispatcher) ->
     {noreply, State};
 cloudi_service_handle_info(tick,
-                           #state{name = Name,
+                           #state{process_index = ProcessIndex,
+                                  name = Name,
                                   request_info = RequestInfo,
                                   request = Request,
                                   request_rate = RequestRate,
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
     {RequestCount,
-     RequestRateNew} = request_count_sent(RequestRate, undefined, TickLength),
+     RequestRateNew} = request_count_sent(RequestRate, undefined,
+                                          TickLength, ProcessIndex),
     tick_send(TickLength, Dispatcher),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request, Dispatcher),
@@ -286,7 +288,8 @@ cloudi_service_handle_info({tick, T1},
                            Dispatcher) ->
     if
         RequestFailIn > 0 ->
-            ?LOG_ERROR("~p requests failed validation", [RequestFailIn]);
+            ?LOG_ERROR("~3.. w: ~w requests failed validation",
+                       [ProcessIndex, RequestFailIn]);
         true ->
             ok
     end,
@@ -294,8 +297,8 @@ cloudi_service_handle_info({tick, T1},
                              T1) / 1000000.0, % seconds
     RequestRateComplete = RequestSuccessIn / Elapsed,
     {RequestCount,
-     RequestRateNew} = request_count_sent(RequestRate,
-                                          RequestRateComplete, TickLength),
+     RequestRateNew} = request_count_sent(RequestRate, RequestRateComplete,
+                                          TickLength, ProcessIndex),
     request_rate_output(RequestRateNew, Elapsed,
                         RequestRateComplete, Name, ProcessIndex),
     tick_send(TickLength, Dispatcher),
@@ -343,14 +346,14 @@ request_count_sent(RequestRate, TickLength) ->
     erlang:round(RequestRate * (TickLength / 1000.0)).
 
 request_count_sent(#dynamic{request_rate = RequestRate} = Dynamic,
-                   undefined, TickLength) ->
+                   undefined, TickLength, _) ->
     {request_count_sent(RequestRate, TickLength), Dynamic};
 request_count_sent(#dynamic{count_stable_max = CountStableMax,
                             count_stable = CountStable,
                             request_rate = RequestRateOld,
                             request_rate_stable = RequestRateStable,
                             request_rate_max = RequestRateMax} = Dynamic,
-                   RequestRateComplete, TickLength) ->
+                   RequestRateComplete, TickLength, ProcessIndex) ->
     % result will be within 5% (or 1 request)
     Offset = erlang:max(erlang:round(RequestRateComplete * 0.05) - 1, 1),
     RequestRateCompleteOffset = erlang:round(RequestRateComplete) + Offset,
@@ -384,8 +387,11 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
             RequestRateNext = erlang:max(RequestRateOld - Delta, 1),
             RequestRateMaxNext = if
                 CountStable >= CountStableMax ->
-                    ?LOG_WARN("failed ~p requests/second after ~p ticks",
-                              [RequestRateStable, CountStable + 1]),
+                    Elapsed = (CountStable + 1) * TickLength / 1000.0,
+                    ?LOG_WARN("~3.. w: failed ~w requests/second"
+                              " after ~s",
+                              [ProcessIndex, RequestRateStable,
+                               seconds_to_string(Elapsed)]),
                     RequestRateStable - 1;
                 true ->
                     RequestRateOld
@@ -398,23 +404,24 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
     end,
     if
         CountStableNew == 0 ->
-            ?LOG_DEBUG("attempt ~p requests/second", [RequestRateNew]);
+            ?LOG_DEBUG("~3.. w: attempt ~w requests/second",
+                       [ProcessIndex, RequestRateNew]);
         true ->
             ok
     end,
     {request_count_sent(RequestRateNew, TickLength), DynamicNew};
-request_count_sent(RequestRate, _, TickLength) ->
+request_count_sent(RequestRate, _, TickLength, _) ->
     {request_count_sent(RequestRate, TickLength), RequestRate}.
 
 request_rate_output_log(RequestRate, Elapsed,
                         RequestRateComplete, Name, ProcessIndex) ->
-    ?LOG_INFO("~3.. w: ~p requests/second~n"
+    ?LOG_INFO("~3.. w: ~.1f requests/second~n"
               "(to ~s,~n"
-              " during ~p seconds,~n"
-              " sent ~p requests/second)",
+              " stable during ~s,~n"
+              " sent ~w requests/second)",
               [ProcessIndex,
                erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
-               erlang:round(Elapsed * 10.0) / 10.0, RequestRate]).
+               seconds_to_string(Elapsed), RequestRate]).
 
 request_rate_output(#dynamic{count_stable_max = CountStableMax,
                              count_stable = CountStable,
@@ -422,7 +429,7 @@ request_rate_output(#dynamic{count_stable_max = CountStableMax,
                     Elapsed, RequestRateComplete, Name, ProcessIndex) ->
     if
         CountStable == CountStableMax ->
-            request_rate_output_log(RequestRateStable, Elapsed,
+            request_rate_output_log(RequestRateStable, Elapsed * CountStable,
                                     RequestRateComplete, Name, ProcessIndex);
         true ->
             ok
@@ -439,7 +446,7 @@ tick_start(Dispatcher) ->
 tick_send(TickLength, Dispatcher) ->
     erlang:send_after(TickLength,
                       cloudi_service:self(Dispatcher),
-                      {tick, erlang:now()}),
+                      {tick, cloudi_timestamp:timestamp()}),
     ok.
 
 tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
@@ -473,4 +480,15 @@ tick_request_send(I, RequestIds, Name,
     end,
     tick_request_send(I - 1, NewRequestIds, Name,
                       RequestInfo, Request, Dispatcher).
+
+seconds_to_string(Seconds)
+    when Seconds > 60 * 60 ->
+    Hours = Seconds / (60 * 60),
+    io_lib:format("~.1f hours", [erlang:round(Hours * 10.0) / 10.0]);
+seconds_to_string(Seconds)
+    when Seconds > 60 ->
+    Minutes = Seconds / 60,
+    io_lib:format("~.1f minutes", [erlang:round(Minutes * 10.0) / 10.0]);
+seconds_to_string(Seconds) ->
+    io_lib:format("~.1f seconds", [erlang:round(Seconds * 10.0) / 10.0]).
 
