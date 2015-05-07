@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -103,8 +103,25 @@
 % 
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
+-define(DEFAULT_REQUEST_INFO,             <<>>).
 -define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,
                                   (<<"40">>)/binary, 0:8>>).
+-define(DEFAULT_RESPONSE_INFO,       undefined). % see below:
+        % check the response_info for each service request with
+        % the return value of an anonymous function (arity 1)
+        % or as an exact match on a value
+        % (undefined means no check occurs)
+-define(DEFAULT_RESPONSE,
+        fun
+            (<<>>, <<>>) ->
+                false;
+            (_, _) ->
+                true
+        end).                                    % see below:
+        % check the response for each service request with
+        % the return value of an anonymous function (arity 2)
+        % or as an exact match on a value
+        % (undefined means no check occurs)
 -define(DEFAULT_REQUEST_RATE,          dynamic). % requests/second
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
 -define(DEFAULT_TICK_STABLE_COUNT,           4). % dynamic attempts for stable
@@ -127,9 +144,13 @@
 -record(state,
     {
         name :: string(),
+        request_info :: any(),
         request :: any(),
+        response_info :: any(),
+        response :: any(),
         request_rate :: pos_integer() | #dynamic{},
-        request_count :: non_neg_integer(),
+        request_success :: non_neg_integer(),
+        request_fail :: non_neg_integer(),
         request_ids :: dict_proxy(cloudi_service:trans_id(), undefined),
         tick_length :: pos_integer()
     }).
@@ -145,26 +166,44 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {service_name,           ?DEFAULT_SERVICE_NAME},
+        {request_info,           ?DEFAULT_REQUEST_INFO},
         {request,                ?DEFAULT_REQUEST},
+        {response_info,          ?DEFAULT_RESPONSE_INFO},
+        {response,               ?DEFAULT_RESPONSE},
         {request_rate,           ?DEFAULT_REQUEST_RATE},
         {tick_length,            ?DEFAULT_TICK_LENGTH},
         {tick_stable_count,      ?DEFAULT_TICK_STABLE_COUNT}],
-    [Name, Request0, RequestRate0, TickLength, TickStableCount] =
+    [Name, RequestInfo0, Request0, ResponseInfo0, Response0,
+     RequestRate0, TickLength, TickStableCount] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Name) andalso is_integer(hd(Name)),
-    RequestN = case Request0 of
-        {M, F} = Request1 ->
-            case erlang:function_exported(M, F, 0) of
-                true ->
-                    fun M:F/0;
-                false ->
-                    Request1
-            end;
-        F when is_function(F) ->
-            true = is_function(F, 0),
-            F;
-        Request1 ->
-            Request1
+    RequestInfoN = if
+        is_function(RequestInfo0) ->
+            true = is_function(RequestInfo0, 0),
+            RequestInfo0;
+        true ->
+            RequestInfo0
+    end,
+    RequestN = if
+        is_function(Request0) ->
+            true = is_function(Request0, 0),
+            Request0;
+        true ->
+            Request0
+    end,
+    ResponseInfoN = if
+        is_function(ResponseInfo0) ->
+            true = is_function(ResponseInfo0, 1),
+            ResponseInfo0;
+        true ->
+            ResponseInfo0
+    end,
+    ResponseN = if
+        is_function(Response0) ->
+            true = is_function(Response0, 2),
+            Response0;
+        true ->
+            Response0
     end,
     true = is_integer(TickStableCount) andalso (TickStableCount > 0),
     RequestRateN = if
@@ -176,7 +215,10 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = is_integer(TickLength) andalso (TickLength >= 1000),
     tick_start(Dispatcher),
     {ok, #state{name = Name,
+                request_info = RequestInfoN,
                 request = RequestN,
+                response_info = ResponseInfoN,
+                response = ResponseN,
                 request_rate = RequestRateN,
                 tick_length = TickLength}}.
 
@@ -186,13 +228,26 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Dispatcher) ->
     {noreply, State}.
 
-cloudi_service_handle_info(#return_async_active{trans_id = TransId},
-                           #state{request_count = RequestCount,
+cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
+                                                response = Response,
+                                                trans_id = TransId},
+                           #state{response_info = ValidateResponseInfo,
+                                  response = ValidateResponse,
+                                  request_success = RequestSuccess,
+                                  request_fail = RequestFail,
                                   request_ids = RequestIds} = State,
                            _Dispatcher) ->
     case dict:find(TransId, RequestIds) of
         {ok, _} ->
-            {noreply, State#state{request_count = RequestCount + 1}};
+            case validate(ValidateResponseInfo, ValidateResponse,
+                          ResponseInfo, Response) of
+                true ->
+                    {noreply,
+                     State#state{request_success = RequestSuccess + 1}};
+                false ->
+                    {noreply,
+                     State#state{request_fail = RequestFail + 1}}
+            end;
         error ->
             {noreply, State}
     end;
@@ -202,35 +257,47 @@ cloudi_service_handle_info(#timeout_async_active{},
     {noreply, State};
 cloudi_service_handle_info(tick,
                            #state{name = Name,
+                                  request_info = RequestInfo,
                                   request = Request,
                                   request_rate = RequestRate,
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
-    {RequestCountOut,
+    {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate, undefined, TickLength),
     tick_send(TickLength, Dispatcher),
-    RequestIds = tick_request_send(RequestCountOut, Name, Request, Dispatcher),
+    RequestIds = tick_request_send(RequestCount, Name,
+                                   RequestInfo, Request, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
-                          request_count = 0,
+                          request_success = 0,
+                          request_fail = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info({tick, T1},
                            #state{name = Name,
+                                  request_info = RequestInfo,
                                   request = Request,
                                   request_rate = RequestRate,
-                                  request_count = RequestCountIn,
+                                  request_success = RequestSuccessIn,
+                                  request_fail = RequestFailIn,
                                   tick_length = TickLength} = State,
                            Dispatcher) ->
+    if
+        RequestFailIn > 0 ->
+            ?LOG_ERROR("~p requests failed validation", [RequestFailIn]);
+        true ->
+            ok
+    end,
     Elapsed = timer:now_diff(cloudi_timestamp:timestamp(),
                              T1) / 1000000.0, % seconds
-    RequestRateComplete = RequestCountIn / Elapsed,
-    {RequestCountOut,
+    RequestRateComplete = RequestSuccessIn / Elapsed,
+    {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate,
-                                          RequestRateComplete, TickLength),
+                                            RequestRateComplete, TickLength),
     request_rate_output(RequestRateNew, Elapsed, RequestRateComplete, Name),
     tick_send(TickLength, Dispatcher),
-    RequestIds = tick_request_send(RequestCountOut, Name, Request, Dispatcher),
+    RequestIds = tick_request_send(RequestCount, Name,
+                                   RequestInfo, Request, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
-                          request_count = 0,
+                          request_success = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -243,6 +310,29 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+validate_f_return(Value) when is_boolean(Value) ->
+    Value.
+
+validate(undefined, undefined, _, _) ->
+    true;
+validate(RInfoF, RF, RInfo, R) ->
+    (if
+        RInfoF =:= undefined ->
+            true;
+        is_function(RInfoF) ->
+            validate_f_return(RInfoF(RInfo));
+        true ->
+            RInfoF =:= RInfo
+    end) andalso
+    (if
+        RF =:= undefined ->
+            true;
+        is_function(RF) ->
+            validate_f_return(RF(RInfo, R));
+        true ->
+            RF =:= R
+    end).
 
 request_count_sent(RequestRate, TickLength) ->
     erlang:round(RequestRate * (TickLength / 1000.0)).
@@ -343,24 +433,35 @@ tick_send(TickLength, Dispatcher) ->
                       {tick, erlang:now()}),
     ok.
 
-tick_request_send(I, Name, Request, Dispatcher) ->
+tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
+    RequestInfoData = if
+        is_function(RequestInfo) ->
+            RequestInfo();
+        true ->
+            RequestInfo
+    end,
     RequestData = if
         is_function(Request) ->
             Request();
         true ->
             Request
     end,
-    tick_request_send(I, dict:new(), Name, RequestData, Dispatcher).
+    tick_request_send(I, dict:new(), Name,
+                      RequestInfoData, RequestData, Dispatcher).
 
-tick_request_send(0, RequestIds, _, _, _) ->
+tick_request_send(0, RequestIds, _, _, _, _) ->
     RequestIds;
-tick_request_send(I, RequestIds, Name, Request, Dispatcher) ->
-    NewRequestIds = case cloudi_service:send_async_active(Dispatcher,
-                                                          Name, Request) of
+tick_request_send(I, RequestIds, Name,
+                  RequestInfo, Request, Dispatcher) ->
+    NewRequestIds = case cloudi_service:send_async_active(Dispatcher, Name,
+                                                          RequestInfo, Request,
+                                                          undefined,
+                                                          undefined) of
         {ok, TransId} ->
             dict:store(TransId, undefined, RequestIds);
         {error, _} ->
             RequestIds
     end,
-    tick_request_send(I - 1, NewRequestIds, Name, Request, Dispatcher).
+    tick_request_send(I - 1, NewRequestIds, Name,
+                      RequestInfo, Request, Dispatcher).
 

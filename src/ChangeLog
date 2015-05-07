@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add request_info, response_info, and response configuration
+      arguments to cloudi_service_request_rate to make it more flexible
+
 2015-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Small updates due to version change
