@@ -86,6 +86,8 @@ limit_validate(Invalid) ->
 
 limit_validate([], [], Output) ->
     {ok, lists:reverse(Output)};
+limit_validate([], [_ | _] = L, _) ->
+    {error, {service_options_limit_invalid, L}};
 limit_validate([{Key, Default} | Defaults], L, Output) ->
     case lists:keytake(Key, 1, L) of
         {value, {Key, Value}, NewL} ->
