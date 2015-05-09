@@ -56,6 +56,7 @@
 #include "copy_ptr.hpp"
 #include "cloudi_os_spawn.hpp"
 #include "cloudi_os_rlimit.hpp"
+#include "cloudi_os_owner.hpp"
 #include "assert.hpp"
 
 namespace
@@ -788,6 +789,10 @@ int32_t spawn(char protocol,
               char * socket_path, uint32_t socket_path_len,
               uint32_t * ports, uint32_t ports_len,
               char * rlimits, uint32_t rlimits_len,
+              uint64_t user_i,
+              char * user_str, uint32_t user_str_len,
+              uint64_t group_i,
+              char * group_str, uint32_t group_str_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len)
@@ -845,6 +850,9 @@ int32_t spawn(char protocol,
             ::_exit(spawn_status::errno_close());
 
         if (rlimit(rlimits, rlimits_len))
+            ::_exit(spawn_status::invalid_input);
+        if (owner(user_i, user_str, user_str_len,
+                  group_i, group_str, group_str_len))
             ::_exit(spawn_status::invalid_input);
         char pid_message[1024];
         int pid_message_index = 0;

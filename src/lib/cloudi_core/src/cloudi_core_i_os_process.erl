@@ -3,9 +3,9 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI OS Resource Limit Configuration==
-%%% Maximum limits can be set after "setcap 'CAP_SYS_RESOURCE=+ep' executable"
-%%% (on Linux).
+%%% ==CloudI OS Process Configuration==
+%%% Maximum resource limits can be set after
+%%% "setcap 'CAP_SYS_RESOURCE=+ep' executable" (on Linux).
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -46,15 +46,17 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_os_rlimit).
+-module(cloudi_core_i_os_process).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
 -export([limit_validate/1,
-         limit_format/1]).
+         limit_format/1,
+         owner_validate/1,
+         owner_format/1]).
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
@@ -246,4 +248,57 @@ limit_format_list_value(infinity) ->
 limit_format_list_value(Value)
     when is_integer(Value), Value >= 0 ->
     Value.
+
+-spec owner_validate(cloudi_service_api:owner_external()) ->
+    {ok, cloudi_service_api:owner_external()} |
+    {error, {service_options_owner_invalid, any()}}.
+
+owner_validate(Values)
+    when is_list(Values) ->
+    Defaults = [
+        {user, "user"},
+        {group, "group"}],
+    case cloudi_proplists:take_values(Defaults, Values) of
+        [User, _]
+            when not ((is_list(User) andalso is_integer(hd(User))) orelse
+                      (is_integer(User) andalso
+                       (User > 0) andalso (User =< 16#ffffffffffffffff))) ->
+            {error, {service_options_owner_invalid, [{user, User}]}};
+        [_, Group]
+            when not ((is_list(Group) andalso is_integer(hd(Group))) orelse
+                      (is_integer(Group) andalso
+                       (Group > 0) andalso (Group =< 16#ffffffffffffffff))) ->
+            {error, {service_options_owner_invalid, [{group, Group}]}};
+        [_, _] ->
+            {ok, Values};
+        [_, _ | Extra] ->
+            {error, {service_options_owner_invalid, Extra}}
+    end;
+owner_validate(Invalid) ->
+    {error, {service_options_owner_invalid, Invalid}}.
+
+-spec owner_format(Values :: cloudi_service_api:owner_external()) ->
+    {UserI :: non_neg_integer(), UserStr :: string(),
+     GroupI :: non_neg_integer(), GroupStr :: string()}.
+
+owner_format(Values) ->
+    {UserI, UserStr} = case lists:keyfind(user, 1, Values) of
+        {user, User}
+            when is_integer(User) ->
+            {User, ""};
+        {user, [_ | _] = User} ->
+            {0, User};
+        false ->
+            {0, ""}
+    end,
+    {GroupI, GroupStr} = case lists:keyfind(group, 1, Values) of
+        {group, Group}
+            when is_integer(Group) ->
+            {Group, ""};
+        {group, [_ | _] = Group} ->
+            {0, Group};
+        false ->
+            {0, ""}
+    end,
+    {UserI, UserStr, GroupI, GroupStr}.
 

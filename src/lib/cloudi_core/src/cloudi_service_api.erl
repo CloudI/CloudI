@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -289,9 +289,13 @@
 -type limit_external() ::
     system |
     list({limit_external_key(), limit_external_value()}).
+-type owner_external() ::
+    list({user, pos_integer() | string()} |
+         {group, pos_integer() | string()}).
 -export_type([limit_external_key/0,
               limit_external_value/0,
-              limit_external/0]).
+              limit_external/0,
+              owner_external/0]).
 
 -type service_options_internal() ::
     list({priority_default, priority()} |
@@ -379,7 +383,8 @@
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
-         {limit, limit_external()}).
+         {limit, limit_external()} |
+         {owner, owner_external()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 

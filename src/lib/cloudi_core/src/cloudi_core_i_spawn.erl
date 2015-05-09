@@ -206,6 +206,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 ConfigOptions) of
                         {ok, Pids, Ports} ->
                             Rlimits = rlimits(ConfigOptions),
+                            Owner = owner(ConfigOptions),
                             case cloudi_core_i_pool:
                                  get(cloudi_core_i_os_spawn) of
                                 SpawnProcess when is_pid(SpawnProcess) ->
@@ -220,7 +221,8 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                     start_external_spawn(SpawnProcess,
                                                          SpawnProtocol,
                                                          SocketPath,
-                                                         Pids, Ports, Rlimits,
+                                                         Pids, Ports,
+                                                         Rlimits, Owner,
                                                          ThreadsPerProcess,
                                                          CommandLine,
                                                          NewFilename,
@@ -246,7 +248,10 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
 %%%------------------------------------------------------------------------
 
 rlimits(#config_service_options{limit = L}) ->
-    cloudi_core_i_os_rlimit:limit_format(L).
+    cloudi_core_i_os_process:limit_format(L).
+
+owner(#config_service_options{owner = L}) ->
+    cloudi_core_i_os_process:owner_format(L).
 
 create_socket_path(TemporaryDirectory, UUID)
     when is_binary(UUID) ->
@@ -299,18 +304,23 @@ start_external_threads(ThreadsPerProcess,
                           ConfigOptions).
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                     Pids, Ports, Rlimits,
+                     Pids, Ports, Rlimits, Owner,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
     SpawnEnvironment = environment_parse(Environment, ThreadsPerProcess,
                                          Protocol, BufferSize,
                                          EnvironmentLookup),
+    {UserI, UserStr, GroupI, GroupStr} = Owner,
     case cloudi_core_i_os_spawn:spawn(SpawnProcess,
                                       SpawnProtocol,
                                       string_terminate(SocketPath),
                                       Ports,
                                       Rlimits,
+                                      UserI,
+                                      string_terminate(UserStr),
+                                      GroupI,
+                                      string_terminate(GroupStr),
                                       string_terminate(Filename),
                                       string_terminate(Arguments),
                                       SpawnEnvironment) of

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -37,20 +37,61 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 // DAMAGE.
 //
-#ifndef CLOUDI_OS_SPAWN_HPP
-#define CLOUDI_OS_SPAWN_HPP
 
-#include <stdint.h>
-int32_t spawn(char protocol,
-              char * socket_path, uint32_t socket_path_len,
-              uint32_t * ports, uint32_t ports_len,
-              char * rlimits, uint32_t rlimits_len,
-              uint64_t user_i,
-              char * user_str, uint32_t user_str_len,
-              uint64_t group_i,
-              char * group_str, uint32_t group_str_len,
-              char * filename, uint32_t filename_len,
-              char * argv, uint32_t argv_len,
-              char * env, uint32_t env_len);
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
+#include <unistd.h>
+#include <cstdio>
+#include "cloudi_os_owner.hpp"
 
-#endif // CLOUDI_OS_SPAWN_HPP
+int owner(uint64_t user_i,
+          char * user_str, uint32_t user_str_len,
+          uint64_t group_i,
+          char * group_str, uint32_t group_str_len)
+{
+    uid_t uid = static_cast<uid_t>(user_i);
+    gid_t gid = static_cast<gid_t>(group_i);
+    if (uid == 0 && user_str_len > 1)
+    {
+        struct passwd * user_p = ::getpwnam(user_str);
+        if (user_p == 0)
+        {
+            ::perror("getpwnam: ");
+            return -1;
+        }
+        uid = user_p->pw_uid;
+        if (gid == 0 && group_str_len == 1)
+        {
+            gid = user_p->pw_gid;
+        }
+    }
+    if (gid == 0 && group_str_len > 1)
+    {
+        struct group * group_p = ::getgrnam(group_str);
+        if (group_p == 0)
+        {
+            ::perror("getgrnam: ");
+            return -1;
+        }
+        gid = group_p->gr_gid;
+    }
+    if (gid > 0)
+    {
+        if (::setgid(gid) == -1)
+        {
+            ::perror("setgid: ");
+            return -1;
+        }
+    }
+    if (uid > 0)
+    {
+        if (::setuid(uid) == -1)
+        {
+            ::perror("setuid: ");
+            return -1;
+        }
+    }
+    return 0;
+}
+

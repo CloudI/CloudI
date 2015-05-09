@@ -22,8 +22,9 @@
 //  __________________________________________________________________________
 //  || FUNCTION     || ARITY/TYPES                           || RETURN TYPE ||
 #define PORT_FUNCTIONS \
-    ((spawn,           7, (char, pchar_len, puint32_len, pchar_len, \
-                           pchar_len, pchar_len, pchar_len),    int32_t ))
+    ((spawn,           11, (char, pchar_len, puint32_len, pchar_len,         \
+                            uint64_t, pchar_len, uint64_t, pchar_len,        \
+                            pchar_len, pchar_len, pchar_len),       int32_t ))
 
 //////////////////////////////////////////////////////////////////////////////
 

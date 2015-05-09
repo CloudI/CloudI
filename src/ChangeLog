@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-05-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the owner service configuration option for external services
+      (to set the OS user and/or OS group for any OS processes spawned)
+
 2015-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add request_info, response_info, and response configuration

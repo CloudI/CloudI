@@ -270,6 +270,11 @@
 
         % Only Relevant for External Services:
 
+        % use a specific user and/or group for spawning the OS processes
+        owner = []
+            :: cloudi_service_api:owner_external(),
+
+        % set resource limits for each OS process spawned
         limit = []
             :: cloudi_service_api:limit_external(),
 

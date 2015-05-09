@@ -28,6 +28,7 @@ $(RLIMIT_HEADER): Makefile \
 
 cloudi_os_spawn_vsn_1_SOURCES = cloudi_os_spawn.cpp \
                                 cloudi_os_rlimit.cpp \
+                                cloudi_os_owner.cpp \
                                 assert.cpp \
 								port.cpp
 cloudi_os_spawn_vsn_1_CPPFLAGS = \
