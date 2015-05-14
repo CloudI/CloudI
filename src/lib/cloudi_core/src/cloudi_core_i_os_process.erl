@@ -56,7 +56,7 @@
 -export([limit_validate/1,
          limit_format/1,
          owner_validate/1,
-         owner_format/1]).
+         owner_format/2]).
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
@@ -279,17 +279,18 @@ owner_validate(Values)
 owner_validate(Invalid) ->
     {error, {service_options_owner_invalid, Invalid}}.
 
--spec owner_format(Values :: cloudi_service_api:owner_external()) ->
+-spec owner_format(Values :: cloudi_service_api:owner_external(),
+                   EnvironmentLookup :: cloudi_environment:lookup()) ->
     {UserI :: non_neg_integer(), UserStr :: string(),
      GroupI :: non_neg_integer(), GroupStr :: string()}.
 
-owner_format(Values) ->
+owner_format(Values, EnvironmentLookup) ->
     {UserI, UserStr} = case lists:keyfind(user, 1, Values) of
         {user, User}
             when is_integer(User) ->
             {User, ""};
         {user, [_ | _] = User} ->
-            {0, User};
+            {0, cloudi_environment:transform(User, EnvironmentLookup)};
         false ->
             {0, ""}
     end,
@@ -298,7 +299,7 @@ owner_format(Values) ->
             when is_integer(Group) ->
             {Group, ""};
         {group, [_ | _] = Group} ->
-            {0, Group};
+            {0, cloudi_environment:transform(Group, EnvironmentLookup)};
         false ->
             {0, ""}
     end,

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -206,7 +206,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 ConfigOptions) of
                         {ok, Pids, Ports} ->
                             Rlimits = rlimits(ConfigOptions),
-                            Owner = owner(ConfigOptions),
+                            Owner = owner(ConfigOptions, EnvironmentLookup),
                             case cloudi_core_i_pool:
                                  get(cloudi_core_i_os_spawn) of
                                 SpawnProcess when is_pid(SpawnProcess) ->
@@ -250,8 +250,8 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
 rlimits(#config_service_options{limit = L}) ->
     cloudi_core_i_os_process:limit_format(L).
 
-owner(#config_service_options{owner = L}) ->
-    cloudi_core_i_os_process:owner_format(L).
+owner(#config_service_options{owner = L}, EnvironmentLookup) ->
+    cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
 
 create_socket_path(TemporaryDirectory, UUID)
     when is_binary(UUID) ->
