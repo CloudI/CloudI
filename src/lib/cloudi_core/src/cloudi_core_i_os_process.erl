@@ -290,7 +290,13 @@ owner_format(Values, EnvironmentLookup) ->
             when is_integer(User) ->
             {User, ""};
         {user, [_ | _] = User} ->
-            {0, cloudi_environment:transform(User, EnvironmentLookup)};
+            case cloudi_environment:transform(User, EnvironmentLookup) of
+                [] ->
+                    % make user lookup fail
+                    {0, User};
+                [_ | _] = UserFinal ->
+                    {0, UserFinal}
+            end;
         false ->
             {0, ""}
     end,
@@ -299,7 +305,13 @@ owner_format(Values, EnvironmentLookup) ->
             when is_integer(Group) ->
             {Group, ""};
         {group, [_ | _] = Group} ->
-            {0, cloudi_environment:transform(Group, EnvironmentLookup)};
+            case cloudi_environment:transform(Group, EnvironmentLookup) of
+                [] ->
+                    % make group lookup fail
+                    {0, Group};
+                [_ | _] = GroupFinal ->
+                    {0, GroupFinal}
+            end;
         false ->
             {0, ""}
     end,

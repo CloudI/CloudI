@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix owner service configuration option issue due to the
+      environment variable transform
+
 2015-05-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Allow the owner service configuration option to use
