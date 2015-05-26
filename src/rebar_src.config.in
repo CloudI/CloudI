@@ -50,6 +50,7 @@
   "external/cloudi_x_jsx",
   "external/cloudi_x_lager",
   "external/cloudi_x_lhttpc",
+  "external/cloudi_x_msgpack",
   "external/cloudi_x_nodefinder",
   "external/cloudi_x_pgsql",
   "external/cloudi_x_poolboy",

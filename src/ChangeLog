@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove the old service name paths from cloudi_service_api_requests
+      (along with adding more error handling)
+    * Add msgpack cloudi_core integration for cloudi_request and cloudi_response
+      usage (with 'external_format' in cloudi_service_db_mysql and
+      cloudi_service_db_pgsql)
+    * Disable binary handling in cloudi_service_db_couchdb and
+      cloudi_service_db_tokyotyrant
+      (will add again once better drivers are used)
+
 2015-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix owner service configuration option issue due to the

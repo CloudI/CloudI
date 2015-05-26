@@ -1,0 +1,16 @@
+case erlang:system_info(otp_release) of
+
+    %% Rxx, before R16
+    [$R|_] ->
+        HashDefine = [{d,without_map}],
+        case lists:keysearch(erl_opts, 1, CONFIG) of
+            {value, {erl_opts, Opts}} ->
+                lists:keyreplace(erl_opts,1,CONFIG,{erl_opts,Opts++HashDefine});
+            false ->
+                CONFIG ++ [{erl_opts, HashDefine}]
+        end;
+
+    %% "17", our future with map
+    _ ->
+        CONFIG
+end.

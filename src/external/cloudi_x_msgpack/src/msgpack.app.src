@@ -1,0 +1,9 @@
+{application, msgpack,
+ [{description, "MessagePack serializer/deserializer"},
+  {vsn, "0.3.3"},
+  {modules, 
+   [msgpack]
+  },
+  {registered, []},
+  {env, []},
+  {applications, [kernel, stdlib]}]}.

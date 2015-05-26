@@ -71,7 +71,7 @@
 
 -define(DEFAULT_TABLE_MODULE,             dict). % dict API
 -define(DEFAULT_OUTPUT,               internal).
--define(DEFAULT_ENDIAN,                 native). % when output == external
+-define(DEFAULT_EXTERNAL_FORMAT,       msgpack).
 -define(DEFAULT_USE_KEY_VALUE,            true). % functionality
 
 -record(state,
@@ -81,7 +81,7 @@
         uuid_generator :: cloudi_x_uuid:state(),
         table_module :: atom(),
         output_type :: internal | external,
-        endian :: big | little | native,
+        external_format :: cloudi_request:external_format(),
         use_key_value :: boolean()
     }).
 
@@ -239,23 +239,24 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {table_module,             ?DEFAULT_TABLE_MODULE},
         {output,                   ?DEFAULT_OUTPUT},
-        {endian,                   ?DEFAULT_ENDIAN},
+        {external_format,          ?DEFAULT_EXTERNAL_FORMAT},
         {use_key_value,            ?DEFAULT_USE_KEY_VALUE}],
-    [TableModule, OutputType, Endian, UseKeyValue] =
+    [TableModule, OutputType, ExternalFormat, UseKeyValue] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_atom(TableModule),
     {file, _} = code:is_loaded(TableModule),
-    true = OutputType =:= internal orelse OutputType =:= external,
-    true = (Endian =:= big orelse
-            Endian =:= little orelse
-            Endian =:= native),
+    true = ((OutputType =:= internal) orelse
+            (OutputType =:= external)),
+    true = ((ExternalFormat =:= erlang_string) orelse
+            (ExternalFormat =:= erlang_term) orelse
+            (ExternalFormat =:= msgpack)),
     true = is_boolean(UseKeyValue),
     false = lists:member($*, Prefix),
     cloudi_service:subscribe(Dispatcher, "*"), % dynamic database name
     {ok, #state{prefix_length = erlang:length(Prefix),
                 table_module = TableModule,
                 output_type = OutputType,
-                endian = Endian,
+                external_format = ExternalFormat,
                 use_key_value = UseKeyValue}}.
 
 cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
@@ -275,11 +276,6 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-do_query(Database, Request, TransId,
-         #state{use_key_value = true} = State) ->
-    key_value(cloudi_request:new(Request, internal),
-              Database, Request, TransId, State).
-    
 key_value({Command, Table},
           Database, Request, TransId, State)
     when is_binary(Table) ->
@@ -400,12 +396,25 @@ key_value(Command,
      response(Request, {error, {invalid_command, Command}}, State),
      State}.
 
--compile({inline, [{response, 3}]}).
+do_query(Database, Request, TransId,
+         #state{output_type = Output,
+                external_format = ExternalFormat,
+                use_key_value = true} = State)
+    when (Output =:= external) orelse
+         ((Output =:= internal) andalso is_binary(Request)) ->
+    key_value(cloudi_request:external_format(Request, ExternalFormat),
+              Database, Request, TransId, State);
+do_query(Database, Request, TransId,
+         #state{use_key_value = true} = State) ->
+    key_value(Request,
+              Database, Request, TransId, State).
+    
 response(Request, Response,
-         #state{output_type = internal}) ->
-    cloudi_response:new_internal(Request, Response);
-response(Request, Response,
-         #state{output_type = external,
-                endian = Endian}) ->
-    cloudi_response:new_external(Request, Response, Endian).
+         #state{output_type = Output,
+                external_format = ExternalFormat})
+    when (Output =:= external) orelse
+         ((Output =:= internal) andalso is_binary(Request)) ->
+    cloudi_response:external_format(Response, ExternalFormat);
+response(_, Response, #state{}) ->
+    Response.
 

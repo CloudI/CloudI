@@ -788,10 +788,10 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                                      database = Database} = State,
                               _Dispatcher) ->
     case Request of
-        Command when is_binary(Command) ->
-            reply_external(do_query(Command, Connection, HostName,
-                                    Port, Database, Timeout),
-                           Request, State);
+        %Command when is_binary(Command) ->
+        %    reply_external(do_query(Command, Connection, HostName,
+        %                            Port, Database, Timeout),
+        %                   Request, State);
         'create_database' ->
             reply_internal(cloudi_x_ecouchdb:
                            create_database_c(Connection, HostName,
@@ -949,124 +949,124 @@ reply_internal({Output, Output}, _, State) ->
 reply_internal({OutputState, OutputData}, _, State) ->
     {reply, {OutputState, OutputData}, State}.
 
-reply_external({Output, Output, NewConnection}, Input, State) ->
-    reply_binary(cloudi_string:term_to_binary(Output),
-                 Input, State#state{connection = NewConnection});
-reply_external({OutputState, OutputData, NewConnection}, Input, State) ->
-    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
-                 Input, State#state{connection = NewConnection});
-reply_external({Output, Output}, Input, State) ->
-    reply_binary(cloudi_string:term_to_binary(Output), Input, State);
-reply_external({OutputState, OutputData}, Input, State) ->
-    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
-                 Input, State);
-reply_external(Output, Input, State) when is_binary(Output) ->
-    reply_binary(Output, Input, State).
-
-reply_binary(Output, Input, State) ->
-    {reply, cloudi_response:new(Input, Output), State}.
-
+%reply_external({Output, Output, NewConnection}, Input, State) ->
+%    reply_binary(cloudi_string:term_to_binary(Output),
+%                 Input, State#state{connection = NewConnection});
+%reply_external({OutputState, OutputData, NewConnection}, Input, State) ->
+%    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
+%                 Input, State#state{connection = NewConnection});
+%reply_external({Output, Output}, Input, State) ->
+%    reply_binary(cloudi_string:term_to_binary(Output), Input, State);
+%reply_external({OutputState, OutputData}, Input, State) ->
+%    reply_binary(cloudi_string:term_to_binary({OutputState, OutputData}),
+%                 Input, State);
+%reply_external(Output, Input, State) when is_binary(Output) ->
+%    reply_binary(Output, Input, State).
+%
+%reply_binary(Output, Input, State) ->
+%    {reply, cloudi_response:new(Input, Output), State}.
+%
 %% do a single query and return a boolean to determine if the query succeeded
-do_query(Query, Connection, HostName, Port, Database, Timeout) ->
-    try (case cloudi_string:binary_to_term(Query) of
-        'create_database' ->
-            cloudi_x_ecouchdb:
-            create_database_c(Connection, HostName, Port,
-                              Database, Timeout);
-        'delete_database' ->
-            cloudi_x_ecouchdb:
-            delete_database_c(Connection, HostName, Port,
-                              Database, Timeout);
-        % database_info
-        % server_info
-        % retrieve_all_dbs
-        {'create_attachment', DocumentID, File, ContentType}
-            when is_list(DocumentID), is_list(File),
-                 is_list(ContentType) ->
-            cloudi_x_ecouchdb:
-            create_attachment_c(Connection, HostName, Port,
-                                Database, DocumentID, File,
-                                ContentType, Timeout);
-        {'create_document', DocumentID, Doc}
-            when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:
-            create_document_c(Connection, HostName, Port,
-                              Database, DocumentID, Doc, Timeout);
-        % create_documents
-        % document_revision
-        % retrieve_document
-        {'update_document', DocumentID, Doc}
-            when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:
-            update_document_c(Connection, HostName, Port,
-                              Database, DocumentID, Doc, Timeout);
-        {'update_document', DocumentID, Rev, Doc}
-            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-            cloudi_x_ecouchdb:
-            update_document_c(Connection, HostName, Port,
-                              Database, DocumentID, Rev,
-                              Doc, Timeout);
-        {'replace_document', DocumentID, Doc}
-            when is_list(DocumentID), is_list(Doc) ->
-            cloudi_x_ecouchdb:
-            replace_document_c(Connection, HostName, Port,
-                               Database, DocumentID, Doc, Timeout);
-        {'replace_document', DocumentID, Rev, Doc}
-            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
-            cloudi_x_ecouchdb:
-            replace_document_c(Connection, HostName, Port,
-                               Database, DocumentID, Rev, Doc, Timeout);
-        {'delete_document', DocumentID}
-            when is_list(DocumentID) ->
-            cloudi_x_ecouchdb:
-            delete_document_c(Connection, HostName, Port,
-                              Database, DocumentID, Timeout);
-        {'delete_document', DocumentID, Rev}
-            when is_list(DocumentID), is_list(Rev) ->
-            cloudi_x_ecouchdb:
-            delete_document_c(Connection, HostName, Port,
-                              Database, DocumentID, Rev, Timeout);
-        % delete_documents
-        {'create_view', DocName, ViewList}
-            when is_list(DocName), is_list(ViewList) ->
-            cloudi_x_ecouchdb:
-            create_view_c(Connection, HostName, Port, Database,
-                          DocName, ViewList, Timeout);
-        {'create_view', DocName, ViewName, Data}
-            when is_list(DocName), is_list(ViewName), is_list(Data) ->
-            cloudi_x_ecouchdb:
-            create_view_c(Connection, HostName, Port, Database,
-                          DocName, ViewName, Data, Timeout);
-        {'create_view', DocName, Type, ViewName, Data}
-            when is_list(DocName), is_list(Type),
-                 is_list(ViewName), is_list(Data) ->
-            cloudi_x_ecouchdb:
-            create_view_c(Connection, HostName, Port, Database,
-                          DocName, Type, ViewName, Data, Timeout);
-        {'invoke_view', DocName, ViewName}
-            when is_list(DocName), is_list(ViewName) ->
-            cloudi_x_ecouchdb:
-            invoke_view_c(Connection, HostName, Port, Database,
-                          DocName, ViewName, Timeout);
-        {'invoke_view', DocName,   ViewName, Keys}
-            when is_list(DocName), is_list(ViewName), is_list(Keys) ->
-            cloudi_x_ecouchdb:
-            invoke_view_c(Connection, HostName, Port, Database,
-                          DocName, ViewName, Keys, Timeout);
-        _ ->
-            {error, invalid_call}
-        end) of
-        {error, invalid_call} ->
-            ?LOG_DEBUG("Invalid couchdb command tuple ~p",
-                       [erlang:binary_to_list(Query)]),
-            <<>>;
-        Result ->
-            Result
-    catch
-        _:Reason ->
-            ?LOG_DEBUG("exception when processing "
-                       "couchdb command tuple ~p: ~p",
-                       [erlang:binary_to_list(Query), Reason]),
-            <<>>
-    end.
+%do_query(Query, Connection, HostName, Port, Database, Timeout) ->
+%    try (case cloudi_string:binary_to_term(Query) of
+%        'create_database' ->
+%            cloudi_x_ecouchdb:
+%            create_database_c(Connection, HostName, Port,
+%                              Database, Timeout);
+%        'delete_database' ->
+%            cloudi_x_ecouchdb:
+%            delete_database_c(Connection, HostName, Port,
+%                              Database, Timeout);
+%        % database_info
+%        % server_info
+%        % retrieve_all_dbs
+%        {'create_attachment', DocumentID, File, ContentType}
+%            when is_list(DocumentID), is_list(File),
+%                 is_list(ContentType) ->
+%            cloudi_x_ecouchdb:
+%            create_attachment_c(Connection, HostName, Port,
+%                                Database, DocumentID, File,
+%                                ContentType, Timeout);
+%        {'create_document', DocumentID, Doc}
+%            when is_list(DocumentID), is_list(Doc) ->
+%            cloudi_x_ecouchdb:
+%            create_document_c(Connection, HostName, Port,
+%                              Database, DocumentID, Doc, Timeout);
+%        % create_documents
+%        % document_revision
+%        % retrieve_document
+%        {'update_document', DocumentID, Doc}
+%            when is_list(DocumentID), is_list(Doc) ->
+%            cloudi_x_ecouchdb:
+%            update_document_c(Connection, HostName, Port,
+%                              Database, DocumentID, Doc, Timeout);
+%        {'update_document', DocumentID, Rev, Doc}
+%            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+%            cloudi_x_ecouchdb:
+%            update_document_c(Connection, HostName, Port,
+%                              Database, DocumentID, Rev,
+%                              Doc, Timeout);
+%        {'replace_document', DocumentID, Doc}
+%            when is_list(DocumentID), is_list(Doc) ->
+%            cloudi_x_ecouchdb:
+%            replace_document_c(Connection, HostName, Port,
+%                               Database, DocumentID, Doc, Timeout);
+%        {'replace_document', DocumentID, Rev, Doc}
+%            when is_list(DocumentID), is_list(Rev), is_list(Doc) ->
+%            cloudi_x_ecouchdb:
+%            replace_document_c(Connection, HostName, Port,
+%                               Database, DocumentID, Rev, Doc, Timeout);
+%        {'delete_document', DocumentID}
+%            when is_list(DocumentID) ->
+%            cloudi_x_ecouchdb:
+%            delete_document_c(Connection, HostName, Port,
+%                              Database, DocumentID, Timeout);
+%        {'delete_document', DocumentID, Rev}
+%            when is_list(DocumentID), is_list(Rev) ->
+%            cloudi_x_ecouchdb:
+%            delete_document_c(Connection, HostName, Port,
+%                              Database, DocumentID, Rev, Timeout);
+%        % delete_documents
+%        {'create_view', DocName, ViewList}
+%            when is_list(DocName), is_list(ViewList) ->
+%            cloudi_x_ecouchdb:
+%            create_view_c(Connection, HostName, Port, Database,
+%                          DocName, ViewList, Timeout);
+%        {'create_view', DocName, ViewName, Data}
+%            when is_list(DocName), is_list(ViewName), is_list(Data) ->
+%            cloudi_x_ecouchdb:
+%            create_view_c(Connection, HostName, Port, Database,
+%                          DocName, ViewName, Data, Timeout);
+%        {'create_view', DocName, Type, ViewName, Data}
+%            when is_list(DocName), is_list(Type),
+%                 is_list(ViewName), is_list(Data) ->
+%            cloudi_x_ecouchdb:
+%            create_view_c(Connection, HostName, Port, Database,
+%                          DocName, Type, ViewName, Data, Timeout);
+%        {'invoke_view', DocName, ViewName}
+%            when is_list(DocName), is_list(ViewName) ->
+%            cloudi_x_ecouchdb:
+%            invoke_view_c(Connection, HostName, Port, Database,
+%                          DocName, ViewName, Timeout);
+%        {'invoke_view', DocName,   ViewName, Keys}
+%            when is_list(DocName), is_list(ViewName), is_list(Keys) ->
+%            cloudi_x_ecouchdb:
+%            invoke_view_c(Connection, HostName, Port, Database,
+%                          DocName, ViewName, Keys, Timeout);
+%        _ ->
+%            {error, invalid_call}
+%        end) of
+%        {error, invalid_call} ->
+%            ?LOG_DEBUG("Invalid couchdb command tuple ~p",
+%                       [erlang:binary_to_list(Query)]),
+%            <<>>;
+%        Result ->
+%            Result
+%    catch
+%        _:Reason ->
+%            ?LOG_DEBUG("exception when processing "
+%                       "couchdb command tuple ~p: ~p",
+%                       [erlang:binary_to_list(Query), Reason]),
+%            <<>>
+%    end.
 

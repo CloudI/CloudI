@@ -78,6 +78,7 @@
 -define(DEFAULT_ENCODING,                    utf8).
 -define(DEFAULT_ENDIAN,                    native). % response binary sizes
 -define(DEFAULT_OUTPUT,                      both).
+-define(DEFAULT_EXTERNAL_FORMAT,    erlang_string).
 -define(DEFAULT_INTERNAL_INTERFACE,        native).
 -define(DEFAULT_START_COMMANDS,                []). % list(SQL :: binary())
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
@@ -86,14 +87,12 @@
 % supported drivers
 -define(MODULE_EONBLAST, cloudi_x_emysql_conn). % default
 
--type endian() :: big | little | native.
-
 -record(state,
     {
         module :: ?MODULE_EONBLAST,
         connection :: any(),
-        endian :: endian(),
-        output :: both | external | internal,
+        output_type :: both | external | internal,
+        external_format :: cloudi_request:external_format(),
         interface :: native | common,
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
@@ -180,7 +179,7 @@
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
--type external_response(Result) ::
+-type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
@@ -194,7 +193,7 @@
              Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list()) ->
-    external_response(any()).
+    module_response(any()).
 
 equery(Agent, Name, Query, Parameters)
     when (is_binary(Query) orelse is_list(Query)),
@@ -213,7 +212,7 @@ equery(Agent, Name, Query, Parameters)
              Query :: string() | binary(),
              Parameters :: list(),
              Timeout :: timeout_milliseconds()) ->
-    external_response(any()).
+    module_response(any()).
 
 equery(Agent, Name, Query, Parameters, Timeout)
     when (is_binary(Query) orelse is_list(Query)), is_list(Parameters) ->
@@ -231,7 +230,7 @@ equery(Agent, Name, Query, Parameters, Timeout)
                     Name :: service_name(),
                     Identifier :: atom(),
                     Query :: string() | binary()) ->
-    external_response(ok).
+    module_response(ok).
 
 prepare_query(Agent, Name, Identifier, Query)
     when is_atom(Identifier), (is_binary(Query) orelse is_list(Query)) ->
@@ -250,7 +249,7 @@ prepare_query(Agent, Name, Identifier, Query)
                     Identifier :: atom(),
                     Query :: string() | binary(),
                     Timeout :: timeout_milliseconds()) ->
-    external_response(ok).
+    module_response(ok).
 
 prepare_query(Agent, Name, Identifier, Query, Timeout)
     when is_atom(Identifier),
@@ -268,7 +267,7 @@ prepare_query(Agent, Name, Identifier, Query, Timeout)
                     Name :: service_name(),
                     Identifier :: atom(),
                     Arguments :: list()) ->
-    external_response(any()).
+    module_response(any()).
 
 execute_query(Agent, Name, Identifier, Arguments)
     when is_atom(Identifier), is_list(Arguments) ->
@@ -286,7 +285,7 @@ execute_query(Agent, Name, Identifier, Arguments)
                     Identifier :: atom(),
                     Arguments :: list(),
                     Timeout :: timeout_milliseconds()) ->
-    external_response(any()).
+    module_response(any()).
 
 execute_query(Agent, Name, Identifier, Arguments, Timeout)
     when is_atom(Identifier), is_list(Arguments) ->
@@ -302,7 +301,7 @@ execute_query(Agent, Name, Identifier, Arguments, Timeout)
 -spec squery(Agent :: agent(),
              Name :: service_name(),
              Query :: string() | binary()) ->
-    external_response(any()).
+    module_response(any()).
 
 squery(Agent, Name, Query)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -319,7 +318,7 @@ squery(Agent, Name, Query)
              Name :: service_name(),
              Query :: string() | binary(),
              Timeout :: timeout_milliseconds()) ->
-    external_response(any()).
+    module_response(any()).
 
 squery(Agent, Name, Query, Timeout)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -335,7 +334,7 @@ squery(Agent, Name, Query, Timeout)
 -spec transaction(Agent :: agent(),
                   Name :: service_name(),
                   QueryList :: list(string() | binary())) ->
-    external_response(ok | {error, any()}).
+    module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -352,7 +351,7 @@ transaction(Agent, Name, [Query | _] = QueryList)
                   Name :: service_name(),
                   QueryList :: list(string() | binary()),
                   Timeout :: timeout_milliseconds()) ->
-    external_response(ok | {error, any()}).
+    module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList, Timeout)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -363,7 +362,7 @@ transaction(Agent, Name, [Query | _] = QueryList, Timeout)
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     Defaults = [
         {database,                 ?DEFAULT_DATABASE},
         {driver,                   ?DEFAULT_DRIVER},
@@ -374,14 +373,14 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {ping,                     ?DEFAULT_PING},
         {timeout,                  ?DEFAULT_TIMEOUT},
         {encoding,                 ?DEFAULT_ENCODING},
-        {endian,                   ?DEFAULT_ENDIAN},
         {output,                   ?DEFAULT_OUTPUT},
+        {external_format,          ?DEFAULT_EXTERNAL_FORMAT},
         {internal_interface,       ?DEFAULT_INTERNAL_INTERFACE},
         {start_commands,           ?DEFAULT_START_COMMANDS},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
     [Database, Driver, HostName, UserName, Password, Port, Ping,
-     TimeoutConnect, Encoding, Endian, Output, Interface,
+     TimeoutConnect, Encoding, OutputType, ExternalFormat, Interface,
      StartCommands, Debug, DebugLevel] =
         cloudi_proplists:take_values(Defaults, Args),
     true = (is_list(Database) andalso is_integer(hd(Database))),
@@ -398,12 +397,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
            (is_integer(Ping) andalso (Ping > 0) andalso (Ping =< TimeoutMax)),
     true = (is_integer(TimeoutConnect) andalso (TimeoutConnect > 0)),
     true = (Encoding =:= utf8) orelse (Encoding =:= latin1),
-    true = ((Endian =:= big) orelse
-            (Endian =:= little) orelse
-            (Endian =:= native)),
-    true = ((Output =:= both) orelse
-            (Output =:= external) orelse
-            (Output =:= internal)),
+    true = ((OutputType =:= both) orelse
+            (OutputType =:= external) orelse
+            (OutputType =:= internal)),
+    true = ((ExternalFormat =:= erlang_string) orelse
+            (ExternalFormat =:= erlang_term) orelse
+            (ExternalFormat =:= msgpack)),
     true = ((Interface =:= native) orelse
             (Interface =:= common)),
     true = ((Debug =:= true) orelse
@@ -415,8 +414,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
     case driver_open(Module, HostName, UserName, Password,
-                     Port, Database, TimeoutConnect, Encoding,
-                     StartCommands) of
+                     Port, Database, erlang:min(TimeoutConnect, Timeout),
+                     Encoding, StartCommands) of
         {ok, Connection} ->
             cloudi_service:subscribe(Dispatcher, Database),
             DebugLogLevel = if
@@ -434,8 +433,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             end,
             {ok, #state{module = Module,
                         connection = Connection,
-                        endian = Endian,
-                        output = Output,
+                        output_type = OutputType,
+                        external_format = ExternalFormat,
                         interface = Interface,
                         debug_level = DebugLogLevel}};
         {error, Reason} ->
@@ -444,72 +443,48 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
-                              #state{output = Output} = State,
+                              #state{output_type = OutputType,
+                                     external_format = ExternalFormat} = State,
                               _Dispatcher) ->
-    case Request of
-        {Query, []}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_squery(internal,
-                                     Query, Timeout, State),
-            {reply, Response, State};
-        {Query, Parameters}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_equery(Query, Parameters, Timeout, State),
-            {reply, Response, State};
-        [Query | _] = QueryList
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_with_transaction(QueryList, Timeout, State),
-            {reply, Response, State};
-        Query
-            when is_binary(Query) ->
-            ResponseOutput = if
-                Output =:= internal ->
+    if
+        is_binary(Request) ->
+            ResponseOutputType = if
+                OutputType =:= internal ->
                     internal;
-                Output =:= external; Output =:= both ->
+                OutputType =:= external; OutputType =:= both ->
                     external
             end,
-            Response = driver_squery(ResponseOutput,
-                                     Query, Timeout, State),
-            {reply, Response, State};
-        Query
-            when (Output =/= external),
-                 is_list(Query) ->
-            Response = driver_squery(internal,
-                                     Query, Timeout, State),
-            {reply, Response, State};
-
-        % older requests not meant to be compatible with other
-        % CloudI database services
-
-        {prepare, Identifier, Query}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_prepare(Identifier, Query, Timeout, State),
-            {reply, Response, State};
-        {execute, Identifier, Parameters}
-            when (Output =/= external) ->
-            Response = driver_equery(Identifier, Parameters, Timeout, State),
-            {reply, Response, State};
-        {equery, Query, []}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_squery(internal,
-                                     Query, Timeout, State),
-            {reply, Response, State};
-        {equery, Query, Parameters}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_equery(Query, Parameters, Timeout, State),
-            {reply, Response, State};
-        {squery, Query}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            Response = driver_squery(internal,
-                                     Query, Timeout, State),
-            {reply, Response, State}
+            if
+                OutputType =:= internal; ExternalFormat =:= erlang_string ->
+                    request_internal(Request, Timeout,
+                                     ResponseOutputType, State);
+                true ->
+                    RequestInternal = case cloudi_request:
+                                           external_format(Request,
+                                                           ExternalFormat) of
+                        [T1, T2] ->
+                            {T1, T2};
+                        [T1, T2, T3]
+                            when (T1 =:= <<"prepare">>) orelse
+                                 (T1 =:= <<"execute">>) orelse 
+                                 (T1 =:= <<"equery">>) ->
+                            T1New = erlang:binary_to_atom(T1, utf8),
+                            T2New = if
+                                T1New =:= execute; T1New =:= prepare ->
+                                    erlang:binary_to_atom(T2, utf8);
+                                true ->
+                                    T2
+                            end,
+                            {T1New, T2New, T3};
+                        RequestInternalValue ->
+                            RequestInternalValue
+                    end,
+                    request_internal(RequestInternal, Timeout,
+                                     ResponseOutputType, State)
+            end;
+        true ->
+            request_internal(Request, Timeout,
+                             internal, State)
     end.
 
 cloudi_service_handle_info({ping, Ping} = Request, State, Dispatcher) ->
@@ -537,40 +512,73 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+request_internal({Query, []}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({Query, Parameters}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_equery(Query, Parameters, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal([Query | _] = QueryList, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_with_transaction(QueryList, Timeout,
+                                       ResponseOutputType, State),
+    {reply, Response, State};
+request_internal(Query, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+% external interface not meant to be compatible with other
+% CloudI database services:
+request_internal({prepare, Identifier, Query}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_prepare(Identifier, Query, Timeout,
+                              ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({execute, Identifier, Parameters}, Timeout,
+                 ResponseOutputType, State) ->
+    Response = driver_equery(Identifier, Parameters, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({equery, Query, []}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({equery, Query, Parameters}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_equery(Query, Parameters, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({squery, Query}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State}.
+
 -spec response_external(common_result(),
-                        Input :: any(),
-                        Endian :: endian()) ->
+                        ExternalFormat :: cloudi_response:external_format()) ->
     binary().
 
-% rely on an interface result format
-response_external({updated, Count}, Input, Endian) ->
-    CountBin = if
-        Endian =:= big ->
-            <<Count:32/unsigned-integer-big>>;
-        Endian =:= little ->
-            <<Count:32/unsigned-integer-little>>;
-        Endian =:= native ->
-            <<Count:32/unsigned-integer-native>>
-    end,
-    cloudi_response:new(Input, CountBin, Endian);
-response_external({selected, Rows}, Input, Endian) ->
-    Count = erlang:length(Rows),
-    CountBin = if
-        Endian =:= big ->
-            <<Count:32/unsigned-integer-big>>;
-        Endian =:= little ->
-            <<Count:32/unsigned-integer-little>>;
-        Endian =:= native ->
-            <<Count:32/unsigned-integer-native>>
-    end,
-    Output = erlang:iolist_to_binary([CountBin |
-        lists:map(fun(T) ->
-            Row = cloudi_string:term_to_list(erlang:tuple_to_list(T)),
-            cloudi_response:new(Input, Row, Endian)
-        end, Rows)]),
-    cloudi_response:new(Input, Output);
-response_external({error, _} = Error, Input, Endian) ->
-    cloudi_response:new(Input, Error, Endian).
+% use the common interface format
+response_external({updated, _Count} = Response, ExternalFormat) ->
+    cloudi_response:external_format(Response, ExternalFormat);
+response_external({selected, _Rows} = Response, ExternalFormat) ->
+    cloudi_response:external_format(Response, ExternalFormat);
+response_external({error, _} = Response, ExternalFormat) ->
+    cloudi_response:external_format(Response, ExternalFormat).
 
 %% interface adapter
 
@@ -602,23 +610,34 @@ driver_open(?MODULE_EONBLAST, HostName, UserName, Password,
 driver_close(?MODULE_EONBLAST, Connection) ->
     ok = ?MODULE_EONBLAST:close_connection(Connection).
 
-% only internal usage, due to relying on an erlang list
-driver_with_transaction(L, Timeout, State) ->
-    case driver_squery(internal,
-                       [<<"BEGIN;">> | L] ++ [<<"COMMIT;">>], Timeout,
-                       State#state{interface = common}) of
+driver_with_transaction(L, Timeout, ResponseOutputType,
+                        #state{external_format = ExternalFormat} = State) ->
+    Response = case driver_squery([<<"BEGIN;">> | L] ++
+                                  [<<"COMMIT;">>], Timeout, internal,
+                                  State#state{interface = common}) of
         {updated, 0} ->
             ok;
         {error, _} = Error ->
-            driver_squery(internal, <<"ROLLBACK;">>,
-                          Timeout, State),
+            driver_squery(<<"ROLLBACK;">>, Timeout,
+                          internal, State),
             Error
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            if
+                Response =:= ok ->
+                    response_external({updated, 0}, ExternalFormat);
+                true ->
+                    response_external(Response, ExternalFormat)
+            end
     end.
 
-% only internal usage, due to relying on an erlang list
-driver_equery(Query, Parameters, Timeout,
+driver_equery(Query, Parameters, Timeout, ResponseOutputType,
               #state{module = ?MODULE_EONBLAST,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     NewQuery = if
@@ -637,17 +656,23 @@ driver_equery(Query, Parameters, Timeout,
         true ->
             driver_debug(DebugLevel, Query, Parameters, Native)
     end,
-    if
-        Interface =:= common ->
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             eonblast_to_common(Native);
         Interface =:= native ->
             Native
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
     end.
 
-% internal or external
-driver_squery(internal, Query, Timeout,
+driver_squery(Query, Timeout, ResponseOutputType,
               #state{module = ?MODULE_EONBLAST,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     QueryBinary = if
@@ -664,36 +689,23 @@ driver_squery(internal, Query, Timeout,
         true ->
             driver_debug(DebugLevel, Query, Native)
     end,
-    if
-        Interface =:= common ->
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             eonblast_to_common(Native);
         Interface =:= native ->
             Native
-    end;
-driver_squery(external, Query, Timeout,
-              #state{module = ?MODULE_EONBLAST,
-                     connection = Connection,
-                     endian = Endian,
-                     debug_level = DebugLevel}) ->
-    QueryBinary = if
-        is_list(Query) ->
-            erlang:iolist_to_binary(Query);
-        is_binary(Query) ->
-            Query
     end,
-    Native = ?MODULE_EONBLAST:execute(Connection,
-                                      QueryBinary, [], Timeout),
     if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
-    end,
-    response_external(eonblast_to_common(Native), Query, Endian).
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
+    end.
 
-driver_prepare(Identifier, Query, Timeout,
+driver_prepare(Identifier, Query, Timeout, ResponseOutputType,
                #state{module = ?MODULE_EONBLAST,
                       connection = Connection,
+                      external_format = ExternalFormat,
                       debug_level = DebugLevel}) ->
     QueryBinary = if
         is_list(Query) ->
@@ -701,8 +713,8 @@ driver_prepare(Identifier, Query, Timeout,
         is_binary(Query) ->
             Query
     end,
-    Result = try ?MODULE_EONBLAST:preprepare(Connection, Identifier,
-                                             QueryBinary, Timeout) of
+    Response = try ?MODULE_EONBLAST:preprepare(Connection, Identifier,
+                                               QueryBinary, Timeout) of
         ok ->
             ok
     catch
@@ -718,9 +730,19 @@ driver_prepare(Identifier, Query, Timeout,
                              " ~p~n"
                              " ~p~n"
                              " = ~p",
-                             [Identifier, Query, Result])
+                             [Identifier, Query, Response])
     end,
-    Result.
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            if
+                Response =:= ok ->
+                    response_external({updated, 0}, ExternalFormat);
+                true ->
+                    response_external(Response, ExternalFormat)
+            end
+    end.
 
 driver_ping(Timeout,
             #state{module = ?MODULE_EONBLAST,

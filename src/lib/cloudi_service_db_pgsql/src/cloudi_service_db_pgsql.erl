@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -77,11 +77,11 @@
 -define(DEFAULT_SSL,                        false).
 -define(DEFAULT_LISTEN,                 undefined). % LISTEN/NOTIFY destination
 -define(DEFAULT_TIMEOUT,                    20000). % ms (connect-only)
--define(DEFAULT_ENDIAN,                    native). % response binary sizes
 -define(DEFAULT_OUTPUT,                      both).
+-define(DEFAULT_EXTERNAL_FORMAT,    erlang_string).
 -define(DEFAULT_INTERNAL_INTERFACE,        native).
-% currently only handling equery "?" -> "$N" conversion
--define(DEFAULT_MYSQL_COMPATIBILITY,        false).
+-define(DEFAULT_MYSQL_COMPATIBILITY,        false). % see below:
+        % currently only handling equery "?" -> "$N" conversion
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
@@ -90,15 +90,13 @@
 -define(MODULE_WG, cloudi_x_epgsql_wg). % default
 -define(MODULE_SEMIOCAST, cloudi_x_pgsql_connection).
 
--type endian() :: big | little | native.
-
 -record(state,
     {
         module :: ?MODULE_WG | ?MODULE_SEMIOCAST | ?MODULE_EPGSQL,
         connection :: any(),
         listen :: cloudi_service:service_name() | undefined,
-        endian :: endian(),
-        output :: both | external | internal,
+        output_type :: both | internal | external,
+        external_format :: cloudi_request:external_format(),
         interface :: native | common,
         mysql :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal
@@ -119,7 +117,7 @@
 -type agent() :: cloudi:agent().
 -type service_name() :: cloudi:service_name().
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
--type external_response(Result) ::
+-type module_response(Result) ::
     {{ok, Result}, NewAgent :: agent()} |
     {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
 
@@ -133,7 +131,7 @@
              Name :: service_name(),
              Query :: string() | binary(),
              Parameters :: list()) ->
-    external_response(any()).
+    module_response(any()).
 
 equery(Agent, Name, Query, Parameters)
     when (is_binary(Query) orelse is_list(Query)),
@@ -152,7 +150,7 @@ equery(Agent, Name, Query, Parameters)
              Query :: string() | binary(),
              Parameters :: list(),
              Timeout :: timeout_milliseconds()) ->
-    external_response(any()).
+    module_response(any()).
 
 equery(Agent, Name, Query, Parameters, Timeout)
     when (is_binary(Query) orelse is_list(Query)), is_list(Parameters) ->
@@ -168,7 +166,7 @@ equery(Agent, Name, Query, Parameters, Timeout)
 -spec squery(Agent :: agent(),
              Name :: service_name(),
              Query :: string() | binary()) ->
-    external_response(any()).
+    module_response(any()).
 
 squery(Agent, Name, Query)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -185,7 +183,7 @@ squery(Agent, Name, Query)
              Name :: service_name(),
              Query :: string() | binary(),
              Timeout :: timeout_milliseconds()) ->
-    external_response(any()).
+    module_response(any()).
 
 squery(Agent, Name, Query, Timeout)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -201,7 +199,7 @@ squery(Agent, Name, Query, Timeout)
 -spec transaction(Agent :: agent(),
                   Name :: service_name(),
                   QueryList :: list(string() | binary())) ->
-    external_response(ok | {error, any()}).
+    module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -218,7 +216,7 @@ transaction(Agent, Name, [Query | _] = QueryList)
                   Name :: service_name(),
                   QueryList :: list(string() | binary()),
                   Timeout :: timeout_milliseconds()) ->
-    external_response(ok | {error, any()}).
+    module_response(ok | {error, any()}).
 
 transaction(Agent, Name, [Query | _] = QueryList, Timeout)
     when (is_binary(Query) orelse is_list(Query)) ->
@@ -242,7 +240,7 @@ binary_to_bytea(B) when is_binary(B) ->
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     Defaults = [
         {database,                 ?DEFAULT_DATABASE},
         {driver,                   ?DEFAULT_DRIVER},
@@ -253,14 +251,14 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {ssl,                      ?DEFAULT_SSL},
         {listen,                   ?DEFAULT_LISTEN},
         {timeout,                  ?DEFAULT_TIMEOUT},
-        {endian,                   ?DEFAULT_ENDIAN},
         {output,                   ?DEFAULT_OUTPUT},
+        {external_format,          ?DEFAULT_EXTERNAL_FORMAT},
         {internal_interface,       ?DEFAULT_INTERNAL_INTERFACE},
         {mysql_compatibility,      ?DEFAULT_MYSQL_COMPATIBILITY},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
     [Database, Driver, HostName, UserName, Password, Port, SSL, Listen,
-     Timeout, Endian, Output, Interface, MysqlCompatibility,
+     TimeoutConnect, OutputType, ExternalFormat, Interface, MysqlCompatibility,
      Debug, DebugLevel | NewArgs] =
         cloudi_proplists:take_values(Defaults, Args),
     true = (is_list(Database) andalso is_integer(hd(Database))),
@@ -286,13 +284,13 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Listen =:= undefined ->
             []
     end,
-    true = (is_integer(Timeout) andalso (Timeout > 0)),
-    true = ((Endian =:= big) orelse
-            (Endian =:= little) orelse
-            (Endian =:= native)),
-    true = ((Output =:= both) orelse
-            (Output =:= external) orelse
-            (Output =:= internal)),
+    true = (is_integer(TimeoutConnect) andalso (TimeoutConnect > 0)),
+    true = ((OutputType =:= both) orelse
+            (OutputType =:= external) orelse
+            (OutputType =:= internal)),
+    true = ((ExternalFormat =:= erlang_string) orelse
+            (ExternalFormat =:= erlang_term) orelse
+            (ExternalFormat =:= msgpack)),
     true = ((Interface =:= native) orelse
             (Interface =:= common)),
     true = ((MysqlCompatibility =:= true) orelse
@@ -307,7 +305,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             (DebugLevel =:= fatal)),
     FinalArgs = AsyncArg ++
                 [{port, Port},
-                 {timeout, Timeout},
+                 {timeout, erlang:min(TimeoutConnect, Timeout)},
                  {database, Database},
                  {ssl, SSL} | NewArgs],
     case driver_open(Module, HostName, UserName, Password, FinalArgs) of
@@ -322,8 +320,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             {ok, #state{module = Module,
                         connection = Connection,
                         listen = Listen,
-                        endian = Endian,
-                        output = Output,
+                        output_type = OutputType,
+                        external_format = ExternalFormat,
                         interface = Interface,
                         mysql = MysqlCompatibility,
                         debug_level = DebugLogLevel}};
@@ -333,66 +331,36 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
-                              #state{output = Output,
-                                     mysql = MysqlCompatibility} = State,
+                              #state{output_type = OutputType,
+                                     external_format = ExternalFormat} = State,
                               _Dispatcher) ->
-    case Request of
-        {Query, []}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            case driver_squery(internal, Query, Timeout, State) of
-                {error, closed} ->
-                    {stop, closed, State};
-                Response ->
-                    {reply, Response, State}
-            end;
-        {Query, [_ | _] = Parameters}
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            NewQuery = if
-                MysqlCompatibility =:= true ->
-                    mysql_query_transform(Query);
-                MysqlCompatibility =:= false ->
-                    Query
-            end,
-            case driver_equery(NewQuery, Parameters, Timeout, State) of
-                {error, closed} ->
-                    {stop, closed, State};
-                Response ->
-                    {reply, Response, State}
-            end;
-        [Query | _] = QueryList
-            when (Output =/= external),
-                 (is_binary(Query) orelse is_list(Query)) ->
-            case driver_with_transaction(QueryList, Timeout, State) of
-                {error, closed} ->
-                    {stop, closed, State};
-                Response ->
-                    {reply, Response, State}
-            end;
-        Query
-            when is_binary(Query) ->
-            ResponseOutput = if
-                Output =:= internal ->
+    if
+        is_binary(Request) ->
+            ResponseOutputType = if
+                OutputType =:= internal ->
                     internal;
-                Output =:= external; Output =:= both ->
+                OutputType =:= external; OutputType =:= both ->
                     external
             end,
-            case driver_squery(ResponseOutput, Query, Timeout, State) of
-                {error, closed} ->
-                    {stop, closed, State};
-                Response ->
-                    {reply, Response, State}
+            if
+                OutputType =:= internal; ExternalFormat =:= erlang_string ->
+                    request_internal(Request, Timeout,
+                                     ResponseOutputType, State);
+                true ->
+                    RequestInternal = case cloudi_request:
+                                           external_format(Request,
+                                                           ExternalFormat) of
+                        [T1, T2] ->
+                            {T1, T2};
+                        RequestInternalValue ->
+                            RequestInternalValue
+                    end,
+                    request_internal(RequestInternal, Timeout,
+                                     ResponseOutputType, State)
             end;
-        Query
-            when (Output =/= external),
-                 is_list(Query) ->
-            case driver_squery(internal, Query, Timeout, State) of
-                {error, closed} ->
-                    {stop, closed, State};
-                Response ->
-                    {reply, Response, State}
-            end
+        true ->
+            request_internal(Request, Timeout,
+                             internal, State)
     end.
 
 cloudi_service_handle_info({pgsql, Connection, Async},
@@ -417,53 +385,54 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+request_internal({Query, []}, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal({Query, [_ | _] = Parameters}, Timeout,
+                 ResponseOutputType,
+                 #state{mysql = MysqlCompatibility} = State)
+    when is_binary(Query); is_list(Query) ->
+    NewQuery = if
+        MysqlCompatibility =:= true ->
+            mysql_query_transform(Query);
+        MysqlCompatibility =:= false ->
+            Query
+    end,
+    Response = driver_equery(NewQuery, Parameters, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State};
+request_internal([Query | _] = QueryList, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_with_transaction(QueryList, Timeout,
+                                       ResponseOutputType, State),
+    {reply, Response, State};
+request_internal(Query, Timeout,
+                 ResponseOutputType, State)
+    when is_binary(Query); is_list(Query) ->
+    Response = driver_squery(Query, Timeout,
+                             ResponseOutputType, State),
+    {reply, Response, State}.
+
 -spec response_external(common_result(),
-                        Input :: any(),
-                        Endian :: endian()) ->
+                        ExternalFormat :: cloudi_response:external_format()) ->
     binary().
 
 % rely on an interface result format
-response_external({updated, Count}, Input, Endian) ->
+response_external({updated, _Count} = Response, ExternalFormat) ->
     % SQL UPDATE and various commands
-    CountBin = if
-        Endian =:= big ->
-            <<Count:32/unsigned-integer-big>>;
-        Endian =:= little ->
-            <<Count:32/unsigned-integer-little>>;
-        Endian =:= native ->
-            <<Count:32/unsigned-integer-native>>
-    end,
-    cloudi_response:new(Input, CountBin, Endian);
-response_external({updated, Count, _Rows}, Input, Endian) ->
+    cloudi_response:external_format(Response, ExternalFormat);
+response_external({updated, Count, _Rows}, ExternalFormat) ->
     % SQL INSERT/UPDATE/DELETE
-    CountBin = if
-        Endian =:= big ->
-            <<Count:32/unsigned-integer-big>>;
-        Endian =:= little ->
-            <<Count:32/unsigned-integer-little>>;
-        Endian =:= native ->
-            <<Count:32/unsigned-integer-native>>
-    end,
-    cloudi_response:new(Input, CountBin, Endian);
-response_external({selected, Rows}, Input, Endian) ->
+    cloudi_response:external_format({updated, Count}, ExternalFormat);
+response_external({selected, _Rows} = Response, ExternalFormat) ->
     % SQL SELECT
-    Count = erlang:length(Rows),
-    CountBin = if
-        Endian =:= big ->
-            <<Count:32/unsigned-integer-big>>;
-        Endian =:= little ->
-            <<Count:32/unsigned-integer-little>>;
-        Endian =:= native ->
-            <<Count:32/unsigned-integer-native>>
-    end,
-    Output = erlang:iolist_to_binary([CountBin |
-        lists:map(fun(T) ->
-            Row = cloudi_string:term_to_list(erlang:tuple_to_list(T)),
-            cloudi_response:new(Input, Row, Endian)
-        end, Rows)]),
-    cloudi_response:new(Input, Output);
-response_external({error, _} = Error, Input, Endian) ->
-    cloudi_response:new(Input, Error, Endian).
+    cloudi_response:external_format(Response, ExternalFormat);
+response_external({error, _} = Response, ExternalFormat) ->
+    cloudi_response:external_format(Response, ExternalFormat).
 
 %% provide the "?"s parameter syntax externally like cloudi_x_emysql,
 %% but provide the $1, $2, $3, etc. PostgreSQL parameter syntax internally
@@ -615,22 +584,34 @@ driver_close(?MODULE_WG, Connection) ->
 driver_close(?MODULE_SEMIOCAST, Connection) ->
     ?MODULE_SEMIOCAST:close(Connection).
 
-% only internal usage, due to relying on an erlang list
-driver_with_transaction(L, Timeout, State) ->
-    case driver_squery(internal,
-                       [<<"BEGIN;">> | L] ++ [<<"COMMIT;">>], Timeout,
-                       State#state{interface = common}) of
+driver_with_transaction(L, Timeout, ResponseOutputType,
+                        #state{external_format = ExternalFormat} = State) ->
+    Response = case driver_squery([<<"BEGIN;">> | L] ++
+                                  [<<"COMMIT;">>], Timeout, internal,
+                                  State#state{interface = common}) of
         {updated, 0} ->
             ok;
         {error, _} = Error ->
-            driver_squery(internal, <<"ROLLBACK;">>, Timeout, State),
+            driver_squery(<<"ROLLBACK;">>, Timeout,
+                          internal, State),
             Error
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            if
+                Response =:= ok ->
+                    response_external({updated, 0}, ExternalFormat);
+                true ->
+                    response_external(Response, ExternalFormat)
+            end
     end.
 
-% only internal usage, due to relying on an erlang list
-driver_equery(Query, Parameters, _Timeout,
+driver_equery(Query, Parameters, _Timeout, ResponseOutputType,
               #state{module = ?MODULE_EPGSQL,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_EPGSQL:equery(Connection, Query, Parameters),
@@ -641,14 +622,27 @@ driver_equery(Query, Parameters, _Timeout,
             driver_debug(DebugLevel, Query, Parameters, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             epgsql_to_common(Native);
         Interface =:= native ->
             Native
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
     end;
-driver_equery(Query, Parameters, _Timeout,
+driver_equery(Query, Parameters, _Timeout, ResponseOutputType,
               #state{module = ?MODULE_WG,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_WG:equery(Connection, Query, Parameters),
@@ -659,14 +653,27 @@ driver_equery(Query, Parameters, _Timeout,
             driver_debug(DebugLevel, Query, Parameters, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             wg_to_common(Native);
         Interface =:= native ->
             Native
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
     end;
-driver_equery(Query, Parameters, Timeout,
+driver_equery(Query, Parameters, Timeout, ResponseOutputType,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
@@ -678,16 +685,28 @@ driver_equery(Query, Parameters, Timeout,
             driver_debug(DebugLevel, Query, Parameters, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             semiocast_to_common(Native);
         Interface =:= native ->
             Native
+    end,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
     end.
 
-% internal or external
-driver_squery(internal, Query, _Timeout,
+driver_squery(Query, _Timeout, ResponseOutputType,
               #state{module = ?MODULE_EPGSQL,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_EPGSQL:squery(Connection, Query),
@@ -698,27 +717,27 @@ driver_squery(internal, Query, _Timeout,
             driver_debug(DebugLevel, Query, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             epgsql_to_common(Native);
         Interface =:= native ->
             Native
-    end;
-driver_squery(external, Query, _Timeout,
-              #state{module = ?MODULE_EPGSQL,
-                     connection = Connection,
-                     endian = Endian,
-                     debug_level = DebugLevel}) ->
-    Native = ?MODULE_EPGSQL:squery(Connection, Query),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
     end,
-    response_external(epgsql_to_common(Native), Query, Endian);
-driver_squery(internal, Query, _Timeout,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
+    end;
+driver_squery(Query, _Timeout, ResponseOutputType,
               #state{module = ?MODULE_WG,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_WG:squery(Connection, Query),
@@ -729,27 +748,27 @@ driver_squery(internal, Query, _Timeout,
             driver_debug(DebugLevel, Query, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             wg_to_common(Native);
         Interface =:= native ->
             Native
-    end;
-driver_squery(external, Query, _Timeout,
-              #state{module = ?MODULE_WG,
-                     connection = Connection,
-                     endian = Endian,
-                     debug_level = DebugLevel}) ->
-    Native = ?MODULE_WG:squery(Connection, Query),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
     end,
-    response_external(wg_to_common(Native), Query, Endian);
-driver_squery(internal, Query, Timeout,
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
+    end;
+driver_squery(Query, Timeout, ResponseOutputType,
               #state{module = ?MODULE_SEMIOCAST,
                      connection = Connection,
+                     external_format = ExternalFormat,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
@@ -760,24 +779,23 @@ driver_squery(internal, Query, Timeout,
             driver_debug(DebugLevel, Query, Native)
     end,
     if
-        Interface =:= common ->
+        Native == {error, closed} ->
+            erlang:exit(closed);
+        true ->
+            ok
+    end,
+    Response = if
+        Interface =:= common; ResponseOutputType =:= external ->
             semiocast_to_common(Native);
         Interface =:= native ->
             Native
-    end;
-driver_squery(external, Query, Timeout,
-              #state{module = ?MODULE_SEMIOCAST,
-                     connection = Connection,
-                     endian = Endian,
-                     debug_level = DebugLevel}) ->
-    Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
     end,
-    response_external(semiocast_to_common(Native), Query, Endian).
+    if
+        ResponseOutputType =:= internal ->
+            Response;
+        ResponseOutputType =:= external ->
+            response_external(Response, ExternalFormat)
+    end.
 
 driver_debug_log(trace, Message, Args) ->
     ?LOG_TRACE(Message, Args);

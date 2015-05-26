@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,35 +44,48 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([new/2,
+-export([external_format/2,
          http_qs_parse/1]).
+
+-type external_format() ::
+    erlang_string |
+    erlang_term |
+    msgpack.
+-export_type([external_format/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-% TODO: remove old code path?
-new(Input, OutputType)
-    when is_binary(Input) ->
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Decode incoming external request data.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec external_format(Request :: binary(),
+                      Format :: external_format()) ->
+    any().
+
+external_format(Request, Format)
+    when is_binary(Request) ->
     if
-        OutputType =:= external ->
-            Input;
-        OutputType =:= internal ->
-            cloudi_string:binary_to_term(Input)
-    end;
-new([I | _] = Input, internal)
-    when is_integer(I) ->
-    cloudi_string:list_to_term(Input);
-new(Input, internal) ->
-    Input.
+        Format =:= erlang_string ->
+            cloudi_string:binary_to_term(Request);
+        Format =:= erlang_term ->
+            erlang:binary_to_term(Request);
+        Format =:= msgpack ->
+            {ok, Incoming} = cloudi_x_msgpack:unpack(Request),
+            Incoming
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -92,4 +105,8 @@ new(Input, internal) ->
 
 http_qs_parse(Request) ->
     cloudi_request_info:key_value_parse(Request).
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 

@@ -62,6 +62,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_lager/src \
      -d $(top_srcdir)/external/cloudi_x_lhttpc/src \
+     -d $(top_srcdir)/external/cloudi_x_msgpack/src \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_poolboy/src \
@@ -149,6 +150,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/keys1value/ebin
 	$(MKDIR_P) lib/service/ebin
 	$(MKDIR_P) external/rebar_modules/ebin
+	$(MKDIR_P) external/cloudi_x_msgpack/ebin
 	$(MKDIR_P) external/cloudi_x_nodefinder/ebin
 	$(MKDIR_P) external/cloudi_x_erlcloud/ebin
 	$(MKDIR_P) external/cloudi_x_lager/ebin
@@ -398,6 +400,10 @@ rebar-directories-compile:
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/rebar_modules/ebin || \
         exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_msgpack && \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/cloudi_x_msgpack/ebin || \
+        exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_nodefinder && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/cloudi_x_nodefinder/ebin || \
@@ -623,6 +629,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/service/ebin
 	rmdir $(top_builddir)/external/rebar_modules/ebin || exit 0
 	rm -f $(top_srcdir)/external/rebar_modules/ebin
+	rmdir $(top_builddir)/external/cloudi_x_msgpack/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_msgpack/ebin
 	rmdir $(top_builddir)/external/cloudi_x_nodefinder/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_nodefinder/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcloud/ebin || exit 0
@@ -831,6 +839,7 @@ dialyze: all \
               external/cloudi_x_etokyotyrant/ebin \
               external/cloudi_x_jsx/ebin \
               external/cloudi_x_pgsql/ebin \
+              external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/syslog/ebin
 	@echo "No Errors or Warnings Found!"

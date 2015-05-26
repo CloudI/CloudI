@@ -257,6 +257,15 @@ exceptions due to their C integration).
 - `Fri Mar  4 00:19:03 PST 2011`
 - `MIT-like`
 
+`msgpack`
+---------
+`MessagePack in Erlang`
+
+- `https://github.com/msgpack/msgpack-erlang`
+- `commit c666a5f6568ac2e15687bb155442025dbb8b74ff (0.3.3)`
+- `Mon May 25 11:14:25 PDT 2015`
+- `Apache License 2.0`
+
 `nodefinder`
 ------------
 `Strategies for automatic node discovery in Erlang`
