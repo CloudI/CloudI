@@ -69,10 +69,10 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(DEFAULT_TABLE_MODULE,             dict). % dict API
--define(DEFAULT_OUTPUT,               internal).
--define(DEFAULT_EXTERNAL_FORMAT,       msgpack).
--define(DEFAULT_USE_KEY_VALUE,            true). % functionality
+-define(DEFAULT_TABLE_MODULE,                dict). % dict API
+-define(DEFAULT_OUTPUT,                  internal).
+-define(DEFAULT_EXTERNAL_FORMAT,    erlang_string).
+-define(DEFAULT_USE_KEY_VALUE,               true). % functionality
 
 -record(state,
     {
