@@ -101,11 +101,15 @@ cloudi_service_init([], Prefix, _Timeout, Dispatcher) ->
             Arity == 1 ->
                 cloudi_service:subscribe(Dispatcher,
                                          FormatMethod ++ "/get"),
-                fun cloudi_service_api_call/2;
+                fun (Arg1) ->
+                    cloudi_service_api_call(Method, Arg1)
+                end;
             Arity == 2 ->
                 cloudi_service:subscribe(Dispatcher,
                                          FormatMethod ++ "/post"),
-                fun cloudi_service_api_call/3
+                fun (Arg1, Arg2) ->
+                    cloudi_service_api_call(Method, Arg1, Arg2)
+                end
         end,
         cloudi_x_trie:store(MethodName ++ ".erl", {F, Arity}, Functions)
     end, cloudi_x_trie:new(), Exports),
