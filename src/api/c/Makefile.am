@@ -1,7 +1,7 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 
-instdir = "$(DESTDIR)$(cloudi_prefix)/api/c"
+instdir = "$(cloudi_prefix)/api/c"
 inst_LTLIBRARIES = libcloudi.la
 if CXX_SUPPORT
     CXX_SUPPORT_HEADER = cloudi.hpp

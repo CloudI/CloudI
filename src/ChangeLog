@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-05-29 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+
+    * Fix 'make install DESTDIR=pkgdir/'
+
 2015-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove the old service name paths from cloudi_service_api_requests
