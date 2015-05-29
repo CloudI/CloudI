@@ -2,7 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging/ebin"
-beamdir = ../ebin
+beamdir = "$(top_builddir)/tests/messaging/ebin"
 APPLICATION = cloudi_service_messaging_sequence.app
 beam_DATA = cloudi_service_messaging_sequence1.beam \
             cloudi_service_messaging_sequence2.beam \
