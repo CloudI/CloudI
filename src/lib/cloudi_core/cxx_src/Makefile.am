@@ -5,7 +5,7 @@ INTERFACE_HEADER = $(srcdir)/../src/cloudi_core_i_os_spawn.hrl
 RLIMIT_HEADER = $(srcdir)/../src/cloudi_core_i_os_rlimit.hrl
 CURRENT_VERSION = vsn_1
 
-instdir = $(DESTDIR)$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv
+instdir = "$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv"
 inst_PROGRAMS = cloudi_os_spawn_vsn_1
 inst_LTLIBRARIES = libcloudi_socket_drv.la
 
