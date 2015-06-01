@@ -5,12 +5,13 @@
     python-install \
     python-c-install
 
-instdir = "$(DESTDIR)$(cloudi_prefix)/api/python"
+instdir = "$(cloudi_prefix)/api/python"
+directinstdir = "$(DESTDIR)$(instdir)"
 
 python-install:
-	$(MKDIR_P) $(instdir)
-	$(INSTALL_DATA) $(srcdir)/erlang.py $(instdir)
-	$(INSTALL_DATA) $(srcdir)/cloudi.py $(instdir)
+	$(MKDIR_P) $(directinstdir)
+	$(INSTALL_DATA) $(srcdir)/erlang.py $(directinstdir)
+	$(INSTALL_DATA) $(srcdir)/cloudi.py $(directinstdir)
 
 if PYTHON_C_SUPPORT
 inst_LTLIBRARIES = libcloudi_py.la
@@ -36,7 +37,7 @@ PYTHON_C_INSTALL_HOOK = python-c-install
 endif
 
 python-c-install: python-install
-	$(INSTALL_DATA) $(srcdir)/cloudi_c.py $(instdir)
+	$(INSTALL_DATA) $(srcdir)/cloudi_c.py $(directinstdir)
 
 install-exec-hook: python-install $(PYTHON_C_INSTALL_HOOK)
 
