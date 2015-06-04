@@ -60,7 +60,7 @@
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--define(OS_RLIMIT_DEFAULTS, []).
+-define(OS_RLIMIT_DEFAULTS, [{invalid, undefined}]).
 -else.
 -include("cloudi_core_i_os_rlimit.hrl").
 -endif.
