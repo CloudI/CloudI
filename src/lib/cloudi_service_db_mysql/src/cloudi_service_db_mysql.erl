@@ -569,7 +569,7 @@ request_internal({squery, Query}, Timeout,
     {reply, Response, State}.
 
 -spec response_external(common_result(),
-                        ExternalFormat :: cloudi_response:external_format()) ->
+                        ExternalFormat :: cloudi_request:external_format()) ->
     binary().
 
 % use the common interface format

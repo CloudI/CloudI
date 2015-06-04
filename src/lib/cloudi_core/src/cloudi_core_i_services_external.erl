@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -857,59 +857,82 @@ handle_info({SendType, Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source}, StateName,
             #state{queue_requests = false,
                    service_state = ServiceState,
-                   options = ConfigOptions} = State)
+                   options = #config_service_options{
+                       rate_request_max = RateRequest} = ConfigOptions
+                   } = State)
     when SendType =:= 'cloudi_service_send_async' orelse
          SendType =:= 'cloudi_service_send_sync' ->
-    Type = if
-        SendType =:= 'cloudi_service_send_async' ->
-            'send_async';
-        SendType =:= 'cloudi_service_send_sync' ->
-            'send_sync'
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
     end,
-    NewConfigOptions = check_incoming(true, ConfigOptions),
-    #config_service_options{
-        request_timeout_adjustment = RequestTimeoutAdjustment,
-        aspects_request_before = AspectsBefore} = NewConfigOptions,
-    try aspects_request_before(AspectsBefore, Type,
-                               Name, Pattern, RequestInfo, Request,
-                               Timeout, Priority, TransId, Source,
-                               ServiceState, RequestTimeoutAdjustment) of
-        {ok, NextTimeout, NewServiceState} ->
-            if
+    if
+        RateRequestOk =:= true ->
+            Type = if
                 SendType =:= 'cloudi_service_send_async' ->
-                    ok = send('send_async_out'(Name, Pattern,
-                                               RequestInfo, Request,
-                                               NextTimeout, Priority,
-                                               TransId, Source),
-                              State);
+                    'send_async';
                 SendType =:= 'cloudi_service_send_sync' ->
-                    ok = send('send_sync_out'(Name, Pattern,
+                    'send_sync'
+            end,
+            NewConfigOptions =
+                check_incoming(true, ConfigOptions#config_service_options{
+                                         rate_request_max = NewRateRequest}),
+            #config_service_options{
+                request_timeout_adjustment = RequestTimeoutAdjustment,
+                aspects_request_before = AspectsBefore} = NewConfigOptions,
+            try aspects_request_before(AspectsBefore, Type,
+                                       Name, Pattern, RequestInfo, Request,
+                                       Timeout, Priority, TransId, Source,
+                                       ServiceState,
+                                       RequestTimeoutAdjustment) of
+                {ok, NextTimeout, NewServiceState} ->
+                    if
+                        SendType =:= 'cloudi_service_send_async' ->
+                            ok = send('send_async_out'(Name, Pattern,
+                                                       RequestInfo, Request,
+                                                       NextTimeout, Priority,
+                                                       TransId, Source),
+                                      State);
+                        SendType =:= 'cloudi_service_send_sync' ->
+                            ok = send('send_sync_out'(Name, Pattern,
+                                                      RequestInfo, Request,
+                                                      NextTimeout, Priority,
+                                                      TransId, Source),
+                                      State)
+                    end,
+                    AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
+                                               Result, S) ->
+                        aspects_request_after(AspectsAfter, Type,
+                                              Name, Pattern,
                                               RequestInfo, Request,
-                                              NextTimeout, Priority,
-                                              TransId, Source),
-                              State)
-            end,
-            AspectsRequestAfterF = fun(AspectsAfter, NewTimeout, Result, S) ->
-                aspects_request_after(AspectsAfter, Type,
-                                      Name, Pattern, RequestInfo, Request,
-                                      NewTimeout, Priority, TransId, Source,
-                                      Result, S, RequestTimeoutAdjustment)
-            end,
+                                              NewTimeout, Priority,
+                                              TransId, Source,
+                                              Result, S,
+                                              RequestTimeoutAdjustment)
+                    end,
+                    {next_state, StateName,
+                     State#state{queue_requests = true,
+                                 service_state = NewServiceState,
+                                 aspects_request_after_f = AspectsRequestAfterF,
+                                 options = NewConfigOptions}};
+                {stop, Reason, NewServiceState} ->
+                    {stop, Reason,
+                     State#state{service_state = NewServiceState,
+                                 options = NewConfigOptions}}
+            catch
+                ErrorType:Error ->
+                    Stack = erlang:get_stacktrace(),
+                    ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
+                    {stop, {ErrorType, {Error, Stack}},
+                     State#state{options = NewConfigOptions}}
+            end;
+        RateRequestOk =:= false ->
             {next_state, StateName,
-             State#state{queue_requests = true,
-                         service_state = NewServiceState,
-                         aspects_request_after_f = AspectsRequestAfterF,
-                         options = NewConfigOptions}};
-        {stop, Reason, NewServiceState} ->
-            {stop, Reason,
-             State#state{service_state = NewServiceState,
-                         options = NewConfigOptions}}
-    catch
-        ErrorType:Error ->
-            Stack = erlang:get_stacktrace(),
-            ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-            {stop, {ErrorType, {Error, Stack}},
-             State#state{options = NewConfigOptions}}
+             State#state{options = ConfigOptions#config_service_options{
+                             rate_request_max = NewRateRequest}}}
     end;
 
 handle_info({SendType, _, _,
@@ -920,29 +943,41 @@ handle_info({SendType, _, _,
                    queued_word_size = WordSize,
                    options = #config_service_options{
                        queue_limit = QueueLimit,
-                       queue_size = QueueSize}} = State)
+                       queue_size = QueueSize,
+                       rate_request_max = RateRequest} = ConfigOptions
+                   } = State)
     when SendType =:= 'cloudi_service_send_async';
          SendType =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
-        QueueLimit /= undefined ->
+        QueueLimit =/= undefined ->
             cloudi_x_pqueue4:len(Queue) < QueueLimit;
         true ->
             true
     end,
     {QueueSizeOk, Size} = if
-        QueueSize /= undefined ->
+        QueueSize =/= undefined ->
             QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
             {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
         true ->
             {true, 0}
     end,
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    NewState = State#state{
+        options = ConfigOptions#config_service_options{
+            rate_request_max = NewRateRequest}},
     if
-        QueueLimitOk, QueueSizeOk ->
+        QueueLimitOk, QueueSizeOk, RateRequestOk ->
             {next_state, StateName,
              recv_timeout_start(Timeout, Priority, TransId,
-                                Size, T, State)};
+                                Size, T, NewState)};
         true ->
-            {next_state, StateName, State}
+            {next_state, StateName, NewState}
     end;
 
 handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size}, StateName,
@@ -1254,6 +1289,16 @@ handle_info('cloudi_count_process_dynamic_terminate_check', StateName,
 
 handle_info('cloudi_count_process_dynamic_terminate_now', _, State) ->
     {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
+
+handle_info('cloudi_rate_request_max_rate', StateName,
+            #state{options = #config_service_options{
+                       rate_request_max =
+                           RateRequest} = ConfigOptions} = State) ->
+    NewRateRequest = cloudi_core_i_rate_based_configuration:
+                     rate_request_reinit(RateRequest),
+    {next_state, StateName,
+     State#state{options = ConfigOptions#config_service_options{
+                     rate_request_max = NewRateRequest}}};
 
 handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

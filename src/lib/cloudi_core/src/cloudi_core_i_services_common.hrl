@@ -6,7 +6,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -462,13 +462,22 @@ check_init_send(#config_service_options{
         monkey_chaos = NewMonkeyChaos}.
 
 check_init_receive(#config_service_options{
+                       rate_request_max = undefined,
                        count_process_dynamic = false,
                        hibernate = Hibernate} = ConfigOptions)
     when is_boolean(Hibernate) ->
     ConfigOptions;
 check_init_receive(#config_service_options{
+                       rate_request_max = RateRequest,
                        count_process_dynamic = CountProcessDynamic,
                        hibernate = Hibernate} = ConfigOptions) ->
+    NewRateRequest = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_init(RateRequest);
+        true ->
+            RateRequest
+    end,
     NewCountProcessDynamic = if
         CountProcessDynamic =/= false ->
             cloudi_core_i_rate_based_configuration:
@@ -484,6 +493,7 @@ check_init_receive(#config_service_options{
             Hibernate
     end,
     ConfigOptions#config_service_options{
+        rate_request_max = NewRateRequest,
         count_process_dynamic = NewCountProcessDynamic,
         hibernate = NewHibernate}.
 

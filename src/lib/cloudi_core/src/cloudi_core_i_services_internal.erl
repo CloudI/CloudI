@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1044,21 +1044,40 @@ handle_info({'cloudi_service_send_async',
                    module = Module,
                    service_state = ServiceState,
                    request_pid = RequestPid,
-                   options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(true, ConfigOptions),
-    hibernate_check({noreply,
-                     State#state{
-                         queue_requests = true,
-                         request_pid = handle_module_request_loop_pid(
-                             RequestPid,
-                             {'cloudi_service_request_loop',
-                              'send_async', Name, Pattern,
-                              RequestInfo, Request,
-                              Timeout, Priority, TransId, Source,
-                              ServiceState, Dispatcher,
-                              Module, NewConfigOptions},
-                             NewConfigOptions, Dispatcher),
-                         options = NewConfigOptions}});
+                   options = #config_service_options{
+                       rate_request_max = RateRequest} = ConfigOptions
+                   } = State) ->
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    if
+        RateRequestOk =:= true ->
+            NewConfigOptions =
+                check_incoming(true, ConfigOptions#config_service_options{
+                                         rate_request_max = NewRateRequest}),
+            hibernate_check({noreply,
+                             State#state{
+                                 queue_requests = true,
+                                 request_pid = handle_module_request_loop_pid(
+                                     RequestPid,
+                                     {'cloudi_service_request_loop',
+                                      'send_async', Name, Pattern,
+                                      RequestInfo, Request,
+                                      Timeout, Priority, TransId, Source,
+                                      ServiceState, Dispatcher,
+                                      Module, NewConfigOptions},
+                                     NewConfigOptions, Dispatcher),
+                                 options = NewConfigOptions}});
+        RateRequestOk =:= false ->
+            hibernate_check({noreply,
+                             State#state{
+                                 options = ConfigOptions#config_service_options{
+                                     rate_request_max = NewRateRequest}}})
+    end;
 
 handle_info({'cloudi_service_send_sync',
              Name, Pattern, RequestInfo, Request,
@@ -1068,21 +1087,40 @@ handle_info({'cloudi_service_send_sync',
                    module = Module,
                    service_state = ServiceState,
                    request_pid = RequestPid,
-                   options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(true, ConfigOptions),
-    hibernate_check({noreply,
-                     State#state{
-                         queue_requests = true,
-                         request_pid = handle_module_request_loop_pid(
-                             RequestPid,
-                             {'cloudi_service_request_loop',
-                              'send_sync', Name, Pattern,
-                              RequestInfo, Request,
-                              Timeout, Priority, TransId, Source,
-                              ServiceState, Dispatcher,
-                              Module, NewConfigOptions},
-                             NewConfigOptions, Dispatcher),
-                         options = NewConfigOptions}});
+                   options = #config_service_options{
+                       rate_request_max = RateRequest} = ConfigOptions
+                   } = State) ->
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    if
+        RateRequestOk =:= true ->
+            NewConfigOptions =
+                check_incoming(true, ConfigOptions#config_service_options{
+                                         rate_request_max = NewRateRequest}),
+            hibernate_check({noreply,
+                             State#state{
+                                 queue_requests = true,
+                                 request_pid = handle_module_request_loop_pid(
+                                     RequestPid,
+                                     {'cloudi_service_request_loop',
+                                      'send_sync', Name, Pattern,
+                                      RequestInfo, Request,
+                                      Timeout, Priority, TransId, Source,
+                                      ServiceState, Dispatcher,
+                                      Module, NewConfigOptions},
+                                     NewConfigOptions, Dispatcher),
+                                 options = NewConfigOptions}});
+        RateRequestOk =:= false ->
+            hibernate_check({noreply,
+                             State#state{
+                                 options = ConfigOptions#config_service_options{
+                                     rate_request_max = NewRateRequest}}})
+    end;
 
 handle_info({Type, _, _, _, _, 0, _, _, _},
             #state{queue_requests = true} = State)
@@ -1097,30 +1135,42 @@ handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
                    queued_word_size = WordSize,
                    options = #config_service_options{
                        queue_limit = QueueLimit,
-                       queue_size = QueueSize}} = State)
+                       queue_size = QueueSize,
+                       rate_request_max = RateRequest} = ConfigOptions
+                   } = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
-        QueueLimit /= undefined ->
+        QueueLimit =/= undefined ->
             cloudi_x_pqueue4:len(Queue) < QueueLimit;
         true ->
             true
     end,
     {QueueSizeOk, Size} = if
-        QueueSize /= undefined ->
+        QueueSize =/= undefined ->
             QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
             {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
         true ->
             {true, 0}
     end,
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    NewState = State#state{
+        options = ConfigOptions#config_service_options{
+            rate_request_max = NewRateRequest}},
     hibernate_check(if
-        QueueLimitOk, QueueSizeOk ->
+        QueueLimitOk, QueueSizeOk, RateRequestOk ->
             {noreply,
              recv_timeout_start(Timeout, Priority, TransId,
-                                Size, T, State)};
+                                Size, T, NewState)};
         true ->
             % message is discarded since too many messages have been queued
-            {noreply, State}
+            {noreply, NewState}
     end);
 
 handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
@@ -1403,6 +1453,18 @@ handle_info('cloudi_count_process_dynamic_terminate_check',
 handle_info('cloudi_count_process_dynamic_terminate_now',
             #state{duo_mode_pid = undefined} = State) ->
     {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
+
+handle_info('cloudi_rate_request_max_rate',
+            #state{duo_mode_pid = undefined,
+                   options = #config_service_options{
+                       rate_request_max =
+                           RateRequest} = ConfigOptions} = State) ->
+    NewRateRequest = cloudi_core_i_rate_based_configuration:
+                     rate_request_reinit(RateRequest),
+    hibernate_check({noreply,
+                     State#state{
+                         options = ConfigOptions#config_service_options{
+                             rate_request_max = NewRateRequest}}});
 
 handle_info({'EXIT', _, shutdown},
             #state{duo_mode_pid = DuoModePid} = State) ->
@@ -3255,18 +3317,36 @@ duo_handle_info({'cloudi_service_send_async',
                            service_state = ServiceState,
                            dispatcher = Dispatcher,
                            request_pid = RequestPid,
-                           options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(true, ConfigOptions),
-    {noreply, State#state_duo{
-        queue_requests = true,
-        request_pid = handle_module_request_loop_pid(RequestPid,
-            {'cloudi_service_request_loop',
-             'send_async', Name, Pattern,
-             RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             ServiceState, Dispatcher,
-             Module, NewConfigOptions}, NewConfigOptions, DuoModePid),
-        options = NewConfigOptions}};
+                           options = #config_service_options{
+                               rate_request_max = RateRequest} = ConfigOptions
+                           } = State) ->
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    if
+        RateRequestOk =:= true ->
+            NewConfigOptions =
+                check_incoming(true, ConfigOptions#config_service_options{
+                                         rate_request_max = NewRateRequest}),
+            {noreply, State#state_duo{
+                queue_requests = true,
+                request_pid = handle_module_request_loop_pid(RequestPid,
+                    {'cloudi_service_request_loop',
+                     'send_async', Name, Pattern,
+                     RequestInfo, Request,
+                     Timeout, Priority, TransId, Source,
+                     ServiceState, Dispatcher,
+                     Module, NewConfigOptions}, NewConfigOptions, DuoModePid),
+                options = NewConfigOptions}};
+        RateRequestOk =:= false ->
+            {noreply, State#state_duo{
+                options = ConfigOptions#config_service_options{
+                    rate_request_max = NewRateRequest}}}
+    end;
 
 duo_handle_info({'cloudi_service_send_sync',
                  Name, Pattern, RequestInfo, Request,
@@ -3277,18 +3357,36 @@ duo_handle_info({'cloudi_service_send_sync',
                            service_state = ServiceState,
                            dispatcher = Dispatcher,
                            request_pid = RequestPid,
-                           options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(true, ConfigOptions),
-    {noreply, State#state_duo{
-        queue_requests = true,
-        request_pid = handle_module_request_loop_pid(RequestPid,
-            {'cloudi_service_request_loop',
-             'send_sync', Name, Pattern,
-             RequestInfo, Request,
-             Timeout, Priority, TransId, Source,
-             ServiceState, Dispatcher,
-             Module, NewConfigOptions}, NewConfigOptions, DuoModePid),
-        options = NewConfigOptions}};
+                           options = #config_service_options{
+                               rate_request_max = RateRequest} = ConfigOptions
+                           } = State) ->
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    if
+        RateRequestOk =:= true ->
+            NewConfigOptions =
+                check_incoming(true, ConfigOptions#config_service_options{
+                                         rate_request_max = NewRateRequest}),
+            {noreply, State#state_duo{
+                queue_requests = true,
+                request_pid = handle_module_request_loop_pid(RequestPid,
+                    {'cloudi_service_request_loop',
+                     'send_sync', Name, Pattern,
+                     RequestInfo, Request,
+                     Timeout, Priority, TransId, Source,
+                     ServiceState, Dispatcher,
+                     Module, NewConfigOptions}, NewConfigOptions, DuoModePid),
+                options = NewConfigOptions}};
+        RateRequestOk =:= false ->
+            {noreply, State#state_duo{
+                options = ConfigOptions#config_service_options{
+                    rate_request_max = NewRateRequest}}}
+    end;
 
 duo_handle_info({Type, _, _, _, _, 0, _, _, _},
                 #state_duo{queue_requests = true} = State)
@@ -3303,30 +3401,42 @@ duo_handle_info({Type, _, _, _, _, Timeout, Priority, TransId, _} = T,
                            queued_word_size = WordSize,
                            options = #config_service_options{
                                queue_limit = QueueLimit,
-                               queue_size = QueueSize}} = State)
+                               queue_size = QueueSize,
+                               rate_request_max = RateRequest} = ConfigOptions
+                           } = State)
     when Type =:= 'cloudi_service_send_async';
          Type =:= 'cloudi_service_send_sync' ->
     QueueLimitOk = if
-        QueueLimit /= undefined ->
+        QueueLimit =/= undefined ->
             cloudi_x_pqueue4:len(Queue) < QueueLimit;
         true ->
             true
     end,
     {QueueSizeOk, Size} = if
-        QueueSize /= undefined ->
+        QueueSize =/= undefined ->
             QueueElementSize = cloudi_x_erlang_term:byte_size({0, T}, WordSize),
             {(QueuedSize + QueueElementSize) =< QueueSize, QueueElementSize};
         true ->
             {true, 0}
     end,
+    {RateRequestOk, NewRateRequest} = if
+        RateRequest =/= undefined ->
+            cloudi_core_i_rate_based_configuration:
+            rate_request_request(RateRequest);
+        true ->
+            {true, RateRequest}
+    end,
+    NewState = State#state_duo{
+        options = ConfigOptions#config_service_options{
+            rate_request_max = NewRateRequest}},
     if
-        QueueLimitOk, QueueSizeOk ->
+        QueueLimitOk, QueueSizeOk, RateRequestOk ->
             {noreply,
              duo_recv_timeout_start(Timeout, Priority, TransId,
-                                    Size, T, State)};
+                                    Size, T, NewState)};
         true ->
             % message is discarded since too many messages have been queued
-            {noreply, State}
+            {noreply, NewState}
     end;
 
 duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
@@ -3407,6 +3517,16 @@ duo_handle_info('cloudi_count_process_dynamic_terminate_check',
 
 duo_handle_info('cloudi_count_process_dynamic_terminate_now', State) ->
     {stop, {shutdown, cloudi_count_process_dynamic_terminate}, State};
+
+duo_handle_info('cloudi_rate_request_max_rate',
+                #state_duo{options = #config_service_options{
+                               rate_request_max = RateRequest} = ConfigOptions
+                           } = State) ->
+    NewRateRequest = cloudi_core_i_rate_based_configuration:
+                     rate_request_reinit(RateRequest),
+    {noreply,
+     State#state_duo{options = ConfigOptions#config_service_options{
+                         rate_request_max = NewRateRequest}}};
 
 duo_handle_info({system, From, Msg},
                 #state_duo{dispatcher = Dispatcher} = State) ->

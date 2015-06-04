@@ -137,6 +137,12 @@
         % (configured in kilobytes and stored as bytes)
         queue_size = undefined
             :: undefined | pos_integer(),
+        % service reqs/second maximum
+        rate_request_max = undefined
+            :: undefined | number() |
+               list({period, cloudi_service_api:period_seconds()} |
+                    {value, number()}) |
+               tuple(),
         % delay after startup before requesting the initial service
         % group membership (when using a lazy destination refresh method)
         dest_refresh_start = ?DEFAULT_DEST_REFRESH_START

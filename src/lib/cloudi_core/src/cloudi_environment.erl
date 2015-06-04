@@ -55,6 +55,9 @@
          transform/1,
          transform/2]).
 
+-type lookup() :: cloudi_x_trie:cloudi_x_trie().
+-export_type([lookup/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -66,7 +69,7 @@
 %%-------------------------------------------------------------------------
 
 -spec lookup() ->
-    cloudi_x_trie:cloudi_x_trie().
+    lookup().
 
 lookup() ->
     cloudi_core_i_spawn:environment_lookup().
@@ -95,7 +98,7 @@ transform(String) ->
 %%-------------------------------------------------------------------------
 
 -spec transform(String :: string(),
-                Lookup :: cloudi_x_trie:cloudi_x_trie()) ->
+                Lookup :: lookup()) ->
     string().
 
 transform(String, Lookup) ->

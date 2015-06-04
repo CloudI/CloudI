@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -66,7 +66,12 @@
          count_process_dynamic_update/2,
          count_process_dynamic_terminate/1,
          count_process_dynamic_terminate_set/2,
-         count_process_dynamic_terminated/1]).
+         count_process_dynamic_terminated/1,
+         rate_request_format/1,
+         rate_request_validate/1,
+         rate_request_init/1,
+         rate_request_reinit/1,
+         rate_request_request/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -79,6 +84,8 @@
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_OFFSET_DEFAULT, 10). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MAX_DEFAULT, 4.0). % float%/integer_abs
 -define(COUNT_PROCESS_DYNAMIC_COUNT_MIN_DEFAULT, 0.5). % float%/integer_abs
+-define(RATE_REQUEST_PERIOD_DEFAULT, 5). % seconds
+-define(RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
 
 -record(hibernate,
     {
@@ -99,6 +106,14 @@
         count_process_max :: pos_integer(),
         count_process_min :: pos_integer(),
         terminate = false :: boolean()
+    }).
+
+-record(rate_request,
+    {
+        period :: cloudi_service_api:period_seconds(),
+        count = 0 :: non_neg_integer(),
+        rate_max :: number(), % per seconds
+        blocking = false :: boolean()
     }).
 
 %%%------------------------------------------------------------------------
@@ -344,6 +359,84 @@ count_process_dynamic_terminated(#count_process_dynamic{
                                      terminate = Value}) ->
     Value.
 
+%% convert internal state to the configuration format
+
+-spec rate_request_format(#rate_request{} | undefined) ->
+    list({atom(), any()}) | undefined.
+
+rate_request_format(undefined) ->
+    undefined;
+rate_request_format(#rate_request{period = Period,
+                                  rate_max = RateMax}) ->
+    [{period, Period},
+     {value, RateMax}].
+
+%% convert the configuration format to internal state
+
+-spec rate_request_validate(list({atom(), any()}) | number() | undefined) ->
+    {ok, #rate_request{} | undefined} |
+    {error, {service_options_rate_request_max_invalid, any()}}.
+
+rate_request_validate(undefined) ->
+    {ok, undefined};
+rate_request_validate(Value)
+    when is_number(Value) ->
+    rate_request_validate([{value, Value}], #rate_request{});
+rate_request_validate(Options) ->
+    rate_request_validate(Options, #rate_request{}).
+
+%% called by init/1
+
+-spec rate_request_init(RateRequest :: #rate_request{}) ->
+    #rate_request{}.
+
+rate_request_init(#rate_request{period = Period} = RateRequest) ->
+    erlang:send_after(Period * 1000, self(),
+                      'cloudi_rate_request_max_rate'),
+    RateRequest#rate_request{count = 0,
+                             blocking = false}.
+
+%% called by handle_info('cloudi_rate_request_max_rate', ...)
+
+-spec rate_request_reinit(RateRequest :: #rate_request{}) ->
+    #rate_request{}.
+
+rate_request_reinit(#rate_request{period = Period,
+                                  count = Count,
+                                  blocking = Blocking} = RateRequest) ->
+    erlang:send_after(Period * 1000, self(),
+                      'cloudi_rate_request_max_rate'),
+    if
+        Blocking =:= true ->
+            RateCurrent = Count / Period,
+            ?LOG_TRACE("rate_request_max: exceeded at ~p requests/second",
+                       [erlang:round(RateCurrent * 10) / 10]);
+        Blocking =:= false ->
+            ok
+    end,
+    RateRequest#rate_request{count = 0,
+                             blocking = false}.
+
+%% called when a service request is handled
+
+-spec rate_request_request(RateRequest :: #rate_request{}) ->
+    {boolean(), #rate_request{}}.
+
+rate_request_request(#rate_request{blocking = true} = RateRequest) ->
+    {false, RateRequest};
+rate_request_request(#rate_request{period = Period,
+                                   count = Count,
+                                   rate_max = RateMax} = RateRequest) ->
+    NewCount = Count + 1,
+    NewBlocking = (NewCount / Period) > RateMax,
+    NewRateRequest = if
+        NewBlocking =:= true ->
+            RateRequest#rate_request{blocking = true};
+        NewBlocking =:= false ->
+            RateRequest#rate_request{count = NewCount}
+    end,
+    {not NewBlocking, NewRateRequest}.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -547,4 +640,36 @@ count_process_dynamic_validate([{period, Period} | Options],
 count_process_dynamic_validate([Invalid | _Options],
                                _CountProcessDynamic, _CountProcess) ->
     {error, {service_options_count_process_dynamic_invalid, Invalid}}.
+
+rate_request_validate([],
+                      #rate_request{period = Period,
+                                    rate_max = RateMax} = RateRequest) ->
+    NewPeriod = if
+        Period =:= undefined ->
+            ?RATE_REQUEST_PERIOD_DEFAULT;
+        Period =/= undefined ->
+            Period
+    end,
+    NewRateMax = if
+        RateMax =:= undefined ->
+            ?RATE_REQUEST_MAX_DEFAULT;
+        RateMax =/= undefined ->
+            RateMax
+    end,
+    {ok, RateRequest#rate_request{period = NewPeriod,
+                                  rate_max = NewRateMax}};
+rate_request_validate([{value, RateMax} | Options],
+                      #rate_request{} = RateRequest)
+    when is_number(RateMax), RateMax > 0 ->
+    rate_request_validate(Options,
+                          RateRequest#rate_request{rate_max = RateMax});
+rate_request_validate([{period, Period} | Options],
+                      #rate_request{} = RateRequest)
+    when is_integer(Period), Period > 0,
+         Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
+    rate_request_validate(Options,
+                          RateRequest#rate_request{period = Period});
+rate_request_validate([Invalid | _Options],
+                      _RateRequest) ->
+    {error, {service_options_rate_request_max_invalid, Invalid}}.
 

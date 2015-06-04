@@ -301,6 +301,9 @@
     list({priority_default, priority()} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
+         {rate_request_max,
+          list({period, period_seconds()} |
+               {value, number()}) | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
@@ -353,6 +356,9 @@
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
+         {rate_request_max,
+          list({period, period_seconds()} |
+               {value, number()}) | number() | undefined} |
          {dest_refresh_start, dest_refresh_delay_milliseconds()} |
          {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
