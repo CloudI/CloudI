@@ -84,33 +84,15 @@ external_format(Response, Format) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-msgpack_response(Response)
-    when is_atom(Response) ->
-    erlang:atom_to_binary(Response, utf8);
-msgpack_response(Response)
-    when is_tuple(Response) ->
-    [msgpack_tuple_element(E) || E <- erlang:tuple_to_list(Response)];
-msgpack_response(Response) ->
-    Response.
-
-msgpack_tuple_element(E)
+msgpack_response(E)
     when is_atom(E) ->
     erlang:atom_to_binary(E, utf8);
-msgpack_tuple_element(L)
-    when is_list(L) ->
-    [msgpack_list_element(E) || E <- L];
-msgpack_tuple_element(E) ->
-    E.
-
-msgpack_list_element(T)
+msgpack_response(T)
     when is_tuple(T) ->
-    [msgpack_atom(E) || E <- erlang:tuple_to_list(T)];
-msgpack_list_element(E) ->
-    E.
-
-msgpack_atom(E)
-    when is_atom(E) ->
-    erlang:atom_to_binary(E, utf8);
-msgpack_atom(E) ->
+    [msgpack_response(E) || E <- erlang:tuple_to_list(T)];
+msgpack_response(L)
+    when is_list(L) ->
+    [msgpack_response(E) || E <- L];
+msgpack_response(E) ->
     E.
 

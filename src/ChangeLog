@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Simplify the conversion from Erlang types to msgpack types
+      (in cloudi_response:external_format/2)
+
 2015-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the rate_request_max service configuration option
