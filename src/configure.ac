@@ -350,7 +350,7 @@ AM_CONDITIONAL([JAVA_SUPPORT], [test "x$java_support" = "xtrue"])
 # Javascript/node.js CloudI API support
 if test "x$javascript_support" = "xtrue" ; then
 AC_ARG_VAR([NODE],[node executable])
-AC_PATH_PROGS([NODE],[node])
+AC_PATH_PROGS([NODE],[node nodejs])
 if test "x$NODE" = "x" ; then
     AC_MSG_ERROR([node.js not found])
 fi
