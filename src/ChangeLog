@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
 
+2015-06-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix node.js detection for v0.12 usage of 'nodejs' binary
+
 2015-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify the conversion from Erlang types to msgpack types
