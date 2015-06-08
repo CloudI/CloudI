@@ -1,5 +1,5 @@
 // -*- coding:utf-8;Mode:C;tab-width:2;c-basic-offset:2;indent-tabs-mode:nil -*-
-// ex: set softtabstop=2 tabstop=2 shiftwidth=2 expandtab fileencoding=utf-8:
+// ex: set softtabstop=2 tabstop=2 shiftwidth=2 expandtab fileencoding=utf-8 nomodified:
 //
 // Copyright (c) 2011 Yurii Rashkovskii, Evax Software and Michael Truog
 // 

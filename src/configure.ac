@@ -1,5 +1,5 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-# ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et:
+# ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 AC_INIT([CloudI], [1.5.0], [mjtruog at gmail dot com],
         [cloudi], [http://cloudi.org/])

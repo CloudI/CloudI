@@ -1,5 +1,5 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
-# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet:
+# ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 INTERFACE_HEADER = $(srcdir)/../src/cloudi_core_i_os_spawn.hrl
 RLIMIT_HEADER = $(srcdir)/../src/cloudi_core_i_os_rlimit.hrl

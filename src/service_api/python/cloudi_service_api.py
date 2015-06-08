@@ -1,5 +1,5 @@
 #-*-Mode:python;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-# ex: set ft=python fenc=utf-8 sts=4 ts=4 sw=4 et:
+# ex: set ft=python fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 import sys, os
 _absolute_path = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
