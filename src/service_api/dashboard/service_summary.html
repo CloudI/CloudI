@@ -1,0 +1,628 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252"/>
+    <title>Service Summary</title>
+    <!-- link to JQuery and DataTables javascript libraries -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.jqueryui.js"></script>
+    <!-- link to JQuery and DataTables CSS definitions -->
+    <link rel="stylesheet" href="css/jquery-ui.css"/>
+    <link rel="stylesheet" href="css/dataTables.jqueryui.css"/>
+    <!-- define an internal style -->
+    <style type="text/css">
+        .right {
+            float:right;
+        }
+	.loading {
+	    color:CornflowerBlue;
+	} 
+    </style>
+    <script type="text/javascript">
+      var websocket_port = "6464";
+      var service_port = "6467";
+      var service_name = "/cloudi/api/rpc/services.erl";
+      var restart_service_name = "/cloudi/api/rpc/services_restart.erl";
+      var remove_service_name = "/cloudi/api/rpc/services_remove.erl";
+      var service_subscriptions_name = "/cloudi/api/rpc/service_subscriptions.erl";
+      var request_type = "get";
+      var web_socket = undefined;
+      var subscriptions_web_socket = undefined;
+      var websocket_url = "";
+      var interval_id = undefined; 
+
+      function is(type, obj) {
+          if (obj === undefined)
+              return type === 'undefined';
+          else if (obj === null)
+              return type === 'null';
+          else 
+              return type === Object.prototype.toString.call(obj).slice(8,  - 1);
+      }
+
+      String.prototype.startsWith = function (str) {
+          return this.slice(0, str.length) == str;
+      };
+
+      // This function uses a web socket to get a list of services
+      function send() {
+          // if the web socket is undefined then display an error
+          if (web_socket == undefined) {
+              $('#connectionStatus').text("Not connected");
+              open();
+          }
+
+          // if the web socket is in an open status then send the request
+          if (web_socket.readyState == web_socket.OPEN) {
+              web_socket.send(request_type);
+              //console.log("Request (out): " + request_type);
+          }
+      }
+
+      // This function opens a web socket used to get a list of services
+      function open() {
+
+          if (!("WebSocket" in window)) {
+              $('#connectionStatus').text("Not connected");
+              alert("This browser does not support WebSockets");
+              return;
+          }
+
+          $('#connectionStatus').text("Connecting");
+          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          web_socket = new WebSocket(websocket_url);
+
+          console.log("Connecting to " + websocket_url);
+
+          // define function that is called when the web socket is opened
+          web_socket.onopen = function () {
+              $('#connectionStatus').text("Connected");
+              console.log("Connected");
+              send();
+          };
+
+          // define function that is called when an error occurs with the websocket
+          web_socket.onerror = function () {
+              $('#connectionStatus').text("Error");
+              console.log("Websocket error");
+
+              // turn off the timed page refresh
+              if (interval_id != undefined) {
+                 clearInterval(interval_id);
+                 interval_id = undefined;
+              }
+
+              // hide the loading message
+              $('#loadingMessage').hide();
+
+              alert("Error connecting to websocket " + websocket_url);
+          };
+
+          // define function that is called when data is available on the websocket 
+          handle_message = function (data) {
+              if (data.startsWith("notification:")) {
+                  // client state check to determine this is an incoming
+                  // service request, not an incoming response
+                  console.log("Request (in): " + data);
+
+                  var response = "ok";
+                  web_socket.send(response);
+                  console.log("Response (in): " + response);
+
+              }
+              else {
+                  //console.log("Response (out): " + data);
+                  if (data != "got connect! yay!") {
+
+                      // attempt to parse the data response
+                      // console.log("parsing starts.  data is length " + data.length);
+                      var service_entries = [];
+                      var start = 0;
+                      var end = 0;
+
+                      do {
+                          // parse the service id
+                          start = data.indexOf("{\"", end);
+                          end = data.indexOf(",", start);
+                          var serviceID = data.substring(start + 2, end - 1);
+                          //console.log("serviceID= [" + serviceID+ "]");
+                          // parse the type
+                          //   {internal,
+                          start = data.indexOf("{", end);
+                          end = data.indexOf(",", start);
+                          var serviceType = data.substring(start + 1, end);
+
+                          // parse the service path
+                          //   "/cloudi/api/",
+                          start = data.indexOf("\"", end);
+                          end = data.indexOf("\",", start);
+                          var servicePath = data.substring(start + 1, end);
+
+                          // parse the module name
+                          //   "/cloudi/api/",
+                          start = end + 2;
+                          end = data.indexOf(",", start);
+                          var serviceName = data.substring(start, end);
+                          //console.log("serviceName = [" + serviceName + "]");
+
+                          // skip to the next entry
+                          start = end + 1;
+                          end = data.indexOf("}},", start);
+                          var miscStuff = data.substring(start, end);
+                          //console.log("miscStuff = " + miscStuff);
+                          var serviceEntry = new Object([serviceName, servicePath, serviceType, serviceID]);
+                          //console.log("serviceEntry=" + serviceEntry);
+                          // add the serviceEntry object to the array
+                          service_entries[service_entries.length] = serviceEntry;
+                          //console.log("service entries: " + service_entries);
+                      }
+                      while (end > 0);
+
+                      // display the service entries in the table
+                      updateTable(service_entries);
+
+                      // setup time interval to refresh page
+                      if (interval_id == undefined) {
+                          interval_id = setInterval("send();", 60000);
+                      }
+
+                  }
+              }
+          };
+
+          // define function that is called when a message is received on the web socket 
+          web_socket.onmessage = function (evt) {
+              var data = evt.data;
+              if (is("Blob", data)) {
+                  // for the example, treat binary as text
+                  var reader = new FileReader();
+                  reader.readAsText(data, "text/plain");
+                  reader.onload = function (reader_evt) {
+                      data = reader_evt.target.result;
+                      handle_message(data);
+                  };
+              }
+              else {
+                  handle_message(data);
+              }
+          };
+
+          // define function that is called when the websocket is closed
+          web_socket.onclose = function () {
+              web_socket = undefined;
+              console.log("Connection closed");
+          };
+      }
+
+      // This function closes a web socket used to get a list of services
+      function close() {
+          $('#connectionStatus').text("Not connected");
+
+          if (web_socket == undefined) {
+              return;
+          }
+          web_socket.close();
+      }
+
+      // This function uses a web socket to get a list of subscriptions to a service
+      function show_service_subscriptions(serviceID) {
+
+          if (!("WebSocket" in window)) {
+              $('#connectionStatus').text("Not connected");
+              alert("This browser does not support WebSockets");
+              return;
+          }
+
+          $('#connectionStatus').text("Connecting");
+          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          subscriptions_web_socket = new WebSocket(websocket_url);
+
+          console.log("Connecting to " + websocket_url);
+
+          // define function that is called when the web socket is opened
+          subscriptions_web_socket.onopen = function () {
+              $('#connectionStatus').text("Connected");
+              console.log("Connected");
+              send();
+          };
+
+          handle_message_subscriptions = function (data) {
+              if (data.startsWith("notification:")) {
+                  // client state check to determine this is an incoming
+                  // service request, not an incoming response
+                  console.log("Request (in): " + data);
+
+                  var response = "ok";
+                  subscriptions_web_socket.send(response);
+                  console.log("Response (in): " + response);
+
+              }
+              else {
+                  //console.log("Response (out): " + data);
+                  if (data != "got connect! yay!") {
+
+                      // attempt to parse the data response
+                      console.log("parsing starts.  data is length " + data.length);
+
+                      /*
+			var service_entries = [];
+			var start = 0;
+			var end = 0;
+
+			do {
+				// parse the service id
+				start = data.indexOf("{\"", end);
+				end = data.indexOf(",", start);
+				var serviceID = data.substring(start+2, end-1);
+				//console.log("serviceID= [" + serviceID+ "]");
+
+				// parse the type
+				//   {internal,
+				start = data.indexOf("{", end);
+				end = data.indexOf(",", start);
+				var serviceType = data.substring(start+1, end);
+			
+				// parse the service path
+				//   "/cloudi/api/",
+				start = data.indexOf("\"", end);
+				end = data.indexOf("\",", start);
+				var servicePath = data.substring(start+1, end);
+
+				// parse the module name
+				//   "/cloudi/api/",
+				start = end+2;
+				end = data.indexOf(",", start);
+				var serviceName = data.substring(start, end);
+				//console.log("serviceName = [" + serviceName + "]");
+			
+
+				// skip to the next entry
+				start = end+1;
+				end = data.indexOf("}},", start);
+				var miscStuff = data.substring(start, end);
+				//console.log("miscStuff = " + miscStuff);
+			
+				var serviceEntry = new Object([serviceName, servicePath, serviceType, serviceID]);
+				//console.log("serviceEntry=" + serviceEntry);
+				
+				// add the serviceEntry object to the array
+				service_entries[service_entries.length] = serviceEntry;
+				//console.log("service entries: " + service_entries);
+
+			} while (end > 0);
+
+			// display the service entries in the table
+      			updateTable(service_entries);
+*/
+                  }
+              }
+          };
+
+          subscriptions_web_socket.onmessage = function (evt) {
+              var data = evt.data;
+              if (is("Blob", data)) {
+                  // for the example, treat binary as text
+                  var reader = new FileReader();
+                  reader.readAsText(data, "text/plain");
+                  reader.onload = function (reader_evt) {
+                      data = reader_evt.target.result;
+                      handle_message_subscriptions(data);
+
+                  };
+              }
+              else {
+                  handle_message_subscriptions(data);
+              }
+          };
+
+          subscriptions_web_socket.onclose = function () {
+              subscriptions_web_socket = undefined;
+
+              $('#connectionStatus').text("Not connected");
+              console.log("Connection closed");
+          };
+      }
+
+      // Toggle the button visibility when an item is selected in the table
+      function toggle_manage_buttons() {
+          var serviceID = $('#serviceID').text();
+          if (serviceID.length > 0) {
+              $('#remove_button').show();
+              $('#restart_button').show();
+              $('#subscriptions_button').show();
+          }
+          else {
+              $('#remove_button').hide();
+              $('#restart_button').hide();
+              $('#subscriptions_button').hide();
+          }
+      }
+
+      function createCORSRequest(method, url) {
+          console.log("Creating CORS Request " + method + " " + url);
+
+          var xhr = new XMLHttpRequest();
+          if ("withCredentials" in xhr) {
+
+              // Check if the XMLHttpRequest object has a "withCredentials" property.
+              // "withCredentials" only exists on XMLHTTPRequest2 objects.
+              xhr.open(method, url, false);// create an asynchronous request
+          }
+          else if (typeof XDomainRequest != "undefined") {
+
+              // Otherwise, check if XDomainRequest.
+              // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
+              xhr = new XDomainRequest();
+              xhr.open(method, url, false);// create an asynchronous request
+          }
+          else {
+
+              // Otherwise, CORS is not supported by the browser.
+              xhr = null;
+
+          }
+          return xhr;
+      }
+
+      // Submit an HTTP request to remove a service
+      function remove_service(serviceID) {
+
+          var remove_service_url = "http://" + $("#hostname").val() + ":" + service_port + remove_service_name;
+          var xhr = createCORSRequest('POST', remove_service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          xhr.onload = function () {
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          xhr.onerror = function () {
+              console.log('There was an error!');
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          // clear the serviceID
+          $('#serviceID').text("");
+
+          // hide the manage service buttons
+          toggle_manage_buttons();
+
+          xhr.send('[\"' + serviceID + '\"]');
+      }
+
+      // Submit an HTTP request to restart a service
+      function restart_service(serviceID) {
+
+          var restart_service_url = "http://" + $("#hostname").val() + ":" + service_port + restart_service_name;
+          var xhr = createCORSRequest('POST', restart_service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          // create a load event handler
+          xhr.onload = function (e) {
+              console.log("Onload event received. Event=" + e);
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          // create an error event handler
+          xhr.onerror = function (e) {
+              console.log("On error event received.  Event=" + e + " with type " + e.type);
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          // create a progress event handler
+          xhr.onprogress = function (e) {
+              console.log("Progress event received.  Event=" + e);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          // clear the serviceID
+          $('#serviceID').text("");
+
+          // hide the manage service buttons
+          toggle_manage_buttons();
+
+          // send the request
+          xhr.send('[\"' + serviceID + '\"]');
+      }
+
+      // Submit an HTTP request to show the service subscriptions 
+      function show_service_subscriptions(serviceID) {
+
+          var service_subscriptions_url = "http://" + $("#hostname").val() + ":" + service_port + service_subscriptions_name;
+          console.log("Flag A url = [" + service_subscriptions_url);
+
+          var xhr = createCORSRequest('POST', service_subscriptions_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          // create a load event handler
+          xhr.onload = function (e) {
+              console.log("Onload event received. Event=" + e);
+              var responseText = xhr.responseText;
+              console.log(responseText);
+              // process the response.
+          };
+
+          /*
+    // create an error event handler
+    xhr.onerror = function(e) {
+      console.log("On error event received.  Event=" + e + " with type " + e.type);
+      var responseText = xhr.responseText;
+      console.log(responseText);
+    };
+*/
+          // clear the serviceID
+          $('#serviceID').text("");
+
+          // hide the manage service buttons
+          toggle_manage_buttons();
+
+          // send the request
+          xhr.send('\"' + serviceID + '\"');
+
+      }
+    </script>
+  </head>
+  <body>
+    <script type="text/javascript">
+      // This function is called by the server when data is ready to be processed
+      function updateTable(serviceEntries) {
+
+          // clear table
+          var oTable = $('#servicesTable').dataTable();
+          oTable.fnClearTable();
+
+          // process each endpoint event in the array            
+          for (i = 0;i < serviceEntries.length;i++) {
+              serviceEntry = serviceEntries[i];
+
+              oTable.fnAddData([serviceEntry[0], serviceEntry[1], serviceEntry[2], serviceEntry[3]]);
+
+          }
+
+          // hide the loading message
+          $('#loadingMessage').hide();
+      }
+    </script>
+    <div id="logo">
+      <img class="right" src="powered_by_cloudi.png"></img>
+       
+      <h1>Service Summary</h1>
+    </div>
+    <div id="loadingMessage">
+      <h2 class="loading">Waiting for data...</h2>
+    </div>
+    <div>
+      <input id="hostname" type="text" value="localhost" title="Host name or address to be monitored"></input>
+       
+      <button class="left" onclick="send();">Refresh Now</button>
+       
+      <label hidden="true" id="serviceID"></label>
+       
+      <label class="right" id="connectionStatus"></label>
+       
+      <button id="remove_button" title="Stop selected service">Remove Service</button>
+       
+      <button id="restart_button" title="Restart selected service">Restart Service</button>
+       
+      <button id="subscriptions_button" title="List the subscriptions a service instance has initiated">Show Subscriptions</button>
+    </div>
+    <table id="servicesTable" class="display">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Path</th>
+          <th>Type</th>
+          <th>ID</th>
+        </tr>
+      </thead>
+       
+      <tbody id="servicesTableBody"></tbody>
+    </table>
+    <script type="text/javascript">
+      $(document).ready(function () {
+
+          // assign default hostname
+          $("#hostname").val(location.host);
+
+          // change the table attributes to support jQuery styles
+          $('#servicesTable').dataTable( {
+              "bJQueryUI" : true, "sPaginationType" : "full_numbers"
+          });
+
+          // clear the table upon first displaying the page
+          var oTable = $('#servicesTable').dataTable();
+          oTable.fnClearTable();
+
+          // show the loading message
+          $('#loadingMessage').show();
+
+          // set the connection status 
+          $('#connectionStatus').text("Not connected");
+
+          // call the service request function now
+          send();
+
+          // hide the manage service buttons
+          toggle_manage_buttons();
+
+          // define a function that will highlight a row when selected
+          $('#servicesTable tbody').on('click', 'tr', function () {
+
+              // toggle the row highlighting color
+              if ($(this).hasClass('selected')) {
+                  $(this).removeClass('selected');
+              }
+              else {
+                  oTable.$('tr.selected').removeClass('selected');
+                  $(this).addClass('selected');
+              }
+
+              var table_api = $('#servicesTable').dataTable().api();
+
+              // save the ServiceID in a hidden HTML object for use later
+              var serviceEntry = table_api.row(this).data();
+              $('#serviceID').text(serviceEntry[3]);
+
+              // hide the manage service buttons
+              toggle_manage_buttons();
+          });
+
+      });
+
+      // define a function to restart the selected service 
+      $('#restart_button').click(function () {
+
+          var serviceID = $('#serviceID').text();
+          if (serviceID.length > 0) {
+              console.log("Service ID is " + serviceID);
+              restart_service(serviceID);
+          }
+
+      });
+
+      // define a function to remove the selected service 
+      $('#remove_button').click(function () {
+
+          var serviceID = $('#serviceID').text();
+          if (serviceID.length > 0) {
+              console.log("Service ID is " + serviceID);
+              remove_service(serviceID);
+          }
+
+      });
+
+      // define a function to show subscriptions for the selected service 
+          $('#subscriptions_button').click(function () {
+
+              var serviceID = $('#serviceID').text();
+              if (serviceID.length > 0) {
+                  console.log("Service ID is " + serviceID);
+                  show_service_subscriptions(serviceID);
+              }
+
+          });
+    </script>
+  </body>
+</html>

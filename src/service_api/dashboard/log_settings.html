@@ -1,0 +1,452 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252"/>
+    <title>Log Settings</title>
+    <!-- link to JQuery and DataTables javascript libraries -->
+    <script src="js/jquery-1.11.1.min.js"></script>
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.jqueryui.js"></script>
+    <!-- link to JQuery and DataTables CSS definitions -->
+    <link rel="stylesheet" href="css/jquery-ui.css"/>
+    <link rel="stylesheet" href="css/dataTables.jqueryui.css"/>
+    <!-- define an internal style -->
+    <style type="text/css">
+        .right {
+            float:right;
+        }
+        .loading {
+            color:CornflowerBlue;
+        }
+    </style>
+    <script type="text/javascript">
+      var websocket_port = "6464";
+      var service_port = "6467";
+
+      var service_name = "/cloudi/api/erlang/logging";
+      var logging_file_set_service_name = "/cloudi/api/erlang/logging_file_set";
+      var logging_level_set_service_name = "/cloudi/api/erlang/logging_level_set";
+      var logging_redirect_set_service_name = "/cloudi/api/erlang/logging_redirect_set";
+      var logging_syslog_set_service_name = "/cloudi/api/erlang/logging_syslog_set";
+      var request_type = "get";
+      var web_socket = undefined;
+      var websocket_url = "";
+      var interval_id = undefined; 
+
+      function is(type, obj) {
+          if (obj === undefined)
+              return type === 'undefined';
+          else if (obj === null)
+              return type === 'null';
+          else 
+              return type === Object.prototype.toString.call(obj).slice(8,  - 1);
+      }
+
+      String.prototype.startsWith = function (str) {
+          return this.slice(0, str.length) == str;
+      };
+
+      // This function uses a web socket to retrieve the current logging settings
+      function send() {
+          // if the web socket is undefined then display an error
+          if (web_socket == undefined) {
+              $('#connectionStatus').text("Not connected");
+              open();
+          }
+
+          // if the web socket is in an open status then send the request
+          if (web_socket.readyState == web_socket.OPEN) {
+              web_socket.send(request_type);
+              //console.log("Request (out): " + request_type);
+          }
+      }
+
+      // This function opens a web socket used to retrieve the current logging settings
+      function open() {
+          if (!("WebSocket" in window)) {
+              $('#connectionStatus').text("Not connected");
+              alert("This browser does not support WebSockets");
+              return;
+          }
+
+          $('#connectionStatus').text("Connecting");
+          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          web_socket = new WebSocket(websocket_url);
+
+          console.log("Connecting to " + websocket_url);
+
+          // define function that is called when the web socket is opened
+          web_socket.onopen = function () {
+              $('#connectionStatus').text("Connected");
+              console.log("Connected");
+              send();
+          };
+
+          // define function that is called when an error occurs with the websocket
+          web_socket.onerror = function () {
+              $('#connectionStatus').text("Error");
+              console.log("Websocket error");
+
+              // turn off the timed page refresh
+              if (interval_id != undefined) {
+                 clearInterval(interval_id);
+                 interval_id = undefined;
+              }
+
+              // hide the loading message
+              $('#loadingMessage').hide();
+
+              alert("Error connecting to websocket " + websocket_url);
+          };
+
+          // define function that is called when data is available on the websocket 
+
+          handle_message = function (data) {
+              if (data.startsWith("notification:")) {
+                  // client state check to determine this is an incoming
+                  // service request, not an incoming response
+                  console.log("Request (in): " + data);
+
+                  var response = "ok";
+                  web_socket.send(response);
+                  console.log("Response (in): " + response);
+
+              }
+              else {
+                  console.log("Response (out): " + data);
+
+                  if (data != "got connect! yay!") {
+
+                      // update the current configuration
+                      $('#current_configuration').text(data);
+
+                      // parse the log level setting
+                      searchString = "level,";
+                      start = data.indexOf(searchString);
+                      if (start > 0) {
+                          end = data.indexOf("}", start);
+                          levelValue = data.substring(start + searchString.length, end);
+                          // set the value of the list 
+                          $("#set_level_input").val(levelValue);
+                      }
+
+                      // parse the file setting
+                      searchString = "file,";
+                      start = data.indexOf(searchString);
+                      if (start > 0) {
+                          end = data.indexOf("}", start);
+                          fileValue = data.substring(start + searchString.length, end);
+                          // set the value of the input field 
+                          $("#set_file_input").val(fileValue);
+                      }
+
+                      // parse the redirect setting 
+                      searchString = "redirect,";
+                      start = data.indexOf(searchString);
+                      if (start > 0) {
+                          end = data.indexOf("}", start);
+                          redirectValue = data.substring(start + searchString.length, end);
+                          // set the value of the input field 
+                          $("#set_redirect_input").val(redirectValue);
+                      }
+
+                      // parse the syslog setting 
+                      searchString = "syslog,[";
+                      start = data.indexOf(searchString);
+                      if (start > 0) {
+                          end = data.indexOf("]", start);
+                          syslogValue = data.substring(start + searchString.length - 1, end + 1);
+                          // set the value of the input field 
+                          $("#set_syslog_input").val(syslogValue);
+                      }
+
+                      // hide the loading message
+                      $('#loadingMessage').hide();
+
+                      // setup time interval to refresh page
+                      if (interval_id == undefined) {
+                          interval_id = setInterval("send();", 60000);
+                      }
+
+                  }
+              }
+          };
+
+          // define function that is called when a message is received on the web socket 
+          web_socket.onmessage = function (evt) {
+              var data = evt.data;
+              if (is("Blob", data)) {
+                  // for the example, treat binary as text
+                  var reader = new FileReader();
+                  reader.readAsText(data, "text/plain");
+                  reader.onload = function (reader_evt) {
+                      data = reader_evt.target.result;
+                      handle_message(data);
+                  };
+              }
+              else {
+                  handle_message(data);
+              }
+          };
+
+          // define function that is called when the websocket is closed
+          web_socket.onclose = function () {
+              web_socket = undefined;
+              console.log("Connection closed");
+          };
+      }
+
+      // This function closes the web socket used to retrieve the current logging settings
+      function close() {
+          $('#connectionStatus').text("Not connected");
+
+          if (web_socket == undefined) {
+              return;
+          }
+          web_socket.close();
+      }
+
+      function createCORSRequest(method, url) {
+          console.log("Creating CORS Request " + method + " " + url);
+
+          var xhr = new XMLHttpRequest();
+          if ("withCredentials" in xhr) {
+
+              // Check if the XMLHttpRequest object has a "withCredentials" property.
+              // "withCredentials" only exists on XMLHTTPRequest2 objects.
+              xhr.open(method, url, true);
+
+          }
+          else if (typeof XDomainRequest != "undefined") {
+
+              // Otherwise, check if XDomainRequest.
+              // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
+              xhr = new XDomainRequest();
+              xhr.open(method, url);
+
+          }
+          else {
+
+              // Otherwise, CORS is not supported by the browser.
+              xhr = null;
+              console.log("XHR not supported by this browser");
+
+          }
+          return xhr;
+      }
+
+      // This function submits an HTTP request to set the log level
+      function setLevel() {
+
+          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_level_set_service_name;
+          var xhr = createCORSRequest('POST', service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          xhr.onload = function () {
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          xhr.onerror = function (xhr, textStatus, errorThrown) {
+              console.log('There was an error.  Status ' + xhr.status);
+              console.log('Error response=' + xhr.responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          var value_to_send = $("#set_level_input").val();
+          console.log("Sending value " + value_to_send);
+          xhr.send(value_to_send);
+      }
+
+      // This function submits an HTTP request to set the log file 
+      function setFile() {
+
+          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_file_set_service_name;
+          var xhr = createCORSRequest('POST', service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          xhr.onload = function () {
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          xhr.onerror = function (xhr, textStatus, errorThrown) {
+              console.log('There was an error.  Status ' + xhr.status);
+              console.log('Error response=' + xhr.responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          var value_to_send = $("#set_file_input").val();
+          console.log("Sending value " + value_to_send);
+          xhr.send(value_to_send);
+      }
+
+      // This function submits an HTTP request to set the log redirection 
+      function setRedirect() {
+
+          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_redirect_set_service_name;
+          var xhr = createCORSRequest('POST', service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          xhr.onload = function () {
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          xhr.onerror = function (xhr, textStatus, errorThrown) {
+              console.log('There was an error.  Status ' + xhr.status);
+              console.log('Error response=' + xhr.responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          var value_to_send = $("#set_redirect_input").val();
+          console.log("Sending value " + value_to_send);
+          xhr.send(value_to_send);
+      }
+
+      // This function submits an HTTP request to set the syslog properties 
+      function setSyslog() {
+
+          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_syslog_set_service_name;
+          var xhr = createCORSRequest('POST', service_url);
+          if (!xhr) {
+              throw new Error('CORS not supported');
+          }
+
+          xhr.onload = function () {
+              var responseText = xhr.responseText;
+              console.log(responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          xhr.onerror = function (xhr, textStatus, errorThrown) {
+              console.log('There was an error.  Status ' + xhr.status);
+              console.log('Error response=' + xhr.responseText);
+
+              // refresh the information shown on the screen
+              send();
+          };
+
+          var value_to_send = $("#set_syslog_input").val();
+          console.log("Sending value " + value_to_send);
+          xhr.send(value_to_send);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="logo">
+      <img class="right" src="powered_by_cloudi.png"></img>
+       
+      <h1>Log Settings</h1>
+       
+      <label class="right" id="connectionStatus"></label>
+    </div>
+    <div id="loadingMessage">
+      <h2 class="loading">Waiting for data...</h2>
+    </div>
+    <div>
+      <h2>
+        <label for="current_configuration">Current Configuration:</label>
+      </h2>
+       
+      <textarea id="current_configuration" rows="9" cols="100"></textarea>
+    </div>
+    <div>
+      <input id="hostname" type="text" value="localhost" title="Host name or address to be monitored"></input>
+       
+      <button class="left" onclick="send();">Refresh Current Configuration</button>
+    </div>
+    <hr></hr>
+    <div>
+      <h2>Detailed Log Settings</h2>
+    </div>
+    <table>
+      <tr>
+        <td>
+          <button onclick="setLevel();" title="Modify the loglevel. The loglevel is changed with an Erlang module update internally so any logging statements that are turned off create no latency. If set to 'undefined' or 'off', logging output will only be sent to syslog and formatters with an output module">Set Level</button>
+        </td>
+        <td>
+          <select id="set_level_input">
+            <option value="error">Error</option>
+            <option value="warn">Warn</option>
+            <option value="info">Info</option>
+            <option value="debug">Debug</option>
+            <option value="trace">Trace</option>
+          </select>
+        </td>
+      </tr>
+       
+      <tr>
+        <td>
+          <button onclick="setFile();" title="Set the file path for logging output. If set to 'undefined', logging output will only be sent to syslog and formatters with an output module">Set File</button>
+        </td>
+        <td>
+          <input id="set_file_input" type="text"></input>
+        </td>
+        <td>Set the file path for logging output. Example:
+            &quot;logs/cloudi_rotated.log&quot;</td>
+      </tr>
+       
+      <tr>
+        <td>
+          <button onclick="setRedirect();" title="Redirect all local log output to a remote CloudI node. Use 'undefined' as the node name to log locally">Set Redirection</button>
+        </td>
+        <td>
+          <input id="set_redirect_input" type="text"></input>
+        </td>
+        <td>Redirect all local log output to a remote CloudI node. Use
+            'undefined' as the node name to log locally. Example: cloudi@host</td>
+      </tr>
+       
+      <tr>
+        <td>
+          <button onclick="setSyslog();" title="Send all logging output to syslog">Set Syslog</button>
+        </td>
+        <td>
+          <textarea id="set_syslog_input" rows="3" cols="40"></textarea>
+        </td>
+        <td>Example: [{identity, &quot;CloudI&quot;}, {facility, local0},
+            {level, trace}]</td>
+      </tr>
+    </table>
+    <script type="text/javascript">
+          $(document).ready(function () {
+
+              // assign default hostname
+              $("#hostname").val(location.host);
+
+              // show the loading message
+              $('#loadingMessage').show();
+
+              // set the connection status 
+              $('#connectionStatus').text("Not connected");
+
+              // call the service request function now
+              send();
+          });
+    </script>
+  </body>
+</html>

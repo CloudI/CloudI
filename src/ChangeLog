@@ -1,14 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
-# ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab nomodified:
+# ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
-2015-06-08 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+2015-06-14 Bruce Kissinger   <brucekissinger [at] gmail (dot) com>
 
-    * Fix vim modified flag at opening file
+    * Add the CloudI dashboard
 
 2015-06-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix service configuration option request_timeout_immediate_max usage
       in combination with queue_limit, queue_size, and/or rate_request_max 
+
+2015-06-08 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+
+    * Fix vim modified flag at opening file
 
 2015-06-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

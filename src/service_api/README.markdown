@@ -51,6 +51,12 @@ The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/clo
 expects HTTP requests to port 6464 with the proper service path and format
 (listed above) to call the CloudI service interface.
 
+### DASHBOARD
+
+The CloudI dashboard provides a web UI with all the CloudI Service API
+functionality available to the user visually.  The installed configuration
+provides the web UI on port 6464 (i.e., http://localhost:6464/cloudi/).
+
 ### EXAMPLES
 
 CloudI Service API integration example:
