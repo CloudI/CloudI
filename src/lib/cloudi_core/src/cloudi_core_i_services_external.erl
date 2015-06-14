@@ -844,13 +844,14 @@ handle_info({'cloudi_service_recv_async_retry', Timeout, TransId, Consume},
             StateName, State) ->
     ?MODULE:StateName({'recv_async', Timeout, TransId, Consume}, State);
 
-handle_info({SendType, _, _,
-             RequestInfo, Request, Timeout, _, _, _}, StateName, State)
+handle_info({SendType, _, _, RequestInfo, Request,
+             Timeout, _, _, _}, StateName, State)
     when SendType =:= 'cloudi_service_send_async' orelse
          SendType =:= 'cloudi_service_send_sync',
          is_binary(Request) =:= false orelse
          is_binary(RequestInfo) =:= false orelse
          Timeout =:= 0 ->
+    % since Timeout == 0: not (Timeout > response_timeout_immediate_max)
     {next_state, StateName, State};
 
 handle_info({SendType, Name, Pattern, RequestInfo, Request,
@@ -858,7 +859,9 @@ handle_info({SendType, Name, Pattern, RequestInfo, Request,
             #state{queue_requests = false,
                    service_state = ServiceState,
                    options = #config_service_options{
-                       rate_request_max = RateRequest} = ConfigOptions
+                       rate_request_max = RateRequest,
+                       response_timeout_immediate_max =
+                           ResponseTimeoutImmediateMax} = ConfigOptions
                    } = State)
     when SendType =:= 'cloudi_service_send_async' orelse
          SendType =:= 'cloudi_service_send_sync' ->
@@ -930,13 +933,28 @@ handle_info({SendType, Name, Pattern, RequestInfo, Request,
                      State#state{options = NewConfigOptions}}
             end;
         RateRequestOk =:= false ->
+            if
+                Timeout > ResponseTimeoutImmediateMax ->
+                    if
+                        SendType =:= 'cloudi_service_send_async' ->
+                            Source ! {'cloudi_service_return_async',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source};
+                        SendType =:= 'cloudi_service_send_sync' ->
+                            Source ! {'cloudi_service_return_sync',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source}
+                    end;
+                true ->
+                    ok
+            end,
             {next_state, StateName,
              State#state{options = ConfigOptions#config_service_options{
                              rate_request_max = NewRateRequest}}}
     end;
 
-handle_info({SendType, _, _,
-             _, _, Timeout, Priority, TransId, _} = T, StateName,
+handle_info({SendType, Name, Pattern, _, _,
+             Timeout, Priority, TransId, Source} = T, StateName,
             #state{queue_requests = true,
                    queued = Queue,
                    queued_size = QueuedSize,
@@ -944,7 +962,9 @@ handle_info({SendType, _, _,
                    options = #config_service_options{
                        queue_limit = QueueLimit,
                        queue_size = QueueSize,
-                       rate_request_max = RateRequest} = ConfigOptions
+                       rate_request_max = RateRequest,
+                       response_timeout_immediate_max =
+                           ResponseTimeoutImmediateMax} = ConfigOptions
                    } = State)
     when SendType =:= 'cloudi_service_send_async';
          SendType =:= 'cloudi_service_send_sync' ->
@@ -977,6 +997,21 @@ handle_info({SendType, _, _,
              recv_timeout_start(Timeout, Priority, TransId,
                                 Size, T, NewState)};
         true ->
+            if
+                Timeout > ResponseTimeoutImmediateMax ->
+                    if
+                        SendType =:= 'cloudi_service_send_async' ->
+                            Source ! {'cloudi_service_return_async',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source};
+                        SendType =:= 'cloudi_service_send_sync' ->
+                            Source ! {'cloudi_service_return_sync',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source}
+                    end;
+                true ->
+                    ok
+            end,
             {next_state, StateName, NewState}
     end;
 
