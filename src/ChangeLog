@@ -1,5 +1,9 @@
 # -*- coding: utf-8; tab-width: 4; -*-
-# ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab:
+# ex: set fileencoding=utf-8 softtabstop=4 tabstop=4 expandtab nomodified:
+
+2015-06-08 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+
+    * Fix vim modified flag at opening file
 
 2015-06-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 

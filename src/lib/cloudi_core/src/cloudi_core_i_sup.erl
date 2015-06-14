@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -140,7 +140,7 @@ child_specification(cloudi_core_i_logger, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_logger,
      {cloudi_core_i_logger, start_link, [Config]},
-     permanent, Shutdown, worker, [cloud_core_i_logger]};
+     permanent, Shutdown, worker, [cloudi_core_i_logger]};
 
 child_specification(cloudi_core_i_nodes, Config) ->
     Shutdown = 2000, % milliseconds
@@ -152,7 +152,7 @@ child_specification(cloudi_core_i_configurator, Config) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_configurator,
      {cloudi_core_i_configurator, start_link, [Config]},
-     permanent, Shutdown, worker, [cloud_core_i_configurator]}.
+     permanent, Shutdown, worker, [cloudi_core_i_configurator]}.
 
 child_specification(cloudi_core_i_services_monitor) ->
     Shutdown = 2000, % milliseconds
