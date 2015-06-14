@@ -20,10 +20,8 @@
         }
     </style>
     <script type="text/javascript">
-      var websocket_port = "6464";
-
-      var view_log_service_name = "/dashboard/log/cloudi.log";
-      var log_settings_service_name = "/cloudi/api/erlang/logging";
+      var view_log_service_name = "/cloudi/log/cloudi.log";
+      var log_settings_service_name = "/cloudi/api/rpc/logging.erl";
       var request_type = "get";
 
       var view_log_web_socket = undefined;
@@ -80,7 +78,7 @@
 
           $('#connectionStatus').text("Connecting");
 
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + view_log_service_name;
+          websocket_url = "ws://" + $("#hostname").val() + view_log_service_name;
           view_log_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -247,7 +245,7 @@
 
           $('#connectionStatus').text("Connecting");
 
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + log_settings_service_name;
+          websocket_url = "ws://" + $("#hostname").val() + log_settings_service_name;
           log_settings_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -460,7 +458,7 @@
 
 
               // assign default hostname
-              $("#hostname").val(location.host);
+              $("#hostname").val("localhost:6464");
 
               // show the loading message
               $('#loadingMessage').show();

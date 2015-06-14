@@ -1,0 +1,26 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+{acl, []}.
+{services, [
+  [{prefix, "/cloudi/api/"},
+   {module, cloudi_service_api_requests},
+   {dest_refresh, none}],
+  [{prefix, "/cloudi/"},
+   {module, cloudi_service_filesystem},
+   {args,
+    [{directory, "service_api/dashboard/"}]},
+   {dest_refresh, none},
+   {count_process, 4}],
+  [{prefix, "/cloudi/log/"},
+   {module, cloudi_service_filesystem},
+   {args,
+    [{directory, "@cloudi_logdir@"},
+     {refresh, 60}]},
+   {dest_refresh, none}],
+  [{prefix, "/"},
+   {module, cloudi_service_http_cowboy},
+   {args,
+    [{port, 6464}, {output, external}, {use_websockets, true}]}]
+ ]}.
+{nodes, []}.
+{logging, []}.

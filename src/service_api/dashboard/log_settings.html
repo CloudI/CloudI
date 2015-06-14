@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Log Settings</title>
     <!-- link to JQuery and DataTables javascript libraries -->
     <script src="js/jquery-1.11.1.min.js"></script>
@@ -20,14 +20,11 @@
         }
     </style>
     <script type="text/javascript">
-      var websocket_port = "6464";
-      var service_port = "6467";
-
-      var service_name = "/cloudi/api/erlang/logging";
-      var logging_file_set_service_name = "/cloudi/api/erlang/logging_file_set";
-      var logging_level_set_service_name = "/cloudi/api/erlang/logging_level_set";
-      var logging_redirect_set_service_name = "/cloudi/api/erlang/logging_redirect_set";
-      var logging_syslog_set_service_name = "/cloudi/api/erlang/logging_syslog_set";
+      var service_name = "/cloudi/api/rpc/logging.erl";
+      var logging_file_set_service_name = "/cloudi/api/rpc/logging_file_set.erl";
+      var logging_level_set_service_name = "/cloudi/api/rpc/logging_level_set.erl";
+      var logging_redirect_set_service_name = "/cloudi/api/rpc/logging_redirect_set.erl";
+      var logging_syslog_set_service_name = "/cloudi/api/rpc/logging_syslog_set.erl";
       var request_type = "get";
       var web_socket = undefined;
       var websocket_url = "";
@@ -70,7 +67,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          websocket_url = "ws://" + $("#hostname").val() + service_name;
           web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -238,7 +235,7 @@
       // This function submits an HTTP request to set the log level
       function setLevel() {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_level_set_service_name;
+          var service_url = "http://" + $("#hostname").val() + logging_level_set_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -268,7 +265,7 @@
       // This function submits an HTTP request to set the log file 
       function setFile() {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_file_set_service_name;
+          var service_url = "http://" + $("#hostname").val() + logging_file_set_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -298,7 +295,7 @@
       // This function submits an HTTP request to set the log redirection 
       function setRedirect() {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_redirect_set_service_name;
+          var service_url = "http://" + $("#hostname").val() + logging_redirect_set_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -328,7 +325,7 @@
       // This function submits an HTTP request to set the syslog properties 
       function setSyslog() {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + logging_syslog_set_service_name;
+          var service_url = "http://" + $("#hostname").val() + logging_syslog_set_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -436,7 +433,7 @@
           $(document).ready(function () {
 
               // assign default hostname
-              $("#hostname").val(location.host);
+              $("#hostname").val("localhost:6464");
 
               // show the loading message
               $('#loadingMessage').show();

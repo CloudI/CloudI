@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Resolve file modeline differences
+    * Add a minimal CloudI configuration file to use when the
+      integration tests are disabled
+    * Fix some minor problems in the dashboard
+    * Add the dashboard to the default configurations
+
 2015-06-14 Bruce Kissinger   <brucekissinger [at] gmail (dot) com>
 
     * Add the CloudI dashboard

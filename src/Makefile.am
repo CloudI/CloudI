@@ -893,8 +893,8 @@ install-exec-hook: rel/files/app.config
 	test -e "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" \
              "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old" || exit 0
-	$(INSTALL_DATA) "$(top_builddir)/cloudi.conf" \
-                  "$(DESTDIR)$(cloudi_confdir)"
+	$(INSTALL_DATA) "$(top_builddir)/$(CLOUDI_CONF)" \
+                  "$(DESTDIR)$(cloudi_confdir)/cloudi.conf"
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/release
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \

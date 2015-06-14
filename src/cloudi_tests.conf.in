@@ -1,11 +1,13 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 {acl, [
     % Access Control Lists (ACLs) define service name prefixes that can be
     % referenced instead of the literal service name prefixes for the
     % destination allow list and/or the destination deny list.  The ACLs may
     % reference other ACLs (cyclic references and missing references
-    % in this list generate errors).  ACLs always use an exact match on the
-    % send operation destination service name when determining if a common
-    % prefix is allowed or denied (while ignoring the "/" character).
+    % in this list generate errors).  ACLs can be provided as service name
+    % patterns to match before a send operation and non-patterns are made
+    % into service name patterns by appending a '*' character.
     {all, [database, tests]},
     {database, ["/db/"]},
     {tests, ["/tests/"]},
@@ -189,7 +191,19 @@
     % (using the proplist method of specifying the configuration data...
     %  it provides defaults automatically)
     [%{type, internal}, % gets inferred
-     {prefix, "/tests/websockets/"},
+     {prefix, "/cloudi/"},
+     {module, cloudi_service_filesystem},
+     {args,
+      [{directory, "service_api/dashboard/"}]},
+     {dest_refresh, none},
+     {count_process, 4}],
+    [{prefix, "/cloudi/log/"},
+     {module, cloudi_service_filesystem},
+     {args,
+      [{directory, "@cloudi_logdir@"},
+       {refresh, 60}]},
+     {dest_refresh, none}],
+    [{prefix, "/tests/websockets/"},
      {module, cloudi_service_http_cowboy},
      {args, 
       [{port, 6464}, {output, external}, {use_websockets, true},

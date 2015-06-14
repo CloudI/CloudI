@@ -49,8 +49,10 @@ AC_ARG_WITH([version],
     ],
     [cloudi_prefix="$libdir/cloudi-$VERSION"])
 AC_SUBST(cloudi_prefix)
-AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
-AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
+eval cloudi_logdir="\"[$]localstatedir/log/cloudi\""
+AC_SUBST(cloudi_logdir)
+eval cloudi_confdir="\"[$]sysconfdir/cloudi\""
+AC_SUBST(cloudi_confdir)
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 
 AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
@@ -519,13 +521,14 @@ if test "x$want_service" = "xyes"; then
 fi
 
 if test "x$integration_tests_ran" = "xtrue" ; then
-    AC_CONFIG_FILES([cloudi.conf])
+    CLOUDI_CONF="cloudi_tests.conf"
 else
-    AC_CONFIG_COMMANDS([cloudi.conf.empty],
-        [echo "{acl,[[]]}. {services,[[]]}. {nodes,[[]]}. {logging,[[]]}." > \
-         cloudi.conf])
+    CLOUDI_CONF="cloudi_minimal.conf"
 fi
+AC_SUBST(CLOUDI_CONF)
 AC_CONFIG_FILES([
+    cloudi_tests.conf
+    cloudi_minimal.conf
     rebar_src.config
     rebar_src_test.config
     reltool.config
@@ -574,6 +577,10 @@ AC_CONFIG_FILES([
     lib/cloudi_core/Makefile
     lib/cloudi_core/cxx_src/Makefile
     service_api/Makefile
+    service_api/dashboard/Makefile
+    service_api/dashboard/css/Makefile
+    service_api/dashboard/css/images/Makefile
+    service_api/dashboard/js/Makefile
     service_api/python/Makefile
     service_api/python/jsonrpclib/Makefile
     tests/Makefile

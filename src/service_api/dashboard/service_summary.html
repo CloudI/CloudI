@@ -20,8 +20,6 @@
 	} 
     </style>
     <script type="text/javascript">
-      var websocket_port = "6464";
-      var service_port = "6467";
       var service_name = "/cloudi/api/rpc/services.erl";
       var restart_service_name = "/cloudi/api/rpc/services_restart.erl";
       var remove_service_name = "/cloudi/api/rpc/services_remove.erl";
@@ -70,7 +68,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          websocket_url = "ws://" + $("#hostname").val() + service_name;
           web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -215,7 +213,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          websocket_url = "ws://" + $("#hostname").val() + service_name;
           subscriptions_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -368,7 +366,7 @@
       // Submit an HTTP request to remove a service
       function remove_service(serviceID) {
 
-          var remove_service_url = "http://" + $("#hostname").val() + ":" + service_port + remove_service_name;
+          var remove_service_url = "http://" + $("#hostname").val() + remove_service_name;
           var xhr = createCORSRequest('POST', remove_service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -401,7 +399,7 @@
       // Submit an HTTP request to restart a service
       function restart_service(serviceID) {
 
-          var restart_service_url = "http://" + $("#hostname").val() + ":" + service_port + restart_service_name;
+          var restart_service_url = "http://" + $("#hostname").val() + restart_service_name;
           var xhr = createCORSRequest('POST', restart_service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -448,7 +446,7 @@
       // Submit an HTTP request to show the service subscriptions 
       function show_service_subscriptions(serviceID) {
 
-          var service_subscriptions_url = "http://" + $("#hostname").val() + ":" + service_port + service_subscriptions_name;
+          var service_subscriptions_url = "http://" + $("#hostname").val() + service_subscriptions_name;
           console.log("Flag A url = [" + service_subscriptions_url);
 
           var xhr = createCORSRequest('POST', service_subscriptions_url);
@@ -544,7 +542,7 @@
       $(document).ready(function () {
 
           // assign default hostname
-          $("#hostname").val(location.host);
+          $("#hostname").val("localhost:6464");
 
           // change the table attributes to support jQuery styles
           $('#servicesTable').dataTable( {

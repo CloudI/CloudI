@@ -20,12 +20,9 @@
         }
     </style>
     <script type="text/javascript">
-      var websocket_port = "6464";
-      var service_port = "6467";
-
       var service_name = "/cloudi/api/rpc/code_path.erl";
-      var add_path_service_name = "/cloudi/api/erlang/code_path_add";
-      var remove_path_service_name = "/cloudi/api/erlang/code_path_remove";
+      var add_path_service_name = "/cloudi/api/rpc/code_path_add.erl";
+      var remove_path_service_name = "/cloudi/api/rpc/code_path_remove.erl";
       var request_type = "get";
       var web_socket = undefined;
       var websocket_url = "";
@@ -69,7 +66,7 @@
 
           // open the websocket
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + service_name;
+          websocket_url = "ws://" + $("#hostname").val() + service_name;
           web_socket = new WebSocket(websocket_url);
           console.log("Connecting to " + websocket_url);
 
@@ -231,7 +228,7 @@
       // This function submits an HTTP request to remove a code path
       function remove_path(codePath) {
 
-          var remove_path_service_url = "http://" + $("#hostname").val() + ":" + service_port + remove_path_service_name;
+          var remove_path_service_url = "http://" + $("#hostname").val() + remove_path_service_name;
           var xhr = createCORSRequest('POST', remove_path_service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -265,7 +262,7 @@
       // This function submits an HTTP request to add a code path
       function add_path(codePath) {
 
-          var add_path_service_url = "http://" + $("#hostname").val() + ":" + service_port + add_path_service_name;
+          var add_path_service_url = "http://" + $("#hostname").val() + add_path_service_name;
           var xhr = createCORSRequest('POST', add_path_service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -351,7 +348,7 @@
       $(document).ready(function () {
 
           // assign default hostname
-          $("#hostname").val(location.host);
+          $("#hostname").val("localhost:6464");
 	
           // change the table attributes to support jQuery styles
           $('#codePathTable').dataTable( {

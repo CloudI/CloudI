@@ -17,9 +17,6 @@
         }
     </style>
     <script type="text/javascript">
-      var websocket_port = "6464";
-      var service_port = "6467";
-
       var node_get_service_name = "/cloudi/api/rpc/nodes_get.erl";
       var node_set_service_name = "/cloudi/api/rpc/nodes_set.erl";
       var node_add_service_name = "/cloudi/api/rpc/nodes_add.erl";
@@ -103,7 +100,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + node_get_service_name;
+          websocket_url = "ws://" + $("#hostname").val() + node_get_service_name;
           node_get_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -188,7 +185,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + node_alive_service_name;
+          websocket_url = "ws://" + $("#hostname").val() + node_alive_service_name;
           live_nodes_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -288,7 +285,7 @@
           }
 
           $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + ":" + websocket_port + node_dead_service_name;
+          websocket_url = "ws://" + $("#hostname").val() + node_dead_service_name;
           dead_nodes_web_socket = new WebSocket(websocket_url);
 
           console.log("Connecting to " + websocket_url);
@@ -441,7 +438,7 @@
       // This function submits an HTTP request to set the node configuration
       function setNodeConfiguration() {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + node_set_service_name;
+          var service_url = "http://" + $("#hostname").val() + node_set_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -468,7 +465,7 @@
       // This function submits an HTTP request to add a node
       function addNode(nodeValue) {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + node_add_service_name;
+          var service_url = "http://" + $("#hostname").val() + node_add_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -492,7 +489,7 @@
       // This function submits an HTTP request to remove a node
       function removeNode(nodeValue) {
 
-          var service_url = "http://" + $("#hostname").val() + ":" + service_port + node_remove_service_name;
+          var service_url = "http://" + $("#hostname").val() + node_remove_service_name;
           var xhr = createCORSRequest('POST', service_url);
           if (!xhr) {
               throw new Error('CORS not supported');
@@ -602,7 +599,7 @@
           $(document).ready(function () {
 
               // assign default hostname
-              $("#hostname").val(location.host);
+              $("#hostname").val("localhost:6464");
 
               // hide the loading message
               $('#loadingMessage').hide();

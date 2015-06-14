@@ -4,7 +4,7 @@
 if PYTHON_SUPPORT
     PYTHON_SUBDIR = python
 endif
-SUBDIRS = $(PYTHON_SUBDIR)
+SUBDIRS = dashboard $(PYTHON_SUBDIR)
 
 install-exec-hook:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/service_api"
