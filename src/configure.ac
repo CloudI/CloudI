@@ -536,6 +536,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_db/src/cloudi_service_db.app.src
     lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src
+    lib/cloudi_service_db_cassandra_cql/src/cloudi_service_db_cassandra_cql.app.src
     lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src
     lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.app.src
     lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.app.src

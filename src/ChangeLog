@@ -8,6 +8,7 @@
       integration tests are disabled
     * Fix some minor problems in the dashboard
     * Add the dashboard to the default configurations
+    * Fix cloudi_service_db_cassandra_cql app file version
 
 2015-06-14 Bruce Kissinger   <brucekissinger [at] gmail (dot) com>
 

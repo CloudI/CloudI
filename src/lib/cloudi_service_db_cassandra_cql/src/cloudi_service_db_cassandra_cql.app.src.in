@@ -3,7 +3,7 @@
 
 {application, cloudi_service_db_cassandra_cql,
   [{description, "DB Cassandra CQL CloudI Service"},
-    {vsn, "1.0.0"},
+    {vsn, "@VERSION@"},
     {modules, [
       cloudi_service_db_cassandra_cql
     ]},
