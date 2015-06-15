@@ -9,6 +9,8 @@
     * Fix some minor problems in the dashboard
     * Add the dashboard to the default configurations
     * Fix cloudi_service_db_cassandra_cql app file version
+    * Fix cloudi_service_db_riak and cloudi_service_oauth1
+      app file version and modelines
 
 2015-06-14 Bruce Kissinger   <brucekissinger [at] gmail (dot) com>
 
