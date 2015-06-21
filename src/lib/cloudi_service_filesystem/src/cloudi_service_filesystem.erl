@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -82,6 +82,20 @@
         % possibly reuse its cached copy.  HTTP headers are added to the
         % ResponseInfo to provide the modification time.
         % Use the value 'refresh' to assign (0.5 * refresh).
+-define(DEFAULT_READ,                       []). % see below:
+        % A list of file service names (provided by this service) that
+        % will explicitly specify the files to read from the directory.
+        % Any other files within the directory will be ignored.
+        % The entries can be strings or tuples that provide a file
+        % segment to read:
+        % "/tests/http_req/hexpi.txt"
+        % (specific file segment) position 0, 64 bytes:
+        % {"/tests/http_req/hexpi.txt", {0, 64}}
+        % (specific file segment) offset 64 from end, 32 bytes:
+        % {"/tests/http_req/hexpi.txt", {-64, 32}}
+        % (specific file segment) offset 64 from end, read till end:
+        % {"/tests/http_req/hexpi.txt", {-64, undefined}}
+        % {"/tests/http_req/hexpi.txt", -64}
 -define(DEFAULT_WRITE_TRUNCATE,             []). % see below:
         % A list of file service names (provided by this service) that
         % will overwrite the file contents with the service request data
@@ -113,9 +127,14 @@
         % cloudi_service_http_cowboy.  Required for write-related
         % functionality and reading ranges.
 
+-type read_list_exact() :: list({string(),
+                                 integer() | undefined,
+                                 non_neg_integer() | undefined}).
+
 -record(state,
     {
         prefix :: string(),
+        prefix_length :: pos_integer(),
         service :: pid(),
         directory :: string(),
         directory_length :: non_neg_integer(),
@@ -125,6 +144,7 @@
         cache :: undefined | pos_integer(),
         use_http_get_suffix :: boolean(),
         use_content_disposition :: boolean(),
+        read :: read_list_exact(),
         toggle :: boolean(),
         files :: cloudi_x_trie:cloudi_x_trie(),
         content_type_lookup :: undefined | cloudi_x_trie:cloudi_x_trie()
@@ -302,6 +322,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {files_size,                   ?DEFAULT_FILES_SIZE},
         {refresh,                      ?DEFAULT_REFRESH},
         {cache,                        ?DEFAULT_CACHE},
+        {read,                         ?DEFAULT_READ},
         {write_truncate,               ?DEFAULT_WRITE_TRUNCATE},
         {write_append,                 ?DEFAULT_WRITE_APPEND},
         {notify_one,                   ?DEFAULT_NOTIFY_ONE},
@@ -311,7 +332,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
         {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0,
-     WriteTruncateL, WriteAppendL, NotifyOneL, NotifyAllL, NotifyOnStart,
+     ReadL0, WriteTruncateL, WriteAppendL,
+     NotifyOneL, NotifyAllL, NotifyOnStart,
      UseContentTypes, UseContentDisposition, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
@@ -333,6 +355,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         Cache0 > 0, Cache0 =< 31536000 ->
             Cache0
     end,
+    true = is_list(ReadL0),
+    true = is_list(WriteTruncateL),
+    true = is_list(WriteAppendL),
     true = is_list(NotifyOneL),
     true = is_list(NotifyAllL),
     true = is_boolean(NotifyOnStart),
@@ -352,55 +377,43 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             undefined
     end,
     true = is_boolean(UseContentDisposition),
+    true = if
+        Refresh =:= undefined ->
+            filelib:is_dir(Directory);
+        true ->
+            true % directory may appear later
+    end,
+    ReadLN = lists:map(fun(Read) ->
+        case Read of
+            [_ | _] = ReadName ->
+                true = lists:prefix(Prefix, ReadName),
+                {lists:nthtail(PrefixLength, ReadName),
+                 undefined, undefined};
+            {[_ | _] = ReadName, ReadSegmentI}
+                when is_integer(ReadSegmentI) orelse
+                     (ReadSegmentI =:= undefined) ->
+                true = lists:prefix(Prefix, ReadName),
+                {lists:nthtail(PrefixLength, ReadName),
+                 ReadSegmentI, undefined};
+            {[_ | _] = ReadName, {ReadSegmentI, ReadSegmentSize}}
+                when (is_integer(ReadSegmentI) orelse
+                      (ReadSegmentI =:= undefined)) andalso
+                     ((is_integer(ReadSegmentSize) andalso
+                       (ReadSegmentSize >= 0)) orelse
+                      (ReadSegmentSize =:= undefined)) ->
+                true = lists:prefix(Prefix, ReadName),
+                {lists:nthtail(PrefixLength, ReadName),
+                 ReadSegmentI, ReadSegmentSize}
+        end
+    end, ReadL0),
     Toggle = true,
     {FilesSizeN,
-     Files1} = fold_files(Directory,
-                          fun(FilePath, FileName, FileInfo,
-                              {FilesSize0, Files0}) ->
-        case lists:member($*, FileName) of
-            false ->
-                #file_info{access = Access,
-                           mtime = MTime} = FileInfo,
-                case file_read_data(FileInfo, FilePath) of
-                    {ok, Contents} ->
-                        case files_size_check(FilesSize0, Contents,
-                                              FilesSizeLimitN) of
-                            {ok, ContentsSize, FilesSize1} ->
-                                Headers = file_headers(FilePath,
-                                                       ContentTypeLookup,
-                                                       UseContentDisposition),
-                                File = #file{contents = Contents,
-                                             size = ContentsSize,
-                                             path = FilePath,
-                                             headers = Headers,
-                                             mtime_i = {MTime, 0},
-                                             access = Access,
-                                             toggle = Toggle},
-                                {FilesSize1,
-                                 file_add_read(FileName, File, Files0,
-                                               UseHttpGetSuffix, Prefix,
-                                               Dispatcher)};
-                            {error, ContentsSize} ->
-                                ?LOG_WARN("file name ~s (size ~w kB) "
-                                          "excluded due to ~w kB files_size",
-                                          [FilePath, ContentsSize div 1024,
-                                           FilesSizeLimitN div 1024]),
-                                {FilesSize0, Files0}
-                        end;
-                    {error, Reason} ->
-                        ?LOG_ERROR("file read ~s error: ~p",
-                                   [FilePath, Reason]),
-                        {FilesSize0, Files0}
-                end;
-            true ->
-                ?LOG_ERROR("file name ~s error: '*' character invalid",
-                           [FilePath]),
-                {FilesSize0, Files0}
-        end
-    end, {0, cloudi_x_trie:new()}),
+     Files1} = read_files_init(ReadLN, Directory, Toggle, ContentTypeLookup,
+                               UseContentDisposition, UseHttpGetSuffix,
+                               FilesSizeLimitN, Prefix, Dispatcher),
     MTimeFake = calendar:now_to_universal_time(os:timestamp()),
     Files4 = lists:foldl(fun(Name, Files2) ->
-        true = is_list(Name) andalso is_integer(hd(Name)),
+        true = lists:prefix(Prefix, Name),
         FileName = lists:nthtail(PrefixLength, Name),
         Pattern = if
             UseHttpGetSuffix =:= true ->
@@ -437,7 +450,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end
     end, Files1, WriteTruncateL),
     Files7 = lists:foldl(fun(Name, Files5) ->
-        true = is_list(Name) andalso is_integer(hd(Name)),
+        true = lists:prefix(Prefix, Name),
         FileName = lists:nthtail(PrefixLength, Name),
         Pattern = if
             UseHttpGetSuffix =:= true ->
@@ -530,6 +543,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             ok
     end,
     {ok, #state{prefix = Prefix,
+                prefix_length = PrefixLength,
                 service = Service,
                 directory = Directory,
                 directory_length = DirectoryLength,
@@ -537,6 +551,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 files_size = FilesSizeN,
                 refresh = Refresh,
                 cache = CacheN,
+                read = ReadLN,
                 toggle = Toggle,
                 files = FilesN,
                 use_http_get_suffix = UseHttpGetSuffix,
@@ -621,11 +636,13 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
 
 cloudi_service_handle_info(refresh,
                            #state{prefix = Prefix,
+                                  prefix_length = PrefixLength,
                                   service = Service,
                                   directory = Directory,
                                   files_size_limit = FilesSizeLimit,
                                   files_size = FilesSize,
                                   refresh = Refresh,
+                                  read = ReadL,
                                   toggle = Toggle,
                                   files = Files,
                                   use_http_get_suffix = UseHttpGetSuffix,
@@ -636,10 +653,11 @@ cloudi_service_handle_info(refresh,
                            Dispatcher) ->
     NewToggle = not Toggle,
     {NewFilesSize,
-     NewFiles} = files_refresh(Directory, NewToggle,
-                               FilesSize, Files, ContentTypeLookup,
-                               UseContentDisposition, UseHttpGetSuffix,
-                               FilesSizeLimit, Prefix, Dispatcher),
+     NewFiles} = read_files_refresh(ReadL, Directory, NewToggle,
+                                    FilesSize, Files, ContentTypeLookup,
+                                    UseContentDisposition, UseHttpGetSuffix,
+                                    FilesSizeLimit, PrefixLength,
+                                    Prefix, Dispatcher),
     erlang:send_after(Refresh * 1000, Service, refresh),
     {noreply, State#state{files_size = NewFilesSize,
                           toggle = NewToggle,
@@ -1428,11 +1446,76 @@ file_exists(FileName, Files, UseHttpGetSuffix, Prefix) ->
     Suffix = service_name_suffix_read(FileName, UseHttpGetSuffix),
     cloudi_x_trie:find(Prefix ++ Suffix, Files).
 
+file_read_data_position(F, undefined, Size)
+    when is_integer(Size) ->
+    case file:read(F, Size) of
+        {ok, _} = Success ->
+            Success;
+        eof ->
+            {error, eof};
+        {error, _} = Error ->
+            Error
+    end;
+file_read_data_position(F, I, undefined)
+    when is_integer(I) ->
+    case file:position(F, eof) of
+        {ok, FileSize} ->
+            if
+                I < 0 ->
+                    AbsoluteI = FileSize + I,
+                    if
+                        AbsoluteI >= 0 ->
+                            file_read_data_position(F, AbsoluteI, I * -1);
+                        true ->
+                            file_read_data_position(F, 0, FileSize)
+                    end;
+                I < FileSize ->
+                    file_read_data_position(F, I, FileSize - I);
+                I >= FileSize ->
+                    {ok, <<>>}
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+file_read_data_position(F, I, Size)
+    when is_integer(I), is_integer(Size) ->
+    Location = if
+        I < 0 ->
+            {eof, I};
+        true ->
+            {bof, I}
+    end,
+    case file:position(F, Location) of
+        {ok, _} ->
+            case file:read(F, Size) of
+                {ok, _} = Success ->
+                    Success;
+                eof ->
+                    {error, eof};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+    
 % allow it to read from any non-directory/link type (device, other, regular)
-file_read_data(#file_info{access = Access}, FilePath)
+file_read_data(#file_info{access = Access}, FilePath, I, Size)
     when Access =:= read; Access =:= read_write ->
-    file:read_file(FilePath);
-file_read_data(_, _) ->
+    if
+        I =:= undefined, Size =:= undefined ->
+            file:read_file(FilePath);
+        true ->
+            case file:open(FilePath, [read, raw, binary]) of
+                {ok, F} ->
+                    Result = file_read_data_position(F, I, Size),
+                    file:close(F),
+                    Result;
+                {error, _} = Error ->
+                    Error
+            end
+    end;
+file_read_data(_, _, _, _) ->
     {error, enoent}.
 
 file_header_content_disposition(FilePath, true) ->
@@ -1470,14 +1553,67 @@ file_notify_send([#file_notify{send = Send,
     cloudi_service:Send(Dispatcher, Name, <<>>, Contents, Timeout, Priority),
     file_notify_send(NotifyL, Contents, Dispatcher).
 
-files_refresh(Directory, Toggle,
-              FilesSize0, Files0, ContentTypeLookup,
-              UseContentDisposition, UseHttpGetSuffix,
-              FilesSizeLimit, Prefix, Dispatcher) ->
-    {FilesSize2,
-     Files2} = fold_files(Directory,
-                          fun(FilePath, FileName, FileInfo,
-                              {FilesSize1, Files1}) ->
+read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
+                UseContentDisposition, UseHttpGetSuffix,
+                FilesSizeLimit, Prefix, Dispatcher) ->
+    Finit = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
+                {FilesSize0, Files0}) ->
+        case lists:member($*, FileName) of
+            false ->
+                #file_info{access = Access,
+                           mtime = MTime} = FileInfo,
+                case file_read_data(FileInfo, FilePath,
+                                    SegmentI, SegmentSize) of
+                    {ok, Contents} ->
+                        case files_size_check(FilesSize0, Contents,
+                                              FilesSizeLimit) of
+                            {ok, ContentsSize, FilesSize1} ->
+                                Headers = file_headers(FilePath,
+                                                       ContentTypeLookup,
+                                                       UseContentDisposition),
+                                File = #file{contents = Contents,
+                                             size = ContentsSize,
+                                             path = FilePath,
+                                             headers = Headers,
+                                             mtime_i = {MTime, 0},
+                                             access = Access,
+                                             toggle = Toggle},
+                                {FilesSize1,
+                                 file_add_read(FileName, File, Files0,
+                                               UseHttpGetSuffix, Prefix,
+                                               Dispatcher)};
+                            {error, ContentsSize} ->
+                                ?LOG_WARN("file name ~s (size ~w kB) "
+                                          "excluded due to ~w kB files_size",
+                                          [FilePath, ContentsSize div 1024,
+                                           FilesSizeLimit div 1024]),
+                                {FilesSize0, Files0}
+                        end;
+                    {error, Reason} ->
+                        ?LOG_ERROR("file read ~s error: ~p",
+                                   [FilePath, Reason]),
+                        {FilesSize0, Files0}
+                end;
+            true ->
+                ?LOG_ERROR("file name ~s error: '*' character invalid",
+                           [FilePath]),
+                {FilesSize0, Files0}
+        end
+    end,
+    Ainit = {0, cloudi_x_trie:new()},
+    if
+        ReadL == [] ->
+            fold_files(Directory, Finit, Ainit);
+        true ->
+            fold_files_exact(ReadL, Directory, Finit, Ainit)
+    end.
+
+read_files_refresh(ReadL, Directory, Toggle,
+                   FilesSize0, Files0, ContentTypeLookup,
+                   UseContentDisposition, UseHttpGetSuffix,
+                   FilesSizeLimit, PrefixLength, Prefix, Dispatcher) ->
+    Frefresh = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
+                   {FilesSize1, Files1}) ->
         #file_info{access = Access,
                    mtime = MTime} = FileInfo,
         case file_exists(FileName, Files1, UseHttpGetSuffix, Prefix) of
@@ -1490,7 +1626,8 @@ files_refresh(Directory, Toggle,
                        mtime_i = OldMTimeI,
                        notify = NotifyL,
                        write = Write} = File0} ->
-                case file_read_data(FileInfo, FilePath) of
+                case file_read_data(FileInfo, FilePath,
+                                    SegmentI, SegmentSize) of
                     {ok, Contents} ->
                         case files_size_check(FilesSize1 - OldContentsSize,
                                               Contents, FilesSizeLimit) of
@@ -1526,7 +1663,8 @@ files_refresh(Directory, Toggle,
                                       UseHttpGetSuffix, Prefix)}
                 end;
             error ->
-                case file_read_data(FileInfo, FilePath) of
+                case file_read_data(FileInfo, FilePath,
+                                    SegmentI, SegmentSize) of
                     {ok, Contents} ->
                         case files_size_check(FilesSize1,
                                               Contents, FilesSizeLimit) of
@@ -1560,41 +1698,80 @@ files_refresh(Directory, Toggle,
                                           Dispatcher)}
                 end
         end
-    end, {FilesSize0, Files0}),
-    PrefixLength = erlang:length(Prefix),
-    {FilesSizesLN,
-     FilesN} = cloudi_x_trie:foldl(fun(Pattern,
-                                       #file{size = OldContentsSize,
-                                             path = FilePath,
-                                             toggle = FileToggle,
-                                             write = Write} = File,
-                                       {FilesSizesL0, Files3}) ->
-        if
-            FileToggle =/= Toggle ->
+    end,
+    Arefresh = {FilesSize0, Files0},
+    if
+        ReadL == [] ->
+            {FilesSize2,
+             Files2} = fold_files(Directory, Frefresh, Arefresh),
+            % remove anything not updated, since the file was removed
+            {FilesSizesLN,
+             FilesN} = cloudi_x_trie:foldl(fun(Pattern,
+                                               #file{size = OldContentsSize,
+                                                     path = FilePath,
+                                                     toggle = FileToggle,
+                                                     write = Write} = File,
+                                               {FilesSizesL0, Files3}) ->
                 if
-                    Write =:= [] ->
-                        Suffix = lists:nthtail(PrefixLength, Pattern),
-                        cloudi_service:unsubscribe(Dispatcher, Suffix),
-                        {lists:keystore(FilePath, 1, FilesSizesL0,
-                                        {FilePath, OldContentsSize}),
-                         cloudi_x_trie:erase(Pattern, Files3)};
+                    FileToggle =/= Toggle ->
+                        if
+                            Write =:= [] ->
+                                Suffix = lists:nthtail(PrefixLength, Pattern),
+                                cloudi_service:unsubscribe(Dispatcher, Suffix),
+                                {lists:keystore(FilePath, 1, FilesSizesL0,
+                                                {FilePath, OldContentsSize}),
+                                 cloudi_x_trie:erase(Pattern, Files3)};
+                            true ->
+                                {FilesSizesL0,
+                                 cloudi_x_trie:store(Pattern,
+                                                     File#file{toggle = Toggle},
+                                                     Files3)}
+                        end;
                     true ->
-                        {FilesSizesL0,
-                         cloudi_x_trie:store(Pattern,
-                                             File#file{toggle = Toggle},
-                                             Files3)}
-                end;
-            true ->
-                {FilesSizesL0, Files3}
-        end
-    end, {[], Files2}, Files2),
-    FilesSizeN = lists:foldl(fun({_, OldContentSize}, FilesSize3) ->
-        FilesSize3 - OldContentSize
-    end, FilesSize2, FilesSizesLN),
-    {FilesSizeN, FilesN}.
+                        {FilesSizesL0, Files3}
+                end
+            end, {[], Files2}, Files2),
+            FilesSizeN = lists:foldl(fun({_, OldContentSize}, FilesSize3) ->
+                FilesSize3 - OldContentSize
+            end, FilesSize2, FilesSizesLN),
+            {FilesSizeN, FilesN};
+        true ->
+            fold_files_exact(ReadL, Directory, Frefresh, Arefresh)
+    end.
+
+-type fold_files_f() :: fun((string(), string(), #file_info{},
+                             integer() | undefined,
+                             non_neg_integer() | undefined,
+                             any()) -> any()).
+
+-spec fold_files_exact(ReadL :: read_list_exact(),
+                       Directory :: string() | binary(),
+                       F :: fold_files_f(),
+                       A :: any()) ->
+    any().
+
+fold_files_exact(ReadL, Directory, F, A)
+    when is_function(F, 6) ->
+    fold_files_exact_element(ReadL, Directory, F, A).
+
+fold_files_exact_element([], _, _, A) ->
+    A;
+fold_files_exact_element([{FileName, SegmentI, SegmentSize} | ReadL],
+                         Directory, F, A) ->
+    FilePath = filename:join(Directory, FileName),
+    case read_file_info(FilePath) of
+        {ok, #file_info{type = Type} = FileInfo} ->
+            true = (Type /= directory),
+            fold_files_exact_element(ReadL, Directory, F,
+                                     F(FilePath, FileName, FileInfo,
+                                       SegmentI, SegmentSize, A));
+        {error, Reason} ->
+            ?LOG_WARN("file ~s error: ~p", [FilePath, Reason]),
+            fold_files_exact_element(ReadL, Directory, F, A)
+    end.
 
 -spec fold_files(Directory :: string() | binary(),
-                 F :: fun((string(), string(), #file_info{}, any()) -> any()),
+                 F :: fold_files_f(),
                  A :: any()) ->
     any().
 
@@ -1602,7 +1779,7 @@ files_refresh(Directory, Toggle,
 % with recursive always true, with a regex of ".*",
 % with links included, and with both the filename and file_info provided to F
 fold_files(Directory, F, A)
-    when is_function(F, 4) ->
+    when is_function(F, 6) ->
     case file:list_dir_all(Directory) of
         {ok, FileNames} ->
             fold_files_directory(FileNames, Directory, F, A);
@@ -1612,7 +1789,7 @@ fold_files(Directory, F, A)
     end.
 
 fold_files(Directory, Path, F, A)
-    when is_function(F, 4) ->
+    when is_function(F, 6) ->
     case file:list_dir_all(filename:join(Directory, Path)) of
         {ok, FileNames} ->
             fold_files_directory([filename:join(Path, FileName) ||
@@ -1637,7 +1814,9 @@ fold_files_f(FilePath, FileName, FileInfo, F, A) ->
         is_list(FileName) ->
             FileName
     end,
-    F(FilePathString, FileNameString, FileInfo, A).
+    SegmentI = undefined,
+    SegmentSize = undefined,
+    F(FilePathString, FileNameString, FileInfo, SegmentI, SegmentSize, A).
 
 fold_files_directory([], _, _, A) ->
     A;

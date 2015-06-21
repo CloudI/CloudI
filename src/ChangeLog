@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the read configuration argument to cloudi_service_filesystem
+      (to allow explicitly specifying the files to read from a directory
+       and the segment of the file to read)
+
 2015-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Resolve file modeline differences
