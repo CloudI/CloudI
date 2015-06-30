@@ -49,6 +49,8 @@
 -compile({nowarn_unused_function,
           [{recv_async_select_random, 1},
            {recv_async_select_oldest, 1}]}).
+-compile({inline,
+          [{cancel_timer_async, 1}]}).
 
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
@@ -404,6 +406,19 @@ send_timeout_dead(Pid,
     end,
     State#state{send_timeouts = NewSendTimeouts,
                 send_timeout_monitors = dict:erase(Pid, SendTimeoutMonitors)}.
+
+-ifdef(ERLANG_OTP_VERSION_16).
+cancel_timer_async(Tref) ->
+    erlang:cancel_timer(Tref).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+cancel_timer_async(Tref) ->
+    erlang:cancel_timer(Tref).
+-else. % >= ERLANG_OTP_VERSION_18
+cancel_timer_async(Tref) ->
+    erlang:cancel_timer(Tref, [{async, true}]).
+-endif.
+-endif.
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;

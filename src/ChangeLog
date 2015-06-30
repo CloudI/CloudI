@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change usage of erlang:cancel_timer/1 to erlang:cancel_timer/2 for
+      Erlang >= 18.0, when the time remaining is not used for service
+      request timeout adjustment
+
 2015-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the read configuration argument to cloudi_service_filesystem
