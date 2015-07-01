@@ -164,7 +164,7 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
 
     case cloudi_service:get_pid(Dispatcher, Name) of
         {ok, PatternPid} ->
-            <<Iterations:32/unsigned-integer-native,
+            <<_Iterations:32/unsigned-integer-native,
               _Step:32/unsigned-integer-native,
               IndexBin/binary>> = Request,
             IndexStr = erlang:binary_to_list(IndexBin),

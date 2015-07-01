@@ -119,16 +119,31 @@
 
 {overlay,
  [
-  {mkdir, "bin"},
   {mkdir, "etc"},
-  {copy, "@builddir@/rel/files/app.config", "etc/app.config"},
-  {copy, "@srcdir@/rel/files/erl", "{{erts_vsn}}/bin/erl"},
-  {copy, "@srcdir@/rel/files/nodetool", "{{erts_vsn}}/bin/nodetool"},
-  {copy, "@srcdir@/rel/files/install_upgrade.escript",
-         "bin/install_upgrade.escript"},
-  {copy, "@srcdir@/rel/files/cloudi", "bin/cloudi"},
-  {copy, "@srcdir@/rel/files/vm.args", "etc/vm.args"}
+  {copy,
+   "@builddir@/rel/files/app.config",
+   "etc/app.config"},
+  {copy,
+   "@builddir@/rel/files/vm.args",
+   "etc/vm.args"},
+  {mkdir, "bin"},
+  {copy,
+   "@srcdir@/rel/files/erl",
+   "{{erts_vsn}}/bin/erl"},
+  {copy,
+   "@srcdir@/rel/files/nodetool",
+   "{{erts_vsn}}/bin/nodetool"},
+  {copy,
+   "@srcdir@/rel/files/install_upgrade.escript",
+   "bin/install_upgrade.escript"},
+  {copy,
+   "@srcdir@/rel/files/cloudi",
+   "bin/cloudi"}
   % windows scripts
-  %{copy, "@srcdir@/rel/files/cloudi.cmd", "bin/cloudi.cmd"},
-  %{copy, "@srcdir@/rel/files/start_erl.cmd", "bin/start_erl.cmd"}
+  %{copy,
+  % "@srcdir@/rel/files/cloudi.cmd",
+  % "bin/cloudi.cmd"},
+  %{copy,
+  % "@srcdir@/rel/files/start_erl.cmd",
+  % "bin/start_erl.cmd"}
  ]}.
