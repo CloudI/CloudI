@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add "+C multi_time_warp" to the Erlang/OTP command line arguments
+      when 18.0 or higher is used for CloudI configuration
+
 2015-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change usage of erlang:cancel_timer/1 to erlang:cancel_timer/2 for
