@@ -279,9 +279,9 @@ new(Options)
         GroupsStatic =:= true ->
             OldGroups;
         GroupsStatic =:= false ->
-            ok = destination_refresh_first(DestRefresh,
-                                           DestRefreshStart,
-                                           Scope),
+            destination_refresh_first(DestRefresh,
+                                      DestRefreshStart,
+                                      Scope),
             if
                 ((DestRefresh =:= lazy_closest) orelse
                  (DestRefresh =:= lazy_furthest) orelse
@@ -293,9 +293,9 @@ new(Options)
                 DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
                     receive
                         {cloudi_cpg_data, G} ->
-                            ok = destination_refresh_start(DestRefresh,
-                                                           DestRefreshDelay,
-                                                           Scope),
+                            destination_refresh_start(DestRefresh,
+                                                      DestRefreshDelay,
+                                                      Scope),
                             G
                     after
                         ?DEFAULT_DEST_REFRESH_START ->
@@ -338,7 +338,7 @@ destinations_refresh(#cloudi_context{
                          dest_refresh_delay = DestRefreshDelay,
                          scope = Scope} = Context,
                      {cloudi_cpg_data, Groups}) ->
-    ok = destination_refresh_start(DestRefresh, DestRefreshDelay, Scope),
+    destination_refresh_start(DestRefresh, DestRefreshDelay, Scope),
     Context#cloudi_context{cpg_data = Groups}.
 
 %%-------------------------------------------------------------------------
@@ -1602,8 +1602,8 @@ result(#cloudi_context{
            cpg_data_stale = SendGroups} = Context, Result) ->
     if
         SendGroups =:= true ->
-            ok = destination_refresh_start(DestRefresh,
-                                           DestRefreshDelay, Scope),
+            destination_refresh_start(DestRefresh,
+                                      DestRefreshDelay, Scope),
             {Result, Context#cloudi_context{cpg_data_stale = false}};
         SendGroups =:= false ->
             {Result, Context}
