@@ -281,7 +281,7 @@ new(Options)
         GroupsStatic =:= false ->
             destination_refresh_first(DestRefresh,
                                       DestRefreshStart,
-                                      Scope),
+                                      ConfiguredScope),
             if
                 ((DestRefresh =:= lazy_closest) orelse
                  (DestRefresh =:= lazy_furthest) orelse
@@ -295,7 +295,7 @@ new(Options)
                         {cloudi_cpg_data, G} ->
                             destination_refresh_start(DestRefresh,
                                                       DestRefreshDelay,
-                                                      Scope),
+                                                      ConfiguredScope),
                             G
                     after
                         ?DEFAULT_DEST_REFRESH_START ->

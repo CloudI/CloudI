@@ -3,7 +3,7 @@
 
 2015-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Fix bug with lazy destination refresh method usage in the cloudi module
+    * Fix bugs with lazy destination refresh method usage in the cloudi module
 
 2015-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
