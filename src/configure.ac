@@ -457,6 +457,12 @@ AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 AC_SUBST([ERLC_OPTS],
          ["-DERLANG_OTP_VER_${ERLANG_OTP_VER} -DERLANG_OTP_VER_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"])
+if test "$ERLANG_OTP_VER_MAJOR" -ge 18 ; then
+ERL_OPTS="+C multi_time_warp"
+else
+ERL_OPTS=""
+fi
+AC_SUBST(ERL_OPTS)
 
 # rebar dependency
 AC_ARG_VAR([REBAR],[rebar executable])
@@ -532,6 +538,11 @@ AC_CONFIG_FILES([
     rebar_src.config
     rebar_src_test.config
     reltool.config
+    rel/files/vm.args
+    Makefile
+    lib/Makefile
+    lib/cloudi_core/Makefile
+    lib/cloudi_core/cxx_src/Makefile
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_db/src/cloudi_service_db.app.src
@@ -559,7 +570,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
     lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
     lib/service/src/service.app.src
-    Makefile
     api/Makefile
     api/c/Makefile
     api/erlang/Makefile
@@ -576,9 +586,6 @@ AC_CONFIG_FILES([
     api/php/Makefile
     api/python/Makefile
     api/ruby/Makefile
-    lib/Makefile
-    lib/cloudi_core/Makefile
-    lib/cloudi_core/cxx_src/Makefile
     service_api/Makefile
     service_api/dashboard/Makefile
     service_api/dashboard/css/Makefile

@@ -25,6 +25,9 @@
 ## Distributed Erlang buffer size
 #+zdbbl 1024 # kB (valid values are 1 - 2097151)
 
+# CloudI configuration arguments specifically for Erlang/OTP @ERLANG_OTP_VER@
+@ERL_OPTS@
+
 # Integration Tests code paths for the default configuration
 -pz tests/hexpi/ebin/
 -pz tests/http_req/ebin/

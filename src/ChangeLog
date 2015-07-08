@@ -5,6 +5,17 @@
 
     * Fix bug with lazy destination refresh method usage in the cloudi module
 
+2015-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add "+C multi_time_warp" to the Erlang/OTP command line arguments
+      when 18.0 or higher is used for CloudI configuration
+
+2015-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change usage of erlang:cancel_timer/1 to erlang:cancel_timer/2 for
+      Erlang >= 18.0, when the time remaining is not used for service
+      request timeout adjustment
+
 2015-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the read configuration argument to cloudi_service_filesystem

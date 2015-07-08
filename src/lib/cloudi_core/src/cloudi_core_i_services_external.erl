@@ -361,7 +361,7 @@ init([Protocol, SocketPath,
                                aspects_init_after = Aspects}} = State) ->
     % initialization is now complete because the CloudI API poll function
     % has been called for the first time (i.e., by the service code)
-    erlang:cancel_timer(InitTimer),
+    cancel_timer_async(InitTimer),
     case aspects_init(Aspects, CommandLine, Prefix, Timeout,
                       ServiceState) of
         {ok, NewServiceState} ->
@@ -1060,7 +1060,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
             if
                 ResponseTimeoutAdjustment;
                 OldTimeout > RequestTimeoutImmediateMax ->
-                    erlang:cancel_timer(Tref);
+                    cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
                     ok
@@ -1111,7 +1111,7 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
             if
                 ResponseTimeoutAdjustment;
                 OldTimeout > RequestTimeoutImmediateMax ->
-                    erlang:cancel_timer(Tref);
+                    cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
                     ok

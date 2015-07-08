@@ -1258,7 +1258,7 @@ handle_info({'cloudi_service_return_async',
             if
                 ResponseTimeoutAdjustment;
                 OldTimeout > RequestTimeoutImmediateMax ->
-                    erlang:cancel_timer(Tref);
+                    cancel_timer_async(Tref);
                 true ->
                     ok
             end,
@@ -1285,7 +1285,7 @@ handle_info({'cloudi_service_return_async',
             if
                 ResponseTimeoutAdjustment;
                 OldTimeout > RequestTimeoutImmediateMax ->
-                    erlang:cancel_timer(Tref);
+                    cancel_timer_async(Tref);
                 true ->
                     ok
             end,
@@ -1327,7 +1327,7 @@ handle_info({'cloudi_service_return_sync',
             if
                 ResponseTimeoutAdjustment;
                 OldTimeout > RequestTimeoutImmediateMax ->
-                    erlang:cancel_timer(Tref);
+                    cancel_timer_async(Tref);
                 true ->
                     ok
             end,
@@ -1344,21 +1344,10 @@ handle_info({'cloudi_service_return_sync',
 
 handle_info({'cloudi_service_send_async_timeout', TransId},
             #state{send_timeouts = SendTimeouts,
-                   receiver_pid = ReceiverPid,
-                   options = #config_service_options{
-                       response_timeout_adjustment =
-                           ResponseTimeoutAdjustment}} = State) ->
+                   receiver_pid = ReceiverPid} = State) ->
     hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
-            if
-                ResponseTimeoutAdjustment ->
-                    % should never happen, timer should have been cancelled
-                    % if the send_async already returned
-                    ?LOG_WARN("send timeout not found (trans_id=~s)",
-                              [cloudi_x_uuid:uuid_to_string(TransId)]);
-                true ->
-                    ok % cancel_timer avoided due to latency
-            end,
+            % timer may have sent before being cancelled
             {noreply, State};
         {ok, {active, Pid, _}} ->
             ReceiverPid ! {'timeout_async_active', TransId},
@@ -1368,21 +1357,10 @@ handle_info({'cloudi_service_send_async_timeout', TransId},
     end);
 
 handle_info({'cloudi_service_send_sync_timeout', TransId},
-            #state{send_timeouts = SendTimeouts,
-                   options = #config_service_options{
-                       response_timeout_adjustment =
-                           ResponseTimeoutAdjustment}} = State) ->
+            #state{send_timeouts = SendTimeouts} = State) ->
     hibernate_check(case dict:find(TransId, SendTimeouts) of
         error ->
-            if
-                ResponseTimeoutAdjustment ->
-                    % should never happen, timer should have been cancelled
-                    % if the send_sync already returned
-                    ?LOG_WARN("send timeout not found (trans_id=~s)",
-                              [cloudi_x_uuid:uuid_to_string(TransId)]);
-                true ->
-                    ok % cancel_timer avoided due to latency
-            end,
+            % timer may have sent before being cancelled
             {noreply, State};
         {ok, {Client, Pid, _}} ->
             gen_server:reply(Client, {error, timeout}),
