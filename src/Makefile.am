@@ -871,8 +871,7 @@ api-ruby-test:
 
 test: all $(PYTHON_TEST_HOOK) $(RUBY_TEST_HOOK)
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct eunit)
 
 tests: test
 
