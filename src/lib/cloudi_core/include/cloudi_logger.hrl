@@ -101,10 +101,16 @@
 -define(LOG_METADATA_SET(L),
     cloudi_core_i_logger:metadata_set(L)).
 
--ifndef(FUNCTION).
+-ifndef(FUNCTION). % atom
 -define(FUNCTION,
     erlang:element(2,
         erlang:element(2,
             erlang:process_info(self(), current_function)))).
+-endif.
+-ifndef(FUNCTION_ARITY). % string
+-define(FUNCTION_ARITY,
+    lists:concat(erlang:tl(lists:merge(
+        [["/", E] || E <- erlang:tl(erlang:tuple_to_list(erlang:element(2,
+            erlang:process_info(self(), current_function))))])))).
 -endif.
 
