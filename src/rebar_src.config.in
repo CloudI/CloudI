@@ -87,7 +87,6 @@
   %{d, 'CLOUDI_SERVICE_OLD'}, % ignore cloudi_service behaviour changes in 1.4.0
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
-  %{platform_define, "^[0-9]+", namespaced_types},
   debug_info,
   warnings_as_errors,
   strict_validation,

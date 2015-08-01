@@ -43,9 +43,11 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/quickrand/src \
      -d $(top_srcdir)/lib/reltool_util/src \
      -d $(top_srcdir)/lib/supool/src \
+     -d $(top_srcdir)/lib/supool/test \
      -d $(top_srcdir)/lib/trie/src \
      -d $(top_srcdir)/lib/uuid/src \
      -d $(top_srcdir)/lib/varpool/src \
+     -d $(top_srcdir)/lib/varpool/test \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
