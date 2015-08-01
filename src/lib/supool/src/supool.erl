@@ -3,13 +3,13 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==Pool==
-%%% Simple process pool with round-robin.
+%%% ==Supervisor Pool==
+%%% Simple supervisor process pool with round-robin.
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,60 +44,123 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_pool).
+-module(supool).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/4,
+-export([start_link/3,
+         start_link/4,
          get/1]).
+
+%% internal interface
+-export([pool_worker_start_link/2]).
 
 %% gen_server callbacks
 -export([init/1,
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include("cloudi_logger.hrl").
+-include("supool_logging.hrl").
 
 -record(state,
     {
-        pool,
-        count,
-        supervisor
+        supervisor :: pid(),
+        pool = undefined :: tuple() | undefined,
+        count = undefined :: pos_integer() | undefined
     }).
+
+-type options() ::
+    list({max_r, non_neg_integer()} |
+         {max_t, pos_integer()}).
+-type child_spec() ::
+    {Id :: any(),
+     StartFunc :: {module(), atom(), list()},
+     Restart :: permanent | transient | temporary,
+     Shutdown :: brutal_kill | pos_integer(),
+     Type :: worker | supervisor,
+     Modules :: [module()] | dynamic}.
+-export_type([options/0,
+              child_spec/0]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Name, [_ | _] = ChildSpecs, Supervisor, Parent)
-    when is_atom(Name), is_list(ChildSpecs), is_pid(Supervisor),
-         is_pid(Parent) ->
-    gen_server:start_link({local, Name}, ?MODULE,
-                          [ChildSpecs, Supervisor, Parent], []).
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start the pool supervisor.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_link(Name :: atom(),
+                 Count :: pos_integer(),
+                 ChildSpec :: child_spec()) ->
+    {ok, pid()} |
+    {error, any()}.
+
+start_link(Name, Count, ChildSpec) ->
+    supool_sup:start_link(Name, Count, ChildSpec, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Start the pool supervisor with restart options.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_link(Name :: atom(),
+                 Count :: pos_integer(),
+                 ChildSpec :: child_spec(),
+                 Options :: options()) ->
+    {ok, pid()} |
+    {error, any()}.
+
+start_link(Name, Count, ChildSpec, Options) ->
+    supool_sup:start_link(Name, Count, ChildSpec, Options).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get a pool process.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get(Name :: atom()) ->
+    pid() | undefined.
 
 get(Name)
     when is_atom(Name) ->
-    try gen_server:call(Name, get)
+    try gen_server:call(Name, get, infinity)
     catch
-        exit:{Reason, _} ->
-            {error, Reason}
+        exit:{noproc, _} ->
+            undefined
     end.
+
+%%%------------------------------------------------------------------------
+%%% Internal interface functions
+%%%------------------------------------------------------------------------
+
+-spec pool_worker_start_link(Name :: atom(),
+                             Supervisor :: pid()) ->
+    {ok, pid()} |
+    {error, any()}.
+
+pool_worker_start_link(Name, Supervisor)
+    when is_atom(Name), is_pid(Supervisor) ->
+    gen_server:start_link({local, Name}, ?MODULE, [Supervisor], []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ChildSpecs, Supervisor, Parent]) ->
-    self() ! {start, ChildSpecs},
-    cloudi_core_i_pool_sup:start_link_done(Parent),
+init([Supervisor]) ->
+    erlang:put(current, 1),
+    self() ! restart,
     {ok, #state{supervisor = Supervisor}}.
-
 
 handle_call(get, _, #state{pool = Pool,
                            count = Count} = State) ->
@@ -108,18 +171,12 @@ handle_call(get, _, #state{pool = Pool,
         true ->
             {reply, Pid, State};
         false ->
-            {NewI, NewState} = update(I, State),
-            if
-                NewState#state.count == 0 ->
-                    {stop, {error, noproc}, {error, noproc}, NewState};
-                true ->
-                    {reply, erlang:element(NewI, NewState#state.pool), NewState}
-            end
+            update(I, State)
     end;
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+    {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
      error, State}.
 
 handle_cast(Request, State) ->
@@ -127,15 +184,27 @@ handle_cast(Request, State) ->
     {noreply, State}.
 
 handle_info({start, ChildSpecs}, #state{supervisor = Supervisor} = State) ->
-    case cloudi_core_i_pool_sup:start_children(Supervisor, ChildSpecs) of
-        [] ->
+    case supool_sup:start_children(Supervisor, ChildSpecs) of
+        {ok, []} ->
             {stop, {error, noproc}, State};
-        Pids when is_list(Pids) ->
-            erlang:put(current, 1),
+        {ok, Pids} ->
             {noreply, State#state{pool = erlang:list_to_tuple(Pids),
                                   count = erlang:length(Pids)}};
         {error, _} = Error ->
             {stop, Error, State}
+    end;
+
+handle_info(restart, #state{supervisor = Supervisor} = State) ->
+    Pids = supool_sup:which_children(Supervisor),
+    case erlang:length(Pids) of
+        0 ->
+            % pool worker started for the first time
+            {noreply, State};
+        Count ->
+            % pool worker restarted
+            {noreply,
+             State#state{pool = erlang:list_to_tuple(Pids),
+                         count = Count}}
     end;
 
 handle_info(Request, State) ->
@@ -153,15 +222,21 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 update(I, #state{supervisor = Supervisor} = State) ->
-    Pids = cloudi_core_i_pool_sup:which_children(Supervisor),
-    Count = erlang:length(Pids),
-    NewState = State#state{pool = erlang:list_to_tuple(Pids),
-                           count = Count},
-    if
-        I > Count ->
-            erlang:put(current, if 1 == Count -> 1; true -> 2 end),
-            {1, NewState};
-        true ->
-            {I, NewState}
+    Pids = supool_sup:which_children(Supervisor),
+    case erlang:length(Pids) of
+        0 ->
+            {stop, {error, noproc}, undefined, State};
+        Count ->
+            Pool = erlang:list_to_tuple(Pids),
+            NewI = if
+                I > Count ->
+                    erlang:put(current, if 1 == Count -> 1; true -> 2 end),
+                    1;
+                true ->
+                    I
+            end,
+            {reply, erlang:element(NewI, Pool),
+             State#state{pool = Pool,
+                         count = Count}}
     end.
 

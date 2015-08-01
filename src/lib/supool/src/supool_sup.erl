@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,107 +43,126 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.2.0 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_core_i_pool_sup).
+-module(supool_sup).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(supervisor).
 
 %% external interface
--export([start_link/3, start_link_done/1,
-         start_children/2, which_children/1]).
+-export([start_link/4,
+         start_children/2,
+         which_children/1]).
 
 %% supervisor callbacks
 -export([init/1]).
+
+-define(DEFAULT_MAX_R,                              5). % max restart count
+-define(DEFAULT_MAX_T,                            300). % max time in seconds
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
+-spec start_link(Name :: atom(),
+                 Count :: pos_integer(),
+                 ChildSpec :: supool:child_spec(),
+                 Options :: supool:options()) ->
+    {ok, pid()} |
+    {error, any()}.
 
-start_link(Name, Count, {_, StartFunc, Restart, Shutdown, Type, Modules})
-    when is_atom(Name), is_integer(Count), Count > 0 ->
+start_link(Name, Count,
+           {_, StartFunc, Restart, Shutdown, Type, Modules}, Options)
+    when is_atom(Name), is_integer(Count), Count > 0, is_list(Options) ->
     ChildSpecs = lists:foldl(fun(Id, L) ->
         [{Id, StartFunc, Restart, Shutdown, Type, Modules} | L]
-    end, [], lists:seq(1, Count)),
-    Result = supervisor:start_link(?MODULE, [Name, ChildSpecs, self()]),
+    end, [], lists:seq(Count, 1, -1)),
+    Result = supervisor:start_link(?MODULE, [Name, Options]),
     case Result of
         {ok, _} ->
-            % make the startup synchronous to avoid causing problems for
-            % supervisor dependencies listed sequentially
-            % (i.e., within the same supervisor)
-            receive startup_done -> ok end,
+            PoolWorker = erlang:whereis(Name),
+            true = is_pid(PoolWorker),
+            % needs to be the first message to the pool worker process to
+            % make sure pool processes exist before they are requested
+            PoolWorker ! {start, ChildSpecs},
             Result;
         _ ->
             Result
     end.
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
-
-start_link_done(Parent)
-    when is_pid(Parent) ->
-    Parent ! startup_done,
-    ok.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
+-spec start_children(Supervisor :: pid(),
+                     ChildSpecs :: nonempty_list(supool:child_spec())) ->
+    {ok, list(pid())} |
+    {error, any()}.
 
 start_children(Supervisor, ChildSpecs)
     when is_pid(Supervisor), is_list(ChildSpecs) ->
-    cloudi_lists:itera(fun(Child, L, F) ->
-        case supervisor:start_child(Supervisor, Child) of
-            {ok, Pid} ->
-                F([Pid | L]);
-            {ok, Pid, _} ->
-                F([Pid | L]);
-            {error, _} = Error ->
-                Error
-        end
-    end, [], ChildSpecs).
+    start_child(ChildSpecs, [], Supervisor).
 
-%%-------------------------------------------------------------------------
-%% @doc
-%% @end
-%%-------------------------------------------------------------------------
+-spec which_children(Supervisor :: pid()) ->
+    list(pid()).
 
 which_children(Supervisor)
     when is_pid(Supervisor) ->
-    lists:foldl(fun
-        ({cloudi_core_i_pool, _, _, _}, L) ->
-            L;
-        ({_, undefined, _, _}, L) ->
-            L;
-        ({_, Pid, _, _}, L) ->
-            [Pid | L]
-    end, [], supervisor:which_children(Supervisor)).
+    which_child(supervisor:which_children(Supervisor), []).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
 %%%------------------------------------------------------------------------
 
-init([Name, ChildSpecs, Parent]) ->
-    MaxRestarts = 5,
-    MaxTime = 60, % seconds (1 minute)
-    Shutdown = 2000, % milliseconds (2 seconds)
-    {ok, {{one_for_one, MaxRestarts, MaxTime}, 
-          [{cloudi_core_i_pool,
-            {cloudi_core_i_pool, start_link,
-             [Name, ChildSpecs, self(), Parent]},
-            permanent, Shutdown, worker, [cloudi_core_i_pool]}]}}.
+init([Name, Options]) ->
+    Defaults = [
+        {max_r,            ?DEFAULT_MAX_R},
+        {max_t,            ?DEFAULT_MAX_T}],
+    [MaxR, MaxT] = take_values(Defaults, Options),
+    true = is_integer(MaxR) andalso (MaxR >= 0),
+    true = is_integer(MaxT) andalso (MaxT >= 1),
+    {ok, {{one_for_one, MaxR, MaxT}, 
+          [{supool,
+            {supool, pool_worker_start_link, [Name, self()]},
+            permanent, brutal_kill, worker, [supool]}]}}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+start_child([], Pids, _) ->
+    {ok, lists:reverse(Pids)};
+start_child([ChildSpec | ChildSpecs], Pids, Supervisor) ->
+    case supervisor:start_child(Supervisor, ChildSpec) of
+        {ok, Pid} ->
+            start_child(ChildSpecs, [Pid | Pids], Supervisor);
+        {ok, Pid, _} ->
+            start_child(ChildSpecs, [Pid | Pids], Supervisor);
+        {error, _} = Error ->
+            Error
+    end.
+
+which_child([], L) ->
+    L;
+which_child([{supool, _, _, _} | Children], L) ->
+    which_child(Children, L);
+which_child([{_, undefined, _, _} | Children], L) ->
+    which_child(Children, L);
+which_child([{_, Pid, _, _} | Children], L) ->
+    which_child(Children, [Pid | L]).
+
+take_values(DefaultList, List)
+    when is_list(DefaultList), is_list(List) ->
+    take_values([], DefaultList, List).
+
+take_values(Result, [], List)
+    when is_list(Result), is_list(List) ->
+    lists:reverse(Result) ++ List;
+
+take_values(Result, [{Key, Default} | DefaultList], List)
+    when is_list(Result), is_atom(Key), is_list(List) ->
+    case lists:keytake(Key, 1, List) of
+        false ->
+            take_values([Default | Result], DefaultList, List);
+        {value, {Key, Value}, RemainingList} ->
+            take_values([Value | Result], DefaultList, RemainingList)
+    end.

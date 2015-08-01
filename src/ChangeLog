@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Erlang 18.0 bug with erlang:cancel_timer/2 usage
+    * Add supool and varpool as cloudi_core dependencies
+      (supool was abstracted out of cloudi_core)
+
 2015-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add FUNCTION_ARITY macro to cloudi_logger.hrl

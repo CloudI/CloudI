@@ -207,8 +207,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                         {ok, Pids, Ports} ->
                             Rlimits = rlimits(ConfigOptions),
                             Owner = owner(ConfigOptions, EnvironmentLookup),
-                            case cloudi_core_i_pool:
-                                 get(cloudi_core_i_os_spawn) of
+                            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
                                 SpawnProcess when is_pid(SpawnProcess) ->
                                     SpawnProtocol = if
                                         Protocol =:= tcp ->
@@ -230,8 +229,8 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                          Environment,
                                                          EnvironmentLookup,
                                                          Protocol, BufferSize);
-                                {error, _} = Error ->
-                                    Error
+                                undefined ->
+                                    {error, noproc}
                             end;
                         {error, _} = Error ->
                             Error

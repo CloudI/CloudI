@@ -174,11 +174,11 @@ child_specification(cloudi_core_i_services_internal_sup) ->
 child_specification(cloudi_core_i_os_spawn_pool) ->
     Shutdown = 2000, % milliseconds
     {cloudi_core_i_os_spawn_pool,
-     {cloudi_core_i_pool_sup, start_link,
+     {cloudi_x_supool_sup, start_link,
       [cloudi_core_i_os_spawn, os_process_count(),
        {undefined, {cloudi_core_i_os_spawn, start_link, []},
-        permanent, Shutdown, worker, [cloudi_core_i_os_spawn]}]},
-     permanent, infinity, supervisor, [cloudi_core_i_pool_sup]};
+        permanent, Shutdown, worker, [cloudi_core_i_os_spawn]}, []]},
+     permanent, infinity, supervisor, [cloudi_x_supool_sup]};
 
 child_specification(cloudi_core_i_services_external_sup) ->
     {cloudi_core_i_services_external_sup,
@@ -186,8 +186,8 @@ child_specification(cloudi_core_i_services_external_sup) ->
      permanent, infinity, supervisor, [cloudi_core_i_services_external_sup]}.
 
 % determine the number of cloudi_core_i_os_spawn child processes within the
-% cloudi_core_i_pool_sup, referenced by a cloudi_core_i_pool process with a
-% locally registered name of 'cloudi_core_i_os_spawn'
+% cloudi_x_supool_sup, referenced by the locally registered name (of the pool):
+% 'cloudi_core_i_os_spawn'
 
 %os_process_count() ->
 %    1.

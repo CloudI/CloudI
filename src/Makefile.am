@@ -42,8 +42,10 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/pqueue/test \
      -d $(top_srcdir)/lib/quickrand/src \
      -d $(top_srcdir)/lib/reltool_util/src \
+     -d $(top_srcdir)/lib/supool/src \
      -d $(top_srcdir)/lib/trie/src \
      -d $(top_srcdir)/lib/uuid/src \
+     -d $(top_srcdir)/lib/varpool/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
@@ -143,7 +145,9 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/quickrand/ebin
 	$(MKDIR_P) lib/cpg/ebin
 	$(MKDIR_P) lib/erlang_term/ebin
+	$(MKDIR_P) lib/supool/ebin
 	$(MKDIR_P) lib/uuid/ebin
+	$(MKDIR_P) lib/varpool/ebin
 	$(MKDIR_P) lib/trie/ebin
 	$(MKDIR_P) lib/reltool_util/ebin
 	$(MKDIR_P) lib/key2value/ebin
@@ -270,9 +274,15 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/erlang_term/src && \
         test ! -e $(SCOPE_EXTERNAL)erlang_term.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/erlang_term/src/$(SCOPE_EXTERNAL)erlang_term.app.src || exit 0)
+	(cd $(top_srcdir)/lib/supool/src && \
+        test ! -e $(SCOPE_EXTERNAL)supool.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/supool/src/$(SCOPE_EXTERNAL)supool.app.src || exit 0)
 	(cd $(top_srcdir)/lib/uuid/src && \
         test ! -e $(SCOPE_EXTERNAL)uuid.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/uuid/src/$(SCOPE_EXTERNAL)uuid.app.src || exit 0)
+	(cd $(top_srcdir)/lib/varpool/src && \
+        test ! -e $(SCOPE_EXTERNAL)varpool.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/varpool/src/$(SCOPE_EXTERNAL)varpool.app.src || exit 0)
 	(cd $(top_srcdir)/lib/trie/src && \
         test ! -e $(SCOPE_EXTERNAL)trie.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/trie/src/$(SCOPE_EXTERNAL)trie.app.src || exit 0)

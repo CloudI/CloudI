@@ -40,8 +40,10 @@
   "lib/pqueue",
   "lib/quickrand",
   "lib/reltool_util",
+  "lib/supool",
   "lib/trie",
-  "lib/uuid"
+  "lib/uuid",
+  "lib/varpool"
   @SERVICE_PATH@]}.
 {edoc_opts,
  [{preprocess, true},

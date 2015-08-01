@@ -416,7 +416,7 @@ cancel_timer_async(Tref) ->
     erlang:cancel_timer(Tref).
 -else. % >= ERLANG_OTP_VERSION_18
 cancel_timer_async(Tref) ->
-    erlang:cancel_timer(Tref, [{async, true}]).
+    erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
 -endif.
 -endif.
 
