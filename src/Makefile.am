@@ -388,9 +388,15 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/erlang_term && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/erlang_term/ebin || exit 0)
+	(cd $(top_srcdir)/lib/supool && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/supool/ebin || exit 0)
 	(cd $(top_srcdir)/lib/uuid && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/uuid/ebin || exit 0)
+	(cd $(top_srcdir)/lib/varpool && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/varpool/ebin || exit 0)
 	(cd $(top_srcdir)/lib/trie && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/trie/ebin || exit 0)
