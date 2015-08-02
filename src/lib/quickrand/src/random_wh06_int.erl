@@ -2,34 +2,31 @@
 %% to use Wichmann-Hill algorithm published on 2006
 %% which succeeds the old AS183 algorithm in 1982.
 
-%% This version uses big integers, as Michael Truog proposed.
-%% reference git commit data URL:
-%% https://github.com/okeuday/sfmt-erlang/commit/209f0c1300d454f4d2c16d0c952a7e748677e8d3
-
 %% Copyright (c) 2010 Kenji Rikitake All rights reserved.
-%% Copyright (c) 2012 Michael Truog All rights reserved.
+%% Copyright (c) 2012-2015 Michael Truog All rights reserved.
 
 %%
 %% %CopyrightBegin%
 %% 
-%% Copyright Ericsson AB 1996-2009. All Rights Reserved.
+%% Copyright Ericsson AB 1996-2011. All Rights Reserved.
 %% 
-%% The contents of this file are subject to the Erlang Public License,
-%% Version 1.1, (the "License"); you may not use this file except in
-%% compliance with the License. You should have received a copy of the
-%% Erlang Public License along with this software. If not, it can be
-%% retrieved online at http://www.erlang.org/.
-%% 
-%% Software distributed under the License is distributed on an "AS IS"
-%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
-%% the License for the specific language governing rights and limitations
-%% under the License.
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
 %% 
 %% %CopyrightEnd%
 %%
 -module(random_wh06_int).
 
-%% Reasonable random number generator.
+%% Reasonable random number generator (period is 2.66e36):
 %%  The method is attributed to B. A. Wichmann and I. D. Hill
 %%  See "Generating good pseudo-random numbers",
 %%  Computational Statistics & Data Analysis 51 (2006) 1614-1622.
