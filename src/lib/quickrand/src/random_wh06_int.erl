@@ -64,8 +64,8 @@
 %%   so w * 21267638781707063560975648195455661513.0 == I,
 %%   based on modular arithmetic)
 %%
-%%  The algorithm provides 124 bits of randomness:
-%%  1> (math:log(21267638781707063560975648195455661513) / math:log(2)) + 1.
+%%  The algorithm provides 123 bits of randomness:
+%%  1> math:log(21267638781707063560975648195455661513) / math:log(2).
 %%
 
 -export([seed/0, seed/1, seed/4,
