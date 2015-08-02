@@ -7,8 +7,14 @@
     * Add supool and varpool as cloudi_core dependencies
       (supool was abstracted out of cloudi_core)
     * Update uuid, cpg, quickrand
-        * cpg is no longer related to the Erlang Public License
-          (related to Apache 2.0 license now, due to pg2)
+        * lib/cpg/src/cpg.erl is no longer related to the
+          Erlang Public License (related to Apache 2.0 license now,
+          due to the pg2 module as it currently exists in
+          Erlang/OTP 18.0 kernel-4.0)
+        * lib/quickrand/src/random_wh06_int.erl is no longer related to the
+          Erlang Public License (related to Apache 2.0 license now,
+          due to the random module as it currently exists in
+          Erlang/OTP 18.0 stdlib-2.5)
     * Update jinterface to 1.6 (from Erlang/OTP 18.0)
         * Now all the jinterface source code was added to the JAR
           (previously only the required dependencies were included)
