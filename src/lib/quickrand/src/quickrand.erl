@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -56,6 +56,14 @@
          strong_uniform/1,
          strong_float/0]).
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-define(ERLANG_OTP_VERSION_18_FEATURES, undefined).
+-endif.
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -80,8 +88,9 @@ seed() ->
             error_logger:info_msg("quickrand: low_entropy!~n"),
             crypto:rand_bytes(16)
     end,
-    random:seed(B1, B2, B3),
-    random_wh06_int:seed(B1, B2, B3, B4),
+    _ = random:seed(B1, B2, B3),
+    _ = random_wh06_int:seed(B1, B2, B3, B4),
+    ok = seed_rand(B1, B2, B3),
     ok.
 
 %%-------------------------------------------------------------------------
@@ -91,8 +100,39 @@ seed() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uniform(N :: 1..21267638781707063560975648195455661513) ->
-    1..21267638781707063560975648195455661513.
+-spec uniform(N :: pos_integer()) ->
+    pos_integer().
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+
+uniform(N) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform(1) ->
+    1;
+
+uniform(N) when is_integer(N), N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    (MicroSecs rem N) + 1;
+
+uniform(N) when is_integer(N), N =< 16#ffffffff ->
+    (erlang:abs(erlang:monotonic_time() bxor
+                erlang:unique_integer()) rem N) + 1;
+
+uniform(N) when is_integer(N), N =< 16#03ffffffffffffff ->
+    % assuming exsplus for 58 bits, period 8.31e34
+    rand:uniform(N);
+
+uniform(N) when is_integer(N), N =< 21267638781707063560975648195455661513 ->
+    % 21267638781707063560975648195455661513 ==
+    %   2147483579 * 2147483543 * 2147483423 * 2147483123, period 2.66e36
+    random_wh06_int:uniform(N);
+
+uniform(N) when is_integer(N), N > 21267638781707063560975648195455661513 ->
+    strong_uniform(N).
+
+-else.
 
 uniform(N) when is_integer(N), N < 1 ->
     erlang:exit(badarg);
@@ -106,13 +146,18 @@ uniform(N) when is_integer(N), N < 1000000 ->
     (MicroSecs rem N) + 1;
 
 uniform(N) when is_integer(N), N =< 27817185604309 ->
-    % 27817185604309 == 30269 * 30307 * 30323
+    % 27817185604309 == 30269 * 30307 * 30323, period 2.78e13
     random:uniform(N);
 
 uniform(N) when is_integer(N), N =< 21267638781707063560975648195455661513 ->
     % 21267638781707063560975648195455661513 ==
-    %   2147483579 * 2147483543 * 2147483423 * 2147483123
-    random_wh06_int:uniform(N).
+    %   2147483579 * 2147483543 * 2147483423 * 2147483123, period 2.66e36
+    random_wh06_int:uniform(N);
+
+uniform(N) when is_integer(N), N > 21267638781707063560975648195455661513 ->
+    strong_uniform(N).
+
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -147,4 +192,17 @@ strong_float() ->
     Bytes = 7, % erlang:round(53.0 / 8), % bytes for random number
     MaxRand = 72057594037927935, % (2 ** (7 * 8)) - 1 % max random number
     binary:decode_unsigned(crypto:strong_rand_bytes(Bytes)) / MaxRand.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+seed_rand(B1, B2, B3) ->
+    _ = rand:seed(exsplus, {B1, B2, B3}),
+    ok.
+-else.
+seed_rand(_, _, _) ->
+    ok.
+-endif.
 

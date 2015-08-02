@@ -1,6 +1,8 @@
 CPG ([CloudI](http://cloudi.org) Process Groups)
 ================================================
 
+[![Build Status](https://secure.travis-ci.org/okeuday/cpg.png?branch=master)](http://travis-ci.org/okeuday/cpg)
+
 Purpose
 -------
 
@@ -117,5 +119,5 @@ Michael Truog (mjtruog [at] gmail (dot) com)
 License
 -------
 
-BSD (src/cpg.erl is under the Erlang Public License)
+BSD
 

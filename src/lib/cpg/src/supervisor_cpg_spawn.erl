@@ -346,7 +346,7 @@ nomad_restart(_Reason,
                            restarts = Restarts,
                            max_r = MaxR,
                            max_t = MaxT} = NomadState) ->
-    Now = erlang:now(),
+    Now = timestamp(),
     NewRestarts = lists:dropwhile(fun(T) ->
         timer:now_diff(Now, T) / 1000000 > MaxT
     end, Restarts) ++ [Now],
@@ -382,3 +382,17 @@ extract_child(#state_nomad{pid = Pid,
      {shutdown, Shutdown},
      {child_type, Type}].
 
+-spec timestamp() -> erlang:timestamp().
+
+-ifdef(ERLANG_OTP_VERSION_16).
+timestamp() ->
+    erlang:now().
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+timestamp() ->
+    erlang:now().
+-else. % necessary for Erlang >= 18.0
+timestamp() ->
+    erlang:timestamp().
+-endif.
+-endif.
