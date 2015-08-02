@@ -48,8 +48,6 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_pgsql,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_tokyotyrant,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_filesystem,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_http_client,

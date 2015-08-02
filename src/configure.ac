@@ -554,7 +554,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
     lib/cloudi_service_db_riak/src/cloudi_service_db_riak.app.src
-    lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
     lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
     lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src

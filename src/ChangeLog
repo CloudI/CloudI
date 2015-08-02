@@ -9,6 +9,10 @@
     * Update uuid, cpg, quickrand
         * cpg is no longer related to the Erlang Public License
           (related to Apache 2.0 license now, due to pg2)
+    * Update jinterface to 1.6 (from Erlang/OTP 18.0)
+    * Remove cloudi_service_db_tokyotyrant due to
+      etokyotyrant (medici) being under the Erlang Public License and
+      abandoned (Tokyo Tyrant usage should migrate to Kyoto Tycoon)
 
 2015-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 

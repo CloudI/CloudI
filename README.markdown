@@ -115,7 +115,6 @@ Integration points:
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
   * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
   * Riak with [`cloudi_service_db_riak`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_riak/src/cloudi_service_db_riak.erl)
-  * Tokyo Tyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.erl)
 
 Dynamic configuration uses the CloudI Service API (See [`src/service_api/README`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
 

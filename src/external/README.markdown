@@ -136,15 +136,6 @@ exceptions due to their C integration).
 - `Wed Jun 25 13:01:35 PDT 2014`
 - `MIT`
 
-`etokyotyrant (medici)`
------------------------
-`Erlang TokyoTyrant (native) Driver`
-
-- `https://github.com/okeuday/etokyotyrant`
-- `commit 469ed7086157e06f74174d32bfb83fd9152384fb`
-- `Tue Oct 22 11:58:41 PDT 2013`
-- `Erlang Public License`
-
 `goldrush`
 ----------
 `Small, Fast Event Processing for Erlang`
@@ -158,10 +149,10 @@ exceptions due to their C integration).
 ------------
 `Binary Erlang Term Encoding Java Source Code`
 
-- `http://www.erlang.org/download/otp_src_R16B02.tar.gz`
-- `(in otp_src_R16B02/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
-- `Tue Oct 22 11:58:41 PDT 2013`
-- `Erlang Public License`
+- `http://www.erlang.org/download/otp_src_18.0.tar.gz (jinterface-1.6)`
+- `(in otp_src_18.0/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `Sat Aug  1 19:56:12 PDT 2015`
+- `Apache License 2.0`
 
 `jsonrpclib`
 ------------

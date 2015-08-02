@@ -18,7 +18,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_riak/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
      -d $(top_srcdir)/lib/cloudi_service_http_client/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
@@ -61,7 +60,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_erlasticsearch/src \
      -d $(top_srcdir)/external/cloudi_x_erlcloud/src \
      -d $(top_srcdir)/external/cloudi_x_erlcql/src \
-     -d $(top_srcdir)/external/cloudi_x_etokyotyrant/src \
      -d $(top_srcdir)/external/cloudi_x_goldrush/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_lager/src \
@@ -128,7 +126,6 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_db_mysql/ebin
 	$(MKDIR_P) lib/cloudi_service_db_pgsql/ebin
 	$(MKDIR_P) lib/cloudi_service_db_riak/ebin
-	$(MKDIR_P) lib/cloudi_service_db_tokyotyrant/ebin
 	$(MKDIR_P) lib/cloudi_service_filesystem/ebin
 	$(MKDIR_P) lib/cloudi_service_http_client/ebin
 	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
@@ -163,7 +160,6 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_lhttpc/ebin
 	$(MKDIR_P) external/cloudi_x_jsx/ebin
 	$(MKDIR_P) external/cloudi_x_goldrush/ebin
-	$(MKDIR_P) external/cloudi_x_etokyotyrant/ebin
 	$(MKDIR_P) external/cloudi_x_poolboy/ebin
 	$(MKDIR_P) external/cloudi_x_thrift/ebin
 	$(MKDIR_P) external/cloudi_x_erlasticsearch/ebin
@@ -219,9 +215,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_riak/src && \
         test ! -e cloudi_service_db_riak.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_riak/src/cloudi_service_db_riak.app.src || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/src && \
-        test ! -e cloudi_service_db_tokyotyrant.app.src && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/src/cloudi_service_db_tokyotyrant.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_filesystem/src && \
         test ! -e cloudi_service_filesystem.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src || exit 0)
@@ -333,9 +326,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_db_riak && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_riak/ebin || exit 0)
-	(cd $(top_srcdir)/lib/cloudi_service_db_tokyotyrant && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_filesystem && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0)
@@ -442,9 +432,6 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_goldrush && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_goldrush/ebin || exit 0)
-	(cd $(top_srcdir)/external/cloudi_x_etokyotyrant && \
-        test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/cloudi_x_etokyotyrant/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_poolboy; \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_poolboy/ebin || exit 0)
@@ -595,8 +582,6 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_db_pgsql/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_db_riak/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_db_riak/ebin
-	rmdir $(top_builddir)/lib/cloudi_service_db_tokyotyrant/ebin || exit 0
-	rm -f $(top_srcdir)/lib/cloudi_service_db_tokyotyrant/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_filesystem/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_filesystem/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_http_client/ebin || exit 0
@@ -661,8 +646,6 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_jsx/ebin
 	rmdir $(top_builddir)/external/cloudi_x_goldrush/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_goldrush/ebin
-	rmdir $(top_builddir)/external/cloudi_x_etokyotyrant/ebin || exit 0
-	rm -f $(top_srcdir)/external/cloudi_x_etokyotyrant/ebin
 	rmdir $(top_builddir)/external/cloudi_x_poolboy/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_poolboy/ebin
 	rmdir $(top_builddir)/external/cloudi_x_thrift/ebin || exit 0
@@ -813,7 +796,6 @@ dialyze: all \
               lib/cloudi_service_db_mysql/ebin/ \
               lib/cloudi_service_db_pgsql/ebin/ \
               lib/cloudi_service_db_riak/ebin/ \
-              lib/cloudi_service_db_tokyotyrant/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
               lib/cloudi_service_http_client/ebin/ \
               lib/cloudi_service_http_cowboy/ebin/ \
@@ -854,7 +836,6 @@ dialyze: all \
               external/cloudi_x_erlasticsearch/ebin \
               external/cloudi_x_erlang_cassandra/ebin \
               external/cloudi_x_erlcql/ebin \
-              external/cloudi_x_etokyotyrant/ebin \
               external/cloudi_x_jsx/ebin \
               external/cloudi_x_pgsql/ebin \
               external/cloudi_x_msgpack/ebin \

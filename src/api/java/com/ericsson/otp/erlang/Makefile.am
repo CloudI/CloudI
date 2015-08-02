@@ -27,6 +27,7 @@ java_JAVA = AbstractConnection.java \
             OtpErlangInt.java \
             OtpErlangList.java \
             OtpErlangLong.java \
+            OtpErlangMap.java \
             OtpErlangObject.java \
             OtpErlangPid.java \
             OtpErlangPort.java \
@@ -41,8 +42,8 @@ java_JAVA = AbstractConnection.java \
             OtpExternal.java \
             OtpInputStream.java \
             OtpLocalNode.java \
-            OtpMD5.java \
             OtpMbox.java \
+            OtpMD5.java \
             OtpMsg.java \
             OtpNode.java \
             OtpNodeStatus.java \
@@ -50,5 +51,11 @@ java_JAVA = AbstractConnection.java \
             OtpPeer.java \
             OtpSelf.java \
             OtpServer.java \
-            OtpSystem.java
+            OtpServerSocketTransport.java \
+            OtpServerTransport.java \
+            OtpSocketTransportFactory.java \
+            OtpSocketTransport.java \
+            OtpSystem.java \
+            OtpTransportFactory.java \
+            OtpTransport.java
 
