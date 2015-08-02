@@ -16,8 +16,9 @@
           due to the random module as it currently exists in
           Erlang/OTP 18.0 stdlib-2.5)
     * Update jinterface to 1.6 (from Erlang/OTP 18.0)
-        * Now all the jinterface source code was added to the JAR
-          (previously only the required dependencies were included)
+        * Now all the jinterface source code is added to the JAR
+          for the Java CloudI API (previously only the required
+          dependencies were included)
     * Remove cloudi_service_db_tokyotyrant due to
       etokyotyrant (medici) being under the Erlang Public License and
       abandoned (Tokyo Tyrant usage should migrate to Kyoto Tycoon)
