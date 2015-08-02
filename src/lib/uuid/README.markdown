@@ -1,6 +1,8 @@
 Erlang UUID Implementation
 ==========================
 
+[![Build Status](https://secure.travis-ci.org/okeuday/uuid.png?branch=master)](http://travis-ci.org/okeuday/uuid)
+
 http://www.ietf.org/rfc/rfc4122.txt is the reference for official UUIDs.
 This implementation provides a version 1 UUID that includes both the Erlang pid
 identifier (ID, Serial, Creation) and the distributed Erlang node name within

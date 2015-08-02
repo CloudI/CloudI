@@ -93,13 +93,29 @@
          mac_address/0,
          test/0]).
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-define(TIMESTAMP_ERLANG_NOW, true).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-define(TIMESTAMP_ERLANG_NOW, true).
+-else.
+-endif.
+-endif.
+
+-ifdef(TIMESTAMP_ERLANG_NOW).
+-type timestamp_type_internal() :: 'os' | 'erlang_now' | 'warp'.
+-else.
+-type timestamp_type_internal() :: 'os' | 'erlang_timestamp' | 'warp'.
+-endif.
+
 -record(uuid_state,
     {
         node_id :: <<_:48>>,
         clock_seq :: 0..16383,
-        timestamp_type :: 'os' | 'erlang_now' | 'erlang_timestamp' | 'warp',
+        timestamp_type :: timestamp_type_internal(),
         timestamp_last :: integer() % microseconds
     }).
+
 
 -type uuid() :: <<_:128>>.
 -type timestamp_type() :: 'os' | 'erlang' | 'warp'.
@@ -109,15 +125,6 @@
               state/0]).
 
 -include("uuid.hrl").
-
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else. % necessary for Erlang >= 18.0
--compile({nowarn_deprecated_function,
-          {erlang, now, 0}}).
--endif.
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -225,14 +232,7 @@ new(Pid, Options)
         TimestampType =:= os ->
             os;
         TimestampType =:= erlang ->
-            case erlang:function_exported(erlang, system_time, 0) of
-                true ->
-                    % Erlang >= 18.0
-                    erlang_timestamp;
-                false ->
-                    % Erlang < 18.0
-                    erlang_now
-            end;
+            timestamp_type_erlang();
         TimestampType =:= warp ->
             case erlang:function_exported(erlang, system_time, 0) of
                 true ->
@@ -301,15 +301,31 @@ get_v1_time() ->
 -spec get_v1_time(timestamp_type() | state() | uuid()) ->
     non_neg_integer().
 
+-ifdef(TIMESTAMP_ERLANG_NOW).
+% Erlang < 18.0
 get_v1_time(erlang) ->
-    case erlang:function_exported(erlang, system_time, 0) of
-        true ->
-            % Erlang >= 18.0
-            timestamp(erlang_timestamp);
-        false ->
-            % Erlang < 18.0
-            timestamp(erlang_now)
-    end;
+    timestamp(erlang_now);
+
+get_v1_time(os) ->
+    timestamp(os);
+
+get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
+    timestamp(TimestampTypeInternal);
+
+get_v1_time(Value)
+    when is_binary(Value), byte_size(Value) == 16 ->
+    <<TimeLow:32, TimeMid:16,
+      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      TimeHigh:12,
+      1:1, 0:1,            % RFC 4122 variant bits
+      _:14,
+      _:48>> = Value,
+    <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
+    ((Time - 16#01b21dd213814000) div 10). % microseconds since UNIX epoch
+-else.
+% Erlang >= 18.0
+get_v1_time(erlang) ->
+    timestamp(erlang_timestamp);
 
 get_v1_time(os) ->
     timestamp(os);
@@ -330,6 +346,7 @@ get_v1_time(Value)
       _:48>> = Value,
     <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
     ((Time - 16#01b21dd213814000) div 10). % microseconds since UNIX epoch
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1188,9 +1205,27 @@ test() ->
            {int_to_hex,1},
            {hex_to_int,1}]}).
 
+-ifdef(TIMESTAMP_ERLANG_NOW).
+
+timestamp_type_erlang() ->
+    % Erlang < 18.0
+    false = erlang:function_exported(erlang, system_time, 0),
+    erlang_now.
+
 timestamp(erlang_now) ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
+timestamp(os) ->
+    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
+    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
+
+-else.
+
+timestamp_type_erlang() ->
+    % Erlang >= 18.0
+    true = erlang:function_exported(erlang, system_time, 0),
+    erlang_timestamp.
+
 timestamp(erlang_timestamp) ->
     erlang:system_time(micro_seconds);
 timestamp(os) ->
@@ -1198,6 +1233,8 @@ timestamp(os) ->
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
 timestamp(warp) ->
     erlang:system_time(micro_seconds).
+
+-endif.
 
 timestamp(os, _) ->
     timestamp(os);

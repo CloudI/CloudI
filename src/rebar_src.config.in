@@ -80,11 +80,9 @@
   {includes,
    ["@abs_top_srcdir@/lib",
     "@abs_top_srcdir@/external"]}]}.
-%{require_otp_vsn, "R16|17|18"}.
 {erl_opts,
  [{d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER@'},
   {d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER_MAJOR@'},
-  %{d, 'CLOUDI_SERVICE_OLD'}, % ignore cloudi_service behaviour changes in 1.4.0
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
   debug_info,
