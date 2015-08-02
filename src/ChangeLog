@@ -10,6 +10,8 @@
         * cpg is no longer related to the Erlang Public License
           (related to Apache 2.0 license now, due to pg2)
     * Update jinterface to 1.6 (from Erlang/OTP 18.0)
+        * Now all the jinterface source code was added to the JAR
+          (previously only the required dependencies were included)
     * Remove cloudi_service_db_tokyotyrant due to
       etokyotyrant (medici) being under the Erlang Public License and
       abandoned (Tokyo Tyrant usage should migrate to Kyoto Tycoon)
