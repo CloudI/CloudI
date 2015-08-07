@@ -541,7 +541,7 @@ configure_service([Service | Services], Configured, Timeout) ->
             ServiceDescription = cloudi_core_i_configuration:
                                  service_format(Service),
             % wait for logging statements to be logged before crashing
-            ?LOG_ERROR_SYNC("configure failed: ~p~n~p",
+            ?LOG_FATAL_SYNC("configure failed: ~p~n~p",
                             [Reason, ServiceDescription]),
             Error
     end.
