@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -1232,6 +1232,8 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
     -module(cloudi_core_i_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
     -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
+             fatal_sync/4, error_sync/4, warn_sync/4,
+             info_sync/4, debug_sync/4, trace_sync/4,
              fatal_apply/2, error_apply/2, warn_apply/2,
              info_apply/2, debug_apply/2, trace_apply/2,
              fatal_apply/3, error_apply/3, warn_apply/3,
@@ -1245,6 +1247,12 @@ interface(off, _, _) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_sync(_, _, _, _) -> ok.
+    error_sync(_, _, _, _) -> ok.
+    warn_sync(_, _, _, _) -> ok.
+    info_sync(_, _, _, _) -> ok.
+    debug_sync(_, _, _, _) -> ok.
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(_, _) -> undefined.
     error_apply(_, _) -> undefined.
     warn_apply(_, _) -> undefined.
@@ -1269,6 +1277,13 @@ interface(fatal, Mode, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(_, _, _, _) -> ok.
+    warn_sync(_, _, _, _) -> ok.
+    info_sync(_, _, _, _) -> ok.
+    debug_sync(_, _, _, _) -> ok.
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(_, _) -> undefined.
@@ -1283,7 +1298,8 @@ interface(fatal, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process]);
+    ", [Mode, Process,
+        Process]);
 interface(error, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1296,6 +1312,14 @@ interface(error, Mode, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
+    warn_sync(_, _, _, _) -> ok.
+    info_sync(_, _, _, _) -> ok.
+    debug_sync(_, _, _, _) -> ok.
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1312,7 +1336,8 @@ interface(error, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process, Mode, Process]);
+    ", [Mode, Process, Mode, Process,
+        Process, Process]);
 interface(warn, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1326,6 +1351,15 @@ interface(warn, Mode, Process) ->
     info(_, _, _, _) -> ok.
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
+    warn_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
+    info_sync(_, _, _, _) -> ok.
+    debug_sync(_, _, _, _) -> ok.
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1344,7 +1378,8 @@ interface(warn, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process]);
+    ", [Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process]);
 interface(info, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1359,6 +1394,16 @@ interface(info, Mode, Process) ->
         cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
     debug(_, _, _, _) -> ok.
     trace(_, _, _, _) -> ok.
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
+    warn_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
+    info_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
+    debug_sync(_, _, _, _) -> ok.
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1380,7 +1425,8 @@ interface(info, Mode, Process) ->
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process]);
+        Mode, Process,
+        Process, Process, Process, Process]);
 interface(debug, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1396,6 +1442,17 @@ interface(debug, Mode, Process) ->
     debug(Module, Line, Format, Arguments) ->
         cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(_, _, _, _) -> ok.
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
+    warn_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
+    info_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
+    debug_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:debug(sync, ~p, Module, Line, Format, Arguments).
+    trace_sync(_, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1419,7 +1476,8 @@ interface(debug, Mode, Process) ->
         erlang:apply(M, F, A).
     trace_apply(_, _, _) -> undefined.
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process]);
+        Mode, Process, Mode, Process,
+        Process, Process, Process, Process, Process]);
 interface(trace, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1436,6 +1494,18 @@ interface(trace, Mode, Process) ->
         cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
     trace(Module, Line, Format, Arguments) ->
         cloudi_core_i_logger:trace(~p, ~p, Module, Line, Format, Arguments).
+    fatal_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
+    error_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
+    warn_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
+    info_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
+    debug_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:debug(sync, ~p, Module, Line, Format, Arguments).
+    trace_sync(Module, Line, Format, Arguments) ->
+        cloudi_core_i_logger:trace(sync, ~p, Module, Line, Format, Arguments).
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1461,7 +1531,8 @@ interface(trace, Mode, Process) ->
     trace_apply(M, F, A) ->
         erlang:apply(M, F, A).
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process, Mode, Process]).
+        Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add synchronous logging macros: LOG_FATAL_SYNC,
+      LOG_ERROR_SYNC, LOG_WARN_SYNC, LOG_INFO_SYNC, LOG_DEBUG_SYNC,
+      LOG_TRACE_SYNC
+        * Add usage of the synchronous logging macros for restarts and stops
+          of service instances
+
 2015-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Erlang 18.0 bug with erlang:cancel_timer/2 usage

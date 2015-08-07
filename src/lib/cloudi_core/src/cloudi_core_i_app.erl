@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2009-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_app).
@@ -101,7 +101,7 @@ test() ->
 start(_, _) ->
     application:set_env(cloudi_core, mac_address, cloudi_x_uuid:mac_address()),
     cloudi_x_quickrand:seed(),
-    PathOrData = case application:get_env(configuration) of
+    PathOrData = case application:get_env(cloudi_core, configuration) of
         {ok, C} ->
             C;
         undefined ->

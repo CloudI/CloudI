@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,10 @@
 %%%
 %%%------------------------------------------------------------------------
 
+% Typical logging output which will log asynchronously until the logger's
+% message queue becomes too large, switching to synchronous logging
+% while the message queue remains large
+
 -define(LOG_FATAL(Format, Args),
     cloudi_core_i_logger_interface:fatal(?MODULE, ?LINE, Format, Args)).
 
@@ -58,6 +62,35 @@
 
 -define(LOG_TRACE(Format, Args),
     cloudi_core_i_logger_interface:trace(?MODULE, ?LINE, Format, Args)).
+
+% Force the logging to be done synchronously to the local log only
+% (if you are concerned about losing a logging message when the logging
+%  is done asynchronously while the logger's message queue is somewhat large,
+%  or if you want to make sure the logger's message queue is flushed,
+%  during a rapid shutdown or crash, use these macros where necessary...
+%  they are already used for service restart/stop events with the info
+%  logging level, so it is unlikely it would be necessary to use the macros in
+%  custom source code, if the info logging level is enabled)
+
+-define(LOG_FATAL_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_ERROR_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:error_sync(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_WARN_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:warn_sync(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_INFO_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:info_sync(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_DEBUG_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:debug_sync(?MODULE, ?LINE, Format, Args)).
+
+-define(LOG_TRACE_SYNC(Format, Args),
+    cloudi_core_i_logger_interface:trace_sync(?MODULE, ?LINE, Format, Args)).
+
+% Apply an anonymous function if allowed by the current logging level setting
 
 -define(LOG_FATAL_APPLY(F, A),
     cloudi_core_i_logger_interface:fatal_apply(F, A)).
@@ -77,6 +110,8 @@
 -define(LOG_TRACE_APPLY(F, A),
     cloudi_core_i_logger_interface:trace_apply(F, A)).
 
+% Apply a module function if allowed by the current logging level setting
+
 -define(LOG_FATAL_APPLY(M, F, A),
     cloudi_core_i_logger_interface:fatal_apply(M, F, A)).
 
@@ -95,11 +130,18 @@
 -define(LOG_TRACE_APPLY(M, F, A),
     cloudi_core_i_logger_interface:trace_apply(M, F, A)).
 
+% Get/Set lager-compatible logging metadata
+
 -define(LOG_METADATA_GET(),
     cloudi_core_i_logger:metadata_get()).
 
 -define(LOG_METADATA_SET(L),
     cloudi_core_i_logger:metadata_set(L)).
+
+% Convenience macros
+% (due to not using any parse transforms, the current function is unavailable,
+%  but can be retrieved by the macros below with a small amount of runtime 
+%  latency)
 
 -ifndef(FUNCTION). % atom
 -define(FUNCTION,
@@ -107,7 +149,7 @@
         erlang:element(2,
             erlang:process_info(self(), current_function)))).
 -endif.
--ifndef(FUNCTION_ARITY). % string
+-ifndef(FUNCTION_ARITY). % string (list of characters)
 -define(FUNCTION_ARITY,
     lists:concat(erlang:tl(lists:merge(
         [["/", E] || E <- erlang:tl(erlang:tuple_to_list(erlang:element(2,

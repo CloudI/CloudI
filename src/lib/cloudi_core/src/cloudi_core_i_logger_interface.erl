@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,13 +45,15 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2013 Michael Truog
-%%% @version 1.3.1 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger_interface).
 -author('mjtruog [at] gmail (dot) com').
 -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
+         fatal_sync/4, error_sync/4, warn_sync/4,
+         info_sync/4, debug_sync/4, trace_sync/4,
          fatal_apply/2, error_apply/2, warn_apply/2,
          info_apply/2, debug_apply/2, trace_apply/2,
          fatal_apply/3, error_apply/3, warn_apply/3,
@@ -73,6 +75,24 @@ debug(Module, Line, Format, Arguments) ->
                                Module, Line, Format, Arguments).
 trace(Module, Line, Format, Arguments) ->
     cloudi_core_i_logger:trace(async, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
+fatal_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:fatal(sync, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
+error_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:error(sync, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
+warn_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:warn(sync, cloudi_core_i_logger,
+                              Module, Line, Format, Arguments).
+info_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:info(sync, cloudi_core_i_logger,
+                              Module, Line, Format, Arguments).
+debug_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:debug(sync, cloudi_core_i_logger,
+                               Module, Line, Format, Arguments).
+trace_sync(Module, Line, Format, Arguments) ->
+    cloudi_core_i_logger:trace(sync, cloudi_core_i_logger,
                                Module, Line, Format, Arguments).
 fatal_apply(F, A) ->
     erlang:apply(F, A).

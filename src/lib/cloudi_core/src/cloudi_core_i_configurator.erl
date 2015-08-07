@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -538,13 +538,11 @@ configure_service([Service | Services], Configured, Timeout) ->
         {ok, NewService} ->
             configure_service(Services, [NewService | Configured], Timeout);
         {error, Reason} = Error ->
-            % wait for logging statements to be logged before crashing
-            receive after ?TIMEOUT_DELTA -> ok end,
-
             ServiceDescription = cloudi_core_i_configuration:
                                  service_format(Service),
-            ?LOG_ERROR("configure failed: ~p~n~p",
-                       [Reason, ServiceDescription]),
+            % wait for logging statements to be logged before crashing
+            ?LOG_ERROR_SYNC("configure failed: ~p~n~p",
+                            [Reason, ServiceDescription]),
             Error
     end.
 
@@ -1000,20 +998,21 @@ service_stop_internal(#config_service_internal{
                     % unload the service module)
                     case service_stop_remove_internal(Service, Timeout) of
                         ignore ->
-                            ?LOG_INFO("Service pids ~p stopped~n ~p",
-                                      [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+                            ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
+                                           [Pids,
+                                            cloudi_x_uuid:uuid_to_string(ID)]),
                             ok;
                         {ok, RemoveType} ->
-                            ?LOG_INFO("Service pids ~p stopped ~p~n ~p",
-                                      [Pids, RemoveType,
-                                       cloudi_x_uuid:uuid_to_string(ID)]),
+                            ?LOG_INFO_SYNC("Service pids ~p stopped ~p~n ~p",
+                                           [Pids, RemoveType,
+                                            cloudi_x_uuid:uuid_to_string(ID)]),
                             ok;
                         {error, _} = Error ->
                             Error
                     end;
                 Remove =:= false ->
-                    ?LOG_INFO("Service pids ~p stopped~n ~p",
-                              [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+                    ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
+                                   [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
                     ok
             end;
         {error, Reason} ->
@@ -1025,8 +1024,8 @@ service_stop_external(#config_service_external{
     case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
             shutdown_wait(Pids),
-            ?LOG_INFO("Service pids ~p stopped~n ~p",
-                      [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+            ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
+                           [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
             ok;
         {error, Reason} ->
             {error, {service_external_stop_failed, Reason}}
