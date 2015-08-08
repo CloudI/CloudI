@@ -4,6 +4,7 @@
 2015-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update key2value, keys1value
+    * Update syslog as cloudi_x_syslog
 
 2015-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

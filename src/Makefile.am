@@ -179,9 +179,9 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_protobuffs/ebin
 	$(MKDIR_P) external/cloudi_x_riakc/ebin
 	$(MKDIR_P) external/cloudi_x_riak_pb/ebin
+	$(MKDIR_P) external/cloudi_x_syslog/ebin
 	$(MKDIR_P) external/lz4/ebin
 	$(MKDIR_P) external/snappy/ebin
-	$(MKDIR_P) external/syslog/ebin
 	(cd $(top_srcdir)/lib/cloudi_core/src && \
         test ! -e cloudi_core.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_core.app.src || exit 0)
@@ -489,9 +489,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_erlcql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_erlcql/ebin || exit 0)
-	(cd $(top_srcdir)/external/syslog && \
+	(cd $(top_srcdir)/external/cloudi_x_syslog && \
         test ! -e ebin && \
-        $(LN_S) $(abs_top_builddir)/external/syslog/ebin || exit 0)
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_syslog/ebin || exit 0)
 	(cd $(top_srcdir)/external/lz4 && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/lz4/ebin || exit 0)
@@ -684,8 +684,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_protobuffs/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcql/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_erlcql/ebin
-	rmdir $(top_builddir)/external/syslog/ebin || exit 0
-	rm -f $(top_srcdir)/external/syslog/ebin
+	rmdir $(top_builddir)/external/cloudi_x_syslog/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_syslog/ebin
 	rmdir $(top_builddir)/external/lz4/ebin || exit 0
 	rm -f $(top_srcdir)/external/lz4/ebin
 	rmdir $(top_builddir)/external/snappy/ebin || exit 0
@@ -810,15 +810,17 @@ dialyze: all \
               lib/cloudi_service_udp/ebin/ \
               lib/cloudi_service_validate/ebin/ \
               lib/cloudi_service_zeromq/ebin/ \
-              lib/pqueue/ebin/ \
-              lib/quickrand/ebin/ \
               lib/cpg/ebin/ \
               lib/erlang_term/ebin/ \
-              lib/uuid/ebin/ \
-              lib/trie/ebin/ \
-              lib/reltool_util/ebin/ \
               lib/key2value/ebin/ \
               lib/keys1value/ebin/ \
+              lib/pqueue/ebin/ \
+              lib/quickrand/ebin/ \
+              lib/reltool_util/ebin/ \
+              lib/supool/ebin/ \
+              lib/trie/ebin/ \
+              lib/uuid/ebin/ \
+              lib/varpool/ebin/ \
               tests/hexpi/ebin/ \
               tests/request_rate/ebin/ \
               tests/messaging/ebin/ \
@@ -840,7 +842,7 @@ dialyze: all \
               external/cloudi_x_pgsql/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
-              external/syslog/ebin
+              external/cloudi_x_syslog/ebin
 	@echo "No Errors or Warnings Found!"
 
 dialyzer: dialyze

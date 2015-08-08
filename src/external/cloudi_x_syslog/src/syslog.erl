@@ -43,6 +43,7 @@
          priority/1,
          facility/1,
          openlog_opt/1,
+         openlog_opts/1,
          load/0,
          unload/0
         ]).
@@ -101,7 +102,7 @@ stop() ->
 
 open(Ident, Logopt, Facility) ->
     Log = erlang:open_port({spawn, ?DRV_NAME}, [binary]),
-    Args = term_to_binary({Ident, logopt(Logopt), facility(Facility)}),
+    Args = term_to_binary({Ident, openlog_opts(Logopt), facility(Facility)}),
     try erlang:port_control(Log, ?SYSLOGDRV_OPEN, Args) of
         <<>> ->
             {ok, Log};
@@ -197,6 +198,16 @@ openlog_opt(perror) -> 20;
 openlog_opt(N) when is_integer(N), N >= 1 -> N;
 openlog_opt(_) -> erlang:error(badarg).
 
+-spec openlog_opts(N :: list(openlog_opt() | pos_integer()) |
+                        openlog_opt() | pos_integer()) ->
+    pos_integer().
+
+openlog_opts([Queue]) -> openlog_opt(Queue);
+openlog_opts([Tail|Queue]) ->
+    openlog_opt(Tail) bor openlog_opts(Queue);
+openlog_opts([]) -> 0;
+openlog_opts(N) -> openlog_opt(N).
+
 -spec load() ->
     ok | {error, string()}.
 
@@ -263,21 +274,13 @@ code_change(_, State, _) ->
 
 %%% internal functions %%%
 
-
-logopt([Queue]) -> openlog_opt(Queue);
-logopt([Tail|Queue]) ->
-    openlog_opt(Tail) bor logopt(Queue);
-logopt([]) -> 0;
-logopt(N) -> openlog_opt(N).
-
-
 -ifdef(TEST).
 
-logopt_test() ->
-    11 = logopt([1,2,8]),
-    1 = logopt(pid),
+openlog_opts_test() ->
+    11 = openlog_opts([1,2,8]),
+    1 = openlog_opts(pid),
     try
-        foo = logopt(foo)
+        foo = openlog_opts(foo)
     catch
         error:badarg ->
             ok;
