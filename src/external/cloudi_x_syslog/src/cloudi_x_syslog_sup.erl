@@ -1,5 +1,5 @@
 
--module(syslog_sup).
+-module(cloudi_x_syslog_sup).
 
 -behaviour(supervisor).
 
@@ -24,5 +24,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_all, 5, 10}, [{syslog, {syslog, start_link, []},
-                                   permanent, 5000, worker, [syslog]}] } }.
+    {ok, { {one_for_all, 5, 10}, [{cloudi_x_syslog, {cloudi_x_syslog, start_link, []},
+                                   permanent, 5000, worker, [cloudi_x_syslog]}] } }.

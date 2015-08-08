@@ -22,13 +22,13 @@
 
 %% @doc erlang wrapper for syslog port
 
--module(syslog).
+-module(cloudi_x_syslog).
 
 -behaviour(gen_server).
 
--define(DRV_NAME, "syslog_drv").
+-define(DRV_NAME, "cloudi_x_syslog_drv").
 
-%% this constant must match the same in syslog_drv.c
+%% this constant must match the same in cloudi_x_syslog_drv.c
 -define(SYSLOGDRV_OPEN,  1).
 
 %% API
@@ -289,7 +289,7 @@ openlog_opts_test() ->
     end.
 
 closed_test() ->
-    {ok, _} = syslog:start(),
+    {ok, _} = cloudi_x_syslog:start(),
     try
         {ok, Log} = open("test", pid, local0),
         Self = self(),
@@ -312,7 +312,7 @@ closed_test() ->
                 throw(Reason2)
         end
     after
-        syslog:stop()
+        cloudi_x_syslog:stop()
     end.
 
 -endif.

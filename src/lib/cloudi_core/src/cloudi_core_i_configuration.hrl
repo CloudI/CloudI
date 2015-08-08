@@ -48,7 +48,7 @@
         identity = "CloudI"
             :: string(),
         facility = local0
-            :: syslog:facility(),
+            :: cloudi_x_syslog:facility(),
         % The mapping for CloudI levels to syslog priorities is:
         % fatal  -> emerg    (0)
         % error  -> err      (3)

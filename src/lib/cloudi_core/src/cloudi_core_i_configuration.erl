@@ -3602,7 +3602,7 @@ logging_syslog_validate([_ | _] = Value) ->
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_syslog_level_invalid, Level}};
         [Identity, Facility, Level] ->
-            try syslog:facility(Facility) of
+            try cloudi_x_syslog:facility(Facility) of
                 _ when (Level =:= undefined) ->
                     {ok, undefined};
                 _ ->

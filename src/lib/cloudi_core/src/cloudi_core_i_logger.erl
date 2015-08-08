@@ -439,7 +439,7 @@ init([#config_logging{file = FilePath,
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel0} ->
-            ok = syslog:load(),
+            ok = cloudi_x_syslog:load(),
             State#state{syslog = syslog_open(SyslogIdentity, SyslogFacility),
                         syslog_level = SyslogLevel0}
     end,
@@ -665,13 +665,13 @@ handle_cast({syslog_set, SyslogConfig},
                     SyslogConfig =:= undefined ->
                         ok;
                     true ->
-                        ok = syslog:load()
+                        ok = cloudi_x_syslog:load()
                 end;
             is_port(SyslogOld) ->
-                ok = syslog:close(SyslogOld),
+                ok = cloudi_x_syslog:close(SyslogOld),
                 if
                     SyslogConfig =:= undefined ->
-                        ok = syslog:unload();
+                        ok = cloudi_x_syslog:unload();
                     true ->
                         ok
                 end
@@ -757,8 +757,8 @@ terminate(_, #state{fd = Fd,
     file:close(Fd),
     if
         is_port(Syslog) ->
-            (catch syslog:close(Syslog)),
-            syslog:unload();
+            (catch cloudi_x_syslog:close(Syslog)),
+            cloudi_x_syslog:unload();
         true ->
             ok
     end,
@@ -1090,7 +1090,7 @@ log_file_reopen(FilePath, Inode, State) ->
 log_syslog(Level, Message,
            #state{syslog = Syslog} = State) ->
     SyslogPriority = log_level_to_syslog_priority(Level),
-    syslog:log(Syslog, SyslogPriority, Message),
+    cloudi_x_syslog:log(Syslog, SyslogPriority, Message),
     {ok, State}.
 
 log_redirect(_, Destination,
@@ -1555,7 +1555,8 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
     end.
 
 syslog_open(SyslogIdentity, SyslogFacility) ->
-    {ok, Syslog} = syslog:open(SyslogIdentity, [ndelay, pid], SyslogFacility),
+    {ok, Syslog} = cloudi_x_syslog:open(SyslogIdentity,
+                                        [ndelay, pid], SyslogFacility),
     Syslog.
 
 %%%------------------------------------------------------------------------

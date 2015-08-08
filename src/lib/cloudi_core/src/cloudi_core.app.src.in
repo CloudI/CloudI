@@ -61,7 +61,7 @@
         cloudi_core_i_services_monitor
         ]},
    {included_applications, [
-        syslog
+        cloudi_x_syslog
         ]},
    {applications, [
         cloudi_x_nodefinder,

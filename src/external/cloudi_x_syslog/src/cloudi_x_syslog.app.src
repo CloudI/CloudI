@@ -1,13 +1,13 @@
-{application, syslog,
+{application, cloudi_x_syslog,
  [
   {description, "Syslog for erlang"},
   {vsn, "1.0.3"},
-  {registered, [syslog_sup, syslog]},
+  {registered, [cloudi_x_syslog_sup, cloudi_x_syslog]},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { syslog_app, []}},
+  {mod, { cloudi_x_syslog_app, []}},
   {modules, []},
   {env, []}
  ]}.

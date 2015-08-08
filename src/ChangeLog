@@ -5,6 +5,7 @@
 
     * Update key2value, keys1value
     * Update syslog as cloudi_x_syslog
+        * Manually move the syslog source code to have the "cloudi_x_" prefix
 
 2015-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

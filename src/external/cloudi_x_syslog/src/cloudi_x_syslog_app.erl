@@ -1,4 +1,4 @@
--module(syslog_app).
+-module(cloudi_x_syslog_app).
 
 -behaviour(application).
 
@@ -10,7 +10,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    syslog_sup:start_link().
+    cloudi_x_syslog_sup:start_link().
 
 stop(_State) ->
     ok.

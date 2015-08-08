@@ -35,7 +35,7 @@ typedef int ErlDrvSizeT;
 typedef int ErlDrvSSizeT;
 #endif
 
-#define DRV_NAME "syslog_drv"
+#define DRV_NAME "cloudi_x_syslog_drv"
 
 /* the following constants have to match those in syslog.erl */
 #define SYSLOGDRV_OPEN  1
@@ -176,7 +176,7 @@ static ErlDrvEntry syslogdrv_driver_entry = {
     NULL,
 };
 
-DRIVER_INIT(syslogdrv)
+DRIVER_INIT(cloudi_x_syslog_drv)
 {
     return &syslogdrv_driver_entry;
 }
