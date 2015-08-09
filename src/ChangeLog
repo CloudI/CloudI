@@ -3,7 +3,7 @@
 
 2015-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Update key2value, keys1value
+    * Update key2value, keys1value, uuid
     * Update syslog as cloudi_x_syslog
         * Manually move the syslog source code to have the "cloudi_x_" prefix
     * Add usage of Erlang maps when the version of Erlang is >= 18.0 for the

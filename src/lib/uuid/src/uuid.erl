@@ -103,9 +103,9 @@
 -endif.
 
 -ifdef(TIMESTAMP_ERLANG_NOW).
--type timestamp_type_internal() :: 'os' | 'erlang_now' | 'warp'.
+-type timestamp_type_internal() :: 'erlang_now' | 'os'.
 -else.
--type timestamp_type_internal() :: 'os' | 'erlang_timestamp' | 'warp'.
+-type timestamp_type_internal() :: 'erlang_timestamp' | 'os' | 'warp'.
 -endif.
 
 -record(uuid_state,
@@ -118,7 +118,7 @@
 
 
 -type uuid() :: <<_:128>>.
--type timestamp_type() :: 'os' | 'erlang' | 'warp'.
+-type timestamp_type() :: 'erlang' | 'os' | 'warp'.
 -type state() :: #uuid_state{}.
 -export_type([uuid/0,
               timestamp_type/0,
@@ -308,6 +308,9 @@ get_v1_time(erlang) ->
 
 get_v1_time(os) ->
     timestamp(os);
+
+get_v1_time(warp) ->
+    erlang:exit(badarg);
 
 get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
     timestamp(TimestampTypeInternal);
@@ -1219,6 +1222,11 @@ timestamp(os) ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds.
 
+timestamp(erlang_now, _) ->
+    timestamp(erlang_now);
+timestamp(os, _) ->
+    timestamp(os).
+
 -else.
 
 timestamp_type_erlang() ->
@@ -1234,20 +1242,20 @@ timestamp(os) ->
 timestamp(warp) ->
     erlang:system_time(micro_seconds).
 
--endif.
-
-timestamp(os, _) ->
-    timestamp(os);
-timestamp(warp, _) ->
-    timestamp(warp);
-timestamp(TimestampTypeInternal, TimestampLast) ->
-    TimestampNext = timestamp(TimestampTypeInternal),
+timestamp(erlang_timestamp, TimestampLast) ->
+    TimestampNext = timestamp(erlang_timestamp),
     if
         TimestampNext > TimestampLast ->
             TimestampNext;
         true ->
             TimestampLast + 1
-    end.
+    end;
+timestamp(os, _) ->
+    timestamp(os);
+timestamp(warp, _) ->
+    timestamp(warp).
+
+-endif.
 
 int_to_hex_list(I, N) when is_integer(I), I >= 0 ->
     int_to_hex_list([], I, 1, N).
