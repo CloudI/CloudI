@@ -183,11 +183,17 @@
               callback_leave/0,
               callback/0]).
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
+
 -record(state,
     {
-        scope :: scope(),  % locally registered process name
-        groups,            % GroupName -> #cpg_data{}
-        pids = dict:new(), % pid() -> list(GroupName)
+        scope :: scope(), % locally registered process name
+        groups :: cpg_data:state(), % GroupName -> #cpg_data{}
+        pids = dict:new() :: dict_proxy(pid(), list(name())),
         callbacks = undefined :: undefined | pid(),
         listen :: visible | all
     }).
@@ -1255,14 +1261,6 @@ send(ViaName, Msg) ->
             Pid
     end.
 
--type get_members_ret() ::
-    {ok, name(), list(pid())} |
-    {error, {no_such_group, name()}}.
-
--type gcp_error_reason() ::
-    {no_process, name()} |
-    {no_such_group, name()}.
-
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group.===
@@ -1270,7 +1268,7 @@ send(ViaName, Msg) ->
 %%-------------------------------------------------------------------------
 
 -spec get_members(name()) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1285,7 +1283,7 @@ get_members(GroupName) ->
 
 -spec get_members(name() | scope(),
                   pid() | name() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1312,7 +1310,7 @@ get_members(GroupName, Timeout) ->
 -spec get_members(scope() | name(),
                   name() | pid(),
                   pid() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1342,7 +1340,7 @@ get_members(Scope, GroupName, Timeout)
                   name(),
                   pid(),
                   pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1357,7 +1355,7 @@ get_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec get_local_members(name()) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_local_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1372,7 +1370,7 @@ get_local_members(GroupName) ->
 
 -spec get_local_members(name() | scope(),
                         pid() | name() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_local_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1399,7 +1397,7 @@ get_local_members(GroupName, Timeout) ->
 -spec get_local_members(scope() | name(),
                         name() | pid(),
                         pid() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_local_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1429,7 +1427,7 @@ get_local_members(Scope, GroupName, Timeout)
                         name(),
                         pid(),
                         pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_local_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1444,7 +1442,7 @@ get_local_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec get_remote_members(name()) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_remote_members(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1459,7 +1457,7 @@ get_remote_members(GroupName) ->
 
 -spec get_remote_members(name() | scope(),
                          pid() | name() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_remote_members(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1486,7 +1484,7 @@ get_remote_members(GroupName, Timeout) ->
 -spec get_remote_members(scope() | name(),
                          name() | pid(),
                          pid() | pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_remote_members(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1516,7 +1514,7 @@ get_remote_members(Scope, GroupName, Timeout)
                          name(),
                          pid(),
                          pos_integer() | infinity) ->
-    get_members_ret().
+    cpg_data:get_members_return().
 
 get_remote_members(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1531,7 +1529,7 @@ get_remote_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 
 -spec which_groups() ->
-    [name()].
+    list(name()).
 
 which_groups() ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1544,7 +1542,7 @@ which_groups() ->
 %%-------------------------------------------------------------------------
 
 -spec which_groups(scope() | pid() | pos_integer() | infinity) ->
-    [name()].
+    list(name()).
 
 which_groups(Scope)
     when is_atom(Scope) ->
@@ -1569,7 +1567,7 @@ which_groups(Timeout) ->
 
 -spec which_groups(scope() | pid(),
                    pid() | pos_integer() | infinity) ->
-    [name()].
+    list(name()).
 
 which_groups(Scope, Pid)
     when is_atom(Scope), is_pid(Pid) ->
@@ -1597,7 +1595,7 @@ which_groups(Pid, Timeout)
 -spec which_groups(scope(),
                    pid(),
                    pos_integer() | infinity) ->
-    [name()].
+    list(name()).
 
 which_groups(Scope, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
@@ -1613,7 +1611,7 @@ which_groups(Scope, Pid, Timeout)
 
 -spec get_closest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_closest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1629,7 +1627,7 @@ get_closest_pid(GroupName) ->
 -spec get_closest_pid(name() | scope(),
                       pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_closest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1657,7 +1655,7 @@ get_closest_pid(GroupName, Timeout) ->
                       name() | pid(),
                       pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_closest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1689,7 +1687,7 @@ get_closest_pid(Scope, GroupName, Timeout)
                       pid(),
                       pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_closest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1705,7 +1703,7 @@ get_closest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_furthest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_furthest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1721,7 +1719,7 @@ get_furthest_pid(GroupName) ->
 -spec get_furthest_pid(name() | scope(),
                        pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_furthest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1749,7 +1747,7 @@ get_furthest_pid(GroupName, Timeout) ->
                        name() | pid(),
                        pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_furthest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1780,7 +1778,7 @@ get_furthest_pid(Scope, GroupName, Timeout)
                        pid(),
                        pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_furthest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1796,7 +1794,7 @@ get_furthest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_random_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_random_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1812,7 +1810,7 @@ get_random_pid(GroupName) ->
 -spec get_random_pid(name() | scope(),
                      pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_random_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1840,7 +1838,7 @@ get_random_pid(GroupName, Timeout) ->
                      name() | pid(),
                      pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_random_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1871,7 +1869,7 @@ get_random_pid(Scope, GroupName, Timeout)
                      pid(),
                      pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_random_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1887,7 +1885,7 @@ get_random_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_local_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1903,7 +1901,7 @@ get_local_pid(GroupName) ->
 -spec get_local_pid(name() | scope(),
                     pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -1931,7 +1929,7 @@ get_local_pid(GroupName, Timeout) ->
                     name() | pid(),
                     pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1962,7 +1960,7 @@ get_local_pid(Scope, GroupName, Timeout)
                     pid(),
                     pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -1978,7 +1976,7 @@ get_local_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_remote_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -1994,7 +1992,7 @@ get_remote_pid(GroupName) ->
 -spec get_remote_pid(name() | scope(),
                      pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2022,7 +2020,7 @@ get_remote_pid(GroupName, Timeout) ->
                      name() | pid(),
                      pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2053,7 +2051,7 @@ get_remote_pid(Scope, GroupName, Timeout)
                      pid(),
                      pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2069,7 +2067,7 @@ get_remote_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_oldest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_oldest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2085,7 +2083,7 @@ get_oldest_pid(GroupName) ->
 -spec get_oldest_pid(name() | scope(),
                      pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_oldest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2113,7 +2111,7 @@ get_oldest_pid(GroupName, Timeout) ->
                      name() | pid(),
                      pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_oldest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2144,7 +2142,7 @@ get_oldest_pid(Scope, GroupName, Timeout)
                      pid(),
                      pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_oldest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2160,7 +2158,7 @@ get_oldest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_local_oldest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_oldest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2176,7 +2174,7 @@ get_local_oldest_pid(GroupName) ->
 -spec get_local_oldest_pid(name() | scope(),
                            pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_oldest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2204,7 +2202,7 @@ get_local_oldest_pid(GroupName, Timeout) ->
                            name() | pid(),
                            pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_oldest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2235,7 +2233,7 @@ get_local_oldest_pid(Scope, GroupName, Timeout)
                            pid(),
                            pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_oldest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2251,7 +2249,7 @@ get_local_oldest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_remote_oldest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_oldest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2267,7 +2265,7 @@ get_remote_oldest_pid(GroupName) ->
 -spec get_remote_oldest_pid(name() | scope(),
                             pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_oldest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2295,7 +2293,7 @@ get_remote_oldest_pid(GroupName, Timeout) ->
                             name() | pid(),
                             pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_oldest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2326,7 +2324,7 @@ get_remote_oldest_pid(Scope, GroupName, Timeout)
                             pid(),
                             pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_oldest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2342,7 +2340,7 @@ get_remote_oldest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_newest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_newest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2358,7 +2356,7 @@ get_newest_pid(GroupName) ->
 -spec get_newest_pid(name() | scope(),
                      pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_newest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2386,7 +2384,7 @@ get_newest_pid(GroupName, Timeout) ->
                      name() | pid(),
                      pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_newest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2417,7 +2415,7 @@ get_newest_pid(Scope, GroupName, Timeout)
                      pid(),
                      pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_newest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2433,7 +2431,7 @@ get_newest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_local_newest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_newest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2449,7 +2447,7 @@ get_local_newest_pid(GroupName) ->
 -spec get_local_newest_pid(name() | scope(),
                            pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_newest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2477,7 +2475,7 @@ get_local_newest_pid(GroupName, Timeout) ->
                            name() | pid(),
                            pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_newest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2508,7 +2506,7 @@ get_local_newest_pid(Scope, GroupName, Timeout)
                            pid(),
                            pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_local_newest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2524,7 +2522,7 @@ get_local_newest_pid(Scope, GroupName, Exclude, Timeout)
 
 -spec get_remote_newest_pid(name()) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_newest_pid(GroupName) ->
     gen_server:call(?DEFAULT_SCOPE,
@@ -2540,7 +2538,7 @@ get_remote_newest_pid(GroupName) ->
 -spec get_remote_newest_pid(name() | scope(),
                             pid() | name() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_newest_pid(GroupName, Exclude)
     when is_pid(Exclude) ->
@@ -2568,7 +2566,7 @@ get_remote_newest_pid(GroupName, Timeout) ->
                             name() | pid(),
                             pid() | pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_newest_pid(Scope, GroupName, Exclude)
     when is_atom(Scope), is_pid(Exclude) ->
@@ -2599,7 +2597,7 @@ get_remote_newest_pid(Scope, GroupName, Timeout)
                             pid(),
                             pos_integer() | infinity) ->
     {ok, name(), pid()} |
-    {error, gcp_error_reason()}.
+    {error, cpg_data:get_pid_error_reason()}.
 
 get_remote_newest_pid(Scope, GroupName, Exclude, Timeout)
     when is_atom(Scope), is_pid(Exclude) ->

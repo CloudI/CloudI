@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -93,6 +93,19 @@
 -include("cpg_data.hrl").
 -include("cpg_constants.hrl").
 
+% GroupsData == GroupName -> #cpg_data{} lookup, using the DictI module
+-type state() :: {DictI :: module(), GroupsData :: any()}.
+-export_type([state/0]).
+
+-type get_members_return() ::
+    {ok, cpg:name(), list(pid())} |
+    {error, {no_such_group, cpg:name()}}.
+-type get_pid_error_reason() ::
+    {no_process, cpg:name()} |
+    {no_such_group, cpg:name()}.
+-export_type([get_members_return/0,
+              get_pid_error_reason/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -106,6 +119,9 @@
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_groups() ->
+    state().
+
 get_groups() ->
     gen_server:call(?DEFAULT_SCOPE, cpg_data).
 
@@ -117,6 +133,9 @@ get_groups() ->
 %% of the process groups.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_groups(atom() | non_neg_integer()) ->
+    state() | reference().
 
 get_groups(Scope) when is_atom(Scope) ->
     gen_server:call(Scope, cpg_data);
@@ -134,6 +153,10 @@ get_groups(Time) when is_integer(Time) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_groups(Scope :: atom(),
+                 Time :: non_neg_integer()) ->
+    reference().
+
 get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
     erlang:send_after(Time, Scope, {cpg_data, self()}).
 
@@ -146,6 +169,11 @@ get_groups(Scope, Time) when is_atom(Scope), is_integer(Time) ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_groups(Scope :: atom(),
+                 Destination :: pid() | atom(),
+                 Time :: non_neg_integer()) ->
+    reference().
+
 get_groups(Scope, Destination, Time)
     when is_atom(Scope), (is_pid(Destination) orelse is_atom(Destination)),
          is_integer(Time) ->
@@ -157,6 +185,9 @@ get_groups(Scope, Destination, Time)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_empty_groups() ->
+    state().
+
 get_empty_groups() ->
     DictI = cpg_app:group_storage(),
     {DictI, DictI:new()}.
@@ -166,6 +197,10 @@ get_empty_groups() ->
 %% ===Get the members of a specific group.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_members(GroupName :: cpg:name(),
+                  Groups :: state()) ->
+    get_members_return().
 
 get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
@@ -188,6 +223,11 @@ get_members(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_members(GroupName :: cpg:name(),
+                  Exclude :: pid(),
+                  Groups :: state()) ->
+    get_members_return().
 
 get_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -223,6 +263,10 @@ get_members(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_local_members(GroupName :: cpg:name(),
+                        Groups :: state()) ->
+    get_members_return().
+
 get_local_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -242,6 +286,11 @@ get_local_members(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_local_members(GroupName :: cpg:name(),
+                        Exclude :: pid(),
+                        Groups :: state()) ->
+    get_members_return().
 
 get_local_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -275,6 +324,10 @@ get_local_members(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_remote_members(GroupName :: cpg:name(),
+                         Groups :: state()) ->
+    get_members_return().
+
 get_remote_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -294,6 +347,11 @@ get_remote_members(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_remote_members(GroupName :: cpg:name(),
+                         Exclude :: pid(),
+                         Groups :: state()) ->
+    get_members_return().
 
 get_remote_members(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -327,6 +385,9 @@ get_remote_members(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec which_groups(state()) ->
+    list(cpg:name()).
+
 which_groups({DictI, GroupsData}) ->
     DictI:fetch_keys(GroupsData).
 
@@ -335,6 +396,11 @@ which_groups({DictI, GroupsData}) ->
 %% ===Get a group member, with local pids given priority.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_closest_pid(GroupName :: cpg:name(),
+                      Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_closest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
@@ -358,6 +424,12 @@ get_closest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_closest_pid(GroupName :: cpg:name(),
+                      Exclude :: pid(),
+                      Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_closest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -386,6 +458,11 @@ get_closest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_furthest_pid(GroupName :: cpg:name(),
+                       Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_furthest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -408,6 +485,12 @@ get_furthest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_furthest_pid(GroupName :: cpg:name(),
+                       Exclude :: pid(),
+                       Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_furthest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -435,6 +518,11 @@ get_furthest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_random_pid(GroupName :: cpg:name(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_random_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -455,6 +543,12 @@ get_random_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_random_pid(GroupName :: cpg:name(),
+                     Exclude :: pid(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_random_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -478,6 +572,11 @@ get_random_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_local_pid(GroupName :: cpg:name(),
+                    Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_local_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -495,6 +594,12 @@ get_local_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_local_pid(GroupName :: cpg:name(),
+                    Exclude :: pid(),
+                    Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_local_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -514,6 +619,11 @@ get_local_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_remote_pid(GroupName :: cpg:name(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_remote_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -531,6 +641,12 @@ get_remote_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_remote_pid(GroupName :: cpg:name(),
+                     Exclude :: pid(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_remote_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -550,6 +666,11 @@ get_remote_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_oldest_pid(GroupName :: cpg:name(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -567,6 +688,12 @@ get_oldest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_oldest_pid(GroupName :: cpg:name(),
+                     Exclude :: pid(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_oldest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -591,6 +718,11 @@ get_oldest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_local_oldest_pid(GroupName :: cpg:name(),
+                           Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_local_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -613,6 +745,12 @@ get_local_oldest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_local_oldest_pid(GroupName :: cpg:name(),
+                           Exclude :: pid(),
+                           Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_local_oldest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -637,6 +775,11 @@ get_local_oldest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_remote_oldest_pid(GroupName :: cpg:name(),
+                            Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_remote_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -659,6 +802,12 @@ get_remote_oldest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_remote_oldest_pid(GroupName :: cpg:name(),
+                            Exclude :: pid(),
+                            Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_remote_oldest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -683,6 +832,11 @@ get_remote_oldest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_newest_pid(GroupName :: cpg:name(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -700,6 +854,12 @@ get_newest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_newest_pid(GroupName :: cpg:name(),
+                     Exclude :: pid(),
+                     Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_newest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -724,6 +884,11 @@ get_newest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_local_newest_pid(GroupName :: cpg:name(),
+                           Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_local_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -746,6 +911,12 @@ get_local_newest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_local_newest_pid(GroupName :: cpg:name(),
+                           Exclude :: pid(),
+                           Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_local_newest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->
@@ -770,6 +941,11 @@ get_local_newest_pid(GroupName, Exclude, Groups)
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec get_remote_newest_pid(GroupName :: cpg:name(),
+                            Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
+
 get_remote_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
@@ -792,6 +968,12 @@ get_remote_newest_pid(GroupName, Groups) ->
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec get_remote_newest_pid(GroupName :: cpg:name(),
+                            Exclude :: pid(),
+                            Groups :: state()) ->
+    {ok, cpg:name(), pid()} |
+    {error, get_pid_error_reason()}.
 
 get_remote_newest_pid(GroupName, Exclude, Groups)
     when is_pid(Exclude) ->

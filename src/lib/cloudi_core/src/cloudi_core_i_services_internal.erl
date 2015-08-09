@@ -161,16 +161,16 @@
         dest_refresh :: cloudi_service_api:dest_refresh(),
         % cached cpg data for lazy destination refresh methods
         cpg_data
-            :: {module(), any()} | undefined |
-               list({any(), any()}),
+            :: cloudi_x_cpg_data:state() | undefined |
+               list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for denied destinations
         dest_deny
             :: cloudi_x_trie:cloudi_x_trie() | undefined |
-               list({string(), any()}),
+               list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for allowed destinations
         dest_allow
             :: cloudi_x_trie:cloudi_x_trie() | undefined |
-               list({string(), any()}),
+               list({cloudi:service_name_pattern(), any()}),
         % service configuration options
         options
             :: #config_service_options{} |

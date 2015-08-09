@@ -10,12 +10,12 @@
 <hr>
 
 <h1>Module cpg_data</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="CPG_Groups_Handling.">CPG Groups Handling.</a></h3>
    Method of using cpg instead of pg2.
-<p>Copyright © 2011-2014 Michael Truog</p>
+<p>Copyright © 2011-2015 Michael Truog</p>
 
-<p><b>Version:</b> 1.3.3 Sep 30 2014 14:04:30
+<p><b>Version:</b> 1.5.1 Aug 8 2015 20:06:50
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -26,6 +26,20 @@
    obtained from the cpg process for a specific scope and is then used with
    the functions provided here, so that contention for the cpg process
    can be avoided.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-get_members_return">get_members_return()</a></h3>
+<p><tt>get_members_return() = {ok, <a href="cpg.html#type-name">cpg:name()</a>, [pid()]} | {error, {no_such_group, <a href="cpg.html#type-name">cpg:name()</a>}}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-get_pid_error_reason">get_pid_error_reason()</a></h3>
+<p><tt>get_pid_error_reason() = {no_process, <a href="cpg.html#type-name">cpg:name()</a>} | {no_such_group, <a href="cpg.html#type-name">cpg:name()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = {DictI::module(), GroupsData::any()}</tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_closest_pid-2">get_closest_pid/2</a></td><td>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>.</td></tr>
@@ -127,42 +141,42 @@
 
 <h3 class="function"><a name="get_closest_pid-2">get_closest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_closest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority.">Get a group member, with local pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_closest_pid-3">get_closest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_closest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_closest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_local_pids_given_priority_while_excluding_a_specific_pid.">Get a group member, with local pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_empty_groups-0">get_empty_groups/0</a></h3>
 <div class="spec">
-<p><tt>get_empty_groups() -&gt; any()</tt></p>
+<p><tt>get_empty_groups() -&gt; <a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_empty_group_storage.">Get empty group storage.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_furthest_pid-2">get_furthest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_furthest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority.">Get a group member, with remote pids given priority.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_furthest_pid-3">get_furthest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_furthest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_furthest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member,_with_remote_pids_given_priority_while_excluding_a_specific_pid.">Get a group member, with remote pids given priority while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_groups-0">get_groups/0</a></h3>
 <div class="spec">
-<p><tt>get_groups() -&gt; any()</tt></p>
+<p><tt>get_groups() -&gt; <a href="#type-state">state()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_group_storage.">Get the group storage.</a></h4>
   This provides the internal representation of process groups so that
@@ -171,7 +185,7 @@
 
 <h3 class="function"><a name="get_groups-1">get_groups/1</a></h3>
 <div class="spec">
-<p><tt>get_groups(Scope) -&gt; any()</tt></p>
+<p><tt>get_groups(Scope::atom() | non_neg_integer()) -&gt; <a href="#type-state">state()</a> | reference()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_group_storage_for_a_particular_scope_or_after_a_period_of_time.">Get the group storage for a particular scope or after a period of time.</a></h4>
   This provides the internal representation of process groups so that
@@ -180,7 +194,7 @@
 
 <h3 class="function"><a name="get_groups-2">get_groups/2</a></h3>
 <div class="spec">
-<p><tt>get_groups(Scope, Time) -&gt; any()</tt></p>
+<p><tt>get_groups(Scope::atom(), Time::non_neg_integer()) -&gt; reference()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_group_storage_for_a_particular_scope_after_a_period_of_time.">Get the group storage for a particular scope after a period of time.</a></h4>
   This provides the internal representation of process groups so that
@@ -189,7 +203,7 @@
 
 <h3 class="function"><a name="get_groups-3">get_groups/3</a></h3>
 <div class="spec">
-<p><tt>get_groups(Scope, Destination, Time) -&gt; any()</tt></p>
+<p><tt>get_groups(Scope::atom(), Destination::pid() | atom(), Time::non_neg_integer()) -&gt; reference()</tt><br></p>
 </div><p>
   <h4><a name="Get_the_group_storage_for_a_particular_scope_and_destination_after_a_period_of_time.">Get the group storage for a particular scope and destination after a period of time.</a></h4>
   This provides the internal representation of process groups so that
@@ -198,181 +212,181 @@
 
 <h3 class="function"><a name="get_local_members-2">get_local_members/2</a></h3>
 <div class="spec">
-<p><tt>get_local_members(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_members-3">get_local_members/3</a></h3>
 <div class="spec">
-<p><tt>get_local_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the local members of a specific group while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_newest_pid-3">get_local_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_local_group_member_while_excluding_a_specific_pid.">Get the newest local group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_oldest_pid-2">get_local_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member.">Get the oldest local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_oldest_pid-3">get_local_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_local_group_member_while_excluding_a_specific_pid.">Get the oldest local group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_pid-2">get_local_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member.">Get a local group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_local_pid-3">get_local_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_local_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_local_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid.">Get a local group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_members-2">get_members/2</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_members-3">get_members/3</a></h3>
 <div class="spec">
-<p><tt>get_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_newest_pid-3">get_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_group_member_while_excluding_a_specific_pid.">Get the newest group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_oldest_pid-2">get_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member.">Get the oldest group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_oldest_pid-3">get_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_group_member_while_excluding_a_specific_pid.">Get the oldest group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_random_pid-2">get_random_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_random_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member.">Get a group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_random_pid-3">get_random_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_random_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_random_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_members-2">get_remote_members/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_members-3">get_remote_members/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_members(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the remote members of a specific group while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_newest_pid-3">get_remote_newest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_newest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_newest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_newest_remote_group_member_while_excluding_a_specific_pid.">Get the newest remote group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-2">get_remote_oldest_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member.">Get the oldest remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_oldest_pid-3">get_remote_oldest_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_oldest_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_oldest_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_the_oldest_remote_group_member_while_excluding_a_specific_pid.">Get the oldest remote group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_pid-2">get_remote_pid/2</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member.">Get a remote group member.</a></h4>
 </p>
 
 <h3 class="function"><a name="get_remote_pid-3">get_remote_pid/3</a></h3>
 <div class="spec">
-<p><tt>get_remote_pid(GroupName, Exclude, Groups) -&gt; any()</tt></p>
+<p><tt>get_remote_pid(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; {ok, <a href="cpg.html#type-name">cpg:name()</a>, pid()} | {error, <a href="#type-get_pid_error_reason">get_pid_error_reason()</a>}</tt><br></p>
 </div><p>
   <h4><a name="Get_a_remote_group_member_while_excluding_a_specific_pid.">Get a remote group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="which_groups-1">which_groups/1</a></h3>
 <div class="spec">
-<p><tt>which_groups(X1) -&gt; any()</tt></p>
+<p><tt>which_groups(X1::<a href="#type-state">state()</a>) -&gt; [<a href="cpg.html#type-name">cpg:name()</a>]</tt><br></p>
 </div><p>
   <h4><a name="Get_all_the_groups_currently_defined.">Get all the groups currently defined.</a></h4>
 </p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Sep 30 2014, 14:04:30.</i></p>
+<p><i>Generated by EDoc, Aug 8 2015, 20:06:50.</i></p>
 </body>
 </html>
