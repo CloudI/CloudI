@@ -94,6 +94,48 @@
 %  due to the extra compilation required for external services support)
 %-define(CLOUDI_CORE_STANDALONE, true).
 
+% handle the dict type change
+-ifdef(ERLANG_OTP_VERSION_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
+
+% handle the queue type change
+-ifdef(ERLANG_OTP_VERSION_16).
+-type queue_proxy(_Value) :: queue().
+-else.
+-type queue_proxy(Value) :: queue:queue(Value).
+-endif.
+
+% for features specific to Erlang/OTP version 18.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-define(ERLANG_OTP_VERSION_18_FEATURES, undefined).
+-endif.
+-endif.
+
+% provide a simple way of switching from the dict module to the maps module
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+-type maps_proxy(_Key, _Value) :: any().
+-define(MAP_NEW(),           maps:new()).
+-define(MAP_FIND(K, M),      maps:find(K, M)).
+-define(MAP_FETCH(K, M),     maps:get(K, M)).
+-define(MAP_STORE(K, V, M),  maps:put(K, V, M)).
+-define(MAP_ERASE(K, M),     maps:remove(K, M)).
+-define(MAP_TO_LIST(M),      maps:to_list(M)).
+-else.
+-type maps_proxy(Key, Value) :: dict_proxy(Key, Value).
+-define(MAP_NEW(),           dict:new()).
+-define(MAP_FIND(K, M),      dict:find(K, M)).
+-define(MAP_FETCH(K, M),     dict:fetch(K, M)).
+-define(MAP_STORE(K, V, M),  dict:store(K, V, M)).
+-define(MAP_ERASE(K, M),     dict:erase(K, M)).
+-define(MAP_TO_LIST(M),      dict:to_list(M)).
+-endif.
+
 % used to calculate the timeout_terminate based on MaxT / MaxR
 -define(TIMEOUT_TERMINATE_CALC0(MaxT),
         (1000 * MaxT) - ?TIMEOUT_DELTA).

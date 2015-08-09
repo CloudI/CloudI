@@ -41,6 +41,15 @@
 %%%
 %%%------------------------------------------------------------------------
 
+% logging levels explained:
+%
+%   FATAL: indicates the system has failed and can not continue
+%   ERROR: indicates a subsystem has failed but the failure is not fatal
+%   WARN:  indicates an unexpected occurance was found in a subsystem
+%   INFO:  indicates a subsystem has changed state
+%   DEBUG: reports subsystem data that should be useful for debugging
+%   TRACE: reports subsystem data that is only for tracing execution
+
 % Typical logging output which will log asynchronously until the logger's
 % message queue becomes too large, switching to synchronous logging
 % while the message queue remains large

@@ -12,7 +12,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.3.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_init).
@@ -69,8 +69,8 @@
 
 -record(state,
     {
-        service_state,
-        init_timeout
+        service_state :: any(),
+        init_timeout :: reference()
     }).
 
 -include("cloudi_logger.hrl").

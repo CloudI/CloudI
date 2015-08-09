@@ -274,18 +274,18 @@ send_async_timeout_start(Timeout, TransId, Pid,
                                         RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout > RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case dict:find(Pid, SendTimeoutMonitors) of
+    NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
-            dict:store(Pid,
+            ?MAP_STORE(Pid,
                        {MonitorRef,
                         lists:umerge(TransIdList, [TransId])},
                        SendTimeoutMonitors);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
-            dict:store(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
+            ?MAP_STORE(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
     end,
     State#state{
-        send_timeouts = dict:store(TransId,
+        send_timeouts = ?MAP_STORE(TransId,
             {passive, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -297,7 +297,7 @@ send_async_timeout_start(Timeout, TransId, _Pid,
                                 send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
-        send_timeouts = dict:store(TransId,
+        send_timeouts = ?MAP_STORE(TransId,
             {passive, undefined,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -313,18 +313,18 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
                                        RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout > RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case dict:find(Pid, SendTimeoutMonitors) of
+    NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
-            dict:store(Pid,
+            ?MAP_STORE(Pid,
                        {MonitorRef,
                         lists:umerge(TransIdList, [TransId])},
                        SendTimeoutMonitors);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
-            dict:store(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
+            ?MAP_STORE(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
     end,
     State#state{
-        send_timeouts = dict:store(TransId,
+        send_timeouts = ?MAP_STORE(TransId,
             {Client, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
@@ -336,7 +336,7 @@ send_sync_timeout_start(Timeout, TransId, _Pid, Client,
                                send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
-        send_timeouts = dict:store(TransId,
+        send_timeouts = ?MAP_STORE(TransId,
             {Client, undefined,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
@@ -348,12 +348,12 @@ send_timeout_end(TransId, Pid,
     when is_binary(TransId) ->
     NewSendTimeoutMonitors = if
         is_pid(Pid) ->
-            case dict:find(Pid, SendTimeoutMonitors) of
+            case ?MAP_FIND(Pid, SendTimeoutMonitors) of
                 {ok, {MonitorRef, [TransId]}} ->
                     erlang:demonitor(MonitorRef),
-                    dict:erase(Pid, SendTimeoutMonitors);
+                    ?MAP_ERASE(Pid, SendTimeoutMonitors);
                 {ok, {MonitorRef, TransIdList}} ->
-                    dict:store(Pid,
+                    ?MAP_STORE(Pid,
                                {MonitorRef,
                                 lists:delete(TransId, TransIdList)},
                                SendTimeoutMonitors);
@@ -363,7 +363,7 @@ send_timeout_end(TransId, Pid,
         Pid =:= undefined ->
             SendTimeoutMonitors
     end,
-    State#state{send_timeouts = dict:erase(TransId, SendTimeouts),
+    State#state{send_timeouts = ?MAP_ERASE(TransId, SendTimeouts),
                 send_timeout_monitors = NewSendTimeoutMonitors}.
 
 send_timeout_dead(Pid,
@@ -372,10 +372,10 @@ send_timeout_dead(Pid,
                          send_timeout_monitors =
                              SendTimeoutMonitors} = State)
     when is_pid(Pid) ->
-    NewSendTimeouts = case dict:find(Pid, SendTimeoutMonitors) of
+    NewSendTimeouts = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {_MonitorRef, TransIdList}} ->
             lists:foldl(fun(TransId, D) ->
-                case dict:find(TransId, D) of
+                case ?MAP_FIND(TransId, D) of
                     {ok, {Type, _, Tref}}
                     when Type =:= active; Type =:= passive ->
                         case erlang:cancel_timer(Tref) of
@@ -386,7 +386,7 @@ send_timeout_dead(Pid,
                                     {'cloudi_service_send_async_timeout',
                                      TransId}
                         end,
-                        dict:store(TransId, {Type, undefined, Tref}, D);
+                        ?MAP_STORE(TransId, {Type, undefined, Tref}, D);
                     {ok, {Client, _, Tref}} ->
                         case erlang:cancel_timer(Tref) of
                             false ->
@@ -396,7 +396,7 @@ send_timeout_dead(Pid,
                                     {'cloudi_service_send_sync_timeout',
                                      TransId}
                         end,
-                        dict:store(TransId, {Client, undefined, Tref}, D);
+                        ?MAP_STORE(TransId, {Client, undefined, Tref}, D);
                     error ->
                         D
                 end
@@ -405,19 +405,14 @@ send_timeout_dead(Pid,
             SendTimeouts
     end,
     State#state{send_timeouts = NewSendTimeouts,
-                send_timeout_monitors = dict:erase(Pid, SendTimeoutMonitors)}.
+                send_timeout_monitors = ?MAP_ERASE(Pid, SendTimeoutMonitors)}.
 
--ifdef(ERLANG_OTP_VERSION_16).
-cancel_timer_async(Tref) ->
-    erlang:cancel_timer(Tref).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
-cancel_timer_async(Tref) ->
-    erlang:cancel_timer(Tref).
--else. % >= ERLANG_OTP_VERSION_18
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 cancel_timer_async(Tref) ->
     erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
--endif.
+-else.
+cancel_timer_async(Tref) ->
+    erlang:cancel_timer(Tref).
 -endif.
 
 async_response_timeout_start(_, _, 0, _, State) ->
@@ -429,7 +424,7 @@ async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
     when is_integer(Timeout), is_binary(TransId) ->
     erlang:send_after(Timeout, Dispatcher,
                       {'cloudi_service_recv_async_timeout', TransId}),
-    State#state{async_responses = dict:store(TransId,
+    State#state{async_responses = ?MAP_STORE(TransId,
                                              {ResponseInfo, Response},
                                              AsyncResponses)}.
 

@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -54,6 +54,8 @@
 -export([timestamp/0,
          seconds/0,
          seconds_filter/3]).
+
+-include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -69,17 +71,12 @@
 
 -spec timestamp() -> erlang:timestamp().
 
--ifdef(ERLANG_OTP_VERSION_16).
-timestamp() ->
-    erlang:now().
--else.
--ifdef(ERLANG_OTP_VERSION_17).
-timestamp() ->
-    erlang:now().
--else. % necessary for Erlang >= 18.0
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 timestamp() ->
     erlang:timestamp().
--endif.
+-else.
+timestamp() ->
+    erlang:now().
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -89,23 +86,16 @@ timestamp() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
--define(GREGORIAN_SECONDS_OFFSET, 62167219200).
--ifdef(ERLANG_OTP_VERSION_16).
-seconds() ->
-    calendar:datetime_to_gregorian_seconds(
-        calendar:now_to_universal_time(erlang:now())) -
-        ?GREGORIAN_SECONDS_OFFSET.
--else.
--ifdef(ERLANG_OTP_VERSION_17).
-seconds() ->
-    calendar:datetime_to_gregorian_seconds(
-        calendar:now_to_universal_time(erlang:now())) -
-        ?GREGORIAN_SECONDS_OFFSET.
--else. % necessary for Erlang >= 18.0
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seconds() ->
     erlang:system_time(seconds).
--endif.
+-else.
+% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
+-define(GREGORIAN_SECONDS_OFFSET, 62167219200).
+seconds() ->
+    calendar:datetime_to_gregorian_seconds(
+        calendar:now_to_universal_time(erlang:now())) -
+        ?GREGORIAN_SECONDS_OFFSET.
 -endif.
 
 %%-------------------------------------------------------------------------

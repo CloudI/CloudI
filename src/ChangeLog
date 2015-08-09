@@ -6,6 +6,13 @@
     * Update key2value, keys1value
     * Update syslog as cloudi_x_syslog
         * Manually move the syslog source code to have the "cloudi_x_" prefix
+    * Add usage of Erlang maps when the version of Erlang is >= 18.0 for the
+      compilation of internal CloudI service logic
+        * Erlang/OTP versions R16 and 17.x still use the dict module
+          (which provides better type checking in 17.x)
+    * Add dict_proxy/2, queue_proxy/1 and maps_proxy/2 as types defined in a
+      single place within the internal CloudI source code
+    * Add better type specifications for internal CloudI service logic data
 
 2015-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

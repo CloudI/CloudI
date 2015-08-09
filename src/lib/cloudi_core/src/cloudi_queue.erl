@@ -79,11 +79,7 @@
          send/8,
          timeout/3]).
 
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
+-include("cloudi_core_i_constants.hrl").
 
 -record(request,
     {

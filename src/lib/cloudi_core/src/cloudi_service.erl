@@ -253,11 +253,6 @@
 
 -define(CATCH_TIMEOUT(F),
         try F catch exit:{timeout, _} -> {error, timeout} end).
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions for behavior

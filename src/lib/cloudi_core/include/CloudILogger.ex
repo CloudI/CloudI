@@ -41,6 +41,15 @@
 ###
 ###------------------------------------------------------------------------
 
+# logging levels explained:
+#
+#   fatal: indicates the system has failed and can not continue
+#   error: indicates a subsystem has failed but the failure is not fatal
+#   warn:  indicates an unexpected occurance was found in a subsystem
+#   info:  indicates a subsystem has changed state
+#   debug: reports subsystem data that should be useful for debugging
+#   trace: reports subsystem data that is only for tracing execution
+
 defmodule CloudILogger do
 
 # Typical logging output which will log asynchronously until the logger's

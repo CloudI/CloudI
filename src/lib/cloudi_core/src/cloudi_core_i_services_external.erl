@@ -92,52 +92,111 @@
 
 -record(state,
     {
-        % common elements for cloudi_core_i_services_common.hrl
-        dispatcher,                    % self()
-        send_timeouts = dict:new(),    % tracking for send timeouts
-        send_timeout_monitors = dict:new(),  % send timeouts destinations
-        recv_timeouts = dict:new(),    % tracking for recv timeouts
-        async_responses = dict:new(),  % tracking for async requests
-        queue_requests = true,         % is the external process busy?
-        queued = cloudi_x_pqueue4:new(),     % queued incoming requests
-        % unique state elements
-        queued_size = 0,               % queued size in bytes
-        queued_word_size,              % erlang:system_info(wordsize)
-        protocol,                      % tcp, udp, or local
-        port,                          % port number used
-        initialize = false,            % ready to send init
-        incoming_port,                 % udp incoming port
-        listener,                      % tcp listener
-        acceptor,                      % tcp acceptor
-        socket_path,                   % local socket filesystem path
-        socket_options,                % common socket options
-        socket = undefined,            % data socket
-        service_state = undefined,     % service state for aspects
-        aspects_request_after_f = undefined, % pending aspects_request_after
-        process_index,                 % 0-based index of the Erlang process
-        process_count,                 % initial count of Erlang processes
-        command_line,                  % command line of OS execve
-        prefix,                        % subscribe/unsubscribe name prefix
-        timeout_init,                  % pre-poll() timeout
-        timeout_async,                 % default timeout for send_async
-        timeout_sync,                  % default timeout for send_sync
-        timeout_term,                  % post-poll() timeout
-        os_pid = undefined,            % os_pid reported by the socket
-        keepalive = undefined,         % stores if a keepalive succeeded
-        init_timer,                    % init timeout handler
-        uuid_generator,                % transaction id generator
-        dest_refresh,                  % immediate_closest | lazy_closest |
-                                       % immediate_furthest | lazy_furthest |
-                                       % immediate_random | lazy_random |
-                                       % immediate_local | lazy_local |
-                                       % immediate_remote | lazy_remote |
-                                       % immediate_newest | lazy_newest |
-                                       % immediate_oldest | lazy_oldest,
-                                       % destination pid refresh
-        cpg_data,                      % dest_refresh lazy
-        dest_deny,                     % denied from sending to a destination
-        dest_allow,                    % allowed to send to a destination
-        options                        % #config_service_options{}
+        % state record fields common for cloudi_core_i_services_common.hrl:
+
+        % self() value cached
+        dispatcher :: pid(),
+        % timeout enforcement for any outgoing service requests
+        send_timeouts = ?MAP_NEW()
+            :: maps_proxy(cloudi:trans_id(),
+                          {passive, pid() | undefined, reference()}) |
+               list({cloudi:trans_id(),
+                     {passive, pid() | undefined, reference()}}),
+        % if a sent service request timeout is greater than the
+        % service configuration option request_timeout_immediate_max,
+        % monitor the destination process with the sent service request
+        % transaction id
+        send_timeout_monitors = ?MAP_NEW()
+            :: maps_proxy(pid(), {reference(), list(cloudi:trans_id())}) |
+               list({pid(), {reference(), list(cloudi:trans_id())}}),
+        % timeout enforcement for any incoming service requests
+        recv_timeouts = ?MAP_NEW()
+            :: maps_proxy(cloudi:trans_id(), reference()) |
+               list({cloudi:trans_id(), reference()}),
+        % timeout enforcement for any responses to
+        % asynchronous outgoing service requests
+        async_responses = ?MAP_NEW()
+            :: maps_proxy(cloudi:trans_id(), {binary(), binary()}) |
+               list({cloudi:trans_id(), {binary(), binary()}}),
+        % is the external service OS process thread busy?
+        queue_requests = true :: boolean(),
+        % queued incoming service requests
+        queued = cloudi_x_pqueue4:new()
+            :: cloudi_x_pqueue4:cloudi_x_pqueue4() |
+               list({integer(), any()}),
+
+        % state record fields unique to the external thread Erlang process:
+
+        % queued size in bytes
+        queued_size = 0 :: non_neg_integer(),
+        % erlang:system_info(wordsize) cached
+        queued_word_size :: pos_integer(),
+        % external thread connection protocol
+        protocol :: tcp | udp | local,
+        % external thread connection port
+        port :: inet:port_number(),
+        % wait for cloudi_core_i_services_monitor to send initialize when
+        % all of the service instance processes have been spawned
+        initialize = false :: boolean(),
+        % udp incoming data port
+        incoming_port :: inet:port_number(),
+        % tcp listener
+        listener,
+        % tcp acceptor
+        acceptor,
+        % local socket filesystem path
+        socket_path :: string(),
+        % common socket options
+        socket_options,
+        % data socket
+        socket = undefined,
+        % service state for executing aspect functions
+        % (as assigned from aspect function execution)
+        service_state = undefined,
+        % pending aspects_request_after
+        aspects_request_after_f = undefined,
+        % 0-based index of the Erlang process in all service instance processes
+        process_index :: non_neg_integer(),
+        % current count of all Erlang processes for the service instance
+        process_count :: pos_integer(),
+        % command line of OS execve
+        command_line,
+        % subscribe/unsubscribe name prefix set in service configuration
+        prefix :: cloudi:service_name_pattern(),
+        % pre-poll() timeout in the external service thread
+        timeout_init :: cloudi_service_api:timeout_milliseconds(),
+        % default timeout for send_async set in service configuration
+        timeout_async :: cloudi_service_api:timeout_milliseconds(),
+        % default timeout for send_sync set in service configuration
+        timeout_sync :: cloudi_service_api:timeout_milliseconds(),
+        % post-poll() timeout in the external service thread
+        timeout_term :: cloudi_service_api:timeout_milliseconds(),
+        % OS process pid for SIGKILL
+        os_pid = undefined :: pos_integer() | undefined,
+        % udp keepalive succeeded
+        keepalive = undefined :: received | undefined,
+        % init timeout handler
+        init_timer :: reference() | undefined,
+        % transaction id (UUIDv1) generator
+        uuid_generator :: cloudi_x_uuid:state(),
+        % how service destination lookups occur for a service request send
+        dest_refresh :: cloudi_service_api:dest_refresh(),
+        % cached cpg data for lazy destination refresh methods
+        cpg_data
+            :: {module(), any()} | undefined |
+               list({any(), any()}),
+        % ACL lookup for denied destinations
+        dest_deny
+            :: cloudi_x_trie:cloudi_x_trie() | undefined |
+               list({string(), any()}),
+        % ACL lookup for allowed destinations
+        dest_allow
+            :: cloudi_x_trie:cloudi_x_trie() | undefined |
+               list({string(), any()}),
+        % service configuration options
+        options
+            :: #config_service_options{} |
+               cloudi_service_api:service_options_external()
     }).
 
 -include("cloudi_core_i_services_common.hrl").
@@ -691,7 +750,7 @@ init([Protocol, SocketPath,
     true = is_boolean(Consume),
     case TransId of
         <<0:128>> ->
-            case dict:to_list(AsyncResponses) of
+            case ?MAP_TO_LIST(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
                                       {'cloudi_service_recv_async_retry',
@@ -703,17 +762,17 @@ init([Protocol, SocketPath,
                     {next_state, 'HANDLE', State};
                 L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
                                                           AsyncResponses),
                     ok = send('recv_async_out'(ResponseInfo, Response,
                                                TransIdPick),
                               State),
                     {next_state, 'HANDLE', State#state{
-                        async_responses = dict:erase(TransIdPick,
+                        async_responses = ?MAP_ERASE(TransIdPick,
                                                      AsyncResponses)}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = dict:fetch(TransIdPick,
+                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
                                                           AsyncResponses),
                     ok = send('recv_async_out'(ResponseInfo, Response,
                                                TransIdPick),
@@ -721,7 +780,7 @@ init([Protocol, SocketPath,
                     {next_state, 'HANDLE', State}
             end;
         <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> -> % v1 UUID
-            case dict:find(TransId, AsyncResponses) of
+            case ?MAP_FIND(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, Dispatcher,
                                       {'cloudi_service_recv_async_retry',
@@ -735,7 +794,7 @@ init([Protocol, SocketPath,
                     ok = send('recv_async_out'(ResponseInfo, Response, TransId),
                               State),
                     {next_state, 'HANDLE', State#state{
-                        async_responses = dict:erase(TransId,
+                        async_responses = ?MAP_ERASE(TransId,
                                                      AsyncResponses)}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
                     ok = send('recv_async_out'(ResponseInfo, Response, TransId),
@@ -1037,7 +1096,7 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size}, StateName,
             {Queue, QueuedSize}
     end,
     {next_state, StateName,
-     State#state{recv_timeouts = dict:erase(TransId, RecvTimeouts),
+     State#state{recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
                  queued = NewQueue,
                  queued_size = NewQueuedSize}};
 
@@ -1051,7 +1110,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= Dispatcher,
-    case dict:find(TransId, SendTimeouts) of
+    case ?MAP_FIND(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {next_state, StateName, State};
@@ -1103,7 +1162,7 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= Dispatcher,
-    case dict:find(TransId, SendTimeouts) of
+    case ?MAP_FIND(TransId, SendTimeouts) of
         error ->
             % send_sync timeout already occurred
             {next_state, StateName, State};
@@ -1132,7 +1191,7 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
 
 handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
             #state{send_timeouts = SendTimeouts} = State) ->
-    case dict:find(TransId, SendTimeouts) of
+    case ?MAP_FIND(TransId, SendTimeouts) of
         error ->
             {next_state, StateName, State};
         {ok, {_, Pid, _}} ->
@@ -1142,7 +1201,7 @@ handle_info({'cloudi_service_send_async_timeout', TransId}, StateName,
 
 handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
             #state{send_timeouts = SendTimeouts} = State) ->
-    case dict:find(TransId, SendTimeouts) of
+    case ?MAP_FIND(TransId, SendTimeouts) of
         error ->
             {next_state, StateName, State};
         {ok, {_, Pid, _}} ->
@@ -1154,7 +1213,7 @@ handle_info({'cloudi_service_send_sync_timeout', TransId}, StateName,
 handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
             #state{async_responses = AsyncResponses} = State) ->
     {next_state, StateName,
-     State#state{async_responses = dict:erase(TransId, AsyncResponses)}};
+     State#state{async_responses = ?MAP_ERASE(TransId, AsyncResponses)}};
 
 handle_info({udp, Socket, _, Port, Data}, StateName,
             #state{protocol = udp,
@@ -1368,18 +1427,6 @@ format_status(_Opt,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
                       options = ConfigOptions} = State]) ->
-    NewRecvTimeouts = if
-        RecvTimeouts =:= undefined ->
-            undefined;
-        true ->
-            dict:to_list(RecvTimeouts)
-    end,
-    NewQueue = if
-        Queue =:= undefined ->
-            undefined;
-        true ->
-            cloudi_x_pqueue4:to_plist(Queue)
-    end,
     NewGroups = case Groups of
         undefined ->
             undefined;
@@ -1402,11 +1449,11 @@ format_status(_Opt,
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"StateData",
-        State#state{send_timeouts = dict:to_list(SendTimeouts),
-                    send_timeout_monitors = dict:to_list(SendTimeoutMonitors),
-                    recv_timeouts = NewRecvTimeouts,
-                    async_responses = dict:to_list(AsyncResponses),
-                    queued = NewQueue,
+        State#state{send_timeouts = ?MAP_TO_LIST(SendTimeouts),
+                    send_timeout_monitors = ?MAP_TO_LIST(SendTimeoutMonitors),
+                    recv_timeouts = ?MAP_TO_LIST(RecvTimeouts),
+                    async_responses = ?MAP_TO_LIST(AsyncResponses),
+                    queued = cloudi_x_pqueue4:to_plist(Queue),
                     cpg_data = NewGroups,
                     dest_deny = NewDestDeny,
                     dest_allow = NewDestAllow,
@@ -1770,7 +1817,7 @@ recv_timeout_start(Timeout, Priority, TransId, Size, T,
                           queued_size = QueuedSize} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state{
-        recv_timeouts = dict:store(TransId,
+        recv_timeouts = ?MAP_STORE(TransId,
             erlang:send_after(Timeout, Dispatcher,
                 {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
@@ -1805,7 +1852,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                        OldTimeout, Priority, TransId, Source,
                                        ServiceState, false) of
                 {ok, _, NewServiceState} ->
-                    RecvTimer = dict:fetch(TransId, RecvTimeouts),
+                    RecvTimer = ?MAP_FETCH(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
                             0;
@@ -1827,7 +1874,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                               Result, S,
                                               RequestTimeoutAdjustment)
                     end,
-                    State#state{recv_timeouts = dict:erase(TransId,
+                    State#state{recv_timeouts = ?MAP_ERASE(TransId,
                                                            RecvTimeouts),
                                 queued = NewQueue,
                                 queued_size = QueuedSize - Size,
@@ -1863,7 +1910,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                        OldTimeout, Priority, TransId, Source,
                                        ServiceState, false) of
                 {ok, _, NewServiceState} ->
-                    RecvTimer = dict:fetch(TransId, RecvTimeouts),
+                    RecvTimer = ?MAP_FETCH(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
                             0;
@@ -1885,7 +1932,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                               Result, S,
                                               RequestTimeoutAdjustment)
                     end,
-                    State#state{recv_timeouts = dict:erase(TransId,
+                    State#state{recv_timeouts = ?MAP_ERASE(TransId,
                                                            RecvTimeouts),
                                 queued = NewQueue,
                                 queued_size = QueuedSize - Size,
