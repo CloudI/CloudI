@@ -143,7 +143,7 @@
             scope :: atom(),
             receiver :: pid(),
             uuid_generator :: cloudi_x_uuid:state(),
-            cpg_data :: any(),
+            cpg_data :: cloudi_x_cpg_data:state(),
             cpg_data_stale = false :: boolean()
         }).
 
@@ -160,7 +160,7 @@
          % advanced:
          % options for internal coordination with cloudi_service
          {uuid, cloudi_x_uuid:state()} |
-         {groups, any()} |
+         {groups, cloudi_x_cpg_data:state()} |
          {groups_scope, atom()} |
          {groups_static, boolean()}).
 -type context() :: #cloudi_context{}.
@@ -330,7 +330,8 @@ new(Options)
 %%-------------------------------------------------------------------------
 
 -spec destinations_refresh(Context :: context(),
-                           Message :: {cloudi_cpg_data, any()}) ->
+                           Message :: {cloudi_cpg_data,
+                                       cloudi_x_cpg_data:state()}) ->
     context().
 
 destinations_refresh(#cloudi_context{
