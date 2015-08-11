@@ -59,7 +59,7 @@ in `tests/http_req/loadtest/results_v*/*_tsung_output.tar.bz2`
     L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (Socket G2)
 
-####Machine 2 `(1.4.0)`
+####Machine 2
 
     Core i7 2700K 3.5GHz 1 cpu, 4 cores/cpu, 2 hts/core
     L2:4x256KB L3:8MB RAM:16GB:DDR3-1333MHz
