@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add common notification format for cloudi_service_db_pgsql:
+        * {notify_ok, Pid, Channel :: binary(), Payload :: binary()} and
+          {notify_error, Message :: binary()}
+
 2015-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update key2value, keys1value, uuid, cpg

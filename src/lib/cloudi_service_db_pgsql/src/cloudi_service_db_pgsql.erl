@@ -363,11 +363,22 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                              internal, State)
     end.
 
-cloudi_service_handle_info({pgsql, Connection, Async},
-                           #state{connection = Connection,
-                                  listen = Listen} = State, Dispatcher) ->
-    {ok, _} = cloudi_service:send_async(Dispatcher, Listen, Async),
+cloudi_service_handle_info({AsyncTag, Connection, Async},
+                           #state{module = Module,
+                                  connection = Connection,
+                                  listen = Listen,
+                                  interface = Interface} = State, Dispatcher)
+    when AsyncTag =:= pgsql;
+         AsyncTag =:= epgsql ->
+    Request = if
+        Interface =:= native ->
+            Async;
+        Interface =:= common ->
+            driver_async_to_common(Module, Async)
+    end,
+    {ok, _} = cloudi_service:send_async(Dispatcher, Listen, Request),
     {noreply, State};
+
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -926,6 +937,31 @@ semiocast_to_common({Command, []}) ->
 semiocast_to_common([_ | _] = L) ->
     % list is reversed, odd
     check_list(lists:reverse(L), fun semiocast_to_common/1).
+
+driver_async_to_common(?MODULE_EPGSQL,
+                       {notification, Channel, Pid, Payload}) ->
+    {notify_ok, Pid, Channel, Payload};
+driver_async_to_common(?MODULE_EPGSQL,
+                       {notice, #error{message = Message}}) ->
+    {notify_error, Message};
+driver_async_to_common(?MODULE_WG,
+                       {notification, Channel, Pid, Payload}) ->
+    {notify_ok, Pid, Channel, Payload};
+driver_async_to_common(?MODULE_WG,
+                       {notice, #epgsql_wg_error{message = Message}}) ->
+    {notify_error, Message};
+driver_async_to_common(?MODULE_SEMIOCAST,
+                       {notification, Pid, Channel, Payload}) ->
+    {notify_ok, Pid, Channel, Payload};
+driver_async_to_common(?MODULE_SEMIOCAST,
+                       {notice, Fields}) ->
+    Message = case lists:keyfind(message, 1, Fields) of
+        false ->
+            <<>>;
+        {message, MessageValue} ->
+            MessageValue
+    end,
+    {notify_error, Message}.
 
 check_list([E], F) ->
     F(E);
