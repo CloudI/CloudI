@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CloudI services that were previously not included in the
+      installation: cloudi_service_db_cassandra_cql,
+      cloudi_service_db_riak, cloudi_service_oauth1
+
 2015-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add common notification format for cloudi_service_db_pgsql:
