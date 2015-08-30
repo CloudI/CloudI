@@ -170,6 +170,7 @@
          priority_default/1,
          destination_refresh_immediate/1,
          destination_refresh_lazy/1,
+         duo_mode/1,
          source_subscriptions/2,
          context_options/1,
          trans_id/1,
@@ -2278,6 +2279,18 @@ destination_refresh_immediate(Dispatcher) ->
 
 destination_refresh_lazy(Dispatcher) ->
     gen_server:call(Dispatcher, destination_refresh_lazy, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine if duo_mode is enabled.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec duo_mode(Dispatcher :: dispatcher()) ->
+    boolean().
+
+duo_mode(Dispatcher) ->
+    gen_server:call(Dispatcher, duo_mode, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

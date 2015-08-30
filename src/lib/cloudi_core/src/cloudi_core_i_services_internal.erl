@@ -796,6 +796,11 @@ handle_call(destination_refresh_lazy, _,
             DestRefresh =:= lazy_oldest),
     hibernate_check({reply, Lazy, State});
 
+handle_call(duo_mode, _,
+            #state{options = #config_service_options{
+                       duo_mode = DuoMode}} = State) ->
+    hibernate_check({reply, DuoMode, State});
+
 handle_call({source_subscriptions, Pid}, _,
             #state{options = #config_service_options{
                        scope = Scope}} = State) ->

@@ -54,6 +54,8 @@
 %% external interface
 -export([external_format/2]).
 
+-include("cloudi_core_i_constants.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -75,7 +77,8 @@ external_format(Response, Format) ->
         Format =:= erlang_term ->
             erlang:term_to_binary(Response);
         Format =:= msgpack ->
-            Outgoing = cloudi_x_msgpack:pack(msgpack_response(Response)),
+            Outgoing = cloudi_x_msgpack:pack(msgpack_response(Response),
+                                             [{format, ?MSGPACK_MAP}]),
             true = is_binary(Outgoing),
             Outgoing
     end.

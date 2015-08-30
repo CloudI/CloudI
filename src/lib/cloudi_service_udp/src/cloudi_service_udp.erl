@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2013-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_udp).
@@ -91,13 +91,14 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, _Timeout, _Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {ip,                       ?DEFAULT_INTERFACE},
         {port,                     ?DEFAULT_PORT},
         {destination,              ?DEFAULT_DESTINATION}],
     [Interface, Port, Destination] =
         cloudi_proplists:take_values(Defaults, Args),
+    true = cloudi_service:duo_mode(Dispatcher),
     true = is_integer(Port),
     true = is_list(Destination),
     case gen_udp:open(Port, [{ip, Interface}, {active, true}, binary]) of

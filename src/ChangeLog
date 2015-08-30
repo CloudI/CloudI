@@ -1,6 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_service:duo_mode/1 to test whether the service
+      is configured with the duo_mode service configuration option
+    * Enforce duo_mode is true when cloudi_service_tcp or
+      cloudi_service_udp is used, due to socket ownership
+    * Specify the msgpack map type based on whether the Erlang
+      version is 18.x or pre-18.x (to pick map or jsx format, respectively)
+    * Document the usage of an 'external_format' configuration argument
+      and the usage of an 'output' configuration argument in cloudi_request
+    * Add destination_set configuration argument to cloudi_service_tcp
+      to allow a service request to specify a destination for a newly
+      created tcp socket
+    * Add debug and debug_level configuration arguments to cloudi_service_tcp
+
 2015-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudI services that were previously not included in the

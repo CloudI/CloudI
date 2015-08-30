@@ -126,6 +126,7 @@
 -define(MAP_STORE(K, V, M),  maps:put(K, V, M)).
 -define(MAP_ERASE(K, M),     maps:remove(K, M)).
 -define(MAP_TO_LIST(M),      maps:to_list(M)).
+-define(MSGPACK_MAP, map).
 -else.
 -type maps_proxy(Key, Value) :: dict_proxy(Key, Value).
 -define(MAP_NEW(),           dict:new()).
@@ -134,6 +135,7 @@
 -define(MAP_STORE(K, V, M),  dict:store(K, V, M)).
 -define(MAP_ERASE(K, M),     dict:erase(K, M)).
 -define(MAP_TO_LIST(M),      dict:to_list(M)).
+-define(MSGPACK_MAP, jsx).
 -endif.
 
 % used to calculate the timeout_terminate based on MaxT / MaxR

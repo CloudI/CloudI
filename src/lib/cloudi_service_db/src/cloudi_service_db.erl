@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db).
@@ -70,7 +70,7 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
 -define(DEFAULT_TABLE_MODULE,                dict). % dict API
--define(DEFAULT_OUTPUT,                  internal).
+-define(DEFAULT_OUTPUT,                      both).
 -define(DEFAULT_EXTERNAL_FORMAT,    erlang_string).
 -define(DEFAULT_USE_KEY_VALUE,               true). % functionality
 
@@ -80,7 +80,7 @@
         prefix_length :: integer(),
         uuid_generator :: cloudi_x_uuid:state(),
         table_module :: atom(),
-        output_type :: internal | external,
+        output_type :: both | internal | external,
         external_format :: cloudi_request:external_format(),
         use_key_value :: boolean()
     }).
@@ -245,7 +245,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         cloudi_proplists:take_values(Defaults, Args),
     true = is_atom(TableModule),
     {file, _} = code:is_loaded(TableModule),
-    true = ((OutputType =:= internal) orelse
+    true = ((OutputType =:= both) orelse
+            (OutputType =:= internal) orelse
             (OutputType =:= external)),
     true = ((ExternalFormat =:= erlang_string) orelse
             (ExternalFormat =:= erlang_term) orelse
@@ -277,22 +278,22 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 
 key_value({Command, Table},
-          Database, Request, TransId, State)
+          Database, ResponseOutputType, TransId, State)
     when is_binary(Table) ->
     key_value({Command, erlang:binary_to_list(Table)},
-              Database, Request, TransId, State);
+              Database, ResponseOutputType, TransId, State);
 key_value({Command, Table, Arg1},
-          Database, Request, TransId, State)
+          Database, ResponseOutputType, TransId, State)
     when is_binary(Table) ->
     key_value({Command, erlang:binary_to_list(Table), Arg1},
-              Database, Request, TransId, State);
+              Database, ResponseOutputType, TransId, State);
 key_value({Command, Table, Arg1, Arg2},
-          Database, Request, TransId, State)
+          Database, ResponseOutputType, TransId, State)
     when is_binary(Table) ->
     key_value({Command, erlang:binary_to_list(Table), Arg1, Arg2},
-              Database, Request, TransId, State);
+              Database, ResponseOutputType, TransId, State);
 key_value({new, [I | _] = Table, Value},
-          Database, Request, TransId,
+          Database, ResponseOutputType, TransId,
           #state{tables = Tables,
                  table_module = TableModule} = State)
     when is_integer(I) ->
@@ -321,19 +322,19 @@ key_value({new, [I | _] = Table, Value},
             TableModule:store(TransId, NewValue, Old)
         end, TableModule:store(TransId, NewValue, TableModule:new()), Tables),
     {reply,
-     response(Request, {ok, TransId, NewValue}, State),
+     response(ResponseOutputType, {ok, TransId, NewValue}, State),
      State#state{tables = NewTables}};
 key_value({delete, [I | _] = Table},
-          Database, Request, _TransId,
+          Database, ResponseOutputType, _TransId,
           #state{tables = Tables} = State)
     when is_integer(I) ->
     TableName = Database ++ [$* | Table],
     NewTables = cloudi_x_trie:erase(TableName, Tables),
     {reply,
-     response(Request, ok, State),
+     response(ResponseOutputType, ok, State),
      State#state{tables = NewTables}};
 key_value({delete, [I | _] = Table, Key},
-          Database, Request, _TransId,
+          Database, ResponseOutputType, _TransId,
           #state{tables = Tables,
                  table_module = TableModule} = State)
     when is_integer(I) ->
@@ -342,10 +343,10 @@ key_value({delete, [I | _] = Table, Key},
             TableModule:erase(Key, Old)
         end, TableModule:new(), Tables),
     {reply,
-     response(Request, ok, State),
+     response(ResponseOutputType, ok, State),
      State#state{tables = NewTables}};
 key_value({get, [I | _] = Table},
-          Database, Request, _TransId,
+          Database, ResponseOutputType, _TransId,
           #state{tables = Tables,
                  table_module = TableModule} = State)
     when is_integer(I) ->
@@ -353,15 +354,17 @@ key_value({get, [I | _] = Table},
     case cloudi_x_trie:find(TableName, Tables) of
         {ok, TableValues} ->
             {reply,
-             response(Request, {ok, TableModule:to_list(TableValues)}, State),
+             response(ResponseOutputType,
+                      {ok, TableModule:to_list(TableValues)}, State),
              State};
         error ->
             {reply,
-             response(Request, {ok, []}, State),
+             response(ResponseOutputType,
+                      {ok, []}, State),
              State}
     end;
 key_value({get, [I | _] = Table, Key},
-          Database, Request, _TransId,
+          Database, ResponseOutputType, _TransId,
           #state{tables = Tables,
                  table_module = TableModule} = State)
     when is_integer(I) ->
@@ -370,16 +373,16 @@ key_value({get, [I | _] = Table, Key},
         {ok, TableValues} ->
             case TableModule:find(Key, TableValues) of
                 {ok, Value} ->
-                    response(Request, {ok, Value}, State);
+                    response(ResponseOutputType, {ok, Value}, State);
                 error ->
-                    response(Request, {ok, undefined}, State)
+                    response(ResponseOutputType, {ok, undefined}, State)
             end;
         error ->
-            response(Request, {ok, undefined}, State)
+            response(ResponseOutputType, {ok, undefined}, State)
     end,
     {reply, Response, State};
 key_value({put, [I | _] = Table, Key, Value},
-          Database, Request, _TransId,
+          Database, ResponseOutputType, _TransId,
           #state{tables = Tables,
                  table_module = TableModule} = State)
     when is_integer(I) ->
@@ -388,12 +391,13 @@ key_value({put, [I | _] = Table, Key, Value},
             TableModule:store(Key, Value, Old)
         end, TableModule:store(Key, Value, TableModule:new()), Tables),
     {reply,
-     response(Request, {ok, Value}, State),
+     response(ResponseOutputType, {ok, Value}, State),
      State#state{tables = NewTables}};
 key_value(Command,
-          _Database, Request, _TransId, State) ->
+          _Database, ResponseOutputType, _TransId, State) ->
     {reply,
-     response(Request, {error, {invalid_command, Command}}, State),
+     response(ResponseOutputType,
+              {error, {invalid_command, Command}}, State),
      State}.
 
 do_query(Database, Request, TransId,
@@ -401,20 +405,18 @@ do_query(Database, Request, TransId,
                 external_format = ExternalFormat,
                 use_key_value = true} = State)
     when (Output =:= external) orelse
-         ((Output =:= internal) andalso is_binary(Request)) ->
+         ((Output =:= both) andalso is_binary(Request)) ->
     key_value(cloudi_request:external_format(Request, ExternalFormat),
-              Database, Request, TransId, State);
+              Database, external, TransId, State);
 do_query(Database, Request, TransId,
-         #state{use_key_value = true} = State) ->
+         #state{output_type = internal,
+                use_key_value = true} = State) ->
     key_value(Request,
-              Database, Request, TransId, State).
+              Database, internal, TransId, State).
     
-response(Request, Response,
-         #state{output_type = Output,
-                external_format = ExternalFormat})
-    when (Output =:= external) orelse
-         ((Output =:= internal) andalso is_binary(Request)) ->
+response(external, Response,
+         #state{external_format = ExternalFormat}) ->
     cloudi_response:external_format(Response, ExternalFormat);
-response(_, Response, #state{}) ->
+response(internal, Response, #state{}) ->
     Response.
 

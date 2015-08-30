@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request_info).
@@ -52,6 +52,7 @@
 
 %% external interface
 -export([key_value_new/1,
+         key_value_append/2,
          key_value_parse/1]).
 
 %%%------------------------------------------------------------------------
@@ -79,6 +80,22 @@ key_value_new(RequestInfo) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Append RequestInfo key/value data.===
+%% Use the same binary format.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec key_value_append(RequestInfo :: cloudi_key_value:key_values(),
+                       Existing :: binary()) ->
+    Result :: binary().
+
+key_value_append(RequestInfo, Existing)
+    when is_binary(Existing) ->
+    Suffix = key_value_new(RequestInfo),
+    <<Existing/binary, Suffix/binary>>.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Parse RequestInfo key/value data.===
 %% RequestInfo is meant to contain key/value pairs that is request
 %% meta-data.
@@ -87,25 +104,30 @@ key_value_new(RequestInfo) ->
 
 -ifdef(ERLANG_OTP_VERSION_16).
 -spec key_value_parse(RequestInfo :: binary() |
-                                     list({any(), any()})) ->
+                                     list({any(), any()}) |
+                                     dict()) ->
     Result :: dict().
 -else.
 -spec key_value_parse(RequestInfo :: binary() |
-                                     list({any(), any()})) ->
+                                     list({any(), any()}) |
+                                     dict:dict(any(), any())) ->
     Result :: dict:dict(any(), any()).
 -endif.
 
 key_value_parse(RequestInfo)
+    when is_binary(RequestInfo) ->
+    % key/values: binary() -> binary()
+    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
+                                dict:new());
+key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->
-    % any() -> any()
+    % key/values: any() -> any()
     lists:foldl(fun({K, V}, D) ->
         dict:store(K, V, D)
     end, dict:new(), RequestInfo);
-key_value_parse(RequestInfo)
-    when is_binary(RequestInfo) ->
-    % binary() -> binary()
-    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
-                                dict:new()).
+key_value_parse(RequestInfo) ->
+    % key/values: any() -> any()
+    RequestInfo.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
