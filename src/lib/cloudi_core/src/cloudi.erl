@@ -131,6 +131,30 @@
     0..?TIMEOUT_MAX_ERLANG.
 -export_type([dest_refresh_delay_milliseconds/0]).
 
+-type message_service_request() ::
+    {Type :: 'cloudi_service_send_async' |
+             'cloudi_service_send_sync',
+     Name :: service_name(),
+     Pattern :: service_name_pattern(),
+     RequestInfo :: request_info(),
+     Request :: request(),
+     Timeout :: timeout_value_milliseconds(),
+     Priority :: priority_value(),
+     TransId :: trans_id(),
+     Source :: pid()}.
+-type message_service_response() ::
+    {Type :: 'cloudi_service_return_async' |
+             'cloudi_service_return_sync',
+     Name :: service_name(),
+     Pattern :: service_name_pattern(),
+     ResponseInfo :: response_info(),
+     Response :: response(),
+     Timeout :: timeout_value_milliseconds(),
+     TransId :: trans_id(),
+     Source :: pid()}.
+-export_type([message_service_request/0,
+              message_service_response/0]).
+
 -record(cloudi_context,
         {
             dest_refresh :: cloudi_service_api:dest_refresh(),

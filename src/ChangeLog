@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the compression configuration argument to cloudi_service_queue
+      to provide a zlib compression level
+      (defaults to 0, no compression, can be 0..9)
+    * Improve cloudi_service_http_cowboy type specifications
+      and the processing of queued requests
+    * Add support in cloudi_service_tcp for bidirectional CloudI
+      service requests, including the protocol_id_check configuration
+      argument to avoid blocking on CloudI service request responses
+      from the socket
+
 2015-08-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:duo_mode/1 to test whether the service

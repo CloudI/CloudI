@@ -42,7 +42,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -77,8 +77,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -99,6 +99,7 @@
         % required argument, string
         % use "$I" or "${I}" for the process index within the string
         % so unique files are created when the configuration count_process > 1
+-define(DEFAULT_COMPRESSION,                    0). % zlib compression 0..9
 -define(DEFAULT_RETRY,                          0).
 -define(DEFAULT_FAULT_ISOLATION,      destination). % | both
 
@@ -145,7 +146,7 @@
 
 -record(state,
     {
-        logging,
+        logging :: cloudi_write_ahead_logging:state(),
         mode :: destination | both,
         retry :: non_neg_integer(),
         retry_f :: fun((request()) ->
@@ -164,18 +165,22 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {file,                         ?DEFAULT_FILE},
+        {compression,           ?DEFAULT_COMPRESSION},
         {retry,                       ?DEFAULT_RETRY},
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
-    [FilePath, Retry, Mode] = cloudi_proplists:take_values(Defaults, Args),
-    true = (is_list(FilePath) andalso is_integer(hd(FilePath))),
-    true = (is_integer(Retry) andalso (Retry >= 0)),
+    [FilePath, Compression, Retry,
+     Mode] = cloudi_proplists:take_values(Defaults, Args),
+    true = is_list(FilePath) andalso is_integer(hd(FilePath)),
+    true = is_integer(Compression) andalso
+           (Compression >= 0) andalso (Compression =< 9),
+    true = is_integer(Retry) andalso (Retry >= 0),
     true = ((Mode =:= destination) orelse (Mode =:= both)),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
                                       cloudi_environment:lookup()),
-    QueueFilePath = cloudi_environment:transform(FilePath,
-                                                         Environment),
+    QueueFilePath = cloudi_environment:transform(FilePath, Environment),
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
+                                             Compression,
                                              fun(T) ->
                                                 retry(Mode, Dispatcher, T)
                                              end),

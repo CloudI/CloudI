@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -71,6 +71,12 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
+
 -record(websocket_state,
     {
         % for service requests entering CloudI
@@ -81,10 +87,13 @@
         % for a service request exiting CloudI
         response_pending = false     :: boolean(),
         response_timer               :: reference(),
-        request_pending              :: tuple(),
-        response_lookup,    % dict
-        recv_timeouts,      % dict
-        queued              % pqueue4
+        request_pending              :: cloudi:message_service_request(),
+        response_lookup :: dict_proxy(any(),
+                                      {cloudi:message_service_request(),
+                                       reference()}) | undefined,
+        recv_timeouts :: dict_proxy(cloudi:trans_id(),
+                                    reference()) | undefined,
+        queued :: cloudi_x_pqueue4:new() | undefined
     }).
 
 %%%------------------------------------------------------------------------
@@ -366,10 +375,10 @@ websocket_init(_Transport, Req0,
             received
     end,
     ResponseLookup = if
-        WebSocketProtocol =:= undefined ->
-            undefined;
+        WebSocketProtocol /= undefined ->
+            dict:new();
         true ->
-            dict:new()
+            undefined
     end,
     RecvTimeouts = if
         WebSocketProtocol =:= undefined ->
@@ -725,9 +734,8 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
                                  queued = Queue
                                  } = WebSocketState
                              } = State) ->
-    NewQueue = cloudi_x_pqueue4:filter(fun({_, _, _, _, _, _, _, Id, _}) ->
-                   Id /= TransId
-               end, Priority, Queue),
+    F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
+    {_, NewQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
     {ok, Req,
      State#cowboy_state{
          websocket_state = WebSocketState#websocket_state{
