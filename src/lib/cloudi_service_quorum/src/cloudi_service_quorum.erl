@@ -290,7 +290,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
     case validate(RequestInfoF, RequestF,
                   RequestInfo, Request) of
         true ->
-            [QuorumName] = cloudi_service:service_name_parse(Name, Pattern),
+            [QuorumName] = cloudi_service_name:parse(Name, Pattern),
             case cloudi_service:get_pids(Dispatcher, QuorumName, Timeout) of
                 {ok, PatternPids} ->
                     Count = erlang:length(PatternPids),

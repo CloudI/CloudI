@@ -136,7 +136,7 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
                                   requests = Requests} = State, Dispatcher) ->
     SourceAddressFormatted = cloudi_ip_address:to_binary(SourceAddress),
     SourcePortFormatted = erlang:integer_to_binary(SourcePort),
-    RequestInfo = cloudi_service:request_info_key_value_new(
+    RequestInfo = cloudi_request_info:key_value_new(
         [{<<"source_address">>, SourceAddressFormatted},
          {<<"source_port">>, SourcePortFormatted},
          {<<"destination_address">>, DestinationAddressFormatted},

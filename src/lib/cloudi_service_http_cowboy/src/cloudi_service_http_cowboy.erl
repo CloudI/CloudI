@@ -456,7 +456,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                               keyfile,
                                               password,
                                               verify], SSLOpts),
-            Environment = cloudi_service:environment_lookup(),
+            Environment = cloudi_environment:lookup(),
             NewSSLOpts = environment_transform_ssl_options(SSLOpts,
                                                            Environment),
             cloudi_x_cowboy:StartFunction(
@@ -537,7 +537,7 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
         [I | _] when is_integer(I) ->
             Name = Prefix ++ L,
             F = fun(Parameters) ->
-                cloudi_service:service_name_new(Name, Parameters)
+                cloudi_service_name:new(Name, Parameters)
             end,
             NewLookup = cloudi_x_trie:update(Prefix ++ PatternSuffix,
                                              fun(Functions) ->
@@ -603,7 +603,7 @@ environment_transform_ssl_options([], Output, _) ->
 environment_transform_ssl_options([{K, FilePath} | SSLOpts],
                                   Output, Environment)
     when K =:= certfile; K =:= cacertfile; K =:= keyfile ->
-    NewFilePath = cloudi_service:environment_transform(FilePath, Environment),
+    NewFilePath = cloudi_environment:transform(FilePath, Environment),
     environment_transform_ssl_options(SSLOpts, [{K, NewFilePath} | Output],
                                       Environment);
 environment_transform_ssl_options([E | SSLOpts], Output, Environment) ->

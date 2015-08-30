@@ -1899,7 +1899,7 @@ trans_id_age(TransId)
     list(string()) | error.
 
 service_name_parse(Name, Pattern) ->
-    cloudi_service:service_name_parse(Name, Pattern).
+    cloudi_service_name:parse(Name, Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1912,7 +1912,7 @@ service_name_parse(Name, Pattern) ->
     {list(string()), string()} | error.
 
 service_name_parse_with_suffix(Name, Pattern) ->
-    cloudi_service:service_name_parse_with_suffix(Name, Pattern).
+    cloudi_service_name:parse_with_suffix(Name, Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1924,7 +1924,7 @@ service_name_parse_with_suffix(Name, Pattern) ->
     Result :: dict_proxy(binary(), binary()).
 
 request_http_qs_parse(Request) ->
-    cloudi_service:request_http_qs_parse(Request).
+    cloudi_request:http_qs_parse(Request).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1936,7 +1936,7 @@ request_http_qs_parse(Request) ->
     Result :: binary().
 
 request_info_key_value_new(RequestInfo) ->
-    cloudi_service:request_info_key_value_new(RequestInfo).
+    cloudi_request_info:key_value_new(RequestInfo).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1949,7 +1949,7 @@ request_info_key_value_new(RequestInfo) ->
     Result :: dict_proxy(any(), any()).
 
 request_info_key_value_parse(RequestInfo) ->
-    cloudi_service:request_info_key_value_parse(RequestInfo).
+    cloudi_request_info:key_value_parse(RequestInfo).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1962,7 +1962,7 @@ request_info_key_value_parse(RequestInfo) ->
     NewKeyValues :: cloudi_service:key_values().
 
 key_value_erase(Key, KeyValues) ->
-    cloudi_service:key_value_erase(Key, KeyValues).
+    cloudi_key_value:erase(Key, KeyValues).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1976,7 +1976,7 @@ key_value_erase(Key, KeyValues) ->
     error.
 
 key_value_find(Key, KeyValues) ->
-    cloudi_service:key_value_find(Key, KeyValues).
+    cloudi_key_value:find(Key, KeyValues).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1990,7 +1990,7 @@ key_value_find(Key, KeyValues) ->
     NewKeyValues :: cloudi_service:key_values().
 
 key_value_store(Key, Value, KeyValues) ->
-    cloudi_service:key_value_store(Key, Value, KeyValues).
+    cloudi_key_value:store(Key, Value, KeyValues).
 
 %%%------------------------------------------------------------------------
 %%% edoc functions

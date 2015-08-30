@@ -93,7 +93,7 @@ cloudi_service_handle_info({test, 1},
     % service request can survive the source failure (including
     % an Erlang VM restart)
     Name = ?PREFIX_QUEUE ++ Prefix ++ "request",
-    RequestInfo = cloudi_service:request_info_key_value_new([
+    RequestInfo = cloudi_request_info:key_value_new([
         {<<"service_name">>, erlang:list_to_binary(Prefix ++ "response")}]),
     % send 2 requests with the cloudi_service_queue in 'both' mode
     {ok, Id0} = cloudi_service:send_sync(Dispatcher, Name, RequestInfo,

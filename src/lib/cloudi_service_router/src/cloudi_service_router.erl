@@ -250,7 +250,7 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             case cloudi_x_trie:find(Pattern, Destinations) of
                 {ok, #destination{} = Destination} ->
                     {NextName, NewDestination} = destination_pick(Destination),
-                    Parameters = cloudi_service:service_name_parse(Name,
+                    Parameters = cloudi_service_name:parse(Name,
                                                                    Pattern),
                     case name_parameters(NextName, Parameters,
                                          NewDestination) of
@@ -328,7 +328,7 @@ name_parameters(Pattern, Parameters,
                                  ParametersStrictMatching,
                              parameters_selected =
                                  ParametersSelected}) ->
-    cloudi_service:service_name_new(Pattern, Parameters, ParametersSelected,
+    cloudi_service_name:new(Pattern, Parameters, ParametersSelected,
                                     ParametersStrictMatching).
 
 validate_f_return(Value) when is_boolean(Value) ->

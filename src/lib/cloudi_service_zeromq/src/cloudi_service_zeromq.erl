@@ -361,7 +361,7 @@ outgoing(true, Endian, RequestInfo, Request) ->
         is_binary(RequestInfo) ->
             RequestInfo;
         true ->
-            cloudi_service:request_info_key_value_new(RequestInfo)
+            cloudi_request_info:key_value_new(RequestInfo)
     end,
     MetaDataSize = erlang:byte_size(MetaData),
     if

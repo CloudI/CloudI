@@ -384,13 +384,14 @@ socket_loop_init_set(true, _Scope,
                            <<"SET">>, self()) of
         {{ok, ResponseInfo, _Response}, Context1} ->
             KeyValues = cloudi_request_info:key_value_parse(ResponseInfo),
-            NewDestination = case dict:find(<<"service_name">>, KeyValues) of
+            NewDestination = case cloudi_key_value:find(<<"service_name">>,
+                                                        KeyValues) of
                 error ->
                     Destination;
                 {ok, NextDestination} ->
                     NextDestination
             end,
-            case dict:find(<<"subscribe">>, KeyValues) of
+            case cloudi_key_value:find(<<"subscribe">>, KeyValues) of
                 error ->
                     ok;
                 {ok, ServiceNamePattern} when is_binary(ServiceNamePattern) ->
@@ -402,7 +403,7 @@ socket_loop_init_set(true, _Scope,
                     ok
             end,
             {Lock,
-             ContextN}= case dict:find(<<"lock">>, KeyValues) of
+             ContextN}= case cloudi_key_value:find(<<"lock">>, KeyValues) of
                 error ->
                     undefined;
                 {ok, <<"false">>} ->

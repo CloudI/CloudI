@@ -247,7 +247,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
     case validate(RequestInfoF, RequestF,
                   RequestInfo, Request) of
         true ->
-            [ValidateName] = cloudi_service:service_name_parse(Name, Pattern),
+            [ValidateName] = cloudi_service_name:parse(Name, Pattern),
             case cloudi_service:get_pid(Dispatcher, ValidateName, Timeout) of
                 {ok, {_, DstPid} = PatternPid} ->
                     case cloudi_service:send_async_active(Dispatcher,

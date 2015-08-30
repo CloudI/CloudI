@@ -134,7 +134,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
              {keyfile, KeyFile}, SSL0} = lists:keytake(keyfile, 1, SSL),
             {value,
              {certfile, CertFile}, []} = lists:keytake(certfile, 1, SSL0),
-            Environment = cloudi_service:environment_lookup(),
+            Environment = cloudi_environment:lookup(),
             environment_transform_ssl_options([{ssl, true},
                                                {keyfile, KeyFile},
                                                {certfile, CertFile}],
@@ -219,7 +219,7 @@ environment_transform_ssl_options([], Output, _) ->
 environment_transform_ssl_options([{K, FilePath} | SSLOpts],
                                   Output, Environment)
     when K =:= certfile; K =:= cacertfile; K =:= keyfile ->
-    NewFilePath = cloudi_service:environment_transform(FilePath, Environment),
+    NewFilePath = cloudi_environment:transform(FilePath, Environment),
     environment_transform_ssl_options(SSLOpts, [{K, NewFilePath} | Output],
                                       Environment);
 environment_transform_ssl_options([E | SSLOpts], Output, Environment) ->

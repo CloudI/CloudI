@@ -247,7 +247,7 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               #state{prefix_length = PrefixLength} = State,
                               Dispatcher) ->
     Suffix = lists:nthtail(PrefixLength, Pattern),
-    RequestHeaders = cloudi_service:request_info_key_value_parse(RequestInfo),
+    RequestHeaders = cloudi_request_info:key_value_parse(RequestInfo),
     request(Suffix, Name, Pattern, RequestHeaders, Request,
             Timeout, State, Dispatcher).
 
@@ -355,7 +355,7 @@ request("token/delete", _Name, _Pattern, RequestHeaders, Request, Timeout,
 request("verify*", Name, Pattern, RequestHeaders, Request, Timeout,
         #state{url_host = URLHost,
                host = Host} = State, Dispatcher) ->
-    [NextName] = cloudi_service:service_name_parse(Name, Pattern),
+    [NextName] = cloudi_service_name:parse(Name, Pattern),
     Method = string:to_upper(cloudi_string:afterr($/, NextName)),
     case url(Method, RequestHeaders, URLHost, Host, Request) of
         {ok, URL} ->
@@ -372,9 +372,9 @@ request("verify*", Name, Pattern, RequestHeaders, Request, Timeout,
     end.
 
 url(Method, RequestHeaders, URLHost, Host, Request) ->
-    {ok, URLPath} = cloudi_service:key_value_find(<<"url-path">>,
+    {ok, URLPath} = cloudi_key_value:find(<<"url-path">>,
                                                   RequestHeaders),
-    case cloudi_service:key_value_find(<<"host">>, RequestHeaders) of
+    case cloudi_key_value:find(<<"host">>, RequestHeaders) of
         {ok, Host} when Method == "GET" ->
             {ok, URLHost ++ erlang:binary_to_list(URLPath) ++ "?" ++
                  erlang:binary_to_list(cloudi_x_cow_qs:qs(Request))};
@@ -396,7 +396,7 @@ oauth_parameters(Method, RequestHeaders, Request) ->
         true ->
             []
     end,
-    case cloudi_service:key_value_find(<<"authorization">>, RequestHeaders) of
+    case cloudi_key_value:find(<<"authorization">>, RequestHeaders) of
         {ok, <<Scheme:48/bits, OAuth/binary>>}
             when Scheme == <<"OAuth ">> ->
             case cloudi_service_oauth1_parse:authorization(OAuth) of

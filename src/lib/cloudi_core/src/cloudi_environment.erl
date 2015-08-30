@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_environment).
@@ -64,7 +64,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Get an environment variable lookup for cloudi_service:environment_transform().===
+%% ===Get an environment variable lookup.===
 %% @end
 %%-------------------------------------------------------------------------
 

@@ -15,6 +15,7 @@
       to allow a service request to specify a destination for a newly
       created tcp socket
     * Add debug and debug_level configuration arguments to cloudi_service_tcp
+    * Fix usage of cloudi_service deprecated functions
 
 2015-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

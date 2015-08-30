@@ -172,8 +172,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = ((Mode =:= destination) orelse (Mode =:= both)),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
-                                      cloudi_service:environment_lookup()),
-    QueueFilePath = cloudi_service:environment_transform(FilePath,
+                                      cloudi_environment:lookup()),
+    QueueFilePath = cloudi_environment:transform(FilePath,
                                                          Environment),
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
                                              fun(T) ->
@@ -192,7 +192,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               #state{logging = Logging,
                                      mode = destination} = State,
                               Dispatcher) ->
-    [QueueName] = cloudi_service:service_name_parse(Name, Pattern),
+    [QueueName] = cloudi_service_name:parse(Name, Pattern),
     ChunkRequest = #destination_request{type = Type,
                                         name = Name,
                                         pattern = Pattern,
@@ -224,10 +224,10 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               #state{logging = Logging,
                                      mode = both} = State,
                               Dispatcher) ->
-    RequestMetaData = cloudi_service:request_info_key_value_parse(RequestInfo),
-    case cloudi_service:key_value_find(<<"service_name">>, RequestMetaData) of
+    RequestMetaData = cloudi_request_info:key_value_parse(RequestInfo),
+    case cloudi_key_value:find(<<"service_name">>, RequestMetaData) of
         {ok, NextNameAnyType} ->
-            [QueueName] = cloudi_service:service_name_parse(Name, Pattern),
+            [QueueName] = cloudi_service_name:parse(Name, Pattern),
             NextName = if
                 is_binary(NextNameAnyType) ->
                     erlang:binary_to_list(NextNameAnyType);
@@ -384,7 +384,7 @@ retry(destination, Dispatcher,
         true when Age >= Timeout ->
             {error, timeout};
         true ->
-            [QueueName] = cloudi_service:service_name_parse(Name, Pattern),
+            [QueueName] = cloudi_service_name:parse(Name, Pattern),
             NewTimeout = Timeout - Age,
             cloudi_service:send_async_active(Dispatcher, QueueName,
                                              RequestInfo, Request,
