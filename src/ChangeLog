@@ -12,6 +12,7 @@
       service requests, including the protocol_id_check configuration
       argument to avoid blocking on CloudI service request responses
       from the socket
+    * Update pqueue and improve pqueue4 type specification
 
 2015-08-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 

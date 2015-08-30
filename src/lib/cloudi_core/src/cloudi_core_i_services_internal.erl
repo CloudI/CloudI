@@ -118,8 +118,9 @@
             :: boolean() | undefined,
         % queued incoming service requests
         queued = cloudi_x_pqueue4:new()
-            :: cloudi_x_pqueue4:cloudi_x_pqueue4() | undefined |
-               list({integer(), any()}),
+            :: cloudi_x_pqueue4:cloudi_x_pqueue4(
+                   cloudi:message_service_request()) | undefined |
+               list({cloudi:priority_value(), any()}),
 
         % state record fields unique to the dispatcher Erlang process:
 
@@ -190,8 +191,9 @@
         queue_requests = true :: boolean(),
         % queued incoming service requests
         queued = cloudi_x_pqueue4:new()
-            :: cloudi_x_pqueue4:cloudi_x_pqueue4() |
-               list({integer(), any()}),
+            :: cloudi_x_pqueue4:cloudi_x_pqueue4(
+                   cloudi:message_service_request()) |
+               list({cloudi:priority_value(), any()}),
         % queued size in bytes
         queued_size = 0 :: non_neg_integer(),
         % erlang:system_info(wordsize) cached

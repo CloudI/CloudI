@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -63,8 +63,8 @@
 %%% under the License.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
@@ -92,10 +92,11 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-type priority() :: -128..128.
 -ifdef(ERLANG_OTP_VERSION_16).
--type pqueue4() ::
-    {integer() | 'empty', % current priority
-     integer(),           % total size
+-type pqueue4(_) ::
+    {priority() | 'empty', % current priority
+     non_neg_integer(),    % total size
      {queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue(),
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()},
      {queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue(),
@@ -130,75 +131,77 @@
      {queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue(),
       queue(), queue(), queue(), queue(), queue(), queue(), queue(), queue()}}.
 -else.
--type pqueue4() ::
-    {integer() | 'empty', % current priority
-     integer(),           % total size
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     queue:queue(),
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()},
-     {queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue(),
-      queue:queue(), queue:queue(), queue:queue(), queue:queue()}}.
+-type pqueue4(T) ::
+    {priority() | 'empty', % current priority
+     non_neg_integer(),    % total size
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     queue:queue(T),
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)},
+     {queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T),
+      queue:queue(T), queue:queue(T), queue:queue(T), queue:queue(T)}}.
 -endif.
+-type pqueue4() :: pqueue4(any()).
+-export_type([pqueue4/0, pqueue4/1]).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -471,7 +474,7 @@ to_list(L, {{value, Value}, Q}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec to_plist(pqueue4()) -> list({integer(), list()}).
+-spec to_plist(pqueue4()) -> list({priority(), list()}).
 
 to_plist(Q) ->
     to_plist([], [], undefined, pout(Q)).
