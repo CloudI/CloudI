@@ -369,7 +369,7 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-socket_loop_init_set(true, Scope,
+socket_loop_init_set(true, _Scope,
                      #state_socket{
                          socket = Socket,
                          dispatcher = Dispatcher,
