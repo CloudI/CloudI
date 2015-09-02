@@ -922,6 +922,8 @@ semiocast_to_common({'do', []}) ->
     {updated, 0};
 semiocast_to_common({listen, []}) ->
     {updated, 0};
+semiocast_to_common({unlisten, []}) ->
+    {updated, 0};
 semiocast_to_common({notify, []}) ->
     {updated, 0};
 semiocast_to_common({rollback, []}) ->

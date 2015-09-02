@@ -15,7 +15,8 @@
 
 -type pgsql_error_and_mention_field_type() ::
     severity | code | message | detail | hint | position | internal_position
-    | internal_query | where | file | line | routine | {unknown, byte()}.
+    | internal_query | where | file | line | routine
+    | schema | table | column | data_type | constraint | {unknown, byte()}.
 -type pgsql_error_and_mention_field() ::
     {pgsql_error_and_mention_field_type(), binary()}.
 -type pgsql_error() :: {pgsql_error, [pgsql_error_and_mention_field()]}.

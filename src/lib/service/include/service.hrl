@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,16 +44,25 @@
 -behaviour(service).
 -behaviour(cloudi_service).
 
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI =< 1.3.3
 %% cloudi_service callbacks
 -export([cloudi_service_init/3,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/2]).
+-else.                      % CloudI >= 1.4.0
+%% cloudi_service callbacks
+-export([cloudi_service_init/4,
+         cloudi_service_handle_request/11,
+         cloudi_service_handle_info/3,
+         cloudi_service_terminate/3]).
+-endif.
 
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 -include_lib("cloudi_core/include/cloudi_service_api.hrl").
 -include_lib("service/include/service_req.hrl").
 
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI =< 1.3.3
 -spec cloudi_service_init(Args :: list(),
                           Prefix :: cloudi_service:service_name_pattern(),
                           Dispatcher :: cloudi_service:dispatcher()) ->
@@ -63,6 +72,18 @@
 
 cloudi_service_init(Args, Prefix, Dispatcher) ->
     service_init(Args, Prefix, Dispatcher).
+-else.                      % CloudI >= 1.4.0
+-spec cloudi_service_init(Args :: list(),
+                          Prefix :: cloudi_service:service_name_pattern(),
+                          Timeout :: cloudi_service_api:timeout_milliseconds(),
+                          Dispatcher :: cloudi_service:dispatcher()) ->
+    {'ok', State :: any()} |
+    {'stop', Reason :: any()} |
+    {'stop', Reason :: any(), State :: any()}.
+
+cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
+    service_init(Args, Prefix, Timeout, Dispatcher).
+-endif.
 
 -spec cloudi_service_handle_request(Type ::
                                         cloudi_service:request_type(),
@@ -75,7 +96,8 @@ cloudi_service_init(Args, Prefix, Dispatcher) ->
                                     Request ::
                                         cloudi_service:request(),
                                     Timeout ::
-                                        cloudi_service:timeout_value_milliseconds(),
+                                        cloudi_service:
+                                        timeout_value_milliseconds(),
                                     Priority ::
                                         cloudi_service:priority_value(),
                                     TransId ::
@@ -138,10 +160,21 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     service_info(Request, State, Dispatcher).
 
+-ifdef(CLOUDI_SERVICE_OLD). % CloudI =< 1.3.3
 -spec cloudi_service_terminate(Reason :: any(),
                                State :: any()) ->
     'ok'.
 
 cloudi_service_terminate(Reason, State) ->
     service_terminate(Reason, State).
+-else.                      % CloudI >= 1.4.0
+-spec cloudi_service_terminate(Reason :: any(),
+                               Timeout :: cloudi_service_api:
+                                          timeout_milliseconds(),
+                               State :: any()) ->
+    'ok'.
+
+cloudi_service_terminate(Reason, Timeout, State) ->
+    service_terminate(Reason, Timeout, State).
+-endif.
 

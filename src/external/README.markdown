@@ -271,8 +271,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Erlang PostgreSQL (native) driver (semiocast branch)`
 
 - `https://github.com/semiocast/pgsql`
-- `commit e7aced69bb1d60d1499930c925cde4393f091ff1`
-- `Fri May  9 14:30:40 PDT 2014`
+- `commit e40786b5c3e76dcfe502cbad702ed1b5e50b616e`
+- `Tue Sep  1 21:59:06 PDT 2015`
 - `BSD`
 
 `poolboy`

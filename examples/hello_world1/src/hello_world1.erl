@@ -2,10 +2,10 @@
 -behaviour(cloudi_service).
 
 %% cloudi_service callbacks
--export([cloudi_service_init/3,
+-export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
-         cloudi_service_terminate/2]).
+         cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -13,7 +13,7 @@
     {
     }).
 
-cloudi_service_init(_Args, _Prefix, Dispatcher) ->
+cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "hello_world1/get"),
     {ok, #state{}}.
 
@@ -26,5 +26,5 @@ cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_Reason, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.

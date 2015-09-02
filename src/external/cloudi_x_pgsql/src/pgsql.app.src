@@ -2,7 +2,7 @@
     [
         {description,   "pgsql driver"},
         {id,            "pgsql"},
-        {vsn,           "22"},
+        {vsn,           "25"},
         {modules,       [
             pgsql_app,
             pgsql_connection,

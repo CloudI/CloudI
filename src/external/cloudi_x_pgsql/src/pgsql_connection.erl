@@ -41,6 +41,9 @@
     foreach/4,
     foreach/5,
     foreach/6,
+ 
+    send_copy_data/2,
+    send_copy_end/1,
     
     % Cancel current query
     cancel/1,
@@ -103,10 +106,11 @@
 -type odbc_result_tuple() :: {updated, n_rows()} | {updated, n_rows(), rows()} | {selected, rows()}.
 
 -type result_tuple() ::
-    {'begin' | commit | 'do' | listen | notify | rollback | set | {declare, cursor} | {lock, table}, []}
+    {'begin' | commit | 'do' | listen | unlisten | notify | rollback | set | {declare, cursor} | {lock, table}, []}
     | {{insert, integer(), integer()}, rows()}
     | {{copy | delete | fetch | move | select | update, integer()}, rows()}
-    | {{alter | create | drop, atom()} | {start, transaction}, []}.
+    | {{alter | create | drop, atom()} | {start, transaction}, []}
+    | {copy_in, [pgsql_format()]}.
 
 % A gen_tcp or SSL socket.
 -type prim_socket() :: port() | tuple().
@@ -171,7 +175,11 @@
         % expect command_complete
     |   no_data
         % expect ready_for_query
-    |   {result, any()}.
+    |   {result, any()}
+        % expect copy_data or copy_done
+    |   {copy, [pgsql_format()]}.
+
+-define(binary_to_integer(Bin), list_to_integer(binary_to_list(Bin))).
 
 %%--------------------------------------------------------------------
 %% @doc Open a connection to a database, throws an error if it failed.
@@ -269,12 +277,14 @@ param_query(Query, Parameters, QueryOptions, Timeout, Connection) ->
 
 %%--------------------------------------------------------------------
 %% @doc Perform a simple query.
-%% 
--spec simple_query(iodata(), pgsql_connection()) -> result_tuple() | {error, any()}.
+%%
+-spec simple_query(iodata(), pgsql_connection()) ->
+    result_tuple() | {error, any()} | [result_tuple() | {error, any()}].
 simple_query(Query, Connection) ->
     simple_query(Query, [], Connection).
 
--spec simple_query(iodata(), query_options(), pgsql_connection()) -> result_tuple() | {error, any()}.
+-spec simple_query(iodata(), query_options(), pgsql_connection()) ->
+    result_tuple() | {error, any()} | [result_tuple() | {error, any()}].
 simple_query(Query, QueryOptions, Connection) ->
     simple_query(Query, QueryOptions, ?REQUEST_TIMEOUT, Connection).
 
@@ -283,7 +293,8 @@ simple_query(Query, QueryOptions, Connection) ->
 %% will confuse timeout logic and such manual handling of statement_timeout
 %% should not be mixed with calls to simple_query/4.
 %%
--spec simple_query(iodata(), query_options(), timeout(), pgsql_connection()) -> result_tuple() | {error, any()}.
+-spec simple_query(iodata(), query_options(), timeout(), pgsql_connection()) ->
+    result_tuple() | {error, any()} | [result_tuple() | {error, any()}].
 simple_query(Query, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
     call_and_retry(ConnectionPid, {simple_query, Query, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
 
@@ -308,15 +319,18 @@ extended_query(Query, Parameters, QueryOptions, Timeout, {pgsql_connection, Conn
 %%--------------------------------------------------------------------
 %% @doc Perform a query several times with parameters.
 %%
--spec batch_query(iodata(), [any()], pgsql_connection()) -> [result_tuple()] | {error, any()}.
+-spec batch_query(iodata(), [any()], pgsql_connection()) ->
+    [result_tuple()] | {error, any()} | [result_tuple() | {error, any()}].
 batch_query(Query, Parameters, Connection) ->
     batch_query(Query, Parameters, [], Connection).
 
--spec batch_query(iodata(), [any()], query_options(), pgsql_connection()) -> [result_tuple()] | {error, any()}.
+-spec batch_query(iodata(), [any()], query_options(), pgsql_connection()) ->
+    [result_tuple()] | {error, any()} | [result_tuple() | {error, any()}].
 batch_query(Query, Parameters, QueryOptions, Connection) ->
     batch_query(Query, Parameters, QueryOptions, ?REQUEST_TIMEOUT, Connection).
 
--spec batch_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> [result_tuple()] | {error, any()}.
+-spec batch_query(iodata(), [any()], query_options(), timeout(), pgsql_connection()) ->
+    [result_tuple()] | {error, any()} | [result_tuple() | {error, any()}].
 batch_query(Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
     call_and_retry(ConnectionPid, {batch_query, Query, Parameters, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
 
@@ -379,6 +393,20 @@ foreach(Function, Query, Parameters, QueryOptions, Connection) ->
 -spec foreach(fun((tuple()) -> any()), iodata(), [any()], query_options(), timeout(), pgsql_connection()) -> ok | {error, any()}.
 foreach(Function, Query, Parameters, QueryOptions, Timeout, {pgsql_connection, ConnectionPid}) ->
     call_and_retry(ConnectionPid, {foreach, Query, Parameters, Function, QueryOptions, Timeout}, proplists:get_bool(retry, QueryOptions), adjust_timeout(Timeout)).
+
+%%--------------------------------------------------------------------
+%% @doc Send some binary data after starting a COPY
+%%
+-spec send_copy_data(iodata(), pgsql_connection()) -> ok | {error, any()}.
+send_copy_data(Data, {pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {send_copy_data, Data}, false, infinity).
+
+%%--------------------------------------------------------------------
+%% @doc Finish a COPY
+%%
+-spec send_copy_end(pgsql_connection()) -> {copy, integer()} | {error, any()}.
+send_copy_end({pgsql_connection, ConnectionPid}) ->
+    call_and_retry(ConnectionPid, {send_copy_end}, false, infinity).
 
 %%--------------------------------------------------------------------
 %% @doc Cancel the current query.
@@ -763,9 +791,22 @@ pgsql_simple_query_loop(Result0, Acc, AsyncT, #state{socket = Socket, subscriber
             DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
             AccRows1 = [DecodedRow | AccRows0],
             pgsql_simple_query_loop({rows, Fields, AccRows1}, Acc, AsyncT, State0);
+        {ok, #copy_out_response{format = Format}} when Result0 =:= [] ->
+            Fields = [Format],
+            pgsql_simple_query_loop({copy, Fields, []}, Acc, AsyncT, State0);
+        {ok, #copy_data{data = Data}} when is_tuple(Result0) andalso element(1, Result0) =:= copy ->
+            {copy, Fields, AccData0} = Result0,
+            AccData1 = [Data | AccData0],
+            pgsql_simple_query_loop({copy, Fields, AccData1}, Acc, AsyncT, State0);
+        {ok, #copy_done{}} ->
+            pgsql_simple_query_loop(Result0, Acc, AsyncT, State0);
+        {ok, #copy_in_response{format = Format}} when Result0 =:= [] ->
+            Fields = [Format],
+            return_async({copy_in, Fields}, AsyncT, State0);
         {ok, #command_complete{command_tag = Tag}} ->
             ResultRows = case Result0 of
                 {rows, _Descs, AccRows} -> lists:reverse(AccRows);
+                {copy, _Descs, AccData} -> lists:reverse(AccData);
                 [] -> []
             end,
             DecodedTag = decode_tag(Tag),
@@ -956,6 +997,14 @@ pgsql_extended_query_receive_loop0(#data_row{values = Values}, {rows, Fields} = 
     DecodedRow = pgsql_protocol:decode_row(Fields, Values, State0#state.oidmap, State0#state.integer_datetimes),
     Acc1 = Fun(DecodedRow, Acc0),
     pgsql_extended_query_receive_loop(LoopState, Fun, Acc1, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#copy_out_response{format = Format}, _LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    Fields = [Format],
+    pgsql_extended_query_receive_loop({copy, Fields}, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#copy_data{data = Data}, {copy, _Fields} = LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    Acc1 = Fun(Data, Acc0),
+    pgsql_extended_query_receive_loop(LoopState, Fun, Acc1, FinalizeFun, MaxRowsStep, AsyncT, State0);
+pgsql_extended_query_receive_loop0(#copy_done{}, LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0) ->
+    pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
 pgsql_extended_query_receive_loop0(#command_complete{command_tag = Tag}, _LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
     Result = FinalizeFun(Tag, Acc0),
     if  MaxRowsStep > 0 ->
@@ -976,14 +1025,33 @@ pgsql_extended_query_receive_loop0(#portal_suspended{}, LoopState, Fun, Acc0, Fi
     end;
 pgsql_extended_query_receive_loop0(#ready_for_query{}, {result, Result}, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
     return_async(Result, AsyncT, State0);
-pgsql_extended_query_receive_loop0(#error_response{fields = Fields}, _LoopState, _Fun, _Acc0, _FinalizeFun, 0, AsyncT, State0) ->
+pgsql_extended_query_receive_loop0(#copy_in_response{}, LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, #state{socket={SockModule,Sock}}=State0) ->
+    ErrorMessage = <<"Cannot use COPY with extended_query">>,
+    Packet = [pgsql_protocol:encode_copy_fail(ErrorMessage),pgsql_protocol:encode_sync_message()],
+    Res= SockModule:send(Sock, Packet),
+    case Res of
+        ok -> pgsql_extended_query_receive_loop(LoopState, Fun, Acc0, FinalizeFun, MaxRowsStep, AsyncT, State0);
+        {error,_} = SendError -> return_async(SendError, AsyncT, State0)
+    end;
+pgsql_extended_query_receive_loop0(#error_response{fields = Fields}, LoopState, _Fun, _Acc0, _FinalizeFun, MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
     Error = {error, {pgsql_error, Fields}},
-    flush_until_ready_for_query(Error, AsyncT, State0);
-pgsql_extended_query_receive_loop0(#error_response{fields = Fields}, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, #state{socket = {SockModule, Sock}} = State0) ->
-    Error = {error, {pgsql_error, Fields}},
-    case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
-        ok -> flush_until_ready_for_query(Error, AsyncT, State0);
-        {error, _} = SendSyncPacketError -> return_async(SendSyncPacketError, AsyncT, State0)
+    % We already sent a Sync except when we sent a Flush :-)
+    % - when we asked for the statement description
+    % - when MaxRowsStep > 0
+    NeedSync = case LoopState of
+        {parse_complete_with_params, _Mode, _Args} -> true;
+        {parameter_description_with_params, _Mode, _Parameters} -> true;
+        _ when MaxRowsStep > 0 -> true;
+        _ -> false
+    end,
+    case NeedSync of
+        true ->
+            case SockModule:send(Sock, pgsql_protocol:encode_sync_message()) of
+                ok -> flush_until_ready_for_query(Error, AsyncT, State0);
+                {error, _} = SendSyncPacketError -> return_async(SendSyncPacketError, AsyncT, State0)
+            end;
+        false ->
+            flush_until_ready_for_query(Error, AsyncT, State0)
     end;
 pgsql_extended_query_receive_loop0(#ready_for_query{} = Message, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
     Result = {error, {unexpected_message, Message}},
@@ -991,6 +1059,27 @@ pgsql_extended_query_receive_loop0(#ready_for_query{} = Message, _LoopState, _Fu
 pgsql_extended_query_receive_loop0(Message, _LoopState, _Fun, _Acc0, _FinalizeFun, _MaxRowsStep, AsyncT, State0) ->
     Error = {error, {unexpected_message, Message}},
     flush_until_ready_for_query(Error, AsyncT, State0).
+
+pgsql_send_copy_data(Data, From, #state{socket = {SockModule, Sock}} = State0) ->
+    Message = pgsql_protocol:encode_copy_data_message(Data),
+    Result = SockModule:send(Sock, Message),
+    gen_server:reply(From, Result),
+    State0#state{current = undefined}.
+
+pgsql_send_copy_end(From, #state{socket = {SockModule, Sock}} = State0) ->
+    Message = pgsql_protocol:encode_copy_done(),
+    Result0 = SockModule:send(Sock, Message),
+    {Result1, State1} = pgsql_send_copy_end_flush(Result0, State0),
+    gen_server:reply(From, Result1),
+    State1.
+pgsql_send_copy_end_flush(Result0, #state{socket = Socket, subscribers = Subscribers} = State0) ->
+    case receive_message(Socket, sync, Subscribers) of
+        {ok, {command_complete, <<"COPY ",CopyCount/binary>>}} ->
+            CopyCountNum = ?binary_to_integer(CopyCount),
+            pgsql_send_copy_end_flush({copy,CopyCountNum}, State0);
+        {ok, {ready_for_query, _}} ->
+            {Result0, State0#state{current = undefined}}
+    end.
 
 flush_until_ready_for_query(Result, AsyncT, #state{socket = Socket, subscribers = Subscribers} = State0) ->
     case receive_message(Socket, AsyncT, Subscribers) of
@@ -1377,7 +1466,12 @@ do_query0({map, Query, Parameters, Function, QueryOptions, Timeout}, From, #stat
     pgsql_extended_query(Query, Parameters, fun map_fn/2, {Function, []}, fun map_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0);
 do_query0({foreach, Query, Parameters, Function, QueryOptions, Timeout}, From, #state{} = State0) ->
     MaxRowsStep = proplists:get_value(max_rows_step, QueryOptions, ?DEFAULT_MAX_ROWS_STEP),
-    pgsql_extended_query(Query, Parameters, fun foreach_fn/2, Function, fun foreach_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0).
+    pgsql_extended_query(Query, Parameters, fun foreach_fn/2, Function, fun foreach_finalize/2, {cursor, MaxRowsStep}, Timeout, From, State0);
+do_query0({send_copy_data, Data}, From, State0) ->
+    pgsql_send_copy_data(Data, From, State0);
+do_query0({send_copy_end}, From, State0) ->
+    pgsql_send_copy_end(From, State0).
+
 
 command_completed(Command, #state{current = Command, pending = []} = State) ->
     set_active_once(State),

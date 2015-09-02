@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix examples so that the 1.4.0 cloudi_service behaviour interface
+      is used
+    * Fix service application header file usage of cloudi_service behaviour
+    * Update pgsql
+
 2015-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the compression configuration argument to cloudi_service_queue

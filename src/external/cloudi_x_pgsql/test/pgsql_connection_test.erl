@@ -229,6 +229,64 @@ sql_query_test_() ->
     ]
     end}.
 
+copy_test_() ->
+    {setup,
+     fun() ->
+	     {ok, SupPid} = pgsql_connection_sup:start_link(),
+	     Conn = pgsql_connection:open("test", "test"),
+	     {SupPid, Conn}
+     end,
+     fun({SupPid, Conn}) ->
+	     pgsql_connection:close(Conn),
+	     kill_sup(SupPid)
+     end,
+     fun({_SupPid, Conn}) ->
+     [
+      {"Create temporary table for copies",
+       ?_assertEqual({{create,table},[]}, pgsql_connection:simple_query("create temporary table copy_data (foo integer, bar text)", Conn))
+      },
+      {"Insert data for copy out",
+       ?_assertEqual({{insert,0,5},[]}, pgsql_connection:simple_query("insert into copy_data values (0,'hello'),(1,'world'),(2,'shoe'),(10,'hen'),(42,'so long')", Conn))
+      },
+      {"Copy out",
+       ?_assertMatch({{copy, 5},_}, pgsql_connection:simple_query("copy copy_data to stdout", Conn))
+      },
+      {"Begin copy in",
+       ?_assertEqual({copy_in,[text]}, pgsql_connection:simple_query("copy copy_data from stdin", Conn))
+      },
+      {"Send copy data",
+       ?_assertEqual(ok, pgsql_connection:send_copy_data(<<"100\tcentury\n">>, Conn))
+      },
+      {"End copy",
+       ?_assertEqual({copy,1}, pgsql_connection:send_copy_end(Conn))
+      },
+      {"Check copy data",
+       ?_assertEqual({{select, 1},[{100,<<"century">>}]}, pgsql_connection:simple_query("select * from copy_data where foo = 100", Conn))
+      },
+      {"Copy out with extended query",
+       ?_assertMatch({{copy,6},_}, pgsql_connection:simple_query("copy copy_data to stdout", [], Conn))
+      },
+      {"Begin copy in (2)",
+       ?_assertEqual({copy_in,[text]}, pgsql_connection:simple_query("copy copy_data from stdin", [], Conn))
+      },
+      {"Send copy data (2)",
+       ?_assertEqual(ok, pgsql_connection:send_copy_data(<<"101\tx\n102\ty\n">>, Conn))
+      },
+      {"Send copy data (2b)",
+       ?_assertEqual(ok, pgsql_connection:send_copy_data(<<"103\tz\n">>, Conn))
+      },
+      {"End copy (2)",
+       ?_assertEqual({copy,3}, pgsql_connection:send_copy_end(Conn))
+      },
+      {"Check copy data (2)",
+       ?_assertMatch({{select,3},_}, pgsql_connection:extended_query("select * from copy_data where foo > 100", [], Conn))
+      },
+      {"Can't copy in using extended_query",
+       ?_assertMatch({error, {pgsql_error, _}}, pgsql_connection:extended_query("copy copy_data from stdin", [], Conn))
+      }
+     ]
+     end}.
+
 types_test_() ->
     {setup,
     fun() ->
@@ -414,6 +472,7 @@ array_types_test_() ->
                     ?_assertEqual({{select,1},[{{array,[<<"2  ">>,<<"3  ">>]}}]}, pgsql_connection:extended_query("select $1::char(3)[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[<<"2">>,<<"3">>]}}]}, pgsql_connection:extended_query("select $1::varchar(3)[]", [{array, [<<"2">>, <<"3">>]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[{array,[<<"2">>]},{array, [<<"3">>]}]}}]}, pgsql_connection:extended_query("select $1::text[]", [{array, [{array, [<<"2">>]}, {array, [<<"3">>]}]}], Conn)),
+                    ?_assertEqual({{select,1},[{{array,[{array,[1,2]},{array, [3,4]}]}}]}, pgsql_connection:extended_query("select $1::int[]", [{array, [{array, [1,2]}, {array, [3,4]}]}], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::text[]", [], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select '{}'::int[]", [], Conn)),
                     ?_assertEqual({{select,1},[{{array,[]}}]}, pgsql_connection:extended_query("select ARRAY[]::text[]", [], Conn)),
@@ -826,10 +885,78 @@ datetime_types_test_() ->
         ?_assertEqual({selected, [{'-infinity'}]},   pgsql_connection:param_query("select '-infinity'::timestamp", [], Conn)),
         ?_assertEqual({selected, [{infinity}]},   pgsql_connection:param_query("select 'infinity'::timestamptz", [], Conn)),
         ?_assertEqual({selected, [{'-infinity'}]},   pgsql_connection:param_query("select '-infinity'::timestamptz", [], Conn)),
-        
+
         ?_assertEqual({{select, 1}, [{{{2012,1,17},{10,54,3}}}]},   pgsql_connection:extended_query("select $1::timestamptz", [{{2012,1,17},{10,54,3}}], Conn)),
         ?_assertEqual({{select, 1}, [{{2012,1,17}}]},   pgsql_connection:extended_query("select $1::date", [{2012,1,17}], Conn)),
-        ?_assertEqual({{select, 1}, [{{10,54,3}}]},   pgsql_connection:extended_query("select $1::time", [{10,54,3}], Conn))
+        ?_assertEqual({{select, 1}, [{{10,54,3}}]},   pgsql_connection:extended_query("select $1::time", [{10,54,3}], Conn)),
+
+        {"Create temporary table for the times", ?_assertEqual({updated, 1}, pgsql_connection:sql_query("create temporary table times (a_timestamp timestamp, a_time time)", Conn))},
+        {"Insert timestamp with micro second resolution",
+            ?_assertEqual({{insert, 0, 1}, []}, pgsql_connection:extended_query("insert into times (a_timestamp, a_time) values ($1, $2)", [{{2014, 5, 15}, {12, 12, 12.999999}}, null], Conn))
+        },
+        {"Insert timestamp without micro second resolution",
+            ?_assertEqual({{insert, 0, 1}, []}, pgsql_connection:extended_query("insert into times (a_timestamp, a_time) values ($1, $2)", [{{2014, 5, 15}, {12, 12, 12}}, null], Conn))
+        },
+        {"Insert a time with micro second resolution",
+            ?_assertEqual({{insert, 0, 1}, []}, pgsql_connection:extended_query("insert into times (a_timestamp, a_time) values ($1, $2)", [null, {12, 12, 12.999999}], Conn))
+        },
+        {"Insert a time without micro second resolution",
+            ?_assertEqual({{insert, 0, 1}, []}, pgsql_connection:extended_query("insert into times (a_timestamp, a_time) values ($1, $2)", [null, {12, 12, 12}], Conn))
+        }
+    ]
+    end}.
+
+tz_test_() ->
+    {setup,
+    fun() ->
+        {ok, SupPid} = pgsql_connection_sup:start_link(),
+        PosTZConn = pgsql_connection:open("127.0.0.1", "test", "test", "", [{timezone, "UTC+2"}]),
+        NegTZConn = pgsql_connection:open("127.0.0.1", "test", "test", "", [{timezone, "UTC-2"}]),
+        {SupPid, PosTZConn, NegTZConn}
+    end,
+    fun({SupPid, PosTZConn, NegTZConn}) ->
+        pgsql_connection:close(PosTZConn),
+        pgsql_connection:close(NegTZConn),
+        kill_sup(SupPid)
+    end,
+    fun({_SupPid, PosTZConn, NegTZConn}) ->
+    [
+        ?_assertEqual({{select,1},[{{11,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::time", PosTZConn)),
+        ?_assertEqual({{select,1},[{{13,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timetz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{11,4,3}}]},    pgsql_connection:extended_query("select '2015-01-03 11:04:03'::time", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{13,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timetz", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{11,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timestamp", PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{13,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timestamptz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{11,4,3}}}]},    pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timestamp", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{13,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timestamptz", [], PosTZConn)),
+
+        ?_assertEqual({{select,1},[{{8,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03+0300'::timetz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{8,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03+0300'::timetz", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{8,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03+0300'::timestamptz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{8,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03+0300'::timestamptz", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{14,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03-0300'::timetz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{14,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03-0300'::timetz", [], PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{14,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03-0300'::timestamptz", PosTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{14,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03-0300'::timestamptz", [], PosTZConn)),
+        
+        
+        ?_assertEqual({{select,1},[{{11,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::time", NegTZConn)),
+        ?_assertEqual({{select,1},[{{9,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timetz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{11,4,3}}]},    pgsql_connection:extended_query("select '2015-01-03 11:04:03'::time", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{9,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timetz", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{11,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timestamp", NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{9,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03'::timestamptz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{11,4,3}}}]},    pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timestamp", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{9,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03'::timestamptz", [], NegTZConn)),
+
+        ?_assertEqual({{select,1},[{{8,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03+0300'::timetz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{8,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03+0300'::timetz", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{8,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03+0300'::timestamptz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{8,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03+0300'::timestamptz", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{14,4,3}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03-0300'::timetz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{14,4,3}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03-0300'::timetz", [], NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{14,4,3}}}]},   pgsql_connection:simple_query("select '2015-01-03 11:04:03-0300'::timestamptz", NegTZConn)),
+        ?_assertEqual({{select,1},[{{{2015,1,3},{14,4,3}}}]},   pgsql_connection:extended_query("select '2015-01-03 11:04:03-0300'::timestamptz", [], NegTZConn))
     ]
     end}.
 
@@ -1015,21 +1142,55 @@ timeout_test_() ->
     ]
     end}.
 
-ssl_test_OFF() ->
+postgression_ssl_test_() ->
     {setup,
     fun() ->
+        ssl:start(),
         {ok, SupPid} = pgsql_connection_sup:start_link(),
-        Conn = pgsql_connection:open("127.0.0.1", "test", "test", "", [{ssl, true}]),
-        {SupPid, Conn}
+        ok = application:start(inets),
+        {ok, Result} = httpc:request("http://api.postgression.com/"),
+        ConnInfo = case Result of
+            {{"HTTP/1.1", 200, "OK"}, _Headers, ConnectionString} ->
+                {match, [User, Password, Host, PortStr, Database]} =
+                    re:run(ConnectionString, "^postgres://(.*):(.*)@(.*):([0-9]+)/(.*)$", [{capture, all_but_first, list}]),
+                Port = list_to_integer(PortStr),
+                {Host, Database, User, Password, Port};
+            {{"HTTP/1.1", 500, HTTPStatus}, _Headers, FailureDescription} ->
+                ?debugFmt("Postgression unavailable: ~s\n~s\n", [HTTPStatus, FailureDescription]),
+                unavailable
+        end,
+        {SupPid, ConnInfo}
     end,
-    fun({SupPid, Conn}) ->
-        pgsql_connection:close(Conn),
-        kill_sup(SupPid)
+    fun({SupPid, _ConnInfo}) ->
+        kill_sup(SupPid),
+        ssl:stop()
     end,
-    fun({_SupPid, Conn}) ->
-    [
-        ?_assertEqual({selected, [{null}]}, pgsql_connection:sql_query("select null", Conn))
-    ]
+    fun({_SupPid, ConnInfo}) ->
+        case ConnInfo of
+            unavailable ->
+                ?debugMsg("Skipped.\n"),
+                [];
+            {Host, Database, User, Password, Port} ->
+                [
+                    {"Postgression requires SSL",
+                    ?_test(begin
+                        try
+                            pgsql_connection:open(Host, Database, User, Password, [{port, Port}]),
+                            ?assert(false)
+                        catch throw:{pgsql_error, _} ->
+                            ok
+                        end
+                    end)
+                    },
+                    {"SSL Connection test",
+                    ?_test(begin
+                        Conn = pgsql_connection:open(Host, Database, User, Password, [{port, Port}, {ssl, true}]),
+                        ?assertEqual({show, [{<<"on">>}]}, pgsql_connection:simple_query("show ssl", Conn)),
+                        pgsql_connection:close(Conn)
+                    end)
+                    }
+                ]
+        end
     end}.
 
 constraint_violation_test_() ->
@@ -1182,6 +1343,17 @@ invalid_query_test_() ->
                                 {'rollback',[]} = pgsql_connection:simple_query("ROLLBACK", [], 5000, Conn),
                                 R1 = pgsql_connection:extended_query("insert into tmp(id, other) values (6, $1)", ["toto"], Conn),
                                 ?assertEqual({{insert, 0, 1}, []}, R1)
+                        end),
+                    ?_test(begin
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [], Conn)),
+                                % Empty array forces a Describe command, thus we end the normal sequence with Flush and not with Sync
+                                % Error recovery therefore requires a Sync to get the ReadyForQuery message.
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:extended_query("FOO", [{array, [<<>>]}], Conn)),
+                                % Likewise, cursor mode does send a Flush instead of a Sync after Bind
+                                ?assertMatch({error, {pgsql_error, _Error}}, pgsql_connection:foreach(fun(_Row) -> ok end, "FOO", Conn)),
+                                % connection still usable
+                                R = pgsql_connection:extended_query("insert into tmp(id, other) values (7, $1)", ["toto"], Conn),
+                                ?assertEqual({{insert, 0, 1}, []}, R)
                         end)
                 ]
         end
