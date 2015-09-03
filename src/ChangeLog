@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix installation path bug
+    * Update examples description
+
 2015-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix examples so that the 1.4.0 cloudi_service behaviour interface

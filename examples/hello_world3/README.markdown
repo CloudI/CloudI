@@ -10,7 +10,7 @@ service.
 ## DETAILS
 
 The approach with the Hello World 3 Example is for CloudI to be
-compiled and installated locally as a rebar dependency
+compiled and installated locally as a rebar (version 2.x) dependency
 (so during the build process).  Using rebar in this way is necessary
 due to rebar's lack of support for non-Erlang programming languages.
 However, if you only want internal service support
@@ -32,13 +32,11 @@ service module is loaded before each service instance is added.
 So, this is a method of embedding CloudI into an Erlang application
 with CloudI as a rebar dependency.
 
-PLEASE NOTE (as of 10/18/2013): rebar was broken, when fetching the
-HEAD of https://github.com/rebar/rebar due to attempts at improving
-update-deps functionality.  To avoid problems with update-deps you should
-use the rebar release tag, which is `2.1.0-pre`.  This version of rebar
-is provided within the CloudI repo to satisfy build-time dependencies
-(if the configure script is not given --without-rebar).  This is only
-a concern when trying to use rebar with the `update-deps` command.
+If you use the `update-deps` command with rebar you will want to use
+either an old release of rebar (e.g., the `2.1.0-pre` tag) or a new
+release of rebar (`2.6.0` should work), due to broken behaviour in the
+rebar source code (added around 10/18/2013).  To find a new release,
+go to the rebar [repository](https://github.com/rebar/rebar).
 
 ## USAGE
 

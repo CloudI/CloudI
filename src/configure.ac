@@ -49,10 +49,8 @@ AC_ARG_WITH([version],
     ],
     [cloudi_prefix="$libdir/cloudi-$VERSION"])
 AC_SUBST(cloudi_prefix)
-eval cloudi_logdir="\"[$]localstatedir/log/cloudi\""
-AC_SUBST(cloudi_logdir)
-eval cloudi_confdir="\"[$]sysconfdir/cloudi\""
-AC_SUBST(cloudi_confdir)
+AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
+AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
 
 AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,

@@ -19,7 +19,7 @@ when providing a string for the internal service module name.
 
 ## USAGE (Different ways of adding the same internal service)
 
-To use an Erlang/OTP application or module for an internal service in the code path (if the application name is different from the `cloudi_service` module, use the `application_name` service configuration option):
+To use an Erlang/OTP application or module for an internal service in the code path (if the application name is different from the CloudI service module name implementing the `cloudi_service` behaviour, use the `application_name` service configuration option):
 
     $ make
     $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_add.erl

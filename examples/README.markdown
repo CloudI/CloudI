@@ -11,7 +11,7 @@
 ## Embedding CloudI in other Erlang/OTP applications
 
 * `hello_world2` - Including CloudI in your Erlang OTP/reltool release
-* `hello_world3` - Including CloudI as a rebar dependency
+* `hello_world3` - Including CloudI as a rebar dependency (rebar version 2.x)
 * `hello_world4` - Including CloudI as a relx release
 * `hello_world5` - Including CloudI in your Erlang source code
 
