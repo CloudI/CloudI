@@ -11,14 +11,15 @@
 
 main(_) ->
     {ok, IncludeFile} = file:open("../src/cloudi_response_info.hrl", [write]),
-    Defaults = [{".erl",    {request, <<"application/x-erlang">>}},
-                {".config", {attachment, <<"application/x-erlang">>}},
-                {".txt",    {request, <<"text/plain">>}},
-                {".json",   {request, <<"application/json">>}},
-                {".xml",    {request, <<"text/xml">>}},
-                {".csv",    {request, <<"text/csv">>}},
-                {".htm",    {request, <<"text/html">>}},
-                {".html",   {request, <<"text/html">>}}],
+    Defaults = [{".erl",     {request, <<"application/x-erlang">>}},
+                {".config",  {attachment, <<"application/x-erlang">>}},
+                {".msgpack", {request, <<"application/x-msgpack">>}},
+                {".txt",     {request, <<"text/plain">>}},
+                {".json",    {request, <<"application/json">>}},
+                {".xml",     {request, <<"text/xml">>}},
+                {".csv",     {request, <<"text/csv">>}},
+                {".htm",     {request, <<"text/html">>}},
+                {".html",    {request, <<"text/html">>}}],
     ok = shell("curl -O "
                "http://svn.apache.org/repos"
                "/asf/httpd/httpd/trunk/docs/conf/mime.types", []),

@@ -1009,4 +1009,5 @@
  {".smv",{attachment,<<"video/x-smv">>}},
  {".ice",{attachment,<<"x-conference/x-cooltalk">>}},
  {".erl",{request,<<"application/x-erlang">>}},
- {".config",{attachment,<<"application/x-erlang">>}}]).
+ {".config",{attachment,<<"application/x-erlang">>}},
+ {".msgpack",{request,<<"application/x-msgpack">>}}]).
