@@ -22,6 +22,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_http_client/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_rest/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
      -d $(top_srcdir)/lib/cloudi_service_oauth1/src \
      -d $(top_srcdir)/lib/cloudi_service_queue/src \
@@ -130,6 +131,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_http_client/ebin
 	$(MKDIR_P) lib/cloudi_service_http_cowboy/ebin
 	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
+	$(MKDIR_P) lib/cloudi_service_http_rest/ebin
 	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
 	$(MKDIR_P) lib/cloudi_service_oauth1/ebin
 	$(MKDIR_P) lib/cloudi_service_queue/ebin
@@ -227,6 +229,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_http_elli/src && \
         test ! -e cloudi_service_http_elli.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_rest/src && \
+        test ! -e cloudi_service_http_rest.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_rest/src/cloudi_service_http_rest.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce/src && \
         test ! -e cloudi_service_map_reduce.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src || exit 0)
@@ -338,6 +343,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_http_elli && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_elli/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_http_rest && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_http_rest/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0)
@@ -590,6 +598,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_http_cowboy/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_http_elli/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_http_elli/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_http_rest/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_http_rest/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_map_reduce/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_oauth1/ebin || exit 0
@@ -800,6 +810,7 @@ dialyze: all \
               lib/cloudi_service_http_client/ebin/ \
               lib/cloudi_service_http_cowboy/ebin/ \
               lib/cloudi_service_http_elli/ebin/ \
+              lib/cloudi_service_http_rest/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
               lib/cloudi_service_oauth1/ebin/ \
               lib/cloudi_service_queue/ebin/ \

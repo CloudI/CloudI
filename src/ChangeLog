@@ -4,6 +4,8 @@
 2015-09-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add msgpack as a supported content-type
+    * Add eunit tests to cloudi_string
+    * Add cloudi_service_http_rest to simplify REST API function creation
 
 2015-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 

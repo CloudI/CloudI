@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2009-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -277,12 +277,15 @@ splitr_empty([Char | L1], [], Char, []) ->
 splitr_empty(_, [], _, []) ->
     {[], []};
 splitr_empty(L1, L2, Char, []) ->
-    [Char | NewL1] = lists:foldl(fun(_, [_ | L]) -> L end, L1, L2),
-    {lists:reverse(NewL1), L2};
+    {splitr_prefix(L1, L2, Char), L2};
 splitr_empty(L1, _, Char, [Char | Rest]) ->
     splitr_empty([Char | L1], Rest, Char, Rest);
 splitr_empty(L1, L2, Char, [C | Rest]) ->
     splitr_empty([C | L1], L2, Char, Rest).
+splitr_prefix([Char | L1], [], Char) ->
+    lists:reverse(L1);
+splitr_prefix([_ | L1], [_ | L2], Char) ->
+    splitr_prefix(L1, L2, Char).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -302,8 +305,7 @@ splitr_input([Char | L1], [], Char, [], _) ->
 splitr_input(_, [], _, [], Input) ->
     {[], Input};
 splitr_input(L1, L2, Char, [], _) ->
-    [Char | NewL1] = lists:foldl(fun(_, [_ | L]) -> L end, L1, L2),
-    {lists:reverse(NewL1), L2};
+    {splitr_prefix(L1, L2, Char), L2};
 splitr_input(L1, _, Char, [Char | Rest], Input) ->
     splitr_input([Char | L1], Rest, Char, Rest, Input);
 splitr_input(L1, L2, Char, [C | Rest], Input) ->
@@ -447,4 +449,65 @@ compare_constant_binary(Test, Correct)
     compare_constant(erlang:binary_to_list(Test),
                      erlang:binary_to_list(Correct)).
 
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
 
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+afterl_test() ->
+    "this-is-all-input" = afterl($/, "this-is-all-input", input),
+    "" = afterl($/, "this-is-all-input", empty),
+    "" = afterl($/, "this-is-all-input"),
+    "is-all-input" = afterl($-, "this-is-all-input", input),
+    "is-all-input" = afterl($-, "this-is-all-input", empty),
+    "is-all-input" = afterl($-, "this-is-all-input"),
+    ok.
+
+afterr_test() ->
+    "this-is-all-input" = afterr($/, "this-is-all-input", input),
+    "" = afterr($/, "this-is-all-input", empty),
+    "" = afterr($/, "this-is-all-input"),
+    "input" = afterr($-, "this-is-all-input", input),
+    "input" = afterr($-, "this-is-all-input", empty),
+    "input" = afterr($-, "this-is-all-input"),
+    ok.
+
+beforel_test() ->
+    "this-is-all-input" = beforel($/, "this-is-all-input", input),
+    "" = beforel($/, "this-is-all-input", empty),
+    "" = beforel($/, "this-is-all-input"),
+    "this" = beforel($-, "this-is-all-input", input),
+    "this" = beforel($-, "this-is-all-input", empty),
+    "this" = beforel($-, "this-is-all-input"),
+    ok.
+
+beforer_test() ->
+    "this-is-all-input" = beforer($/, "this-is-all-input", input),
+    "" = beforer($/, "this-is-all-input", empty),
+    "" = beforer($/, "this-is-all-input"),
+    "this-is-all" = beforer($-, "this-is-all-input", input),
+    "this-is-all" = beforer($-, "this-is-all-input", empty),
+    "this-is-all" = beforer($-, "this-is-all-input"),
+    ok.
+
+splitl_test() ->
+    {"this-is-all-input", ""} = splitl($/, "this-is-all-input", input),
+    {"", ""} = splitl($/, "this-is-all-input", empty),
+    {"", ""} = splitl($/, "this-is-all-input"),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input", input),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input", empty),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input"),
+    ok.
+
+splitr_test() ->
+    {"", "this-is-all-input"} = splitr($/, "this-is-all-input", input),
+    {"", ""} = splitr($/, "this-is-all-input", empty),
+    {"", ""} = splitr($/, "this-is-all-input"),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input", input),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input", empty),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input"),
+    ok.
+
+-endif.
