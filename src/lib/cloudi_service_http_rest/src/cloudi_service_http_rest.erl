@@ -101,7 +101,8 @@
 -record(state,
     {
         prefix :: cloudi:service_name_pattern(),
-        lookup :: cloudi_x_trie:cloudi_x_trie()
+        lookup :: cloudi_x_trie:cloudi_x_trie(),
+        api_state :: any()
     }).
 
 %%%------------------------------------------------------------------------
@@ -112,11 +113,12 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
+cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Defaults = [
+        {initialize,               undefined},
         {handlers,                 undefined},
         {formats,                  undefined}],
-    [Handlers, Formats] =
+    [Initialize, Handlers, Formats | ArgsAPI] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(Handlers),
     true = is_list(Formats),
@@ -151,13 +153,36 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                    arity = Arity},
         subscribe_paths(Method, Path, Formats, API, Lookup0, Dispatcher)
     end, cloudi_x_trie:new(), Handlers),
-    {ok, #state{prefix = Prefix,
-                lookup = LookupN}}.
+    State = #state{prefix = Prefix,
+                   lookup = LookupN},
+    ReturnAPI = case Initialize of
+        {InitializeModule, InitializeFunction}
+            when is_atom(InitializeModule),
+                 is_atom(InitializeFunction) ->
+            true = erlang:function_exported(InitializeModule,
+                                            InitializeFunction, 3),
+            InitializeModule:
+            InitializeFunction(ArgsAPI, Timeout, Dispatcher);
+        _ when is_function(Initialize, 3) ->
+            Initialize(ArgsAPI, Timeout, Dispatcher);
+        undefined ->
+            {ok, undefined}
+    end,
+    case ReturnAPI of
+        {ok, StateAPI} ->
+            {ok, State#state{api_state = StateAPI}};
+        {stop, Reason} ->
+            {stop, Reason, State};
+        {stop, Reason, StateAPI} ->
+            {stop, Reason, State#state{api_state = StateAPI}}
+    end.
 
 cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
                               #state{prefix = Prefix,
-                                     lookup = Lookup} = State, Dispatcher) ->
+                                     lookup = Lookup,
+                                     api_state = StateAPI} = State,
+                              Dispatcher) ->
     Suffix = cloudi_service_name:suffix(Prefix, Pattern),
     #api{method = Method,
          path = Path,
@@ -171,10 +196,30 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
         Parameters =:= false ->
             []
     end,
-    if
+    ReturnAPI = if
         Arity == 11 ->
             Handler(Method, Path, ParametersL, Format, RequestInfo, Request,
-                    Timeout, Priority, TransId, State, Dispatcher)
+                    Timeout, Priority, TransId, StateAPI, Dispatcher)
+    end,
+    case ReturnAPI of
+        {reply, Response, NewStateAPI} ->
+            {reply, Response,
+             State#state{api_state = NewStateAPI}};
+        {reply, ResponseInfo, Response, NewStateAPI} ->
+            {reply, ResponseInfo, Response,
+             State#state{api_state = NewStateAPI}};
+        {forward, NextName, NextRequestInfo, NextRequest, NewStateAPI} ->
+            {forward, NextName, NextRequestInfo, NextRequest,
+             State#state{api_state = NewStateAPI}};
+        {forward, NextName, NextRequestInfo, NextRequest,
+         NextTimeout, NextPriority, NewStateAPI} ->
+            {forward, NextName, NextRequestInfo, NextRequest,
+             NextTimeout, NextPriority,
+             State#state{api_state = NewStateAPI}};
+        {noreply, NewStateAPI} ->
+            {noreply, State#state{api_state = NewStateAPI}};
+        {stop, Reason, NewStateAPI} ->
+            {stop, Reason, State#state{api_state = NewStateAPI}}
     end.
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
