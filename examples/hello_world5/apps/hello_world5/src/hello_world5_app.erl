@@ -30,6 +30,7 @@
     {error, Reason :: any()}.
 
 start(_StartType, _StartArgs) ->
+    {ok, Application} = application:get_application(),
     Services = [
         {internal,
             "/cloudi/api/",
@@ -46,7 +47,8 @@ start(_StartType, _StartArgs) ->
             [],
             none,
             5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [{automatic_loading, false}]},
+            [{automatic_loading, false},
+             {application_name, Application}]},
         % can also use the proplist configuration format for the
         % hello_world5 example
         [%{type, internal}, % gets inferred from having module entry
@@ -62,7 +64,9 @@ start(_StartType, _StartArgs) ->
          %{count_process, 1}, % default
          %{max_r, 5}, % default
          %{max_t, 300}, % default
-         {options, [{automatic_loading, false}]}],
+         {options,
+          [{automatic_loading, false},
+           {application_name, Application}]}],
 
         % cloudi_service_http_cowboy gets listed last so that
         % if the destination refresh method changes to lazy,

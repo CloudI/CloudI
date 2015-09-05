@@ -36,7 +36,7 @@ of a software system (fully or partially) to the Erlang programming language.
 
 The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
-(currently C++/C, Java, PHP, Python, Ruby, and Erlang):
+(currently C++/C, Java, JavaScript, Perl, PHP, Python, Ruby, and Erlang):
 
 * `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
@@ -44,9 +44,9 @@ Service-Oriented Architecture (SOA) development in any supported language
 * `return`, `forward`
 
 External communication that needs to scale (beyond 10,000 connections)
-can use an internal CloudI service (implemented in Erlang) which may do
-processing for one or more external CloudI services
-(implemented C++/C, Java, PHP, Python, and/or Ruby)
+can use an existing internal CloudI service (implemented in Erlang) which
+may do processing for one or more external CloudI services
+(implemented C++/C, Java, JavaScript, Perl, PHP, Python, and/or Ruby)
 
 Even if external communication doesn't need to scale, private cloud
 computing tasks (number crunching) can gain fault-tolerance and internal
