@@ -47,7 +47,15 @@ start(_StartType, _StartArgs) ->
             [],
             none,
             5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [{automatic_loading, false},
+            [% automatic_loading should be set to false due to the
+             % hello_world5 Erlang application handling the loading of
+             % Erlang modules for the hello_world5 CloudI service
+             {automatic_loading, false},
+             % it is not necessary to set the application_name unless the
+             % CloudI service name is different from the Erlang application
+             % name (in this example, both are named hello_world5,
+             % but Erlang applications with more than 1 CloudI service will
+             % want to set the application_name here)
              {application_name, Application}]},
         % can also use the proplist configuration format for the
         % hello_world5 example
