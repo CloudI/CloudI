@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-09-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix URL parameter errors in cloudi_service_http_rest
+
 2015-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix application_name service configuration option usage when

@@ -148,7 +148,10 @@
 -define(DEFAULT_MAX_REQUEST_LINE_LENGTH,           4096).
 -define(DEFAULT_OUTPUT,                        external).
 -define(DEFAULT_CONTENT_TYPE,                 undefined). % force a content type
--define(DEFAULT_CONTENT_TYPES_ACCEPTED,       undefined).
+-define(DEFAULT_CONTENT_TYPES_ACCEPTED,       undefined). % see below:
+        % provide a list of content types strings
+        % (list of integers or binaries) which must match the
+        % HTTP request "Accept" header value
 -define(DEFAULT_STATUS_CODE_TIMEOUT,                504). % "Gateway Timeout"
 -define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
 -define(DEFAULT_USE_WEBSOCKETS,                   false).
