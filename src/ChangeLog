@@ -4,6 +4,10 @@
 2015-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update trie
+    * Fix parameter parsing due to pattern matching with the
+      service name and service name pattern with functions like
+      cloudi_service_name:parse/2 (now "*/" will parse "//" AND "///")
+    * Handle bad parameters as a crash in cloudi_service_http_rest
 
 2015-09-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 

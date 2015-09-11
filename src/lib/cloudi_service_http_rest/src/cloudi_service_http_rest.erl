@@ -262,9 +262,8 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             protocol_debug_log(DebugLevel, "request ~p ~p",
                                [Name, Request])
     end,
+    true = is_list(ParametersL),
     ReturnAPI = if
-        ParametersL =:= error ->
-            {reply, [{<<"status">>, <<"422">>}], <<>>, StateAPI};
         Arity == 11 ->
             Handler(Method, Path, ParametersL, Format, RequestInfo, Request,
                     Timeout, Priority, TransId, StateAPI, Dispatcher)
