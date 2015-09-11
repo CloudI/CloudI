@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -837,17 +837,6 @@ pattern_parse(Pattern, L) ->
 %% ===Parse a string based on the supplied wildcard pattern.===
 %% "*" is the wildcard character (equivalent to the ".+" regex) and
 %% "**" is forbidden.
-%% This function assumes there is a direct match with the characters following
-%% the wildcard characters, so "*/" will parse "//" but not "///".  That means
-%% it currently depends on the pattern delimiters being unique
-%% (not part of what is consumed by the wildcard).  So, it is possible to have
-%% a find_match/2 argument that doesn't parse with the pattern it matches
-%% (since it is matching the most exact pattern while not making any
-%%  decisions based on the delimiters following wildcard characters, i.e.,
-%%  it backtracks through the string to match when the current path through
-%%  the pattern doesn't match).  This function's current implementation
-%% is simple to keep the pattern parse efficient, without the need to
-%% consume extra memory.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -879,6 +868,22 @@ pattern_parse_element(_, [$* | _], _) ->
 pattern_parse_element(C, [H | T], L) ->
     pattern_parse_element(C, T, [H | L]).
 
+pattern_parse_pattern(Pattern, C, L, Segment, Parsed, Option) ->
+    case pattern_parse_element(C, L, Segment) of
+        {ok, NewL, NewSegment} ->
+            case pattern_parse(Pattern, NewL,
+                               [NewSegment | Parsed], [C], Option) of
+                error ->
+                    pattern_parse_pattern(Pattern, C, NewL,
+                                          [C | lists:reverse(NewSegment)],
+                                          Parsed, Option);
+                Success ->
+                    Success
+            end;
+        error ->
+            error
+    end.
+
 pattern_parse([], [], Parsed, Suffix, Option) ->
     pattern_parse_result(Option, lists:reverse(Parsed), Suffix);
 
@@ -895,12 +900,7 @@ pattern_parse([$*, $* | _], [_ | _], _, _, _) ->
     erlang:exit(badarg);
 
 pattern_parse([$*, C | Pattern], [H | T], Parsed, _, Option) ->
-    case pattern_parse_element(C, T, [H]) of
-        {ok, NewL, Segment} ->
-            pattern_parse(Pattern, NewL, [Segment | Parsed], [C], Option);
-        error ->
-            error
-    end;
+    pattern_parse_pattern(Pattern, C, T, [H], Parsed, Option);
 
 pattern_parse([C | Pattern], [C | L], Parsed, Suffix, Option) ->
     pattern_parse(Pattern, L, Parsed, [C | Suffix], Option);
@@ -1160,6 +1160,8 @@ test() ->
     ["bb", "b"] = trie:pattern_parse("aa*a*", "aabbab"),
     ["bb", "bb"] = trie:pattern_parse("aa*a*", "aabbabb"),
     error = trie:pattern_parse("aa*a*", "aaabb"),
+    ["file.name"] = trie:pattern_parse("*.txt", "file.name.txt"),
+    ["//"] = trie:pattern_parse("*/", "///"),
     [] = trie:pattern_parse("aaabb", "aaabb"),
     {[], "aaabb"} = trie:pattern_parse("aaabb", "aaabb", with_suffix),
     false = trie:is_pattern("abcdef"),
