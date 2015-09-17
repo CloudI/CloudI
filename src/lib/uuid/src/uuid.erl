@@ -1016,7 +1016,7 @@ is_uuid(_) ->
 %%-------------------------------------------------------------------------
 
 -spec increment(state() | uuid()) ->
-    NewState :: state().
+    state() | uuid().
 
 increment(<<TimeLow:32, TimeMid:16,
             0:1, 0:1, 0:1, 1:1,  % version 1 bits
