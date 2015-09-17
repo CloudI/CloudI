@@ -47,7 +47,8 @@
         cloudi_service_future,
         cloudi_service_name,
         cloudi_string,
-        cloudi_timestamp
+        cloudi_timestamp,
+        cloudi_trans_id
         ]},
    {registered,[
         cloudi_core_i_configurator,

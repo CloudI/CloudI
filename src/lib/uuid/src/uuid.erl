@@ -55,7 +55,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -67,6 +67,8 @@
          get_v1/1,
          get_v1_time/0,
          get_v1_time/1,
+         get_v1_datetime/1,
+         get_v1_datetime/2,
          is_v1/1,
          get_v3/1,
          get_v3/2,
@@ -350,6 +352,56 @@ get_v1_time(Value)
     <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
     ((Time - 16#01b21dd213814000) div 10). % microseconds since UNIX epoch
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get an ISO8601 datetime in UTC from a v1 UUID's time value.===
+%% http://www.w3.org/TR/NOTE-datetime
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v1_datetime(Value :: timestamp_type() | state() | uuid()) ->
+    string().
+
+get_v1_datetime(Value) ->
+    get_v1_datetime(Value, 0).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get an ISO8601 datetime in UTC from a v1 UUID's time value with an offset in microseconds.===
+%% http://www.w3.org/TR/NOTE-datetime
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v1_datetime(Value :: timestamp_type() | state() | uuid(),
+                      MicroSecondsOffset :: integer()) ->
+    string().
+
+get_v1_datetime(Value, MicroSecondsOffset)
+    when is_integer(MicroSecondsOffset) ->
+    MicroSecondsTotal = get_v1_time(Value) + MicroSecondsOffset,
+    MegaSeconds = MicroSecondsTotal div 1000000000000,
+    Seconds = (MicroSecondsTotal div 1000000) - MegaSeconds * 1000000,
+    MicroSeconds = MicroSecondsTotal rem 1000000,
+    Timestamp = {MegaSeconds, Seconds, MicroSeconds},
+    {{DateYYYY, DateMM, DateDD},
+     {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Timestamp),
+    [DateYYYY0, DateYYYY1,
+     DateYYYY2, DateYYYY3] = int_to_dec_list(DateYYYY, 4),
+    [DateMM0, DateMM1] = int_to_dec_list(DateMM, 2),
+    [DateDD0, DateDD1] = int_to_dec_list(DateDD, 2),
+    [TimeHH0, TimeHH1] = int_to_dec_list(TimeHH, 2),
+    [TimeMM0, TimeMM1] = int_to_dec_list(TimeMM, 2),
+    [TimeSS0, TimeSS1] = int_to_dec_list(TimeSS, 2),
+    [MicroSeconds0, MicroSeconds1,
+     MicroSeconds2, MicroSeconds3,
+     MicroSeconds4, MicroSeconds5] = int_to_dec_list(MicroSeconds, 6),
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
+     MicroSeconds0, MicroSeconds1,
+     MicroSeconds2, MicroSeconds3,
+     MicroSeconds4, MicroSeconds5, $Z].
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -762,16 +814,14 @@ is_v5(_) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec uuid_to_list(Value :: uuid()) ->
+-spec uuid_to_list(uuid()) ->
     iolist().
 
-uuid_to_list(Value)
-    when is_binary(Value), byte_size(Value) == 16 ->
-    <<B1:32/unsigned-integer,
-      B2:16/unsigned-integer,
-      B3:16/unsigned-integer,
-      B4:16/unsigned-integer,
-      B5:48/unsigned-integer>> = Value,
+uuid_to_list(<<B1:32/unsigned-integer,
+               B2:16/unsigned-integer,
+               B3:16/unsigned-integer,
+               B4:16/unsigned-integer,
+               B5:48/unsigned-integer>>) ->
     [B1, B2, B3, B4, B5].
 
 %%-------------------------------------------------------------------------
@@ -937,31 +987,56 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Is the binary a UUID?===
+%% ===Is the term a UUID?===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec is_uuid(Value :: any()) ->
+-spec is_uuid(any()) ->
     boolean().
 
-is_uuid(Value)
-    when is_binary(Value), byte_size(Value) == 16 ->
-    is_v1(Value) orelse is_v3(Value) orelse is_v4(Value) orelse is_v5(Value);
+is_uuid(<<_:48,
+          Version:4/unsigned-integer,
+          _:12,
+          1:1, 0:1,            % RFC 4122 variant bits
+          _:62>>) ->
+    (Version == 1) orelse
+    (Version == 3) orelse
+    (Version == 4) orelse
+    (Version == 5);
 is_uuid(_) ->
     false.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Increment the clock sequence of v1 UUID state.===
+%% ===Increment the clock sequence of v1 UUID state or a v1 UUID.===
 %% Call to increment the clock sequence counter after the system clock has
 %% been set backwards (see the RFC).  This is only necessary
 %% if the `os' or `warp' timestamp_type is used.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec increment(State :: state()) ->
+-spec increment(state() | uuid()) ->
     NewState :: state().
 
+increment(<<TimeLow:32, TimeMid:16,
+            0:1, 0:1, 0:1, 1:1,  % version 1 bits
+            TimeHigh:12,
+            1:1, 0:1,            % RFC 4122 variant bits
+            ClockSeq:14,
+            NodeId:48>>) ->
+    NextClockSeq = ClockSeq + 1,
+    NewClockSeq = if
+        NextClockSeq == 16384 ->
+            0;
+        true ->
+            NextClockSeq
+    end,
+    <<TimeLow:32, TimeMid:16,
+      0:1, 0:1, 0:1, 1:1,  % version 1 bits
+      TimeHigh:12,
+      1:1, 0:1,            % RFC 4122 variant bits
+      NewClockSeq:14,
+      NodeId:48>>;
 increment(#uuid_state{clock_seq = ClockSeq} = State) ->
     NextClockSeq = ClockSeq + 1,
     NewClockSeq = if
@@ -1010,6 +1085,7 @@ test() ->
       V1NodeId1/binary>> = V1uuid1,
     true = uuid:is_uuid(V1uuid1),
     true = uuid:is_v1(V1uuid1),
+    "2012-12-08T03:13:58.564048Z" = uuid:get_v1_datetime(V1uuid1),
     <<V1Time1:60>> = <<V1TimeHigh1:12, V1TimeMid1:16, V1TimeLow1:32>>,
     V1Time1total = erlang:trunc((V1Time1 - 16#01b21dd213814000) / 10),
     V1Time1mega = erlang:trunc(V1Time1total / 1000000000000),
@@ -1027,6 +1103,7 @@ test() ->
     V1uuid2 = uuid:string_to_uuid("50d15f5c40e911e2a0eb001fd0a5484e"),
     "50d15f5c40e911e2a0eb001fd0a5484e" =
         uuid:uuid_to_string(V1uuid2, nodash),
+    "2012-12-08T03:42:40.199254Z" = uuid:get_v1_datetime(V1uuid2),
     <<V1TimeLow2:32, V1TimeMid2:16,
       0:1, 0:1, 0:1, 1:1,  % version 1 bits
       V1TimeHigh2:12,
@@ -1205,6 +1282,7 @@ test() ->
 -compile({inline,
           [{timestamp,1},
            {timestamp,2},
+           {int_to_dec,1},
            {int_to_hex,1},
            {hex_to_int,1}]}).
 
@@ -1257,19 +1335,31 @@ timestamp(warp, _) ->
 
 -endif.
 
+int_to_dec_list(I, N) when is_integer(I), I >= 0 ->
+    int_to_dec_list([], I, 1, N).
+
+int_to_dec_list(L, I, Count, N)
+    when I < 10 ->
+    int_to_list_pad([int_to_dec(I) | L], N - Count);
+int_to_dec_list(L, I, Count, N) ->
+    int_to_dec_list([int_to_dec(I rem 10) | L], I div 10, Count + 1, N).
+
 int_to_hex_list(I, N) when is_integer(I), I >= 0 ->
     int_to_hex_list([], I, 1, N).
 
-int_to_hex_list_pad(L, 0) ->
+int_to_list_pad(L, 0) ->
     L;
-int_to_hex_list_pad(L, Count) ->
-    int_to_hex_list_pad([$0 | L], Count - 1).
+int_to_list_pad(L, Count) ->
+    int_to_list_pad([$0 | L], Count - 1).
 
 int_to_hex_list(L, I, Count, N)
     when I < 16 ->
-    int_to_hex_list_pad([int_to_hex(I) | L], N - Count);
+    int_to_list_pad([int_to_hex(I) | L], N - Count);
 int_to_hex_list(L, I, Count, N) ->
     int_to_hex_list([int_to_hex(I rem 16) | L], I div 16, Count + 1, N).
+
+int_to_dec(I) when 0 =< I, I =< 9 ->
+    I + $0.
 
 int_to_hex(I) when 0 =< I, I =< 9 ->
     I + $0;

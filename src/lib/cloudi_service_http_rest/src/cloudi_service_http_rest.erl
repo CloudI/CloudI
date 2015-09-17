@@ -221,6 +221,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         _ when is_function(Initialize, 3) ->
             Initialize(ArgsAPI, Timeout, Dispatcher);
         undefined ->
+            true = (ArgsAPI == []),
             {ok, undefined}
     end,
     case ReturnAPI of

@@ -5,6 +5,7 @@ cgroups support (?) with cgclassify
     * (cgcreate ?) https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Creating_Cgroups.html
     * sys filesystem usage seems to be the only low-level usage, no C API
 Add to http://0install.net/ ?
+Use https://github.com/jordansissel/fpm ?
 Add better database integration
     * update memcached and couchdb drivers
     * add redis support

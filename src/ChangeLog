@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_trans_id for Erlang usage of the
+      CloudI service request transaction id
+    * Update uuid
+
 2015-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update trie
