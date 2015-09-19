@@ -6,20 +6,16 @@
   {lib_dirs,
    [
     "/usr/local/lib/cloudi-1.5.0/lib"
-   ]},
+    ]},
   {rel, "cloudi_hello_world5", "1",
    [
-    hello_world5,
-    % Erlang
-    sasl,
-    stdlib,
-    kernel
-   ]},
+    hello_world5
+    ]},
   {rel, "start_clean", "",
    [
     kernel,
     stdlib
-   ]},
+    ]},
   {boot_rel, "cloudi_hello_world5"},
   {app, hello_world5,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep},
@@ -46,7 +42,7 @@
   {debug_info, keep}
   %{app, debugger,
   % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]}
-]}.
+  ]}.
 
 {target_dir, "release"}.
 
@@ -58,4 +54,4 @@
   {copy, "./nodetool", "{{erts_vsn}}/bin/nodetool"},
   {copy, "./app.config", "etc/cloudi/app.config"},
   {copy, "./vm.args", "etc/cloudi/vm.args"}
-]}.
+  ]}.

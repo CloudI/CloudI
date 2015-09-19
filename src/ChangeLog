@@ -4,6 +4,8 @@
 2015-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add more details to the hello_world5 example.
+    * Update the other examples to have reltool.config comments and modelines
+    * Fix Elixir.HelloWorld1 example
 
 2015-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 

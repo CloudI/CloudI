@@ -43,9 +43,7 @@ go to the rebar [repository](https://github.com/rebar/rebar).
 To use an Erlang/OTP application file for an internal service with the same
 module name:
 
-    $ rebar get-deps
-    $ rebar compile
-    $ rebar generate
+    $ rebar get-deps compile generate
     $ cd release
     $ bin/cloudi_hello_world3 start
     $ curl http://localhost:6467/examples/hello_world3
