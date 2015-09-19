@@ -1,5 +1,6 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
 -module(hello_world5_app).
 
 -behaviour(application).
@@ -32,6 +33,7 @@
 start(_StartType, _StartArgs) ->
     {ok, Application} = application:get_application(),
     Services = [
+        % CloudI Service API usage through service requests
         {internal,
             "/cloudi/api/",
             cloudi_service_api_requests,
@@ -89,9 +91,12 @@ start(_StartType, _StartArgs) ->
              {automatic_loading, false}]}],
     case hello_world5_sup:start_link() of
         {ok, Pid} ->
-            {ok, ServiceIds} = cloudi_service_api:services_add(Services,
-                                                               infinity),
-            {ok, Pid, #state{service_ids = ServiceIds}};
+            case cloudi_service_api:services_add(Services, infinity) of
+                {ok, ServiceIds} ->
+                    {ok, Pid, #state{service_ids = ServiceIds}};
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end.

@@ -1,0 +1,63 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+{sys,
+ [
+  {lib_dirs,
+   [
+    "deps"
+   ]},
+  {rel, "cloudi_hello_world5", "1",
+   [
+    hello_world5,
+    % Erlang
+    sasl,
+    stdlib,
+    kernel
+   ]},
+  {rel, "start_clean", "",
+   [
+    kernel,
+    stdlib
+   ]},
+  {boot_rel, "cloudi_hello_world5"},
+  {app, hello_world5,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep},
+    {lib_dir, "apps/hello_world5"}]},
+
+  % typical defaults
+  {profile, embedded},
+  {incl_cond, derived},
+  {mod_cond, all},
+  {app_file, keep},
+  {excl_sys_filters, ["^bin/.*",
+                      "^erts.*/bin/(dialyzer|typer)",
+                      "^erts.*/(doc|info|include|lib|man|src)"]},
+
+  % keep beam files exposed for module loading of internal services
+  {excl_archive_filters, [".*"]},
+
+  % Erlang dependencies
+  {erts,
+   [{incl_cond, derived}, {mod_cond, all}, {app_file, keep}]},
+  {app, hipe,
+   [{incl_cond, exclude}]},
+  % sometimes services need the debug_info within OTP applications
+  {debug_info, keep},
+  %{app, debugger,
+  % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, sasl,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]}
+]}.
+
+{target_dir, "release"}.
+
+{overlay, [
+  {mkdir, "bin"},
+  {mkdir, "logs"},
+  {copy, "./cloudi_hello_world5", "bin/cloudi_hello_world5"},
+  {copy, "./erl", "{{erts_vsn}}/bin/erl"},
+  {copy, "./nodetool", "{{erts_vsn}}/bin/nodetool"},
+  {copy, "./app.config", "etc/cloudi/app.config"},
+  {copy, "./vm.args", "etc/cloudi/vm.args"}
+]}.
