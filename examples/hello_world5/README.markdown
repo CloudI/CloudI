@@ -22,7 +22,7 @@ service configuration option `automatic_loading` set to false to completely
 rely on the release for handling the Erlang service module loading.
 
 If more Erlang CloudI services were added to the `hello_world5` Erlang
-application, any of the service modules with names that do not match
+application, any of the service modules with names that do not equal
 `hello_world5` would set the `application_name` service configuration option
 to make sure the application ownership is clear
 (e.g., for `application:get_env/1`).
