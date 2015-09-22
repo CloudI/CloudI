@@ -69,6 +69,13 @@
 -type method() :: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'HEAD' | 'OPTIONS' |
                   'PATCH' | 'TRACE' | 'CONNECT'.
 
+-type initialize_f() :: fun((Args :: list(),
+                             Timeout :: cloudi_service_api:
+                                        timeout_milliseconds(),
+                             Dispatcher :: cloudi:dispatcher()) ->
+    {ok, State :: any()} |
+    {stop, Reason :: any()} |
+    {stop, Reason :: any(), State :: any()}).
 -type handler_f_11() :: fun((Method :: method(),
                              Path :: cloudi:service_name_pattern(),
                              Parameters :: list(string()),
@@ -95,6 +102,7 @@
                             State :: any()) ->
                            ok).
 -export_type([method/0,
+              initialize_f/0,
               handler_f_11/0,
               terminate_f/0]).
 

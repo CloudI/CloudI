@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-09-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add type specification macros for cloudi_service_http_rest with a new
+      cloudi_service_http_rest.hrl file
+
 2015-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add more details to the hello_world5 example.
