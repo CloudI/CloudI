@@ -164,7 +164,8 @@ external_format(Request, Format)
             erlang:binary_to_term(Request);
         Format =:= msgpack ->
             {ok, Incoming} = cloudi_x_msgpack:unpack(Request,
-                                                     [{format, ?MSGPACK_MAP}]),
+                                                     [{enable_str, true},
+                                                      {format, ?MSGPACK_MAP}]),
             Incoming
     end.
 

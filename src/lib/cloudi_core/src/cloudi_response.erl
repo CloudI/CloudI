@@ -78,7 +78,8 @@ external_format(Response, Format) ->
             erlang:term_to_binary(Response);
         Format =:= msgpack ->
             Outgoing = cloudi_x_msgpack:pack(msgpack_response(Response),
-                                             [{format, ?MSGPACK_MAP}]),
+                                             [{enable_str, true},
+                                              {format, ?MSGPACK_MAP}]),
             true = is_binary(Outgoing),
             Outgoing
     end.
