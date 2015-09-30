@@ -11,7 +11,7 @@
 
 -record(state,
     {
-        service_ids = [] :: list(cloudi_service:trans_id())
+        service_ids = [] :: list(cloudi_service_api:service_id())
     }).
 
 %%%------------------------------------------------------------------------
