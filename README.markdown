@@ -76,7 +76,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 Optional (installed/linked statically, automatically):
 
 * `ZeroMQ >= 3.x.x or 2.x.x (use the "--with-zeromq" configure flag)`
-  * `uuid-dev (uuid-dev/Ubuntu)`
+  * `uuid-dev (uuid-dev/Ubuntu, ossp-uuid/macports)`
 
 ### Building
 
