@@ -68,6 +68,15 @@
 -define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
 -define(ENVIRONMENT_BUFFER_SIZE,   "CLOUDI_API_INIT_BUFFER_SIZE").
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+% warning due to CLOUDI_CORE_STANDALONE being defined
+-dialyzer({no_match, start_external_spawn/15}).
+-endif.
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface
 %%%------------------------------------------------------------------------
