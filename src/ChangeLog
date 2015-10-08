@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix false negative from dialyzer when CLOUDI_CORE_STANDALONE is defined
+
 2015-09-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Tweak hello_world5 example type spec

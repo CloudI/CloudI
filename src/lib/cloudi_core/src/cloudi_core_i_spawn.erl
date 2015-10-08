@@ -59,6 +59,7 @@
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
+-include("cloudi_core_i_constants.hrl").
 
 -define(CREATE_INTERNAL, cloudi_core_i_services_internal_sup:create_internal).
 -define(CREATE_EXTERNAL, cloudi_core_i_services_external_sup:create_external).
@@ -68,12 +69,13 @@
 -define(ENVIRONMENT_PROTOCOL,      "CLOUDI_API_INIT_PROTOCOL").
 -define(ENVIRONMENT_BUFFER_SIZE,   "CLOUDI_API_INIT_BUFFER_SIZE").
 
+-ifdef(CLOUDI_CORE_STANDALONE).
 -ifdef(ERLANG_OTP_VERSION_16).
 -else.
 -ifdef(ERLANG_OTP_VERSION_17).
 -else.
-% warning due to CLOUDI_CORE_STANDALONE being defined
 -dialyzer({no_match, start_external_spawn/15}).
+-endif.
 -endif.
 -endif.
 
