@@ -172,6 +172,8 @@ external_format(Request, Format)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse HTTP Request query string data.===
+%% Only for GET query string data.  POST request data that provides parameters
+%% can be parsed with cloudi_x_cow_qs:parse_qs/1 from cowlib.
 %% @end
 %%-------------------------------------------------------------------------
 
