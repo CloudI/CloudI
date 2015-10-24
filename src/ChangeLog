@@ -8,6 +8,7 @@
       with the default set to 'raw' (to get the previous default behavior,
       set to 'text_pairs')
     * Update backward-cpp
+    * Add basic comments to cloudi_service_http_rest
 
 2015-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

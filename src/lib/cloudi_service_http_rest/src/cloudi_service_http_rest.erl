@@ -63,6 +63,25 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(DEFAULT_INITIALIZE,             undefined). % see below:
+        % If necessary, provide an initialization function to be called
+        % for initializing REST handler state data.  The initialize
+        % function can be specified as an anonymous function or a
+        % {module(), FunctionName :: atom()} tuple.
+-define(DEFAULT_TERMINATE,              undefined). % see below:
+        % If necessary, provide a terminate function to be called
+        % for terminating the REST handler's state data.  The terminate
+        % function can be specified as an anonymous function or a
+        % {module(), FunctionName :: atom()} tuple.
+-define(DEFAULT_HANDLERS,               undefined). % see below:
+        % Provide a list of handler functions to be used with the
+        % service name prefix.  Each handler function entry in the list
+        % takes the form:
+        % {Method :: atom() | string(), Path :: string(), handler()}
+        % (e.g., Method == 'GET', Path == "index.html")
+        % The handler function can be specified as an anonymous function or a
+        % {module(), FunctionName :: atom()} tuple.
+-define(DEFAULT_FORMATS,                undefined). % see below:
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
@@ -135,10 +154,10 @@
 
 cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Defaults = [
-        {initialize,               undefined},
-        {terminate,                undefined},
-        {handlers,                 undefined},
-        {formats,                  undefined},
+        {initialize,               ?DEFAULT_INITIALIZE},
+        {terminate,                ?DEFAULT_TERMINATE},
+        {handlers,                 ?DEFAULT_HANDLERS},
+        {formats,                  ?DEFAULT_FORMATS},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
     [Initialize, Terminate0, Handlers, Formats0,
@@ -188,6 +207,9 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         FormatN
     end, Formats0),
     LookupN = lists:foldl(fun({Method, Path, Handler0}, Lookup0) ->
+        true = is_atom(Method) orelse
+               (is_list(Method) andalso is_integer(hd(Method))),
+        true = is_list(Path) andalso is_integer(hd(Path)),
         {Handler1, Arity} = case Handler0 of
             {HandlerModule, HandlerFunction}
                 when is_atom(HandlerModule),
@@ -207,7 +229,13 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             _ when is_function(Handler0, 11) ->
                 {Handler0, 11}
         end,
-        API = #api{method = Method,
+        HandlerMethod = if
+            is_atom(Method) ->
+                Method;
+            is_list(Method), is_integer(hd(Method)) ->
+                erlang:list_to_atom(Method)
+        end,
+        API = #api{method = HandlerMethod,
                    path = Path,
                    parameters = lists:member($*, Prefix ++ Path),
                    handler_f = Handler1,
@@ -375,7 +403,11 @@ subscribe_paths('PATCH', Path, Formats, API, Lookup, Dispatcher) ->
 subscribe_paths('TRACE', Path, Formats, API, Lookup, Dispatcher) ->
     subscribe_path(Formats, Path, "/trace", API, Lookup, Dispatcher);
 subscribe_paths('CONNECT', Path, Formats, API, Lookup, Dispatcher) ->
-    subscribe_path(Formats, Path, "/connect", API, Lookup, Dispatcher).
+    subscribe_path(Formats, Path, "/connect", API, Lookup, Dispatcher);
+subscribe_paths(Method, Path, Formats, API, Lookup, Dispatcher)
+    when is_list(Method) ->
+    MethodSuffix = [$/ | string:to_lower(Method)],
+    subscribe_path(Formats, Path, MethodSuffix, API, Lookup, Dispatcher).
 
 protocol_debug_log(trace, Message, Args) ->
     ?LOG_TRACE(Message, Args);
