@@ -7,6 +7,7 @@
       cloudi_service_http_cowboy and cloudi_service_http_elli
       with the default set to 'raw' (to get the previous default behavior,
       set to 'text_pairs')
+    * Update backward-cpp
 
 2015-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

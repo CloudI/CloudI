@@ -41,6 +41,20 @@ doing at your convenience.
 
 ##Configuration & Dependencies
 
+### Integration with CMake
+
+If you are using CMake and want to use its configuration abilities to save
+you the trouble, you can easily integrate Backward:
+```
+add_subdirectory(/path/to/backward-cpp)
+
+# This will add backward.cpp to your target
+add_executable(myproject mysource.cpp ${backward_ENABLE})
+
+# This will add libraries, definitions and include directories needed by backward
+add_backward(myproject)
+```
+
 ### Compile with debug info
 
 You need to compile your project with generation of debug symbols enabled,
@@ -170,8 +184,8 @@ class TraceResolver { public:
 	template <class ST>
 		void load_stacktrace(ST&)
 
-	// Resolve a trace. It takes a ResolvedTrace, because a `Trace` or a
-	// `TraceWithLocals` are implicitly convertible to a ResolvedTrace.
+	// Resolve a trace. It takes a ResolvedTrace, because a `Trace` is
+	// implicitly convertible to it.
 	ResolvedTrace resolve(ResolvedTrace t)
 };
 ```
@@ -276,24 +290,13 @@ struct Trace {
 };
 ```
 
-#### Trace with local variables
-
-This is not used for now, but it might be used to carry Traces with snapshotted
-variables in the future.
-
-```c++
-struct TraceWithLocals: public Trace {
-	std::vector<Variable> locals; // Locals variable and values.
-};
-```
-
 #### Resolved trace
 
 A `ResolvedTrace` should contains a maximum of details about the location of
 the trace in the source code. Note that not all fields might be set.
 
 ```c++
-struct ResolvedTrace: public TraceWithLocals {
+struct ResolvedTrace: public Trace {
 
 	struct SourceLoc {
 		std::string function;

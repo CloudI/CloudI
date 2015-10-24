@@ -10,8 +10,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 --------------
 `for creating a backtrace in C++`
 - `https://github.com/bombela/backward-cpp`
-- `commit c486368c543f10127431098a57d04c88a442296f`
-- `Wed Nov 27 12:15:07 PST 2013`
+- `commit 77fc8d9fe4f2521558199206670fc3611dc75291`
+- `Sat Oct 24 11:03:12 PDT 2015`
 - `MIT`
 
 `booster (only booster/backtrace.h)`
