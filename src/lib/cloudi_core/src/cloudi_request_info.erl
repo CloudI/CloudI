@@ -4,6 +4,21 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI RequestInfo Creation and Parsing==
+%%% RequestInfo is used for request meta-data which is normally
+%%% key/value pairs that describe the context of the service request
+%%% (e.g., HTTP header names and values for a HTTP request).  The encoding
+%%% provided below is a basic format for textual key/value data
+%%% (i.e., neither the key or value should contain a null character, '\0')
+%%% which is easily parsed in any programming language and is referred to as
+%%% the 'text_pairs' format.  It is valid to have multiple entries for the
+%%% same key within the RequestInfo data.
+%%%
+%%% The ResponseInfo data is normally service request response meta-data
+%%% (providing the response equivalent of RequestInfo for a request)
+%%% and can utilize the same functions below.
+%%%
+%%% These module functions provide Erlang serialization of the 'text_pairs'
+%%% format for use with the cloudi_key_value module.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -74,9 +89,9 @@
 key_value_new([]) ->
     <<>>;
 key_value_new([{_, _} | _] = RequestInfo) ->
-    binary_key_value_new_list(RequestInfo, []);
+    text_pairs_new_list(RequestInfo, []);
 key_value_new(RequestInfo) ->
-    binary_key_value_new_list(dict:to_list(RequestInfo), []).
+    text_pairs_new_list(dict:to_list(RequestInfo), []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -117,7 +132,7 @@ key_value_append(RequestInfo, Existing)
 key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
     % key/values: binary() -> binary()
-    binary_key_value_parse_list(binary:split(RequestInfo, <<0>>, [global]),
+    text_pairs_parse_list(binary:split(RequestInfo, <<0>>, [global]),
                                 dict:new());
 key_value_parse(RequestInfo)
     when is_list(RequestInfo) ->
@@ -133,9 +148,9 @@ key_value_parse(RequestInfo) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-binary_key_value_new_list([], Result) ->
+text_pairs_new_list([], Result) ->
     erlang:iolist_to_binary(lists:reverse(Result));
-binary_key_value_new_list([{K, V} | L], Result) ->
+text_pairs_new_list([{K, V} | L], Result) ->
     NewK = if
         is_binary(K) ->
             K;
@@ -154,17 +169,17 @@ binary_key_value_new_list([{K, V} | L], Result) ->
         true ->
             cloudi_string:term_to_binary(V)
     end,
-    binary_key_value_new_list(L, [[NewK, 0, NewV, 0] | Result]).
+    text_pairs_new_list(L, [[NewK, 0, NewV, 0] | Result]).
 
-binary_key_value_parse_list([<<>>], Lookup) ->
+text_pairs_parse_list([<<>>], Lookup) ->
     Lookup;
-binary_key_value_parse_list([K, V | L], Lookup) ->
+text_pairs_parse_list([K, V | L], Lookup) ->
     case dict:find(K, Lookup) of
         {ok, [_ | _] = ListV} ->
-            binary_key_value_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
+            text_pairs_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
         {ok, V0} ->
-            binary_key_value_parse_list(L, dict:store(K, [V0, V], Lookup));
+            text_pairs_parse_list(L, dict:store(K, [V0, V], Lookup));
         error ->
-            binary_key_value_parse_list(L, dict:store(K, V, Lookup))
+            text_pairs_parse_list(L, dict:store(K, V, Lookup))
     end.
 

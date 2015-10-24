@@ -21,7 +21,8 @@
   [{prefix, "/"},
    {module, cloudi_service_http_cowboy},
    {args,
-    [{port, 6464}, {output, external}, {use_websockets, true}]}]
+    [{port, 6464}, {output, external}, {use_websockets, true},
+     {query_get_format, text_pairs}]}]
  ]}.
 {nodes, []}.
 {logging, []}.

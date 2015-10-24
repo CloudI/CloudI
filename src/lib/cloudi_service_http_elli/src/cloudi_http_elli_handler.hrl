@@ -52,6 +52,7 @@
         content_types_accepted    :: undefined | binary:cp(),
         set_x_forwarded_for       :: boolean(),
         status_code_timeout       :: 100..599,
+        query_get_format          :: raw | text_pairs,
         use_host_prefix           :: boolean(),
         use_client_ip_prefix      :: boolean(),
         use_method_suffix         :: boolean()

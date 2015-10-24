@@ -77,15 +77,42 @@ handle(Req,
                    content_types_accepted = ContentTypesAccepted,
                    set_x_forwarded_for = SetXForwardedFor,
                    status_code_timeout = StatusCodeTimeout,
+                   query_get_format = QueryGetFormat,
                    use_host_prefix = UseHostPrefix,
                    use_client_ip_prefix = UseClientIpPrefix,
                    use_method_suffix = UseMethodSuffix} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     HeadersIncoming0 = headers_to_lower(cloudi_x_elli_request:headers(Req)),
     Method = cloudi_x_elli_request:method(Req),
-    QsVals = cloudi_x_elli_request:query_str(Req),
-    [PathRaw | _] = binary:split(cloudi_x_elli_request:raw_path(Req),
-                                 [<<"?">>]),
+    [PathRaw | QSRawL] = binary:split(cloudi_x_elli_request:raw_path(Req),
+                                      [<<"?">>]),
+    QS = if
+        Method =:= 'GET' ->
+            QSRaw = case QSRawL of
+                [] ->
+                    <<>>;
+                [QSRawValue] ->
+                    QSRawValue
+            end,
+            if
+                QueryGetFormat =:= text_pairs ->
+                    QSVals = cloudi_x_cow_qs:parse_qs(QSRaw),
+                    if
+                        (OutputType =:= external) orelse
+                        (OutputType =:= binary) orelse (OutputType =:= list) ->
+                            % cloudi_request_info text_pairs format
+                            get_query_string_external(QSVals);
+                        OutputType =:= internal ->
+                            % cloudi_key_value format
+                            QSVals
+                    end;
+                QueryGetFormat =:= raw ->
+                    QSRaw
+            end;
+        true ->
+            % query strings only handled for GET methods
+            undefined
+    end,
     {ClientIpAddr, ClientPort} = Client = peer(Req),
     NameIncoming = service_name_incoming(UseClientIpPrefix,
                                          UseHostPrefix,
@@ -152,14 +179,10 @@ handle(Req,
             end,
             Body = if
                 Method =:= 'GET' ->
-                    ParsedQsVals = cloudi_x_cow_qs:parse_qs(QsVals),
-                    if
-                        (OutputType =:= external) orelse
-                        (OutputType =:= binary) orelse (OutputType =:= list) ->
-                            get_query_string_external(ParsedQsVals);
-                        OutputType =:= internal ->
-                            ParsedQsVals
-                    end;
+                    % only the query string is provided as the
+                    % body of a GET request passed within the Request parameter
+                    % of a CloudI service request, which prevents misuse of GET
+                    QS;
                 Method =:= 'POST'; Method =:= 'PUT' ->
                     % do not pass type information along with the request!
                     % make sure to encourage good design that provides

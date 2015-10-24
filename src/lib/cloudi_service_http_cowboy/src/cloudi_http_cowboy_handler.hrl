@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,7 @@
         content_types_accepted    :: undefined | binary:cp(),
         set_x_forwarded_for       :: boolean(),
         status_code_timeout       :: 100..599,
+        query_get_format          :: raw | text_pairs,
         websocket_output_type     :: text | binary,
         websocket_connect         :: undefined |
                                      {async | sync,

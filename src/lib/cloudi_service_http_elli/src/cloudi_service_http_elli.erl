@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -78,10 +78,30 @@
 -define(DEFAULT_CONTENT_TYPE,                 undefined). % force a content type
 -define(DEFAULT_CONTENT_TYPES_ACCEPTED,       undefined).
 -define(DEFAULT_STATUS_CODE_TIMEOUT,                504). % "Gateway Timeout"
+-define(DEFAULT_QUERY_GET_FORMAT,                   raw). % see below:
+        % If set to 'text_pairs' any GET query string is parsed and
+        % encoded based on the format defined in the cloudi_request_info
+        % module (to create a single binary accessible in external services)
+        % if the output is not internal, if the output is internal the
+        % parsed query string is provided in an Erlang data structure used
+        % by the cloudi_key_value module.
+        % Due to making testing simpler without requiring extra dependencies,
+        % the 'text_pairs' format is used when performing basic loadtests
+        % of CloudI with the http_req integration test.
+        % The default 'raw' setting will not parse GET query string data.
+        % GET query string data is always provided in the service request
+        % Request data (so using GET request body data will be ignored,
+        % due to being bad practice).
 -define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
 -define(DEFAULT_USE_HOST_PREFIX,                  false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,             false).
--define(DEFAULT_USE_METHOD_SUFFIX,                 true). % get/post name suffix
+-define(DEFAULT_USE_METHOD_SUFFIX,                 true). % see below:
+        % Always append a suffix on the service name used to send the
+        % HTTP request as a CloudI service request, to utilize the service
+        % name routing when handling separate HTTP request methods.
+        % For example, a GET HTTP request method would cause "/get" to be
+        % added to the service name (the URL path) that is used when sending
+        % the service request.
 
 -record(state,
     {
@@ -112,13 +132,15 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {content_types_accepted,        ?DEFAULT_CONTENT_TYPES_ACCEPTED},
         {set_x_forwarded_for,           ?DEFAULT_SET_X_FORWARDED_FOR},
         {status_code_timeout,           ?DEFAULT_STATUS_CODE_TIMEOUT},
+        {query_get_format,              ?DEFAULT_QUERY_GET_FORMAT},
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, AcceptTimeout, RecvTimeout, HeaderTimeout, BodyTimeout,
      MinAcceptors, SSL, MaxBodySize,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
-     StatusCodeTimeout, UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
+     StatusCodeTimeout, QueryGetFormat,
+     UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_integer(Port),
     true = is_integer(AcceptTimeout),
@@ -161,6 +183,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_integer(StatusCodeTimeout) andalso
            (StatusCodeTimeout > 100) andalso
            (StatusCodeTimeout =< 599),
+    true = (QueryGetFormat =:= raw) orelse
+           (QueryGetFormat =:= text_pairs),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
     true = is_boolean(UseMethodSuffix),
@@ -173,6 +197,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                        content_types_accepted = ContentTypesAccepted1,
                        set_x_forwarded_for = SetXForwardedFor,
                        status_code_timeout = StatusCodeTimeout,
+                       query_get_format = QueryGetFormat,
                        use_host_prefix = UseHostPrefix,
                        use_client_ip_prefix = UseClientIpPrefix,
                        use_method_suffix = UseMethodSuffix},

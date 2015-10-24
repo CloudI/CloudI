@@ -172,8 +172,11 @@ external_format(Request, Format)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse HTTP Request query string data.===
-%% Only for GET query string data.  POST request data that provides parameters
-%% can be parsed with cloudi_x_cow_qs:parse_qs/1 from cowlib.
+%% Only for GET query string data (when either cloudi_service_http_cowboy
+%% or cloudi_service_http_elli is configured with query_get_format
+%% equal to 'text_pairs').  POST request data that provides parameters
+%% (or GET query strings when query_get_format is equal to 'raw'
+%%  (the default)) can be parsed with cloudi_x_cow_qs:parse_qs/1 from cowlib.
 %% @end
 %%-------------------------------------------------------------------------
 

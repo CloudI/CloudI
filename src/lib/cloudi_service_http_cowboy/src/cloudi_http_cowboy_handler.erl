@@ -133,6 +133,7 @@ handle(Req0,
                      content_types_accepted = ContentTypesAccepted,
                      set_x_forwarded_for = SetXForwardedFor,
                      status_code_timeout = StatusCodeTimeout,
+                     query_get_format = QueryGetFormat,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
                      use_method_suffix = UseMethodSuffix
@@ -140,15 +141,35 @@ handle(Req0,
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
-    {QsVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
-    {PathRaw, Req4} = cloudi_x_cowboy_req:path(Req3),
+    {QS, Req4} = if
+        Method =:= <<"GET">> ->
+            if
+                QueryGetFormat =:= text_pairs ->
+                    {QSVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
+                    if
+                        (OutputType =:= external) orelse
+                        (OutputType =:= binary) orelse (OutputType =:= list) ->
+                            % cloudi_request_info text_pairs format
+                            {get_query_string_external(QSVals), Req3};
+                        OutputType =:= internal ->
+                            % cloudi_key_value format
+                            {QSVals, Req3}
+                    end;
+                QueryGetFormat =:= raw ->
+                    cloudi_x_cowboy_req:qs(Req2)
+            end;
+        true ->
+            % query strings only handled for GET methods
+            {undefined, Req2}
+    end,
+    {PathRaw, Req5} = cloudi_x_cowboy_req:path(Req4),
     {{ClientIpAddr, ClientPort} = Client,
-     Req5} = cloudi_x_cowboy_req:peer(Req4),
+     Req6} = cloudi_x_cowboy_req:peer(Req5),
     {NameIncoming, ReqN} = service_name_incoming(UseClientIpPrefix,
                                                  UseHostPrefix,
                                                  PathRaw,
                                                  Client,
-                                                 Req5),
+                                                 Req6),
     RequestAccepted = if
         ContentTypesAccepted =:= undefined ->
             true;
@@ -216,13 +237,10 @@ handle(Req0,
             end,
             Body = if
                 Method =:= <<"GET">> ->
-                    if
-                        (OutputType =:= external) orelse
-                        (OutputType =:= binary) orelse (OutputType =:= list) ->
-                            get_query_string_external(QsVals);
-                        OutputType =:= internal ->
-                            QsVals
-                    end;
+                    % only the query string is provided as the
+                    % body of a GET request passed within the Request parameter
+                    % of a CloudI service request, which prevents misuse of GET
+                    QS;
                 (Method =:= <<"POST">>) orelse
                 (Method =:= <<"PUT">>) ->
                     case header_content_type(HeadersIncoming0) of
