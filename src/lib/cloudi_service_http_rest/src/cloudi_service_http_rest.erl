@@ -82,6 +82,9 @@
         % The handler function can be specified as an anonymous function or a
         % {module(), FunctionName :: atom()} tuple.
 -define(DEFAULT_FORMATS,                undefined). % see below:
+        % Provide a list of formats to handle that are added as file type
+        % suffixes on the URL path which also determine the content-type used
+        % for the request and response.
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
@@ -89,6 +92,7 @@
                   'PATCH' | 'TRACE' | 'CONNECT'.
 
 -type initialize_f() :: fun((Args :: list(),
+                             Prefix :: cloudi:service_name_pattern(),
                              Timeout :: cloudi_service_api:
                                         timeout_milliseconds(),
                              Dispatcher :: cloudi:dispatcher()) ->
@@ -251,11 +255,11 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             when is_atom(InitializeModule),
                  is_atom(InitializeFunction) ->
             true = erlang:function_exported(InitializeModule,
-                                            InitializeFunction, 3),
+                                            InitializeFunction, 4),
             InitializeModule:
-            InitializeFunction(ArgsAPI, Timeout, Dispatcher);
-        _ when is_function(Initialize, 3) ->
-            Initialize(ArgsAPI, Timeout, Dispatcher);
+            InitializeFunction(ArgsAPI, Prefix, Timeout, Dispatcher);
+        _ when is_function(Initialize, 4) ->
+            Initialize(ArgsAPI, Prefix, Timeout, Dispatcher);
         undefined ->
             true = (ArgsAPI == []),
             {ok, undefined}
