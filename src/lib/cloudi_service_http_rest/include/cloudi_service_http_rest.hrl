@@ -43,7 +43,6 @@
 
 -define(SPEC_REST_INITIALIZE(Function),
 -spec Function(Args :: list(),
-               Prefix :: cloudi:service_name_pattern(),
                Timeout :: cloudi_service_api:timeout_milliseconds(),
                Dispatcher :: cloudi:dispatcher()) ->
     {ok, State :: any()} |

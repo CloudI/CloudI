@@ -3,7 +3,7 @@
 
 2015-10-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Change cloudi_service_http_rest initialize function
+    * Add comment to cloudi_service_http_rest
 
 2015-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 

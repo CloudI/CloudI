@@ -92,7 +92,6 @@
                   'PATCH' | 'TRACE' | 'CONNECT'.
 
 -type initialize_f() :: fun((Args :: list(),
-                             Prefix :: cloudi:service_name_pattern(),
                              Timeout :: cloudi_service_api:
                                         timeout_milliseconds(),
                              Dispatcher :: cloudi:dispatcher()) ->
@@ -255,11 +254,11 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             when is_atom(InitializeModule),
                  is_atom(InitializeFunction) ->
             true = erlang:function_exported(InitializeModule,
-                                            InitializeFunction, 4),
+                                            InitializeFunction, 3),
             InitializeModule:
-            InitializeFunction(ArgsAPI, Prefix, Timeout, Dispatcher);
-        _ when is_function(Initialize, 4) ->
-            Initialize(ArgsAPI, Prefix, Timeout, Dispatcher);
+            InitializeFunction(ArgsAPI, Timeout, Dispatcher);
+        _ when is_function(Initialize, 3) ->
+            Initialize(ArgsAPI, Timeout, Dispatcher);
         undefined ->
             true = (ArgsAPI == []),
             {ok, undefined}
