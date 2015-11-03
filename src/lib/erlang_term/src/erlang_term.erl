@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -90,7 +90,9 @@ byte_size_terms_in_list([], _) ->
 byte_size_terms_in_list([Term | L], WordSize) ->
     1 * WordSize +
     byte_size_terms(Term, WordSize) +
-    byte_size_terms_in_list(L, WordSize).
+    byte_size_terms_in_list(L, WordSize);
+byte_size_terms_in_list(Term, WordSize) ->
+    byte_size_terms(Term, WordSize). % element of improper list
 
 byte_size_terms_in_tuple(Size, Size, Term, WordSize) ->
     byte_size_terms(erlang:element(Size, Term), WordSize);
@@ -131,6 +133,7 @@ internal_test() ->
     32 = byte_size(<<$a, $b, $c>>, 8),
     8 = byte_size([], 8),
     24 = byte_size([0], 8),
+    32 = byte_size([1|2], 8), % improper list
     16 = byte_size({}, 8),
     24 = byte_size({0}, 8),
     8 = byte_size(0, 8),
