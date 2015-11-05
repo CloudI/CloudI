@@ -95,7 +95,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -108,6 +108,8 @@
          process_count_min/1,
          self/1,
          monitor/2,
+         demonitor/2,
+         demonitor/3,
          dispatcher/1,
          subscribe/2,
          subscribe_count/2,
@@ -404,8 +406,40 @@ self(Dispatcher) ->
               Pid :: pid()) ->
     MonitorRef :: reference().
 
-monitor(Dispatcher, Pid) ->
+monitor(Dispatcher, Pid)
+    when is_pid(Dispatcher), is_pid(Pid) ->
     gen_server:call(Dispatcher, {monitor, Pid}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Demonitor an Erlang pid.===
+%% The function will make sure an Erlang pid is demonitored properly.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec demonitor(Dispatcher :: dispatcher(),
+                MonitorRef :: reference()) ->
+    true.
+
+demonitor(Dispatcher, MonitorRef)
+    when is_pid(Dispatcher), is_reference(MonitorRef) ->
+    gen_server:call(Dispatcher, {demonitor, MonitorRef}, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Demonitor an Erlang pid with options.===
+%% The function will make sure an Erlang pid is demonitored properly.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec demonitor(Dispatcher :: dispatcher(),
+                MonitorRef :: reference(),
+                Options :: list()) ->
+    true.
+
+demonitor(Dispatcher, MonitorRef, Options)
+    when is_pid(Dispatcher), is_reference(MonitorRef), is_list(Options) ->
+    gen_server:call(Dispatcher, {demonitor, MonitorRef, Options}, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc

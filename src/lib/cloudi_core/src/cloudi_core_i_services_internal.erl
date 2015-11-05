@@ -403,19 +403,14 @@ handle_call(self, _,
             #state{receiver_pid = ReceiverPid} = State) ->
     hibernate_check({reply, ReceiverPid, State});
 
-handle_call({monitor, Pid}, _,
-            #state{duo_mode_pid = DuoModePid} = State) ->
-    MonitorRef = if
-        DuoModePid =:= undefined ->
-            erlang:monitor(process, Pid);
-        is_pid(DuoModePid) ->
-            DuoModePid ! {monitor, Pid},
-            receive
-                {monitor, MonitorRefValue} ->
-                    MonitorRefValue
-            end
-    end,
-    hibernate_check({reply, MonitorRef, State});
+handle_call({monitor, Pid}, _, State) ->
+    hibernate_check({reply, erlang:monitor(process, Pid), State});
+
+handle_call({demonitor, MonitorRef}, _, State) ->
+    hibernate_check({reply, erlang:demonitor(MonitorRef), State});
+
+handle_call({demonitor, MonitorRef, Options}, _, State) ->
+    hibernate_check({reply, erlang:demonitor(MonitorRef, Options), State});
 
 handle_call(dispatcher, _,
             #state{dispatcher = Dispatcher} = State) ->
@@ -1728,15 +1723,14 @@ handle_info({'DOWN', _MonitorRef, process, Pid, _Info} = Request, State) ->
     case send_timeout_dead(Pid, State) of
         {true, NewState} ->
             hibernate_check({noreply, NewState});
-        {false, #state{duo_mode_pid = undefined} = NewState} ->
-            handle_info_message(Request, NewState);
-        {false, #state{duo_mode_pid = DuoModePid} = NewState}
-            when is_pid(DuoModePid) ->
-            % should never happen since the duo_mode pid
-            % should have received the monitor message instead
-            % (use cloudi_service:monitor/2)
-            ?LOG_ERROR("Unknown info \"~p\"", [Request]),
-            hibernate_check({noreply, NewState})
+        {false, #state{duo_mode_pid = DuoModePid} = NewState} ->
+            if
+                DuoModePid =:= undefined ->
+                    handle_info_message(Request, NewState);
+                is_pid(DuoModePid) ->
+                    DuoModePid ! Request,
+                    hibernate_check({noreply, NewState})
+            end
     end;
 
 handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
@@ -3688,11 +3682,6 @@ duo_handle_info({system, From, Msg},
             sys:handle_system_msg(Msg, From, Dispatcher, ?MODULE, [],
                                   State)
     end;
-
-duo_handle_info({monitor, Pid},
-                #state_duo{dispatcher = Dispatcher} = State) ->
-    Dispatcher ! {monitor, erlang:monitor(process, Pid)},
-    {noreply, State};
 
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,

@@ -4,7 +4,10 @@
 2015-11-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:monitor/2 for monitoring
-      Erlang processes in a CloudI service
+      Erlang processes in an Erlang CloudI service
+    * Add cloudi_service:demonitor/2 and
+      cloudi_service:demonitor/3 for removing a monitor
+      in an Erlang CloudI service
     * Add cloudi_service_http_rest info function configuration argument
 
 2015-11-03 Dmitriy Mazurin <dimas.m.19 [at] gmail (dot) com>
