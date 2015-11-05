@@ -372,9 +372,9 @@ send_timeout_dead(Pid,
                          send_timeout_monitors =
                              SendTimeoutMonitors} = State)
     when is_pid(Pid) ->
-    NewSendTimeouts = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+    case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {_MonitorRef, TransIdList}} ->
-            lists:foldl(fun(TransId, D) ->
+            NewSendTimeouts = lists:foldl(fun(TransId, D) ->
                 case ?MAP_FIND(TransId, D) of
                     {ok, {Type, _, Tref}}
                     when Type =:= active; Type =:= passive ->
@@ -400,12 +400,14 @@ send_timeout_dead(Pid,
                     error ->
                         D
                 end
-            end, SendTimeouts, TransIdList);
+            end, SendTimeouts, TransIdList),
+            NewSendTimeoutMonitors = ?MAP_ERASE(Pid, SendTimeoutMonitors),
+            {true,
+             State#state{send_timeouts = NewSendTimeouts,
+                         send_timeout_monitors = NewSendTimeoutMonitors}};
         error ->
-            SendTimeouts
-    end,
-    State#state{send_timeouts = NewSendTimeouts,
-                send_timeout_monitors = ?MAP_ERASE(Pid, SendTimeoutMonitors)}.
+            {false, State}
+    end.
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 cancel_timer_async(Tref) ->

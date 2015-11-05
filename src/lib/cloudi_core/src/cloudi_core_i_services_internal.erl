@@ -403,6 +403,20 @@ handle_call(self, _,
             #state{receiver_pid = ReceiverPid} = State) ->
     hibernate_check({reply, ReceiverPid, State});
 
+handle_call({monitor, Pid}, _,
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    MonitorRef = if
+        DuoModePid =:= undefined ->
+            erlang:monitor(process, Pid);
+        is_pid(DuoModePid) ->
+            DuoModePid ! {monitor, Pid},
+            receive
+                {monitor, MonitorRefValue} ->
+                    MonitorRefValue
+            end
+    end,
+    hibernate_check({reply, MonitorRef, State});
+
 handle_call(dispatcher, _,
             #state{dispatcher = Dispatcher} = State) ->
     hibernate_check({reply, Dispatcher, State});
@@ -1464,10 +1478,6 @@ handle_info({cloudi_cpg_data, Groups},
     destination_refresh_start(DestRefresh, Dispatcher, ConfigOptions),
     hibernate_check({noreply, State#state{cpg_data = Groups}});
 
-handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
-            State) ->
-    hibernate_check({noreply, send_timeout_dead(Pid, State)});
-
 handle_info('cloudi_hibernate_rate',
             #state{duo_mode_pid = undefined,
                    request_pid = RequestPid,
@@ -1714,38 +1724,31 @@ handle_info({'cloudi_service_init_state', NewProcessDictionary, NewState},
     erlang:process_flag(trap_exit, true),
     hibernate_check({noreply, NewState});
 
-handle_info(Request,
-            #state{queue_requests = true,
-                   queued_info = QueueInfo,
-                   duo_mode_pid = undefined} = State) ->
-    hibernate_check({noreply,
-                     State#state{
-                         queued_info = queue:in(Request, QueueInfo)}});
-
-handle_info(Request,
-            #state{dispatcher = Dispatcher,
-                   module = Module,
-                   service_state = ServiceState,
-                   info_pid = InfoPid,
-                   duo_mode_pid = undefined,
-                   options = ConfigOptions} = State) ->
-    NewConfigOptions = check_incoming(false, ConfigOptions),
-    hibernate_check({noreply,
-                     State#state{
-                         queue_requests = true,
-                         info_pid = handle_module_info_loop_pid(InfoPid,
-                             {'cloudi_service_info_loop',
-                              Request, ServiceState, Dispatcher,
-                              Module, NewConfigOptions},
-                              NewConfigOptions, Dispatcher),
-                         options = NewConfigOptions}});
+handle_info({'DOWN', _MonitorRef, process, Pid, _Info} = Request, State) ->
+    case send_timeout_dead(Pid, State) of
+        {true, NewState} ->
+            hibernate_check({noreply, NewState});
+        {false, #state{duo_mode_pid = undefined} = NewState} ->
+            handle_info_message(Request, NewState);
+        {false, #state{duo_mode_pid = DuoModePid} = NewState}
+            when is_pid(DuoModePid) ->
+            % should never happen since the duo_mode pid
+            % should have received the monitor message instead
+            % (use cloudi_service:monitor/2)
+            ?LOG_ERROR("Unknown info \"~p\"", [Request]),
+            hibernate_check({noreply, NewState})
+    end;
 
 handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
-    true = is_pid(DuoModePid),
-    % should never happen, but random code could
-    % send random messages to the dispatcher Erlang process
-    ?LOG_ERROR("Unknown info \"~p\"", [Request]),
-    hibernate_check({noreply, State}).
+    if
+        DuoModePid =:= undefined ->
+            handle_info_message(Request, State);
+        is_pid(DuoModePid) ->
+            % should never happen, but random code could
+            % send random messages to the dispatcher Erlang process
+            ?LOG_ERROR("Unknown info \"~p\"", [Request]),
+            hibernate_check({noreply, State})
+    end.
 
 terminate(Reason,
           #state{dispatcher = Dispatcher,
@@ -2827,6 +2830,31 @@ process_queue(NewServiceState,
                 options = NewConfigOptions}
     end.
 
+handle_info_message(Request,
+                    #state{queue_requests = true,
+                           queued_info = QueueInfo,
+                           duo_mode_pid = undefined} = State) ->
+    hibernate_check({noreply,
+                     State#state{
+                         queued_info = queue:in(Request, QueueInfo)}});
+handle_info_message(Request,
+                    #state{dispatcher = Dispatcher,
+                           module = Module,
+                           service_state = ServiceState,
+                           info_pid = InfoPid,
+                           duo_mode_pid = undefined,
+                           options = ConfigOptions} = State) ->
+    NewConfigOptions = check_incoming(false, ConfigOptions),
+    hibernate_check({noreply,
+                     State#state{
+                         queue_requests = true,
+                         info_pid = handle_module_info_loop_pid(InfoPid,
+                             {'cloudi_service_info_loop',
+                              Request, ServiceState, Dispatcher,
+                              Module, NewConfigOptions},
+                              NewConfigOptions, Dispatcher),
+                         options = NewConfigOptions}}).
+
 process_queue_info(NewServiceState,
                    #state{dispatcher = Dispatcher,
                           queue_requests = true,
@@ -3660,6 +3688,11 @@ duo_handle_info({system, From, Msg},
             sys:handle_system_msg(Msg, From, Dispatcher, ?MODULE, [],
                                   State)
     end;
+
+duo_handle_info({monitor, Pid},
+                #state_duo{dispatcher = Dispatcher} = State) ->
+    Dispatcher ! {monitor, erlang:monitor(process, Pid)},
+    {noreply, State};
 
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,

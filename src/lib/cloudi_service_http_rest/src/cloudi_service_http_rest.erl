@@ -81,6 +81,11 @@
         % (e.g., Method == 'GET', Path == "index.html")
         % The handler function can be specified as an anonymous function or a
         % {module(), FunctionName :: atom()} tuple.
+-define(DEFAULT_INFO,                   undefined). % see below:
+        % If necessary, provide an info function to be called
+        % for Erlang messages received by the process. The info
+        % function can be specified as an anonymous function or a
+        % {module(), FunctionName :: atom()} tuple.
 -define(DEFAULT_FORMATS,                undefined). % see below:
         % Provide a list of formats to handle that are added as file type
         % suffixes on the URL path which also determine the content-type used
@@ -119,6 +124,11 @@
      NextPriority :: cloudi:priority_value(), NewState :: any()} |
     {noreply, NewState :: any()} |
     {stop, Reason :: any(), NewState :: any()}).
+-type info_f() :: fun((Request :: any(),
+                       State :: any(),
+                       Dispatcher :: cloudi:dispatcher()) ->
+                      {noreply, NewState :: any()} |
+                      {stop, Reason :: any(), NewState :: any()}).
 -type terminate_f() :: fun((Reason :: any(),
                             Timeout :: cloudi:timeout_value_milliseconds(),
                             State :: any()) ->
@@ -126,6 +136,7 @@
 -export_type([method/0,
               initialize_f/0,
               handler_f_11/0,
+              info_f/0,
               terminate_f/0]).
 
 -record(api,
@@ -142,6 +153,7 @@
     {
         prefix :: cloudi:service_name_pattern(),
         lookup :: cloudi_x_trie:cloudi_x_trie(),
+        info_f :: info_f() | undefined,
         terminate_f :: terminate_f() | undefined,
         debug_level :: off | trace | debug | info | warn | error | fatal,
         api_state :: any()
@@ -160,10 +172,11 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {initialize,               ?DEFAULT_INITIALIZE},
         {terminate,                ?DEFAULT_TERMINATE},
         {handlers,                 ?DEFAULT_HANDLERS},
+        {info,                     ?DEFAULT_INFO},
         {formats,                  ?DEFAULT_FORMATS},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Initialize, Terminate0, Handlers, Formats0,
+    [Initialize, Terminate0, Handlers, Info0, Formats0,
      Debug, DebugLevel | ArgsAPI] =
         cloudi_proplists:take_values(Defaults, Args),
     TerminateN = case Terminate0 of
@@ -174,8 +187,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                                             TerminateFunction, 3),
             fun(TerminateArg1, TerminateArg2, TerminateArg3) ->
                 TerminateModule:
-                TerminateFunction(TerminateArg1, TerminateArg2,
-                                  TerminateArg3)
+                TerminateFunction(TerminateArg1, TerminateArg2, TerminateArg3)
             end;
         _ when is_function(Terminate0, 3) ->
             Terminate0;
@@ -183,6 +195,21 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             undefined
     end,
     true = is_list(Handlers),
+    InfoN = case Info0 of
+        {InfoModule, InfoFunction}
+            when is_atom(InfoModule),
+                 is_atom(InfoFunction) ->
+            true = erlang:function_exported(InfoModule,
+                                            InfoFunction, 3),
+            fun(InfoArg1, InfoArg2, InfoArg3) ->
+                InfoModule:
+                InfoFunction(InfoArg1, InfoArg2, InfoArg3)
+            end;
+        _ when is_function(Info0, 3) ->
+            Info0;
+        undefined ->
+            undefined
+    end,
     true = is_list(Formats0),
     true = ((Debug =:= true) orelse
             (Debug =:= false)),
@@ -247,6 +274,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     end, cloudi_x_trie:new(), Handlers),
     State = #state{prefix = Prefix,
                    lookup = LookupN,
+                   info_f = InfoN,
                    terminate_f = TerminateN,
                    debug_level = DebugLogLevel},
     ReturnAPI = case Initialize of
@@ -359,9 +387,22 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             {stop, Reason, State#state{api_state = NewStateAPI}}
     end.
 
-cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+cloudi_service_handle_info(Request,
+                           #state{info_f = InfoF,
+                                  api_state = StateAPI} = State,
+                           Dispatcher) ->
+    if
+        InfoF =:= undefined ->
+            ?LOG_WARN("Unknown info \"~p\"", [Request]),
+            {noreply, State};
+        true ->
+            case InfoF(Request, StateAPI, Dispatcher) of
+                {noreply, NewStateAPI} ->
+                    {noreply, State#state{api_state = NewStateAPI}};
+                {stop, Reason, NewStateAPI} ->
+                    {stop, Reason, State#state{api_state = NewStateAPI}}
+            end
+    end.
 
 cloudi_service_terminate(Reason, Timeout,
                          #state{terminate_f = TerminateF,

@@ -200,7 +200,7 @@
     [{prefix, "/cloudi/log/"},
      {module, cloudi_service_filesystem},
      {args,
-      [{directory, "@cloudi_logdir@"},
+      [{directory, "@prefix@/var/log/cloudi"},
        {read, [{"/cloudi/log/cloudi.log", -16384}]},
        {refresh, 10}]},
      {dest_refresh, none}],

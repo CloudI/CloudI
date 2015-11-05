@@ -1336,9 +1336,9 @@ handle_info('cloudi_service_init_timeout', _, State) ->
 handle_info({'EXIT', _, Reason}, _, State) ->
     {stop, Reason, State};
 
-handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName,
-            State) ->
-    {next_state, StateName, send_timeout_dead(Pid, State)};
+handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName, State) ->
+    {_, NewState} = send_timeout_dead(Pid, State),
+    {next_state, StateName, NewState};
 
 handle_info('cloudi_count_process_dynamic_rate', StateName,
             #state{dispatcher = Dispatcher,

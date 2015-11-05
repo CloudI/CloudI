@@ -70,6 +70,12 @@
      NextPriority :: cloudi:priority_value(), NewState :: any()} |
     {noreply, NewState :: any()} |
     {stop, Reason :: any(), NewState :: any()}).
+-define(SPEC_REST_INFO(Function),
+-spec Function(Request :: any(),
+               State :: any(),
+               Dispatcher :: cloudi:dispatcher()) ->
+    {noreply, NewState :: any()} |
+    {stop, Reason :: any(), NewState :: any()}).
 -define(SPEC_REST_TERMINATE(Function),
 -spec Function(Reason :: any(),
                Timeout :: cloudi:timeout_value_milliseconds(),

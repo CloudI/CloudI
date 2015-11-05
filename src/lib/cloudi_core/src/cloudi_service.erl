@@ -107,6 +107,7 @@
          process_count_max/1,
          process_count_min/1,
          self/1,
+         monitor/2,
          dispatcher/1,
          subscribe/2,
          subscribe_count/2,
@@ -388,6 +389,23 @@ process_count_min(Dispatcher) ->
 
 self(Dispatcher) ->
     gen_server:call(Dispatcher, self, infinity).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Monitor an Erlang pid.===
+%% The function will make sure an Erlang pid is monitored properly so the
+%% cloudi_service_handle_info/3 callback receives the monitor result.
+%% Since both the request_pid and the info_pid are temporary Erlang processes,
+%% no spawned Erlang process should be linked to the request_pid or info_pid.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec monitor(Dispatcher :: dispatcher(),
+              Pid :: pid()) ->
+    MonitorRef :: reference().
+
+monitor(Dispatcher, Pid) ->
+    gen_server:call(Dispatcher, {monitor, Pid}, infinity).
 
 %%-------------------------------------------------------------------------
 %% @doc
