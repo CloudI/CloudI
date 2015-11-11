@@ -51,49 +51,61 @@
 
 -module(cloudi_core_i_logger_interface).
 -author('mjtruog [at] gmail (dot) com').
--export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
-         fatal_sync/4, error_sync/4, warn_sync/4,
-         info_sync/4, debug_sync/4, trace_sync/4,
+-export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
+         fatal_sync/6, error_sync/6, warn_sync/6,
+         info_sync/6, debug_sync/6, trace_sync/6,
          fatal_apply/2, error_apply/2, warn_apply/2,
          info_apply/2, debug_apply/2, trace_apply/2,
          fatal_apply/3, error_apply/3, warn_apply/3,
          info_apply/3, debug_apply/3, trace_apply/3]).
-fatal(Module, Line, Format, Arguments) ->
+fatal(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(async, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-error(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+error(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:error(async, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-warn(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+warn(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:warn(async, cloudi_core_i_logger,
-                              Module, Line, Format, Arguments).
-info(Module, Line, Format, Arguments) ->
+                              Module, Line, Function, Arity,
+                              Format, Arguments).
+info(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:info(async, cloudi_core_i_logger,
-                              Module, Line, Format, Arguments).
-debug(Module, Line, Format, Arguments) ->
+                              Module, Line, Function, Arity,
+                              Format, Arguments).
+debug(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:debug(async, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-trace(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+trace(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(async, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-fatal_sync(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(sync, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-error_sync(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+error_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:error(sync, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-warn_sync(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:warn(sync, cloudi_core_i_logger,
-                              Module, Line, Format, Arguments).
-info_sync(Module, Line, Format, Arguments) ->
+                              Module, Line, Function, Arity,
+                              Format, Arguments).
+info_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:info(sync, cloudi_core_i_logger,
-                              Module, Line, Format, Arguments).
-debug_sync(Module, Line, Format, Arguments) ->
+                              Module, Line, Function, Arity,
+                              Format, Arguments).
+debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:debug(sync, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
-trace_sync(Module, Line, Format, Arguments) ->
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
+trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(sync, cloudi_core_i_logger,
-                               Module, Line, Format, Arguments).
+                               Module, Line, Function, Arity,
+                               Format, Arguments).
 fatal_apply(F, A) ->
     erlang:apply(F, A).
 error_apply(F, A) ->

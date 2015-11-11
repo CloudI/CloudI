@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Changes to abide by EEP45
+        * FUNCTION macro was changed to FUNCTION_NAME
+        * FUNCTION_ARITY macro was changed to only be the function arity
+    * Fix ERLANG_OTP_VERSION macros used for integration test compilation
+    * Added logging parameters for function and arity to make logging of the
+      function data easy
+    * Fix lager metadata pid to be a string to match the lager parse transform
+
 2015-11-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service:monitor/2 for monitoring

@@ -50,27 +50,65 @@
 %   DEBUG: reports subsystem data that should be useful for debugging
 %   TRACE: reports subsystem data that is only for tracing execution
 
+% Convenience macros
+% (due to not using any parse transforms, the current function is unavailable,
+%  but can be retrieved by the macros below with a small amount of runtime 
+%  latency (names are based on EEP45))
+
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-ifdef(ERLANG_OTP_VERSION_18).
+-else.
+-define(ERLANG_OTP_VERSION_19_FEATURES, true). % EEP45
+-endif.
+-endif.
+-endif.
+-ifndef(ERLANG_OTP_VERSION_19_FEATURES).
+-define(FUNCTION_NAME,
+    erlang:element(2,
+        erlang:element(2,
+            erlang:process_info(self(), current_function)))).
+-define(FUNCTION_ARITY,
+    erlang:element(3,
+        erlang:element(2,
+            erlang:process_info(self(), current_function)))).
+-endif.
+
 % Typical logging output which will log asynchronously until the logger's
 % message queue becomes too large, switching to synchronous logging
 % while the message queue remains large
 
 -define(LOG_FATAL(Format, Args),
-    cloudi_core_i_logger_interface:fatal(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:fatal(?MODULE, ?LINE,
+                                         undefined, undefined,
+                                         Format, Args)).
 
 -define(LOG_ERROR(Format, Args),
-    cloudi_core_i_logger_interface:error(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:error(?MODULE, ?LINE,
+                                         undefined, undefined,
+                                         Format, Args)).
 
 -define(LOG_WARN(Format, Args),
-    cloudi_core_i_logger_interface:warn(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:warn(?MODULE, ?LINE,
+                                        undefined, undefined,
+                                        Format, Args)).
 
 -define(LOG_INFO(Format, Args),
-    cloudi_core_i_logger_interface:info(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:info(?MODULE, ?LINE,
+                                        undefined, undefined,
+                                        Format, Args)).
 
 -define(LOG_DEBUG(Format, Args),
-    cloudi_core_i_logger_interface:debug(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:debug(?MODULE, ?LINE,
+                                         undefined, undefined,
+                                         Format, Args)).
 
 -define(LOG_TRACE(Format, Args),
-    cloudi_core_i_logger_interface:trace(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:trace(?MODULE, ?LINE,
+                                         undefined, undefined,
+                                         Format, Args)).
 
 % Force the logging to be done synchronously to the local log only
 % (if you are concerned about losing a logging message when the logging
@@ -82,22 +120,34 @@
 %  custom source code, if the info logging level is enabled)
 
 -define(LOG_FATAL_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE,
+                                              undefined, undefined,
+                                              Format, Args)).
 
 -define(LOG_ERROR_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:error_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:error_sync(?MODULE, ?LINE,
+                                              undefined, undefined,
+                                              Format, Args)).
 
 -define(LOG_WARN_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:warn_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:warn_sync(?MODULE, ?LINE,
+                                             undefined, undefined,
+                                             Format, Args)).
 
 -define(LOG_INFO_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:info_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:info_sync(?MODULE, ?LINE,
+                                             undefined, undefined,
+                                             Format, Args)).
 
 -define(LOG_DEBUG_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:debug_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:debug_sync(?MODULE, ?LINE,
+                                              undefined, undefined,
+                                              Format, Args)).
 
 -define(LOG_TRACE_SYNC(Format, Args),
-    cloudi_core_i_logger_interface:trace_sync(?MODULE, ?LINE, Format, Args)).
+    cloudi_core_i_logger_interface:trace_sync(?MODULE, ?LINE,
+                                              undefined, undefined,
+                                              Format, Args)).
 
 % Apply an anonymous function if allowed by the current logging level setting
 
@@ -146,22 +196,4 @@
 
 -define(LOG_METADATA_SET(L),
     cloudi_core_i_logger:metadata_set(L)).
-
-% Convenience macros
-% (due to not using any parse transforms, the current function is unavailable,
-%  but can be retrieved by the macros below with a small amount of runtime 
-%  latency)
-
--ifndef(FUNCTION). % atom
--define(FUNCTION,
-    erlang:element(2,
-        erlang:element(2,
-            erlang:process_info(self(), current_function)))).
--endif.
--ifndef(FUNCTION_ARITY). % string (list of characters)
--define(FUNCTION_ARITY,
-    lists:concat(erlang:tl(lists:merge(
-        [["/", E] || E <- erlang:tl(erlang:tuple_to_list(erlang:element(2,
-            erlang:process_info(self(), current_function))))])))).
--endif.
 

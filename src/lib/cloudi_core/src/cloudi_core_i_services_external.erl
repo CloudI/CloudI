@@ -259,11 +259,13 @@ port(Dispatcher, Timeout)
 stdout(OsPid, Output) ->
     % uses a fake module name and a fake line number
     cloudi_core_i_logger_interface:info('STDOUT', OsPid,
+                                        undefined, undefined,
                                         filter_stream(Output), undefined).
 
 stderr(OsPid, Output) ->
     % uses a fake module name and a fake line number
     cloudi_core_i_logger_interface:error('STDERR', OsPid,
+                                         undefined, undefined,
                                          filter_stream(Output), undefined).
 
 get_status(Dispatcher) ->

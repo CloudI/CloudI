@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_messaging_sequence1).
@@ -88,7 +88,7 @@ cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "sequence1"),
     case cloudi_service:process_index(Dispatcher) of
         0 ->
-            ?LOG_TRACE("~p is sending", [?FUNCTION]),
+            ?LOG_TRACE("~p is sending", [?FUNCTION_NAME]),
             cloudi_service:send_async(Dispatcher,
                                       Prefix ++ "sequence1", "start");
         _ ->

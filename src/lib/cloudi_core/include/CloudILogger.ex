@@ -52,6 +52,29 @@
 
 defmodule CloudILogger do
 
+# Convenience macros
+# (due to not using any parse transforms, the current function is unavailable,
+#  but can be retrieved by the macros below with a small amount of runtime 
+#  latency (names are based on EEP45))
+
+    defmacro function_name() do
+        quote do
+            case __ENV__.function do
+                nil -> :undefined;
+                {function, _} -> function
+            end
+        end
+    end
+
+    defmacro function_arity() do
+        quote do
+            case __ENV__.function do
+                nil -> :undefined;
+                {_, arity} -> arity
+            end
+        end
+    end
+
 # Typical logging output which will log asynchronously until the logger's
 # message queue becomes too large, switching to synchronous logging
 # while the message queue remains large
@@ -60,6 +83,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.fatal(__MODULE__,
                                                   __ENV__.line,
+                                                  unquote(function_name()),
+                                                  unquote(function_arity()),
                                                   unquote(format),
                                                   unquote(args))
         end
@@ -69,6 +94,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.error(__MODULE__,
                                                   __ENV__.line,
+                                                  unquote(function_name()),
+                                                  unquote(function_arity()),
                                                   unquote(format),
                                                   unquote(args))
         end
@@ -78,6 +105,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.warn(__MODULE__,
                                                  __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
                                                  unquote(format),
                                                  unquote(args))
         end
@@ -87,6 +116,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.info(__MODULE__,
                                                  __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
                                                  unquote(format),
                                                  unquote(args))
         end
@@ -96,6 +127,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.debug(__MODULE__,
                                                   __ENV__.line,
+                                                  unquote(function_name()),
+                                                  unquote(function_arity()),
                                                   unquote(format),
                                                   unquote(args))
         end
@@ -105,6 +138,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.trace(__MODULE__,
                                                   __ENV__.line,
+                                                  unquote(function_name()),
+                                                  unquote(function_arity()),
                                                   unquote(format),
                                                   unquote(args))
         end
@@ -123,6 +158,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
                                                        __ENV__.line,
+                                                       unquote(function_name()),
+                                                       unquote(function_arity()),
                                                        unquote(format),
                                                        unquote(args))
         end
@@ -132,6 +169,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.error_sync(__MODULE__,
                                                        __ENV__.line,
+                                                       unquote(function_name()),
+                                                       unquote(function_arity()),
                                                        unquote(format),
                                                        unquote(args))
         end
@@ -141,6 +180,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
                                                       __ENV__.line,
+                                                      unquote(function_name()),
+                                                      unquote(function_arity()),
                                                       unquote(format),
                                                       unquote(args))
         end
@@ -150,6 +191,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.info_sync(__MODULE__,
                                                       __ENV__.line,
+                                                      unquote(function_name()),
+                                                      unquote(function_arity()),
                                                       unquote(format),
                                                       unquote(args))
         end
@@ -159,6 +202,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
                                                        __ENV__.line,
+                                                       unquote(function_name()),
+                                                       unquote(function_arity()),
                                                        unquote(format),
                                                        unquote(args))
         end
@@ -168,6 +213,8 @@ defmodule CloudILogger do
         quote do
             :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
                                                        __ENV__.line,
+                                                       unquote(function_name()),
+                                                       unquote(function_arity()),
                                                        unquote(format),
                                                        unquote(args))
         end
@@ -278,31 +325,6 @@ defmodule CloudILogger do
     defmacro log_metadata_set(l) do
         quote do
             :cloudi_core_i_logger.metadata_set(unquote(l))
-        end
-    end
-
-# Convenience macros
-# (due to not using any parse transforms, the current function is unavailable,
-#  but can be retrieved by the macros below with a small amount of runtime 
-#  latency)
-
-    defmacro function() do # atom
-        quote do
-            :erlang.element(2,
-                :erlang.element(2,
-                    :erlang.process_info(:erlang.self(), :current_function)))
-        end
-    end
-
-    defmacro function_arity() do # string (binary)
-        quote do
-            to_string(
-                :lists.concat(:erlang.tl(:lists.merge(
-                    for e <- :erlang.tl(:erlang.tuple_to_list(
-                        :erlang.element(2,
-                            :erlang.process_info(:erlang.self(),
-                                                 :current_function)))),
-                    do: ['/', e]))))
         end
     end
 

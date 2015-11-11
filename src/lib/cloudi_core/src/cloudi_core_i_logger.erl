@@ -60,7 +60,7 @@
          syslog_set/1,
          formatters_set/2,
          redirect_set/1,
-         fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
+         fatal/8, error/8, warn/8, info/8, debug/8, trace/8,
          metadata_get/0, metadata_set/1,
          format/2, format/3]).
 
@@ -228,12 +228,15 @@ redirect_set(Node) ->
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
+            Function :: atom(),
+            Arity :: non_neg_integer() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
 
-fatal(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, fatal, Module, Line, Format, Args).
+fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, fatal, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -247,12 +250,15 @@ fatal(Mode, Process, Module, Line, Format, Args) ->
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
+            Function :: atom(),
+            Arity :: non_neg_integer() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
 
-error(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, error, Module, Line, Format, Args).
+error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, error, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -266,12 +272,15 @@ error(Mode, Process, Module, Line, Format, Args) ->
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: integer(),
+           Function :: atom(),
+           Arity :: non_neg_integer() | undefined,
            Format :: string(),
            Args :: list() | undefined) ->
     'ok'.
 
-warn(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, warn, Module, Line, Format, Args).
+warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, warn, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -285,12 +294,15 @@ warn(Mode, Process, Module, Line, Format, Args) ->
            Process :: atom() | {atom(), node()},
            Module :: atom(),
            Line :: integer(),
+           Function :: atom(),
+           Arity :: non_neg_integer() | undefined,
            Format :: string(),
            Args :: list() | undefined) ->
     'ok'.
 
-info(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, info, Module, Line, Format, Args).
+info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, info, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -304,12 +316,15 @@ info(Mode, Process, Module, Line, Format, Args) ->
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
+            Function :: atom(),
+            Arity :: non_neg_integer() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
 
-debug(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, debug, Module, Line, Format, Args).
+debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, debug, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -323,12 +338,15 @@ debug(Mode, Process, Module, Line, Format, Args) ->
             Process :: atom() | {atom(), node()},
             Module :: atom(),
             Line :: integer(),
+            Function :: atom(),
+            Arity :: non_neg_integer() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
 
-trace(Mode, Process, Module, Line, Format, Args) ->
-    log_message_external(Mode, Process, trace, Module, Line, Format, Args).
+trace(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
+    log_message_external(Mode, Process, trace, Module, Line,
+                         Function, Arity, Format, Args).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -390,27 +408,36 @@ format(Msg, Config, _) ->
      Timestamp,
      Message} = Msg,
     Level = lager_severity_input(Severity),
-    Defaults = [
-        {node, undefined},
-        {pid, undefined},
-        {module, undefined},
-        {line, undefined}],
-    [Node, Pid, Module, Line |
+    Defaults = [{function, undefined},
+                {module, undefined},
+                {line, undefined},
+                {node, undefined},
+                {pid, undefined}],
+    [Function, Module, Line, Node, PidStr |
      ExtraMetaData] = cloudi_proplists:take_values(Defaults, MetaData),
+    Pid = if
+        PidStr =:= undefined ->
+            undefined;
+        is_list(PidStr) ->
+            erlang:list_to_pid(PidStr)
+    end,
     LogMessage = Message,
     if
         Mode =:= legacy ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, ExtraMetaData,
+                        Module, Line, Function, undefined,
+                        ExtraMetaData,
                         indent_space_1(LogMessage));
         Mode =:= legacy_stdout ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, ExtraMetaData,
+                        Module, Line, Function, undefined,
+                        ExtraMetaData,
                         cloudi_string:format(" stdout (pid ~w):~n", [Line]) ++
                         indent_space_2(LogMessage));
         Mode =:= legacy_stderr ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, ExtraMetaData,
+                        Module, Line, Function, undefined,
+                        ExtraMetaData,
                         cloudi_string:format(" stderr (pid ~w):~n", [Line]) ++
                         indent_space_2(LogMessage))
     end.
@@ -478,9 +505,11 @@ init([#config_logging{file = FilePath,
     end.
 
 handle_call({Level, Timestamp, Node, Pid,
-             Module, Line, MetaData, LogMessage}, _, State) ->
+             Module, Line, Function, Arity,
+             MetaData, LogMessage}, _, State) ->
     case log_message_internal(Level, Timestamp, Node, Pid,
-                              Module, Line, MetaData, LogMessage, State) of
+                              Module, Line, Function, Arity,
+                              MetaData, LogMessage, State) of
         {ok, StateNext} ->
             case log_mode_check(StateNext) of
                 {ok, StateNew} ->
@@ -733,9 +762,11 @@ handle_cast({redirect_set, Node}, State) ->
             {stop, Reason, StateNew}
     end;
 handle_cast({Level, Timestamp, Node, Pid,
-             Module, Line, MetaData, LogMessage}, State) ->
+             Module, Line, Function, Arity,
+             MetaData, LogMessage}, State) ->
     case log_message_internal(Level, Timestamp, Node, Pid,
-                              Module, Line, MetaData, LogMessage, State) of
+                              Module, Line, Function, Arity,
+                              MetaData, LogMessage, State) of
         {ok, StateNext} ->
             case log_mode_check(StateNext) of
                 {ok, StateNew} ->
@@ -772,7 +803,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
-            Module, Line, MetaData, LogMessage) ->
+            Module, Line, Function, Arity, MetaData, LogMessage) ->
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Timestamp),
     MetaDataStr = if
@@ -781,14 +812,23 @@ format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
         true ->
             io_lib:format("~p~n", [MetaData])
     end,
+    FunctionArity = if
+        Function =:= undefined ->
+            "";
+        Arity =:= undefined ->
+            [$: | erlang:atom_to_list(Function)];
+        true ->
+            [$: | erlang:atom_to_list(Function)] ++
+            [$/ | erlang:integer_to_list(Arity)]
+    end,
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     cloudi_string:format("~4..0w-~2..0w-~2..0wT"
                          "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                         "(~p:~p:~p:~p)~n~s~s~n",
+                         "(~w:~w~s:~w:~w)~n~s~s~n",
                          [DateYYYY, DateMM, DateDD,
                           TimeHH, TimeMM, TimeSS, MicroSeconds,
                           log_level_to_string(Level),
-                          Module, Line, Pid, Node,
+                          Module, Line, FunctionArity, Pid, Node,
                           MetaDataStr, LogMessage]).
 
 indent_space_1(Output) ->
@@ -814,7 +854,8 @@ indent_space_2_lines([C | L], Output) ->
     indent_space_2_lines(L, [C | Output]).
 
 log_message_formatter_call(Level, Timestamp, Node, Pid,
-                           Module, Line, MetaData, LogMessage,
+                           Module, Line, Function, Arity,
+                           MetaData, LogMessage,
                            #config_logging_formatter{
                                output = undefined,
                                formatter = Formatter,
@@ -823,7 +864,8 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
     % required: format(Msg, Config)
     % optional: format(Msg, Config, Colors)
     Msg = lager_msg(Level, Timestamp, Node, Pid,
-                    Module, Line, MetaData, LogMessage),
+                    Module, Line, Function, Arity,
+                    MetaData, LogMessage),
     try Formatter:format(Msg, FormatterConfig)
     catch
         ErrorType:Error ->
@@ -831,81 +873,102 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                                                 [Formatter, ErrorType, Error,
                                                  erlang:get_stacktrace()]),
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, MetaData, LogMessage) ++
+                        Module, Line, Function, Arity,
+                        MetaData, LogMessage) ++
             format_line(error, timestamp_increment(Timestamp), node(), self(),
-                        ?MODULE, ?LINE, [], ErrorMessage)
+                        ?MODULE, ?LINE, undefined, undefined,
+                        [], ErrorMessage)
     end;
 log_message_formatter_call(Level, Timestamp, Node, Pid,
-                           Module, Line, MetaData, LogMessage,
+                           Module, Line, Function, Arity,
+                           MetaData, LogMessage,
                            #config_logging_formatter{
                                output = Output,
                                output_name = OutputName}) ->
     Msg = lager_msg(Level, Timestamp, Node, Pid,
-                    Module, Line, MetaData, LogMessage),
+                    Module, Line, Function, Arity,
+                    MetaData, LogMessage),
     try gen_event:notify(OutputName, {log, Msg}) of
         ok ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, MetaData, LogMessage)
+                        Module, Line, Function, Arity,
+                        MetaData, LogMessage)
     catch
         error:badarg ->
             % output module is not currently running,
             % it likely exceeded the maximum restart intensity
             % (which is logged elsewhere via sasl)
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, MetaData, LogMessage);
+                        Module, Line, Function, Arity,
+                        MetaData, LogMessage);
         ErrorType:Error ->
             ErrorMessage = cloudi_string:format("output(~p) ~p ~p~n~p",
                                                 [Output, ErrorType, Error,
                                                  erlang:get_stacktrace()]),
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, MetaData, LogMessage) ++
+                        Module, Line, Function, Arity,
+                        MetaData, LogMessage) ++
             format_line(error, timestamp_increment(Timestamp), node(), self(),
-                        ?MODULE, ?LINE, [], ErrorMessage)
+                        ?MODULE, ?LINE, undefined, undefined,
+                        [], ErrorMessage)
     end.
 
 log_message_formatter(Level, Timestamp, Node, Pid,
-                      Module, Line, MetaData, LogMessage,
+                      Module, Line, Function, Arity,
+                      MetaData, LogMessage,
                       #config_logging_formatter{
                           level = FormatterLevel} = FormatterConfig) ->
     case log_level_allowed(FormatterLevel, Level) of
         true ->
             log_message_formatter_call(Level, Timestamp, Node, Pid,
-                                       Module, Line, MetaData, LogMessage,
+                                       Module, Line, Function, Arity,
+                                       MetaData, LogMessage,
                                        FormatterConfig);
         false ->
             format_line(Level, Timestamp, Node, Pid,
-                        Module, Line, MetaData, LogMessage)
+                        Module, Line, Function, Arity,
+                        MetaData, LogMessage)
     end.
 
 log_message_formatters(Level, Timestamp, Node, Pid,
-                       Module, Line, MetaData, LogMessage,
+                       Module, Line, Function, Arity,
+                       MetaData, LogMessage,
                        undefined) ->
     format_line(Level, Timestamp, Node, Pid,
-                Module, Line, MetaData, LogMessage);
+                Module, Line, Function, Arity,
+                MetaData, LogMessage);
 log_message_formatters(Level, Timestamp, Node, Pid,
-                       Module, Line, MetaData, LogMessage,
+                       Module, Line, Function, Arity,
+                       MetaData, LogMessage,
                        #config_logging_formatters{
                            default = Default,
                            lookup = Lookup}) ->
     case cloudi_x_keys1value:find(Module, Lookup) of
         {ok, FormatterConfig} ->
             log_message_formatter(Level, Timestamp, Node, Pid,
-                                  Module, Line, MetaData, LogMessage,
+                                  Module, Line, Function, Arity,
+                                  MetaData, LogMessage,
                                   FormatterConfig);
         error ->
             if
                 Default =:= undefined ->
                     format_line(Level, Timestamp, Node, Pid,
-                                Module, Line, MetaData, LogMessage);
+                                Module, Line, Function, Arity,
+                                MetaData, LogMessage);
                 true ->
                     log_message_formatter(Level, Timestamp, Node, Pid,
-                                          Module, Line, MetaData, LogMessage,
+                                          Module, Line, Function, Arity,
+                                          MetaData, LogMessage,
                                           Default)
             end
     end.
 
-log_message_external(Mode, Process, Level, Module, Line, Format, Args)
-    when is_atom(Level), is_atom(Module), is_integer(Line) ->
+log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
+                     Format, Args)
+    when is_atom(Level), is_atom(Module), is_integer(Line),
+         is_atom(Function),
+         (Arity =:= undefined) orelse
+         (is_integer(Arity) andalso (Arity >= 0)) ->
     Timestamp = cloudi_timestamp:timestamp(),
     case flooding_logger(Timestamp) of
         true ->
@@ -927,11 +990,13 @@ log_message_external(Mode, Process, Level, Module, Line, Format, Args)
                 Mode =:= async ->
                     gen_server:cast(Process,
                                     {Level, Timestamp, node(), self(),
-                                     Module, Line, MetaData, LogMessage});
+                                     Module, Line, Function, Arity,
+                                     MetaData, LogMessage});
                 Mode =:= sync ->
                     gen_server:call(Process,
                                     {Level, Timestamp, node(), self(),
-                                     Module, Line, MetaData, LogMessage},
+                                     Module, Line, Function, Arity,
+                                     MetaData, LogMessage},
                                     infinity)
             end
     end.
@@ -968,7 +1033,8 @@ log_message_internal_t0(LevelCheck, Line, Format, Args,
             LogMessage = cloudi_string:format(Format, Args),
             log_message_internal(LevelCheck,
                                  cloudi_timestamp:timestamp(), node(), self(),
-                                 ?MODULE, Line, [], LogMessage, State);
+                                 ?MODULE, Line, undefined, undefined,
+                                 [], LogMessage, State);
         false ->
             {ok, State}
     end.
@@ -984,20 +1050,23 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
             gen_server:cast(Destination,
                             {LevelCheck,
                              cloudi_timestamp:timestamp(), node(), self(),
-                             ?MODULE, Line, [], LogMessage});
+                             ?MODULE, Line, undefined, undefined,
+                             [], LogMessage});
         false ->
             ok
     end.
 
 log_message_internal(Level, Timestamp, Node, Pid,
-                     Module, Line, MetaData, LogMessage,
+                     Module, Line, Function, Arity,
+                     MetaData, LogMessage,
                      #state{file_level = FileLevel,
                             syslog_level = SyslogLevel,
                             formatters = FormattersConfig} = State0)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     Message = log_message_formatters(Level, Timestamp, Node, Pid,
-                                     Module, Line, MetaData, LogMessage,
+                                     Module, Line, Function, Arity,
+                                     MetaData, LogMessage,
                                      FormattersConfig),
     {FileResult, State1} = case log_level_allowed(FileLevel, Level) of
         true ->
@@ -1231,9 +1300,9 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
     "
     -module(cloudi_core_i_logger_interface).
     -author('mjtruog [at] gmail (dot) com').
-    -export([fatal/4, error/4, warn/4, info/4, debug/4, trace/4,
-             fatal_sync/4, error_sync/4, warn_sync/4,
-             info_sync/4, debug_sync/4, trace_sync/4,
+    -export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
+             fatal_sync/6, error_sync/6, warn_sync/6,
+             info_sync/6, debug_sync/6, trace_sync/6,
              fatal_apply/2, error_apply/2, warn_apply/2,
              info_apply/2, debug_apply/2, trace_apply/2,
              fatal_apply/3, error_apply/3, warn_apply/3,
@@ -1241,18 +1310,18 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
 interface(off, _, _) ->
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(_, _, _, _) -> ok.
-    error(_, _, _, _) -> ok.
-    warn(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    trace(_, _, _, _) -> ok.
-    fatal_sync(_, _, _, _) -> ok.
-    error_sync(_, _, _, _) -> ok.
-    warn_sync(_, _, _, _) -> ok.
-    info_sync(_, _, _, _) -> ok.
-    debug_sync(_, _, _, _) -> ok.
-    trace_sync(_, _, _, _) -> ok.
+    fatal(_, _, _, _, _, _) -> ok.
+    error(_, _, _, _, _, _) -> ok.
+    warn(_, _, _, _, _, _) -> ok.
+    info(_, _, _, _, _, _) -> ok.
+    debug(_, _, _, _, _, _) -> ok.
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(_, _, _, _, _, _) -> ok.
+    error_sync(_, _, _, _, _, _) -> ok.
+    warn_sync(_, _, _, _, _, _) -> ok.
+    info_sync(_, _, _, _, _, _) -> ok.
+    debug_sync(_, _, _, _, _, _) -> ok.
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(_, _) -> undefined.
     error_apply(_, _) -> undefined.
     warn_apply(_, _) -> undefined.
@@ -1270,20 +1339,22 @@ interface(fatal, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(_, _, _, _) -> ok.
-    warn(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    trace(_, _, _, _) -> ok.
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(_, _, _, _) -> ok.
-    warn_sync(_, _, _, _) -> ok.
-    info_sync(_, _, _, _) -> ok.
-    debug_sync(_, _, _, _) -> ok.
-    trace_sync(_, _, _, _) -> ok.
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(_, _, _, _, _, _) -> ok.
+    warn(_, _, _, _, _, _) -> ok.
+    info(_, _, _, _, _, _) -> ok.
+    debug(_, _, _, _, _, _) -> ok.
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(_, _, _, _, _, _) -> ok.
+    warn_sync(_, _, _, _, _, _) -> ok.
+    info_sync(_, _, _, _, _, _) -> ok.
+    debug_sync(_, _, _, _, _, _) -> ok.
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(_, _) -> undefined.
@@ -1304,22 +1375,26 @@ interface(error, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
-    warn(_, _, _, _) -> ok.
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    trace(_, _, _, _) -> ok.
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
-    warn_sync(_, _, _, _) -> ok.
-    info_sync(_, _, _, _) -> ok.
-    debug_sync(_, _, _, _) -> ok.
-    trace_sync(_, _, _, _) -> ok.
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn(_, _, _, _, _, _) -> ok.
+    info(_, _, _, _, _, _) -> ok.
+    debug(_, _, _, _, _, _) -> ok.
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn_sync(_, _, _, _, _, _) -> ok.
+    info_sync(_, _, _, _, _, _) -> ok.
+    debug_sync(_, _, _, _, _, _) -> ok.
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1342,24 +1417,30 @@ interface(warn, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
-    warn(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
-    info(_, _, _, _) -> ok.
-    debug(_, _, _, _) -> ok.
-    trace(_, _, _, _) -> ok.
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
-    warn_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
-    info_sync(_, _, _, _) -> ok.
-    debug_sync(_, _, _, _) -> ok.
-    trace_sync(_, _, _, _) -> ok.
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info(_, _, _, _, _, _) -> ok.
+    debug(_, _, _, _, _, _) -> ok.
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info_sync(_, _, _, _, _, _) -> ok.
+    debug_sync(_, _, _, _, _, _) -> ok.
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1384,26 +1465,34 @@ interface(info, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
-    warn(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
-    info(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
-    debug(_, _, _, _) -> ok.
-    trace(_, _, _, _) -> ok.
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
-    warn_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
-    info_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
-    debug_sync(_, _, _, _) -> ok.
-    trace_sync(_, _, _, _) -> ok.
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug(_, _, _, _, _, _) -> ok.
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug_sync(_, _, _, _, _, _) -> ok.
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1431,28 +1520,38 @@ interface(debug, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
-    warn(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
-    info(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
-    debug(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
-    trace(_, _, _, _) -> ok.
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
-    warn_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
-    info_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
-    debug_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:debug(sync, ~p, Module, Line, Format, Arguments).
-    trace_sync(_, _, _, _) -> ok.
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:debug(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    trace(_, _, _, _, _, _) -> ok.
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:debug(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    trace_sync(_, _, _, _, _, _) -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1482,30 +1581,42 @@ interface(trace, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
     "
-    fatal(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(~p, ~p, Module, Line, Format, Arguments).
-    error(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(~p, ~p, Module, Line, Format, Arguments).
-    warn(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(~p, ~p, Module, Line, Format, Arguments).
-    info(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(~p, ~p, Module, Line, Format, Arguments).
-    debug(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:debug(~p, ~p, Module, Line, Format, Arguments).
-    trace(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:trace(~p, ~p, Module, Line, Format, Arguments).
-    fatal_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:fatal(sync, ~p, Module, Line, Format, Arguments).
-    error_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:error(sync, ~p, Module, Line, Format, Arguments).
-    warn_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:warn(sync, ~p, Module, Line, Format, Arguments).
-    info_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:info(sync, ~p, Module, Line, Format, Arguments).
-    debug_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:debug(sync, ~p, Module, Line, Format, Arguments).
-    trace_sync(Module, Line, Format, Arguments) ->
-        cloudi_core_i_logger:trace(sync, ~p, Module, Line, Format, Arguments).
+    fatal(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(~w, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:debug(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    trace(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:trace(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    error_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:error(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    warn_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:warn(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    info_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:info(sync, ~w, Module, Line, Function, Arity,
+                                  Format, Arguments).
+    debug_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:debug(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
+    trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
+        cloudi_core_i_logger:trace(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments).
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1662,36 +1773,37 @@ lager_severity_input(debug) -> debug.
 -spec lager_msg(Level :: debug | error | fatal | info | trace | warn,
                 Timestamp :: erlang:timestamp(),
                 Node :: node(),
-                Pid :: atom(),
+                Pid :: pid(),
                 Module :: module(),
                 Line :: pos_integer(),
+                Function :: atom(),
+                Arity :: non_neg_integer() | undefined,
                 MetaData :: list({atom(), any()}),
                 LogMessage :: string()) ->
     #lager_msg{}.
 
 % based on lager_msg:new/5
 lager_msg(Level, Timestamp, Node, Pid,
-          Module, Line, MetaData, LogMessage) ->
+          Module, Line, Function, _Arity,
+          MetaData0, LogMessage) ->
     Destinations = [], % not using TraceFilters
-    NewMetaData = [{node, Node},
-                   {pid, Pid},
-                   {module, Module},
-                   % providing the function requires a preprocessor macro
-                   % reasons:
-                   % 1. parse transforms are not ok
-                   % 2. the stack trace is slow
-                   %    http://erlang.org/pipermail/erlang-questions
-                   %          /2013-November/075928.html
-                   % 3. avoids process_info overhead
-                   %    (similar to stack trace overhead)
-                   {line, Line} | MetaData],
+    MetaData1 = if
+        Function =:= undefined ->
+            MetaData0;
+        true ->
+            [{function, Function} | MetaData0]
+    end,
+    MetaDataN = [{module, Module},
+                 {line, Line},
+                 {node, Node},
+                 {pid, erlang:pid_to_list(Pid)} | MetaData1],
     Severity = lager_severity_output(Level),
     DateTime = lager_datetime_format(lager_datetime(Timestamp)),
     Message = LogMessage,
     % create lager_msg record manually
     {lager_msg,
      Destinations,
-     NewMetaData,
+     MetaDataN,
      Severity,
      DateTime,
      Timestamp,
