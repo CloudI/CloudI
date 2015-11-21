@@ -816,15 +816,15 @@ format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
         Function =:= undefined ->
             "";
         Arity =:= undefined ->
-            [$: | erlang:atom_to_list(Function)];
+            erlang:atom_to_list(Function);
         true ->
-            [$: | erlang:atom_to_list(Function)] ++
+            erlang:atom_to_list(Function) ++
             [$/ | erlang:integer_to_list(Arity)]
     end,
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
     cloudi_string:format("~4..0w-~2..0w-~2..0wT"
                          "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                         "(~w:~w~s:~w:~w)~n~s~s~n",
+                         "(~w:~w:~s:~w:~w)~n~s~s~n",
                          [DateYYYY, DateMM, DateDD,
                           TimeHH, TimeMM, TimeSS, MicroSeconds,
                           log_level_to_string(Level),

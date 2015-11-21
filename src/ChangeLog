@@ -3,6 +3,8 @@
 
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Always have an empty space in the logging source output when the
+      function name/arity is not provided
     * Update trie
 
 2015-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
