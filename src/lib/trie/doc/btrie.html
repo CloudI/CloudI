@@ -21,7 +21,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    This Erlang trie implementation uses binary keys.
 <p>Copyright © 2010-2013 Michael Truog</p>
 
-<p><b>Version:</b> 1.4.0 Apr 12 2015 16:51:08
+<p><b>Version:</b> 1.4.0 Nov 21 2015 12:04:54
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -39,12 +39,16 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    not available elsewhere.
 <h2><a name="types">Data Types</a></h2>
 
+<h3 class="typedecl"><a name="type-empty_trie">empty_trie()</a></h3>
+<p><tt>empty_trie() = '?TYPE_EMPTY'</tt></p>
+
+
+<h3 class="typedecl"><a name="type-nonempty_trie">nonempty_trie()</a></h3>
+<p><tt>nonempty_trie() = {integer(), integer(), tuple()}</tt></p>
+
+
 <h3 class="typedecl"><a name="type-trie">trie()</a></h3>
-<p><tt>trie() = '?TYPE_EMPTY' | <a href="#type-trie_return">trie_return()</a></tt></p>
-
-
-<h3 class="typedecl"><a name="type-trie_return">trie_return()</a></h3>
-<p><tt>trie_return() = {integer(), integer(), tuple()}</tt></p>
+<p><tt>trie() = <a href="#type-nonempty_trie">nonempty_trie()</a> | <a href="#type-empty_trie">empty_trie()</a></tt></p>
 
 
 <h2><a name="index">Function Index</a></h2>
@@ -141,14 +145,14 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="append-3">append/3</a></h3>
 <div class="spec">
-<p><tt>append(Key::'?TYPE_NAME', Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>append(Key::'?TYPE_NAME', Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Append_a_value_as_a_list_element_in_a_trie_instance.">Append a value as a list element in a trie instance.</a></h4>
 </p>
 
 <h3 class="function"><a name="append_list-3">append_list/3</a></h3>
 <div class="spec">
-<p><tt>append_list(Key::'?TYPE_NAME', ValueList::list(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>append_list(Key::'?TYPE_NAME', ValueList::list(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Append_a_list_of_values_as_a_list_element_in_a_trie_instance.">Append a list of values as a list element in a trie instance.</a></h4>
 </p>
@@ -169,7 +173,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="fetch-2">fetch/2</a></h3>
 <div class="spec">
-<p><tt>fetch(X1::'?TYPE_NAME', Node::<a href="#type-trie_return">trie_return()</a>) -&gt; any()</tt><br></p>
+<p><tt>fetch(X1::'?TYPE_NAME', Node::<a href="#type-nonempty_trie">nonempty_trie()</a>) -&gt; any()</tt><br></p>
 </div><p>
   <h4><a name="Fetch_a_value_from_a_trie.">Fetch a value from a trie.</a></h4>
 </p>
@@ -305,7 +309,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="new-0">new/0</a></h3>
 <div class="spec">
-<p><tt>new() -&gt; '?TYPE_EMPTY'</tt><br></p>
+<p><tt>new() -&gt; <a href="#type-empty_trie">empty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Create_a_new_trie_instance.">Create a new trie instance.</a></h4>
 </p>
@@ -323,7 +327,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="prefix-3">prefix/3</a></h3>
 <div class="spec">
-<p><tt>prefix(Key::'?TYPE_NAME', Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>prefix(Key::'?TYPE_NAME', Value::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Insert_a_value_as_the_first_list_element_in_a_trie_instance.">Insert a value as the first list element in a trie instance.</a></h4>
   The reverse of append/3.</p>
@@ -337,14 +341,14 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="store-2">store/2</a></h3>
 <div class="spec">
-<p><tt>store(Key::'?TYPE_NAME', Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>store(Key::'?TYPE_NAME', Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Store_only_a_key_in_a_trie_instance.">Store only a key in a trie instance.</a></h4>
 </p>
 
 <h3 class="function"><a name="store-3">store/3</a></h3>
 <div class="spec">
-<p><tt>store(Key::'?TYPE_NAME', NewValue::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>store(Key::'?TYPE_NAME', NewValue::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Store_a_key/value_pair_in_a_trie_instance.">Store a key/value pair in a trie instance.</a></h4>
 </p>
@@ -365,27 +369,27 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 
 <h3 class="function"><a name="update-3">update/3</a></h3>
 <div class="spec">
-<p><tt>update(X1::'?TYPE_NAME', F::fun((any()) -&gt; any()), Node::<a href="#type-trie_return">trie_return()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>update(X1::'?TYPE_NAME', F::fun((any()) -&gt; any()), Node::<a href="#type-nonempty_trie">nonempty_trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Update_a_value_in_a_trie.">Update a value in a trie.</a></h4>
 </p>
 
 <h3 class="function"><a name="update-4">update/4</a></h3>
 <div class="spec">
-<p><tt>update(Key::'?TYPE_NAME', F::fun((any()) -&gt; any()), Initial::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>update(Key::'?TYPE_NAME', F::fun((any()) -&gt; any()), Initial::any(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Update_or_add_a_value_in_a_trie.">Update or add a value in a trie.</a></h4>
 </p>
 
 <h3 class="function"><a name="update_counter-3">update_counter/3</a></h3>
 <div class="spec">
-<p><tt>update_counter(Key::'?TYPE_NAME', Increment::number(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-trie_return">trie_return()</a></tt><br></p>
+<p><tt>update_counter(Key::'?TYPE_NAME', Increment::number(), Node::<a href="#type-trie">trie()</a>) -&gt; <a href="#type-nonempty_trie">nonempty_trie()</a></tt><br></p>
 </div><p>
   <h4><a name="Update_a_counter_in_a_trie.">Update a counter in a trie.</a></h4>
 </p>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Apr 12 2015, 16:51:08.</i></p>
+<p><i>Generated by EDoc, Nov 21 2015, 12:04:54.</i></p>
 </body>
 </html>

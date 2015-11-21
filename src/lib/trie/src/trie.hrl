@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%%
@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -91,9 +91,12 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type trie_return() :: {integer(), integer(), tuple()}.
--type trie() :: ?TYPE_EMPTY | trie_return().
--export_type([trie/0]).
+-type nonempty_trie() :: {integer(), integer(), tuple()}.
+-type empty_trie() :: ?TYPE_EMPTY.
+-type trie() :: nonempty_trie() | empty_trie().
+-export_type([nonempty_trie/0,
+              empty_trie/0,
+              trie/0]).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -103,7 +106,7 @@
 
 -spec append(Key :: ?TYPE_NAME(),
              Value :: any(),
-             Node :: trie()) -> trie_return().
+             Node :: trie()) -> nonempty_trie().
 
 append(Key, Value, Node) ->
     ValueList = [Value],
@@ -117,7 +120,7 @@ append(Key, Value, Node) ->
 
 -spec append_list(Key :: ?TYPE_NAME(),
                   ValueList :: list(),
-                  Node :: trie()) -> trie_return().
+                  Node :: trie()) -> nonempty_trie().
 
 append_list(Key, ValueList, Node) ->
     update(Key, fun(OldValue) -> OldValue ++ ValueList end, ValueList, Node).
@@ -188,7 +191,7 @@ erase_similar(Similar, Node) ->
 %%-------------------------------------------------------------------------
 
 -spec fetch(?TYPE_NAME(),
-            trie_return()) -> any().
+            nonempty_trie()) -> any().
 
 fetch(?TYPE_H0T0, {_, _, _} = Node) ->
     fetch_node(H, T, Node).
@@ -921,7 +924,7 @@ merge(F, Node1, Node2) when is_function(F, 3) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new() -> ?TYPE_EMPTY.
+-spec new() -> empty_trie().
 
 new() ->
     ?TYPE_EMPTY.
@@ -975,7 +978,7 @@ new_instance_state(?TYPE_H0T0, V1, V0)
 
 -spec prefix(Key :: ?TYPE_NAME(),
              Value :: any(),
-             Node :: trie()) -> trie_return().
+             Node :: trie()) -> nonempty_trie().
 
 prefix(Key, Value, Node) ->
     update(Key, fun(OldValue) -> [Value | OldValue] end, [Value], Node).
@@ -998,7 +1001,7 @@ size(Node) ->
 %%-------------------------------------------------------------------------
 
 -spec store(Key :: ?TYPE_NAME(),
-            Node :: trie()) -> trie_return().
+            Node :: trie()) -> nonempty_trie().
 
 store(Key, Node) ->
     store(Key, empty, Node).
@@ -1011,7 +1014,7 @@ store(Key, Node) ->
 
 -spec store(Key :: ?TYPE_NAME(),
             NewValue :: any(),
-            Node :: trie()) -> trie_return().
+            Node :: trie()) -> nonempty_trie().
 
 store(?TYPE_H0T0, NewValue, ?TYPE_EMPTY) ->
     {H, H, {{T, NewValue}}};
@@ -1104,7 +1107,7 @@ to_list_similar(Similar, Node) ->
 
 -spec update(?TYPE_NAME(),
              F :: fun((any()) -> any()),
-             trie_return()) -> trie_return().
+             nonempty_trie()) -> nonempty_trie().
 
 update(?TYPE_H0T0, F, {_, _, _} = Node)
     when is_function(F, 1) ->
@@ -1142,7 +1145,7 @@ update_node(H, T, F, {I0, I1, Data})
 -spec update(Key :: ?TYPE_NAME(),
              F :: fun((any()) -> any()),
              Initial :: any(),
-             Node :: trie()) -> trie_return().
+             Node :: trie()) -> nonempty_trie().
 
 update(Key, _, Initial, ?TYPE_EMPTY = Node) ->
     store(Key, Initial, Node);
@@ -1218,7 +1221,7 @@ update_node(H, T, F, Initial, {I0, I1, Data})
 
 -spec update_counter(Key :: ?TYPE_NAME(),
                      Increment :: number(),
-                     Node :: trie()) -> trie_return().
+                     Node :: trie()) -> nonempty_trie().
 
 update_counter(Key, Increment, Node) ->
     update(Key, fun(I) -> I + Increment end, Increment, Node).
