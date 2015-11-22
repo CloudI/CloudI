@@ -90,6 +90,9 @@
         % Provide a list of formats to handle that are added as file type
         % suffixes on the URL path which also determine the content-type used
         % for the request and response.
+-define(DEFAULT_SET_CONTENT_DISPOSITION,     true).
+        % Set the content-disposition header value for any content-type values
+        % that are tagged as an attachment.
 -define(DEFAULT_USE_OPTIONS_METHOD,         false).
         % Provide default handling of the OPTIONS method based on the
         % configured handlers.
@@ -155,12 +158,20 @@
         arity :: 11
     }).
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-type dict_proxy(_Key, _Value) :: dict().
+-else.
+-type dict_proxy(Key, Value) :: dict:dict(Key, Value).
+-endif.
+
 -record(state,
     {
         prefix :: cloudi:service_name_pattern(),
         lookup :: cloudi_x_trie:cloudi_x_trie(),
         info_f :: info_f() | undefined,
         terminate_f :: terminate_f() | undefined,
+        content_types :: dict_proxy(atom(), {request | attachment, binary()}),
+        content_disposition :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal,
         api_state :: any()
     }).
@@ -180,12 +191,14 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {handlers,                 ?DEFAULT_HANDLERS},
         {info,                     ?DEFAULT_INFO},
         {formats,                  ?DEFAULT_FORMATS},
+        {set_content_disposition,  ?DEFAULT_SET_CONTENT_DISPOSITION},
         {use_options_method,       ?DEFAULT_USE_OPTIONS_METHOD},
         {use_trace_method,         ?DEFAULT_USE_TRACE_METHOD},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
     [Initialize, Terminate0, Handlers0, Info0, Formats0,
-     UseOptionsMethod, UseTraceMethod, Debug, DebugLevel | ArgsAPI] =
+     SetContentDisposition, UseOptionsMethod, UseTraceMethod,
+     Debug, DebugLevel | ArgsAPI] =
         cloudi_proplists:take_values(Defaults, Args),
     TerminateN = case Terminate0 of
         {TerminateModule, TerminateFunction}
@@ -229,6 +242,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             undefined
     end,
     true = is_list(Formats0),
+    true = is_boolean(SetContentDisposition),
     true = is_boolean(UseOptionsMethod),
     true = is_boolean(UseTraceMethod),
     true = is_boolean(Debug),
@@ -255,6 +269,11 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         true = cloudi_x_trie:is_key("." ++ FormatN, ContentTypes),
         FormatN
     end, Formats0),
+    ContentTypeLookupN = lists:foldl(fun(FormatN, ContentTypeLookup0) ->
+        dict:store(erlang:list_to_atom(FormatN),
+                   cloudi_x_trie:fetch("." ++ FormatN, ContentTypes),
+                   ContentTypeLookup0)
+    end, dict:new(), FormatsN),
     MethodListsN = cloudi_x_trie:to_list(lists:foldr(fun({Method, Path, _},
                                                          MethodLists0) ->
         MethodString = if
@@ -334,6 +353,8 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                    lookup = LookupN,
                    info_f = InfoN,
                    terminate_f = TerminateN,
+                   content_types = ContentTypeLookupN,
+                   content_disposition = SetContentDisposition,
                    debug_level = DebugLogLevel},
     ReturnAPI = case Initialize of
         {InitializeModule, InitializeFunction}
@@ -362,6 +383,8 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
                               #state{prefix = Prefix,
                                      lookup = Lookup,
+                                     content_types = ContentTypes,
+                                     content_disposition = ContentDisposition,
                                      debug_level = DebugLevel,
                                      api_state = StateAPI} = State,
                               Dispatcher) ->
@@ -396,16 +419,9 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
     end,
     case ReturnAPI of
         {reply, Response, NewStateAPI} ->
-            if
-                DebugLevel =:= off ->
-                    ok;
-                true ->
-                    protocol_debug_log(DebugLevel, "response ~p ~p",
-                                       [Name, Response])
-            end,
-            {reply, Response,
-             State#state{api_state = NewStateAPI}};
-        {reply, ResponseInfo, Response, NewStateAPI} ->
+            ResponseInfo = response_info_headers([], Name, Format,
+                                                 ContentTypes,
+                                                 ContentDisposition),
             if
                 DebugLevel =:= off ->
                     ok;
@@ -414,6 +430,19 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                                        [Name, {ResponseInfo, Response}])
             end,
             {reply, ResponseInfo, Response,
+             State#state{api_state = NewStateAPI}};
+        {reply, ResponseInfo, Response, NewStateAPI} ->
+            NewResponseInfo = response_info_headers(ResponseInfo, Name, Format,
+                                                    ContentTypes,
+                                                    ContentDisposition),
+            if
+                DebugLevel =:= off ->
+                    ok;
+                true ->
+                    protocol_debug_log(DebugLevel, "response ~p ~p",
+                                       [Name, {NewResponseInfo, Response}])
+            end,
+            {reply, NewResponseInfo, Response,
              State#state{api_state = NewStateAPI}};
         {forward, NextName, NextRequestInfo, NextRequest, NewStateAPI} ->
             if
@@ -510,6 +539,38 @@ subscribe_paths(Method, Path, Formats, API, Lookup, Dispatcher)
     when is_list(Method) ->
     MethodSuffix = [$/ | string:to_lower(Method)],
     subscribe_path(Formats, Path, MethodSuffix, API, Lookup, Dispatcher).
+
+response_info_headers(ResponseInfo0, Name, Format,
+                      ContentTypes, ContentDisposition)
+    when is_list(ResponseInfo0) ->
+    {ContentTypeTag, ContentType} = dict:fetch(Format, ContentTypes),
+    ResponseInfo1 = if
+        (ContentDisposition =:= true) andalso
+        (ContentTypeTag =:= attachment) ->
+            case lists:keyfind(<<"content-disposition">>, 1,
+                               ResponseInfo0) of
+                false ->
+                    ContentDispositionValue = erlang:iolist_to_binary(
+                        ["attachment; filename=\"",
+                         filename:basename(Name), "\""]),
+                    [{<<"content-disposition">>,
+                      ContentDispositionValue} | ResponseInfo0];
+                {_, _} ->
+                    ResponseInfo0
+            end;
+        true ->
+            ResponseInfo0
+    end,
+    ResponseInfoN = case lists:keyfind(<<"content-type">>, 1,
+                                       ResponseInfo0) of
+        false ->
+            [{<<"content-type">>, ContentType} | ResponseInfo1];
+        {_, _} ->
+            ResponseInfo1
+    end,
+    ResponseInfoN;
+response_info_headers(ResponseInfo, _, _, _, _) ->
+    ResponseInfo.
 
 protocol_debug_log(trace, Message, Args) ->
     ?LOG_TRACE(Message, Args);
