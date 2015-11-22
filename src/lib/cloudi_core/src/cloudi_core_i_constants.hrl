@@ -21,7 +21,7 @@
 -define(TIMEOUT_TERMINATE_DEFAULT,  2000). % milliseconds
 % absolute bounds for the terminate function execution time
 % when a service stops or restarts
--define(TIMEOUT_TERMINATE_MIN,  1000). % milliseconds
+-define(TIMEOUT_TERMINATE_MIN,    10). % milliseconds
 % fail-fast is somewhat arbitrary but failure occurs in 1 minute or less
 -define(TIMEOUT_TERMINATE_MAX, 60000). % milliseconds
 
@@ -140,9 +140,9 @@
 
 % used to calculate the timeout_terminate based on MaxT / MaxR
 -define(TIMEOUT_TERMINATE_CALC0(MaxT),
-        (1000 * MaxT) - ?TIMEOUT_DELTA).
--define(TIMEOUT_TERMINATE_CALC1(MaxT, MaxR),
-        (1000 * MaxT) div MaxR - ?TIMEOUT_DELTA).
+        ((1000 * MaxT) - ?TIMEOUT_DELTA)).
+-define(TIMEOUT_TERMINATE_CALC1(MaxR, MaxT),
+        ((1000 * MaxT) div MaxR - ?TIMEOUT_DELTA)).
 
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).

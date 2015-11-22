@@ -116,6 +116,10 @@
     0..?TIMEOUT_MAX_ERLANG.
 -export_type([response_timeout_immediate_max_milliseconds/0]).
 
+-type timeout_terminate_milliseconds() ::
+    ?TIMEOUT_TERMINATE_MIN..?TIMEOUT_TERMINATE_MAX.
+-export_type([timeout_terminate_milliseconds/0]).
+
 -type acl() ::
     list(atom() | cloudi:service_name_pattern()).
 -export_type([acl/0]).
@@ -319,6 +323,8 @@
                {rate_request_min, number()} |
                {count_max, number()} |
                {count_min, number()}) | false} |
+         {timeout_terminate,
+          undefined | timeout_terminate_milliseconds()} |
          {scope, atom()} |
          {monkey_latency,
           list({time_uniform_min, latency_time_milliseconds()} |
@@ -374,6 +380,8 @@
                {rate_request_min, number()} |
                {count_max, number()} |
                {count_min, number()}) | false} |
+         {timeout_terminate,
+          undefined | timeout_terminate_milliseconds()} |
          {scope, atom()} |
          {monkey_latency,
           list({time_uniform_min, latency_time_milliseconds()} |

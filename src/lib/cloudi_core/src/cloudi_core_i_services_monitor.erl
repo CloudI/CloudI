@@ -93,7 +93,7 @@
         monitor :: reference(),
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(integer()),
-        timeout_term :: cloudi_service_api:timeout_milliseconds(),
+        timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
         % the supervisor terminates all child processes...
@@ -137,7 +137,8 @@ start_link() ->
               CountProcess :: pos_integer(),
               CountThread :: pos_integer(),
               Scope :: atom(),
-              TimeoutTerm :: cloudi_service_api:timeout_milliseconds(),
+              TimeoutTerm :: cloudi_service_api:
+                             timeout_terminate_milliseconds(),
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
               ServiceId :: cloudi_x_uuid:cloudi_x_uuid(),
@@ -151,7 +152,9 @@ monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
          is_integer(ProcessIndex), ProcessIndex >= 0,
          is_integer(CountProcess), CountProcess > 0,
          is_integer(CountThread), CountThread > 0, is_atom(Scope),
-         is_integer(TimeoutTerm), TimeoutTerm > ?TIMEOUT_DELTA,
+         is_integer(TimeoutTerm),
+         TimeoutTerm >= ?TIMEOUT_TERMINATE_MIN,
+         TimeoutTerm =< ?TIMEOUT_TERMINATE_MAX,
          is_integer(MaxR), MaxR >= 0, is_integer(MaxT), MaxT >= 0,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,

@@ -3,6 +3,7 @@
 
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add the timeout_terminate service configuration option
     * Always have an empty space in the logging source output when the
       function name/arity is not provided
     * Update trie

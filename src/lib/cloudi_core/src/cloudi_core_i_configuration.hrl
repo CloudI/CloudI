@@ -72,7 +72,7 @@
         % notice    (becomes warning)   -> warn
         % info                          -> info
         % debug                         -> debug
-        %           (becomes debug)     -> trace
+        %                               -> trace
         % none                          -> off
         level = trace
             :: cloudi_service_api:loglevel(),
@@ -213,6 +213,13 @@
                     {count_max, number()} | % float multiplier or
                     {count_min, number()}) | % integer absolute
                tuple(),
+        % when undefined, timeout_terminate defaults to
+        % (1000 * MaxT) / MaxR - 100 to ensure the service lifetime is finite
+        % when errors occur. timeout_terminate can be set manually to
+        % enforce a greater uptime constraint on the service execution.
+        timeout_terminate = undefined
+            :: undefined |
+               cloudi_service_api:timeout_terminate_milliseconds(),
         % provide a scope for all subscribe/unsubscribe and messaging
         % (i.e., all service name usage is within the scope).  Using a
         % different scope can help avoid contention when using an immediate
