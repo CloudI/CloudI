@@ -215,6 +215,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
      BufferRecvSize, BufferSendSize, BufferSize, DestinationSet,
      ProtocolIdCheck0, Debug, DebugLevel] =
         cloudi_proplists:take_values(Defaults, Args),
+    1 = cloudi_service:process_count_max(Dispatcher),
     true = cloudi_service:duo_mode(Dispatcher),
     true = is_integer(Port),
     true = is_list(Destination),

@@ -280,6 +280,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      StatusCodeTimeout, QueryGetFormat, UseWebSockets, UseSpdy,
      UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
+    1 = cloudi_service:process_count_max(Dispatcher),
     true = is_integer(Port),
     true = is_integer(Backlog),
     true = is_boolean(NoDelay),
