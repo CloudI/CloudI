@@ -550,9 +550,10 @@ response_info_headers(ResponseInfo0, Name, Format,
             case lists:keyfind(<<"content-disposition">>, 1,
                                ResponseInfo0) of
                 false ->
+                    FilePath = cloudi_string:beforer($/, Name),
                     ContentDispositionValue = erlang:iolist_to_binary(
                         ["attachment; filename=\"",
-                         filename:basename(Name), "\""]),
+                         filename:basename(FilePath), "\""]),
                     [{<<"content-disposition">>,
                       ContentDispositionValue} | ResponseInfo0];
                 {_, _} ->
