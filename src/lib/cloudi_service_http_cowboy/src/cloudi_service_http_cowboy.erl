@@ -367,22 +367,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     true = (WebSocketPing =:= undefined) orelse
            (is_integer(WebSocketPing) andalso (WebSocketPing > 0)),
-    WebSocketProtocol1 = case WebSocketProtocol0 of
-        undefined ->
-            undefined;
-        {WebSocketProtocolModule, WebSocketProtocolFunction}
-            when is_atom(WebSocketProtocolModule),
-                 is_atom(WebSocketProtocolFunction) ->
-            true = erlang:function_exported(WebSocketProtocolModule,
-                                            WebSocketProtocolFunction, 2),
-            fun(WebSocketProtocolArg1, WebSocketProtocolArg2) ->
-                WebSocketProtocolModule:
-                WebSocketProtocolFunction(WebSocketProtocolArg1,
-                                          WebSocketProtocolArg2)
-            end;
-        _ when is_function(WebSocketProtocol0, 2) ->
-            WebSocketProtocol0
-    end,
+    WebSocketProtocol1 = cloudi_args_type:
+                         function_optional(WebSocketProtocol0, 2),
     true = is_boolean(WebSocketNameUnique),
     WebSocketSubscriptions1 = if
         WebSocketSubscriptions0 == [] ->

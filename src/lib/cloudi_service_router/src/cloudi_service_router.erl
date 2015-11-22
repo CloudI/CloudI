@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -133,37 +133,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
      DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(AddPrefix),
-    ValidateRequestInfo1 = case ValidateRequestInfo0 of
-        undefined ->
-            undefined;
-        {ValidateRequestInfoModule, ValidateRequestInfoFunction}
-            when is_atom(ValidateRequestInfoModule),
-                 is_atom(ValidateRequestInfoFunction) ->
-            true = erlang:function_exported(ValidateRequestInfoModule,
-                                            ValidateRequestInfoFunction, 1),
-            fun(ValidateRequestInfoArg1) ->
-                ValidateRequestInfoModule:
-                ValidateRequestInfoFunction(ValidateRequestInfoArg1)
-            end;
-        _ when is_function(ValidateRequestInfo0, 1) ->
-            ValidateRequestInfo0
-    end,
-    ValidateRequest1 = case ValidateRequest0 of
-        undefined ->
-            undefined;
-        {ValidateRequestModule, ValidateRequestFunction}
-            when is_atom(ValidateRequestModule),
-                 is_atom(ValidateRequestFunction) ->
-            true = erlang:function_exported(ValidateRequestModule,
-                                            ValidateRequestFunction, 2),
-            fun(ValidateRequestArg1, ValidateRequestArg2) ->
-                ValidateRequestModule:
-                ValidateRequestFunction(ValidateRequestArg1,
-                                        ValidateRequestArg2)
-            end;
-        _ when is_function(ValidateRequest0, 2) ->
-            ValidateRequest0
-    end,
+    ValidateRequestInfo1 = cloudi_args_type:
+                           function_optional(ValidateRequestInfo0, 1),
+    ValidateRequest1 = cloudi_args_type:
+                       function_optional(ValidateRequest0, 2),
     true = is_boolean(FailuresSrcDie),
     true = is_integer(FailuresSrcMaxCount) andalso (FailuresSrcMaxCount > 0),
     true = (FailuresSrcMaxPeriod =:= infinity) orelse

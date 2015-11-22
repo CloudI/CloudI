@@ -200,21 +200,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
      SetContentDisposition, UseOptionsMethod, UseTraceMethod,
      Debug, DebugLevel | ArgsAPI] =
         cloudi_proplists:take_values(Defaults, Args),
-    TerminateN = case Terminate0 of
-        {TerminateModule, TerminateFunction}
-            when is_atom(TerminateModule),
-                 is_atom(TerminateFunction) ->
-            true = erlang:function_exported(TerminateModule,
-                                            TerminateFunction, 3),
-            fun(TerminateArg1, TerminateArg2, TerminateArg3) ->
-                TerminateModule:
-                TerminateFunction(TerminateArg1, TerminateArg2, TerminateArg3)
-            end;
-        _ when is_function(Terminate0, 3) ->
-            Terminate0;
-        undefined ->
-            undefined
-    end,
+    TerminateN = cloudi_args_type:function_optional(Terminate0, 3),
     true = is_list(Handlers0),
     lists:foreach(fun({Method, Path, _}) ->
         MethodString = if
@@ -226,21 +212,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         MethodString = string:to_upper(MethodString),
         true = is_list(Path) andalso is_integer(hd(Path))
     end, Handlers0),
-    InfoN = case Info0 of
-        {InfoModule, InfoFunction}
-            when is_atom(InfoModule),
-                 is_atom(InfoFunction) ->
-            true = erlang:function_exported(InfoModule,
-                                            InfoFunction, 3),
-            fun(InfoArg1, InfoArg2, InfoArg3) ->
-                InfoModule:
-                InfoFunction(InfoArg1, InfoArg2, InfoArg3)
-            end;
-        _ when is_function(Info0, 3) ->
-            Info0;
-        undefined ->
-            undefined
-    end,
+    InfoN = cloudi_args_type:function_optional(Info0, 3),
     true = is_list(Formats0),
     true = is_boolean(SetContentDisposition),
     true = is_boolean(UseOptionsMethod),
@@ -317,25 +289,8 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             Handlers1
     end,
     LookupN = lists:foldl(fun({Method, Path, Handler0}, Lookup0) ->
-        {Handler1, Arity} = case Handler0 of
-            {HandlerModule, HandlerFunction}
-                when is_atom(HandlerModule),
-                     is_atom(HandlerFunction) ->
-                true = erlang:function_exported(HandlerModule,
-                                                HandlerFunction, 11),
-                {fun(HandlerArg1, HandlerArg2, HandlerArg3,
-                     HandlerArg4, HandlerArg5, HandlerArg6,
-                     HandlerArg7, HandlerArg8, HandlerArg9,
-                     HandlerArg10, HandlerArg11) ->
-                     HandlerModule:
-                     HandlerFunction(HandlerArg1, HandlerArg2, HandlerArg3,
-                                     HandlerArg4, HandlerArg5, HandlerArg6,
-                                     HandlerArg7, HandlerArg8, HandlerArg9,
-                                     HandlerArg10, HandlerArg11)
-                 end, 11};
-            _ when is_function(Handler0, 11) ->
-                {Handler0, 11}
-        end,
+        {Handler1,
+         Arity} = cloudi_args_type:function_required_pick(Handler0, [11]),
         HandlerMethod = if
             is_atom(Method) ->
                 Method;
@@ -356,19 +311,12 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                    content_types = ContentTypeLookupN,
                    content_disposition = SetContentDisposition,
                    debug_level = DebugLogLevel},
-    ReturnAPI = case Initialize of
-        {InitializeModule, InitializeFunction}
-            when is_atom(InitializeModule),
-                 is_atom(InitializeFunction) ->
-            true = erlang:function_exported(InitializeModule,
-                                            InitializeFunction, 3),
-            InitializeModule:
-            InitializeFunction(ArgsAPI, Timeout, Dispatcher);
-        _ when is_function(Initialize, 3) ->
-            Initialize(ArgsAPI, Timeout, Dispatcher);
+    ReturnAPI = case cloudi_args_type:function_optional(Initialize, 3) of
         undefined ->
             true = (ArgsAPI == []),
-            {ok, undefined}
+            {ok, undefined};
+        InitializeFunction ->
+            InitializeFunction(ArgsAPI, Timeout, Dispatcher)
     end,
     case ReturnAPI of
         {ok, StateAPI} ->

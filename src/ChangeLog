@@ -3,6 +3,8 @@
 
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add cloudi_args_type module for validating function arguments
+      set in the service configuration arguments list
     * Add the cloudi_service_http_rest configuration arguments
       set_content_disposition, use_options_method, use_trace_method
     * Set max configured service processes to 1 due to port ownership for

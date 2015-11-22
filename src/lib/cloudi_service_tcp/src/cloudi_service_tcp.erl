@@ -235,22 +235,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = (BufferSendSize =:= undefined) orelse is_integer(BufferSendSize),
     true = (BufferSize =:= undefined) orelse is_integer(BufferSize),
     true = is_boolean(DestinationSet),
-    ProtocolIdCheck1 = case ProtocolIdCheck0 of
-        undefined ->
-            undefined;
-        {ProtocolIdCheckModule, ProtocolIdCheckFunction}
-            when is_atom(ProtocolIdCheckModule),
-                 is_atom(ProtocolIdCheckFunction) ->
-            true = erlang:function_exported(ProtocolIdCheckModule,
-                                            ProtocolIdCheckFunction, 2),
-            fun(ProtocolIdCheckArg1, ProtocolIdCheckArg2) ->
-                ProtocolIdCheckModule:
-                ProtocolIdCheckFunction(ProtocolIdCheckArg1,
-                                          ProtocolIdCheckArg2)
-            end;
-        _ when is_function(ProtocolIdCheck0, 2) ->
-            ProtocolIdCheck0
-    end,
+    ProtocolIdCheck1 = cloudi_args_type:function_optional(ProtocolIdCheck0, 2),
     true = ((Debug =:= true) orelse
             (Debug =:= false)),
     true = ((DebugLevel =:= trace) orelse

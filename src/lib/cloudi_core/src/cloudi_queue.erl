@@ -62,7 +62,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -197,68 +197,14 @@ new(Options)
      ] =
         cloudi_proplists:take_values(Defaults, Options),
     true = is_integer(RetryMax) andalso (RetryMax >= 0),
-    ValidateRequestInfo1 = case ValidateRequestInfo0 of
-        undefined ->
-            undefined;
-        {ValidateRequestInfoModule, ValidateRequestInfoFunction}
-            when is_atom(ValidateRequestInfoModule),
-                 is_atom(ValidateRequestInfoFunction) ->
-            true = erlang:function_exported(ValidateRequestInfoModule,
-                                            ValidateRequestInfoFunction, 1),
-            fun(ValidateRequestInfoArg1) ->
-                ValidateRequestInfoModule:
-                ValidateRequestInfoFunction(ValidateRequestInfoArg1)
-            end;
-        _ when is_function(ValidateRequestInfo0, 1) ->
-            ValidateRequestInfo0
-    end,
-    ValidateRequest1 = case ValidateRequest0 of
-        undefined ->
-            undefined;
-        {ValidateRequestModule, ValidateRequestFunction}
-            when is_atom(ValidateRequestModule),
-                 is_atom(ValidateRequestFunction) ->
-            true = erlang:function_exported(ValidateRequestModule,
-                                            ValidateRequestFunction, 2),
-            fun(ValidateRequestArg1, ValidateRequestArg2) ->
-                ValidateRequestModule:
-                ValidateRequestFunction(ValidateRequestArg1,
-                                        ValidateRequestArg2)
-            end;
-        _ when is_function(ValidateRequest0, 2) ->
-            ValidateRequest0
-    end,
-    ValidateResponseInfo1 = case ValidateResponseInfo0 of
-        undefined ->
-            undefined;
-        {ValidateResponseInfoModule, ValidateResponseInfoFunction}
-            when is_atom(ValidateResponseInfoModule),
-                 is_atom(ValidateResponseInfoFunction) ->
-            true = erlang:function_exported(ValidateResponseInfoModule,
-                                            ValidateResponseInfoFunction, 1),
-            fun(ValidateResponseInfoArg1) ->
-                ValidateResponseInfoModule:
-                ValidateResponseInfoFunction(ValidateResponseInfoArg1)
-            end;
-        _ when is_function(ValidateResponseInfo0, 1) ->
-            ValidateResponseInfo0
-    end,
-    ValidateResponse1 = case ValidateResponse0 of
-        undefined ->
-            undefined;
-        {ValidateResponseModule, ValidateResponseFunction}
-            when is_atom(ValidateResponseModule),
-                 is_atom(ValidateResponseFunction) ->
-            true = erlang:function_exported(ValidateResponseModule,
-                                            ValidateResponseFunction, 2),
-            fun(ValidateResponseArg1, ValidateResponseArg2) ->
-                ValidateResponseModule:
-                ValidateResponseFunction(ValidateResponseArg1,
-                                         ValidateResponseArg2)
-            end;
-        _ when is_function(ValidateResponse0, 2) ->
-            ValidateResponse0
-    end,
+    ValidateRequestInfo1 = cloudi_args_type:
+                           function_optional(ValidateRequestInfo0, 1),
+    ValidateRequest1 = cloudi_args_type:
+                       function_optional(ValidateRequest0, 2),
+    ValidateResponseInfo1 = cloudi_args_type:
+                            function_optional(ValidateResponseInfo0, 1),
+    ValidateResponse1 = cloudi_args_type:
+                        function_optional(ValidateResponse0, 2),
     true = is_boolean(FailuresSrcDie),
     true = is_integer(FailuresSrcMaxCount) andalso (FailuresSrcMaxCount > 0),
     true = (FailuresSrcMaxPeriod =:= infinity) orelse
