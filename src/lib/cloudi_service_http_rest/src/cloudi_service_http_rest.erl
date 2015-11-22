@@ -90,6 +90,12 @@
         % Provide a list of formats to handle that are added as file type
         % suffixes on the URL path which also determine the content-type used
         % for the request and response.
+-define(DEFAULT_USE_OPTIONS_METHOD,         false).
+        % Provide default handling of the OPTIONS method based on the
+        % configured handlers.
+-define(DEFAULT_USE_TRACE_METHOD,           false).
+        % Provide default handling of the TRACE method based on the
+        % configured handlers.
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
@@ -174,10 +180,12 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         {handlers,                 ?DEFAULT_HANDLERS},
         {info,                     ?DEFAULT_INFO},
         {formats,                  ?DEFAULT_FORMATS},
+        {use_options_method,       ?DEFAULT_USE_OPTIONS_METHOD},
+        {use_trace_method,         ?DEFAULT_USE_TRACE_METHOD},
         {debug,                    ?DEFAULT_DEBUG},
         {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Initialize, Terminate0, Handlers, Info0, Formats0,
-     Debug, DebugLevel | ArgsAPI] =
+    [Initialize, Terminate0, Handlers0, Info0, Formats0,
+     UseOptionsMethod, UseTraceMethod, Debug, DebugLevel | ArgsAPI] =
         cloudi_proplists:take_values(Defaults, Args),
     TerminateN = case Terminate0 of
         {TerminateModule, TerminateFunction}
@@ -194,7 +202,17 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         undefined ->
             undefined
     end,
-    true = is_list(Handlers),
+    true = is_list(Handlers0),
+    lists:foreach(fun({Method, Path, _}) ->
+        MethodString = if
+            is_atom(Method) ->
+                erlang:atom_to_list(Method);
+            is_list(Method), is_integer(hd(Method)) ->
+                Method
+        end,
+        MethodString = string:to_upper(MethodString),
+        true = is_list(Path) andalso is_integer(hd(Path))
+    end, Handlers0),
     InfoN = case Info0 of
         {InfoModule, InfoFunction}
             when is_atom(InfoModule),
@@ -211,8 +229,9 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             undefined
     end,
     true = is_list(Formats0),
-    true = ((Debug =:= true) orelse
-            (Debug =:= false)),
+    true = is_boolean(UseOptionsMethod),
+    true = is_boolean(UseTraceMethod),
+    true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
@@ -236,10 +255,49 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         true = cloudi_x_trie:is_key("." ++ FormatN, ContentTypes),
         FormatN
     end, Formats0),
+    MethodListsN = cloudi_x_trie:to_list(lists:foldr(fun({Method, Path, _},
+                                                         MethodLists0) ->
+        MethodString = if
+            is_atom(Method) ->
+                erlang:atom_to_list(Method);
+            is_list(Method) ->
+                Method
+        end,
+        cloudi_x_trie:update(Path, fun(MethodList0) ->
+            lists:umerge(MethodList0, [MethodString])
+        end, [MethodString], MethodLists0)
+    end, cloudi_x_trie:new(), Handlers0)),
+    Handlers1 = if
+        UseTraceMethod =:= true ->
+            lists:map(fun({Path, _}) ->
+                HandlerTrace = fun(_, _, _, _, _, _, _, _, _,
+                                   TraceHandlerState, _) ->
+                    {reply,
+                     [{<<"via">>, <<"1.1 CloudI">>}], <<>>, TraceHandlerState}
+                end,
+                {'TRACE', Path, HandlerTrace}
+            end, MethodListsN) ++ Handlers0;
+        UseTraceMethod =:= false ->
+            Handlers0
+    end,
+    HandlersN = if
+        UseOptionsMethod =:= true ->
+            lists:map(fun({Path, MethodList1}) ->
+                MethodListN = lists:umerge(MethodList1, ["OPTIONS"]),
+                Methods = erlang:list_to_binary(string:join(MethodListN,
+                                                            ", ")),
+                HandlerOptions = fun(_, _, _, _, _, _, _, _, _,
+                                     OptionsHandlerState, _) ->
+                    % content-type is set automatically by HTTP process
+                    {reply,
+                     [{<<"allow">>, Methods}], <<>>, OptionsHandlerState}
+                end,
+                {'OPTIONS', Path, HandlerOptions}
+            end, MethodListsN) ++ Handlers1;
+        UseOptionsMethod =:= false ->
+            Handlers1
+    end,
     LookupN = lists:foldl(fun({Method, Path, Handler0}, Lookup0) ->
-        true = is_atom(Method) orelse
-               (is_list(Method) andalso is_integer(hd(Method))),
-        true = is_list(Path) andalso is_integer(hd(Path)),
         {Handler1, Arity} = case Handler0 of
             {HandlerModule, HandlerFunction}
                 when is_atom(HandlerModule),
@@ -262,7 +320,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         HandlerMethod = if
             is_atom(Method) ->
                 Method;
-            is_list(Method), is_integer(hd(Method)) ->
+            is_list(Method) ->
                 erlang:list_to_atom(Method)
         end,
         API = #api{method = HandlerMethod,
@@ -271,7 +329,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                    handler_f = Handler1,
                    arity = Arity},
         subscribe_paths(Method, Path, FormatsN, API, Lookup0, Dispatcher)
-    end, cloudi_x_trie:new(), Handlers),
+    end, cloudi_x_trie:new(), HandlersN),
     State = #state{prefix = Prefix,
                    lookup = LookupN,
                    info_f = InfoN,

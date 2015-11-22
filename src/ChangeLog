@@ -3,6 +3,8 @@
 
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add the cloudi_service_http_rest configuration arguments
+      use_options_method and use_trace_method
     * Set max configured service processes to 1 due to port ownership for
       cloudi_service_http_cowboy, cloudi_service_http_elli,
       cloudi_service_tcp, cloudi_service_udp
