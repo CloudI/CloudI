@@ -10,7 +10,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/4,
+-export([start_link/5,
          discover/1]).
 
 %% gen_server callbacks
@@ -22,7 +22,7 @@
     {
         sendsock,
         recvsock,
-        addr,
+        address,
         port,
         timeout :: pos_integer(), % seconds
         connect :: visible | hidden
@@ -35,9 +35,9 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Addr, Port, TTL, TimeoutSeconds) ->
+start_link(Interface, Address, Port, TTL, TimeoutSeconds) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE,
-                          [Addr, Port, TTL, TimeoutSeconds], []).
+                          [Interface, Address, Port, TTL, TimeoutSeconds], []).
 
 discover(Timeout) ->
     try gen_server:call(?MODULE, discover, Timeout)
@@ -50,18 +50,19 @@ discover(Timeout) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Addr, Port, TTL, TimeoutSeconds]) ->
+init([Interface, Address, Port, TTL, TimeoutSeconds]) ->
     Opts = [{active, true},
-            {ip, Addr},
-            {add_membership, {Addr, {0, 0, 0, 0 }}},
+            {ip, Address},
+            {multicast_if, Interface},
+            {add_membership, {Address, Interface}},
             {multicast_loop, true},
             {reuseaddr, true},
             list],
     {ok, RecvSocket} = gen_udp:open(Port, Opts),
     Connect = nodefinder_app:connect_type(),
     {ok, send_discover(#state{recvsock = RecvSocket,
-                              sendsock = send_socket(TTL),
-                              addr = Addr,
+                              sendsock = send_socket(Interface, TTL),
+                              address = Address,
                               port = Port,
                               timeout = TimeoutSeconds,
                               connect = Connect})}.
@@ -99,13 +100,13 @@ code_change(_OldVsn, State, _Extra) ->
 %%%------------------------------------------------------------------------
 
 send_discover(#state{sendsock = SendSock,
-                     addr = Addr,
+                     address = Address,
                      port = Port} = State) ->
     NodeString = erlang:atom_to_list(erlang:node()),
     Time = seconds(),
     Identifier = identifier([<<Time:64>>, NodeString]),
     Message = ["DISCOVERV2 ", Identifier, " ", <<Time:64>>, " ", NodeString],
-    ok = gen_udp:send(SendSock, Addr, Port, Message),
+    ok = gen_udp:send(SendSock, Address, Port, Message),
     State.
 
 identifier(Message) ->
@@ -145,8 +146,8 @@ process_packet(_Packet, _IP, _InPortNo, State) ->
 seconds() ->
     calendar:datetime_to_gregorian_seconds(calendar:universal_time()).
 
-send_socket(TTL) ->
-    SendOpts = [{ip, { 0, 0, 0, 0 }},
+send_socket(Interface, TTL) ->
+    SendOpts = [{ip, Interface},
                 {multicast_ttl, TTL}, 
                 {multicast_loop, true}],
     {ok, SendSocket} = gen_udp:open(0, SendOpts),

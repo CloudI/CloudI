@@ -176,6 +176,7 @@
      node_discovery_invalid |
      node_discovery_ambiguous |
      node_discovery_multicast_invalid |
+     node_discovery_multicast_interface_invalid |
      node_discovery_multicast_address_invalid |
      node_discovery_multicast_port_invalid |
      node_discovery_multicast_ttl_invalid |
@@ -1106,13 +1107,15 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
     NodesList7 = case Discovery of
         undefined ->
             NodesList6;
-        #config_nodes_discovery{start_a = [MulticastAddress,
+        #config_nodes_discovery{start_a = [MulticastInterface,
+                                           MulticastAddress,
                                            MulticastPort,
                                            MulticastTTL, _],
                                 discover_f = multicast_discover} ->
             [{discovery,
               [{multicast,
-                [{address, MulticastAddress},
+                [{interface, MulticastInterface},
+                 {address, MulticastAddress},
                  {port, MulticastPort},
                  {ttl, MulticastTTL}]}]} | NodesList6];
         #config_nodes_discovery{start_a = [EC2AccessKeyId,
@@ -3538,32 +3541,36 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
 nodes_discovery_multicast_options(Value, NodesConfig) ->
     #config_nodes{reconnect_delay = TimeoutSeconds} = NodesConfig,
     Defaults = [
+        {interface, {0,0,0,0}},
         {address, {224,0,0,1}},
         {port, 4475},
         {ttl, 1}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Address, _, _ | _]
+        [Interface, _, _, _ | _]
+            when not is_tuple(Interface) ->
+            {error, {node_discovery_multicast_interface_invalid, Interface}};
+        [_, Address, _, _ | _]
             when not is_tuple(Address) ->
             {error, {node_discovery_multicast_address_invalid, Address}};
-        [_, Port, _ | _]
+        [_, _, Port, _ | _]
             when not (is_integer(Port) andalso
                       (Port > 0)) ->
             {error, {node_discovery_multicast_port_invalid, Port}};
-        [_, _, TTL | _]
+        [_, _, _, TTL | _]
             when not (is_integer(TTL) andalso
                       (TTL >= 0)) ->
             {error, {node_discovery_multicast_ttl_invalid, TTL}};
-        [Address, Port, TTL] ->
+        [Interface, Address, Port, TTL] ->
             Discovery = #config_nodes_discovery{
                 module = cloudi_x_nodefinder,
                 start_f = multicast_start,
-                start_a = [Address, Port, TTL, TimeoutSeconds],
+                start_a = [Interface, Address, Port, TTL, TimeoutSeconds],
                 discover_f = multicast_discover,
                 discover_a = [TimeoutSeconds * 1000 + ?TIMEOUT_DELTA],
                 stop_f = multicast_stop,
                 stop_a = []},
             {ok, NodesConfig#config_nodes{discovery = Discovery}};
-        [_, _, _ | Extra] ->
+        [_, _, _, _ | Extra] ->
             {error, {node_discovery_multicast_invalid, Extra}}
     end.
 

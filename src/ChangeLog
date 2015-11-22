@@ -3,6 +3,7 @@
 
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add multicast discovery interface address configuration option
     * Add cloudi_args_type module for validating function arguments
       set in the service configuration arguments list
     * Add the cloudi_service_http_rest configuration arguments
@@ -13,7 +14,7 @@
     * Add the timeout_terminate service configuration option
     * Always have an empty space in the logging source output when the
       function name/arity is not provided
-    * Update trie
+    * Update trie, nodefinder (and fix dependency modelines)
 
 2015-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 

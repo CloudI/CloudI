@@ -8,7 +8,7 @@
          ec2_discover/1,
          ec2_stop/0,
          multicast_start/0,
-         multicast_start/4,
+         multicast_start/5,
          multicast_discover/1,
          multicast_stop/0,
          timeout_min/0]).
@@ -48,21 +48,23 @@ ec2_stop() ->
     {error, any()}.
 
 multicast_start() ->
-    multicast_start({224,0,0,1}, 4475, 1, 300).
+    multicast_start({0,0,0,0}, {224,0,0,1}, 4475, 1, 300).
 
--spec multicast_start(Addr :: inet:ip_address(),
+-spec multicast_start(Interface :: inet:ip_address(),
+                      Address :: inet:ip_address(),
                       Port :: inet:port_number(),
                       TTL :: non_neg_integer(),
                       TimeoutSeconds :: pos_integer()) ->
     {ok, pid()} |
     {error, any()}.
 
-multicast_start(Addr, Port, TTL, TimeoutSeconds)
+multicast_start(Interface, Address, Port, TTL, TimeoutSeconds)
     when is_integer(Port), Port > 0,
          is_integer(TTL), TTL >= 0,
          is_integer(TimeoutSeconds), TimeoutSeconds > 0 ->
     nodefinder_sup:start_child(nodefinder_multicast,
-                               [Addr, Port, TTL, TimeoutSeconds]).
+                               [Interface, Address,
+                                Port, TTL, TimeoutSeconds]).
 
 -spec multicast_discover(Timeout :: pos_integer()) ->
     ok |
