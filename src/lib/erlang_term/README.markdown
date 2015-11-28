@@ -1,6 +1,10 @@
-#`erlang_term`
+Erlang Term Info (Memory Consumption)
+=====================================
 
-## PURPOSE
+[![Build Status](https://secure.travis-ci.org/okeuday/erlang_term.png?branch=master)](http://travis-ci.org/okeuday/erlang_term)
+
+Purpose
+-------
 
 To provide the in-memory size of Erlang terms, ignoring where the Erlang terms
 are stored.
@@ -33,18 +37,27 @@ Size information should match the [Erlang Efficiency Guide memory information](h
     * From remote node: 6 words
 * Fun: 9..13 words + size of environment
 
+Maps use a "flatmap" (a pair of tuples) before switching to a
+Hash Array Mapped Trie (HAMT) implementation after the size becomes larger than
+`MAP_SMALL_MAP_LIMIT` (32).  The upper-limit of a HAMT map is used in ERTS
+(`HASHMAP_ESTIMATED_HEAP_SIZE(SIZE) == (SIZE*3 + (2*SIZE/5)*2)`)
+but the result severely exaggerates the size of a map.  Due to the difficulty
+anticipating the in-memory size of a map, the size is taken directly by using
+`erts_debug:flat_size/1`.  The C macros above may change in the future
+(the macros above are from `erts/emulator/beam/erl_map.h` in Erlang 18.1).
 
-## LICENSE
+License
+-------
 
-BSD license
+BSD
 
+Contact
+-------
 
-## CONTACT
+Michael Truog (mjtruog [at] gmail (dot) com)
 
-Michael Truog <mjtruog at gmail dot com>
-
-
-## THANKS
+Thanks
+------
 
 * Sverker Eriksson [`erts_debug:flat_size/1` info](http://erlang.org/pipermail/erlang-bugs/2014-September/004607.html)
 

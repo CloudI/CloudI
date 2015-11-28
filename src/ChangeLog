@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update erlang_term:
+        * Adds support for using the size of binaries nested in maps
+        * Fixes the improper list size
+
 2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add multicast discovery interface address configuration option
