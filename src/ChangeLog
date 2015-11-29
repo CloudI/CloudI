@@ -3,6 +3,8 @@
 
 2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Allow the cloudi_service_filesystem configuration arguments
+      write_truncate and write_append to take service name patterns
     * Add cloudi_args_type:service_name_suffix/2 and
       cloudi_args_type:service_name_pattern_suffix/2 for the common
       task of getting a service name suffix during service initialization

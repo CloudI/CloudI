@@ -97,12 +97,18 @@
         % {"/tests/http_req/hexpi.txt", {-64, undefined}}
         % {"/tests/http_req/hexpi.txt", -64}
 -define(DEFAULT_WRITE_TRUNCATE,             []). % see below:
-        % A list of file service names (provided by this service) that
-        % will overwrite the file contents with the service request data
+        % A list of file service names (and/or service name patterns)
+        % (provided by this service) that will overwrite the file
+        % contents with the service request data.
+        % If a service name pattern is provided, it must match at
+        % least one existing file path.
 -define(DEFAULT_WRITE_APPEND,               []). % see below:
-        % A list of file service names (provided by this service) that
-        % will append to the file contents with the service request data
-        % (n.b., use to update with a range request in bytes)
+        % A list of file service names (and/or service name patterns)
+        % (provided by this service) that will append to the file
+        % contents with the service request data
+        % (n.b., use to update with a range request in bytes).
+        % If a service name pattern is provided, it must match at
+        % least one existing file path.
 -define(DEFAULT_NOTIFY_ONE,                 []). % see below:
         % A list of {Name, NotifyName} entries that provide a mapping from
         % a file service name (provided by this service) to a
@@ -408,29 +414,52 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                UseContentDisposition, UseHttpGetSuffix,
                                FilesSizeLimitN, Prefix, Dispatcher),
     MTimeFake = calendar:now_to_universal_time(os:timestamp()),
-    Files4 = lists:foldl(fun(Name, Files2) ->
-        FileName = cloudi_args_type:service_name_suffix(Prefix, Name),
-        Pattern = if
+    Files7 = lists:foldl(fun(Pattern, Files2) ->
+        PatternRead = if
             UseHttpGetSuffix =:= true ->
-                Name ++ "/get";
+                Pattern ++ "/get";
             UseHttpGetSuffix =:= false ->
-                Name
+                Pattern
         end,
-        case cloudi_x_trie:find(Pattern, Files2) of
-            {ok, #file{access = Access,
-                       write = []} = File}
-                when Access =:= read_write ->
-                NewFile = File#file{write = [truncate]},
-                Files3 = file_add_write_truncate(FileName, NewFile,
-                                                 Files2, Prefix, Dispatcher),
-                file_refresh(FileName, NewFile,
-                             Files3, true, Prefix);
-            {ok, #file{path = FilePath}} ->
-                ?LOG_ERROR("unable to read and write file: \"~s\"",
-                           [FilePath]),
-                erlang:exit({eacces, FilePath}),
-                Files2;
-            error ->
+        Files6 = cloudi_x_trie:fold_match(PatternRead,
+                                          fun(NameRead, File, Files3) ->
+            Files4 = if
+                Files3 =:= undefined ->
+                    Files2;
+                true ->
+                    Files3
+            end,
+            NameReadSuffix = cloudi_args_type:service_name_suffix(Prefix,
+                                                                  NameRead),
+            FileName = if
+                UseHttpGetSuffix =:= true ->
+                    cloudi_string:beforer($/, NameReadSuffix);
+                UseHttpGetSuffix =:= false ->
+                    NameReadSuffix
+            end,
+            #file{path = FilePath,
+                  access = Access,
+                  write = []} = File,
+            if
+                Access =:= read_write ->
+                    NewFile = File#file{write = [truncate]},
+                    Files5 = file_add_write_truncate(FileName, NewFile,
+                                                     Files4, Prefix,
+                                                     Dispatcher),
+                    file_refresh(FileName, NewFile,
+                                 Files5, true, Prefix);
+                true ->
+                    ?LOG_ERROR("unable to read and write file: \"~s\"",
+                               [FilePath]),
+                    erlang:exit({eacces, FilePath}),
+                    Files4
+            end
+        end, undefined, Files2),
+        if
+            Files6 =:= undefined ->
+                false = lists:member($*, Pattern),
+                FileName = cloudi_args_type:service_name_suffix(Prefix,
+                                                                Pattern),
                 FilePath = filename:join(Directory, FileName),
                 Headers = file_headers(FilePath, ContentTypeLookup,
                                        UseContentDisposition),
@@ -443,32 +472,57 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                      access = 'read_write',
                                      toggle = Toggle,
                                      write = [truncate]},
-                               Files2, Prefix, Dispatcher)
+                               Files2, Prefix, Dispatcher);
+            true ->
+                Files6
         end
     end, Files1, WriteTruncateL),
-    Files7 = lists:foldl(fun(Name, Files5) ->
-        FileName = cloudi_args_type:service_name_suffix(Prefix, Name),
-        Pattern = if
+    Files13 = lists:foldl(fun(Pattern, Files8) ->
+        PatternRead = if
             UseHttpGetSuffix =:= true ->
-                Name ++ "/get";
+                Pattern ++ "/get";
             UseHttpGetSuffix =:= false ->
-                Name
+                Pattern
         end,
-        case cloudi_x_trie:find(Pattern, Files5) of
-            {ok, #file{access = Access,
-                       write = Write} = File}
-                when Access =:= read_write ->
-                NewFile = File#file{write = [append | Write]},
-                Files6 = file_add_write_append(FileName, NewFile,
-                                               Files5, Prefix, Dispatcher),
-                file_refresh(FileName, NewFile,
-                             Files6, true, Prefix);
-            {ok, #file{path = FilePath}} ->
-                ?LOG_ERROR("unable to read and write file: \"~s\"",
-                           [FilePath]),
-                erlang:exit({eacces, FilePath}),
-                Files5;
-            error ->
+        Files12 = cloudi_x_trie:fold_match(PatternRead,
+                                           fun(NameRead, File, Files9) ->
+            Files10 = if
+                Files9 =:= undefined ->
+                    Files8;
+                true ->
+                    Files9
+            end,
+            NameReadSuffix = cloudi_args_type:service_name_suffix(Prefix,
+                                                                  NameRead),
+            FileName = if
+                UseHttpGetSuffix =:= true ->
+                    cloudi_string:beforer($/, NameReadSuffix);
+                UseHttpGetSuffix =:= false ->
+                    NameReadSuffix
+            end,
+            #file{path = FilePath,
+                  access = Access,
+                  write = Write} = File,
+            if
+                Access =:= read_write ->
+                    NewFile = File#file{write = [append | Write]},
+                    Files11 = file_add_write_append(FileName, NewFile,
+                                                    Files10, Prefix,
+                                                    Dispatcher),
+                    file_refresh(FileName, NewFile,
+                                 Files11, true, Prefix);
+                true ->
+                    ?LOG_ERROR("unable to read and write file: \"~s\"",
+                               [FilePath]),
+                    erlang:exit({eacces, FilePath}),
+                    Files10
+            end
+        end, undefined, Files8),
+        if
+            Files12 =:= undefined ->
+                false = lists:member($*, Pattern),
+                FileName = cloudi_args_type:service_name_suffix(Prefix,
+                                                                Pattern),
                 FilePath = filename:join(Directory, FileName),
                 Headers = file_headers(FilePath, ContentTypeLookup,
                                        UseContentDisposition),
@@ -481,45 +535,47 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                      access = 'read_write',
                                      toggle = Toggle,
                                      write = [append]},
-                               Files5, Prefix, Dispatcher)
+                               Files8, Prefix, Dispatcher);
+            true ->
+                Files12
         end
-    end, Files4, WriteAppendL),
+    end, Files7, WriteAppendL),
     Timeout = cloudi_service:timeout_async(Dispatcher),
     Priority = cloudi_service:priority_default(Dispatcher),
-    Files10 = lists:foldl(fun({NameOne, NotifyNameOne}, Files8) ->
+    Files16 = lists:foldl(fun({NameOne, NotifyNameOne}, Files14) ->
         true = is_list(NameOne) andalso is_integer(hd(NameOne)),
         true = is_list(NotifyNameOne) andalso is_integer(hd(NotifyNameOne)),
         true = lists:prefix(Prefix, NameOne),
         case files_notify(#file_notify{send = send_async,
                                        service_name = NotifyNameOne},
-                          NameOne, Files8, Timeout, Priority,
+                          NameOne, Files14, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
-            {ok, _, Files9} ->
-                Files9;
+            {ok, _, Files15} ->
+                Files15;
             {error, Reason} ->
                 ?LOG_ERROR("notification name does not exist: \"~s\"",
                            [NameOne]),
                 erlang:exit({Reason, NameOne}),
-                Files8
+                Files14
         end
-    end, Files7, NotifyOneL),
-    FilesN = lists:foldl(fun({NameAll, NotifyNameAll}, Files11) ->
+    end, Files13, NotifyOneL),
+    FilesN = lists:foldl(fun({NameAll, NotifyNameAll}, Files17) ->
         true = is_list(NameAll) andalso is_integer(hd(NameAll)),
         true = is_list(NotifyNameAll) andalso is_integer(hd(NotifyNameAll)),
         true = lists:prefix(Prefix, NameAll),
         case files_notify(#file_notify{send = mcast_async,
                                        service_name = NotifyNameAll},
-                          NameAll, Files11, Timeout, Priority,
+                          NameAll, Files17, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
-            {ok, _, Files12} ->
-                Files12;
+            {ok, _, Files18} ->
+                Files18;
             {error, Reason} ->
                 ?LOG_ERROR("notification name does not exist: \"~s\"",
                            [NameAll]),
                 erlang:exit({Reason, NameAll}),
-                Files11
+                Files17
         end
-    end, Files10, NotifyAllL),
+    end, Files16, NotifyAllL),
     if
         NotifyOnStart =:= true ->
             cloudi_x_trie:foreach(fun(Name,
