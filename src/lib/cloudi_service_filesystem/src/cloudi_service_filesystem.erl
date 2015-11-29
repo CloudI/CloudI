@@ -110,15 +110,19 @@
         % If a service name pattern is provided, it must match at
         % least one existing file path.
 -define(DEFAULT_NOTIFY_ONE,                 []). % see below:
-        % A list of {Name, NotifyName} entries that provide a mapping from
-        % a file service name (provided by this service) to a
-        % notification service name which will receive the file's data
-        % in a service request sent with send_async.
+        % A list of {NameOrPattern, NotifyName} entries that provide a
+        % mapping from a file service name (and/or service name pattern)
+        % (provided by this service) to a notification service name which
+        % will receive the file's data in a service request sent with
+        % send_async. If a service name pattern is provided, it must match
+        % at least one existing file path.
 -define(DEFAULT_NOTIFY_ALL,                 []). % see below:
-        % A list of {Name, NotifyName} entries that provide a mapping from
-        % a file service name (provided by this service) to a
-        % notification service name which will receive the file's data
-        % in a service request sent with mcast_async.
+        % A list of {NameOrPattern, NotifyName} entries that provide a
+        % mapping from a file service name (and/or service name pattern)
+        % (provided by this service) to a notification service name which
+        % will receive the file's data in a service request sent with
+        % mcast_async. If a service name pattern is provided, it must match
+        % at least one existing file path.
 -define(DEFAULT_NOTIFY_ON_START,          true). % send notify in init
 -define(DEFAULT_USE_CONTENT_TYPES,        true). % see below:
         % Should the content-type ResponseInfo data be a guess based on
@@ -421,21 +425,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             UseHttpGetSuffix =:= false ->
                 Pattern
         end,
-        Files6 = cloudi_x_trie:fold_match(PatternRead,
-                                          fun(NameRead, File, Files3) ->
+        Files6 = cloudi_x_trie:fold_match(PatternRead, fun(_, File, Files3) ->
             Files4 = if
                 Files3 =:= undefined ->
                     Files2;
                 true ->
                     Files3
-            end,
-            NameReadSuffix = cloudi_args_type:service_name_suffix(Prefix,
-                                                                  NameRead),
-            FileName = if
-                UseHttpGetSuffix =:= true ->
-                    cloudi_string:beforer($/, NameReadSuffix);
-                UseHttpGetSuffix =:= false ->
-                    NameReadSuffix
             end,
             #file{path = FilePath,
                   access = Access,
@@ -443,6 +438,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             if
                 Access =:= read_write ->
                     NewFile = File#file{write = [truncate]},
+                    FileName = lists:nthtail(DirectoryLength, FilePath),
                     Files5 = file_add_write_truncate(FileName, NewFile,
                                                      Files4, Prefix,
                                                      Dispatcher),
@@ -484,21 +480,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             UseHttpGetSuffix =:= false ->
                 Pattern
         end,
-        Files12 = cloudi_x_trie:fold_match(PatternRead,
-                                           fun(NameRead, File, Files9) ->
+        Files12 = cloudi_x_trie:fold_match(PatternRead, fun(_, File, Files9) ->
             Files10 = if
                 Files9 =:= undefined ->
                     Files8;
                 true ->
                     Files9
-            end,
-            NameReadSuffix = cloudi_args_type:service_name_suffix(Prefix,
-                                                                  NameRead),
-            FileName = if
-                UseHttpGetSuffix =:= true ->
-                    cloudi_string:beforer($/, NameReadSuffix);
-                UseHttpGetSuffix =:= false ->
-                    NameReadSuffix
             end,
             #file{path = FilePath,
                   access = Access,
@@ -506,6 +493,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             if
                 Access =:= read_write ->
                     NewFile = File#file{write = [append | Write]},
+                    FileName = lists:nthtail(DirectoryLength, FilePath),
                     Files11 = file_add_write_append(FileName, NewFile,
                                                     Files10, Prefix,
                                                     Dispatcher),
@@ -542,37 +530,37 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end, Files7, WriteAppendL),
     Timeout = cloudi_service:timeout_async(Dispatcher),
     Priority = cloudi_service:priority_default(Dispatcher),
-    Files16 = lists:foldl(fun({NameOne, NotifyNameOne}, Files14) ->
-        true = is_list(NameOne) andalso is_integer(hd(NameOne)),
+    Files16 = lists:foldl(fun({PatternOne, NotifyNameOne}, Files14) ->
+        true = is_list(PatternOne) andalso is_integer(hd(PatternOne)),
         true = is_list(NotifyNameOne) andalso is_integer(hd(NotifyNameOne)),
-        true = lists:prefix(Prefix, NameOne),
+        true = lists:prefix(Prefix, PatternOne),
         case files_notify(#file_notify{send = send_async,
                                        service_name = NotifyNameOne},
-                          NameOne, Files14, Timeout, Priority,
+                          PatternOne, Files14, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
             {ok, _, Files15} ->
                 Files15;
             {error, Reason} ->
                 ?LOG_ERROR("notification name does not exist: \"~s\"",
-                           [NameOne]),
-                erlang:exit({Reason, NameOne}),
+                           [PatternOne]),
+                erlang:exit({Reason, PatternOne}),
                 Files14
         end
     end, Files13, NotifyOneL),
-    FilesN = lists:foldl(fun({NameAll, NotifyNameAll}, Files17) ->
-        true = is_list(NameAll) andalso is_integer(hd(NameAll)),
+    FilesN = lists:foldl(fun({PatternAll, NotifyNameAll}, Files17) ->
+        true = is_list(PatternAll) andalso is_integer(hd(PatternAll)),
         true = is_list(NotifyNameAll) andalso is_integer(hd(NotifyNameAll)),
-        true = lists:prefix(Prefix, NameAll),
+        true = lists:prefix(Prefix, PatternAll),
         case files_notify(#file_notify{send = mcast_async,
                                        service_name = NotifyNameAll},
-                          NameAll, Files17, Timeout, Priority,
+                          PatternAll, Files17, Timeout, Priority,
                           Prefix, DirectoryLength, UseHttpGetSuffix) of
             {ok, _, Files18} ->
                 Files18;
             {error, Reason} ->
                 ?LOG_ERROR("notification name does not exist: \"~s\"",
-                           [NameAll]),
-                erlang:exit({Reason, NameAll}),
+                           [PatternAll]),
+                erlang:exit({Reason, PatternAll}),
                 Files17
         end
     end, Files16, NotifyAllL),
@@ -616,7 +604,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 use_content_disposition = UseContentDisposition,
                 content_type_lookup = ContentTypeLookup}}.
 
-cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
+cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
                               #file_notify{} = Notify,
                               Timeout, Priority, _TransId, _Pid,
                               #state{prefix = Prefix,
@@ -624,14 +612,14 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
                                      files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, _Dispatcher) ->
-    case files_notify(Notify, Pattern, Files, Timeout, Priority,
+    case files_notify(Notify, Name, Files, Timeout, Priority,
                       Prefix, DirectoryLength, UseHttpGetSuffix) of
         {ok, Contents, NewFiles} ->
             {reply, Contents, State#state{files = NewFiles}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
-cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
+cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
                               notify_clear,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{prefix = Prefix,
@@ -639,7 +627,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
                                      files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, _Dispatcher) ->
-    case cloudi_x_trie:find(Pattern, Files) of
+    case cloudi_x_trie:find(Name, Files) of
         {ok, #file{path = FilePath} = File} ->
             FileName = lists:nthtail(DirectoryLength, FilePath),
             NewFiles = file_refresh(FileName, File#file{notify = []},
@@ -648,35 +636,31 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo,
         error ->
             {reply, {error, not_found}, State}
     end;
-cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix
                                      } = State, Dispatcher) ->
-    case cloudi_x_trie:find(Pattern, Files) of
+    case cloudi_x_trie:find(Name, Files) of
         {ok, #file{contents = Contents,
                    headers = FileHeaders,
                    mtime_i = MTimeI} = File} ->
             if
                 UseHttpGetSuffix =:= true ->
-                    case cloudi_string:afterr($/, Pattern) of
-                        "options" ->
-                            {reply,
-                             [{<<"allow">>,
-                               <<"HEAD, GET, PUT, POST, OPTIONS">>} |
-                              contents_ranges_headers(true)],
-                             <<>>, State};
-                        "head" ->
+                    case cloudi_string:splitr($/, Name) of
+                        {NamePath, "options"} ->
+                            request_options(NamePath, State);
+                        {_, "head"} ->
                             request_header(MTimeI, Contents, FileHeaders,
                                            RequestInfo, State);
-                        "get" ->
+                        {_, "get"} ->
                             request_read(MTimeI, Contents, FileHeaders,
                                          RequestInfo, State);
-                        "put" ->
+                        {_, "put"} ->
                             request_truncate(File, RequestInfo, Request,
                                              State, Dispatcher);
-                        "post" ->
-                            request_append(File, Pattern,
+                        {_, "post"} ->
+                            request_append(File, Name,
                                            RequestInfo, Request, Timeout,
                                            State, Dispatcher)
                     end;
@@ -743,6 +727,15 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+request_options(NamePath, #state{files = Files} = State) ->
+    Methods = cloudi_x_trie:fold_match(NamePath ++ "/*", fun(Name, _, L) ->
+        [string:to_upper(cloudi_string:afterr($/, Name)) | L]
+    end, [], Files),
+    Allow = erlang:list_to_binary(string:join(lists:reverse(Methods), ", ")),
+    {reply,
+     [{<<"allow">>, Allow} |
+      contents_ranges_headers(true)], <<>>, State}.
 
 request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                #state{cache = undefined,
@@ -1264,33 +1257,51 @@ notify(Agent, Name, [I | _] = NotifyName,
 
 files_notify(#file_notify{timeout = NotifyTimeout,
                           priority = NotifyPriority} = Notify,
-             Name, Files, Timeout, Priority,
+             Pattern, Files0, Timeout, Priority,
              Prefix, DirectoryLength, UseHttpGetSuffix) ->
-    case cloudi_x_trie:find(Name, Files) of
-        {ok, #file{contents = Contents,
-                   path = FilePath,
-                   notify = NotifyL} = File} ->
-            NewNotifyTimeout = if
-                is_integer(NotifyTimeout) ->
-                    NotifyTimeout;
-                true ->
-                    Timeout
-            end,
-            NewNotifyPriority = if
-                is_integer(NotifyPriority) ->
-                    NotifyPriority;
-                true ->
-                    Priority
-            end,
-            NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
-                                           priority = NewNotifyPriority},
-            FileName = lists:nthtail(DirectoryLength, FilePath),
-            NewFiles = file_refresh(FileName,
-                                    File#file{notify = [NewNotify | NotifyL]},
-                                    Files, UseHttpGetSuffix, Prefix),
-            {ok, Contents, NewFiles};
-        error ->
-            {error, enoent}
+    {ContentsN,
+     FilesN} = cloudi_x_trie:fold_match(Pattern,
+                                        fun(_, File, {Contents0, Files1}) ->
+        Files2 = if
+            Files1 =:= undefined ->
+                Files0;
+            true ->
+                Files1
+        end,
+        #file{contents = Contents1,
+              path = FilePath,
+              notify = NotifyL} = File,
+        NewNotifyTimeout = if
+            is_integer(NotifyTimeout) ->
+                NotifyTimeout;
+            true ->
+                Timeout
+        end,
+        NewNotifyPriority = if
+            is_integer(NotifyPriority) ->
+                NotifyPriority;
+            true ->
+                Priority
+        end,
+        NewNotify = Notify#file_notify{timeout = NewNotifyTimeout,
+                                       priority = NewNotifyPriority},
+        FileName = lists:nthtail(DirectoryLength, FilePath),
+        Files3 = file_refresh(FileName,
+                              File#file{notify = [NewNotify | NotifyL]},
+                              Files2, UseHttpGetSuffix, Prefix),
+        Contents2 = if
+            Contents0 =:= undefined ->
+                Contents1;
+            true ->
+                Contents0
+        end,
+        {Contents2, Files3}
+    end, {undefined, undefined}, Files0),
+    if
+        FilesN =:= undefined ->
+            {error, enoent};
+        true ->
+            {ok, ContentsN, FilesN}
     end.
 
 service_name_suffix_read_root_file("index.htm") ->

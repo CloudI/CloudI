@@ -4,7 +4,10 @@
 2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Allow the cloudi_service_filesystem configuration arguments
-      write_truncate and write_append to take service name patterns
+      write_truncate, write_append, notify_one, notify_all
+      to take service name patterns
+    * Make the OPTIONS allow response header value provided by
+      cloudi_service_filesystem correct
     * Add cloudi_args_type:service_name_suffix/2 and
       cloudi_args_type:service_name_pattern_suffix/2 for the common
       task of getting a service name suffix during service initialization
