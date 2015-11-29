@@ -196,10 +196,16 @@ function_required_pick_function(_, _, ArityOrder) ->
 
 suffix_name_parse([], Name) ->
     Name;
-suffix_name_parse([$*, C | Prefix], [H | Name])
-    when H =/= $* ->
+suffix_name_parse([$*], Name) ->
+    case lists:member($*, Name) of
+        true ->
+            erlang:exit(badarg);
+        false ->
+            ""
+    end;
+suffix_name_parse([$*, C | Prefix], [H | Name]) ->
     if
-        C =:= $* ->
+        (C =:= $*) orelse (H =:= $*) ->
             erlang:exit(badarg);
         true ->
             suffix_name_parse(Prefix, suffix_name_pattern(Name, C))
@@ -211,13 +217,6 @@ suffix_name_parse([_ | _], _) ->
 
 suffix_pattern_parse([], Pattern) ->
     Pattern;
-suffix_pattern_parse([$*], [H | Pattern]) ->
-    if
-        H =:= $* ->
-            Pattern;
-        true ->
-            ""
-    end;
 suffix_pattern_parse([C | Prefix], [C | Pattern]) ->
     suffix_pattern_parse(Prefix, Pattern);
 suffix_pattern_parse([_ | _], _) ->
@@ -242,15 +241,10 @@ suffix_test() ->
     "." = service_name_pattern_suffix("//", "//."),
     % Name
     "." = service_name_suffix("/*/", "/./."),
-    "." = service_name_pattern_suffix("/*/", "/./."),
     "." = service_name_suffix("/*/", "/..../."),
-    "." = service_name_pattern_suffix("/*/", "/..../."),
     "" = service_name_suffix("*", "."),
-    "" = service_name_pattern_suffix("*", "."),
     "" = service_name_suffix("*.", ".."),
-    "" = service_name_pattern_suffix("*.", ".."),
     "." = service_name_suffix("*.", "..."),
-    "." = service_name_pattern_suffix("*.", "..."),
     % Pattern
     "." = service_name_pattern_suffix("/*/", "/*/."),
     {'EXIT', badarg} = (catch service_name_suffix("/*/", "/*/.")),
