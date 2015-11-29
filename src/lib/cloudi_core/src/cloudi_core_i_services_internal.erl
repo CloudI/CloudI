@@ -225,14 +225,14 @@
 %%%------------------------------------------------------------------------
 
 start_link(ProcessIndex, ProcessCount, GroupLeader,
-           Module, Args, Timeout, Prefix,
+           Module, Args, Timeout, [PrefixC | _] = Prefix,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
                scope = Scope} = ConfigOptions, Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
-         is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
-         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_atom(Module), is_list(Args), is_integer(Timeout),
+         is_integer(PrefixC), is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm), is_pid(Parent)  ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse

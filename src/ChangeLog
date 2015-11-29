@@ -3,6 +3,12 @@
 
 2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add cloudi_args_type:service_name_suffix/2 and
+      cloudi_args_type:service_name_pattern_suffix/2 for the common
+      task of getting a service name suffix during service initialization
+    * Update types and guards to enforce nonempty_string() on the
+      configured service prefix and usage of the service request's
+      service name and service name pattern
     * Update erlang_term:
         * Adds support for using the size of binaries nested in maps
         * Fixes the improper list size

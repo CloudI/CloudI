@@ -206,6 +206,7 @@
 -type request_type() :: 'send_async' | 'send_sync'.
 -type service_name() :: cloudi:service_name().
 -type service_name_pattern() :: cloudi:service_name_pattern().
+-type service_name_pattern_suffix() :: cloudi:service_name_pattern_suffix().
 -type request_info() :: cloudi:request_info().
 -type request() :: cloudi:request().
 -type response_info() :: cloudi:response_info().
@@ -219,6 +220,7 @@
 -export_type([request_type/0,
               service_name/0,
               service_name_pattern/0,
+              service_name_pattern_suffix/0,
               request_info/0, request/0,
               response_info/0, response/0,
               timeout_value_milliseconds/0,
@@ -464,7 +466,7 @@ dispatcher(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec subscribe(Dispatcher :: dispatcher(),
-                Pattern :: service_name_pattern()) ->
+                Pattern :: service_name_pattern_suffix()) ->
     ok | error.
 
 subscribe(Dispatcher, Pattern)
@@ -478,7 +480,7 @@ subscribe(Dispatcher, Pattern)
 %%-------------------------------------------------------------------------
 
 -spec subscribe_count(Dispatcher :: dispatcher(),
-                      Pattern :: service_name_pattern()) ->
+                      Pattern :: service_name_pattern_suffix()) ->
     non_neg_integer().
 
 subscribe_count(Dispatcher, Pattern)
@@ -492,7 +494,7 @@ subscribe_count(Dispatcher, Pattern)
 %%-------------------------------------------------------------------------
 
 -spec unsubscribe(Dispatcher :: dispatcher(),
-                  Pattern :: service_name_pattern()) ->
+                  Pattern :: service_name_pattern_suffix()) ->
     ok | error.
 
 unsubscribe(Dispatcher, Pattern)
@@ -510,8 +512,8 @@ unsubscribe(Dispatcher, Pattern)
     {ok, PatternPid :: pattern_pid()} |
     {error, Reason :: error_reason()}.
 
-get_pid(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
+get_pid(Dispatcher, [NameC | _] = Name)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'get_pid', Name}, infinity).
 
 %%-------------------------------------------------------------------------
@@ -526,15 +528,15 @@ get_pid(Dispatcher, Name)
     {ok, PatternPid :: pattern_pid()} |
     {error, Reason :: error_reason()}.
 
-get_pid(Dispatcher, Name, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+get_pid(Dispatcher, [NameC | _] = Name, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'get_pid', Name}, infinity);
 
 get_pid(Dispatcher, Name, immediate) ->
     get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
 
-get_pid(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+get_pid(Dispatcher, [NameC | _] = Name, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'get_pid', Name,
@@ -551,8 +553,8 @@ get_pid(Dispatcher, Name, Timeout)
     {ok, PatternPids :: list(pattern_pid())} |
     {error, Reason :: error_reason()}.
 
-get_pids(Dispatcher, Name)
-    when is_pid(Dispatcher), is_list(Name) ->
+get_pids(Dispatcher, [NameC | _] = Name)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'get_pids', Name}, infinity).
 
 %%-------------------------------------------------------------------------
@@ -567,15 +569,15 @@ get_pids(Dispatcher, Name)
     {ok, PatternPids :: list(pattern_pid())} |
     {error, Reason :: error_reason()}.
 
-get_pids(Dispatcher, Name, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+get_pids(Dispatcher, [NameC | _] = Name, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'get_pids', Name}, infinity);
 
 get_pids(Dispatcher, Name, immediate) ->
     get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
 
-get_pids(Dispatcher, Name, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+get_pids(Dispatcher, [NameC | _] = Name, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'get_pids', Name,
@@ -593,8 +595,8 @@ get_pids(Dispatcher, Name, Timeout)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async(Dispatcher, [NameC | _] = Name, Request)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
@@ -611,16 +613,16 @@ send_async(Dispatcher, Name, Request)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async(Dispatcher, Name, Request, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async(Dispatcher, [NameC | _] = Name, Request, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
 send_async(Dispatcher, Name, Request, immediate) ->
     send_async(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
 
-send_async(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async(Dispatcher, [NameC | _] = Name, Request, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
@@ -641,13 +643,13 @@ send_async(Dispatcher, Name, Request, Timeout)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async(Dispatcher, Name, Request, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async(Dispatcher, [NameC | _] = Name, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
-send_async(Dispatcher, Name, Request, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+send_async(Dispatcher, [NameC | _] = Name, Request, undefined, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
 
@@ -655,16 +657,16 @@ send_async(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_async(Dispatcher, Name, Request,
                ?SEND_ASYNC_INTERVAL - 1, PatternPid);
 
-send_async(Dispatcher, Name, Request, Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async(Dispatcher, Name, Request, Timeout, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async(Dispatcher, [NameC | _] = Name, Request, Timeout, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name, <<>>, Request,
@@ -686,16 +688,16 @@ send_async(Dispatcher, Name, Request, Timeout, PatternPid)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  undefined, undefined}, infinity);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
@@ -706,9 +708,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     send_async(Dispatcher, Name, RequestInfo, Request,
                ?SEND_ASYNC_INTERVAL - 1, Priority);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name,
@@ -716,9 +718,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -743,24 +745,24 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  undefined, undefined}, infinity);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined, PatternPid}, infinity);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_async', Name,
                                  RequestInfo, Request,
@@ -771,9 +773,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     send_async(Dispatcher, Name, RequestInfo, Request,
                ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async', Name,
@@ -781,9 +783,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                  undefined,
                                  Priority, PatternPid}, infinity);
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name,
@@ -791,9 +793,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async', Name,
@@ -801,9 +803,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -812,9 +814,9 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async(Dispatcher, Name, RequestInfo, Request,
+send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
@@ -842,8 +844,8 @@ send_async(Dispatcher, Name, RequestInfo, Request,
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async_active(Dispatcher, [NameC | _] = Name, Request)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
@@ -866,16 +868,16 @@ send_async_active(Dispatcher, Name, Request)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, Request, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async_active(Dispatcher, [NameC | _] = Name, Request, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
 send_async_active(Dispatcher, Name, Request, immediate) ->
     send_async_active(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
 
-send_async_active(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
@@ -902,13 +904,14 @@ send_async_active(Dispatcher, Name, Request, Timeout)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, Request, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_async_active(Dispatcher, [NameC | _] = Name, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
-send_async_active(Dispatcher, Name, Request, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+send_async_active(Dispatcher, [NameC | _] = Name, Request,
+                  undefined, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
 
@@ -916,16 +919,16 @@ send_async_active(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_async_active(Dispatcher, Name, Request,
                       ?SEND_ASYNC_INTERVAL - 1, PatternPid);
 
-send_async_active(Dispatcher, Name, Request, Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name, <<>>, Request,
@@ -953,17 +956,17 @@ send_async_active(Dispatcher, Name, Request, Timeout, PatternPid)
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined}, infinity);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
@@ -975,9 +978,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
     send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name,
@@ -985,9 +988,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1018,32 +1021,32 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  undefined, undefined}, infinity);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined, PatternPid}, infinity);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  undefined, Priority}, infinity);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
@@ -1056,9 +1059,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
     send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name,
@@ -1066,9 +1069,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_async_active', Name,
@@ -1076,9 +1079,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1087,9 +1090,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
@@ -1123,18 +1126,18 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
     {ok, TransId :: trans_id()} |
     {error, Reason :: error_reason()}.
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, undefined, TransId, PatternPid)
-    when is_pid(Dispatcher), is_list(Name),
+    when is_pid(Dispatcher), is_integer(NameC),
          is_binary(TransId), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
                                  RequestInfo, Request,
                                  undefined, undefined,
                                  TransId, PatternPid}, infinity);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   undefined, Priority, TransId, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_binary(TransId), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_async_active', Name,
@@ -1147,9 +1150,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
     send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority, TransId, PatternPid);
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined, TransId, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX,
          is_binary(TransId), is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1158,9 +1161,9 @@ send_async_active(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined, TransId, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_async_active(Dispatcher, Name, RequestInfo, Request,
+send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, Priority, TransId, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_binary(TransId), is_tuple(PatternPid) ->
@@ -1282,8 +1285,8 @@ send_async_passive(Dispatcher, Name, RequestInfo, Request,
     {ok, Response :: response()} |
     {error, Reason :: error_reason_sync()}.
 
-send_sync(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_sync(Dispatcher, [NameC | _] = Name, Request)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
@@ -1301,16 +1304,16 @@ send_sync(Dispatcher, Name, Request)
     {ok, Response :: response()} |
     {error, Reason :: error_reason_sync()}.
 
-send_sync(Dispatcher, Name, Request, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_sync(Dispatcher, [NameC | _] = Name, Request, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
 send_sync(Dispatcher, Name, Request, immediate) ->
     send_sync(Dispatcher, Name, Request, ?SEND_SYNC_INTERVAL - 1);
 
-send_sync(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
@@ -1332,13 +1335,13 @@ send_sync(Dispatcher, Name, Request, Timeout)
     {ok, Response :: response()} |
     {error, Reason :: error_reason_sync()}.
 
-send_sync(Dispatcher, Name, Request, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+send_sync(Dispatcher, [NameC | _] = Name, Request, undefined, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
-send_sync(Dispatcher, Name, Request, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+send_sync(Dispatcher, [NameC | _] = Name, Request, undefined, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_sync', Name, <<>>, Request,
                                  undefined, undefined, PatternPid}, infinity);
 
@@ -1346,16 +1349,16 @@ send_sync(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_sync(Dispatcher, Name, Request,
               ?SEND_SYNC_INTERVAL - 1, PatternPid);
 
-send_sync(Dispatcher, Name, Request, Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout, PatternPid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name, <<>>, Request,
@@ -1378,16 +1381,16 @@ send_sync(Dispatcher, Name, Request, Timeout, PatternPid)
     {ok, Response :: response()} |
     {error, Reason :: error_reason_sync()}.
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  undefined, undefined}, infinity);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
@@ -1398,9 +1401,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
     send_sync(Dispatcher, Name, RequestInfo, Request,
               ?SEND_SYNC_INTERVAL - 1, Priority);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name,
@@ -1408,9 +1411,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1436,32 +1439,32 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
     {ok, Response :: response()} |
     {error, Reason :: error_reason_sync()}.
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  undefined, undefined}, infinity);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_tuple(PatternPid) ->
+    when is_pid(Dispatcher), is_integer(NameC), is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined, PatternPid}, infinity);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'send_sync', Name,
                                  RequestInfo, Request,
                                  undefined, Priority}, infinity);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           undefined, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
     gen_server:call(Dispatcher, {'send_sync', Name,
@@ -1474,9 +1477,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
     send_sync(Dispatcher, Name, RequestInfo, Request,
               ?SEND_SYNC_INTERVAL - 1, Priority, PatternPid);
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name,
@@ -1484,9 +1487,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, undefined, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_tuple(PatternPid) ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'send_sync', Name,
@@ -1494,9 +1497,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, undefined, PatternPid},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1505,9 +1508,9 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
                                     Timeout, Priority},
                                    Timeout + ?TIMEOUT_DELTA));
 
-send_sync(Dispatcher, Name, RequestInfo, Request,
+send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, PatternPid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW,
          is_tuple(PatternPid) ->
@@ -1531,8 +1534,8 @@ send_sync(Dispatcher, Name, RequestInfo, Request,
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async(Dispatcher, [NameC | _] = Name, Request)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
@@ -1551,16 +1554,16 @@ mcast_async(Dispatcher, Name, Request)
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async(Dispatcher, Name, Request, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async(Dispatcher, [NameC | _] = Name, Request, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
 mcast_async(Dispatcher, Name, Request, immediate) ->
     mcast_async(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
 
-mcast_async(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async(Dispatcher, [NameC | _] = Name, Request, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name, <<>>, Request,
@@ -1584,15 +1587,17 @@ mcast_async(Dispatcher, Name, Request, Timeout)
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+            undefined, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined}, infinity);
 
-mcast_async(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+            undefined, Priority)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'mcast_async', Name,
                                  RequestInfo, Request,
@@ -1603,8 +1608,9 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, immediate, Priority) ->
     mcast_async(Dispatcher, Name, RequestInfo, Request,
                 ?MCAST_ASYNC_INTERVAL - 1, Priority);
 
-mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+            Timeout, undefined)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async', Name,
@@ -1612,8 +1618,9 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+            Timeout, Priority)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1642,8 +1649,8 @@ mcast_async(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async_active(Dispatcher, Name, Request)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async_active(Dispatcher, [NameC | _] = Name, Request)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity).
 
@@ -1668,16 +1675,16 @@ mcast_async_active(Dispatcher, Name, Request)
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async_active(Dispatcher, Name, Request, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async_active(Dispatcher, [NameC | _] = Name, Request, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async_active', Name, <<>>, Request,
                                  undefined, undefined}, infinity);
 
 mcast_async_active(Dispatcher, Name, Request, immediate) ->
     mcast_async_active(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
 
-mcast_async_active(Dispatcher, Name, Request, Timeout)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async_active', Name, <<>>, Request,
@@ -1707,15 +1714,17 @@ mcast_async_active(Dispatcher, Name, Request, Timeout)
     {ok, TransIdList :: list(trans_id())} |
     {error, Reason :: error_reason()}.
 
-mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, undefined)
-    when is_pid(Dispatcher), is_list(Name) ->
+mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+                   undefined, undefined)
+    when is_pid(Dispatcher), is_integer(NameC) ->
     gen_server:call(Dispatcher, {'mcast_async_active', Name,
                                  RequestInfo, Request,
                                  undefined,
                                  undefined}, infinity);
 
-mcast_async_active(Dispatcher, Name, RequestInfo, Request, undefined, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Priority),
+mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+                   undefined, Priority)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     gen_server:call(Dispatcher, {'mcast_async_active', Name,
                                  RequestInfo, Request,
@@ -1727,8 +1736,9 @@ mcast_async_active(Dispatcher, Name, RequestInfo, Request,
     mcast_async_active(Dispatcher, Name, RequestInfo, Request,
                        ?MCAST_ASYNC_INTERVAL - 1, Priority);
 
-mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+                   Timeout, undefined)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
                                    {'mcast_async_active', Name,
@@ -1736,8 +1746,9 @@ mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, undefined)
                                     Timeout, undefined},
                                    Timeout + ?TIMEOUT_DELTA));
 
-mcast_async_active(Dispatcher, Name, RequestInfo, Request, Timeout, Priority)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
+                   Timeout, Priority)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     ?CATCH_TIMEOUT(gen_server:call(Dispatcher,
@@ -1845,9 +1856,9 @@ forward(Dispatcher, 'send_sync', Name, RequestInfo, Request,
                     Pid :: pid()) ->
     no_return().
 
-forward_async(Dispatcher, Name, RequestInfo, Request,
+forward_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
               Timeout, Priority, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
@@ -1872,9 +1883,9 @@ forward_async(Dispatcher, Name, RequestInfo, Request,
                    Pid :: pid()) ->
     no_return().
 
-forward_sync(Dispatcher, Name, RequestInfo, Request,
+forward_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
              Timeout, Priority, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_integer(Timeout),
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
          is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
@@ -1955,9 +1966,9 @@ return(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
                    Pid :: pid()) ->
     no_return().
 
-return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
-             Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+return_async(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
+             ResponseInfo, Response, Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
          is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     erlang:throw({cloudi_service_return,
@@ -1981,9 +1992,9 @@ return_async(Dispatcher, Name, Pattern, ResponseInfo, Response,
                   Pid :: pid()) ->
     no_return().
 
-return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
-            Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+return_sync(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
+            ResponseInfo, Response, Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
          is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     erlang:throw({cloudi_service_return,
@@ -2013,9 +2024,10 @@ return_sync(Dispatcher, Name, Pattern, ResponseInfo, Response,
                      Pid :: pid()) ->
     ok.
 
-return_nothrow(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
-               Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+return_nothrow(Dispatcher, 'send_async',
+               [NameC | _] = Name, [PatternC | _] = Pattern,
+               ResponseInfo, Response, Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
          is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     Pid ! {'cloudi_service_return_async', Name, Pattern,
@@ -2023,9 +2035,10 @@ return_nothrow(Dispatcher, 'send_async', Name, Pattern, ResponseInfo, Response,
            Timeout, TransId, Pid},
     ok;
 
-return_nothrow(Dispatcher, 'send_sync', Name, Pattern, ResponseInfo, Response,
-               Timeout, TransId, Pid)
-    when is_pid(Dispatcher), is_list(Name), is_list(Pattern),
+return_nothrow(Dispatcher, 'send_sync',
+               [NameC | _] = Name, [PatternC | _] = Pattern,
+               ResponseInfo, Response, Timeout, TransId, Pid)
+    when is_pid(Dispatcher), is_integer(NameC), is_integer(PatternC),
          is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     Pid ! {'cloudi_service_return_sync', Name, Pattern,

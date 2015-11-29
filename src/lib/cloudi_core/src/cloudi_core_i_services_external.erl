@@ -208,7 +208,7 @@
 
 start_link(Protocol, SocketPath,
            ThreadIndex, ProcessIndex, ProcessCount,
-           CommandLine, BufferSize, Timeout, Prefix,
+           CommandLine, BufferSize, Timeout, [PrefixC | _] = Prefix,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
@@ -216,7 +216,7 @@ start_link(Protocol, SocketPath,
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_list(CommandLine),
-         is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
+         is_integer(BufferSize), is_integer(Timeout), is_integer(PrefixC),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm) ->
     true = (Protocol =:= tcp) orelse
@@ -1614,12 +1614,12 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     end.
 
 'init_out'(ProcessIndex, ProcessCount,
-           ProcessCountMax, ProcessCountMin, Prefix,
+           ProcessCountMax, ProcessCountMin, [PrefixC | _] = Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
            PriorityDefault, RequestTimeoutAdjustment)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ProcessCountMax), is_integer(ProcessCountMin),
-         is_list(Prefix), is_integer(TimeoutInit),
+         is_integer(PrefixC), is_integer(TimeoutInit),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm), is_integer(PriorityDefault),
          PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
@@ -1662,9 +1662,9 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
 'keepalive_out'() ->
     <<?MESSAGE_KEEPALIVE:32/unsigned-integer-native>>.
 
-'send_async_out'(Name, Pattern, RequestInfo, Request,
-                 Timeout, Priority, TransId, Source)
-    when is_list(Name), is_list(Pattern),
+'send_async_out'([NameC | _] = Name, [PatternC | _] = Pattern,
+                 RequestInfo, Request, Timeout, Priority, TransId, Source)
+    when is_integer(NameC), is_integer(PatternC),
          is_binary(RequestInfo), is_binary(Request),
          is_integer(Timeout), is_integer(Priority),
          is_binary(TransId), is_pid(Source) ->
@@ -1696,9 +1696,9 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
       SourceSize:32/unsigned-integer-native,
       SourceBin/binary>>.
 
-'send_sync_out'(Name, Pattern, RequestInfo, Request,
-                Timeout, Priority, TransId, Source)
-    when is_list(Name), is_list(Pattern),
+'send_sync_out'([NameC | _] = Name, [PatternC | _] = Pattern,
+                RequestInfo, Request, Timeout, Priority, TransId, Source)
+    when is_integer(NameC), is_integer(PatternC),
          is_binary(RequestInfo), is_binary(Request),
          is_integer(Timeout), is_integer(Priority),
          is_binary(TransId), is_pid(Source) ->

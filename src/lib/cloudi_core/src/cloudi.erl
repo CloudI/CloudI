@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -97,8 +97,9 @@
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_configuration_defaults.hrl").
 
--type service_name() :: string().
--type service_name_pattern() :: string().
+-type service_name() :: nonempty_string().
+-type service_name_pattern() :: nonempty_string().
+-type service_name_pattern_suffix() :: string().
 -type request_info() :: any().
 -type request() :: any().
 -type response_info() :: any().
@@ -112,6 +113,7 @@
 -type pattern_pid() :: {service_name_pattern(), pid()}.
 -export_type([service_name/0,
               service_name_pattern/0,
+              service_name_pattern_suffix/0,
               request_info/0, request/0,
               response_info/0, response/0,
               timeout_value_milliseconds/0,
@@ -407,8 +409,8 @@ get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
 get_pid(#cloudi_context{} = Context, Name, immediate) ->
     get_pid(Context, Name, ?SEND_SYNC_INTERVAL - 1);
 
-get_pid(#cloudi_context{} = Context, Name, Timeout)
-    when is_list(Name), is_integer(Timeout),
+get_pid(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -475,8 +477,8 @@ get_pids(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
 get_pids(#cloudi_context{} = Context, Name, immediate) ->
     get_pids(Context, Name, ?SEND_SYNC_INTERVAL - 1);
 
-get_pids(#cloudi_context{} = Context, Name, Timeout)
-    when is_list(Name), is_integer(Timeout),
+get_pids(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -633,9 +635,9 @@ send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
                Timeout, PriorityDefault, PatternPid);
 
 send_async(#cloudi_context{} = Context,
-           Name, RequestInfo, Request,
+           [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, undefined)
-    when is_list(Name), is_integer(Timeout),
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -666,9 +668,9 @@ send_async(#cloudi_context{} = Context,
 
 send_async(#cloudi_context{receiver = Receiver,
                            uuid_generator = UUID} = Context,
-           Name, RequestInfo, Request,
+           [NameC | _] = Name, RequestInfo, Request,
            Timeout, Priority, {Pattern, Pid})
-    when is_list(Name), is_integer(Timeout),
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
@@ -913,9 +915,9 @@ send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
               Timeout, PriorityDefault, PatternPid);
 
 send_sync(#cloudi_context{} = Context,
-          Name, RequestInfo, Request,
+          [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, undefined)
-    when is_list(Name), is_integer(Timeout),
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX ->
     NewContext = destinations_refresh_check(Context),
     #cloudi_context{
@@ -946,9 +948,9 @@ send_sync(#cloudi_context{} = Context,
 
 send_sync(#cloudi_context{receiver = Receiver,
                           uuid_generator = UUID} = Context,
-          Name, RequestInfo, Request,
+          [NameC | _] = Name, RequestInfo, Request,
           Timeout, Priority, {Pattern, Pid})
-    when is_list(Name), is_integer(Timeout),
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
@@ -1043,8 +1045,8 @@ mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
                 Timeout, PriorityDefault);
 
 mcast_async(#cloudi_context{} = Context,
-            Name, RequestInfo, Request, Timeout, Priority)
-    when is_list(Name), is_integer(Timeout),
+            [NameC | _] = Name, RequestInfo, Request, Timeout, Priority)
+    when is_integer(NameC), is_integer(Timeout),
          Timeout >= 0, Timeout =< ?TIMEOUT_MAX, is_integer(Priority),
          Priority >= ?PRIORITY_HIGH, Priority =< ?PRIORITY_LOW ->
     NewContext = destinations_refresh_check(Context),
@@ -1677,78 +1679,46 @@ destination_refresh_start(DestRefresh, _, _)
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
-lazy_check_get(Name, {ok, _, Pid} = Result) ->
-    if
-        node() =:= node(Pid) ->
-            case erlang:is_process_alive(Pid) of
-                true ->
-                    Result;
-                false ->
-                    % stale lookup: give the function call a chance to
-                    %               do a destination refresh
-                    {error, {no_process, Name}}
-            end;
-        true ->
-            Result
-    end;
+destination_get(lazy_closest, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_closest_pid(Name, Groups);
 
-lazy_check_get(_, {error, _} = Result) ->
-    Result.
+destination_get(lazy_furthest, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_furthest_pid(Name, Groups);
 
-destination_get(lazy_closest, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_closest_pid(Name, Groups));
+destination_get(lazy_random, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_random_pid(Name, Groups);
 
-destination_get(lazy_furthest, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_furthest_pid(Name, Groups));
+destination_get(lazy_local, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_local_pid(Name, Groups);
 
-destination_get(lazy_random, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_random_pid(Name, Groups));
+destination_get(lazy_remote, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_remote_pid(Name, Groups);
 
-destination_get(lazy_local, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_local_pid(Name, Groups));
+destination_get(lazy_newest, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_newest_pid(Name, Groups);
 
-destination_get(lazy_remote, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_remote_pid(Name, Groups));
+destination_get(lazy_oldest, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_oldest_pid(Name, Groups);
 
-destination_get(lazy_newest, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_newest_pid(Name, Groups));
-
-destination_get(lazy_oldest, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_get(Name, cloudi_x_cpg_data:get_oldest_pid(Name, Groups));
-
-destination_get(immediate_closest, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_closest, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_closest_pid(Scope, Name, Timeout));
 
-destination_get(immediate_furthest, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_furthest, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_furthest_pid(Scope, Name, Timeout));
 
-destination_get(immediate_random, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_random, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_random_pid(Scope, Name, Timeout));
 
-destination_get(immediate_local, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_local, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_local_pid(Scope, Name, Timeout));
 
-destination_get(immediate_remote, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_remote, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_remote_pid(Scope, Name, Timeout));
 
-destination_get(immediate_newest, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_newest, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_newest_pid(Scope, Name, Timeout));
 
-destination_get(immediate_oldest, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_get(immediate_oldest, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Scope, Name, Timeout));
 
 destination_get(DestRefresh, _, _, _, _) ->
@@ -1756,59 +1726,32 @@ destination_get(DestRefresh, _, _, _, _) ->
                [DestRefresh]),
     erlang:exit(badarg).
 
-lazy_check_all(Name, {ok, _, PidList} = Result) ->
-    Check = fun(Pid) ->
-        if
-            node() =:= node(Pid) ->
-                erlang:is_process_alive(Pid);
-            true ->
-                true
-        end
-    end,
-    case lists:all(Check, PidList) of
-        true ->
-            Result;
-        false ->
-            % stale lookup: give the function call a chance to
-            %               do a destination refresh
-            {error, {no_such_group, Name}}
-    end;
-
-lazy_check_all(_, {error, _} = Result) ->
-    Result.
-
 destination_all(DestRefresh, _, Name, Groups, _)
-    when is_list(Name),
-         (DestRefresh =:= lazy_closest orelse
+    when (DestRefresh =:= lazy_closest orelse
           DestRefresh =:= lazy_furthest orelse
           DestRefresh =:= lazy_random orelse
           DestRefresh =:= lazy_newest orelse
           DestRefresh =:= lazy_oldest) ->
-    lazy_check_all(Name, cloudi_x_cpg_data:get_members(Name, Groups));
+    cloudi_x_cpg_data:get_members(Name, Groups);
 
-destination_all(lazy_local, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_all(Name, cloudi_x_cpg_data:get_local_members(Name, Groups));
+destination_all(lazy_local, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_local_members(Name, Groups);
 
-destination_all(lazy_remote, _, Name, Groups, _)
-    when is_list(Name) ->
-    lazy_check_all(Name, cloudi_x_cpg_data:get_remote_members(Name, Groups));
+destination_all(lazy_remote, _, Name, Groups, _) ->
+    cloudi_x_cpg_data:get_remote_members(Name, Groups);
 
 destination_all(DestRefresh, Scope, Name, _, Timeout)
     when (DestRefresh =:= immediate_closest orelse
           DestRefresh =:= immediate_furthest orelse
           DestRefresh =:= immediate_random orelse
           DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest),
-         is_list(Name) ->
+          DestRefresh =:= immediate_oldest) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_members(Scope, Name, Timeout));
 
-destination_all(immediate_local, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_all(immediate_local, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_local_members(Scope, Name, Timeout));
 
-destination_all(immediate_remote, Scope, Name, _, Timeout)
-    when is_list(Name) ->
+destination_all(immediate_remote, Scope, Name, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Scope, Name, Timeout));
 
 destination_all(DestRefresh, _, _, _, _) ->

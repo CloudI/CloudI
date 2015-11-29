@@ -54,7 +54,9 @@
 %% external interface
 -export([function_required/2,
          function_required_pick/2,
-         function_optional/2]).
+         function_optional/2,
+         service_name_suffix/2,
+         service_name_pattern_suffix/2]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
@@ -112,6 +114,50 @@ function_optional(undefined, _) ->
 function_optional(Function, Arity) ->
     function_required(Function, Arity).
 
+-spec service_name_suffix(Prefix :: cloudi:service_name_pattern(),
+                          Name :: cloudi:service_name()) ->
+    string().
+
+service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
+    when is_integer(PrefixC), is_integer(NameC) ->
+    try suffix_name_parse(Prefix, Name)
+    catch
+        exit:badarg ->
+            ?LOG_ERROR("prefix service name mismatch: \"~s\" \"~s\"",
+                       [Prefix, Name]),
+            erlang:exit(badarg)
+    end;
+service_name_suffix([PrefixC | _], Name)
+    when is_integer(PrefixC) ->
+    ?LOG_ERROR("invalid service name: ~p", [Name]),
+    erlang:exit(badarg);
+service_name_suffix(Prefix, [NameC | _])
+    when is_integer(NameC) ->
+    ?LOG_ERROR("invalid prefix: ~p", [Prefix]),
+    erlang:exit(badarg).
+
+-spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
+                                  Pattern :: cloudi:service_name_pattern()) ->
+    string().
+
+service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
+    when is_integer(PrefixC), is_integer(PatternC) ->
+    try suffix_pattern_parse(Prefix, Pattern)
+    catch
+        exit:badarg ->
+            ?LOG_ERROR("prefix service name pattern mismatch: \"~s\" \"~s\"",
+                       [Prefix, Pattern]),
+            erlang:exit(badarg)
+    end;
+service_name_pattern_suffix([PrefixC | _], Pattern)
+    when is_integer(PrefixC) ->
+    ?LOG_ERROR("invalid service name pattern: ~p", [Pattern]),
+    erlang:exit(badarg);
+service_name_pattern_suffix(Prefix, [PatternC | _])
+    when is_integer(PatternC) ->
+    ?LOG_ERROR("invalid prefix: ~p", [Prefix]),
+    erlang:exit(badarg).
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -147,4 +193,79 @@ function_required_pick_function([Arity | ArityL], Function, ArityOrder)
     end;
 function_required_pick_function(_, _, ArityOrder) ->
     erlang:exit({badarg, ArityOrder}).
+
+suffix_name_parse([], Name) ->
+    Name;
+suffix_name_parse([$*, C | Prefix], [H | Name])
+    when H =/= $* ->
+    if
+        C =:= $* ->
+            erlang:exit(badarg);
+        true ->
+            suffix_name_parse(Prefix, suffix_name_pattern(Name, C))
+    end;
+suffix_name_parse([C | Prefix], [C | Name]) ->
+    suffix_name_parse(Prefix, Name);
+suffix_name_parse([_ | _], _) ->
+    erlang:exit(badarg).
+
+suffix_pattern_parse([], Pattern) ->
+    Pattern;
+suffix_pattern_parse([$*], [H | Pattern]) ->
+    if
+        H =:= $* ->
+            Pattern;
+        true ->
+            ""
+    end;
+suffix_pattern_parse([C | Prefix], [C | Pattern]) ->
+    suffix_pattern_parse(Prefix, Pattern);
+suffix_pattern_parse([_ | _], _) ->
+    erlang:exit(badarg).
+
+suffix_name_pattern([], _) ->
+    erlang:exit(badarg);
+suffix_name_pattern([$* | _], _) ->
+    erlang:exit(badarg);
+suffix_name_pattern([C | Name], C) ->
+    Name;
+suffix_name_pattern([_ | Name], C) ->
+    suffix_name_pattern(Name, C).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+suffix_test() ->
+    % based on cloudi_service_name:suffix/2 but enforcing checks on whether
+    % it is a service name or service name pattern for service initialization
+    "." = service_name_suffix("//", "//."),
+    "." = service_name_pattern_suffix("//", "//."),
+    % Name
+    "." = service_name_suffix("/*/", "/./."),
+    "." = service_name_pattern_suffix("/*/", "/./."),
+    "." = service_name_suffix("/*/", "/..../."),
+    "." = service_name_pattern_suffix("/*/", "/..../."),
+    "" = service_name_suffix("*", "."),
+    "" = service_name_pattern_suffix("*", "."),
+    "" = service_name_suffix("*.", ".."),
+    "" = service_name_pattern_suffix("*.", ".."),
+    "." = service_name_suffix("*.", "..."),
+    "." = service_name_pattern_suffix("*.", "..."),
+    % Pattern
+    "." = service_name_pattern_suffix("/*/", "/*/."),
+    {'EXIT', badarg} = (catch service_name_suffix("/*/", "/*/.")),
+    "." = service_name_pattern_suffix("/*", "/*."),
+    {'EXIT', badarg} = (catch service_name_suffix("/*", "/*.")),
+    % errors
+    {'EXIT', badarg} = (catch service_name_suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch service_name_pattern_suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch service_name_suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch service_name_pattern_suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch service_name_suffix("", ".")),
+    {'EXIT', badarg} = (catch service_name_pattern_suffix("", ".")),
+    {'EXIT', badarg} = (catch service_name_suffix(".", "")),
+    {'EXIT', badarg} = (catch service_name_pattern_suffix(".", "")),
+    ok.
+
+-endif.
 

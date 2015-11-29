@@ -367,7 +367,6 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (UseContentTypes =:= false) andalso
             (WriteTruncateL == []) andalso (WriteAppendL == [])),
     false = lists:member($*, Prefix),
-    PrefixLength = erlang:length(Prefix),
     Directory = cloudi_environment:transform(DirectoryRaw),
     DirectoryLength = erlang:length(Directory),
     ContentTypeLookup = if
@@ -386,14 +385,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     ReadLN = lists:map(fun(Read) ->
         case Read of
             [_ | _] = ReadName ->
-                true = lists:prefix(Prefix, ReadName),
-                {lists:nthtail(PrefixLength, ReadName),
+                {cloudi_args_type:service_name_suffix(Prefix, ReadName),
                  undefined, undefined};
             {[_ | _] = ReadName, ReadSegmentI}
                 when is_integer(ReadSegmentI) orelse
                      (ReadSegmentI =:= undefined) ->
-                true = lists:prefix(Prefix, ReadName),
-                {lists:nthtail(PrefixLength, ReadName),
+                {cloudi_args_type:service_name_suffix(Prefix, ReadName),
                  ReadSegmentI, undefined};
             {[_ | _] = ReadName, {ReadSegmentI, ReadSegmentSize}}
                 when (is_integer(ReadSegmentI) orelse
@@ -401,8 +398,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                      ((is_integer(ReadSegmentSize) andalso
                        (ReadSegmentSize >= 0)) orelse
                       (ReadSegmentSize =:= undefined)) ->
-                true = lists:prefix(Prefix, ReadName),
-                {lists:nthtail(PrefixLength, ReadName),
+                {cloudi_args_type:service_name_suffix(Prefix, ReadName),
                  ReadSegmentI, ReadSegmentSize}
         end
     end, ReadL0),
@@ -413,8 +409,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                FilesSizeLimitN, Prefix, Dispatcher),
     MTimeFake = calendar:now_to_universal_time(os:timestamp()),
     Files4 = lists:foldl(fun(Name, Files2) ->
-        true = lists:prefix(Prefix, Name),
-        FileName = lists:nthtail(PrefixLength, Name),
+        FileName = cloudi_args_type:service_name_suffix(Prefix, Name),
         Pattern = if
             UseHttpGetSuffix =:= true ->
                 Name ++ "/get";
@@ -431,6 +426,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 file_refresh(FileName, NewFile,
                              Files3, true, Prefix);
             {ok, #file{path = FilePath}} ->
+                ?LOG_ERROR("unable to read and write file: \"~s\"",
+                           [FilePath]),
                 erlang:exit({eacces, FilePath}),
                 Files2;
             error ->
@@ -450,8 +447,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end
     end, Files1, WriteTruncateL),
     Files7 = lists:foldl(fun(Name, Files5) ->
-        true = lists:prefix(Prefix, Name),
-        FileName = lists:nthtail(PrefixLength, Name),
+        FileName = cloudi_args_type:service_name_suffix(Prefix, Name),
         Pattern = if
             UseHttpGetSuffix =:= true ->
                 Name ++ "/get";
@@ -468,6 +464,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 file_refresh(FileName, NewFile,
                              Files6, true, Prefix);
             {ok, #file{path = FilePath}} ->
+                ?LOG_ERROR("unable to read and write file: \"~s\"",
+                           [FilePath]),
                 erlang:exit({eacces, FilePath}),
                 Files5;
             error ->
@@ -499,6 +497,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             {ok, _, Files9} ->
                 Files9;
             {error, Reason} ->
+                ?LOG_ERROR("notification name does not exist: \"~s\"",
+                           [NameOne]),
                 erlang:exit({Reason, NameOne}),
                 Files8
         end
@@ -514,6 +514,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             {ok, _, Files12} ->
                 Files12;
             {error, Reason} ->
+                ?LOG_ERROR("notification name does not exist: \"~s\"",
+                           [NameAll]),
                 erlang:exit({Reason, NameAll}),
                 Files11
         end
@@ -543,7 +545,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             ok
     end,
     {ok, #state{prefix = Prefix,
-                prefix_length = PrefixLength,
+                prefix_length = erlang:length(Prefix),
                 service = Service,
                 directory = Directory,
                 directory_length = DirectoryLength,
