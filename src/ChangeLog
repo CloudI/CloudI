@@ -3,6 +3,8 @@
 
 2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add cloudi_service_filesystem redirect configuration argument to
+      permanently redirect existing file paths to similar service names
     * Allow the cloudi_service_filesystem configuration arguments
       write_truncate, write_append, notify_one, notify_all
       to take service name patterns

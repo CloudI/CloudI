@@ -109,6 +109,11 @@
         % (n.b., use to update with a range request in bytes).
         % If a service name pattern is provided, it must match at
         % least one existing file path.
+-define(DEFAULT_REDIRECT,                   []). % see below:
+        % A list of file service name patterns
+        % ({Pattern, RedirectPattern}) to provide a mapping from
+        % a received service name to a different service name.
+        % Each service name pattern must match at least one existing file path.
 -define(DEFAULT_NOTIFY_ONE,                 []). % see below:
         % A list of {NameOrPattern, NotifyName} entries that provide a
         % mapping from a file service name (and/or service name pattern)
@@ -181,7 +186,8 @@
         write = [] :: list(truncate | append),
         write_appends = [] :: list({binary(),
                                     list({non_neg_integer(),
-                                          {any(), any()}})})
+                                          {any(), any()}})}),
+        redirect = undefined :: undefined | binary()
     }).
 
 %%%------------------------------------------------------------------------
@@ -335,6 +341,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {read,                         ?DEFAULT_READ},
         {write_truncate,               ?DEFAULT_WRITE_TRUNCATE},
         {write_append,                 ?DEFAULT_WRITE_APPEND},
+        {redirect,                     ?DEFAULT_REDIRECT},
         {notify_one,                   ?DEFAULT_NOTIFY_ONE},
         {notify_all,                   ?DEFAULT_NOTIFY_ALL},
         {notify_on_start,              ?DEFAULT_NOTIFY_ON_START},
@@ -342,7 +349,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
         {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0,
-     ReadL0, WriteTruncateL, WriteAppendL,
+     ReadL0, WriteTruncateL, WriteAppendL, RedirectL,
      NotifyOneL, NotifyAllL, NotifyOnStart,
      UseContentTypes, UseContentDisposition, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
@@ -368,6 +375,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_list(ReadL0),
     true = is_list(WriteTruncateL),
     true = is_list(WriteAppendL),
+    true = is_list(RedirectL),
     true = is_list(NotifyOneL),
     true = is_list(NotifyAllL),
     true = is_boolean(NotifyOnStart),
@@ -375,7 +383,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (UseHttpGetSuffix =:= true) orelse
            ((UseHttpGetSuffix =:= false) andalso
             (UseContentTypes =:= false) andalso
-            (WriteTruncateL == []) andalso (WriteAppendL == [])),
+            (WriteTruncateL == []) andalso
+            (WriteAppendL == []) andalso
+            (RedirectL == [])),
     false = lists:member($*, Prefix),
     Directory = cloudi_environment:transform(DirectoryRaw),
     DirectoryLength = erlang:length(Directory),
@@ -419,12 +429,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                FilesSizeLimitN, Prefix, Dispatcher),
     MTimeFake = calendar:now_to_universal_time(os:timestamp()),
     Files7 = lists:foldl(fun(Pattern, Files2) ->
-        PatternRead = if
-            UseHttpGetSuffix =:= true ->
-                Pattern ++ "/get";
-            UseHttpGetSuffix =:= false ->
-                Pattern
-        end,
+        true = UseHttpGetSuffix,
+        PatternRead = Pattern ++ "/get",
         Files6 = cloudi_x_trie:fold_match(PatternRead, fun(_, File, Files3) ->
             Files4 = if
                 Files3 =:= undefined ->
@@ -474,12 +480,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end
     end, Files1, WriteTruncateL),
     Files13 = lists:foldl(fun(Pattern, Files8) ->
-        PatternRead = if
-            UseHttpGetSuffix =:= true ->
-                Pattern ++ "/get";
-            UseHttpGetSuffix =:= false ->
-                Pattern
-        end,
+        true = UseHttpGetSuffix,
+        PatternRead = Pattern ++ "/get",
         Files12 = cloudi_x_trie:fold_match(PatternRead, fun(_, File, Files9) ->
             Files10 = if
                 Files9 =:= undefined ->
@@ -547,7 +549,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 Files14
         end
     end, Files13, NotifyOneL),
-    FilesN = lists:foldl(fun({PatternAll, NotifyNameAll}, Files17) ->
+    Files19 = lists:foldl(fun({PatternAll, NotifyNameAll}, Files17) ->
         true = is_list(PatternAll) andalso is_integer(hd(PatternAll)),
         true = is_list(NotifyNameAll) andalso is_integer(hd(NotifyNameAll)),
         true = lists:prefix(Prefix, PatternAll),
@@ -564,6 +566,47 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 Files17
         end
     end, Files16, NotifyAllL),
+    FilesN = lists:foldl(fun({Pattern, RedirectPattern}, Files20) ->
+        true = UseHttpGetSuffix,
+        true = lists:member($*, Pattern),
+        PatternMethods = Pattern ++ "/*",
+        Files23 = cloudi_x_trie:fold_match(PatternMethods,
+                                           fun(NameMethod, File, Files21) ->
+            Files22 = if
+                Files21 =:= undefined ->
+                    Files20;
+                true ->
+                    Files21
+            end,
+            #file{path = FilePath,
+                  redirect = undefined} = File,
+            ParametersMethod = cloudi_service_name:parse(NameMethod,
+                                                         PatternMethods),
+            Parameters = lists:reverse(tl(lists:reverse(ParametersMethod))),
+            RedirectName = case cloudi_service_name:new(RedirectPattern,
+                                                        Parameters) of
+                {ok, RedirectNameString} ->
+                    erlang:list_to_binary(RedirectNameString);
+                {error, Reason} ->
+                    ?LOG_ERROR("redirect ~p: \"~s\" \"~s\"",
+                               [Reason, Pattern, RedirectPattern]),
+                    erlang:exit({Reason, {Pattern, RedirectPattern}}),
+                    undefined
+            end,
+            NewFile = File#file{redirect = RedirectName},
+            FileName = lists:nthtail(DirectoryLength, FilePath),
+            file_refresh(FileName, NewFile,
+                         Files22, true, Prefix)
+        end, undefined, Files20),
+        if
+            Files23 =:= undefined ->
+                ?LOG_ERROR("redirect pattern does not match: \"~s\"",
+                           [Pattern]),
+                erlang:exit({enoent, Pattern});
+            true ->
+                Files23
+        end
+    end, Files19, RedirectL),
     if
         NotifyOnStart =:= true ->
             cloudi_x_trie:foreach(fun(Name,
@@ -644,25 +687,37 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
     case cloudi_x_trie:find(Name, Files) of
         {ok, #file{contents = Contents,
                    headers = FileHeaders,
-                   mtime_i = MTimeI} = File} ->
+                   mtime_i = MTimeI,
+                   redirect = Redirect} = File} ->
             if
                 UseHttpGetSuffix =:= true ->
-                    case cloudi_string:splitr($/, Name) of
-                        {NamePath, "options"} ->
-                            request_options(NamePath, State);
-                        {_, "head"} ->
-                            request_header(MTimeI, Contents, FileHeaders,
-                                           RequestInfo, State);
-                        {_, "get"} ->
-                            request_read(MTimeI, Contents, FileHeaders,
-                                         RequestInfo, State);
-                        {_, "put"} ->
-                            request_truncate(File, RequestInfo, Request,
-                                             State, Dispatcher);
-                        {_, "post"} ->
-                            request_append(File, Name,
-                                           RequestInfo, Request, Timeout,
-                                           State, Dispatcher)
+                    if
+                        Redirect =:= undefined ->
+                            case cloudi_string:splitr($/, Name) of
+                                {NamePath, "options"} ->
+                                    request_options(NamePath, State);
+                                {_, "head"} ->
+                                    request_header(MTimeI,
+                                                   Contents, FileHeaders,
+                                                   RequestInfo, State);
+                                {_, "get"} ->
+                                    request_read(MTimeI,
+                                                 Contents, FileHeaders,
+                                                 RequestInfo, State);
+                                {_, "put"} ->
+                                    request_truncate(File,
+                                                     RequestInfo, Request,
+                                                     State, Dispatcher);
+                                {_, "post"} ->
+                                    request_append(File, Name,
+                                                   RequestInfo, Request,
+                                                   Timeout, State, Dispatcher)
+                            end;
+                        is_binary(Redirect) ->
+                            {reply,
+                             [{<<"status">>, <<"301">>},
+                              {<<"location">>, Redirect}],
+                             <<>>, State}
                     end;
                 UseHttpGetSuffix =:= false ->
                     request_read(MTimeI, Contents, FileHeaders,
@@ -672,7 +727,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
             % possible if a sending service has stale service name lookup data
             % with a file that was removed during a refresh
             {reply,
-             [{<<"status">>, erlang:integer_to_binary(404)}],
+             [{<<"status">>, <<"404">>}],
              <<>>, State}
     end.
 
