@@ -136,13 +136,26 @@ handle(Req0,
                      query_get_format = QueryGetFormat,
                      use_host_prefix = UseHostPrefix,
                      use_client_ip_prefix = UseClientIpPrefix,
+                     use_x_method_override = UseXMethodOverride,
                      use_method_suffix = UseMethodSuffix
                      } = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
-    {Method, Req1} = cloudi_x_cowboy_req:method(Req0),
+    {MethodHTTP, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
+    Method = if
+        UseXMethodOverride =:= true ->
+            case lists:keyfind(<<"x-http-method-override">>, 1,
+                               HeadersIncoming0) of
+                {_, MethodOverride} ->
+                    MethodOverride;
+                false ->
+                    MethodHTTP
+            end;
+        UseXMethodOverride =:= false ->
+            MethodHTTP
+    end,
     {QS, Req4} = if
-        Method =:= <<"GET">> ->
+        MethodHTTP =:= <<"GET">> ->
             if
                 QueryGetFormat =:= text_pairs ->
                     {QSVals, Req3} = cloudi_x_cowboy_req:qs_vals(Req2),
@@ -181,8 +194,9 @@ handle(Req0,
             HttpCode = 406,
             {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                                   ReqN),
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
+            ?LOG_WARN_APPLY(fun request_time_end_error/6,
+                            [HttpCode, MethodHTTP,
+                             NameIncoming, undefined,
                              RequestStartMicroSec, not_acceptable]),
             {ok, Req, State};
         RequestAccepted =:= true ->
@@ -236,13 +250,18 @@ handle(Req0,
                     HeadersIncoming1
             end,
             Body = if
-                Method =:= <<"GET">> ->
+                MethodHTTP =:= <<"GET">> ->
                     % only the query string is provided as the
                     % body of a GET request passed within the Request parameter
                     % of a CloudI service request, which prevents misuse of GET
                     QS;
-                (Method =:= <<"POST">>) orelse
-                (Method =:= <<"PUT">>) ->
+                (MethodHTTP =:= <<"HEAD">>) orelse
+                (MethodHTTP =:= <<"OPTIONS">>) orelse
+                (MethodHTTP =:= <<"TRACE">>) orelse
+                (MethodHTTP =:= <<"CONNECT">>) ->
+                    <<>>;
+                true ->
+                    % POST, PUT, DELETE or anything else
                     case header_content_type(HeadersIncoming0) of
                         <<"application/zip">> ->
                             'application_zip';
@@ -250,15 +269,7 @@ handle(Req0,
                             'multipart';
                         _ ->
                             'normal'
-                    end;
-                (Method =:= <<"DELETE">>) orelse
-                (Method =:= <<"HEAD">>) orelse
-                (Method =:= <<"OPTIONS">>) orelse
-                (Method =:= <<"TRACE">>) orelse
-                (Method =:= <<"CONNECT">>) ->
-                    <<>>;
-                true ->
-                    'normal'
+                    end
             end,
             case handle_request(NameOutgoing, HeadersIncomingN,
                                 Body, ReqN, State) of
@@ -269,7 +280,7 @@ handle(Req0,
                                             Response, ReqN0, OutputType,
                                             ContentTypeForced),
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                                     [HttpCode, Method,
+                                     [HttpCode, MethodHTTP,
                                       NameIncoming, NameOutgoing,
                                       RequestStartMicroSec]),
                     {ok, Req, NewState};
@@ -289,8 +300,9 @@ handle(Req0,
                             cloudi_x_cowboy_req:reply(HttpCode,
                                                       ReqN0)
                     end,
-                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                                    [HttpCode, Method, NameIncoming,
+                    ?LOG_WARN_APPLY(fun request_time_end_error/6,
+                                    [HttpCode, MethodHTTP,
+                                     NameIncoming, NameOutgoing,
                                      RequestStartMicroSec, timeout]),
                     {ok, Req, NewState};
                 {{cowboy_error, Reason},
@@ -298,8 +310,9 @@ handle(Req0,
                     HttpCode = 500,
                     {ok, Req} = cloudi_x_cowboy_req:reply(HttpCode,
                                                           ReqN0),
-                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                                    [HttpCode, Method, NameIncoming,
+                    ?LOG_WARN_APPLY(fun request_time_end_error/6,
+                                    [HttpCode, MethodHTTP,
+                                     NameIncoming, NameOutgoing,
                                      RequestStartMicroSec, Reason]),
                     {ok, Req, NewState}
             end
@@ -951,12 +964,20 @@ request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
                 (cloudi_x_uuid:get_v1_time(os) -
                  RequestStartMicroSec) / 1000.0]).
 
-request_time_end_error(HttpCode, Method, NameIncoming,
+request_time_end_error(HttpCode, Method, NameIncoming, NameOutgoing,
                        RequestStartMicroSec, Reason) ->
-    ?LOG_WARN("~w ~s ~s ~p ms: ~p",
-              [HttpCode, Method, NameIncoming,
-               (cloudi_x_uuid:get_v1_time(os) -
-                RequestStartMicroSec) / 1000.0, Reason]).
+    RequestTime = (cloudi_x_uuid:get_v1_time(os) -
+                   RequestStartMicroSec) / 1000.0,
+    if
+        NameOutgoing =:= undefined ->
+            ?LOG_WARN("~w ~s ~s ~p ms: ~p",
+                      [HttpCode, Method, NameIncoming,
+                       RequestTime, Reason]);
+        true ->
+            ?LOG_WARN("~w ~s ~s (to ~s) ~p ms: ~p",
+                      [HttpCode, Method, NameIncoming, NameOutgoing,
+                       RequestTime, Reason])
+    end.
 
 websocket_time_start() ->
     cloudi_x_uuid:get_v1_time(os).
@@ -968,10 +989,10 @@ websocket_time_end_success(NameIncoming, NameOutgoing,
                 (cloudi_x_uuid:get_v1_time(os) -
                  RequestStartMicroSec) / 1000.0]).
 
-websocket_time_end_error(NameIncoming,
+websocket_time_end_error(NameIncoming, NameOutgoing,
                          RequestStartMicroSec, Reason) ->
-    ?LOG_WARN("~s ~p ms: ~p",
-              [NameIncoming,
+    ?LOG_WARN("~s (to ~s) ~p ms: ~p",
+              [NameIncoming, NameOutgoing,
                (cloudi_x_uuid:get_v1_time(os) -
                 RequestStartMicroSec) / 1000.0, Reason]).
 
@@ -1481,8 +1502,8 @@ websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
                      State#cowboy_state{context = NewContext}}
             end;
         {{error, timeout}, NewContext} ->
-            ?LOG_WARN_APPLY(fun websocket_time_end_error/3,
-                            [NameIncoming,
+            ?LOG_WARN_APPLY(fun websocket_time_end_error/4,
+                            [NameIncoming, NameOutgoing,
                              RequestStartMicroSec, timeout]),
             {reply, {WebSocketRequestType, <<>>}, Req,
              State#cowboy_state{context = NewContext}}

@@ -11,7 +11,8 @@
 %%% (i.e., neither the key or value should contain a null character, '\0')
 %%% which is easily parsed in any programming language and is referred to as
 %%% the 'text_pairs' format.  It is valid to have multiple entries for the
-%%% same key within the RequestInfo data.
+%%% same key within the RequestInfo data.  A key must be of size 1 or greater
+%%% (<<>> will never exist as a key in text_pairs data).
 %%%
 %%% The ResponseInfo data is normally service request response meta-data
 %%% (providing the response equivalent of RequestInfo for a request)
@@ -70,6 +71,8 @@
          key_value_append/2,
          key_value_parse/1]).
 
+-include("cloudi_core_i_constants.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -86,12 +89,8 @@
 -spec key_value_new(RequestInfo :: cloudi_key_value:key_values()) ->
     Result :: binary().
 
-key_value_new([]) ->
-    <<>>;
-key_value_new([{_, _} | _] = RequestInfo) ->
-    text_pairs_new_list(RequestInfo, []);
 key_value_new(RequestInfo) ->
-    text_pairs_new_list(dict:to_list(RequestInfo), []).
+    text_pairs_list_to_binary(cloudi_key_value:to_list(RequestInfo)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -104,8 +103,10 @@ key_value_new(RequestInfo) ->
                        Existing :: binary()) ->
     Result :: binary().
 
-key_value_append(RequestInfo, Existing)
-    when is_binary(Existing) ->
+key_value_append(RequestInfo, <<>>) ->
+    key_value_new(RequestInfo);
+key_value_append(RequestInfo, <<TextPairs:8, _/binary>> = Existing)
+    when TextPairs /= 0 ->
     Suffix = key_value_new(RequestInfo),
     <<Existing/binary, Suffix/binary>>.
 
@@ -117,69 +118,70 @@ key_value_append(RequestInfo, Existing)
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VERSION_16).
 -spec key_value_parse(RequestInfo :: binary() |
-                                     list({any(), any()}) |
-                                     dict()) ->
-    Result :: dict().
--else.
--spec key_value_parse(RequestInfo :: binary() |
-                                     list({any(), any()}) |
-                                     dict:dict(any(), any())) ->
-    Result :: dict:dict(any(), any()).
--endif.
+                                     cloudi_key_value:key_values()) ->
+    Result :: dict_proxy(cloudi_key_value:key(), cloudi_key_value:value()).
 
 key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
-    % key/values: binary() -> binary()
-    text_pairs_parse_list(binary:split(RequestInfo, <<0>>, [global]),
-                                dict:new());
-key_value_parse(RequestInfo)
-    when is_list(RequestInfo) ->
-    % key/values: any() -> any()
-    lists:foldl(fun({K, V}, D) ->
-        dict:store(K, V, D)
-    end, dict:new(), RequestInfo);
+    text_pairs_binary_to_dict(RequestInfo);
 key_value_parse(RequestInfo) ->
-    % key/values: any() -> any()
-    RequestInfo.
+    cloudi_key_value:to_dict(RequestInfo).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-text_pairs_new_list([], Result) ->
-    erlang:iolist_to_binary(lists:reverse(Result));
-text_pairs_new_list([{K, V} | L], Result) ->
-    NewK = if
-        is_binary(K) ->
-            K;
-        is_list(K), is_integer(hd(K)) ->
-            erlang:list_to_binary(K);
-        is_atom(K) ->
-            erlang:atom_to_binary(K, utf8)
-    end,
-    NewV = if
-        is_binary(V) ->
-            V;
-        is_list(V), is_integer(hd(V)) ->
-            erlang:list_to_binary(V);
-        is_atom(V) ->
-            erlang:atom_to_binary(V, utf8);
-        true ->
-            cloudi_string:term_to_binary(V)
-    end,
-    text_pairs_new_list(L, [[NewK, 0, NewV, 0] | Result]).
+text_pairs_key_to_binary(K)
+    when is_binary(K) ->
+    K;
+text_pairs_key_to_binary([H | _] = K)
+    when is_integer(H) ->
+    erlang:list_to_binary(K);
+text_pairs_key_to_binary(K)
+    when is_atom(K) ->
+    erlang:atom_to_binary(K, utf8).
 
-text_pairs_parse_list([<<>>], Lookup) ->
+text_pairs_value_to_binary(V)
+    when is_binary(V) ->
+    V;
+text_pairs_value_to_binary(V)
+    when is_list(V) ->
+    erlang:iolist_to_binary(V);
+text_pairs_value_to_binary(V)
+    when is_atom(V) ->
+    erlang:atom_to_binary(V, utf8);
+text_pairs_value_to_binary(V) ->
+    cloudi_string:term_to_binary(V).
+
+text_pairs_list_to_binary_element([] = L) ->
+    L;
+text_pairs_list_to_binary_element([{K, V} | L]) ->
+    BinaryK = text_pairs_key_to_binary(K),
+    % a text_pairs key must be of size 1 or greater
+    <<TextPairs:8, _/binary>> = BinaryK,
+    true = TextPairs /= 0,
+    BinaryV = text_pairs_value_to_binary(V),
+    [[BinaryK, 0, BinaryV, 0] | text_pairs_list_to_binary_element(L)].
+
+text_pairs_list_to_binary(L) ->
+    erlang:iolist_to_binary(text_pairs_list_to_binary_element(L)).
+
+text_pairs_binary_to_dict_element([<<>>], Lookup) ->
     Lookup;
-text_pairs_parse_list([K, V | L], Lookup) ->
+text_pairs_binary_to_dict_element([K, V | L], Lookup) ->
     case dict:find(K, Lookup) of
         {ok, [_ | _] = ListV} ->
-            text_pairs_parse_list(L, dict:store(K, ListV ++ [V], Lookup));
-        {ok, V0} ->
-            text_pairs_parse_list(L, dict:store(K, [V0, V], Lookup));
+            NewLookup = dict:store(K, ListV ++ [V], Lookup),
+            text_pairs_binary_to_dict_element(L, NewLookup);
+        {ok, PreviousV} when is_binary(PreviousV) ->
+            NewLookup = dict:store(K, [PreviousV, V], Lookup),
+            text_pairs_binary_to_dict_element(L, NewLookup);
         error ->
-            text_pairs_parse_list(L, dict:store(K, V, Lookup))
+            text_pairs_binary_to_dict_element(L, dict:store(K, V, Lookup))
     end.
+
+text_pairs_binary_to_dict(RequestInfo) ->
+    L = binary:split(RequestInfo, <<0>>, [global]),
+    text_pairs_binary_to_dict_element(L, dict:new()).
 

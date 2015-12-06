@@ -4,11 +4,12 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Key/Value Data Access for RequestInfo==
+%%% Keys are unique in both the list and dict key_values data result.
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2014-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_key_value).
@@ -53,19 +54,21 @@
 %% external interface
 -export([erase/2,
          find/2,
-         store/3]).
+         store/3,
+         to_list/1,
+         to_dict/1]).
+
+-include("cloudi_core_i_constants.hrl").
 
 % used for accessing RequestInfo data
--ifdef(ERLANG_OTP_VERSION_16).
+-type key() :: binary() | string() | atom().
+-type value() :: binary() | iolist() | any().
 -type key_values(Key, Value) :: list({Key, Value}) |
-                                dict().
--else.
--type key_values(Key, Value) :: list({Key, Value}) |
-                                dict:dict(Key, Value).
--endif.
--type key_values() :: key_values(binary() | string() | atom(),
-                                 binary() | string() | any()).
--export_type([key_values/2,
+                                dict_proxy(Key, Value).
+-type key_values() :: key_values(key(), value()).
+-export_type([key/0,
+              value/0,
+              key_values/2,
               key_values/0]).
 
 %%%------------------------------------------------------------------------
@@ -81,7 +84,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec erase(Key :: any(),
+-spec erase(Key :: key(),
             KeyValues :: key_values()) ->
     NewKeyValues :: key_values().
 
@@ -100,9 +103,9 @@ erase(Key, KeyValues) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec find(Key :: any(),
+-spec find(Key :: key(),
            KeyValues :: key_values()) ->
-    {ok, Value :: any()} |
+    {ok, Value :: value()} |
     error.
 
 find(Key, KeyValues)
@@ -125,8 +128,8 @@ find(Key, KeyValues) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec store(Key :: any(),
-            Value :: any(),
+-spec store(Key :: key(),
+            Value :: value(),
             KeyValues :: key_values()) ->
     NewKeyValues :: key_values().
 
@@ -135,4 +138,42 @@ store(Key, Value, KeyValues)
     lists:keystore(Key, 1, KeyValues, {Key, Value});
 store(Key, Value, KeyValues) ->
     dict:store(Key, Value, KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value to_list.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to erase request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_list(KeyValues :: key_values()) ->
+    list({key(), value()}).
+
+to_list(KeyValues)
+    when is_list(KeyValues) ->
+    KeyValues;
+to_list(KeyValues) ->
+    dict:to_list(KeyValues).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Generic key/value to_dict.===
+%% RequestInfo's key/value result from request_info_key_value_parse/1
+%% can be used here to erase request meta-data while encapsulating
+%% the data structure used for the lookup.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec to_dict(KeyValues :: key_values()) ->
+    dict_proxy(key(), value()).
+
+to_dict(KeyValues)
+    when is_list(KeyValues) ->
+    lists:foldl(fun({K, V}, D) ->
+        dict:store(K, V, D)
+    end, dict:new(), KeyValues);
+to_dict(KeyValues) ->
+    KeyValues.
 

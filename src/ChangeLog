@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add support for X-HTTP-Method-Override header values in
+      cloudi_service_http_elli and cloudi_service_http_cowboy
+      (add the outgoing service name to warnings, when it is available)
+    * Cleanup cloudi_request_info to make text_pairs more well-defined
+        * values can be iolists
+        * keys must be of length 1 or greater
+
 2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service_filesystem redirect configuration argument to

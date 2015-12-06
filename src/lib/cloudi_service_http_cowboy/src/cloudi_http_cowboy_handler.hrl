@@ -81,6 +81,7 @@
         use_websockets            :: boolean() | exclusively,
         use_host_prefix           :: boolean(),
         use_client_ip_prefix      :: boolean(),
+        use_x_method_override     :: boolean(),
         use_method_suffix         :: boolean(),
         websocket_state           :: tuple()
     }).

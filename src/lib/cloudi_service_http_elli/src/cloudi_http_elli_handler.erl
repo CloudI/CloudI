@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -80,14 +80,41 @@ handle(Req,
                    query_get_format = QueryGetFormat,
                    use_host_prefix = UseHostPrefix,
                    use_client_ip_prefix = UseClientIpPrefix,
+                   use_x_method_override = UseXMethodOverride,
                    use_method_suffix = UseMethodSuffix} = State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
+    MethodHTTP = cloudi_x_elli_request:method(Req),
     HeadersIncoming0 = headers_to_lower(cloudi_x_elli_request:headers(Req)),
-    Method = cloudi_x_elli_request:method(Req),
+    Method = if
+        UseXMethodOverride =:= true ->
+            case lists:keyfind(<<"x-http-method-override">>, 1,
+                               HeadersIncoming0) of
+                {_, <<"GET">>} ->
+                    'GET';
+                {_, <<"POST">>} ->
+                    'POST';
+                {_, <<"PUT">>} ->
+                    'PUT';
+                {_, <<"DELETE">>} ->
+                    'DELETE';
+                {_, <<"HEAD">>} ->
+                    'HEAD';
+                {_, <<"TRACE">>} ->
+                    'TRACE';
+                {_, <<"OPTIONS">>} ->
+                    'OPTIONS';
+                {_, MethodOverride} ->
+                    MethodOverride;
+                false ->
+                    MethodHTTP
+            end;
+        UseXMethodOverride =:= false ->
+            MethodHTTP
+    end,
     [PathRaw | QSRawL] = binary:split(cloudi_x_elli_request:raw_path(Req),
                                       [<<"?">>]),
     QS = if
-        Method =:= 'GET' ->
+        MethodHTTP =:= 'GET' ->
             QSRaw = case QSRawL of
                 [] ->
                     <<>>;
@@ -128,8 +155,9 @@ handle(Req,
     if
         RequestAccepted =:= false ->
             HttpCode = 406,
-            ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                            [HttpCode, Method, NameIncoming,
+            ?LOG_WARN_APPLY(fun request_time_end_error/6,
+                            [HttpCode, MethodHTTP,
+                             NameIncoming, undefined,
                              RequestStartMicroSec, not_acceptable]),
             {HttpCode, [], <<>>};
         RequestAccepted =:= true ->
@@ -178,29 +206,24 @@ handle(Req,
                     HeadersIncoming1
             end,
             Body = if
-                Method =:= 'GET' ->
+                MethodHTTP =:= 'GET' ->
                     % only the query string is provided as the
                     % body of a GET request passed within the Request parameter
                     % of a CloudI service request, which prevents misuse of GET
                     QS;
-                Method =:= 'POST'; Method =:= 'PUT' ->
-                    % do not pass type information along with the request!
-                    % make sure to encourage good design that provides
-                    % one type per name (path)
+                (MethodHTTP =:= 'HEAD') orelse
+                (MethodHTTP =:= 'OPTIONS') orelse
+                (MethodHTTP =:= 'TRACE') orelse
+                (MethodHTTP == <<"CONNECT">>) ->
+                    <<>>;
+                true ->
+                    % POST, PUT, DELETE or anything else
                     case header_content_type(HeadersIncomingN) of
                         <<"application/zip">> ->
                             'application_zip';
                         _ ->
                             'normal'
-                    end;
-                (Method =:= 'DELETE') orelse
-                (Method =:= 'HEAD') orelse
-                (Method =:= 'OPTIONS') orelse
-                (Method =:= 'TRACE') orelse
-                (Method == <<"CONNECT">>) ->
-                    <<>>;
-                true ->
-                    'normal'
+                    end
             end,
             case handle_request(NameOutgoing, HeadersIncomingN,
                                 Body, Req, State) of
@@ -211,7 +234,7 @@ handle(Req,
                                                    Response, Req, OutputType,
                                                    ContentTypeForced),
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
-                                     [HttpCode, Method,
+                                     [HttpCode, MethodHTTP,
                                       NameIncoming, NameOutgoing,
                                       RequestStartMicroSec]),
                     Result;
@@ -227,8 +250,9 @@ handle(Req,
                         true ->
                             {HttpCode, [], <<>>}
                     end,
-                    ?LOG_WARN_APPLY(fun request_time_end_error/5,
-                                    [HttpCode, Method, NameIncoming,
+                    ?LOG_WARN_APPLY(fun request_time_end_error/6,
+                                    [HttpCode, MethodHTTP,
+                                     NameIncoming, NameOutgoing,
                                      RequestStartMicroSec, timeout]),
                     Result
             end
@@ -395,12 +419,20 @@ request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
                 (cloudi_x_uuid:get_v1_time(os) -
                  RequestStartMicroSec) / 1000.0]).
 
-request_time_end_error(HttpCode, Method, NameIncoming,
+request_time_end_error(HttpCode, Method, NameIncoming, NameOutgoing,
                        RequestStartMicroSec, Reason) ->
-    ?LOG_WARN("~w ~s ~s ~p ms: ~p",
-              [HttpCode, Method, NameIncoming,
-               (cloudi_x_uuid:get_v1_time(os) -
-                RequestStartMicroSec) / 1000.0, Reason]).
+    RequestTime = (cloudi_x_uuid:get_v1_time(os) -
+                   RequestStartMicroSec) / 1000.0,
+    if
+        NameOutgoing =:= undefined ->
+            ?LOG_WARN("~w ~s ~s ~p ms: ~p",
+                      [HttpCode, Method, NameIncoming,
+                       RequestTime, Reason]);
+        true ->
+            ?LOG_WARN("~w ~s ~s (to ~s) ~p ms: ~p",
+                      [HttpCode, Method, NameIncoming, NameOutgoing,
+                       RequestTime, Reason])
+    end.
 
 handle_request(Name, Headers, 'normal', Req, State) ->
     Body = cloudi_x_elli_request:body(Req),

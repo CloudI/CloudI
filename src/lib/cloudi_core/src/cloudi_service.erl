@@ -2506,8 +2506,8 @@ service_name_parse_with_suffix(Name, Pattern) ->
 %%-------------------------------------------------------------------------
 
 -spec request_http_qs_parse(Request :: binary() |
-                                       list({any(), any()})) ->
-    Result :: dict_proxy(binary(), binary()).
+                                       cloudi_key_value:key_values()) ->
+    Result :: dict_proxy(cloudi_key_value:key(), cloudi_key_value:value()).
 
 request_http_qs_parse(Request) ->
     cloudi_request:http_qs_parse(Request).

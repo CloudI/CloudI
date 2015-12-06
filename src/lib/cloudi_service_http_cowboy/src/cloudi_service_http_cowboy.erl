@@ -172,6 +172,7 @@
 -define(DEFAULT_USE_SPDY,                         false).
 -define(DEFAULT_USE_HOST_PREFIX,                  false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,             false).
+-define(DEFAULT_USE_X_METHOD_OVERRIDE,            false).
 -define(DEFAULT_USE_METHOD_SUFFIX,                 true). % see below:
         % Always append a suffix on the service name used to send the
         % HTTP request as a CloudI service request, to utilize the service
@@ -263,6 +264,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_spdy,                      ?DEFAULT_USE_SPDY},
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
+        {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
         {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, Backlog, NoDelay, RecvTimeout,
      BodyTimeout, BodyLengthRead, BodyLengthChunk, MultipartHeaderTimeout,
@@ -278,7 +280,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
      StatusCodeTimeout, QueryGetFormat, UseWebSockets, UseSpdy,
-     UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
+     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     1 = cloudi_service:process_count_max(Dispatcher),
     true = is_integer(Port),
@@ -411,6 +413,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(UseSpdy),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
+    true = ((UseXMethodOverride =:= true) andalso
+            (UseMethodSuffix =:= true)) orelse
+           (UseXMethodOverride =:= false),
     true = is_boolean(UseMethodSuffix),
     false = lists:member($*, Prefix),
     {_, Scope} = lists:keyfind(groups_scope, 1,
@@ -450,6 +455,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                     use_websockets = UseWebSockets,
                     use_host_prefix = UseHostPrefix,
                     use_client_ip_prefix = UseClientIpPrefix,
+                    use_x_method_override = UseXMethodOverride,
                     use_method_suffix = UseMethodSuffix}}]}
     ]),
     Service = cloudi_service:self(Dispatcher),

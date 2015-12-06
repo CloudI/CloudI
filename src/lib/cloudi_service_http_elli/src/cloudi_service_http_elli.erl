@@ -95,6 +95,7 @@
 -define(DEFAULT_SET_X_FORWARDED_FOR,              false). % if it is missing
 -define(DEFAULT_USE_HOST_PREFIX,                  false). % for virtual hosts
 -define(DEFAULT_USE_CLIENT_IP_PREFIX,             false).
+-define(DEFAULT_USE_X_METHOD_OVERRIDE,            false).
 -define(DEFAULT_USE_METHOD_SUFFIX,                 true). % see below:
         % Always append a suffix on the service name used to send the
         % HTTP request as a CloudI service request, to utilize the service
@@ -135,12 +136,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {query_get_format,              ?DEFAULT_QUERY_GET_FORMAT},
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
+        {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
         {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
     [Interface, Port, AcceptTimeout, RecvTimeout, HeaderTimeout, BodyTimeout,
      MinAcceptors, SSL, MaxBodySize,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
      StatusCodeTimeout, QueryGetFormat,
-     UseHostPrefix, UseClientIpPrefix, UseMethodSuffix] =
+     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     1 = cloudi_service:process_count_max(Dispatcher),
     true = is_integer(Port),
@@ -188,6 +190,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
            (QueryGetFormat =:= text_pairs),
     true = is_boolean(UseHostPrefix),
     true = is_boolean(UseClientIpPrefix),
+    true = ((UseXMethodOverride =:= true) andalso
+            (UseMethodSuffix =:= true)) orelse
+           (UseXMethodOverride =:= false),
     true = is_boolean(UseMethodSuffix),
     false = lists:member($*, Prefix),
     CallbackArgs = #elli_state{
@@ -201,6 +206,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                        query_get_format = QueryGetFormat,
                        use_host_prefix = UseHostPrefix,
                        use_client_ip_prefix = UseClientIpPrefix,
+                       use_x_method_override = UseXMethodOverride,
                        use_method_suffix = UseMethodSuffix},
     {ok,
      ListenerPid} = cloudi_x_elli:
