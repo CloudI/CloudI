@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix logger flooding check to avoid prematurely triggering the
+      flooding prevention for a single process
+
 2015-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add support for X-HTTP-Method-Override header values in

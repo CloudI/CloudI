@@ -971,10 +971,10 @@ log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
          (is_integer(Arity) andalso (Arity >= 0)) ->
     Timestamp = cloudi_timestamp:timestamp(),
     case flooding_logger(Timestamp) of
-        true ->
+        {true, _} ->
             ok;
-        false ->
-            LogMessage = if
+        {false, FloodingWarning} ->
+            LogMessage0 = if
                 is_list(Format), Args =:= undefined ->
                     Format;
                 true ->
@@ -985,42 +985,58 @@ log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
                                                  [Format, Args])
                     end
             end,
+            LogMessageN = if
+                FloodingWarning =:= undefined ->
+                    LogMessage0;
+                is_list(FloodingWarning) ->
+                    LogMessage0 ++ FloodingWarning
+            end,
             MetaData = metadata_get(),
             if
                 Mode =:= async ->
                     gen_server:cast(Process,
                                     {Level, Timestamp, node(), self(),
                                      Module, Line, Function, Arity,
-                                     MetaData, LogMessage});
+                                     MetaData, LogMessageN});
                 Mode =:= sync ->
                     gen_server:call(Process,
                                     {Level, Timestamp, node(), self(),
                                      Module, Line, Function, Arity,
-                                     MetaData, LogMessage},
+                                     MetaData, LogMessageN},
                                     infinity)
             end
     end.
 
-%% every 10 seconds, determine if the process has sent too many logging messages
-flooding_logger(Timestamp2) ->
+flooding_logger_warning(SecondsRemaining) ->
+    cloudi_string:format("~n"
+        "... (~w logged/second async stopped process logging for ~.2f seconds)",
+        [1000000 div ?LOGGER_FLOODING_DELTA, SecondsRemaining]).
+
+%% determine if a single process has sent too many logging messages
+flooding_logger(Timestamp1) ->
     case erlang:get(cloudi_logger) of
         undefined ->
-            erlang:put(cloudi_logger, {Timestamp2, 1}),
-            false;
-        {Timestamp1, Count1} ->
-            Count2 = Count1 + 1,
-            MicroSecondsElapsed = timer:now_diff(Timestamp2, Timestamp1),
+            erlang:put(cloudi_logger, {Timestamp1, 1, false}),
+            {false, undefined};
+        {Timestamp0, Count0, Flooding} ->
+            Count1 = Count0 + 1,
+            MicroSecondsElapsed = timer:now_diff(Timestamp1, Timestamp0),
             if
-                (MicroSecondsElapsed > 10000000) orelse
+                (MicroSecondsElapsed >
+                 ?LOGGER_FLOODING_INTERVAL_MAX * 1000) orelse
                 (MicroSecondsElapsed < 0) ->
-                    erlang:put(cloudi_logger, {Timestamp2, 1}),
-                    false;
-                (MicroSecondsElapsed / Count2) < ?LOGGER_FLOODING_DELTA ->
-                    erlang:put(cloudi_logger, {Timestamp1, Count2}),
-                    true;
+                    erlang:put(cloudi_logger, {Timestamp1, 1, false}),
+                    {false, undefined};
+                (MicroSecondsElapsed >
+                 ?LOGGER_FLOODING_INTERVAL_MIN * 1000) andalso
+                (MicroSecondsElapsed div Count1 < ?LOGGER_FLOODING_DELTA) ->
+                    erlang:put(cloudi_logger, {Timestamp0, Count1, true}),
+                    SecondsRemaining = ?LOGGER_FLOODING_INTERVAL_MAX * 1000.0 -
+                                       MicroSecondsElapsed / 1000000,
+                    {false, flooding_logger_warning(SecondsRemaining)};
                 true ->
-                    erlang:put(cloudi_logger, {Timestamp1, Count2}),
-                    false
+                    erlang:put(cloudi_logger, {Timestamp0, Count1, Flooding}),
+                    {Flooding, undefined}
             end
     end.
 

@@ -61,11 +61,15 @@
 % reload their modules automatically
 -define(SERVICE_INTERNAL_RELOAD, 1000). % milliseconds
 
-% maximum average time inbetween CloudI logger calls during 10 seconds
+% maximum average time inbetween CloudI logger calls during the interval
 % to trigger logger flooding prevention, so that logging messages are discarded
 % since they are coming from source code that is misbehaving that has already
-% logged enough
+% logged enough (only affects the single Erlang process)
 -define(LOGGER_FLOODING_DELTA, 10). % microseconds
+
+% time interval to check logger flooding within
+-define(LOGGER_FLOODING_INTERVAL_MAX, 10000). % milliseconds
+-define(LOGGER_FLOODING_INTERVAL_MIN,     5). % milliseconds
 
 % message queue size that causes the logger to use synchronous messaging
 % to avoid excessive memory consumption and system death
