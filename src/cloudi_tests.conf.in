@@ -156,7 +156,7 @@
         % if the destination deny list is 'undefined' any destination is valid.
         % a blocked request will just return a timeout
         % (earlier than the timeout specified for the request).
-        [api], % with 'none' destination refresh method, this is not checked
+        undefined, % with 'none' destination refresh method, this is not checked
         % destination allow list is used as an ACL (Access Control List) that
         % allows the process to send to destinations with the specified
         % prefixes.  if atoms are used within the list, they must exist as an

@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add configuration validation to make sure
+      dest_list_deny and dest_list_allow are undefined
+      when dest_refresh is none (i.e., not sending)
+    * Update cpg
+      (make sure all scopes are started after cloudi_core has set
+       the nodes_set listen type)
+
 2015-12-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix logger flooding check to avoid prematurely triggering the

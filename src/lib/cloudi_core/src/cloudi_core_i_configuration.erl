@@ -1752,11 +1752,17 @@ services_validate([#internal{timeout_sync = TimeoutSync} | _], _, _, _)
               (TimeoutSync > ?TIMEOUT_DELTA) andalso
               (TimeoutSync =< ?TIMEOUT_MAX)) ->
     {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
-services_validate([#internal{dest_list_deny = DestListDeny} | _], _, _, _)
-    when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
+services_validate([#internal{dest_refresh = DestRefresh,
+                             dest_list_deny = DestListDeny} | _], _, _, _)
+    when not (is_list(DestListDeny) orelse
+              (DestListDeny =:= undefined)) orelse
+         ((DestRefresh =:= none) andalso is_list(DestListDeny)) ->
     {error, {service_internal_dest_list_deny_invalid, DestListDeny}};
-services_validate([#internal{dest_list_allow = DestListAllow} | _], _, _, _)
-    when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
+services_validate([#internal{dest_refresh = DestRefresh,
+                             dest_list_allow = DestListAllow} | _], _, _, _)
+    when not (is_list(DestListAllow) orelse
+              (DestListAllow =:= undefined)) orelse
+         ((DestRefresh =:= none) andalso is_list(DestListAllow)) ->
     {error, {service_internal_dest_list_allow_invalid, DestListAllow}};
 services_validate([#internal{count_process = CountProcess} | _], _, _, _)
     when not (is_number(CountProcess) andalso CountProcess > 0) ->
@@ -1905,11 +1911,17 @@ services_validate([#external{timeout_sync = TimeoutSync} | _], _, _, _)
               (TimeoutSync > ?TIMEOUT_DELTA) andalso
               (TimeoutSync =< ?TIMEOUT_MAX)) ->
     {error, {service_external_timeout_sync_invalid, TimeoutSync}};
-services_validate([#external{dest_list_deny = DestListDeny} | _], _, _, _)
-    when not (is_list(DestListDeny) or (DestListDeny =:= undefined)) ->
+services_validate([#external{dest_refresh = DestRefresh,
+                             dest_list_deny = DestListDeny} | _], _, _, _)
+    when not (is_list(DestListDeny) orelse
+              (DestListDeny =:= undefined)) orelse
+         ((DestRefresh =:= none) andalso is_list(DestListDeny)) ->
     {error, {service_external_dest_list_deny_invalid, DestListDeny}};
-services_validate([#external{dest_list_allow = DestListAllow} | _], _, _, _)
-    when not (is_list(DestListAllow) or (DestListAllow =:= undefined)) ->
+services_validate([#external{dest_refresh = DestRefresh,
+                             dest_list_allow = DestListAllow} | _], _, _, _)
+    when not (is_list(DestListAllow) orelse
+              (DestListAllow =:= undefined)) orelse
+         ((DestRefresh =:= none) andalso is_list(DestListAllow)) ->
     {error, {service_external_dest_list_allow_invalid, DestListAllow}};
 services_validate([#external{count_process = CountProcess} | _], _, _, _)
     when not (is_number(CountProcess) andalso CountProcess > 0) ->

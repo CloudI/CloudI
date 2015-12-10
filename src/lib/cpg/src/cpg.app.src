@@ -17,7 +17,7 @@
    {registered,[
         % default scope (as defined with DEFAULT_SCOPE in cpg_constants.hrl)
         cpg_default_scope
-        % env scope list defines locally registered pids
+        % (env scope list defines locally registered pids)
         ]},
    {applications, [
         quickrand,
@@ -32,6 +32,7 @@
         {scope, [
             % automatically created scopes to keep process groups separate
             % (each becomes a locally registered name)
+            cpg_default_scope
             ]}
         ]}]}.
 

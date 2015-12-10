@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2013 Michael Truog
-%%% @version 1.2.5 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_sup).
@@ -75,8 +75,8 @@
     {'ok', pid()} |
     {'error', any()}.
 
-start_link([A | _] = ScopeList)
-    when is_atom(A) ->
+start_link(ScopeList)
+    when is_list(ScopeList) ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, [ScopeList]).
 
 %%-------------------------------------------------------------------------
@@ -124,7 +124,7 @@ init([ScopeList]) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-child_specifications([_ | _] = ScopeList) ->
+child_specifications(ScopeList) ->
     child_specifications([], ScopeList).
 
 child_specifications(ChildSpecs, []) ->

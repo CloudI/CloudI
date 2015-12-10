@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @copyright 2012-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_app).
@@ -107,13 +107,7 @@ group_storage() ->
 %%-------------------------------------------------------------------------
 
 start(_, _) ->
-    {ok, L} = application:get_env(scope),
-    ScopeList = if
-        L == [] ->
-            [?DEFAULT_SCOPE];
-        is_list(L) ->
-            [?DEFAULT_SCOPE | L]
-    end,
+    {ok, ScopeList} = application:get_env(scope),
     case cpg_sup:start_link(ScopeList) of
         {ok, _} = Success ->
             Success;
