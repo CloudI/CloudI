@@ -63,6 +63,7 @@
          restart/2,
          search/2,
          pids/2,
+         get_services/1,
          increase/5,
          decrease/5,
          terminate_kill/2]).
@@ -196,6 +197,11 @@ pids(ServiceId, Timeout)
                                 {pids, ServiceId},
                                 Timeout)).
 
+get_services(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                get_services,
+                                Timeout)).
+
 increase(Pid, Period, RateCurrent, RateMax, CountProcessMax)
     when is_pid(Pid), is_integer(Period), is_number(RateCurrent),
          is_number(RateMax), is_number(CountProcessMax) ->
@@ -296,6 +302,10 @@ handle_call({pids, ServiceId}, _,
         error ->
             {reply, {error, not_found}, State}
     end;
+
+handle_call(get_services, _,
+            #state{services = Services} = State) ->
+    {reply, {ok, Services}, State};
 
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),

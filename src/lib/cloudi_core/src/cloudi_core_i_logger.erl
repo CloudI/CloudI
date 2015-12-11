@@ -1688,7 +1688,7 @@ syslog_open(SyslogIdentity, SyslogFacility) ->
 
 %%%------------------------------------------------------------------------
 %%% lager integration based on lager source code
-%%% (lager in under the Apache version 2.0 license and
+%%% (lager is under the Apache version 2.0 license and
 %%%  was developed by Basho Technologies)
 %%%------------------------------------------------------------------------
 

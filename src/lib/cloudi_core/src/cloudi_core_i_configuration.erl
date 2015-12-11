@@ -3633,14 +3633,16 @@ nodes_options(Nodes0, Value) ->
             {error, {node_invalid, Nodes1}};
         [_, ReconnectStart, _, _, _, _, _ | _]
             when not (is_integer(ReconnectStart) andalso
-                      (ReconnectStart > 0)) ->
+                      (ReconnectStart > 0) andalso
+                      (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_start_invalid, ReconnectStart}};
         [_, ReconnectStart, _, _, _, _, _ | _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
             {error, {node_reconnect_start_min, ConnectTimeSeconds}};
         [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (is_integer(ReconnectDelay) andalso
-                      (ReconnectDelay > 0)) ->
+                      (ReconnectDelay > 0) andalso
+                      (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_delay_invalid, ReconnectDelay}};
         [_, _, ReconnectDelay, _, _, _, _ | _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
