@@ -195,16 +195,18 @@ maybe_utc({Date, {H, M, S, Ms}}) ->
             {Date1, {H1, M1, S1, Ms}}
     end.
 
-%% renames and deletes failing are OK
+%% renames failing are OK
 rotate_logfile(File, 0) ->
-    _ = file:delete(File),
-    ok;
+    file:delete(File);
 rotate_logfile(File, 1) ->
-    _ = file:rename(File, File++".0"),
-    rotate_logfile(File, 0);
+    case file:rename(File, File++".0") of
+        ok ->
+            ok;
+        _ ->
+            rotate_logfile(File, 0)
+    end;
 rotate_logfile(File, Count) ->
-    _ =file:rename(File ++ "." ++ integer_to_list(Count - 2), File ++ "." ++
-        integer_to_list(Count - 1)),
+    _ = file:rename(File ++ "." ++ integer_to_list(Count - 2), File ++ "." ++ integer_to_list(Count - 1)),
     rotate_logfile(File, Count - 1).
 
 format_time() ->
@@ -351,17 +353,16 @@ calculate_next_rotation([{date, Date}|T], {{Year, Month, Day}, _} = Now) ->
     NewNow = calendar:gregorian_seconds_to_datetime(Seconds),
     calculate_next_rotation(T, NewNow).
 
-
+-spec trace_filter(Query :: 'none' | [tuple()]) -> {ok, any()}.
 trace_filter(Query) ->
     trace_filter(?DEFAULT_TRACER, Query).
 
 %% TODO: Support multiple trace modules 
+%-spec trace_filter(Module :: atom(), Query :: 'none' | [tuple()]) -> {ok, any()}.
 trace_filter(Module, Query) when Query == none; Query == [] ->
-    trace_filter(Module, glc:null(false));
+    {ok, _} = glc:compile(Module, glc:null(false));
 trace_filter(Module, Query) when is_list(Query) ->
-    trace_filter(Module, glc_lib:reduce(trace_any(Query)));
-trace_filter(Module, Query) ->
-    {ok, _} = glc:compile(Module, Query).
+    {ok, _} = glc:compile(Module, glc_lib:reduce(trace_any(Query))).
 
 validate_trace({Filter, Level, {Destination, ID}}) when is_tuple(Filter); is_list(Filter), is_atom(Level), is_atom(Destination) ->
     case validate_trace({Filter, Level, Destination}) of
@@ -390,6 +391,7 @@ validate_trace_filter(Filter) when is_tuple(Filter), is_atom(element(1, Filter))
     false;
 validate_trace_filter(Filter) ->
         case lists:all(fun({Key, '*'}) when is_atom(Key) -> true; 
+                          ({Key, '!'}) when is_atom(Key) -> true;
                           ({Key, _Value})      when is_atom(Key) -> true;
                           ({Key, '=', _Value}) when is_atom(Key) -> true;
                           ({Key, '<', _Value}) when is_atom(Key) -> true;
@@ -414,6 +416,8 @@ trace_acc([], Acc) ->
 	lists:reverse(Acc);
 trace_acc([{Key, '*'}|T], Acc) ->
 	trace_acc(T, [glc:wc(Key)|Acc]);
+trace_acc([{Key, '!'}|T], Acc) ->
+	trace_acc(T, [glc:nf(Key)|Acc]);
 trace_acc([{Key, Val}|T], Acc) ->
 	trace_acc(T, [glc:eq(Key, Val)|Acc]);
 trace_acc([{Key, '=', Val}|T], Acc) ->
@@ -563,7 +567,27 @@ rotate_file_test() ->
                 rotate_logfile("rotation.log", 10)
     end || N <- lists:seq(0, 20)].
 
+rotate_file_fail_test() ->
+    %% make sure the directory exists
+    ?assertEqual(ok, filelib:ensure_dir("rotation/rotation.log")),
+    %% fix the permissions on it
+    os:cmd("chown -R u+rwx rotation"),
+    %% delete any old files
+    [ok = file:delete(F) || F <- filelib:wildcard("rotation/*")],
+    %% write a file
+    file:write_file("rotation/rotation.log", "hello"),
+    %% hose up the permissions
+    os:cmd("chown u-w rotation"),
+    ?assertMatch({error, _}, rotate_logfile("rotation.log", 10)),
+    ?assert(filelib:is_regular("rotation/rotation.log")),
+    os:cmd("chown u+w rotation"),
+    ?assertMatch(ok, rotate_logfile("rotation/rotation.log", 10)),
+    ?assert(filelib:is_regular("rotation/rotation.log.0")),
+    ?assertEqual(false, filelib:is_regular("rotation/rotation.log")),
+    ok.
+
 check_trace_test() ->
+    lager:start(),
     trace_filter(none),
     %% match by module
     ?assertEqual([foo], check_traces([{module, ?MODULE}], ?EMERGENCY, [
@@ -604,7 +628,8 @@ check_trace_test() ->
                 {[{module, '*'}], config_to_mask('!=info'), anythingbutinfo},
                 {[{module, '*'}], config_to_mask('!=notice'), anythingbutnotice}
                 ], [])),
-
+    application:stop(lager),
+    application:stop(goldrush),
     ok.
 
 is_loggable_test_() ->

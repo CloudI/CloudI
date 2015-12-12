@@ -55,7 +55,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/15,
+-export([start_link/16,
          get_status/1,
          get_status/2]).
 
@@ -229,7 +229,7 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
-               scope = Scope} = ConfigOptions, Parent)
+               scope = Scope} = ConfigOptions, ID, Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout),
          is_integer(PrefixC), is_integer(TimeoutAsync), is_integer(TimeoutSync),
@@ -256,7 +256,7 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                                    Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, TimeoutTerm,
                                    DestRefresh, DestDeny, DestAllow,
-                                   ConfigOptions, Parent],
+                                   ConfigOptions, ID, Parent],
                                   [{timeout, Timeout + ?TIMEOUT_DELTA}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
@@ -278,7 +278,8 @@ init([ProcessIndex, ProcessCount, GroupLeader,
       DestRefresh, DestDeny, DestAllow,
       #config_service_options{
           duo_mode = DuoMode,
-          info_pid_options = InfoPidOptions} = ConfigOptions, Parent]) ->
+          info_pid_options = InfoPidOptions} = ConfigOptions, ID, Parent]) ->
+    erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     Dispatcher = self(),
     if
         GroupLeader =:= undefined ->
@@ -292,6 +293,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     DuoModePid = if
         DuoMode =:= true ->
             proc_lib:spawn_opt(fun() ->
+                erlang:put(?SERVICE_ID_PDICT_KEY, ID),
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
                                               queued_word_size = WordSize,
                                               module = Module,

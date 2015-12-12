@@ -64,10 +64,20 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec function_required({module(), atom()} | fun(),
+-spec function_required({{module(), arity()}} | {module(), atom()} | fun(),
                         Arity :: non_neg_integer()) ->
     fun().
 
+function_required({{M, F}}, Arity)
+    when is_atom(M), is_atom(F), is_integer(Arity), Arity >= 0 ->
+    case erlang:function_exported(M, F, 0) of
+        true ->
+            function_required(M:F(), Arity);
+        false ->
+            ?LOG_ERROR("function ~w:~w/~w does not exist!",
+                       [M, F, 0]),
+            erlang:exit(badarg)
+    end;
 function_required({M, F}, Arity)
     when is_atom(M), is_atom(F), is_integer(Arity), Arity >= 0 ->
     case erlang:function_exported(M, F, Arity) of
@@ -91,10 +101,20 @@ function_required(Function, _) ->
     ?LOG_ERROR("not a function: ~p", [Function]),
     erlang:exit(badarg).
 
--spec function_required_pick({module(), atom()} | fun(),
+-spec function_required_pick({{module(), atom()}} | {module(), atom()} | fun(),
                              ArityOrder :: nonempty_list(non_neg_integer())) ->
     {fun(), Arity :: non_neg_integer()}.
 
+function_required_pick({{M, F}}, [_ | _] = ArityOrder)
+    when is_atom(M), is_atom(F) ->
+    case erlang:function_exported(M, F, 0) of
+        true ->
+            function_required_pick(M:F(), ArityOrder);
+        false ->
+            ?LOG_ERROR("function ~w:~w/~w does not exist!",
+                       [M, F, 0]),
+            erlang:exit(badarg)
+    end;
 function_required_pick({M, F}, [_ | _] = ArityOrder)
     when is_atom(M), is_atom(F) ->
     function_required_pick_module(ArityOrder, M, F, ArityOrder);
@@ -105,7 +125,8 @@ function_required_pick(Function, [_ | _]) ->
     ?LOG_ERROR("not a function: ~p", [Function]),
     erlang:exit(badarg).
 
--spec function_optional(undefined | {module(), atom()} | fun(),
+-spec function_optional(undefined |
+                        {{module(), atom()}} | {module(), atom()} | fun(),
                         Arity :: non_neg_integer()) ->
     undefined | fun().
 

@@ -9,15 +9,26 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `backward-cpp`
 --------------
 `for creating a backtrace in C++`
+
 - `https://github.com/bombela/backward-cpp`
 - `commit 77fc8d9fe4f2521558199206670fc3611dc75291`
 - `Sat Oct 24 11:03:12 PDT 2015`
 - `MIT`
 
+`bear`
+------
+`Statistics functions for Erlang`
+
+- `https://github.com/boundary/bear`
+- `commit 119234548783af19b8ec75c879c5062676b92571 (0.8.2)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Apache License 2.0`
+
 `booster (only booster/backtrace.h)`
 ------------------------------------
 `booster/backtrace.h, from booster, from CppCMS,
  for creating a backtrace in C++`
+
 - `https://svn.code.sf.net/p/cppcms/code/framework/trunk/booster/`
 - `revision r2237 2013-01-06 12:34:05 -0800 (CppCMS 1.0.4)`
 - `Wed Nov 27 12:15:07 PST 2013`
@@ -26,6 +37,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `cowboy`
 --------
 `Erlang HTTP Server`
+
 - `https://github.com/ninenines/cowboy`
 - `commit 3d9078018d7f0a83a359b70c698d35e35fbb94f9 (1.0.1)`
 - `Mon Nov 10 09:11:52 PST 2014`
@@ -34,6 +46,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `cowlib`
 --------
 `cowboy Protocols`
+
 - `https://github.com/ninenines/cowlib`
 - `commit d544a494af4dbc810fc9c15eaf5cc050cced1501 (1.0.0)`
 - `Mon Aug 11 10:57:20 PDT 2014`
@@ -42,6 +55,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `dynamic_compile`
 -----------------
 `Dynamic compilation of Erlang modules`
+
 - `https://github.com/okeuday/dynamic_compile`
 - `commit 2684dcf703b6bac70421dff717293772c5da8f05 (v1.0.0)`
 - `Mon Oct 13 13:58:48 PDT 2014`
@@ -59,6 +73,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `elli`
 ------
 `Erlang HTTP Server`
+
 - `https://github.com/knutin/elli`
 - `commit 8c700e734654285885987b164f32e94a39770fac (v1.0.1)`
 - `Mon Nov 10 09:11:52 PST 2014`
@@ -136,13 +151,40 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Wed Jun 25 13:01:35 PDT 2014`
 - `MIT`
 
+`exometer`
+----------
+`Erlang instrumentation package`
+
+- `https://github.com/Feuerlabs/exometer`
+- `commit 25aa831bebd9cbd83eb0187c0fd7b3f56a42907f (1.2.1)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Mozilla Public License 2.0`
+
+`exometer_core`
+---------------
+`Erlang instrumentation package core`
+
+- `https://github.com/Feuerlabs/exometer_core`
+- `commit 88588f26f226210a1fc9e70271d8a0611ba83d30 (1.2)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Mozilla Public License 2.0`
+
+`folsom`
+--------
+`Erlang Events and Metrics`
+
+- `https://github.com/boundary/folsom`
+- `commit 38e2cce7c64ce1f0a3a918d90394cfc0a940b1ba (0.8.2)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Apache License 2.0`
+
 `goldrush`
 ----------
 `Small, Fast Event Processing for Erlang`
 
 - `https://github.com/DeadZen/goldrush`
-- `commit 879c69874a555b2c13498aa4a3da6f6bbbb6a031`
-- `Sat May 31 13:19:18 PDT 2014`
+- `commit 71e63212f12c25827e0c1b4198d37d5d018a7fec (0.1.6)`
+- `Fri Dec 11 15:51:53 PST 2015`
 - `MIT`
 
 `jinterface`
@@ -177,8 +219,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Erlang Logging`
 
 - `https://github.com/basho/lager`
-- `commit 169cffd94759e99e2e8870b125861a91e3c1482a (2.0.0)`
-- `Sat May 31 13:14:26 PDT 2014`
+- `commit b6b6cebcb27ccff8acc59ae775acebc2f52e4926 (2.0.3)`
+- `Fri Dec 11 15:51:53 PST 2015`
 - `Apache License 2.0`
 
 `lhttpc`
@@ -266,6 +308,15 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Sun Apr 19 20:45:40 PDT 2015`
 - `BSD`
 
+`parse_trans`
+-------------
+`Erlang parse transforms`
+
+- `https://github.com/uwiger/parse_trans`
+- `commit 82cc00264aa1bad8fc5c0739b7541feb4a843432 (2.9)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Erlang Public License`
+
 `pgsql`
 -------
 `Erlang PostgreSQL (native) driver (semiocast branch)`
@@ -337,6 +388,15 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `commit 8d33c020f4ca392200b2d0d973c77dd48164b263 (1.4.2)`
 - `Fri Jun 20 12:11:49 PDT 2014`
 - `Apache License 2.0`
+
+`setup`
+-------
+`Erlang Setup Application`
+
+- `https://github.com/uwiger/setup`
+- `commit 51ee7c9f64d2bbe9dcbb58c278e8fbfd4d0ca5e2 (1.4)`
+- `Fri Dec 11 15:51:53 PST 2015`
+- `Mozilla Public License 2.0`
 
 `snappy`
 --------

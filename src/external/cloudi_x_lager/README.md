@@ -81,7 +81,6 @@ your app.config):
     {lager_console_backend, info},
     {lager_file_backend, [{file, "error.log"}, {level, error}]},
     {lager_file_backend, [{file, "console.log"}, {level, info}]}
-    ]}
   ]}
 ]}.
 ```
@@ -98,11 +97,10 @@ for the backend:
 ```erlang
 {lager, [
   {handlers, [
-    {lager_console_backend, [info, {lager_default_formatter, [time," [",severity,"] ", message, "\n"]}},
-    {lager_file_backend, [{name, "error.log"}, {level, error}, {formatter, lager_default_formatter},
+    {lager_console_backend, [info, {lager_default_formatter, [time," [",severity,"] ", message, "\n"]}]},
+    {lager_file_backend, [{file, "error.log"}, {level, error}, {formatter, lager_default_formatter},
       {formatter_config, [date, " ", time," [",severity,"] ",pid, " ", message, "\n"]}]},
-    {lager_file_backend, [{name, "console.log"}, {level, info}]}
-    ]}
+    {lager_file_backend, [{file, "console.log"}, {level, info}]}
   ]}
 ]}.
 ```
@@ -134,12 +132,12 @@ Error logger integration
 Lager is also supplied with a error_logger handler module that translates
 traditional erlang error messages into a friendlier format and sends them into
 lager itself to be treated like a regular lager log call. To disable this, set
-the lager application variable `error_logger_redirect' to `false'.
+the lager application variable `error_logger_redirect` to `false`.
 
 The error_logger handler will also log more complete error messages (protected
 with use of trunc_io) to a "crash log" which can be referred to for further
 information. The location of the crash log can be specified by the crash_log
-application variable. If undefined it is not written at all.
+application variable. If set to `undefined` it is not written at all.
 
 Messages in the crash log are subject to a maximum message size which can be
 specified via the crash_log_msg_size application variable.
@@ -154,11 +152,13 @@ polls its own mailbox size and toggles the messaging between synchronous and
 asynchronous depending on mailbox size.
 
 ```erlang
-{async_threshold, 20}
+{async_threshold, 20},
+{async_threshold_window, 5}
 ```
 
 This will use async messaging until the mailbox exceeds 20 messages, at which
-point synchronous messaging will be used.
+point synchronous messaging will be used, and switch back to asynchronous, when
+size reduces to `20 - 5 = 15`.
 
 If you wish to disable this behaviour, simply set it to 'undefined'. It defaults
 to a low number to prevent the mailbox growing rapidly beyond the limit and causing
@@ -302,7 +302,7 @@ add
 {colored, true}
 ```
 
-To lager's application environment config. If you don't like the default colors, they are]
+To lager's application environment config. If you don't like the default colors, they are
 also configurable, see the app.src file for more details.
 
 Tracing

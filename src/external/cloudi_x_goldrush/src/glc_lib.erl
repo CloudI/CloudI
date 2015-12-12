@@ -74,7 +74,9 @@ matches({Key, '*'}, Event) ->
     case gre:find(Key, Event) of
         {true, _} -> true;
         false -> false
-    end.
+    end;
+matches({Key, '!'}, Event) ->
+    not matches({Key, '*'}, Event).
 
 %% @private Repeatedly apply a function to a query.
 %% This is used for query transformation functions that must be applied
@@ -87,6 +89,7 @@ repeat(Query, Fun) ->
 
 
 %% @doc Return the output action of a query.
+-spec onoutput(glc_ops:op()) -> output | no_return().
 onoutput({_, '<', _}) ->
     output;
 onoutput({_, '=', _}) ->
@@ -95,10 +98,13 @@ onoutput({_, '>', _}) ->
     output;
 onoutput({_, '*'}) ->
     output;
+onoutput({_, '!'}) ->
+    output;
 onoutput(Query) ->
     erlang:error(badarg, [Query]).
 
 %% @doc Modify the output action of a query.
+-spec onoutput(Action :: any(), Query :: glc_ops:op()) -> no_return().
 onoutput(Action, Query) ->
     erlang:error(badarg, [Action, Query]).
 
@@ -238,6 +244,7 @@ deleteall(Filter, []) ->
 
 
 %% @private Test if a term is a valid filter.
+-spec is_valid(glc_ops:op()) -> boolean().
 is_valid({Field, '<', _Term}) when is_atom(Field) ->
     true;
 is_valid({Field, '=', _Term}) when is_atom(Field) ->
@@ -245,6 +252,8 @@ is_valid({Field, '=', _Term}) when is_atom(Field) ->
 is_valid({Field, '>', _Term}) when is_atom(Field) ->
     true;
 is_valid({Field, '*'}) when is_atom(Field) ->
+    true;
+is_valid({Field, '!'}) when is_atom(Field) ->
     true;
 is_valid({null, true}) ->
     true;
@@ -277,6 +286,13 @@ all_sort_test() ->
 any_one_test() ->
     ?assertEqual(glc:eq(a, 1),
         glc_lib:reduce(glc:any([glc:eq(a, 1)]))
+    ).
+
+all_two_test() ->
+    ?assertEqual(glc_lib:reduce(glc:all([glc:wc(a), glc:nf(b)])),
+       glc_lib:reduce(glc:any([
+                    glc:all([glc:wc(a)]), 
+                    glc:all([glc:wc(a), glc:nf(b)])]))
     ).
 
 any_sort_test() ->
@@ -317,11 +333,12 @@ any_equiv_test() ->
 any_required_test() ->
     ?assertEqual(
         glc:all([
-            glc:any([glc:eq(b, 2), glc:eq(c, 3)]),
+            glc:any([glc:nf(d), glc:eq(b, 2), glc:eq(c, 3)]),
             glc:eq(a, 1)
         ]),
         glc_lib:reduce(
             glc:any([
+                glc:all([glc:eq(a, 1), glc:nf(d)]),
                 glc:all([glc:eq(a, 1), glc:eq(b, 2)]),
                 glc:all([glc:eq(a, 1), glc:eq(c, 3)])]))
     ).
@@ -340,21 +357,22 @@ delete_from_all_test() ->
     ?assertEqual(
         glc:all([glc:eq(b,2)]),
         deleteall(
-            glc:all([glc:eq(a, 1),glc:eq(b,2)]), [glc:eq(a, 1)])
+            glc:all([glc:eq(a, 1),glc:eq(b,2)]), [glc:eq(a, 1), glc:nf(a)])
     ).
 
 delete_from_any_test() ->
     ?assertEqual(
         glc:any([glc:eq(b,2)]),
         deleteall(
-            glc:any([glc:eq(a, 1),glc:eq(b,2)]), [glc:eq(a, 1)])
+            glc:any([glc:eq(a, 1),glc:eq(b,2)]), [glc:eq(a, 1), glc:wc(a)])
     ).
 
 default_is_output_test_() ->
     [?_assertEqual(output, glc_lib:onoutput(glc:lt(a, 1))),
      ?_assertEqual(output, glc_lib:onoutput(glc:eq(a, 1))),
      ?_assertEqual(output, glc_lib:onoutput(glc:gt(a, 1))),
-     ?_assertEqual(output, glc_lib:onoutput(glc:wc(a)))
+     ?_assertEqual(output, glc_lib:onoutput(glc:wc(a))),
+     ?_assertEqual(output, glc_lib:onoutput(glc:nf(a)))
     ].
 
 -ifdef(PROPER).

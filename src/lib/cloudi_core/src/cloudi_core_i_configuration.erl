@@ -2060,9 +2060,9 @@ services_validate([[_| _] = ServicePropList | L], Output, IDs, UUID) ->
                 true ->
                     undefined
             end;
-        Type =:= internal, Module /= undefined ->
+        Type =:= internal, Module /= undefined, FilePath =:= undefined ->
             internal;
-        Type =:= external, FilePath /= undefined ->
+        Type =:= external, FilePath /= undefined, Module =:= undefined ->
             external;
         true ->
             undefined
@@ -2613,7 +2613,13 @@ services_validate_options_internal_checks(RateRequestMax,
                                         AspectsInfoAfter,
                                         AspectsTerminateBefore,
                                         AutomaticLoading) of
-                                        ok ->
+                                        {ok,
+                                         NewAspectsInitAfter,
+                                         NewAspectsRequestBefore,
+                                         NewAspectsRequestAfter,
+                                         NewAspectsInfoBefore,
+                                         NewAspectsInfoAfter,
+                                         NewAspectsTerminateBefore} ->
                                             {ok,
                                              NewRateRequestMax,
                                              NewCountProcessDynamic,
@@ -2623,12 +2629,12 @@ services_validate_options_internal_checks(RateRequestMax,
                                              NewRequestPidOptions,
                                              NewInfoPidOptions,
                                              NewHibernate,
-                                             AspectsInitAfter,
-                                             AspectsRequestBefore,
-                                             AspectsRequestAfter,
-                                             AspectsInfoBefore,
-                                             AspectsInfoAfter,
-                                             AspectsTerminateBefore};
+                                             NewAspectsInitAfter,
+                                             NewAspectsRequestBefore,
+                                             NewAspectsRequestAfter,
+                                             NewAspectsInfoBefore,
+                                             NewAspectsInfoAfter,
+                                             NewAspectsTerminateBefore};
                                         {error, _} = Error ->
                                             Error
                                     end;
@@ -2877,7 +2883,11 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                         AspectsRequestAfter,
                         AspectsTerminateBefore,
                         AutomaticLoading) of
-                        ok ->
+                        {ok,
+                         NewAspectsInitAfter,
+                         NewAspectsRequestBefore,
+                         NewAspectsRequestAfter,
+                         NewAspectsTerminateBefore} ->
                             {ok,
                              NewTimeoutTerminate,
                              Options#config_service_options{
@@ -2914,13 +2924,13 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                  automatic_loading =
                                      AutomaticLoading,
                                  aspects_init_after =
-                                     AspectsInitAfter,
+                                     NewAspectsInitAfter,
                                  aspects_request_before =
-                                     AspectsRequestBefore,
+                                     NewAspectsRequestBefore,
                                  aspects_request_after =
-                                     AspectsRequestAfter,
+                                     NewAspectsRequestAfter,
                                  aspects_terminate_before =
-                                     AspectsTerminateBefore,
+                                     NewAspectsTerminateBefore,
                                  limit =
                                      NewLimit,
                                  owner =
@@ -3051,16 +3061,22 @@ services_validate_option_pid_options([{priority, V} = PidOption |
 services_validate_option_pid_options([PidOption | _], _) ->
     {error, {service_options_pid_invalid, PidOption}}.
 
-services_validate_option_aspects_f([], _, _) ->
-    ok;
-services_validate_option_aspects_f([F | Aspects], Arity, AutomaticLoading)
+services_validate_option_aspects_f(Aspects, Arity, AutomaticLoading) ->
+    services_validate_option_aspects_f(Aspects, [], Arity, AutomaticLoading).
+
+services_validate_option_aspects_f([], AspectsNew, _, _) ->
+    {ok, lists:reverse(AspectsNew)};
+services_validate_option_aspects_f([F | AspectsOld], AspectsNew,
+                                   Arity, AutomaticLoading)
     when is_function(F, Arity) ->
-    services_validate_option_aspects_f(Aspects, Arity, AutomaticLoading);
-services_validate_option_aspects_f([{M, F} = Entry | Aspects], Arity,
-                                   AutomaticLoading)
+    services_validate_option_aspects_f(AspectsOld, [F | AspectsNew],
+                                       Arity, AutomaticLoading);
+services_validate_option_aspects_f([{M, F} = Entry | AspectsOld], AspectsNew,
+                                   Arity, AutomaticLoading)
     when is_atom(M), is_atom(F) ->
     % check if a function is exported
-    % if the module is not currently loaded, only load the module for the check
+    % if the module is not currently loaded,
+    % only load the module for the check
     Exported = case code:is_loaded(M) of
         {file, _} ->
             erlang:function_exported(M, F, Arity);
@@ -3082,20 +3098,64 @@ services_validate_option_aspects_f([{M, F} = Entry | Aspects], Arity,
     end,
     if
         Exported =:= true ->
-            services_validate_option_aspects_f(Aspects, Arity,
-                                               AutomaticLoading);
+            services_validate_option_aspects_f(AspectsOld,
+                                               [Entry | AspectsNew],
+                                               Arity, AutomaticLoading);
         Exported =:= false ->
             {error, Entry}
     end;
-services_validate_option_aspects_f([Entry | _], _, _) ->
+services_validate_option_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
+                                   Arity, AutomaticLoading)
+    when is_atom(M), is_atom(F) ->
+    % check if a function is exported
+    % if the module is not currently loaded,
+    % only load the module to make a function
+    {Exported, Function} = case code:is_loaded(M) of
+        {file, _} ->
+            case erlang:function_exported(M, F, 0) of
+                true ->
+                    {true, M:F()};
+                false ->
+                    {false, undefined}
+            end;
+        false ->
+            if
+                AutomaticLoading =:= true ->
+                    case code:load_file(M) of
+                        {module, _} ->
+                            V = case erlang:function_exported(M, F, 0) of
+                                true ->
+                                    {true, M:F()};
+                                false ->
+                                    {false, undefined}
+                            end,
+                            true = code:delete(M),
+                            false = code:purge(M),
+                            V;
+                        {error, _} ->
+                            {false, undefined}
+                    end;
+                AutomaticLoading =:= false ->
+                    {false, undefined}
+            end
+    end,
+    if
+        Exported =:= true, is_function(Function, Arity) ->
+            services_validate_option_aspects_f(AspectsOld,
+                                               [Function | AspectsNew],
+                                               Arity, AutomaticLoading);
+        Exported =:= false ->
+            {error, Entry}
+    end;
+services_validate_option_aspects_f([Entry | _], _, _, _) ->
     {error, Entry}.
 
 services_validate_option_aspects_terminate_before(AspectsTerminate,
                                                   AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsTerminate, 3,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_terminate_before_invalid, Entry}}
     end.
@@ -3104,8 +3164,8 @@ services_validate_option_aspects_init_after_internal(AspectsInit,
                                                      AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsInit, 5,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_init_after_invalid, Entry}}
     end.
@@ -3114,8 +3174,8 @@ services_validate_option_aspects_request_before_internal(AspectsRequest,
                                                          AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsRequest, 11,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_request_before_invalid, Entry}}
     end.
@@ -3124,8 +3184,8 @@ services_validate_option_aspects_request_after_internal(AspectsRequest,
                                                         AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsRequest, 12,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_request_after_invalid, Entry}}
     end.
@@ -3134,8 +3194,8 @@ services_validate_option_aspects_info_before_internal(AspectsInfo,
                                                       AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsInfo, 3,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_info_before_invalid, Entry}}
     end.
@@ -3144,8 +3204,8 @@ services_validate_option_aspects_info_after_internal(AspectsInfo,
                                                       AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsInfo, 3,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_info_after_invalid, Entry}}
     end.
@@ -3160,26 +3220,37 @@ services_validate_option_aspects_internal(AspectsInitAfter,
     case services_validate_option_aspects_init_after_internal(
         AspectsInitAfter,
         AutomaticLoading) of
-        ok ->
+        {ok, NewAspectsInitAfter} ->
             case services_validate_option_aspects_request_before_internal(
                 AspectsRequestBefore,
                 AutomaticLoading) of
-                ok ->
+                {ok, NewAspectsRequestBefore} ->
                     case services_validate_option_aspects_request_after_internal(
                         AspectsRequestAfter,
                         AutomaticLoading) of
-                        ok ->
+                        {ok, NewAspectsRequestAfter} ->
                             case services_validate_option_aspects_info_before_internal(
                                 AspectsInfoBefore,
                                 AutomaticLoading) of
-                                ok ->
+                                {ok, NewAspectsInfoBefore} ->
                                     case services_validate_option_aspects_info_after_internal(
                                         AspectsInfoAfter,
                                         AutomaticLoading) of
-                                        ok ->
-                                            services_validate_option_aspects_terminate_before(
+                                        {ok, NewAspectsInfoAfter} ->
+                                            case services_validate_option_aspects_terminate_before(
                                                 AspectsTerminateBefore,
-                                                AutomaticLoading);
+                                                AutomaticLoading) of
+                                                {ok, NewAspectsTerminateBefore} ->
+                                                    {ok,
+                                                     NewAspectsInitAfter,
+                                                     NewAspectsRequestBefore,
+                                                     NewAspectsRequestAfter,
+                                                     NewAspectsInfoBefore,
+                                                     NewAspectsInfoAfter,
+                                                     NewAspectsTerminateBefore};
+                                                {error, _} = Error ->
+                                                    Error
+                                            end;
                                         {error, _} = Error ->
                                             Error
                                     end;
@@ -3200,8 +3271,8 @@ services_validate_option_aspects_init_after_external(AspectsInit,
                                                      AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsInit, 4,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_init_after_invalid, Entry}}
     end.
@@ -3210,8 +3281,8 @@ services_validate_option_aspects_request_before_external(AspectsRequest,
                                                          AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsRequest, 10,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_request_before_invalid, Entry}}
     end.
@@ -3220,8 +3291,8 @@ services_validate_option_aspects_request_after_external(AspectsRequest,
                                                         AutomaticLoading) ->
     case services_validate_option_aspects_f(AspectsRequest, 11,
                                             AutomaticLoading) of
-        ok ->
-            ok;
+        {ok, _} = Success ->
+            Success;
         {error, Entry} ->
             {error, {service_options_aspects_request_after_invalid, Entry}}
     end.
@@ -3234,18 +3305,27 @@ services_validate_option_aspects_external(AspectsInitAfter,
     case services_validate_option_aspects_init_after_external(
         AspectsInitAfter,
         AutomaticLoading) of
-        ok ->
+        {ok, NewAspectsInitAfter} ->
             case services_validate_option_aspects_request_before_external(
                 AspectsRequestBefore,
                 AutomaticLoading) of
-                ok ->
+                {ok, NewAspectsRequestBefore} ->
                     case services_validate_option_aspects_request_after_external(
                         AspectsRequestAfter,
                         AutomaticLoading) of
-                        ok ->
-                            services_validate_option_aspects_terminate_before(
+                        {ok, NewAspectsRequestAfter} ->
+                            case services_validate_option_aspects_terminate_before(
                                 AspectsTerminateBefore,
-                                AutomaticLoading);
+                                AutomaticLoading) of
+                                {ok, NewAspectsTerminateBefore} ->
+                                    {ok,
+                                     NewAspectsInitAfter,
+                                     NewAspectsRequestBefore,
+                                     NewAspectsRequestAfter,
+                                     NewAspectsTerminateBefore};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, _} = Error ->
                             Error
                     end;

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/16]).
+         create_external/17]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -80,7 +80,8 @@ create_external(Protocol, SocketPath,
                 ThreadIndex, ProcessIndex, ProcessCount,
                 CommandLine, BufferSize, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, TimeoutTerm,
-                DestRefresh, DestDeny, DestAllow, ConfigOptions)
+                DestRefresh, DestDeny, DestAllow,
+                ConfigOptions, ID)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_list(CommandLine),
@@ -111,7 +112,7 @@ create_external(Protocol, SocketPath,
                                  CommandLine, BufferSize, Timeout, Prefix,
                                  TimeoutSync, TimeoutAsync, TimeoutTerm,
                                  DestRefresh, DestDeny, DestAllow,
-                                 ConfigOptions]) of
+                                 ConfigOptions, ID]) of
         {ok, Dispatcher} ->
             result(Dispatcher, Timeout);
         {ok, Dispatcher, _} ->

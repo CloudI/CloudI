@@ -62,6 +62,8 @@
          fetch2/2,
          find1/2,
          find2/2,
+         fold1/3,
+         fold2/3,
          is_key1/2,
          is_key2/2,
          new/0,
@@ -209,6 +211,32 @@ find2(K,
       #key2value{module = Module,
                  lookup2 = Lookup2}) ->
     Module:find(K, Lookup2).
+
+-spec fold1(F :: fun((key1(), list(key2()), value(), any()) -> any()),
+            A0 :: any(),
+            State :: key2value(key1(), key2(), value())) ->
+    any().
+
+fold1(F, A0,
+      #key2value{module = Module,
+                 lookup1 = Lookup1})
+    when is_function(F, 4) ->
+    Module:fold(fun(K1, {L1, V1}, AN) ->
+        F(K1, L1, V1, AN)
+    end, A0, Lookup1).
+
+-spec fold2(F :: fun((list(key1()), key2(), value(), any()) -> any()),
+            A0 :: any(),
+            State :: key2value(key1(), key2(), value())) ->
+    any().
+
+fold2(F, A0,
+      #key2value{module = Module,
+                 lookup2 = Lookup2})
+    when is_function(F, 4) ->
+    Module:fold(fun(K2, {L2, V2}, AN) ->
+        F(L2, K2, V2, AN)
+    end, A0, Lookup2).
 
 -spec is_key1(K :: key1(),
               key2value(key1(), key2(), value())) ->

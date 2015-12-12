@@ -5,7 +5,8 @@
     lt/2,
     eq/2,
     gt/2,
-    wc/1
+    wc/1,
+    nf/1
 ]).
 
 -export([
@@ -24,6 +25,7 @@
     {atom(), '=', term()} |
     {atom(), '>', term()} |
     {atom(), '*'} |
+    {atom(), '!'} |
     {any, [op(), ...]} |
     {all, [op(), ...]} |
     {null, true|false}.
@@ -51,11 +53,18 @@ gt(Key, Term) when is_atom(Key) ->
 gt(Key, Term) ->
     erlang:error(badarg, [Key, Term]).
 
-%% @doc Test that a field value is exists.
+%% @doc Test that a field exists.
 -spec wc(atom()) -> op().
 wc(Key) when is_atom(Key) ->
     {Key, '*'};
 wc(Key) ->
+    erlang:error(badarg, [Key]).
+
+%% @doc Test that a field is not found.
+-spec nf(atom()) -> op().
+nf(Key) when is_atom(Key) ->
+    {Key, '!'};
+nf(Key) ->
     erlang:error(badarg, [Key]).
 
 %% @doc Filter the input using multiple filters.

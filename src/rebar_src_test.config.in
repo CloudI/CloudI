@@ -24,6 +24,7 @@
   "lib/cloudi_service_http_elli",
   "lib/cloudi_service_http_rest",
   "lib/cloudi_service_map_reduce",
+  "lib/cloudi_service_monitoring",
   "lib/cloudi_service_oauth1",
   "lib/cloudi_service_queue",
   "lib/cloudi_service_quorum",

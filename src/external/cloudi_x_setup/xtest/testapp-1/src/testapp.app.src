@@ -1,0 +1,14 @@
+%% -*- erlang -*-
+{application, testapp,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { testapp_app, []}},
+  {included_applications, [os_mon, snmp]},
+  {env, []}
+ ]}.

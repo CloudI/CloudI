@@ -27,7 +27,7 @@ ct:
 
 build-plt:
 	@$(DIALYZER) --build_plt --output_plt .$(APPNAME)_dialyzer.plt \
-		--apps kernel stdlib sasl inets crypto public_key ssl
+		--apps kernel stdlib sasl inets crypto public_key ssl compiler syntax_tools
 
 dialyze:
 	@$(DIALYZER) --src src --plt .$(APPNAME)_dialyzer.plt --no_native \

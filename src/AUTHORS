@@ -14,6 +14,7 @@ Dmitriy Mazurin             <dimas.m.19 [at] gmail (dot) com>
 
 CloudI Integration Dependencies (alphabetical project order):
 backward-cpp     François-Xavier Bourlet <bombela@gmail.com>
+bear             Boundary
 booster          Artyom Beilis (Tonkikh)
 cowboy           Loïc Hoguin <essen@ninenines.eu>
 ecouchdb         Dmitrii 'Mamut' Dimandt <dmitrii@dmitriid.com>
@@ -34,12 +35,17 @@ erlcloud         Brian Buchanan <bwb@holo.org>
 erlcql           Krzysztof Rutka <krzysztof.rutka@gmail.com>
 erlzmq           Yurii Rashkovskii <yrashk@gmail.com>
 etokyotyrant     Jim McCoy <mccoy@mad-scientist.com>
+exometer         Basho Technologies
+exometer_core    Basho Technologies
+folsom           Boundary
+goldrush         Magnus Klaar <klaar@ninenines.eu>
 jinterface       Ericsson's OTP Team
 jsonlib          Josh Marshall
 jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
 lager            Basho Technologies
 lz4              SUZUKI Tetsuya <tetsuya.suzuki@gmail.com>
 nodefinder       Paul Mineiro <paul@n54.com>
+parse_trans      Ulf Wiger <ulf.wiger@feuerlabs.com>
 pgsql            Paul Guyot
 poolboy          Devin Torres (devinus) devin@devintorres.com,
                  Andrew Thompson (Vagabond) andrew@hijacked.us,
@@ -48,6 +54,7 @@ protobuffs       Nick Gerakines <nick@gerakines.net>
 rebar            Basho Technologies
 riak_pb          Basho Technologies
 riakc            Basho Technologies
+setup            Ulf Wiger <ulf@wiger.net>
 snappy           Filipe David Manana <fdmanana@apache.org>
 thrift           https://github.com/apache/thrift/blob/0.1.x/CONTRIBUTORS
 zeromq           Martin Sustrik <sustrik@250bpm.com>

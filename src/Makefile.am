@@ -24,6 +24,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_http_rest/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
+     -d $(top_srcdir)/lib/cloudi_service_monitoring/src \
      -d $(top_srcdir)/lib/cloudi_service_oauth1/src \
      -d $(top_srcdir)/lib/cloudi_service_queue/src \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
@@ -48,6 +49,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/uuid/src \
      -d $(top_srcdir)/lib/varpool/src \
      -d $(top_srcdir)/lib/varpool/test \
+     -d $(top_srcdir)/external/cloudi_x_bear/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
@@ -61,18 +63,23 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_erlasticsearch/src \
      -d $(top_srcdir)/external/cloudi_x_erlcloud/src \
      -d $(top_srcdir)/external/cloudi_x_erlcql/src \
+     -d $(top_srcdir)/external/cloudi_x_exometer/src \
+     -d $(top_srcdir)/external/cloudi_x_exometer_core/src \
+     -d $(top_srcdir)/external/cloudi_x_folsom/src \
      -d $(top_srcdir)/external/cloudi_x_goldrush/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_lager/src \
      -d $(top_srcdir)/external/cloudi_x_lhttpc/src \
      -d $(top_srcdir)/external/cloudi_x_msgpack/src \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
+     -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_poolboy/src \
      -d $(top_srcdir)/external/cloudi_x_protobuffs/src \
      -d $(top_srcdir)/external/cloudi_x_ranch/src \
      -d $(top_srcdir)/external/cloudi_x_riak_pb/src \
      -d $(top_srcdir)/external/cloudi_x_riakc/src \
+     -d $(top_srcdir)/external/cloudi_x_setup/src \
      -d $(top_srcdir)/external/cloudi_x_thrift/src
 
 if PYTHON_SUPPORT
@@ -133,6 +140,7 @@ rebar-directories-compile:
 	$(MKDIR_P) lib/cloudi_service_http_elli/ebin
 	$(MKDIR_P) lib/cloudi_service_http_rest/ebin
 	$(MKDIR_P) lib/cloudi_service_map_reduce/ebin
+	$(MKDIR_P) lib/cloudi_service_monitoring/ebin
 	$(MKDIR_P) lib/cloudi_service_oauth1/ebin
 	$(MKDIR_P) lib/cloudi_service_queue/ebin
 	$(MKDIR_P) lib/cloudi_service_quorum/ebin
@@ -157,6 +165,7 @@ rebar-directories-compile:
 	$(MKDIR_P) external/rebar_modules/ebin
 	$(MKDIR_P) external/cloudi_x_msgpack/ebin
 	$(MKDIR_P) external/cloudi_x_nodefinder/ebin
+	$(MKDIR_P) external/cloudi_x_parse_trans/ebin
 	$(MKDIR_P) external/cloudi_x_erlcloud/ebin
 	$(MKDIR_P) external/cloudi_x_lager/ebin
 	$(MKDIR_P) external/cloudi_x_lhttpc/ebin
@@ -172,12 +181,16 @@ rebar-directories-compile:
 	$(MKDIR_P) external/cloudi_x_emysql/ebin
 	$(MKDIR_P) external/cloudi_x_ememcached/ebin
 	$(MKDIR_P) external/cloudi_x_ecouchdb/ebin
+	$(MKDIR_P) external/cloudi_x_bear/ebin
 	$(MKDIR_P) external/cloudi_x_cowboy/ebin
 	$(MKDIR_P) external/cloudi_x_cowlib/ebin
 	$(MKDIR_P) external/cloudi_x_ranch/ebin
 	$(MKDIR_P) external/cloudi_x_elli/ebin
 	$(MKDIR_P) external/cloudi_x_dynamic_compile/ebin
 	$(MKDIR_P) external/cloudi_x_erlcql/ebin
+	$(MKDIR_P) external/cloudi_x_exometer/ebin
+	$(MKDIR_P) external/cloudi_x_exometer_core/ebin
+	$(MKDIR_P) external/cloudi_x_folsom/ebin
 	$(MKDIR_P) external/cloudi_x_protobuffs/ebin
 	$(MKDIR_P) external/cloudi_x_riakc/ebin
 	$(MKDIR_P) external/cloudi_x_riak_pb/ebin
@@ -235,6 +248,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce/src && \
         test ! -e cloudi_service_map_reduce.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_monitoring/src && \
+        test ! -e cloudi_service_monitoring.app.src && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.app.src || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_oauth1/src && \
         test ! -e cloudi_service_oauth1.app.src && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.app.src || exit 0)
@@ -349,6 +365,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/lib/cloudi_service_map_reduce && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0)
+	(cd $(top_srcdir)/lib/cloudi_service_monitoring && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_service_monitoring/ebin || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_service_oauth1 && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_service_oauth1/ebin || exit 0)
@@ -424,6 +443,10 @@ rebar-directories-compile:
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/cloudi_x_nodefinder/ebin || \
         exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_parse_trans && \
+        test ! -e ebin && $(LN_S) \
+        $(abs_top_builddir)/external/cloudi_x_parse_trans/ebin || \
+        exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_erlcloud && \
         test ! -e ebin && $(LN_S) \
         $(abs_top_builddir)/external/cloudi_x_erlcloud/ebin || \
@@ -473,6 +496,9 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_ecouchdb && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_ecouchdb/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_bear && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_bear/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_cowboy && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_cowboy/ebin || exit 0)
@@ -497,6 +523,15 @@ rebar-directories-compile:
 	(cd $(top_srcdir)/external/cloudi_x_erlcql && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_erlcql/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_exometer && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_exometer/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_exometer_core && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_exometer_core/ebin || exit 0)
+	(cd $(top_srcdir)/external/cloudi_x_folsom && \
+        test ! -e ebin && \
+        $(LN_S) $(abs_top_builddir)/external/cloudi_x_folsom/ebin || exit 0)
 	(cd $(top_srcdir)/external/cloudi_x_syslog && \
         test ! -e ebin && \
         $(LN_S) $(abs_top_builddir)/external/cloudi_x_syslog/ebin || exit 0)
@@ -602,6 +637,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/lib/cloudi_service_http_rest/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_map_reduce/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_map_reduce/ebin
+	rmdir $(top_builddir)/lib/cloudi_service_monitoring/ebin || exit 0
+	rm -f $(top_srcdir)/lib/cloudi_service_monitoring/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_oauth1/ebin || exit 0
 	rm -f $(top_srcdir)/lib/cloudi_service_oauth1/ebin
 	rmdir $(top_builddir)/lib/cloudi_service_queue/ebin || exit 0
@@ -646,6 +683,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_msgpack/ebin
 	rmdir $(top_builddir)/external/cloudi_x_nodefinder/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_nodefinder/ebin
+	rmdir $(top_builddir)/external/cloudi_x_parse_trans/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_parse_trans/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcloud/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_erlcloud/ebin
 	rmdir $(top_builddir)/external/cloudi_x_lager/ebin || exit 0
@@ -676,6 +715,8 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_ememcached/ebin
 	rmdir $(top_builddir)/external/cloudi_x_ecouchdb/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_ecouchdb/ebin
+	rmdir $(top_builddir)/external/cloudi_x_bear/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_bear/ebin
 	rmdir $(top_builddir)/external/cloudi_x_cowboy/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_cowboy/ebin
 	rmdir $(top_builddir)/external/cloudi_x_cowlib/ebin || exit 0
@@ -694,6 +735,12 @@ rebar-directories-clean: rebar-clean
 	rm -f $(top_srcdir)/external/cloudi_x_protobuffs/ebin
 	rmdir $(top_builddir)/external/cloudi_x_erlcql/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_erlcql/ebin
+	rmdir $(top_builddir)/external/cloudi_x_exometer/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_exometer/ebin
+	rmdir $(top_builddir)/external/cloudi_x_exometer_core/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_exometer_core/ebin
+	rmdir $(top_builddir)/external/cloudi_x_folsom/ebin || exit 0
+	rm -f $(top_srcdir)/external/cloudi_x_folsom/ebin
 	rmdir $(top_builddir)/external/cloudi_x_syslog/ebin || exit 0
 	rm -f $(top_srcdir)/external/cloudi_x_syslog/ebin
 	rmdir $(top_builddir)/external/lz4/ebin || exit 0
@@ -812,6 +859,7 @@ dialyze: all \
               lib/cloudi_service_http_elli/ebin/ \
               lib/cloudi_service_http_rest/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
+              lib/cloudi_service_monitoring/ebin/ \
               lib/cloudi_service_oauth1/ebin/ \
               lib/cloudi_service_queue/ebin/ \
               lib/cloudi_service_quorum/ebin/ \
@@ -846,11 +894,7 @@ dialyze: all \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_epgsql_wg/ebin \
-              external/cloudi_x_erlasticsearch/ebin \
-              external/cloudi_x_erlang_cassandra/ebin \
-              external/cloudi_x_erlcql/ebin \
               external/cloudi_x_jsx/ebin \
-              external/cloudi_x_pgsql/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/cloudi_x_syslog/ebin

@@ -191,7 +191,7 @@ trace(Backend, Filter, Level) ->
 stop_trace({_Filter, _Level, Target} = Trace) ->
     {Level, Traces} = lager_config:get(loglevel),
     NewTraces =  lists:delete(Trace, Traces),
-    lager_util:trace_filter([ element(1, T) || T <- NewTraces ]),
+    _ = lager_util:trace_filter([ element(1, T) || T <- NewTraces ]),
     %MinLevel = minimum_loglevel(get_loglevels() ++ get_trace_levels(NewTraces)),
     lager_config:set(loglevel, {Level, NewTraces}),
     case get_loglevel(Target) of
@@ -210,7 +210,7 @@ stop_trace({_Filter, _Level, Target} = Trace) ->
 
 clear_all_traces() ->
     {Level, _Traces} = lager_config:get(loglevel),
-    lager_util:trace_filter(none),
+    _ = lager_util:trace_filter(none),
     lager_config:set(loglevel, {Level, []}),
     lists:foreach(fun(Handler) ->
           case get_loglevel(Handler) of
@@ -319,7 +319,7 @@ add_trace_to_loglevel_config(Trace) ->
     case lists:member(Trace, Traces) of
         false ->
             NewTraces = [Trace|Traces],
-            lager_util:trace_filter([ element(1, T) || T <- NewTraces]),
+            _ = lager_util:trace_filter([ element(1, T) || T <- NewTraces]),
             lager_config:set(loglevel, {MinLevel, [Trace|Traces]});
         _ ->
             ok
@@ -362,30 +362,47 @@ safe_format_chop(Fmt, Args, Limit) ->
 
 %% @doc Print a record lager found during parse transform
 pr(Record, Module) when is_tuple(Record), is_atom(element(1, Record)) ->
-    try Module:module_info(attributes) of
-        Attrs ->
-            case lists:keyfind(lager_records, 1, Attrs) of
-                false ->
-                    Record;
-                {lager_records, Records} ->
-                    RecordName = element(1, Record),
-                    RecordSize = tuple_size(Record) - 1,
-                    case lists:filter(fun({Name, Fields}) when Name == RecordName,
-                                length(Fields) == RecordSize ->
-                                    true;
-                                (_) ->
-                                    false
-                            end, Records) of
-                        [] ->
-                            Record;
-                        [{RecordName, RecordFields}|_] ->
-                            {'$lager_record', RecordName,
-                                lists:zip(RecordFields, tl(tuple_to_list(Record)))}
-                    end
-            end
+    try 
+        case is_record_known(Record, Module) of
+            false ->
+                Record;
+            {RecordName, RecordFields} ->
+                {'$lager_record', RecordName, 
+                    zip(RecordFields, tl(tuple_to_list(Record)), Module, [])}
+        end
     catch
         error:undef ->
             Record
     end;
 pr(Record, _) ->
     Record.
+
+zip([FieldName|RecordFields], [FieldValue|Record], Module, ToReturn) ->
+    case   is_tuple(FieldValue) andalso
+           tuple_size(FieldValue) > 0 andalso
+           is_atom(element(1, FieldValue)) andalso
+           is_record_known(FieldValue, Module) of
+        false ->
+            zip(RecordFields, Record, Module, [{FieldName, FieldValue}|ToReturn]);
+        _Else ->
+            F = {FieldName, pr(FieldValue, Module)},
+            zip(RecordFields, Record, Module, [F|ToReturn])
+    end;
+zip([], [], _Module, ToReturn) ->
+    lists:reverse(ToReturn).
+
+is_record_known(Record, Module) -> 
+    Name = element(1, Record),
+    Attrs = Module:module_info(attributes),
+    case lists:keyfind(lager_records, 1, Attrs) of
+        false -> false;
+        {lager_records, Records} -> 
+            case lists:keyfind(Name, 1, Records) of
+                false -> false;
+                {Name, RecordFields} -> 
+                    case (tuple_size(Record) - 1) =:= length(RecordFields) of
+                        false -> false;
+                        true -> {Name, RecordFields}
+                    end
+            end
+    end.

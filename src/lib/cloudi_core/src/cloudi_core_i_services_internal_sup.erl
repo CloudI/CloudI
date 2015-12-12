@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2011-2015 Michael Truog
+%%% @version 1.5.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_sup).
@@ -54,7 +54,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/14,
+         create_internal/15,
          create_internal_done/3]).
 
 %% supervisor callbacks
@@ -80,7 +80,8 @@ start_link() ->
 create_internal(ProcessIndex, ProcessCount, GroupLeader,
                 Module, Args, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, TimeoutTerm,
-                DestRefresh, DestDeny, DestAllow, ConfigOptions)
+                DestRefresh, DestDeny, DestAllow,
+                ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync),
@@ -106,7 +107,7 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
                                           TimeoutSync, TimeoutAsync,
                                           TimeoutTerm,
                                           DestRefresh, DestDeny, DestAllow,
-                                          ConfigOptions, self()]) of
+                                          ConfigOptions, ID, self()]) of
         {ok, Dispatcher} ->
             result(Dispatcher);
         {ok, Dispatcher, _} ->
@@ -144,13 +145,13 @@ init([]) ->
 
 result(Dispatcher) ->
     % must not call cloudi_service:self/1 due to the possibility
-    % that external source code (called within cloudi_service_init/3)
+    % that external source code (called within cloudi_service_init/4)
     % will consume any incoming messages it doesn't understand
     % (e.g., in the source code doing a start_link)
     MonitorRef = erlang:monitor(process, Dispatcher),
     receive
         {self, Dispatcher, Service} ->
-            % sent before cloudi_service_init/3 via create_internal_done/3
+            % sent before cloudi_service_init/4 via create_internal_done/3
             erlang:demonitor(MonitorRef),
             {ok, Service};
         {'DOWN', MonitorRef, process, Dispatcher, Info} ->

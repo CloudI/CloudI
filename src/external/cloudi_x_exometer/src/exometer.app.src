@@ -1,0 +1,21 @@
+%% -*- erlang -*-
+{application, exometer,
+ [
+  {description, "Code instrumentation and metrics collection package."},
+  {vsn, "1.2.1"},
+  {registered, []},
+  {applications,
+   [
+    kernel,
+    stdlib,
+    lager,
+    exometer_core
+   ]},
+  {included_applications,
+   [
+   ]},
+  {mod, {exometer_app, []}},
+  {env,
+   [
+   ]}
+ ]}.

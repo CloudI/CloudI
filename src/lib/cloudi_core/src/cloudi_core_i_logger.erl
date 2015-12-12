@@ -1014,9 +1014,10 @@ flooding_logger_warning(SecondsRemaining) ->
 
 %% determine if a single process has sent too many logging messages
 flooding_logger(Timestamp1) ->
-    case erlang:get(cloudi_logger) of
+    case erlang:get(?LOGGER_FLOODING_PDICT_KEY) of
         undefined ->
-            erlang:put(cloudi_logger, {Timestamp1, 1, false}),
+            erlang:put(?LOGGER_FLOODING_PDICT_KEY,
+                       {Timestamp1, 1, false}),
             {false, undefined};
         {Timestamp0, Count0, Flooding} ->
             Count1 = Count0 + 1,
@@ -1025,17 +1026,20 @@ flooding_logger(Timestamp1) ->
                 (MicroSecondsElapsed >
                  ?LOGGER_FLOODING_INTERVAL_MAX * 1000) orelse
                 (MicroSecondsElapsed < 0) ->
-                    erlang:put(cloudi_logger, {Timestamp1, 1, false}),
+                    erlang:put(?LOGGER_FLOODING_PDICT_KEY,
+                               {Timestamp1, 1, false}),
                     {false, undefined};
                 (MicroSecondsElapsed >
                  ?LOGGER_FLOODING_INTERVAL_MIN * 1000) andalso
                 (MicroSecondsElapsed div Count1 < ?LOGGER_FLOODING_DELTA) ->
-                    erlang:put(cloudi_logger, {Timestamp0, Count1, true}),
+                    erlang:put(?LOGGER_FLOODING_PDICT_KEY,
+                               {Timestamp0, Count1, true}),
                     SecondsRemaining = ?LOGGER_FLOODING_INTERVAL_MAX * 1000.0 -
                                        MicroSecondsElapsed / 1000000,
                     {false, flooding_logger_warning(SecondsRemaining)};
                 true ->
-                    erlang:put(cloudi_logger, {Timestamp0, Count1, Flooding}),
+                    erlang:put(?LOGGER_FLOODING_PDICT_KEY,
+                               {Timestamp0, Count1, Flooding}),
                     {Flooding, undefined}
             end
     end.

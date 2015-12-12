@@ -226,7 +226,7 @@ format_json_rpc_f(F, 2, Param, Timeout, Id) ->
 cloudi_service_api_call(services = Method, Timeout) ->
     case cloudi_service_api:Method(Timeout) of
         {ok, L} ->
-            {ok, [{cloudi_x_uuid:uuid_to_string(UUID), Data} ||
+            {ok, [{service_id(UUID), Data} ||
                   {UUID, Data} <- L]};
         {error, _} = Error ->
             Error
@@ -237,7 +237,7 @@ cloudi_service_api_call(Method, Timeout) ->
 cloudi_service_api_call(services_search = Method, Input, Timeout) ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, L} ->
-            {ok, [{cloudi_x_uuid:uuid_to_string(UUID), Data} ||
+            {ok, [{service_id(UUID), Data} ||
                   {UUID, Data} <- L]};
         {error, _} = Error ->
             Error
@@ -245,7 +245,7 @@ cloudi_service_api_call(services_search = Method, Input, Timeout) ->
 cloudi_service_api_call(services_add = Method, Input, Timeout) ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, L} ->
-            {ok, [cloudi_x_uuid:uuid_to_string(UUID) || UUID <- L]};
+            {ok, [service_id(UUID) || UUID <- L]};
         {error, _} = Error ->
             Error
     end;
@@ -256,3 +256,6 @@ cloudi_service_api_result({ok, Result}, erlang_string) ->
     cloudi_string:term_to_binary(Result);
 cloudi_service_api_result(Result, erlang_string) ->
     cloudi_string:term_to_binary(Result).
+
+service_id(ID) ->
+    cloudi_x_uuid:uuid_to_string(ID, list_nodash).

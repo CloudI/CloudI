@@ -1,0 +1,25 @@
+EXOTEST-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE, Counter32, Counter64, Gauge32, Integer32, snmpModules, experimental FROM SNMPv2-SMI
+    MODULE-COMPLIANCE, OBJECT-GROUP, NOTIFICATION-GROUP FROM SNMPv2-CONF;
+
+exotestMIB MODULE-IDENTITY
+	LAST-UPDATED "201401190525Z"
+	ORGANIZATION "Feuerlabs"
+	CONTACT-INFO "TODO" 
+
+	DESCRIPTION 
+		"This MIB module is used for testing of exotest SNMP export."
+	REVISION  "201401190525Z"
+	DESCRIPTION 
+		"The initial version"
+	::= { snmpModules 1 }
+
+exotest OBJECT IDENTIFIER ::= { experimental 9 }
+
+-- CONTENT START
+
+-- CONTENT END
+
+END

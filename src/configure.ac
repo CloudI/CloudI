@@ -558,6 +558,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_http_elli/src/cloudi_service_http_elli.app.src
     lib/cloudi_service_http_rest/src/cloudi_service_http_rest.app.src
     lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
+    lib/cloudi_service_monitoring/src/cloudi_service_monitoring.app.src
     lib/cloudi_service_oauth1/src/cloudi_service_oauth1.app.src
     lib/cloudi_service_queue/src/cloudi_service_queue.app.src
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src

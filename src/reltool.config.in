@@ -64,6 +64,8 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_map_reduce,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_service_monitoring,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_oauth1,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_queue,
@@ -84,12 +86,17 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   % dependencies reltool fails to see:
+  % (reltool has a bug due to xref usage,
+  %  http://erlang.org/pipermail/erlang-bugs/2014-May/004390.html)
 
   % syntax_tools from cloudi_x_erlasticsearch, cloudi_x_erlang_cassandra, and
   %                   cloudi_x_goldrush
   {app, syntax_tools,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  % cloudi_x_lager from cloudi_x_erlang_cassandra
+  % cloudi_x_exometer from cloudi_service_monitoring
+  {app, cloudi_x_exometer,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  % cloudi_x_lager from cloudi_x_exometer
   {app, cloudi_x_lager,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   % cloudi_x_goldrush from cloudi_x_lager

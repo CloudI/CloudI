@@ -63,7 +63,6 @@
          restart/2,
          search/2,
          pids/2,
-         get_services/1,
          increase/5,
          decrease/5,
          terminate_kill/2]).
@@ -81,8 +80,8 @@
 
 -record(service,
     {
-        service_m :: atom(),
-        service_f :: fun(),
+        service_m :: cloudi_core_i_spawn,
+        service_f :: start_internal | start_external,
         service_a :: list(),
         process_index :: non_neg_integer(),
         count_process :: pos_integer(),
@@ -131,8 +130,8 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec monitor(M :: module(),
-              F :: atom(),
+-spec monitor(M :: cloudi_core_i_spawn,
+              F :: start_internal | start_external,
               A :: list(),
               ProcessIndex :: non_neg_integer(),
               CountProcess :: pos_integer(),
@@ -195,11 +194,6 @@ pids(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {pids, ServiceId},
-                                Timeout)).
-
-get_services(Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                get_services,
                                 Timeout)).
 
 increase(Pid, Period, RateCurrent, RateMax, CountProcessMax)
@@ -303,10 +297,6 @@ handle_call({pids, ServiceId}, _,
             {reply, {error, not_found}, State}
     end;
 
-handle_call(get_services, _,
-            #state{services = Services} = State) ->
-    {reply, {ok, Services}, State};
-
 handle_call(Request, _, State) ->
     ?LOG_WARN("Unknown call \"~p\"", [Request]),
     {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
@@ -387,7 +377,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{pids = Pids} = Service}} ->
             ?LOG_INFO_SYNC("Service pid ~p shutdown~n ~p",
-                           [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                           [Pid, service_id(ServiceId)]),
             NewServices = terminate_service(ServiceId, Pids, Service, Services),
             cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, State#state{services = NewServices}};
@@ -401,7 +391,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid,
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{}}} ->
             ?LOG_INFO("Service pid ~p terminated (count_process_dynamic)~n ~p",
-                      [Pid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                      [Pid, service_id(ServiceId)]),
             NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
             {noreply, State#state{services = NewServices}};
         error ->
@@ -413,8 +403,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{pids = Pids} = Service}} ->
             ?LOG_INFO_SYNC("Service pid ~p shutdown (~p)~n ~p",
-                           [Pid, Reason,
-                            cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                           [Pid, Reason, service_id(ServiceId)]),
             NewServices = terminate_service(ServiceId, Pids, Reason,
                                             Service, Services),
             cloudi_core_i_configurator:service_dead(ServiceId),
@@ -428,7 +417,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
             ?LOG_WARN("Service pid ~p error: ~p~n ~p",
-                      [Pid, Info, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                      [Pid, Info, service_id(ServiceId)]),
             case restart(Service, Services, State, ServiceId, Pid) of
                 {true, NewState} ->
                     {noreply, NewState};
@@ -458,9 +447,7 @@ handle_info({kill, TimeoutTerm, Pid, Reason, ServiceId, #service{}}, State) ->
         true ->
             ?LOG_ERROR_SYNC("Service pid ~p brutal_kill (~p)~n"
                             " ~p after ~p ms (MaxT/MaxR)",
-                            [Pid, Reason,
-                             cloudi_x_uuid:uuid_to_string(ServiceId),
-                             TimeoutTerm]),
+                            [Pid, Reason, service_id(ServiceId), TimeoutTerm]),
             erlang:exit(Pid, kill);
         false ->
             ok
@@ -496,7 +483,7 @@ restart_stage2(#service{restart_count = 0,
                Services, State, ServiceId, OldPid) ->
     % no restarts allowed
     ?LOG_WARN_SYNC("max restarts (MaxR = 0) ~p~n ~p",
-                   [OldPid, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                   [OldPid, service_id(ServiceId)]),
     {false, State#state{services = Services}};
 
 restart_stage2(#service{service_m = M,
@@ -513,8 +500,7 @@ restart_stage2(#service{service_m = M,
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now ~p)~n"
-                           " ~p", [OldPid, Pid,
-                                   cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                           " ~p", [OldPid, Pid, service_id(ServiceId)]),
             Pids = [Pid],
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
@@ -526,8 +512,7 @@ restart_stage2(#service{service_m = M,
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now one of ~p)~n"
-                           " ~p", [OldPid, Pids,
-                                   cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                           " ~p", [OldPid, Pids, service_id(ServiceId)]),
             NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
@@ -539,7 +524,7 @@ restart_stage2(#service{service_m = M,
             NextServices;
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
-                            [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                            [Error, service_id(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = 1,
                                       restart_times = [SecondsNow]},
@@ -567,8 +552,7 @@ restart_stage2(#service{restart_count = RestartCount,
                            Services, State, ServiceId, OldPid);
         true ->
             ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
-                           " ~p", [MaxR, MaxT, OldPid,
-                                   cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                           " ~p", [MaxR, MaxT, OldPid, service_id(ServiceId)]),
             {false, State#state{services = Services}}
     end;
 
@@ -590,7 +574,7 @@ restart_stage2(#service{service_m = M,
                            "(R = ~p, T = ~p elapsed seconds)~n"
                            "                   (~p is now ~p)~n"
                            " ~p", [R, T, OldPid, Pid,
-                                   cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                                   service_id(ServiceId)]),
             Pids = [Pid],
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
@@ -606,7 +590,7 @@ restart_stage2(#service{service_m = M,
                            "(R = ~p, T = ~p elapsed seconds)~n"
                            "                   (~p is now one of ~p)~n"
                            " ~p", [R, T, OldPid, Pids,
-                                   cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                                   service_id(ServiceId)]),
             NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
@@ -619,7 +603,7 @@ restart_stage2(#service{service_m = M,
             NextServices;
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
-                            [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                            [Error, service_id(ServiceId)]),
             self() ! {restart_stage2,
                       Service#service{restart_count = R,
                                       restart_times = [SecondsNow |
@@ -732,7 +716,7 @@ pids_update([#service{pids = Pids} = Service | ServiceL], Output,
         cloudi_x_key2value:store(ServiceId, P, NewService, D)
     end, Services, Pids),
     pids_update(ServiceL, [NewService | Output],
-                            CountProcess, ServiceId, NewServices).
+                CountProcess, ServiceId, NewServices).
 
 pids_increase_loop(0, _, _, _, Services) ->
     Services;
@@ -749,7 +733,7 @@ pids_increase_loop(Count, ProcessIndex,
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
-                      [cloudi_x_uuid:uuid_to_string(ServiceId), Pid]),
+                      [service_id(ServiceId), Pid]),
             Pids = [Pid],
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 new_service_process(M, F, A,
@@ -760,7 +744,7 @@ pids_increase_loop(Count, ProcessIndex,
             NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
-                      [cloudi_x_uuid:uuid_to_string(ServiceId), Pids]),
+                      [service_id(ServiceId), Pids]),
             NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     new_service_process(M, F, A,
@@ -772,7 +756,7 @@ pids_increase_loop(Count, ProcessIndex,
             NextServices;
         {error, _} = Error ->
             ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p",
-                       [Error, cloudi_x_uuid:uuid_to_string(ServiceId)]),
+                       [Error, service_id(ServiceId)]),
             Services
     end,
     pids_increase_loop(Count - 1, ProcessIndex + 1,
@@ -843,6 +827,9 @@ terminate_service(ServiceId, Pids, Reason,
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
     NewServices.
+
+service_id(ID) ->
+    cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
                     Scope, Pids, MonitorRef, TimeoutTerm, MaxR, MaxT) ->

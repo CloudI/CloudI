@@ -1,5 +1,4 @@
-%% Encoding: latin-1
-%%
+%% -*- coding: latin-1 -*-
 %% Copyright (c) 2011-2012 Basho Technologies, Inc.  All Rights Reserved.
 %%
 %% This file is provided to you under the Apache License,
@@ -63,15 +62,15 @@
         inode :: integer(),
         flap=false :: boolean(),
         size = 0 :: integer(),
-        date,
-        count = 10,
-        formatter,
-        formatter_config,
-        sync_on,
-        check_interval = ?DEFAULT_CHECK_INTERVAL,
-        sync_interval = ?DEFAULT_SYNC_INTERVAL,
-        sync_size = ?DEFAULT_SYNC_SIZE,
-        last_check = os:timestamp()
+        date :: undefined | string(),
+        count = 10 :: integer(),
+        formatter :: atom(),
+        formatter_config :: any(),
+        sync_on :: {'mask', integer()},
+        check_interval = ?DEFAULT_CHECK_INTERVAL :: non_neg_integer(),
+        sync_interval = ?DEFAULT_SYNC_INTERVAL :: non_neg_integer(),
+        sync_size = ?DEFAULT_SYNC_SIZE :: non_neg_integer(),
+        last_check = os:timestamp() :: erlang:timestamp()
     }).
 
 -type option() :: {file, string()} | {level, lager:log_level()} |
@@ -148,7 +147,7 @@ handle_event(_Event, State) ->
 
 %% @private
 handle_info({rotate, File}, #state{name=File,count=Count,date=Date} = State) ->
-    lager_util:rotate_logfile(File, Count),
+    _ = lager_util:rotate_logfile(File, Count),
     schedule_rotation(File, Date),
     {ok, State};
 handle_info(_Info, State) ->
@@ -191,9 +190,19 @@ write(#state{name=Name, fd=FD, inode=Inode, flap=Flap, size=RotSize,
             %% need to check for rotation
             case lager_util:ensure_logfile(Name, FD, Inode, {State#state.sync_size, State#state.sync_interval}) of
                 {ok, {_, _, Size}} when RotSize /= 0, Size > RotSize ->
-                    lager_util:rotate_logfile(Name, Count),
-                    %% go around the loop again, we'll do another rotation check and hit the next clause here
-                    write(State, Timestamp, Level, Msg);
+                    case lager_util:rotate_logfile(Name, Count) of
+                        ok ->
+                            %% go around the loop again, we'll do another rotation check and hit the next clause of ensure_logfile
+                            write(State, Timestamp, Level, Msg);
+                        {error, Reason} ->
+                            case Flap of
+                                true ->
+                                    State;
+                                _ ->
+                                    ?INT_LOG(error, "Failed to rotate log file ~s with error ~s", [Name, file:format_error(Reason)]),
+                                    State#state{flap=true}
+                            end
+                    end;
                 {ok, {NewFD, NewInode, _}} ->
                     %% update our last check and try again
                     do_write(State#state{last_check=Timestamp, fd=NewFD, inode=NewInode}, Level, Msg);
@@ -298,7 +307,7 @@ validate_logfile_proplist([{date, Date}|Tail], Acc) ->
             validate_logfile_proplist(Tail, [{date, Spec}|Acc]);
         {error, _} when Date == "" ->
             %% legacy config allowed blanks
-            validate_logfile_proplist(Tail, Acc);
+            validate_logfile_proplist(Tail, [{date, undefined}|Acc]);
         {error, _} ->
             throw({bad_config, "Invalid rotation date", Date})
     end;
@@ -460,13 +469,14 @@ filesystem_test_() ->
                 application:set_env(lager, handlers, [{lager_test_backend, info}]),
                 application:set_env(lager, error_logger_redirect, false),
                 application:set_env(lager, async_threshold, undefined),
-                application:start(lager)
+                lager:start()
         end,
         fun(_) ->
                 file:delete("test.log"),
                 file:delete("test.log.0"),
                 file:delete("test.log.1"),
                 application:stop(lager),
+                application:stop(goldrush),
                 error_logger:tty(true)
         end,
         [
@@ -598,7 +608,7 @@ filesystem_test_() ->
                         ?assertEqual({ok, <<>>}, file:read_file("test.log")),
                         lager:log(info, self(), "Test message1"),
                         ?assertEqual({ok, <<>>}, file:read_file("test.log")),
-                        timer:sleep(1000),
+                        timer:sleep(2000),
                         {ok, Bin} = file:read_file("test.log"),
                         ?assert(<<>> /= Bin)
                 end
@@ -707,12 +717,13 @@ formatting_test_() ->
                 application:load(lager),
                 application:set_env(lager, handlers, [{lager_test_backend, info}]),
                 application:set_env(lager, error_logger_redirect, false),
-                application:start(lager)
+                lager:start()
         end,
         fun(_) ->
                 file:delete("test.log"),
                 file:delete("test2.log"),
                 application:stop(lager),
+                application:stop(goldrush),
                 error_logger:tty(true)
         end,
             [{"Should have two log files, the second prefixed with 2>",

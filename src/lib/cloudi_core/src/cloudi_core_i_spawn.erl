@@ -102,13 +102,13 @@ environment_transform(String, EnvironmentLookup) ->
 start_internal(ProcessIndex, ProcessCount, GroupLeader,
                Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions, UUID)
+               DestDenyList, DestAllowList, ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm),
          is_record(ConfigOptions, config_service_options),
-         is_binary(UUID) ->
+         is_binary(ID) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -143,7 +143,8 @@ start_internal(ProcessIndex, ProcessCount, GroupLeader,
             ?CREATE_INTERNAL(ProcessIndex, ProcessCount, GroupLeader,
                              Module, Args, NewTimeout, Prefix,
                              TimeoutAsync, TimeoutSync, TimeoutTerm,
-                             DestRefresh, DestDeny, DestAllow, ConfigOptions);
+                             DestRefresh, DestDeny, DestAllow,
+                             ConfigOptions, ID);
         {error, Reason} ->
             ?LOG_ERROR("loading ~p failed: ~p", [Module, Reason]),
             {error, {service_internal_module_not_loaded, Module}}
@@ -153,7 +154,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions, UUID)
+               DestDenyList, DestAllowList, ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
@@ -161,7 +162,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm),
          is_record(ConfigOptions, config_service_options),
-         is_binary(UUID) ->
+         is_binary(ID) ->
     true = (Protocol =:= tcp) orelse
            (Protocol =:= udp) orelse
            (Protocol =:= local),
@@ -198,7 +199,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
         L ->
             L
     end,
-    SocketPath = create_socket_path(TemporaryDirectory, UUID),
+    SocketPath = create_socket_path(TemporaryDirectory, ID),
     EnvironmentLookup = environment_lookup(),
     case filename_parse(Filename, EnvironmentLookup) of
         {ok, NewFilename} ->
@@ -214,7 +215,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                                 TimeoutAsync, TimeoutSync,
                                                 TimeoutTerm, DestRefresh,
                                                 DestDeny, DestAllow,
-                                                ConfigOptions) of
+                                                ConfigOptions, ID) of
                         {ok, Pids, Ports} ->
                             Rlimits = rlimits(ConfigOptions),
                             Owner = owner(ConfigOptions, EnvironmentLookup),
@@ -263,16 +264,16 @@ rlimits(#config_service_options{limit = L}) ->
 owner(#config_service_options{owner = L}, EnvironmentLookup) ->
     cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
 
-create_socket_path(TemporaryDirectory, UUID)
-    when is_binary(UUID) ->
+create_socket_path(TemporaryDirectory, ID)
+    when is_binary(ID) ->
     Path = filename:join([TemporaryDirectory,
                           "cloudi_socket_" ++
-                          cloudi_x_uuid:uuid_to_string(UUID, nodash) ++ "_"]),
+                          cloudi_x_uuid:uuid_to_string(ID, nodash) ++ "_"]),
     false = filelib:is_file(Path),
     Path.
 
 start_external_thread(0, Pids, Ports,
-                      _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
+                      _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
 
 start_external_thread(I, Pids, Ports,
@@ -280,13 +281,13 @@ start_external_thread(I, Pids, Ports,
                       Protocol, SocketPath, BufferSize, Timeout,
                       Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                       DestRefresh, DestDeny, DestAllow,
-                      ConfigOptions) ->
+                      ConfigOptions, ID) ->
     case ?CREATE_EXTERNAL(Protocol, SocketPath,
                           I, ProcessIndex, ProcessCount, CommandLine,
                           BufferSize, Timeout,
                           Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                           DestRefresh, DestDeny, DestAllow,
-                          ConfigOptions) of
+                          ConfigOptions, ID) of
         {ok, Pid, Port} ->
             start_external_thread(I - 1, [Pid | Pids], [Port | Ports],
                                   ProcessIndex, ProcessCount, CommandLine,
@@ -294,7 +295,7 @@ start_external_thread(I, Pids, Ports,
                                   Prefix, TimeoutAsync, TimeoutSync,
                                   TimeoutTerm,
                                   DestRefresh, DestDeny, DestAllow,
-                                  ConfigOptions);
+                                  ConfigOptions, ID);
         {error, _} = Error ->
             lists:foreach(fun(P) -> erlang:exit(P, kill) end, Pids),
             Error
@@ -305,13 +306,13 @@ start_external_threads(ThreadsPerProcess,
                        Protocol, SocketPath, BufferSize, Timeout,
                        Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                        DestRefresh, DestDeny, DestAllow,
-                       ConfigOptions) ->
+                       ConfigOptions, ID) ->
     start_external_thread(ThreadsPerProcess, [], [],
                           ProcessIndex, ProcessCount, CommandLine,
                           Protocol, SocketPath, BufferSize, Timeout,
                           Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                           DestRefresh, DestDeny, DestAllow,
-                          ConfigOptions).
+                          ConfigOptions, ID).
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                      Pids, Ports, Rlimits, Owner,

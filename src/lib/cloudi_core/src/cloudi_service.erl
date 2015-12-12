@@ -389,7 +389,7 @@ process_count_min(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec self(Dispatcher :: dispatcher()) ->
-    Self :: pid().
+    Self :: source().
 
 self(Dispatcher) ->
     gen_server:call(Dispatcher, self, infinity).

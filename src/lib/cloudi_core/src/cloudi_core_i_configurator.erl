@@ -924,7 +924,7 @@ service_start_internal(IndexProcess, Pids,
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:
                                   service_format(Service),
-            ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
+            ?LOG_INFO("~p -> ~p", [{service_id(ID),
                                     ServiceConfig}, P]),
             service_start_internal(IndexProcess + 1, [P | Pids], Service,
                                    GroupLeader, CountProcess, Timeout);
@@ -972,7 +972,7 @@ service_start_external(IndexProcess, Pids,
         {ok, P} ->
             {ID, ServiceConfig} = cloudi_core_i_configuration:
                                   service_format(Service),
-            ?LOG_INFO("~p -> ~p", [{cloudi_x_uuid:uuid_to_string(ID),
+            ?LOG_INFO("~p -> ~p", [{service_id(ID),
                                     ServiceConfig}, P]),
             service_start_external(IndexProcess + 1, [P | Pids], Service,
                                    CountThread, CountProcess, Timeout);
@@ -1008,20 +1008,19 @@ service_stop_internal(#config_service_internal{
                     case service_stop_remove_internal(Service, Timeout) of
                         ignore ->
                             ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
-                                           [Pids,
-                                            cloudi_x_uuid:uuid_to_string(ID)]),
+                                           [Pids, service_id(ID)]),
                             ok;
                         {ok, RemoveType} ->
                             ?LOG_INFO_SYNC("Service pids ~p stopped ~p~n ~p",
                                            [Pids, RemoveType,
-                                            cloudi_x_uuid:uuid_to_string(ID)]),
+                                            service_id(ID)]),
                             ok;
                         {error, _} = Error ->
                             Error
                     end;
                 Remove =:= false ->
                     ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
-                                   [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+                                   [Pids, service_id(ID)]),
                     ok
             end;
         {error, Reason} ->
@@ -1034,7 +1033,7 @@ service_stop_external(#config_service_external{
         {ok, Pids} ->
             shutdown_wait(Pids),
             ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
-                           [Pids, cloudi_x_uuid:uuid_to_string(ID)]),
+                           [Pids, service_id(ID)]),
             ok;
         {error, Reason} ->
             {error, {service_external_stop_failed, Reason}}
@@ -1125,4 +1124,7 @@ timeout_decr(infinity) ->
 timeout_decr(Timeout)
     when is_integer(Timeout), Timeout >= ?TIMEOUT_DELTA ->
     Timeout - ?TIMEOUT_DELTA.
+
+service_id(ID) ->
+    cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 

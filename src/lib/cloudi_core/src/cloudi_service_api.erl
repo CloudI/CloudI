@@ -406,25 +406,26 @@
 -type service_internal() :: #internal{}.
 -type service_external() :: #external{}.
 -type service_proplist() ::
-    list({type, internal | external} |
-         {prefix, cloudi:service_name_pattern()} |
-         {module, atom() | file:filename()} |
-         {file_path, file:filename()} |
-         {args, list()} |
-         {env, list({string(), string()})} |
-         {dest_refresh, dest_refresh()} |
-         {protocol, 'default' | 'local' | 'tcp' | 'udp'} |
-         {buffer_size, 'default' | pos_integer()} |
-         {timeout_init, timeout_milliseconds()} |
-         {timeout_async, timeout_milliseconds()} |
-         {timeout_sync, timeout_milliseconds()} |
-         {dest_list_deny, dest_list()} |
-         {dest_list_allow, dest_list()} |
-         {count_process, pos_integer() | float()} |
-         {count_thread, pos_integer() | float()} |
-         {max_r, non_neg_integer()} |
-         {max_t, seconds()} |
-         {options, service_options_internal() | service_options_external()}).
+    nonempty_list({type, internal | external} |
+                  {prefix, cloudi:service_name_pattern()} |
+                  {module, atom() | file:filename()} |
+                  {file_path, file:filename()} |
+                  {args, list()} |
+                  {env, list({string(), string()})} |
+                  {dest_refresh, dest_refresh()} |
+                  {protocol, 'default' | 'local' | 'tcp' | 'udp'} |
+                  {buffer_size, 'default' | pos_integer()} |
+                  {timeout_init, timeout_milliseconds()} |
+                  {timeout_async, timeout_milliseconds()} |
+                  {timeout_sync, timeout_milliseconds()} |
+                  {dest_list_deny, dest_list()} |
+                  {dest_list_allow, dest_list()} |
+                  {count_process, pos_integer() | float()} |
+                  {count_thread, pos_integer() | float()} |
+                  {max_r, non_neg_integer()} |
+                  {max_t, seconds()} |
+                  {options, service_options_internal() |
+                            service_options_external()}).
 -type service() :: #internal{} | #external{}.
 -export_type([service_id/0,
               service_internal/0,

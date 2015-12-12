@@ -1,0 +1,17 @@
+%% -*- mode: erlang -*-
+{application, folsom,
+ [
+  {description, "Erlang based metrics system"},
+  {vsn, "0.8.2"},
+  {modules, []},
+  {registered, [folsom_meter_timer_server,
+                folsom_metrics_histogram_ets,
+                folsom_sup]},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  bear
+                 ]},
+  {env, []},
+  {mod, {folsom, []}}
+ ]}.

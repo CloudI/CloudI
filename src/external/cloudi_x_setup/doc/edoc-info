@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,setup}.
+{packages,[]}.
+{modules,[setup,setup_gen,setup_lib]}.

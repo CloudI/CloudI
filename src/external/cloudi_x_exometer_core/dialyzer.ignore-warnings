@@ -1,0 +1,2 @@
+exometer.erl:209: The variable _ can never match since previous clauses completely covered the type 'enabled'
+exometer.erl:444: The variable _ can never match since previous clauses completely covered the type 'enabled'
