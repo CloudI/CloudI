@@ -93,6 +93,9 @@
   %                   cloudi_x_goldrush
   {app, syntax_tools,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  % cloudi_x_exometer from cloudi_service_monitoring
+  {app, cloudi_x_exometer,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   % cloudi_x_lager from cloudi_x_exometer
   {app, cloudi_x_lager,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
