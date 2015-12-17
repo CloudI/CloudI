@@ -14,6 +14,7 @@
       service_id usage in metric names match service_ids elsewhere
     * Update lager and goldrush
     * Update key2value
+    * Simplify rebar usage within autoconf/automake
 
 2015-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
