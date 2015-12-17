@@ -3,10 +3,13 @@
 
 2015-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add queued_requests, queued_requests_size, queued_info metrics
+      in cloudi_service_monitoring for all service processes
     * Set cloudi_service_monitoring default intervals at 15 seconds and
       handle reporter options
     * Fix rebar usage within autoconf/automake
       when not using a separate build directory
+    * Fix system message handling on duo_mode process
 
 2015-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 

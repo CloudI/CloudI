@@ -78,6 +78,9 @@
 % aspect function ref to service_id global lookup
 -define(ETS_REF2ID, cloudi_service_monitoring_cloudi_refs).
 
+% timeout for getting state from a service process
+-define(SERVICE_PROCESS_TIMEOUT, 250). % milliseconds
+
 -type metric_name() :: cloudi_service_monitoring:metric_name().
 -type metric_list() :: cloudi_service_monitoring:metric_list().
 
@@ -383,14 +386,14 @@ services_accumulate(#service{service_f = ServiceF,
                                   concurrency_external = ConcurrencyExternal,
                                   scopes = Scopes} = Changes) ->
     Concurrency = CountProcess * CountThread,
-    if
-        ServiceF =:= start_internal ->
+    case service_type(ServiceF) of
+        internal ->
             NewScopes = scopes_accumulate_internal(Scope, Concurrency, Scopes),
             Changes#service_data{count_internal = CountInternal + 1,
                                  concurrency_internal = ConcurrencyInternal +
                                                         Concurrency,
                                  scopes = NewScopes};
-        ServiceF =:= start_external ->
+        external ->
             NewScopes = scopes_accumulate_external(Scope, Concurrency, Scopes),
             Changes#service_data{count_external = CountExternal + 1,
                                  concurrency_external = ConcurrencyExternal +
@@ -398,8 +401,71 @@ services_accumulate(#service{service_f = ServiceF,
                                  scopes = NewScopes}
     end.
 
+service_process_metrics(internal, Pid, MetricPrefix) ->
+    try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
+        State -> % gen_server/proc_lib
+            {QueuedRequests,
+             QueuedSize0,
+             WordSize,
+             QueuedInfo} = case erlang:tuple_size(State) of
+                29 -> % duo_mode == false
+                    state = erlang:element(1, State),
+                    {erlang:element(8, State),   % queued
+                     erlang:element(9, State),   % queued_size
+                     erlang:element(10, State),  % queued_word_size
+                     erlang:element(11, State)}; % queued_info
+                14 -> % duo_mode == true
+                    state_duo = erlang:element(1, State),
+                    {erlang:element(5, State),   % queued
+                     erlang:element(6, State),   % queued_size
+                     erlang:element(7, State),   % queued_word_size
+                     erlang:element(8, State)}   % queued_info
+            end,
+            QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
+            QueuedSizeN = if
+                QueuedRequestsLength > 0, QueuedSize0 == 0 ->
+                    cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
+                true ->
+                    QueuedSize0
+            end,
+            QueuedInfoLength = queue:len(QueuedInfo),
+            [metric(gauge, MetricPrefix ++ [queued_requests],
+                    QueuedRequestsLength),
+             metric(gauge, MetricPrefix ++ [queued_requests_size],
+                    QueuedSizeN),
+             metric(gauge, MetricPrefix ++ [queued_info],
+                    QueuedInfoLength)]
+    catch
+        exit:{_, _} ->
+            []
+    end;
+service_process_metrics(external, Pid, MetricPrefix) ->
+    try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
+        {_, State} -> % gen_fsm
+            38 = erlang:tuple_size(State),
+            state = erlang:element(1, State),
+            QueuedRequests = erlang:element(8, State), % queued
+            QueuedSize0 = erlang:element(9, State),    % queued_size
+            WordSize = erlang:element(10, State),      % queued_word_size
+            QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
+            QueuedSizeN = if
+                QueuedRequestsLength > 0, QueuedSize0 == 0 ->
+                    cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
+                true ->
+                    QueuedSize0
+            end,
+            [metric(gauge, MetricPrefix ++ [queued_requests],
+                    QueuedRequestsLength),
+             metric(gauge, MetricPrefix ++ [queued_requests_size],
+                    QueuedSizeN)]
+    catch
+        exit:{_, _} ->
+            []
+    end.
+
 service_metrics(Pids,
-                #service{count_process = CountProcess,
+                #service{service_f = ServiceF,
+                         count_process = CountProcess,
                          count_thread = CountThread},
                 Services, MetricPrefix) ->
     [metric(gauge, MetricPrefix ++ [concurrency],
@@ -408,9 +474,11 @@ service_metrics(Pids,
         {[_],
          #service{process_index = ProcessIndex}} =
             cloudi_x_key2value:fetch2(Pid, Services),
-        process_metrics(Pid,
-                        MetricPrefix ++
-                        [erlang:integer_to_list(ProcessIndex)])
+        ProcessMetricPrefix = MetricPrefix ++
+                              [erlang:integer_to_list(ProcessIndex)],
+        service_process_metrics(service_type(ServiceF), Pid,
+                                ProcessMetricPrefix) ++
+        process_metrics(Pid, ProcessMetricPrefix)
     end, Pids).
 
 services_metrics(CountInternal, CountExternal,
@@ -451,6 +519,11 @@ services_metrics(CountInternal, CountExternal,
      metric(gauge, [external, count],
             CountExternal)],
     Scopes).
+
+service_type(start_internal) ->
+    internal;
+service_type(start_external) ->
+    external.
 
 process_metrics(Pid, MetricPrefix) ->
     case erlang:process_info(Pid, [memory, message_queue_len, reductions]) of

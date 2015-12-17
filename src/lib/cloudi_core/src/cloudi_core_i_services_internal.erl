@@ -3675,11 +3675,11 @@ duo_handle_info({system, From, Msg},
     case Msg of
         get_state ->
             sys:handle_system_msg(get_state, From, Dispatcher, ?MODULE, [],
-                                  {State, State});
+                                  State);
         {replace_state, StateFun} ->
             NewState = try StateFun(State) catch _:_ -> State end,
             sys:handle_system_msg(replace_state, From, Dispatcher, ?MODULE, [],
-                                  {NewState, NewState});
+                                  NewState);
         _ ->
             sys:handle_system_msg(Msg, From, Dispatcher, ?MODULE, [],
                                   State)
