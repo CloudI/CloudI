@@ -119,8 +119,7 @@
         [{reporter,
           [{name, cloudi_x_exometer_report_tty}]}]).
 -define(DEFAULT_ERLANG_DRIVER_OPTIONS,
-        [{reporter,
-          [{name, cloudi_x_exometer_report_tty}]}]).
+        ?DEFAULT_DRIVER_OPTIONS).
 -define(DEFAULT_ERLANG_INTERVAL,              15). % seconds
 -define(DEFAULT_ERLANG_PREFIX,          [erlang]).
 -define(DEFAULT_ERLANG_MEMORY,
@@ -142,7 +141,7 @@
         [message_queue_len]).
 -define(DEFAULT_ERLANG_PORT_INFO,
         [memory, queue_size]).
--define(DEFAULT_INTERVAL,                      1). % seconds
+-define(DEFAULT_INTERVAL,                     15). % seconds
 -define(DEFAULT_PREFIX,                 [cloudi]).
 -define(DEFAULT_USE_ASPECTS_ONLY,          false).
 
@@ -850,18 +849,19 @@ exometer_reporters([]) ->
 exometer_reporters([{reporter, ReporterOptions} | L]) ->
     [ReporterName,
      ReporterModule,
-     ReporterExtra] = cloudi_proplists:take_values([{name, undefined},
-                                                    {module, undefined},
-                                                    {extra, undefined}],
-                                                   ReporterOptions),
+     ReporterExtra |
+     Options0] = cloudi_proplists:take_values([{name, undefined},
+                                               {module, undefined},
+                                               {extra, undefined}],
+                                              ReporterOptions),
     true = (ReporterName /= undefined),
-    OptsN = if
+    OptionsN = if
         ReporterModule =:= undefined ->
-            [{module, ReporterName}];
+            [{module, ReporterName} | Options0];
         is_atom(ReporterModule) ->
-            [{module, ReporterModule}]
+            [{module, ReporterModule} | Options0]
     end,
-    case cloudi_x_exometer_report:add_reporter(ReporterName, OptsN) of
+    case cloudi_x_exometer_report:add_reporter(ReporterName, OptionsN) of
         ok ->
             ok;
         {error, already_running} ->
@@ -871,3 +871,4 @@ exometer_reporters([{reporter, ReporterOptions} | L]) ->
     end,
     [{ReporterName,
       ReporterExtra} | exometer_reporters(L)].
+

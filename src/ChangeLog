@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Set cloudi_service_monitoring default intervals at 15 seconds and
+      handle reporter options
+
 2015-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_service_monitoring with dependencies
