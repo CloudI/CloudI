@@ -5,6 +5,8 @@
 
     * Set cloudi_service_monitoring default intervals at 15 seconds and
       handle reporter options
+    * Fix rebar usage within autoconf/automake
+      when not using a separate build directory
 
 2015-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 

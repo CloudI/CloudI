@@ -99,17 +99,17 @@ case $COMMAND in
             if [ ! -d $abs_top_builddir/$d/ebin ]; then
                 mkdir -p $abs_top_builddir/$d/ebin
             fi
-            if [ ! -h $abs_top_srcdir/$d/ebin ]; then
+            if [ ! -e $abs_top_srcdir/$d/ebin ]; then
                 ln -s $abs_top_builddir/$d/ebin \
                       $abs_top_srcdir/$d/ebin
             fi
             if [ -d $abs_top_srcdir/$d/include -a \
-                 ! -h $abs_top_builddir/$d/include ]; then
+                 ! -e $abs_top_builddir/$d/include ]; then
                 ln -s $abs_top_srcdir/$d/include \
                       $abs_top_builddir/$d/include
             fi
             if [ -f $abs_top_builddir/$d/src/$application.app.src -a \
-                 ! -h $abs_top_srcdir/$d/src/$application.app.src ]; then
+                 ! -e $abs_top_srcdir/$d/src/$application.app.src ]; then
                 ln -s $abs_top_builddir/$d/src/$application.app.src \
                       $abs_top_srcdir/$d/src/$application.app.src
             fi
