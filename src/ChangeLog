@@ -10,6 +10,7 @@
     * Fix rebar usage within autoconf/automake
       when not using a separate build directory
     * Fix system message handling on duo_mode process
+    * Update pqueue
 
 2015-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
