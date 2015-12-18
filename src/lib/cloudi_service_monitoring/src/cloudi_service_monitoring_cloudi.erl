@@ -463,6 +463,51 @@ service_process_metrics(external, Pid, MetricPrefix) ->
             []
     end.
 
+service_metrics_pid_internal([], Metrics, _, _) ->
+    Metrics;
+service_metrics_pid_internal([Pid | Pids], Metrics, Services, MetricPrefix) ->
+    {[_],
+     #service{process_index = ProcessIndex}} =
+        cloudi_x_key2value:fetch2(Pid, Services),
+    ProcessMetricPrefix = MetricPrefix ++
+                          [process, erlang:integer_to_list(ProcessIndex)],
+    service_metrics_pid_internal(Pids,
+                                 service_process_metrics(internal, Pid,
+                                                         ProcessMetricPrefix) ++
+                                 process_metrics(Pid, ProcessMetricPrefix) ++
+                                 Metrics,
+                                 Services, MetricPrefix).
+
+service_metrics_pid_external([], Metrics, _, _, _) ->
+    Metrics;
+service_metrics_pid_external([Pid | Pids], Metrics, ThreadIndexLookup,
+                             Services, MetricPrefix) ->
+    {[_],
+     #service{process_index = ProcessIndex}} =
+        cloudi_x_key2value:fetch2(Pid, Services),
+    ThreadIndex = case dict:find(ProcessIndex, ThreadIndexLookup) of
+        {ok, ThreadIndexNext} ->
+            ThreadIndexNext;
+        error ->
+            0
+    end,
+    ThreadMetricPrefix = MetricPrefix ++
+                         [process, erlang:integer_to_list(ProcessIndex),
+                          thread, erlang:integer_to_list(ThreadIndex)],
+    service_metrics_pid_external(Pids,
+                                 service_process_metrics(external, Pid,
+                                                         ThreadMetricPrefix) ++
+                                 process_metrics(Pid,ThreadMetricPrefix) ++
+                                 Metrics,
+                                 dict:store(ProcessIndex,
+                                            ThreadIndex + 1, ThreadIndexLookup),
+                                 Services, MetricPrefix).
+
+service_metrics_pid(internal, Pids, Services, MetricPrefix) ->
+    service_metrics_pid_internal(Pids, [], Services, MetricPrefix);
+service_metrics_pid(external, Pids, Services, MetricPrefix) ->
+    service_metrics_pid_external(Pids, [], dict:new(), Services, MetricPrefix).
+
 service_metrics(Pids,
                 #service{service_f = ServiceF,
                          count_process = CountProcess,
@@ -470,16 +515,7 @@ service_metrics(Pids,
                 Services, MetricPrefix) ->
     [metric(gauge, MetricPrefix ++ [concurrency],
             CountProcess * CountThread)] ++
-    lists:flatmap(fun(Pid) ->
-        {[_],
-         #service{process_index = ProcessIndex}} =
-            cloudi_x_key2value:fetch2(Pid, Services),
-        ProcessMetricPrefix = MetricPrefix ++
-                              [erlang:integer_to_list(ProcessIndex)],
-        service_process_metrics(service_type(ServiceF), Pid,
-                                ProcessMetricPrefix) ++
-        process_metrics(Pid, ProcessMetricPrefix)
-    end, Pids).
+    service_metrics_pid(service_type(ServiceF), Pids, Services, MetricPrefix).
 
 services_metrics(CountInternal, CountExternal,
                  ConcurrencyInternal, ConcurrencyExternal, Scopes) ->

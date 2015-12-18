@@ -3,6 +3,9 @@
 
 2015-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Split cloudi_service_monitoring service process metric names based
+      on whether the service is internal or external, to show either
+      process information or process/thread information, respectively
     * Add queued_requests, queued_requests_size, queued_info metrics
       in cloudi_service_monitoring for all service processes
     * Set cloudi_service_monitoring default intervals at 15 seconds and
