@@ -405,7 +405,7 @@ service_process_metrics(internal, Pid, MetricPrefix) ->
     try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
         State -> % gen_server/proc_lib
             {QueuedRequests,
-             QueuedSize0,
+             QueuedRequestsSize0,
              WordSize,
              QueuedInfo} = case erlang:tuple_size(State) of
                 29 -> % duo_mode == false
@@ -422,17 +422,17 @@ service_process_metrics(internal, Pid, MetricPrefix) ->
                      erlang:element(8, State)}   % queued_info
             end,
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
-            QueuedSizeN = if
-                QueuedRequestsLength > 0, QueuedSize0 == 0 ->
+            QueuedRequestsSizeN = if
+                QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
                     cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
                 true ->
-                    QueuedSize0
+                    QueuedRequestsSize0
             end,
             QueuedInfoLength = queue:len(QueuedInfo),
             [metric(gauge, MetricPrefix ++ [queued_requests],
                     QueuedRequestsLength),
              metric(gauge, MetricPrefix ++ [queued_requests_size],
-                    QueuedSizeN),
+                    QueuedRequestsSizeN),
              metric(gauge, MetricPrefix ++ [queued_info],
                     QueuedInfoLength)]
     catch
@@ -444,20 +444,20 @@ service_process_metrics(external, Pid, MetricPrefix) ->
         {_, State} -> % gen_fsm
             38 = erlang:tuple_size(State),
             state = erlang:element(1, State),
-            QueuedRequests = erlang:element(8, State), % queued
-            QueuedSize0 = erlang:element(9, State),    % queued_size
-            WordSize = erlang:element(10, State),      % queued_word_size
+            QueuedRequests = erlang:element(8, State),       % queued
+            QueuedRequestsSize0 = erlang:element(9, State),  % queued_size
+            WordSize = erlang:element(10, State),            % queued_word_size
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
-            QueuedSizeN = if
-                QueuedRequestsLength > 0, QueuedSize0 == 0 ->
+            QueuedRequestsSizeN = if
+                QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
                     cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
                 true ->
-                    QueuedSize0
+                    QueuedRequestsSize0
             end,
             [metric(gauge, MetricPrefix ++ [queued_requests],
                     QueuedRequestsLength),
              metric(gauge, MetricPrefix ++ [queued_requests_size],
-                    QueuedSizeN)]
+                    QueuedRequestsSizeN)]
     catch
         exit:{_, _} ->
             []
@@ -497,7 +497,7 @@ service_metrics_pid_external([Pid | Pids], Metrics, ThreadIndexLookup,
     service_metrics_pid_external(Pids,
                                  service_process_metrics(external, Pid,
                                                          ThreadMetricPrefix) ++
-                                 process_metrics(Pid,ThreadMetricPrefix) ++
+                                 process_metrics(Pid, ThreadMetricPrefix) ++
                                  Metrics,
                                  dict:store(ProcessIndex,
                                             ThreadIndex + 1, ThreadIndexLookup),
