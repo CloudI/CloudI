@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make cloudi_service_monitoring track reductions as a total count while
+      providing the metric as a change during the interval in a spiral
+    * Add cloudi_timestamp:milliseconds/0 and
+      simplify cloudi_timestamp:seconds/0
+
 2015-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Split cloudi_service_monitoring service process metric names based

@@ -63,12 +63,13 @@
          aspect_terminate_before_internal/0,
          aspect_terminate_before_external/0,
          services_state/1,
-         basic_update/0,
-         services_init/4,
+         basic_update/1,
+         services_init/5,
          services_terminate/1,
-         services_update/5,
+         services_update/6,
          nodes_update/3]).
 
+-include("cloudi_service_monitoring.hrl").
 -include("cloudi_service_monitoring_cloudi.hrl").
 
 % monitoring config for aspects_init_after
@@ -84,13 +85,6 @@
 -type metric_name() :: cloudi_service_monitoring:metric_name().
 -type metric_list() :: cloudi_service_monitoring:metric_list().
 
-% handle the dict type change
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
-
 -record(scope_data,
     {
         count_internal = 0 :: non_neg_integer(),
@@ -101,6 +95,7 @@
 
 -record(service_data,
     {
+        process_info :: dict_proxy(pid(), #process_info{}),
         % modifications to ?ETS_PID2ID
         ets_insert = [] :: list({pid(), metric_name(), module()}),
         ets_delete = [] :: list(pid()),
@@ -170,6 +165,24 @@ aspect_terminate_before_internal() ->
 aspect_terminate_before_external() ->
     aspect_terminate_before_external_f().
 
+basic_update(ProcessInfo0) ->
+    LoggingPid = whereis(cloudi_core_i_logger),
+    {Logging,
+     ProcessInfo1} = process_info_update(LoggingPid, ProcessInfo0),
+    ConfiguratorPid = whereis(cloudi_core_i_configurator),
+    {Configurator,
+     ProcessInfo2} = process_info_update(ConfiguratorPid, ProcessInfo1),
+    ServicesMonitorPid = whereis(cloudi_core_i_services_monitor),
+    {ServicesMonitor,
+     ProcessInfoN} = process_info_update(ServicesMonitorPid, ProcessInfo2),
+    {process_info_metrics(Logging,
+                          [logging]) ++
+     process_info_metrics(Configurator,
+                          [configurator]) ++
+     process_info_metrics(ServicesMonitor,
+                          [services, monitor]),
+     ProcessInfoN}.
+
 services_state(Timeout) ->
     try sys:get_state(cloudi_core_i_services_monitor, Timeout) of
         State ->
@@ -181,17 +194,9 @@ services_state(Timeout) ->
             {error, Reason}
     end.
 
-basic_update() ->
-    process_metrics(whereis(cloudi_core_i_logger),
-                    [logging]) ++
-    process_metrics(whereis(cloudi_core_i_configurator),
-                    [configurator]) ++
-    process_metrics(whereis(cloudi_core_i_services_monitor),
-                    [services, monitor]).
-
-services_init(undefined, _, _, _) ->
-    ok;
-services_init(Interval, MetricPrefix, UseAspectsOnly, Driver) ->
+services_init(undefined, ProcessInfo0, _, _, _) ->
+    ProcessInfo0;
+services_init(Interval, ProcessInfo0, MetricPrefix, UseAspectsOnly, Driver) ->
     {ok, Services} = services_state(Interval * 1000),
     ets:new(?ETS_CONFIG,
             [set, protected, named_table,
@@ -203,23 +208,28 @@ services_init(Interval, MetricPrefix, UseAspectsOnly, Driver) ->
     ets:new(?ETS_REF2ID,
             [set, public, named_table,
              {read_concurrency, true}]),
+    {InsertsN,
+     ProcessInfoN} = cloudi_x_key2value:fold1(fun(ID, Pids, #service{}, A) ->
+        ServiceId = service_id(ID),
+        lists:foldl(fun(Pid, {Inserts1, ProcessInfo1}) ->
+            Inserts2 = if
+                UseAspectsOnly =:= true ->
+                    Inserts1;
+                UseAspectsOnly =:= false ->
+                    [{Pid, MetricPrefix ++ [ServiceId], Driver} | Inserts1]
+            end,
+            {Inserts2, process_info_store(Pid, ProcessInfo1)}
+        end, A, Pids)
+    end, {[], ProcessInfo0}, Services),
     if
         UseAspectsOnly =:= true ->
             % rely completely on aspects_init_after to add the
             % service pid object to be used for service metrics
             ok;
         UseAspectsOnly =:= false ->
-            InsertsN = cloudi_x_key2value:fold1(fun(ID, Pids, #service{},
-                                                    Inserts0) ->
-                ServiceId = service_id(ID),
-                lists:foldl(fun(Pid, Inserts1) ->
-                    [{Pid, MetricPrefix ++ [ServiceId],
-                      Driver} | Inserts1]
-                end, Inserts0, Pids)
-            end, [], Services),
             true = ets:insert(?ETS_PID2ID, InsertsN)
     end,
-    ok.
+    ProcessInfoN.
 
 services_terminate(undefined) ->
     ok;
@@ -229,30 +239,36 @@ services_terminate(_) ->
     true = ets:delete(?ETS_REF2ID),
     ok.
 
-services_update(undefined, ServicesNew,
+services_update(undefined, ServicesNew, ProcessInfo0,
                 MetricPrefix, UseAspectsOnly, Driver) ->
     ChangesN = cloudi_x_key2value:
                fold1(fun(ID, PidsNew,
                          #service{} = Service,
-                         #service_data{ets_insert = Inserts0,
+                         #service_data{process_info = ProcessInfo1,
+                                       ets_insert = Inserts0,
                                        metrics = Metrics0} = Changes1) ->
         ServiceId = service_id(ID),
-        Inserts2 = if
-            UseAspectsOnly =:= true ->
-                Inserts0;
-            UseAspectsOnly =:= false ->
-                lists:foldl(fun(PidNew, Inserts1) ->
-                    [{PidNew, MetricPrefix ++ [ServiceId],
-                      Driver} | Inserts1]
-                end, Inserts0, PidsNew)
-        end,
-        Metrics1 = service_metrics(PidsNew, Service, ServicesNew,
-                                   [ServiceId]) ++ Metrics0,
+        {Inserts3,
+         ProcessInfo3} = lists:foldl(fun(PidNew, {Inserts1, ProcessInfo2}) ->
+            Inserts2 = if
+                UseAspectsOnly =:= true ->
+                    Inserts1;
+                UseAspectsOnly =:= false ->
+                    [{PidNew, MetricPrefix ++ [ServiceId], Driver} | Inserts1]
+            end,
+            {Inserts2, process_info_store(PidNew, ProcessInfo2)}
+        end, {Inserts0, ProcessInfo1}, PidsNew),
+        {Metrics1,
+         ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
+                                         ServicesNew, [ServiceId]),
         services_accumulate(Service,
-                            Changes1#service_data{ets_insert = Inserts2,
-                                                  metrics = Metrics1})
-    end, #service_data{}, ServicesNew),
-    #service_data{ets_insert = InsertsN,
+                            Changes1#service_data{process_info = ProcessInfo4,
+                                                  ets_insert = Inserts3,
+                                                  metrics = Metrics1 ++
+                                                            Metrics0})
+    end, #service_data{process_info = ProcessInfo0}, ServicesNew),
+    #service_data{process_info = ProcessInfoN,
+                  ets_insert = InsertsN,
                   count_internal = CountInternal,
                   count_external = CountExternal,
                   concurrency_internal = ConcurrencyInternal,
@@ -266,69 +282,91 @@ services_update(undefined, ServicesNew,
             true = ets:delete_all_objects(?ETS_PID2ID),
             true = ets:insert(?ETS_PID2ID, InsertsN)
     end,
-    services_metrics(CountInternal, CountExternal,
-                     ConcurrencyInternal, ConcurrencyExternal, Scopes) ++
-    MetricsN;
-services_update(ServicesOld, ServicesNew,
+    {services_metrics(CountInternal, CountExternal,
+                      ConcurrencyInternal, ConcurrencyExternal,
+                      Scopes) ++ MetricsN,
+     ProcessInfoN};
+services_update(ServicesOld, ServicesNew, ProcessInfo0,
                 MetricPrefix, UseAspectsOnly, Driver) ->
     ChangesN = cloudi_x_key2value:
                fold1(fun(ID, PidsNew,
                          #service{} = Service,
-                         #service_data{ets_insert = Inserts0,
+                         #service_data{process_info = ProcessInfo1,
+                                       ets_insert = Inserts0,
                                        ets_delete = Deletes0,
                                        metrics = Metrics0} = Changes1) ->
         ServiceId = service_id(ID),
         Changes2 = case cloudi_x_key2value:find1(ID, ServicesOld) of
             {ok, {PidsNew, #service{}}} ->
-                Changes1;
+                ProcessInfo3 = lists:foldl(fun(PidNew, ProcessInfo2) ->
+                    process_info_store(PidNew, ProcessInfo2)
+                end, ProcessInfo1, PidsNew),
+                Changes1#service_data{process_info = ProcessInfo3};
             {ok, {PidsOld, #service{}}} ->
-                Inserts2 = if
-                    UseAspectsOnly =:= true ->
-                        Inserts0;
-                    UseAspectsOnly =:= false ->
-                        lists:foldl(fun(PidNew, Inserts1) ->
-                            case lists:member(PidNew, PidsOld) of
-                                true ->
+                {Inserts3,
+                 ProcessInfo3} = lists:foldl(fun(PidNew,
+                                                 {Inserts1, ProcessInfo2}) ->
+                    Inserts2 = case lists:member(PidNew, PidsOld) of
+                        true ->
+                            Inserts1;
+                        false ->
+                            if
+                                UseAspectsOnly =:= true ->
                                     Inserts1;
-                                false ->
+                                UseAspectsOnly =:= false ->
                                     [{PidNew, MetricPrefix ++ [ServiceId],
                                       Driver} | Inserts1]
                             end
-                        end, Inserts0, PidsNew)
-                end,
-                Deletes2 = if
-                    UseAspectsOnly =:= true ->
-                        Deletes0;
-                    UseAspectsOnly =:= false ->
-                        lists:foldl(fun(PidOld, Deletes1) ->
-                            case lists:member(PidOld, PidsNew) of
-                                true ->
+                    end,
+                    {Inserts2, process_info_store(PidNew, ProcessInfo2)}
+                end, {Inserts0, ProcessInfo1}, PidsNew),
+                {Deletes3,
+                 ProcessInfo5} = lists:foldl(fun(PidOld,
+                                                 {Deletes1, ProcessInfo4}) ->
+                    case lists:member(PidOld, PidsNew) of
+                        true ->
+                            {Deletes1, ProcessInfo4};
+                        false ->
+                            Deletes2 = if
+                                UseAspectsOnly =:= true ->
                                     Deletes1;
-                                false ->
+                                UseAspectsOnly =:= false ->
                                     [PidOld | Deletes1]
-                            end
-                        end, Deletes0, PidsOld)
-                end,
-                Changes1#service_data{ets_insert = Inserts2,
-                                      ets_delete = Deletes2};
+                            end,
+                            {Deletes2,
+                             process_info_erase(PidOld, ProcessInfo4)}
+                    end
+                end, {Deletes0, ProcessInfo3}, PidsOld),
+                Changes1#service_data{process_info = ProcessInfo5,
+                                      ets_insert = Inserts3,
+                                      ets_delete = Deletes3};
             error ->
-                Inserts2 = if
-                    UseAspectsOnly =:= true ->
-                        Inserts0;
-                    UseAspectsOnly =:= false ->
-                        lists:foldl(fun(PidNew, Inserts1) ->
+                {Inserts3,
+                 ProcessInfo3} = lists:foldl(fun(PidNew,
+                                                 {Inserts1, ProcessInfo2}) ->
+                    Inserts2 = if
+                        UseAspectsOnly =:= true ->
+                            Inserts1;
+                        UseAspectsOnly =:= false ->
                             [{PidNew, MetricPrefix ++ [ServiceId],
                               Driver} | Inserts1]
-                        end, Inserts0, PidsNew)
-                end,
-                Changes1#service_data{ets_insert = Inserts2}
+                    end,
+                    {Inserts2, process_info_store(PidNew, ProcessInfo2)}
+                end, {Inserts0, ProcessInfo1}, PidsNew),
+                Changes1#service_data{process_info = ProcessInfo3,
+                                      ets_insert = Inserts3}
         end,
-        Metrics1 = service_metrics(PidsNew, Service, ServicesNew,
-                                   [ServiceId]) ++ Metrics0,
+        #service_data{process_info = ProcessInfo6} = Changes2,
+        {Metrics1,
+         ProcessInfo7} = service_metrics(PidsNew, ProcessInfo6, Service,
+                                         ServicesNew, [ServiceId]),
         services_accumulate(Service,
-                            Changes2#service_data{metrics = Metrics1})
-    end, #service_data{}, ServicesNew),
-    #service_data{ets_insert = InsertsN,
+                            Changes2#service_data{process_info = ProcessInfo7,
+                                                  metrics = Metrics1 ++
+                                                            Metrics0})
+    end, #service_data{process_info = ProcessInfo0}, ServicesNew),
+    #service_data{process_info = ProcessInfoN,
+                  ets_insert = InsertsN,
                   ets_delete = DeletesN,
                   count_internal = CountInternal,
                   count_external = CountExternal,
@@ -345,9 +383,10 @@ services_update(ServicesOld, ServicesNew,
                                   [{{PidOld, '_', '_'},[],[true]}
                                    || PidOld <- DeletesN])
     end,
-    services_metrics(CountInternal, CountExternal,
-                     ConcurrencyInternal, ConcurrencyExternal, Scopes) ++
-    MetricsN.
+    {services_metrics(CountInternal, CountExternal,
+                      ConcurrencyInternal, ConcurrencyExternal,
+                      Scopes) ++ MetricsN,
+     ProcessInfoN}.
 
 nodes_update(NodesVisible, NodesHidden, NodesAll) ->
     [metric(gauge, [visible], NodesVisible),
@@ -401,45 +440,102 @@ services_accumulate(#service{service_f = ServiceF,
                                  scopes = NewScopes}
     end.
 
-service_process_metrics(internal, Pid, MetricPrefix) ->
+service_process_metrics({undefined, _, _}, _, ProcessInfo0, _, _) ->
+    {[], ProcessInfo0};
+service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
+                        internal, ProcessInfo0, Pid, MetricPrefix) ->
     try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
         State -> % gen_server/proc_lib
             {QueuedRequests,
              QueuedRequestsSize0,
              WordSize,
-             QueuedInfo} = case erlang:tuple_size(State) of
+             QueuedInfo,
+             Memory,
+             Messages,
+             ReductionsNow,
+             ProcessInfoN} = case erlang:tuple_size(State) of
                 29 -> % duo_mode == false
                     state = erlang:element(1, State),
                     {erlang:element(8, State),   % queued
                      erlang:element(9, State),   % queued_size
                      erlang:element(10, State),  % queued_word_size
-                     erlang:element(11, State)}; % queued_info
+                     erlang:element(11, State),  % queued_info
+                     ServiceMemory,
+                     ServiceMessages,
+                     ServiceReductionsNow,
+                     ProcessInfo0};
                 14 -> % duo_mode == true
                     state_duo = erlang:element(1, State),
+                    Dispatcher =  erlang:element(12, State),
+                    {MemoryValue,
+                     MessagesValue,
+                     ReductionsNowValue,
+                     ProcessInfo2} = case process_info_update(Dispatcher,
+                                                              ProcessInfo0) of
+                        {{undefined, _, _}, ProcessInfo1} ->
+                            {ServiceMemory,
+                             ServiceMessages,
+                             ServiceReductionsNow,
+                             ProcessInfo1};
+                        {{DispatcherMemory,
+                          DispatcherMessages,
+                          DispatcherReductionsNow}, ProcessInfo1}
+                        when ServiceReductionsNow =:= undefined;
+                             DispatcherReductionsNow =:= undefined ->
+                            {ServiceMemory + DispatcherMemory,
+                             ServiceMessages + DispatcherMessages,
+                             undefined,
+                             ProcessInfo1};
+                        {{DispatcherMemory,
+                          DispatcherMessages,
+                          DispatcherReductionsNow}, ProcessInfo1} ->
+                            {ServiceMemory + DispatcherMemory,
+                             ServiceMessages + DispatcherMessages,
+                             ServiceReductionsNow + DispatcherReductionsNow,
+                             ProcessInfo1}
+                    end,
                     {erlang:element(5, State),   % queued
                      erlang:element(6, State),   % queued_size
                      erlang:element(7, State),   % queued_word_size
-                     erlang:element(8, State)}   % queued_info
+                     erlang:element(8, State),   % queued_info
+                     MemoryValue,
+                     MessagesValue,
+                     ReductionsNowValue,
+                     ProcessInfo2}
             end,
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
-                    cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
+                    cloudi_x_erlang_term:byte_size(QueuedRequests,
+                                                   WordSize);
                 true ->
                     QueuedRequestsSize0
             end,
             QueuedInfoLength = queue:len(QueuedInfo),
-            [metric(gauge, MetricPrefix ++ [queued_requests],
-                    QueuedRequestsLength),
-             metric(gauge, MetricPrefix ++ [queued_requests_size],
-                    QueuedRequestsSizeN),
-             metric(gauge, MetricPrefix ++ [queued_info],
-                    QueuedInfoLength)]
+            Metrics = if
+                ReductionsNow =:= undefined ->
+                    [];
+                is_integer(ReductionsNow) ->
+                    [metric(spiral, MetricPrefix ++ [reductions],
+                            ReductionsNow)]
+            end,
+            {[metric(gauge, MetricPrefix ++ [memory],
+                     Memory),
+              metric(gauge, MetricPrefix ++ [message_queue_len],
+                     Messages),
+              metric(gauge, MetricPrefix ++ [queued_requests],
+                     QueuedRequestsLength),
+              metric(gauge, MetricPrefix ++ [queued_requests_size],
+                     QueuedRequestsSizeN),
+              metric(gauge, MetricPrefix ++ [queued_info],
+                     QueuedInfoLength) | Metrics],
+             ProcessInfoN}
     catch
         exit:{_, _} ->
-            []
+            {[], ProcessInfo0}
     end;
-service_process_metrics(external, Pid, MetricPrefix) ->
+service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
+                        external, ProcessInfo0, Pid, MetricPrefix) ->
     try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
         {_, State} -> % gen_fsm
             38 = erlang:tuple_size(State),
@@ -450,38 +546,53 @@ service_process_metrics(external, Pid, MetricPrefix) ->
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
-                    cloudi_x_erlang_term:byte_size(QueuedRequests, WordSize);
+                    cloudi_x_erlang_term:byte_size(QueuedRequests,
+                                                   WordSize);
                 true ->
                     QueuedRequestsSize0
             end,
-            [metric(gauge, MetricPrefix ++ [queued_requests],
-                    QueuedRequestsLength),
-             metric(gauge, MetricPrefix ++ [queued_requests_size],
-                    QueuedRequestsSizeN)]
+            Metrics = if
+                ServiceReductionsNow =:= undefined ->
+                    [];
+                is_integer(ServiceReductionsNow) ->
+                    [metric(spiral, MetricPrefix ++ [reductions],
+                            ServiceReductionsNow)]
+            end,
+            {[metric(gauge, MetricPrefix ++ [memory],
+                     ServiceMemory),
+              metric(gauge, MetricPrefix ++ [message_queue_len],
+                     ServiceMessages),
+              metric(gauge, MetricPrefix ++ [queued_requests],
+                     QueuedRequestsLength),
+              metric(gauge, MetricPrefix ++ [queued_requests_size],
+                     QueuedRequestsSizeN) | Metrics],
+             ProcessInfo0}
     catch
         exit:{_, _} ->
-            []
+            {[], ProcessInfo0}
     end.
 
-service_metrics_pid_internal([], Metrics, _, _) ->
-    Metrics;
-service_metrics_pid_internal([Pid | Pids], Metrics, Services, MetricPrefix) ->
+service_metrics_pid_internal([], Metrics, ProcessInfo0, _, _) ->
+    {Metrics, ProcessInfo0};
+service_metrics_pid_internal([Pid | Pids], Metrics, ProcessInfo0,
+                             Services, MetricPrefix) ->
     {[_],
      #service{process_index = ProcessIndex}} =
         cloudi_x_key2value:fetch2(Pid, Services),
     ProcessMetricPrefix = MetricPrefix ++
                           [process, erlang:integer_to_list(ProcessIndex)],
-    service_metrics_pid_internal(Pids,
-                                 service_process_metrics(internal, Pid,
-                                                         ProcessMetricPrefix) ++
-                                 process_metrics(Pid, ProcessMetricPrefix) ++
-                                 Metrics,
+    {MetricsNew,
+     ProcessInfoN} = service_process_metrics(process_info_find(Pid,
+                                                               ProcessInfo0),
+                                             internal, ProcessInfo0, Pid,
+                                             ProcessMetricPrefix),
+    service_metrics_pid_internal(Pids, MetricsNew ++ Metrics, ProcessInfoN,
                                  Services, MetricPrefix).
 
-service_metrics_pid_external([], Metrics, _, _, _) ->
-    Metrics;
-service_metrics_pid_external([Pid | Pids], Metrics, ThreadIndexLookup,
-                             Services, MetricPrefix) ->
+service_metrics_pid_external([], Metrics, ProcessInfo0, _, _, _) ->
+    {Metrics, ProcessInfo0};
+service_metrics_pid_external([Pid | Pids], Metrics, ProcessInfo0,
+                             ThreadIndexLookup, Services, MetricPrefix) ->
     {[_],
      #service{process_index = ProcessIndex}} =
         cloudi_x_key2value:fetch2(Pid, Services),
@@ -494,28 +605,37 @@ service_metrics_pid_external([Pid | Pids], Metrics, ThreadIndexLookup,
     ThreadMetricPrefix = MetricPrefix ++
                          [process, erlang:integer_to_list(ProcessIndex),
                           thread, erlang:integer_to_list(ThreadIndex)],
-    service_metrics_pid_external(Pids,
-                                 service_process_metrics(external, Pid,
-                                                         ThreadMetricPrefix) ++
-                                 process_metrics(Pid, ThreadMetricPrefix) ++
-                                 Metrics,
+    {MetricsNew,
+     ProcessInfoN} = service_process_metrics(process_info_find(Pid,
+                                                               ProcessInfo0),
+                                             external, ProcessInfo0, Pid,
+                                             ThreadMetricPrefix),
+    service_metrics_pid_external(Pids, MetricsNew ++ Metrics, ProcessInfoN,
                                  dict:store(ProcessIndex,
                                             ThreadIndex + 1, ThreadIndexLookup),
                                  Services, MetricPrefix).
 
-service_metrics_pid(internal, Pids, Services, MetricPrefix) ->
-    service_metrics_pid_internal(Pids, [], Services, MetricPrefix);
-service_metrics_pid(external, Pids, Services, MetricPrefix) ->
-    service_metrics_pid_external(Pids, [], dict:new(), Services, MetricPrefix).
+service_metrics_pid(internal, Pids, ProcessInfo,
+                    Services, MetricPrefix) ->
+    service_metrics_pid_internal(Pids, [], ProcessInfo,
+                                 Services, MetricPrefix);
+service_metrics_pid(external, Pids, ProcessInfo,
+                    Services, MetricPrefix) ->
+    service_metrics_pid_external(Pids, [], ProcessInfo, dict:new(),
+                                 Services, MetricPrefix).
 
-service_metrics(Pids,
+service_metrics(Pids, ProcessInfo0,
                 #service{service_f = ServiceF,
                          count_process = CountProcess,
                          count_thread = CountThread},
                 Services, MetricPrefix) ->
-    [metric(gauge, MetricPrefix ++ [concurrency],
-            CountProcess * CountThread)] ++
-    service_metrics_pid(service_type(ServiceF), Pids, Services, MetricPrefix).
+    Metrics0 = [metric(gauge, MetricPrefix ++ [concurrency],
+                       CountProcess * CountThread)],
+    {Metrics1,
+     ProcessInfoN} = service_metrics_pid(service_type(ServiceF),
+                                         Pids, ProcessInfo0,
+                                         Services, MetricPrefix),
+    {Metrics0 ++ Metrics1, ProcessInfoN}.
 
 services_metrics(CountInternal, CountExternal,
                  ConcurrencyInternal, ConcurrencyExternal, Scopes) ->
@@ -556,23 +676,110 @@ services_metrics(CountInternal, CountExternal,
             CountExternal)],
     Scopes).
 
+process_info_store(Pid, ProcessInfo) ->
+    case erlang:process_info(Pid, [memory, message_queue_len, reductions]) of
+        [{memory, MemoryNew},
+         {message_queue_len, MessagesNew},
+         {reductions, ReductionsNew}] ->
+            case dict:find(Pid, ProcessInfo) of
+                {ok, #process_info{reductions = ReductionsOld}} ->
+                    ReductionsNow = if
+                        ReductionsOld =:= undefined ->
+                            undefined;
+                        is_integer(ReductionsOld) ->
+                            ReductionsNew - ReductionsOld
+                    end,
+                    InfoNew = #process_info{memory = MemoryNew,
+                                            message_queue_len = MessagesNew,
+                                            reductions = ReductionsNew,
+                                            reductions_now = ReductionsNow},
+                    dict:store(Pid, InfoNew, ProcessInfo);
+                error ->
+                    InfoNew = #process_info{memory = MemoryNew,
+                                            message_queue_len = MessagesNew,
+                                            reductions = ReductionsNew},
+                    dict:store(Pid, InfoNew, ProcessInfo)
+            end;
+        undefined ->
+            dict:store(Pid, #process_info{}, ProcessInfo)
+    end.
+
+process_info_update(Pid, ProcessInfo) ->
+    case erlang:process_info(Pid, [memory, message_queue_len, reductions]) of
+        [{memory, MemoryNew},
+         {message_queue_len, MessagesNew},
+         {reductions, ReductionsNew}] ->
+            case dict:find(Pid, ProcessInfo) of
+                {ok, #process_info{reductions = ReductionsOld}} ->
+                    ReductionsNow = if
+                        ReductionsOld =:= undefined ->
+                            undefined;
+                        is_integer(ReductionsOld) ->
+                            ReductionsNew - ReductionsOld
+                    end,
+                    InfoNew = #process_info{memory = MemoryNew,
+                                            message_queue_len = MessagesNew,
+                                            reductions = ReductionsNew,
+                                            reductions_now = ReductionsNow},
+                    {{MemoryNew, MessagesNew, ReductionsNow},
+                     dict:store(Pid, InfoNew, ProcessInfo)};
+                error ->
+                    InfoNew = #process_info{memory = MemoryNew,
+                                            message_queue_len = MessagesNew,
+                                            reductions = ReductionsNew},
+                    {{MemoryNew, MessagesNew, undefined},
+                     dict:store(Pid, InfoNew, ProcessInfo)}
+            end;
+        undefined ->
+            {{undefined, undefined, undefined},
+             dict:store(Pid, #process_info{}, ProcessInfo)}
+    end.
+
+process_info_find(Pid, ProcessInfo) ->
+    case dict:find(Pid, ProcessInfo) of
+        {ok, #process_info{memory = Memory,
+                           message_queue_len = Messages,
+                           reductions_now = ReductionsNow}} ->
+            {Memory, Messages, ReductionsNow};
+        error ->
+            {undefined, undefined, undefined}
+    end.
+
+process_info_erase(Pid, ProcessInfo) ->
+    dict:erase(Pid, ProcessInfo).
+
+process_info_metrics({Memory, Messages, ReductionsNow}, MetricPrefix) ->
+    L0 = [],
+    L1 = if
+        Memory =:= undefined ->
+            L0;
+        is_integer(Memory) ->
+            [metric(gauge, MetricPrefix ++ [memory],
+                    Memory) | L0]
+    end,
+    L2 = if
+        Messages =:= undefined ->
+            L1;
+        is_integer(Messages) ->
+            [metric(gauge, MetricPrefix ++ [message_queue_len],
+                    Messages) | L1]
+    end,
+    LN = if
+        ReductionsNow =:= undefined ->
+            L2;
+        is_integer(ReductionsNow) ->
+            [metric(spiral, MetricPrefix ++ [reductions],
+                    ReductionsNow) | L2]
+    end,
+    LN.
+
 service_type(start_internal) ->
     internal;
 service_type(start_external) ->
     external.
 
-process_metrics(Pid, MetricPrefix) ->
-    case erlang:process_info(Pid, [memory, message_queue_len, reductions]) of
-        [{memory, Memory},
-         {message_queue_len, Messages},
-         {reductions, Reductions}] ->
-            [metric(gauge, MetricPrefix ++ [memory], Memory),
-             metric(gauge, MetricPrefix ++ [message_queue_len], Messages),
-             metric(gauge, MetricPrefix ++ [reductions], Reductions)];
-        undefined ->
-            []
-    end.
-
+metric(spiral, [_ | _] = Name, Value) ->
+    {spiral, Name, Value};
 metric(gauge, [_ | _] = Name, Value) ->
     {gauge, Name, Value}.
 

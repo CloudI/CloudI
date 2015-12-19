@@ -178,8 +178,8 @@ statistics_value(io) ->
 statistics_value(scheduler_wall_time) ->
     {scheduler_wall_time, lists:sort(erlang:statistics(scheduler_wall_time))};
 statistics_value(reductions) ->
-    {_, ReductionsSinceLastCall} = erlang:statistics(reductions),
-    {reductions, ReductionsSinceLastCall};
+    {TotalReductions, _} = erlang:statistics(reductions),
+    {reductions, TotalReductions};
 statistics_value(Option) ->
     Value = erlang:statistics(Option),
     true = is_integer(Value),
@@ -224,9 +224,10 @@ statistics_value_update(scheduler_wall_time, SchedulersOld) ->
         end
     end, [], SchedulersOld),
     {MetricValues, EntryNew};
-statistics_value_update(reductions, _) ->
-    EntryNew = {_, ValueNew} = statistics_value(reductions),
-    {[metric(spiral, [reductions], ValueNew)], EntryNew};
+statistics_value_update(reductions, TotalReductionsOld) ->
+    EntryNew = {_, TotalReductionsNew} = statistics_value(reductions),
+    {[metric(spiral, [reductions],
+             TotalReductionsNew - TotalReductionsOld)], EntryNew};
 statistics_value_update(Option, _) ->
     EntryNew = statistics_value(Option),
     {[metric(gauge, EntryNew)], EntryNew}.

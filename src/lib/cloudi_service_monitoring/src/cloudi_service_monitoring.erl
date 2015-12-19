@@ -111,6 +111,7 @@
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
+-include("cloudi_service_monitoring.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service_api.hrl").
 
@@ -194,6 +195,7 @@
         services :: cloudi_x_key2value:
                     cloudi_x_key2value(cloudi_service_api:service_id(),
                                        pid(), tuple()) | undefined,
+        process_info :: dict_proxy(pid(), #process_info{}),
         nodes_visible :: non_neg_integer(),
         nodes_hidden :: non_neg_integer(),
         nodes_all :: non_neg_integer()
@@ -575,9 +577,11 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = is_atom(hd(MetricPrefix)) andalso
            lists:all(fun is_atom/1, MetricPrefix),
     true = is_boolean(UseAspectsOnly),
-    ok = cloudi_service_monitoring_cloudi:
-         services_init(Interval, MetricPrefix ++ [services],
-                       UseAspectsOnly, Driver),
+    ProcessInfo0 = dict:new(),
+    ProcessInfoN = cloudi_service_monitoring_cloudi:
+                   services_init(Interval, ProcessInfo0,
+                                 MetricPrefix ++ [services],
+                                 UseAspectsOnly, Driver),
     ErlangState = erlang_init(ErlangMetricPrefix,
                               ErlangMemory,
                               ErlangSystemInfo,
@@ -605,6 +609,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 interval = Interval,
                 metric_prefix = MetricPrefix,
                 services = undefined,
+                process_info = ProcessInfoN,
                 aspects_only = UseAspectsOnly,
                 nodes_visible = erlang:length(erlang:nodes(visible)),
                 nodes_hidden = erlang:length(erlang:nodes(hidden)),
@@ -622,12 +627,14 @@ cloudi_service_handle_info(cloudi_update,
                                   interval = Interval,
                                   metric_prefix = MetricPrefix,
                                   services = ServicesOld,
+                                  process_info = ProcessInfo0,
                                   aspects_only = UseAspectsOnly,
                                   nodes_visible = NodesVisible,
                                   nodes_hidden = NodesHidden,
                                   nodes_all = NodesAll} = State,
                            _Dispatcher) ->
     erlang:send_after(Interval * 1000, Service, cloudi_update),
+    Start = cloudi_timestamp:milliseconds(),
     ServicesNew = case cloudi_service_monitoring_cloudi:
                        services_state(Interval * 1000) of
         {ok, ServicesUpdate} ->
@@ -636,16 +643,17 @@ cloudi_service_handle_info(cloudi_update,
             ?LOG_ERROR("cloudi_update failed: ~p", [Reason]),
             undefined
     end,
-    BasicMetrics = cloudi_service_monitoring_cloudi:
-                   basic_update(),
-    ServicesMetrics = if
+    {BasicMetrics,
+     ProcessInfo1} = cloudi_service_monitoring_cloudi:
+                     basic_update(ProcessInfo0),
+    {ServicesMetrics, ProcessInfoN} = if
         ServicesNew /= undefined ->
             cloudi_service_monitoring_cloudi:
-            services_update(ServicesOld, ServicesNew,
+            services_update(ServicesOld, ServicesNew, ProcessInfo1,
                             MetricPrefix ++ [services],
                             UseAspectsOnly, Driver);
         true ->
-            []
+            {[], ProcessInfo1}
     end,
     NodesMetrics = cloudi_service_monitoring_cloudi:
                    nodes_update(NodesVisible, NodesHidden, NodesAll),
@@ -655,14 +663,30 @@ cloudi_service_handle_info(cloudi_update,
                 MetricPrefix ++ [services], Driver),
     ok = update(NodesMetrics,
                 MetricPrefix ++ [nodes], Driver),
-    {noreply, State#state{services = ServicesNew}};
+    Elapsed = cloudi_timestamp:milliseconds() - Start,
+    if
+        Elapsed > (Interval * 1000) div 2 ->
+            ?LOG_WARN("CloudI update took ~.3f s", [Elapsed / 1000]);
+        true ->
+            ok
+    end,
+    {noreply, State#state{services = ServicesNew,
+                          process_info = ProcessInfoN}};
 cloudi_service_handle_info(erlang_update,
                            #state{service = Service,
                                   erlang_state = ErlangStateOld,
                                   erlang_interval = ErlangInterval} = State,
                            _Dispatcher) ->
     erlang:send_after(ErlangInterval * 1000, Service, erlang_update),
+    Start = cloudi_timestamp:milliseconds(),
     ErlangStateNew = erlang_update(ErlangStateOld),
+    Elapsed = cloudi_timestamp:milliseconds() - Start,
+    if
+        Elapsed > (ErlangInterval * 1000) div 2 ->
+            ?LOG_WARN("Erlang update took ~.3f s", [Elapsed / 1000]);
+        true ->
+            ok
+    end,
     {noreply, State#state{erlang_state = ErlangStateNew}};
 cloudi_service_handle_info({nodeup, _Node, OptionList},
                            State, _Dispatcher) ->

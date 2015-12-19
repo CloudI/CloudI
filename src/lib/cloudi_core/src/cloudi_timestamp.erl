@@ -53,6 +53,7 @@
 %% external interface
 -export([timestamp/0,
          seconds/0,
+         milliseconds/0,
          seconds_filter/3]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -90,12 +91,25 @@ timestamp() ->
 seconds() ->
     erlang:system_time(seconds).
 -else.
-% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}})
--define(GREGORIAN_SECONDS_OFFSET, 62167219200).
 seconds() ->
-    calendar:datetime_to_gregorian_seconds(
-        calendar:now_to_universal_time(erlang:now())) -
-        ?GREGORIAN_SECONDS_OFFSET.
+    {MegaSeconds, Seconds, _} = erlang:now(),
+    MegaSeconds * 1000000 + Seconds.
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Milliseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+milliseconds() ->
+    erlang:system_time(milli_seconds).
+-else.
+milliseconds() ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
 -endif.
 
 %%-------------------------------------------------------------------------
