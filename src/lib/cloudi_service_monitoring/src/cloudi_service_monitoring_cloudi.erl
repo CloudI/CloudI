@@ -108,6 +108,21 @@
         metrics = [] :: metric_list()
     }).
 
+% cloudi_core_i_service_internal and cloudi_core_i_service_external
+% use maps when available/stable
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-define(ERLANG_OTP_VERSION_18_FEATURES, true).
+-endif.
+-endif.
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+-define(MAP_SIZE(M),         maps:size(M)).
+-else.
+-define(MAP_SIZE(M),         dict:size(M)).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -447,9 +462,10 @@ service_process_metrics({undefined, _, _}, _, ProcessInfo0, _, _, _) ->
 service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         internal, ProcessInfo0, Pid,
                         QueuedEmptySize, MetricPrefix) ->
-    try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
-        State -> % gen_server/proc_lib
-            {QueuedRequests,
+    case service_state(Pid) of
+        {ok, State} -> % gen_server/proc_lib
+            {Outgoing,
+             QueuedRequests,
              QueuedRequestsSize0,
              WordSize,
              QueuedInfo,
@@ -459,10 +475,11 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
              ProcessInfoN} = case erlang:tuple_size(State) of
                 29 -> % duo_mode == false
                     state = erlang:element(1, State),
-                    {erlang:element(8, State),   % queued
-                     erlang:element(9, State),   % queued_size
-                     erlang:element(10, State),  % queued_word_size
-                     erlang:element(11, State),  % queued_info
+                    {?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
+                     erlang:element(8, State),             % queued
+                     erlang:element(9, State),             % queued_size
+                     erlang:element(10, State),            % queued_word_size
+                     erlang:element(11, State),            % queued_info
                      ServiceMemory,
                      ServiceMessages,
                      ServiceReductionsNow,
@@ -470,6 +487,14 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                 14 -> % duo_mode == true
                     state_duo = erlang:element(1, State),
                     Dispatcher =  erlang:element(12, State),
+                    DispatcherOutgoing = case service_state(Dispatcher) of
+                        {ok, DispatcherState} -> % gen_server/proc_lib
+                            29 = erlang:tuple_size(DispatcherState),
+                            state = erlang:element(1, DispatcherState),
+                            ?MAP_SIZE(erlang:element(3, DispatcherState));
+                        {error, _} ->
+                            undefined
+                    end,
                     {MemoryValue,
                      MessagesValue,
                      ReductionsNowValue,
@@ -497,7 +522,8 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                              ServiceReductionsNow + DispatcherReductionsNow,
                              ProcessInfo1}
                     end,
-                    {erlang:element(5, State),   % queued
+                    {DispatcherOutgoing,
+                     erlang:element(5, State),   % queued
                      erlang:element(6, State),   % queued_size
                      erlang:element(7, State),   % queued_word_size
                      erlang:element(8, State),   % queued_info
@@ -516,35 +542,42 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                     QueuedRequestsSize0
             end,
             QueuedInfoLength = queue:len(QueuedInfo),
-            Metrics = if
-                ReductionsNow =:= undefined ->
+            Metrics0 = if
+                Outgoing =:= undefined ->
                     [];
+                is_integer(Outgoing) ->
+                    [metric(gauge, MetricPrefix ++ [outgoing_requests],
+                            Outgoing)]
+            end,
+            MetricsN = if
+                ReductionsNow =:= undefined ->
+                    Metrics0;
                 is_integer(ReductionsNow) ->
                     [metric(spiral, MetricPrefix ++ [reductions],
-                            ReductionsNow)]
+                            ReductionsNow) | Metrics0]
             end,
             {[metric(gauge, MetricPrefix ++ [memory],
                      Memory),
               metric(gauge, MetricPrefix ++ [message_queue_len],
                      Messages),
-              metric(gauge, MetricPrefix ++ [queued_requests],
+              metric(gauge, MetricPrefix ++ [incoming_requests],
                      QueuedRequestsLength),
-              metric(gauge, MetricPrefix ++ [queued_requests_size],
+              metric(gauge, MetricPrefix ++ [incoming_requests_size],
                      QueuedRequestsSizeN),
-              metric(gauge, MetricPrefix ++ [queued_info],
-                     QueuedInfoLength) | Metrics],
-             ProcessInfoN}
-    catch
-        exit:{_, _} ->
+              metric(gauge, MetricPrefix ++ [incoming_info],
+                     QueuedInfoLength) | MetricsN],
+             ProcessInfoN};
+        {error, _} ->
             {[], ProcessInfo0}
     end;
 service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         external, ProcessInfo0, Pid,
                         QueuedEmptySize, MetricPrefix) ->
-    try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
-        {_, State} -> % gen_fsm
+    case service_state(Pid) of
+        {ok, {_, State}} -> % gen_fsm
             38 = erlang:tuple_size(State),
             state = erlang:element(1, State),
+            Outgoing = ?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
             QueuedRequests = erlang:element(8, State),       % queued
             QueuedRequestsSize0 = erlang:element(9, State),  % queued_size
             WordSize = erlang:element(10, State),            % queued_word_size
@@ -557,7 +590,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                 true ->
                     QueuedRequestsSize0
             end,
-            Metrics = if
+            MetricsN = if
                 ServiceReductionsNow =:= undefined ->
                     [];
                 is_integer(ServiceReductionsNow) ->
@@ -568,13 +601,14 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                      ServiceMemory),
               metric(gauge, MetricPrefix ++ [message_queue_len],
                      ServiceMessages),
-              metric(gauge, MetricPrefix ++ [queued_requests],
+              metric(gauge, MetricPrefix ++ [outgoing_requests],
+                     Outgoing),
+              metric(gauge, MetricPrefix ++ [incoming_requests],
                      QueuedRequestsLength),
-              metric(gauge, MetricPrefix ++ [queued_requests_size],
-                     QueuedRequestsSizeN) | Metrics],
-             ProcessInfo0}
-    catch
-        exit:{_, _} ->
+              metric(gauge, MetricPrefix ++ [incoming_requests_size],
+                     QueuedRequestsSizeN) | MetricsN],
+             ProcessInfo0};
+        {error, _} ->
             {[], ProcessInfo0}
     end.
 
@@ -648,6 +682,15 @@ service_metrics(Pids, ProcessInfo0,
                                          Pids, ProcessInfo0, QueuedEmptySize,
                                          Services, MetricPrefix),
     {Metrics0 ++ Metrics1, ProcessInfoN}.
+
+service_state(Pid) ->
+    try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
+        State ->
+            {ok, State}
+    catch
+        exit:{Reason, _} ->
+            {error, Reason}
+    end.
 
 services_metrics(CountInternal, CountExternal,
                  ConcurrencyInternal, ConcurrencyExternal, Scopes) ->

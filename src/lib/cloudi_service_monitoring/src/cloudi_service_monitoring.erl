@@ -583,6 +583,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                    services_init(Interval, ProcessInfo0,
                                  MetricPrefix ++ [services],
                                  UseAspectsOnly, Driver),
+    % no binaries are stored within pqueue4, so using 1 for the word size works
     QueuedEmptySize = cloudi_x_erlang_term:byte_size(cloudi_x_pqueue4:new(), 1),
     ErlangState = erlang_init(ErlangMetricPrefix,
                               ErlangMemory,

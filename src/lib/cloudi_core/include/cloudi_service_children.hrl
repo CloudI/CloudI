@@ -183,14 +183,14 @@ recv_asyncs_minimal(Timeout, TransIdList) ->
     recv_asyncs_minimal([], erlang:length(TransIdList), TransIdList, Timeout).
 
 recv_asyncs_minimal(L, 0, TransIdList, _Timeout) ->
-    Result = lists:map(fun(TransId) ->
+    Result = [begin
         case lists:keyfind(TransId, 3, L) of
             false ->
                 {<<>>, <<>>, TransId};
             {_, _, _} = Entry ->
                 Entry
         end
-    end, TransIdList),
+    end || TransId <- TransIdList],
     {ok, Result};
 recv_asyncs_minimal(L, I, TransIdList, Timeout) ->
     receive
