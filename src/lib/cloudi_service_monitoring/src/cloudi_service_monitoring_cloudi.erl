@@ -66,7 +66,7 @@
          basic_update/1,
          services_init/5,
          services_terminate/1,
-         services_update/6,
+         services_update/7,
          nodes_update/3]).
 
 -include("cloudi_service_monitoring.hrl").
@@ -239,7 +239,7 @@ services_terminate(_) ->
     true = ets:delete(?ETS_REF2ID),
     ok.
 
-services_update(undefined, ServicesNew, ProcessInfo0,
+services_update(undefined, ServicesNew, ProcessInfo0, QueuedEmptySize,
                 MetricPrefix, UseAspectsOnly, Driver) ->
     ChangesN = cloudi_x_key2value:
                fold1(fun(ID, PidsNew,
@@ -260,6 +260,7 @@ services_update(undefined, ServicesNew, ProcessInfo0,
         end, {Inserts0, ProcessInfo1}, PidsNew),
         {Metrics1,
          ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
+                                         QueuedEmptySize,
                                          ServicesNew, [ServiceId]),
         services_accumulate(Service,
                             Changes1#service_data{process_info = ProcessInfo4,
@@ -286,7 +287,7 @@ services_update(undefined, ServicesNew, ProcessInfo0,
                       ConcurrencyInternal, ConcurrencyExternal,
                       Scopes) ++ MetricsN,
      ProcessInfoN};
-services_update(ServicesOld, ServicesNew, ProcessInfo0,
+services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
                 MetricPrefix, UseAspectsOnly, Driver) ->
     ChangesN = cloudi_x_key2value:
                fold1(fun(ID, PidsNew,
@@ -359,6 +360,7 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0,
         #service_data{process_info = ProcessInfo6} = Changes2,
         {Metrics1,
          ProcessInfo7} = service_metrics(PidsNew, ProcessInfo6, Service,
+                                         QueuedEmptySize,
                                          ServicesNew, [ServiceId]),
         services_accumulate(Service,
                             Changes2#service_data{process_info = ProcessInfo7,
@@ -440,10 +442,11 @@ services_accumulate(#service{service_f = ServiceF,
                                  scopes = NewScopes}
     end.
 
-service_process_metrics({undefined, _, _}, _, ProcessInfo0, _, _) ->
+service_process_metrics({undefined, _, _}, _, ProcessInfo0, _, _, _) ->
     {[], ProcessInfo0};
 service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
-                        internal, ProcessInfo0, Pid, MetricPrefix) ->
+                        internal, ProcessInfo0, Pid,
+                        QueuedEmptySize, MetricPrefix) ->
     try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
         State -> % gen_server/proc_lib
             {QueuedRequests,
@@ -507,7 +510,8 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
                     cloudi_x_erlang_term:byte_size(QueuedRequests,
-                                                   WordSize);
+                                                   WordSize) -
+                    QueuedEmptySize * WordSize;
                 true ->
                     QueuedRequestsSize0
             end,
@@ -535,7 +539,8 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
             {[], ProcessInfo0}
     end;
 service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
-                        external, ProcessInfo0, Pid, MetricPrefix) ->
+                        external, ProcessInfo0, Pid,
+                        QueuedEmptySize, MetricPrefix) ->
     try sys:get_state(Pid, ?SERVICE_PROCESS_TIMEOUT) of
         {_, State} -> % gen_fsm
             38 = erlang:tuple_size(State),
@@ -547,7 +552,8 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->
                     cloudi_x_erlang_term:byte_size(QueuedRequests,
-                                                   WordSize);
+                                                   WordSize) -
+                    QueuedEmptySize * WordSize;
                 true ->
                     QueuedRequestsSize0
             end,
@@ -572,9 +578,10 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
             {[], ProcessInfo0}
     end.
 
-service_metrics_pid_internal([], Metrics, ProcessInfo0, _, _) ->
+service_metrics_pid_internal([], Metrics, ProcessInfo0, _, _, _) ->
     {Metrics, ProcessInfo0};
 service_metrics_pid_internal([Pid | Pids], Metrics, ProcessInfo0,
+                             QueuedEmptySize,
                              Services, MetricPrefix) ->
     {[_],
      #service{process_index = ProcessIndex}} =
@@ -585,14 +592,17 @@ service_metrics_pid_internal([Pid | Pids], Metrics, ProcessInfo0,
      ProcessInfoN} = service_process_metrics(process_info_find(Pid,
                                                                ProcessInfo0),
                                              internal, ProcessInfo0, Pid,
+                                             QueuedEmptySize,
                                              ProcessMetricPrefix),
     service_metrics_pid_internal(Pids, MetricsNew ++ Metrics, ProcessInfoN,
+                                 QueuedEmptySize,
                                  Services, MetricPrefix).
 
-service_metrics_pid_external([], Metrics, ProcessInfo0, _, _, _) ->
+service_metrics_pid_external([], Metrics, ProcessInfo0, _, _, _, _) ->
     {Metrics, ProcessInfo0};
 service_metrics_pid_external([Pid | Pids], Metrics, ProcessInfo0,
-                             ThreadIndexLookup, Services, MetricPrefix) ->
+                             ThreadIndexLookup, QueuedEmptySize,
+                             Services, MetricPrefix) ->
     {[_],
      #service{process_index = ProcessIndex}} =
         cloudi_x_key2value:fetch2(Pid, Services),
@@ -609,31 +619,33 @@ service_metrics_pid_external([Pid | Pids], Metrics, ProcessInfo0,
      ProcessInfoN} = service_process_metrics(process_info_find(Pid,
                                                                ProcessInfo0),
                                              external, ProcessInfo0, Pid,
+                                             QueuedEmptySize,
                                              ThreadMetricPrefix),
     service_metrics_pid_external(Pids, MetricsNew ++ Metrics, ProcessInfoN,
                                  dict:store(ProcessIndex,
                                             ThreadIndex + 1, ThreadIndexLookup),
+                                 QueuedEmptySize,
                                  Services, MetricPrefix).
 
 service_metrics_pid(internal, Pids, ProcessInfo,
-                    Services, MetricPrefix) ->
+                    QueuedEmptySize, Services, MetricPrefix) ->
     service_metrics_pid_internal(Pids, [], ProcessInfo,
-                                 Services, MetricPrefix);
+                                 QueuedEmptySize, Services, MetricPrefix);
 service_metrics_pid(external, Pids, ProcessInfo,
-                    Services, MetricPrefix) ->
+                    QueuedEmptySize, Services, MetricPrefix) ->
     service_metrics_pid_external(Pids, [], ProcessInfo, dict:new(),
-                                 Services, MetricPrefix).
+                                 QueuedEmptySize, Services, MetricPrefix).
 
 service_metrics(Pids, ProcessInfo0,
                 #service{service_f = ServiceF,
                          count_process = CountProcess,
                          count_thread = CountThread},
-                Services, MetricPrefix) ->
+                QueuedEmptySize, Services, MetricPrefix) ->
     Metrics0 = [metric(gauge, MetricPrefix ++ [concurrency],
                        CountProcess * CountThread)],
     {Metrics1,
      ProcessInfoN} = service_metrics_pid(service_type(ServiceF),
-                                         Pids, ProcessInfo0,
+                                         Pids, ProcessInfo0, QueuedEmptySize,
                                          Services, MetricPrefix),
     {Metrics0 ++ Metrics1, ProcessInfoN}.
 

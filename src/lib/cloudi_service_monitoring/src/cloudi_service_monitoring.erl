@@ -196,6 +196,7 @@
                     cloudi_x_key2value(cloudi_service_api:service_id(),
                                        pid(), tuple()) | undefined,
         process_info :: dict_proxy(pid(), #process_info{}),
+        queue_empty_size :: non_neg_integer(),
         nodes_visible :: non_neg_integer(),
         nodes_hidden :: non_neg_integer(),
         nodes_all :: non_neg_integer()
@@ -582,6 +583,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                    services_init(Interval, ProcessInfo0,
                                  MetricPrefix ++ [services],
                                  UseAspectsOnly, Driver),
+    QueuedEmptySize = cloudi_x_erlang_term:byte_size(cloudi_x_pqueue4:new(), 1),
     ErlangState = erlang_init(ErlangMetricPrefix,
                               ErlangMemory,
                               ErlangSystemInfo,
@@ -610,6 +612,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 metric_prefix = MetricPrefix,
                 services = undefined,
                 process_info = ProcessInfoN,
+                queue_empty_size = QueuedEmptySize,
                 aspects_only = UseAspectsOnly,
                 nodes_visible = erlang:length(erlang:nodes(visible)),
                 nodes_hidden = erlang:length(erlang:nodes(hidden)),
@@ -628,6 +631,7 @@ cloudi_service_handle_info(cloudi_update,
                                   metric_prefix = MetricPrefix,
                                   services = ServicesOld,
                                   process_info = ProcessInfo0,
+                                  queue_empty_size = QueuedEmptySize,
                                   aspects_only = UseAspectsOnly,
                                   nodes_visible = NodesVisible,
                                   nodes_hidden = NodesHidden,
@@ -650,7 +654,7 @@ cloudi_service_handle_info(cloudi_update,
         ServicesNew /= undefined ->
             cloudi_service_monitoring_cloudi:
             services_update(ServicesOld, ServicesNew, ProcessInfo1,
-                            MetricPrefix ++ [services],
+                            QueuedEmptySize, MetricPrefix ++ [services],
                             UseAspectsOnly, Driver);
         true ->
             {[], ProcessInfo1}

@@ -6,6 +6,7 @@
     * Fix cloudi_service_children.hrl, changing the interface and usage in
       cloudi_service_http_cowboy, cloudi_service_http_elli, and
       cloudi_service_tcp
+    * Make the cloudi_service_monitoring queued_requests_size more accurate
 
 2015-12-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
