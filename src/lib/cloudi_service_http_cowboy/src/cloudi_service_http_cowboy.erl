@@ -425,7 +425,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {'_', [{'_', cloudi_http_cowboy_handler,
                 #cowboy_state{
                     dispatcher = cloudi_service:dispatcher(Dispatcher),
-                    context = create_context(Dispatcher),
+                    timeout_async = cloudi_service:timeout_async(Dispatcher),
+                    timeout_sync = cloudi_service:timeout_sync(Dispatcher),
                     scope = Scope,
                     prefix = Prefix,
                     timeout_body = BodyTimeout,

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_children.hrl, changing the interface and usage in
+      cloudi_service_http_cowboy, cloudi_service_http_elli, and
+      cloudi_service_tcp
+
 2015-12-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make cloudi_service_monitoring track reductions as a total count while

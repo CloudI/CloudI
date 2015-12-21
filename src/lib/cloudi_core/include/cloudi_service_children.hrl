@@ -49,179 +49,163 @@
 % behaviour needs to provide the following variables
 % (assigned normally within cloudi_service_init/3):
 % Dispatcher = cloudi_service:dispatcher(Dispatcher),
-% Context = create_context(Dispatcher),
+% TimeoutSync = cloudi_service:timeout_sync(Dispatcher),
+% TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
 
 -compile({nowarn_unused_function,
-          [{create_context, 1},
-           {send_async_minimal, 6},
+          [{send_async_minimal, 6},
            {send_async_minimal, 7},
            {send_sync_minimal, 6},
            {send_sync_minimal, 7},
+           {recv_async_minimal, 2},
            {recv_asyncs_minimal, 2},
            {recv_asyncs_minimal, 4}]}).
 
--spec create_context(Dispatcher :: cloudi_service:dispatcher()) ->
-    cloudi:context().
-
-create_context(Dispatcher) ->
-    % use a special Context object to minimize latency/memory consumption
-    % and avoid timer usage for lazy destination refresh methods
-    ContextOptions = cloudi_service:context_options(Dispatcher),
-    cloudi:new([{groups_static, true} |
-                lists:keydelete(groups, 1, ContextOptions)]).
-
 -spec send_async_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                         Context :: cloudi:context(),
-                         Name :: cloudi:service_name(),
+                         Name :: cloudi_service:service_name(),
                          RequestInfo :: any(),
                          Request :: any(),
+                         Timeout :: cloudi_service:timeout_value_milliseconds(),
                          Self :: pid()) ->
-    {{ok, TransId :: <<_:128>>}, NewContext :: cloudi:context()}.
+    {ok, TransId :: cloudi_service:trans_id()} |
+    {error, timeout}.
 
-send_async_minimal(Dispatcher, Context, Name,
-                   RequestInfo, Request, Self) ->
-    Timeout = cloudi:timeout_async(Context),
-    Priority = cloudi:priority_default(Context),
-    {TransId, NewContext} = cloudi:trans_id(Context),
-    Dispatcher ! {'cloudi_service_forward_async_retry',
-                  Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Self},
-    {{ok, TransId}, NewContext}.
+send_async_minimal(Dispatcher, Name, RequestInfo, Request,
+                   Timeout, Self) ->
+    send_async_minimal(Dispatcher, Name, RequestInfo, Request,
+                       Timeout, undefined, Self).
 
 -spec send_async_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                         Context :: cloudi:context(),
-                         Name :: cloudi:service_name(),
+                         Name :: cloudi_service:service_name(),
                          RequestInfo :: any(),
                          Request :: any(),
-                         Destination :: cloudi:pattern_pid() | undefined,
+                         Timeout :: cloudi_service:timeout_value_milliseconds(),
+                         Destination :: cloudi_service:pattern_pid() |
+                                        undefined,
                          Self :: pid()) ->
-    {{ok, TransId :: <<_:128>>}, NewContext :: cloudi:context()}.
+    {ok, TransId :: cloudi_service:trans_id()} |
+    {error, timeout}.
 
-send_async_minimal(Dispatcher, Context, Name,
-                   RequestInfo, Request, undefined, Self) ->
-    send_async_minimal(Dispatcher, Context, Name,
-                       RequestInfo, Request, Self);
-send_async_minimal(_Dispatcher, Context, Name,
-                   RequestInfo, Request, {Pattern, Pid}, Self) ->
-    Timeout = cloudi:timeout_async(Context),
-    Priority = cloudi:priority_default(Context),
-    {TransId, NewContext} = cloudi:trans_id(Context),
-    Pid ! {'cloudi_service_send_async',
-           Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Self},
-    {{ok, TransId}, NewContext}.
-
--spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                        Context :: cloudi:context(),
-                        Name :: cloudi:service_name(),
-                        RequestInfo :: any(),
-                        Request :: any(),
-                        Self :: pid()) ->
-    {{ok, ResponseInfo :: any(), Response :: any()} |
-     {error, timeout}, NewContext :: cloudi:context()}.
-
-send_sync_minimal(Dispatcher, Context, Name,
-                  RequestInfo, Request, Self) ->
-    Timeout = cloudi:timeout_sync(Context),
-    Priority = cloudi:priority_default(Context),
-    {TransId, NewContext} = cloudi:trans_id(Context),
-    Dispatcher ! {'cloudi_service_forward_sync_retry',
+send_async_minimal(Dispatcher, Name, RequestInfo, Request,
+                   Timeout, Destination, Self) ->
+    Dispatcher ! {'cloudi_service_send_async_minimal',
                   Name, RequestInfo, Request,
-                  Timeout, Priority, TransId, Self},
+                  Timeout, Destination, Self},
     receive
-        {'cloudi_service_return_sync',
-         _Name, _Pattern, <<>>, <<>>,
-         _OldTimeout, TransId, Self} ->
-            {{error, timeout}, NewContext};
-        {'cloudi_service_return_sync',
-         _Name, _Pattern, ResponseInfo, Response,
-         _OldTimeout, TransId, Self} ->
-            {{ok, ResponseInfo, Response}, NewContext}
-    after
-        Timeout ->
-            {{error, timeout}, NewContext}
-    end.
-
--spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
-                        Context :: cloudi:context(),
-                        Name :: cloudi:service_name(),
-                        RequestInfo :: any(),
-                        Request :: any(),
-                        Destination :: cloudi:pattern_pid() | undefined,
-                        Self :: pid()) ->
-    {{ok, ResponseInfo :: any(), Response :: any()} |
-     {error, timeout}, NewContext :: cloudi:context()}.
-
-send_sync_minimal(Dispatcher, Context, Name,
-                  RequestInfo, Request, undefined, Self) ->
-    send_sync_minimal(Dispatcher, Context, Name,
-                      RequestInfo, Request, Self);
-send_sync_minimal(_Dispatcher, Context, Name,
-                  RequestInfo, Request, {Pattern, Pid}, Self) ->
-    Timeout = cloudi:timeout_sync(Context),
-    Priority = cloudi:priority_default(Context),
-    {TransId, NewContext} = cloudi:trans_id(Context),
-    Pid ! {'cloudi_service_send_sync',
-           Name, Pattern, RequestInfo, Request,
-           Timeout, Priority, TransId, Self},
-    receive
-        {'cloudi_service_return_sync',
-         _Name, _Pattern, <<>>, <<>>,
-         _OldTimeout, TransId, Self} ->
-            {{error, timeout}, NewContext};
-        {'cloudi_service_return_sync',
-         _Name, _Pattern, ResponseInfo, Response,
-         _OldTimeout, TransId, Self} ->
-            {{ok, ResponseInfo, Response}, NewContext}
-    after
-        Timeout ->
-            {{error, timeout}, NewContext}
-    end.
-
--spec recv_asyncs_minimal(Context :: cloudi:context(),
-                          TransIdList :: list(cloudi:trans_id())) ->
-    {{ok, list({ResponseInfo :: any(),
-                Response :: any(), TransId :: cloudi:trans_id()})} |
-     {error, timeout}, NewContext :: cloudi:context()}.
-
-recv_asyncs_minimal(Context, TransIdList) ->
-    {recv_asyncs_minimal([{<<>>, <<>>, TransId} ||
-                          TransId <- TransIdList], [],
-                         erlang:length(TransIdList),
-                         cloudi:timeout_sync(Context)), Context}.
-
-recv_asyncs_minimal([], L, 0, _Timeout) ->
-    {ok, lists:reverse(L)};
-recv_asyncs_minimal([], L, I, Timeout)
-    when Timeout >= 500 ->
-    receive after 500 -> ok end,
-    recv_asyncs_minimal(lists:reverse(L), [], I, Timeout - 500);
-recv_asyncs_minimal([], L, I, _Timeout) ->
-    if
-        erlang:length(L) == I ->
+        {'cloudi_service_send_async_minimal', timeout} ->
             {error, timeout};
-        true ->
-            {ok, lists:reverse(L)}
-    end;
-recv_asyncs_minimal([{<<>>, <<>>, TransId} = Entry | Results], L,
-                    I, Timeout) ->
+        {'cloudi_service_send_async_minimal', TransId} ->
+            {ok, TransId}
+    after
+        Timeout ->
+            {error, timeout}
+    end.
+
+-spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
+                        Name :: cloudi_service:service_name(),
+                        RequestInfo :: any(),
+                        Request :: any(),
+                        Timeout :: cloudi_service:timeout_value_milliseconds(),
+                        Self :: pid()) ->
+    {ok, ResponseInfo :: any(), Response :: any()} |
+    {error, timeout}.
+
+send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, Self) ->
+    send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
+                      Timeout, undefined, Self).
+
+-spec send_sync_minimal(Dispatcher :: cloudi_service:dispatcher(),
+                        Name :: cloudi_service:service_name(),
+                        RequestInfo :: any(),
+                        Request :: any(),
+                        Timeout :: cloudi_service:timeout_value_milliseconds(),
+                        Destination :: cloudi_service:pattern_pid() |
+                                       undefined,
+                        Self :: pid()) ->
+    {ok, ResponseInfo :: any(), Response :: any()} |
+    {error, timeout}.
+
+send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
+                  Timeout, Destination, Self) ->
+    Dispatcher ! {'cloudi_service_send_sync_minimal',
+                  Name, RequestInfo, Request,
+                  Timeout, Destination, Self},
+    receive
+        {'cloudi_service_send_sync_minimal', timeout} ->
+            {error, timeout};
+        {'cloudi_service_send_sync_minimal', TransId} ->
+            receive
+                {'cloudi_service_return_sync',
+                 _Name, _Pattern, <<>>, <<>>,
+                 _OldTimeout, TransId, Self} ->
+                    {error, timeout};
+                {'cloudi_service_return_sync',
+                 _Name, _Pattern, ResponseInfo, Response,
+                 _OldTimeout, TransId, Self} ->
+                    {ok, ResponseInfo, Response}
+            after
+                Timeout ->
+                    {error, timeout}
+            end
+    after
+        Timeout ->
+            {error, timeout}
+    end.
+
+-spec recv_async_minimal(Timeout :: cloudi_service:timeout_value_milliseconds(),
+                         TransId :: cloudi_service:trans_id()) ->
+    {ok, ResponseInfo :: any(), Response :: any()} |
+    {error, timeout}.
+
+recv_async_minimal(Timeout, TransId) ->
     receive
         {'cloudi_service_return_async',
          _Name, _Pattern, <<>>, <<>>,
          _OldTimeout, TransId, _Self} ->
-            recv_asyncs_minimal(Results,
-                                [Entry | L],
-                                I - 1, Timeout);
+            {error, timeout};
         {'cloudi_service_return_async',
          _Name, _Pattern, ResponseInfo, Response,
          _OldTimeout, TransId, _Self} ->
-            recv_asyncs_minimal(Results,
-                                [{ResponseInfo, Response, TransId} | L],
-                                I - 1, Timeout)
+            {ok, ResponseInfo, Response}
     after
-        0 ->
-            recv_asyncs_minimal(Results, [Entry | L], I, Timeout)
-    end;
-recv_asyncs_minimal([{_, _, _} = Entry | Results], L, I, Timeout) ->
-    recv_asyncs_minimal(Results, [Entry | L], I, Timeout).
+        Timeout ->
+            {error, timeout}
+    end.
+
+-spec recv_asyncs_minimal(Timeout :: cloudi:timeout_value_milliseconds(),
+                          TransIdList :: list(cloudi:trans_id())) ->
+    {ok, list({ResponseInfo :: any(),
+               Response :: any(), TransId :: cloudi:trans_id()})} |
+    {error, timeout}.
+
+recv_asyncs_minimal(Timeout, TransIdList) ->
+    recv_asyncs_minimal([], erlang:length(TransIdList), TransIdList, Timeout).
+
+recv_asyncs_minimal(L, 0, TransIdList, _Timeout) ->
+    Result = lists:map(fun(TransId) ->
+        case lists:keyfind(TransId, 3, L) of
+            false ->
+                {<<>>, <<>>, TransId};
+            {_, _, _} = Entry ->
+                Entry
+        end
+    end, TransIdList),
+    {ok, Result};
+recv_asyncs_minimal(L, I, TransIdList, Timeout) ->
+    receive
+        {'cloudi_service_return_async',
+         _Name, _Pattern, ResponseInfo, Response,
+         _OldTimeout, TransId, _Self} ->
+            recv_asyncs_minimal([{ResponseInfo, Response, TransId} | L],
+                                I - 1, TransIdList, Timeout)
+    after
+        Timeout ->
+            if
+                L == [] ->
+                    {error, timeout};
+                true ->
+                    recv_asyncs_minimal(L, 0, TransIdList, Timeout)
+            end
+    end.
 

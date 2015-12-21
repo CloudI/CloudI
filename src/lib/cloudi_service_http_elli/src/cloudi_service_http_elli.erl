@@ -197,7 +197,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     false = lists:member($*, Prefix),
     CallbackArgs = #elli_state{
                        dispatcher = cloudi_service:dispatcher(Dispatcher),
-                       context = create_context(Dispatcher),
+                       timeout_sync = cloudi_service:timeout_sync(Dispatcher),
                        output_type = OutputType,
                        content_type_forced = ContentTypeForced1,
                        content_types_accepted = ContentTypesAccepted1,

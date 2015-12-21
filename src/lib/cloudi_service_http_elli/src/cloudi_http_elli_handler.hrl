@@ -45,7 +45,8 @@
 -record(elli_state,
     {
         dispatcher                :: cloudi_service:dispatcher(),
-        context                   :: cloudi:context(),
+        timeout_sync              :: cloudi_service:
+                                     timeout_value_milliseconds(),
         prefix                    :: string(),
         output_type               :: external | internal | list | binary,
         content_type_forced       :: undefined | binary(),

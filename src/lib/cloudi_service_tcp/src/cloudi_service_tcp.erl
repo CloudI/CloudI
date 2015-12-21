@@ -141,6 +141,8 @@
         interface_formatted :: binary(),
         port_formatted :: binary(),
         service :: pid(),
+        timeout_async :: cloudi_service:timeout_value_milliseconds(),
+        timeout_sync :: cloudi_service:timeout_value_milliseconds(),
         destination :: cloudi_service:service_name(),
         destination_connect :: cloudi_service:service_name() | undefined,
         destination_disconnect :: cloudi_service:service_name() | undefined,
@@ -160,7 +162,8 @@
         timeout_recv :: pos_integer() | infinity,
         service :: pid(),
         dispatcher :: pid(),
-        context :: cloudi:context(),
+        timeout_async :: cloudi_service:timeout_value_milliseconds(),
+        timeout_sync :: cloudi_service:timeout_value_milliseconds(),
         destination :: cloudi_service:service_name(),
         destination_disconnect :: cloudi_service:service_name() | undefined,
         request_info :: binary(),
@@ -278,6 +281,10 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                     case prim_inet:async_accept(Listener, -1) of
                         {ok, Acceptor} ->
                             Service = cloudi_service:self(Dispatcher),
+                            TimeoutAsync = cloudi_service:
+                                           timeout_async(Dispatcher),
+                            TimeoutSync = cloudi_service:
+                                          timeout_sync(Dispatcher),
                             DebugLogLevel = if
                                 Debug =:= false ->
                                     off;
@@ -294,6 +301,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                                         port_formatted =
                                             PortFormatted,
                                         service = Service,
+                                        timeout_async = TimeoutAsync,
+                                        timeout_sync = TimeoutSync,
                                         destination = Destination,
                                         destination_connect =
                                             DestinationConnect,
@@ -346,6 +355,8 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                                   port_formatted =
                                       DestinationPortFormatted,
                                   service = Service,
+                                  timeout_async = TimeoutAsync,
+                                  timeout_sync = TimeoutSync,
                                   destination = Destination,
                                   destination_connect =
                                       DestinationConnect,
@@ -368,13 +379,13 @@ cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                  {<<"destination_address">>, DestinationAddressFormatted},
                  {<<"destination_port">>, DestinationPortFormatted}]),
             SocketPid = proc_lib:spawn_opt(fun() ->
-                Context = create_context(Dispatcher),
                 StateSocket = #state_socket{
                                   socket = Socket,
                                   timeout_recv = TimeoutRecv,
                                   service = Service,
                                   dispatcher = Dispatcher,
-                                  context = Context,
+                                  timeout_async = TimeoutAsync,
+                                  timeout_sync = TimeoutSync,
                                   destination = Destination,
                                   destination_disconnect =
                                       DestinationDisconnect,
@@ -433,7 +444,7 @@ socket_loop_init_set(true, Scope,
                      #state_socket{
                          socket = Socket,
                          dispatcher = Dispatcher,
-                         context = Context0,
+                         timeout_sync = TimeoutSync,
                          destination = Destination,
                          request_info = RequestInfo,
                          protocol_id_check = ProtocolIdCheck} = State) ->
@@ -441,10 +452,10 @@ socket_loop_init_set(true, Scope,
         [{<<"service_name">>,
           erlang:list_to_binary(Destination)}], RequestInfo),
     Self = self(),
-    case send_sync_minimal(Dispatcher, Context0,
-                           Destination, DestinationSetRequestInfo,
-                           <<"SET">>, Self) of
-        {{ok, ResponseInfo, _Response}, Context1} ->
+    case send_sync_minimal(Dispatcher, Destination,
+                           DestinationSetRequestInfo, <<"SET">>,
+                           TimeoutSync, Self) of
+        {ok, ResponseInfo, _Response} ->
             KeyValues = cloudi_request_info:key_value_parse(ResponseInfo),
             NewDestination = case cloudi_key_value:find(<<"service_name">>,
                                                         KeyValues) of
@@ -464,19 +475,17 @@ socket_loop_init_set(true, Scope,
                                            Self, infinity),
                     true
             end,
-            {Lock,
-             ContextN}= case cloudi_key_value:find(<<"lock">>, KeyValues) of
+            Lock = case cloudi_key_value:find(<<"lock">>, KeyValues) of
                 error ->
                     undefined;
                 {ok, <<"false">>} ->
                     undefined;
                 {ok, <<"true">>} ->
-                    case cloudi:get_pid(Context1, NewDestination) of
-                        {{ok, LockValue}, Context2} ->
-                            {LockValue, Context2};
-                        {{error, timeout}, Context2} ->
-                            socket_loop_terminate(lock_timeout,
-                                State#state_socket{context = Context2})
+                    case cloudi_service:get_pid(Dispatcher, NewDestination) of
+                        {ok, LockValue} ->
+                            LockValue;
+                        {error, timeout} ->
+                            socket_loop_terminate(lock_timeout, State)
                     end
             end,
             ResponseLookup = if
@@ -501,15 +510,13 @@ socket_loop_init_set(true, Scope,
                     undefined
             end,
             socket_terminate_check(Socket, KeyValues),
-            State#state_socket{context = ContextN,
-                                     destination = NewDestination,
-                                     lock = Lock,
-                                     response_lookup = ResponseLookup,
-                                     recv_timeouts = RecvTimeouts,
-                                     queued = Queued};
-        {{error, timeout}, ContextN} ->
-            socket_loop_terminate(set_timeout,
-                State#state_socket{context = ContextN})
+            State#state_socket{destination = NewDestination,
+                               lock = Lock,
+                               response_lookup = ResponseLookup,
+                               recv_timeouts = RecvTimeouts,
+                               queued = Queued};
+        {error, timeout} ->
+            socket_loop_terminate(set_timeout, State)
     end;
 socket_loop_init_set(false, _, #state_socket{} = State) ->
     State#state_socket{lock = undefined}.
@@ -520,25 +527,24 @@ socket_loop_init_connect(DestinationConnect,
                          #state_socket{
                              socket = Socket,
                              dispatcher = Dispatcher,
-                             context = Context,
+                             timeout_sync = TimeoutSync,
                              request_info = RequestInfo,
                              lock = Lock} = State)
     when is_list(DestinationConnect) ->
-    case send_sync_minimal(Dispatcher, Context,
-                           DestinationConnect, RequestInfo,
-                           <<"CONNECT">>, Lock, self()) of
-        {{ok, ResponseInfo, Response}, NewContext} ->
+    case send_sync_minimal(Dispatcher, DestinationConnect,
+                           RequestInfo, <<"CONNECT">>,
+                           TimeoutSync, Lock, self()) of
+        {ok, ResponseInfo, Response} ->
             socket_terminate_check(Socket, ResponseInfo),
             socket_send(Response, State),
-            State#state_socket{context = NewContext};
-        {{error, timeout}, NewContext} ->
+            State;
+        {error, timeout} ->
             socket_send(<<>>, State),
-            NewState = State#state_socket{context = NewContext},
             if
                 Lock =:= undefined ->
-                    NewState;
+                    State;
                 true ->
-                    socket_loop_terminate(timeout, NewState)
+                    socket_loop_terminate(timeout, State)
             end
     end.
 
@@ -619,16 +625,16 @@ socket_loop_in_request(Request, ResponseF,
                        #state_socket{
                            socket = Socket,
                            dispatcher = Dispatcher,
-                           context = Context,
+                           timeout_sync = TimeoutSync,
                            destination = Destination,
                            request_info = RequestInfo,
                            lock = Lock,
                            debug_level = DebugLevel} = State) ->
     socket_debug_log(DebugLevel,
                      "socket in request ~p", [Request]),
-    case send_sync_minimal(Dispatcher, Context, Destination,
-                           RequestInfo, Request, Lock, self()) of
-        {{ok, ResponseInfo, Response}, NewContext} ->
+    case send_sync_minimal(Dispatcher, Destination, RequestInfo, Request,
+                           TimeoutSync, Lock, self()) of
+        {ok, ResponseInfo, Response} ->
             socket_terminate_check(Socket, ResponseInfo),
             NewResponse = if
                 ResponseF =:= undefined ->
@@ -639,14 +645,14 @@ socket_loop_in_request(Request, ResponseF,
             socket_send(NewResponse, State),
             socket_debug_log(DebugLevel,
                              "socket out response ~p", [NewResponse]),
-            State#state_socket{context = NewContext};
-        {{error, timeout}, NewContext} ->
+            State;
+        {error, timeout} ->
             socket_send(<<>>, State),
             if
                 Lock =:= undefined ->
                     socket_debug_log(DebugLevel,
                                      "socket out response ~p", [<<>>]),
-                    State#state_socket{context = NewContext};
+                    State;
                 true ->
                     socket_loop_terminate(timeout, State)
             end
@@ -777,15 +783,15 @@ socket_loop_terminate(Reason,
                           socket = Socket,
                           service = Service,
                           dispatcher = Dispatcher,
-                          context = Context,
+                          timeout_async = TimeoutAsync,
                           destination_disconnect = DestinationDisconnect,
                           request_info = RequestInfo,
                           debug_level = DebugLevel}) ->
     if
         is_list(DestinationDisconnect) ->
-            send_async_minimal(Dispatcher, Context,
-                               DestinationDisconnect,
-                               RequestInfo, <<"DISCONNECT">>, self());
+            send_async_minimal(Dispatcher, DestinationDisconnect,
+                               RequestInfo, <<"DISCONNECT">>,
+                               TimeoutAsync, self());
         true ->
             ok
     end,

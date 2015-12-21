@@ -443,7 +443,7 @@ handle_request(Name, Headers, 'application_zip', Req, State) ->
 handle_request(Name, Headers, Body, _Req,
                #elli_state{
                    dispatcher = Dispatcher,
-                   context = Context,
+                   timeout_sync = Timeout,
                    output_type = OutputType}) ->
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
@@ -458,12 +458,12 @@ handle_request(Name, Headers, Body, _Req,
         (OutputType =:= list) ->
             erlang:binary_to_list(Body)
     end,
-    case send_sync_minimal(Dispatcher, Context,
-                           Name, RequestInfo, Request, self()) of
-        {{ok, ResponseInfo, Response}, _} ->
+    case send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
+                           Timeout, self()) of
+        {ok, ResponseInfo, Response} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
             {elli_response, HeadersOutgoing, Response};
-        {{error, timeout}, _} ->
+        {error, timeout} ->
             {elli_error, timeout}
     end.
 

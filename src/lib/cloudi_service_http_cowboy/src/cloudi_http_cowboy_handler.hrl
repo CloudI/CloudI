@@ -45,7 +45,10 @@
 -record(cowboy_state,
     {
         dispatcher                :: cloudi_service:dispatcher(),
-        context                   :: cloudi:context(),
+        timeout_async             :: cloudi_service:
+                                     timeout_value_milliseconds(),
+        timeout_sync              :: cloudi_service:
+                                     timeout_value_milliseconds(),
         scope                     :: atom(),
         prefix                    :: string(),
         timeout_body              :: pos_integer(),

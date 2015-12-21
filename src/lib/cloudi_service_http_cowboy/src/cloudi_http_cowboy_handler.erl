@@ -532,7 +532,7 @@ websocket_handle({WebSocketResponseType, ResponseBinary}, Req,
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{dispatcher = Dispatcher,
-                               context = Context,
+                               timeout_sync = TimeoutSync,
                                output_type = OutputType,
                                websocket_protocol = undefined,
                                use_websockets = true,
@@ -561,14 +561,15 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                 is_list(Data)),
         Data
     end,
-    websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                      RequestInfo, Request, ResponseBinaryF,
+    websocket_handle_incoming_request(Dispatcher, NameOutgoing,
+                                      RequestInfo, Request,
+                                      TimeoutSync, ResponseBinaryF,
                                       WebSocketRequestType, Req,
                                       NameIncoming, State);
 
 websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                  #cowboy_state{dispatcher = Dispatcher,
-                               context = Context,
+                               timeout_sync = TimeoutSync,
                                websocket_protocol = WebSocketProtocol,
                                use_websockets = true,
                                websocket_state = #websocket_state{
@@ -600,8 +601,9 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
                 {_, Data} = WebSocketProtocol(outgoing, ProtocolData),
                 Data
             end,
-            websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                              Info, Value, ResponseF,
+            websocket_handle_incoming_request(Dispatcher, NameOutgoing,
+                                              Info, Value,
+                                              TimeoutSync, ResponseF,
                                               WebSocketRequestType, Req,
                                               NameIncoming, State);
         timeout ->
@@ -1022,7 +1024,7 @@ handle_request(Name, Headers, 'application_zip', Req,
 handle_request(Name, Headers, 'multipart', Req,
                #cowboy_state{
                    dispatcher = Dispatcher,
-                   context = Context,
+                   timeout_async = TimeoutAsync,
                    timeout_part_header = TimeoutPartHeader,
                    length_part_header_read = LengthPartHeaderRead,
                    length_part_header_chunk = LengthPartHeaderChunk,
@@ -1032,8 +1034,7 @@ handle_request(Name, Headers, 'multipart', Req,
                    parts_destination_lock = PartsDestinationLock} = State) ->
     DestinationLock = if
         PartsDestinationLock =:= true ->
-            cloudi_service:get_pid(Dispatcher, Name,
-                                   cloudi:timeout_async(Context));
+            cloudi_service:get_pid(Dispatcher, Name, TimeoutAsync);
         PartsDestinationLock =:= false ->
             {ok, undefined}
     end,
@@ -1057,7 +1058,7 @@ handle_request(Name, Headers, 'multipart', Req,
 handle_request(Name, Headers, Body, Req,
                #cowboy_state{
                    dispatcher = Dispatcher,
-                   context = Context,
+                   timeout_sync = TimeoutSync,
                    output_type = OutputType} = State) ->
     RequestInfo = if
         (OutputType =:= external) orelse (OutputType =:= binary) ->
@@ -1072,15 +1073,13 @@ handle_request(Name, Headers, Body, Req,
         (OutputType =:= list) ->
             erlang:binary_to_list(Body)
     end,
-    case send_sync_minimal(Dispatcher, Context,
-                           Name, RequestInfo, Request, self()) of
-        {{ok, ResponseInfo, Response}, NewContext} ->
+    case send_sync_minimal(Dispatcher, Name, RequestInfo, Request,
+                           TimeoutSync, self()) of
+        {ok, ResponseInfo, Response} ->
             HeadersOutgoing = headers_external_outgoing(ResponseInfo),
-            {{cowboy_response, HeadersOutgoing, Response},
-             Req, State#cowboy_state{context = NewContext}};
-        {{error, timeout}, NewContext} ->
-            {{cowboy_error, timeout},
-             Req, State#cowboy_state{context = NewContext}}
+            {{cowboy_response, HeadersOutgoing, Response}, Req, State};
+        {error, timeout} ->
+            {{cowboy_error, timeout}, Req, State}
     end.
 
 handle_request_body(Req, BodyOpts) ->
@@ -1133,7 +1132,7 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                               MultipartId, Req0,
                               #cowboy_state{
                                   dispatcher = Dispatcher,
-                                  context = Context,
+                                  timeout_async = TimeoutAsync,
                                   output_type = OutputType} = State) ->
     case cloudi_x_cowboy_req:part_body(Req0, PartBodyOpts) of
         {ok, PartBodyChunkLast, Req1} ->
@@ -1187,12 +1186,10 @@ handle_request_multipart_send(PartBodyList, I, Name, Headers, HeadersPart0,
                 (OutputType =:= list) ->
                     erlang:binary_to_list(PartBody)
             end,
-            {SendResult,
-             NewContext} = send_async_minimal(Dispatcher, Context, Name,
-                                              RequestInfo, Request,
-                                              Destination, Self),
-            {SendResult, HeadersPartNextN,
-             ReqN, State#cowboy_state{context = NewContext}};
+            SendResult = send_async_minimal(Dispatcher, Name,
+                                            RequestInfo, Request,
+                                            TimeoutAsync, Destination, Self),
+            {SendResult, HeadersPartNextN, ReqN, State};
         {more, PartBodyChunk, Req1} ->
             handle_request_multipart_send([PartBodyChunk | PartBodyList],
                                           I, Name, Headers, HeadersPart0,
@@ -1238,16 +1235,14 @@ handle_request_multipart_receive_results([{ResponseInfo, Response, _} |
     end.
 
 handle_request_multipart_receive([_ | _] = TransIdList, Req,
-                                 #cowboy_state{context = Context} = State) ->
-    case recv_asyncs_minimal(Context, TransIdList) of
-        {{ok, ResponseList}, NewContext} ->
+                                 #cowboy_state{
+                                     timeout_sync = TimeoutSync} = State) ->
+    case recv_asyncs_minimal(TimeoutSync, TransIdList) of
+        {ok, ResponseList} ->
             handle_request_multipart_receive_results(ResponseList,
-                                                     [], [], Req,
-                                                     State#cowboy_state{
-                                                         context = NewContext});
-        {{error, timeout}, NewContext} ->
-            {{cowboy_error, timeout}, Req,
-             State#cowboy_state{context = NewContext}}
+                                                     [], [], Req, State);
+        {error, timeout} ->
+            {{cowboy_error, timeout}, Req, State}
     end.
 
 handle_response(NameIncoming, HeadersOutgoing0, Response,
@@ -1361,49 +1356,50 @@ websocket_connect_check(undefined, State) ->
 websocket_connect_check({async, WebSocketConnectName},
                         #cowboy_state{
                             dispatcher = Dispatcher,
-                            context = Context,
+                            timeout_async = TimeoutAsync,
                             output_type = OutputType,
                             websocket_state = #websocket_state{
                                 request_info = RequestInfo} = WebSocketState
                             } = State) ->
     Request = websocket_connect_request(OutputType),
-    {{ok, TransId},
-     NewContext} = send_async_minimal(Dispatcher, Context,
-                                      WebSocketConnectName,
-                                      RequestInfo, Request, self()),
-    State#cowboy_state{
-        context = NewContext,
-        websocket_state = WebSocketState#websocket_state{
-            websocket_connect_trans_id = TransId}};
+    case send_async_minimal(Dispatcher, WebSocketConnectName,
+                            RequestInfo, Request, TimeoutAsync, self()) of
+        {ok, TransId} ->
+            State#cowboy_state{
+                websocket_state = WebSocketState#websocket_state{
+                    websocket_connect_trans_id = TransId}};
+        {error, timeout} ->
+            State
+    end;
 websocket_connect_check({sync, WebSocketConnectName},
                         #cowboy_state{
                             dispatcher = Dispatcher,
-                            context = Context,
+                            timeout_sync = TimeoutSync,
                             output_type = OutputType,
                             websocket_state = #websocket_state{
                                 request_info = RequestInfo} = WebSocketState
                             } = State) ->
     Self = self(),
-    Timeout = cloudi:timeout_sync(Context),
-    {TransId, NextContext} = cloudi:trans_id(Context),
-    case send_sync_minimal(Dispatcher, NextContext,
-                           WebSocketConnectName,
-                           RequestInfo,
-                           websocket_connect_request(OutputType), Self) of
-        {{ok, ResponseInfo, Response}, NewContext} ->
-            % must provide the response after the websocket_init is done
-            Self ! {'cloudi_service_return_async',
-                    WebSocketConnectName,
-                    WebSocketConnectName,
-                    ResponseInfo, Response,
-                    Timeout, TransId, Self},
-            State#cowboy_state{
-                context = NewContext,
-                websocket_state = WebSocketState#websocket_state{
-                    websocket_connect_trans_id = TransId}};
-        {{error, timeout}, NewContext} ->
-            State#cowboy_state{
-                context = NewContext}
+    case send_async_minimal(Dispatcher, WebSocketConnectName,
+                            RequestInfo, websocket_connect_request(OutputType),
+                            TimeoutSync, Self) of
+        {ok, TransId} ->
+            case recv_async_minimal(TimeoutSync, TransId) of
+                {ok, ResponseInfo, Response} ->
+                    % must provide the response after the websocket_init is done
+                    Self ! {'cloudi_service_return_async',
+                            WebSocketConnectName,
+                            WebSocketConnectName,
+                            ResponseInfo, Response,
+                            TimeoutSync, TransId, Self},
+                    State#cowboy_state{
+                        websocket_state = WebSocketState#websocket_state{
+                            websocket_connect_trans_id = TransId}};
+                {error, timeout} ->
+                    State
+            end;
+        {error, timeout} ->
+            State
     end.
 
 websocket_disconnect_request(OutputType)
@@ -1435,35 +1431,33 @@ websocket_disconnect_request_info(Reason, RequestInfo, OutputType)
 
 websocket_disconnect_check(undefined, _, _) ->
     ok;
-websocket_disconnect_check({async, WebSocketDisconnectName},
-                           Reason,
+websocket_disconnect_check({async, WebSocketDisconnectName}, Reason,
                            #cowboy_state{
                                dispatcher = Dispatcher,
-                               context = Context,
+                               timeout_async = TimeoutAsync,
                                output_type = OutputType,
                                websocket_state = #websocket_state{
                                    request_info = RequestInfo}}) ->
-    send_async_minimal(Dispatcher, Context,
-                       WebSocketDisconnectName,
+    send_async_minimal(Dispatcher, WebSocketDisconnectName,
                        websocket_disconnect_request_info(Reason,
                                                          RequestInfo,
                                                          OutputType),
-                       websocket_disconnect_request(OutputType), self()),
+                       websocket_disconnect_request(OutputType),
+                       TimeoutAsync, self()),
     ok;
-websocket_disconnect_check({sync, WebSocketDisconnectName},
-                           Reason,
+websocket_disconnect_check({sync, WebSocketDisconnectName}, Reason,
                            #cowboy_state{
                                dispatcher = Dispatcher,
-                               context = Context,
+                               timeout_sync = TimeoutSync,
                                output_type = OutputType,
                                websocket_state = #websocket_state{
                                    request_info = RequestInfo}}) ->
-    send_sync_minimal(Dispatcher, Context,
-                      WebSocketDisconnectName,
+    send_sync_minimal(Dispatcher, WebSocketDisconnectName,
                       websocket_disconnect_request_info(Reason,
                                                         RequestInfo,
                                                         OutputType),
-                      websocket_disconnect_request(OutputType), self()),
+                      websocket_disconnect_request(OutputType),
+                      TimeoutSync, self()),
     ok.
 
 websocket_subscriptions([], _, _) ->
@@ -1477,36 +1471,32 @@ websocket_subscriptions([F | Functions], Parameters, Scope) ->
     end,
     websocket_subscriptions(Functions, Parameters, Scope).
 
-websocket_handle_incoming_request(Dispatcher, Context, NameOutgoing,
-                                  RequestInfo, Request, ResponseF,
+websocket_handle_incoming_request(Dispatcher, NameOutgoing,
+                                  RequestInfo, Request, TimeoutSync, ResponseF,
                                   WebSocketRequestType, Req,
                                   NameIncoming, State) ->
     RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
-    case send_sync_minimal(Dispatcher, Context,
-                           NameOutgoing, RequestInfo, Request, self()) of
-        {{ok, ResponseInfo, Response}, NewContext} ->
+    case send_sync_minimal(Dispatcher, NameOutgoing, RequestInfo, Request,
+                           TimeoutSync, self()) of
+        {ok, ResponseInfo, Response} ->
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
                               RequestStartMicroSec]),
             case websocket_terminate_check(ResponseInfo) of
                 true when Response == <<>> ->
-                    {reply, close, Req,
-                     State#cowboy_state{context = NewContext}};
+                    {reply, close, Req, State};
                 true ->
                     {reply, [{WebSocketRequestType,
-                              ResponseF(Response)}, close], Req,
-                     State#cowboy_state{context = NewContext}};
+                              ResponseF(Response)}, close], Req, State};
                 false ->
                     {reply, {WebSocketRequestType,
-                             ResponseF(Response)}, Req,
-                     State#cowboy_state{context = NewContext}}
+                             ResponseF(Response)}, Req, State}
             end;
-        {{error, timeout}, NewContext} ->
+        {error, timeout} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/4,
                             [NameIncoming, NameOutgoing,
                              RequestStartMicroSec, timeout]),
-            {reply, {WebSocketRequestType, <<>>}, Req,
-             State#cowboy_state{context = NewContext}}
+            {reply, {WebSocketRequestType, <<>>}, Req, State}
     end.
 
 websocket_handle_outgoing_response({SendType,
