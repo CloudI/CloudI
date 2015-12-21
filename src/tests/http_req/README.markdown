@@ -71,7 +71,7 @@ in `tests/http_req/loadtest/results_v*/*_tsung_output.tar.bz2`
 
 ###Software
 
-    Ubuntu 12.04 LTS (GNU/Linux 3.2.0 x86_64)
+    Ubuntu 12.05 LTS (GNU/Linux 3.2.0 x86_64)
 
     Erlang source compilation configuration:
     ./configure --enable-threads --enable-smp-support --enable-kernel-poll --disable-hipe
@@ -129,12 +129,16 @@ are considered invalid and will likely contain request latency spikes.
 
 ###Summaries
 
+* [CloudI version 1.5.1](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_summary.pdf)
 * [CloudI version 1.4.0](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_summary.pdf)
 * [CloudI version 1.2.2](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf)
 * [CloudI version 1.2.1](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf)
 * [CloudI version 1.1.0](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
 
 ###Tsung Output Explanation
+
+[`loadtest/results_v1_5_1/`](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_tsung_output.tar.bz2):
+* shows default service configuration compared with previous versions
 
 [`loadtest/results_v1_4_0/`](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_tsung_output.tar.bz2):
 * compares default service configuration with the usage of the service configuration options `request_timeout_adjustment` and `response_timeout_adjustment` set to true (both default to false) as the "time-adj" variation
