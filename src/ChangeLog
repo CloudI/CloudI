@@ -6,6 +6,7 @@
     * Modify cloudi_service_monitoring to provide incoming and outgoing
       request data with separate metrics
     * Fix a false negative dialyzer error in cloudi_service_children.hrl
+    * Fix build errors on ppc64
 
 2015-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

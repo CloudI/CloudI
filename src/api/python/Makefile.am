@@ -18,7 +18,7 @@ inst_LTLIBRARIES = libcloudi_py.la
 
 libcloudi_py_la_SOURCES = cloudi_py.cpp
 libcloudi_py_la_CPPFLAGS = -g -Wall \
-                           $(PYTHON_CFLAGS) -O0 \
+                           $(PYTHON_CFLAGS) \
                            -I$(top_srcdir)/api/c/ \
                            $(CXXFLAGS)
 libcloudi_py_la_LDFLAGS = $(PYTHON_LDFLAGS) -shared \

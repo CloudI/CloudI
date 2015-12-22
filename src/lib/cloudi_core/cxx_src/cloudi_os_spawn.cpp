@@ -529,21 +529,6 @@ namespace
             }
         }
 
-        int errno_waitpid()
-        {
-            switch (errno)
-            {
-                case ECHILD:
-                    return waitpid_ECHILD;
-                case EINTR:
-                    return waitpid_EINTR;
-                case EINVAL:
-                    return waitpid_EINVAL;
-                default:
-                    return waitpid_unknown;
-            }
-        }
-
         int errno_connect()
         {
             switch (errno)
