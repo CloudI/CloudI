@@ -1,0 +1,105 @@
+ Hardware:
+  IBM POWER System S822 (POWER8) 3.42 GHz 2 cpus, 10 cores/cpu, 8 hts/core
+  L2:10x512KB L3:10x8MB L4:DIMMx16MB RAM:256GB:DDR3-1333MHz
+
+ Software:
+  Fedora 21 (GNU/Linux 3.17.4-301.fc21.ppc64le ppc64le)
+  Erlang 18.2.1
+  Java (OpenJDK 1.8.0_25)
+  Python 2.7.8
+  CloudI 1.5.1 (2015-12)
+
+ Test:
+  Use cloudi_service_request_rate to send service requests to the
+  http_req integration test written in a supported programming language.
+  Vary the number of sending service processes and the number of
+  receiving service processes (either threads or OS processes when testing
+  external services) to determine the effect on the maximum stable request
+  rate that can be sustained (for at least 2 minutes without any errors or
+  timeouts).  The destination refresh method (a service configuration
+  parameter, either immediate_closest or lazy_closest) and the
+  duo_mode (a service configuration option) are both settings for the
+  sender (cloudi_service_request_rate).
+
+ Max Stable (Total) Request Rate: Erlang
+  requests/second dest_refresh_method duo_mode sender receiver
+             1034           immediate    false      1        1
+             1148                lazy    false      1        1
+            10659           immediate     true      1        1
+            12695                lazy     true      1        1
+            19185                lazy     true      1        2
+            15653                lazy     true      1        4
+            20005           immediate     true      2        2
+            19301                lazy     true      2        2
+            27008                lazy     true      2        4
+            26812           immediate     true      4        4
+            22053                lazy     true      4        4
+            38085                lazy     true      4        8
+            28975           immediate     true      8        8
+            40812                lazy     true      8        8
+            65455                lazy     true      8       16
+            62000           immediate     true     16       16
+           101457                lazy     true     16       16
+            96009                lazy     true     16       32
+
+ Max Stable (Total) Request Rate: C (without threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              839           immediate    false      1        1
+              831                lazy    false      1        1
+             9449           immediate     true      1        1
+            10629                lazy     true      1        1
+            10898                lazy     true      1        2
+            13714                lazy     true      1        4
+            13764           immediate     true      2        2
+            11559                lazy     true      2        2
+            19745                lazy     true      2        4
+            20522           immediate     true      4        4
+            16242                lazy     true      4        4
+            32942                lazy     true      4        8
+            39304           immediate     true      8        8
+            16538                lazy     true      8        8
+            55490                lazy     true      8       16
+            49571           immediate     true     16       16
+            45513                lazy     true     16       16
+            39968                lazy     true     16       32
+                 (Erlang VM arguments:
+                  "+secio true"  did not improve 16->32
+                  "+Muacul 0"    did not improve 16->32)
+
+ Max Stable (Total) Request Rate: Java (with threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              708           immediate    false      1        1
+              693                lazy    false      1        1
+             6825           immediate     true      1        1
+            10641                lazy     true      1        1
+            12981                lazy     true      1        2
+            14594                lazy     true      1        4
+            10111           immediate     true      2        2
+            10924                lazy     true      2        2
+            16182                lazy     true      2        4
+            11480           immediate     true      4        4
+            16034                lazy     true      4        4
+            30974                lazy     true      4        8
+            30725           immediate     true      8        8
+            28605                lazy     true      8        8
+            43391                lazy     true      8       16
+            23398                lazy     true     16       16
+
+ Max Stable (Total) Request Rate: Python/C (without threads)
+  requests/second dest_refresh_method duo_mode sender receiver
+              720           immediate    false      1        1
+              962                lazy    false      1        1
+             9151           immediate     true      1        1
+             8467                lazy     true      1        1
+             8748                lazy     true      1        2
+            13718                lazy     true      1        4
+            10737           immediate     true      2        2
+            10655                lazy     true      2        2
+            13163                lazy     true      2        4
+            12176           immediate     true      4        4
+            15334                lazy     true      4        4
+            30955                lazy     true      4        8
+            28960           immediate     true      8        8
+            19945                lazy     true      8        8
+            53682                lazy     true      8       16
+

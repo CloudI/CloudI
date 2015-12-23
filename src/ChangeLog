@@ -5,6 +5,7 @@
 
     * Fix the Javascript CloudI API for using
       node.js versions greater than v0.12.1
+    * Add 1.5.1 request_rate test results
 
 2015-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
@@ -12,6 +13,7 @@
       request data with separate metrics
     * Fix a false negative dialyzer error in cloudi_service_children.hrl
     * Fix build errors on ppc64
+    * Add 1.5.1 loadtest information
 
 2015-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
