@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -217,10 +217,18 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    API._s_in = new net.Socket({fd: (thread_index + 3),
-                                readable: true,
-                                writable: false});
-    API._s_out = fs.createWriteStream(null, {fd: (thread_index + 3)});
+    if (process.versions['node'] > '0.12.1') {
+        API._s_in = new net.Socket({fd: (thread_index + 3),
+                                    readable: true,
+                                    writable: true});
+        API._s_out = API._s_in;
+    }
+    else {
+        API._s_in = new net.Socket({fd: (thread_index + 3),
+                                    readable: true,
+                                    writable: false});
+        API._s_out = fs.createWriteStream(null, {fd: (thread_index + 3)});
+    }
     API._initialization_complete = false;
     API._terminate = false;
     API._size = parseInt(buffer_size_str);

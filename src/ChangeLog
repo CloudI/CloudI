@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2015-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the Javascript CloudI API for using
+      node.js versions greater than v0.12.1
+
 2015-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Modify cloudi_service_monitoring to provide incoming and outgoing
