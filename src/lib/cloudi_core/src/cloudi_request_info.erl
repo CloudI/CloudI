@@ -12,7 +12,7 @@
 %%% which is easily parsed in any programming language and is referred to as
 %%% the 'text_pairs' format.  It is valid to have multiple entries for the
 %%% same key within the RequestInfo data.  A key must be of size 1 or greater
-%%% (<<>> will never exist as a key in text_pairs data).
+%%% (`<<>>' will never exist as a key in text_pairs data).
 %%%
 %%% The ResponseInfo data is normally service request response meta-data
 %%% (providing the response equivalent of RequestInfo for a request)

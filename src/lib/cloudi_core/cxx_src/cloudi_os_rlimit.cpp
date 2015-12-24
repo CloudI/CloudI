@@ -71,7 +71,7 @@
 #define CLOUDI_RLIMITS_CURRENT_MAXIMUM  3
 
 // limit special values
-#define CLOUDI_RLIMITS_VALUE_INFINITY   0xffffffffffffffff
+#define CLOUDI_RLIMITS_VALUE_INFINITY   0xffffffffffffffffull
 
 static int type_value(uint8_t const value)
 {
