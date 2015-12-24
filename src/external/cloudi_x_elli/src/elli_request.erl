@@ -1,5 +1,5 @@
 -module(elli_request).
--include("../include/elli.hrl").
+-include("elli.hrl").
 -include("elli_util.hrl").
 
 -export([send_chunk/2
@@ -10,20 +10,25 @@
          , raw_path/1
          , query_str/1
          , get_header/2
+         , get_header/3
          , get_arg_decoded/2
          , get_arg_decoded/3
          , get_arg/2
          , get_arg/3
          , get_args/1
+         , get_args_decoded/1
          , post_arg/2
          , post_arg/3
+         , post_arg_decoded/2
+         , post_arg_decoded/3
+         , post_args/1
+         , post_args_decoded/1
          , body_qs/1
          , headers/1
          , peer/1
          , method/1
          , body/1
          , get_range/1
-         , get_header/3
          , to_proplist/1
          , is_request/1
         ]).
@@ -70,10 +75,14 @@ get_arg_decoded(Key, #req{} = Req) ->
     get_arg_decoded(Key, Req, undefined).
 
 get_arg_decoded(Key, #req{args = Args}, Default) ->
-    EncodedValue = proplists:get_value(Key, Args, Default),
-    list_to_binary(http_uri:decode(binary_to_list(EncodedValue))).
+    case proplists:get_value(Key, Args) of
+        undefined -> Default;
+        EncodedValue ->
+            list_to_binary(http_uri:decode(binary_to_list(EncodedValue)))
+    end.
 
 %% @doc Parses application/x-www-form-urlencoded body into a proplist
+body_qs(#req{body = <<>>}) -> [];
 body_qs(#req{body = Body} = Req) ->
     case get_header(<<"Content-Type">>, Req) of
         <<"application/x-www-form-urlencoded">> ->
@@ -90,13 +99,41 @@ post_arg(Key, #req{} = Req) ->
 post_arg(Key, #req{} = Req, Default) ->
     proplists:get_value(Key, body_qs(Req), Default).
 
+post_arg_decoded(Key, #req{} = Req) ->
+    post_arg_decoded(Key, #req{} = Req, undefined).
+
+post_arg_decoded(Key, #req{} = Req, Default) ->
+    case proplists:get_value(Key, body_qs(Req)) of
+        undefined -> Default;
+        EncodedValue ->
+            list_to_binary(http_uri:decode(binary_to_list(EncodedValue)))
+    end.
+
 
 -spec get_args(#req{}) -> QueryArgs :: proplists:proplist().
 %% @doc Returns a proplist of keys and values of the original query
 %%      string.  Both keys and values in the returned proplists will
 %%      be binaries or the atom `true' in case no value was supplied
-%%      for the query key.
+%%      for the query value.
 get_args(#req{args = Args}) -> Args.
+
+get_args_decoded(#req{args = Args}) ->
+    lists:map(fun ({K, true}) ->
+                      {K, true};
+                  ({K, V}) ->
+                      {K, list_to_binary(http_uri:decode(binary_to_list(V)))}
+              end, Args).
+
+
+post_args(#req{} = Req) ->
+    body_qs(Req).
+
+post_args_decoded(#req{} = Req) ->
+    lists:map(fun ({K, true}) ->
+                      {K, true};
+                  ({K, V}) ->
+                      {K, list_to_binary(http_uri:decode(binary_to_list(V)))}
+              end, body_qs(Req)).
 
 -spec query_str(#req{}) -> QueryStr :: binary().
 %% @doc Calculates the query string associated with the given Request
@@ -178,7 +215,7 @@ chunk_ref(#req{}) ->
 %% @doc: Explicitly close the chunked connection. Returns {error,
 %% closed} if the client already closed the connection.
 close_chunk(Ref) ->
-    send_chunk(Ref, <<"">>).
+    send_chunk(Ref, close).
 
 %% @doc: Sends a chunk asynchronously
 async_send_chunk(Ref, Data) ->

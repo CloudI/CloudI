@@ -4,8 +4,8 @@
 %% connects. It then handles requests on that connection until it's
 %% closed either by the client timing out or explicitly by the user.
 -module(elli_http).
--include("../include/elli.hrl").
--include("../include/elli_util.hrl").
+-include("elli.hrl").
+-include("elli_util.hrl").
 
 
 %% API
@@ -256,11 +256,12 @@ start_chunk_loop(Socket) ->
     ?MODULE:chunk_loop(Socket).
 
 chunk_loop(Socket) ->
+    {_SockType, InnerSocket} = Socket,
     receive
-        {tcp_closed, Socket} ->
+        {tcp_closed, InnerSocket} ->
             {error, client_closed};
 
-        {chunk, <<>>} ->
+        {chunk, close} ->
             case elli_tcp:send(Socket, <<"0\r\n\r\n">>) of
                 ok ->
                     elli_tcp:close(Socket),
@@ -268,7 +269,7 @@ chunk_loop(Socket) ->
                 {error, Closed} when Closed =:= closed orelse Closed =:= enotconn ->
                     {error, client_closed}
             end;
-        {chunk, <<>>, From} ->
+        {chunk, close, From} ->
             case elli_tcp:send(Socket, <<"0\r\n\r\n">>) of
                 ok ->
                     elli_tcp:close(Socket),
@@ -296,9 +297,12 @@ chunk_loop(Socket) ->
 
 
 send_chunk(Socket, Data) ->
-    Size = integer_to_list(iolist_size(Data), 16),
-    Response = [Size, <<"\r\n">>, Data, <<"\r\n">>],
-    elli_tcp:send(Socket, Response).
+    case iolist_size(Data) of
+        0 -> ok;
+        Size ->
+            Response = [integer_to_list(Size, 16), <<"\r\n">>, Data, <<"\r\n">>],
+            elli_tcp:send(Socket, Response)
+    end.
 
 
 %%
@@ -451,7 +455,7 @@ check_max_size(Socket, ContentLength, Buffer, Opts, {Mod, Args}) ->
 -spec mk_req(Method::http_method(), {PathType::atom(), RawPath::binary()},
              RequestHeaders::headers(), RequestBody::body(), V::version(),
              Socket::elli_tcp:socket() | undefined, Callback::callback()) ->
-    #req{}.
+             #req{}.
 mk_req(Method, RawPath, RequestHeaders, RequestBody, V, Socket, Callback) ->
     {Mod, Args} = Callback,
     case parse_path(RawPath) of

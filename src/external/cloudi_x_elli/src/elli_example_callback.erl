@@ -10,7 +10,7 @@
 -export([handle/2, handle_event/3]).
 -export([chunk_loop/1]).
 
--include("../include/elli.hrl").
+-include("elli.hrl").
 -behaviour(elli_handler).
 
 -include_lib("kernel/include/file.hrl").
@@ -39,17 +39,14 @@ handle('GET', [<<"hello">>], Req) ->
 handle('POST', [<<"hello">>], Req) ->
     %% Fetch a POST argument from the POST body.
     Name = elli_request:post_arg(<<"name">>, Req, <<"undefined">>),
-    {ok, [], <<"Hello ", Name/binary>>};
+    %% Fetch and decode
+    City = elli_request:post_arg_decoded(<<"city">>, Req, <<"undefined">>),
+    {ok, [], <<"Hello ", Name/binary, " of ", City/binary>>};
 
 handle('GET', [<<"hello">>, <<"iolist">>], Req) ->
     %% Iolists will be kept as iolists all the way to the socket.
     Name = elli_request:get_arg(<<"name">>, Req),
     {ok, [], [<<"Hello ">>, Name]};
-
-handle('GET', [<<"decoded-hello">>], Req) ->
-    %% Fetch a URI decoded GET argument from the URL.
-    Name = elli_request:get_arg_decoded(<<"name">>, Req, <<"undefined">>),
-    {ok, [], <<"Hello ", Name/binary>>};
 
 handle('GET', [<<"type">>], Req) ->
     Name = elli_request:get_arg(<<"name">>, Req),
@@ -95,6 +92,17 @@ handle('GET', [<<"crash">>], _Req) ->
     %% Throwing an exception results in a 500 response and
     %% request_throw being called
     throw(foobar);
+
+handle('GET', [<<"decoded-hello">>], Req) ->
+    %% Fetch a URI decoded GET argument from the URL.
+    Name = elli_request:get_arg_decoded(<<"name">>, Req, <<"undefined">>),
+    {ok, [], <<"Hello ", Name/binary>>};
+
+handle('GET', [<<"decoded-list">>], Req) ->
+    %% Fetch a URI decoded GET argument from the URL.
+    [{<<"name">>, Name}, {<<"foo">>, true}] = elli_request:get_args_decoded(Req),
+    {ok, [], <<"Hello ", Name/binary>>};
+
 
 handle('GET', [<<"sendfile">>], _Req) ->
     %% Returning {file, "/path/to/file"} instead of the body results

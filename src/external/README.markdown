@@ -75,8 +75,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Erlang HTTP Server`
 
 - `https://github.com/knutin/elli`
-- `commit 8c700e734654285885987b164f32e94a39770fac (v1.0.1)`
-- `Mon Nov 10 09:11:52 PST 2014`
+- `commit 4fbdf68198949ea926a5762e6f438265a04ac605 (v1.0.4)`
+- `Wed Dec 23 18:41:56 PST 2015`
 - `MIT`
 
 `ememcached (previously mcerlang)`
