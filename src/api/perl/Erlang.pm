@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$Erlang::VERSION = '1.50';
+$Erlang::VERSION = '1.51';
 
 require Compress::Zlib;
 # bigint/bignum caused slowness without enough features to be useful

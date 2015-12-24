@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,cloudi_service_monitoring}.
+{modules,[cloudi_service_monitoring,cloudi_service_monitoring_cloudi,
+          cloudi_service_monitoring_erlang]}.

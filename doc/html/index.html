@@ -121,8 +121,8 @@ EOF
       <li>
         Compile the CloudI service executable:
 <pre>
-gcc -I/usr/local/lib/cloudi-1.5.0/api/c \
-    -L/usr/local/lib/cloudi-1.5.0/api/c \
+gcc -I/usr/local/lib/cloudi-1.5.1/api/c \
+    -L/usr/local/lib/cloudi-1.5.1/api/c \
     -g -O0 -fexceptions hello_world.c -o hello_world_c -lcloudi
 </pre>
       </li>
@@ -137,9 +137,10 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/c/"},
   {file_path, "$PWD/hello_world_c"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.0/api/c/"},
+          "/usr/local/lib/cloudi-1.5.1/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.0/api/c/"}]}]]
+          "/usr/local/lib/cloudi-1.5.1/api/c/"}]},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -242,8 +243,8 @@ EOF
       <li>
         Compile the CloudI service executable:
 <pre>
-g++ -I/usr/local/lib/cloudi-1.5.0/api/c \
-    -L/usr/local/lib/cloudi-1.5.0/api/c \
+g++ -I/usr/local/lib/cloudi-1.5.1/api/c \
+    -L/usr/local/lib/cloudi-1.5.1/api/c \
     -g -O0 hello_world.cpp -o hello_world_cxx -lcloudi
 </pre>
       </li>
@@ -258,9 +259,10 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/cxx/"},
   {file_path, "$PWD/hello_world_cxx"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.0/api/c/"},
+          "/usr/local/lib/cloudi-1.5.1/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.0/api/c/"}]}]]
+          "/usr/local/lib/cloudi-1.5.1/api/c/"}]},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -343,11 +345,11 @@ defmodule HelloWorld.Mixfile do
     use Mix.Project
 
     def project do
-        [app: :Elixir.HelloWorld,
-         version: "1.5.0",
+        [app: :'Elixir.HelloWorld',
+         version: "1.5.1",
          elixirc_paths: ["lib/",
-                         "/usr/local/lib/cloudi-1.5.0/" &lt;&gt;
-                         "lib/cloudi_core-1.5.0/include/"],
+                         "/usr/local/lib/cloudi-1.5.1/" &lt;&gt;
+                         "lib/cloudi_core-1.5.1/include/"],
          deps: []]
     end
 
@@ -484,8 +486,8 @@ EOF
         file would be added with the same filename
         (see the examples <a href="https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme">for more details</a>).
 <pre>
-erlc -pz /usr/local/lib/cloudi-1.5.0/lib/cloudi_core-1.5.0 \
-    -pz /usr/local/lib/cloudi-1.5.0/lib/cloudi_core-1.5.0/ebin \
+erlc -pz /usr/local/lib/cloudi-1.5.1/lib/cloudi_core-1.5.1 \
+    -pz /usr/local/lib/cloudi-1.5.1/lib/cloudi_core-1.5.1/ebin \
     hello_world.erl
 </pre>
       </li>
@@ -646,7 +648,7 @@ public class Task
 EOF
 cat &lt;&lt; EOF &gt; manifest.txt
 Main-Class: org.cloudi.tests.hello_world.Main
-Class-Path: /usr/local/lib/cloudi-1.5.0/api/java/cloudi.jar
+Class-Path: /usr/local/lib/cloudi-1.5.1/api/java/cloudi.jar
 
 EOF
 </pre>
@@ -655,7 +657,7 @@ EOF
         Compile the CloudI service jar:
 <pre>
 cd org/cloudi/tests/hello_world/
-CLASSPATH=/usr/local/lib/cloudi-1.5.0\
+CLASSPATH=/usr/local/lib/cloudi-1.5.1\
 /api/java/cloudi.jar:${CLASSPATH} javac Task.java Main.java
 cd ../../../../
 jar cvfm hello_world.jar manifest.txt org
@@ -672,8 +674,9 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/java/"},
   {file_path, "$JAVA"},
-  {args, "-cp /usr/local/lib/cloudi-1.5.0/api/java/ "
-         "-ea:org.cloudi... -jar $PWD/hello_world.jar"}]]
+  {args, "-cp /usr/local/lib/cloudi-1.5.1/api/java/ "
+         "-ea:org.cloudi... -jar $PWD/hello_world.jar"},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -722,7 +725,7 @@ curl http://localhost:6464/quickstart/java/hello_world
         created by executing the following inside your shell:
 <pre>
 cat &lt;&lt; EOF &gt; hello_world.js
-var CloudI = require('/usr/local/lib/cloudi-1.5.0/' +
+var CloudI = require('/usr/local/lib/cloudi-1.5.1/' +
                      'api/javascript/CloudI.js').CloudI;
 var assert = require('assert');
 
@@ -775,7 +778,8 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/javascript/"},
   {file_path, "$NODE"},
-  {args, "$PWD/hello_world.js"}]]
+  {args, "$PWD/hello_world.js"},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -877,7 +881,8 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/perl/"},
   {file_path, "$PERL"},
   {args, "$PWD/hello_world.pl"},
-  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.5.0/api/perl"}]}]]
+  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.5.1/api/perl"}]},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -928,7 +933,7 @@ curl http://localhost:6464/quickstart/perl/hello_world
 cat &lt;&lt; EOF &gt; hello_world.php
 &lt;?php 
 
-require '/usr/local/lib/cloudi-1.5.0/api/php/CloudI.php';
+require '/usr/local/lib/cloudi-1.5.1/api/php/CloudI.php';
 
 class Task
 {
@@ -985,7 +990,8 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/php/"},
   {file_path, "$PHP"},
-  {args, "$PWD/hello_world.php"}]]
+  {args, "$PWD/hello_world.php"},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -1035,7 +1041,7 @@ curl http://localhost:6464/quickstart/php/hello_world
 <pre>
 cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.5.0/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.5.1/api/python/')
 import traceback
 from cloudi import API, terminate_exception
 
@@ -1076,7 +1082,8 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/python/"},
   {file_path, "$PYTHON"},
-  {args, "$PWD/hello_world.py"}]]
+  {args, "$PWD/hello_world.py"},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -1125,7 +1132,7 @@ curl http://localhost:6464/quickstart/python/hello_world
         created by executing the following inside your shell:
 <pre>
 cat &lt;&lt; EOF &gt; hello_world.rb
-\$:.unshift '/usr/local/lib/cloudi-1.5.0/api/ruby'
+\$:.unshift '/usr/local/lib/cloudi-1.5.1/api/ruby'
 
 \$DEBUG = false
 
@@ -1184,7 +1191,8 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/ruby/"},
   {file_path, "$RUBY"},
-  {args, "$PWD/hello_world.rb"}]]
+  {args, "$PWD/hello_world.rb"},
+  {protocol, tcp}]]
 EOF
 </pre>
       </li>
@@ -1244,8 +1252,8 @@ curl http://localhost:6464/quickstart/ruby/hello_world
 <pre>
 wget --content-disposition \
     http://sourceforge.net/projects/cloudi/files/latest/download
-tar zxvf cloudi-1.5.0.tar.gz
-cd cloudi-1.5.0/src
+tar zxvf cloudi-1.5.1.tar.gz
+cd cloudi-1.5.1/src
 ./configure
 make
 sudo make install
@@ -1265,6 +1273,15 @@ sudo cloudi start
   </div> <!-- Install -->
 
   </div> <!-- Quick Start tabs -->
+</div>
+
+<br />
+<br />
+<br />
+<br />
+<br />
+<div id="footer">
+<a href="config.html"><img style="position: absolute; right: 10; bottom: 0;" src="images/powered_by_cloudi.png" /></a>
 </div>
 
 </body>

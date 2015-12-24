@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_trans_id</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_trans_id</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Transaction_ID_Usage">CloudI Transaction ID Usage</a></h3>
+   Convenience functions for using the v1 UUID used as the
+   transaction id ("TransId" or "trans_id") that follows a CloudI
+   service request for the lifetime (defined by the service request timeout)
+   of the request and its response result.
+<p>Copyright © 2015 Michael Truog</p>
+
+<p><b>Version:</b> 1.5.1 Dec 23 2015 13:31:30
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Transaction_ID_Usage">CloudI Transaction ID Usage</a></h3>
+   Convenience functions for using the v1 UUID used as the
+   transaction id ("TransId" or "trans_id") that follows a CloudI
+   service request for the lifetime (defined by the service request timeout)
+   of the request and its response result.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#datetime-1">datetime/1</a></td><td>
+  <h4><a name="Provide_an_ISO8601_datetime_in_UTC_based_on_the_time_stored_in_the_transaction_id.">Provide an ISO8601 datetime in UTC based on the time stored in the transaction id.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#datetime-2">datetime/2</a></td><td>
+  <h4><a name="Provide_an_ISO8601_datetime_in_UTC_based_on_the_time_stored_in_the_transaction_id_with_an_offset_in_microseconds.">Provide an ISO8601 datetime in UTC based on the time stored in the transaction id with an offset in microseconds.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#from_string-1">from_string/1</a></td><td>
+  <h4><a name="Return_a_transaction_id_as_a_binary_UUID_(16_bytes).">Return a transaction id as a binary UUID (16 bytes).</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#increment-1">increment/1</a></td><td>
+  <h4><a name="Increment_the_transaction_id_while_preserving_uniqueness.">Increment the transaction id while preserving uniqueness.</a></h4>
+  Increment the v1 UUID's clock_seq (14bit) integer for 16384 possible
+  v1 UUID values based on a single transaction id.</td></tr>
+<tr><td valign="top"><a href="#to_string-1">to_string/1</a></td><td>
+  <h4><a name="Return_the_transaction_id_in_a_standard_string_format.">Return the transaction id in a standard string format.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#to_string-2">to_string/2</a></td><td>
+  <h4><a name="Return_the_transaction_id_in_a_string_format.">Return the transaction id in a string format.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="datetime-1">datetime/1</a></h3>
+<div class="spec">
+<p><tt>datetime(TransId::<a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a>) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Provide_an_ISO8601_datetime_in_UTC_based_on_the_time_stored_in_the_transaction_id.">Provide an ISO8601 datetime in UTC based on the time stored in the transaction id.</a></h4>
+</p>
+
+<h3 class="function"><a name="datetime-2">datetime/2</a></h3>
+<div class="spec">
+<p><tt>datetime(TransId::<a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a>, MicroSecondsOffset::integer()) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Provide_an_ISO8601_datetime_in_UTC_based_on_the_time_stored_in_the_transaction_id_with_an_offset_in_microseconds.">Provide an ISO8601 datetime in UTC based on the time stored in the transaction id with an offset in microseconds.</a></h4>
+</p>
+
+<h3 class="function"><a name="from_string-1">from_string/1</a></h3>
+<div class="spec">
+<p><tt>from_string(String::string() | binary()) -&gt; <a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a></tt><br></p>
+</div><p>
+  <h4><a name="Return_a_transaction_id_as_a_binary_UUID_(16_bytes).">Return a transaction id as a binary UUID (16 bytes).</a></h4>
+</p>
+
+<h3 class="function"><a name="increment-1">increment/1</a></h3>
+<div class="spec">
+<p><tt>increment(TransId::<a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a>) -&gt; <a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a></tt><br></p>
+</div><p>
+  <h4><a name="Increment_the_transaction_id_while_preserving_uniqueness.">Increment the transaction id while preserving uniqueness.</a></h4>
+  Increment the v1 UUID's clock_seq (14bit) integer for 16384 possible
+  v1 UUID values based on a single transaction id.</p>
+
+<h3 class="function"><a name="to_string-1">to_string/1</a></h3>
+<div class="spec">
+<p><tt>to_string(TransId::<a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a>) -&gt; string()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_transaction_id_in_a_standard_string_format.">Return the transaction id in a standard string format.</a></h4>
+</p>
+
+<h3 class="function"><a name="to_string-2">to_string/2</a></h3>
+<div class="spec">
+<p><tt>to_string(TransId::<a href="deps/uuid/doc/uuid.html#type-uuid">uuid:uuid()</a>, Format::standard | nodash | list_standard | list_nodash | binary_standard | binary_nodash) -&gt; string() | binary()</tt><br></p>
+</div><p>
+  <h4><a name="Return_the_transaction_id_in_a_string_format.">Return the transaction id in a string format.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Dec 23 2015, 13:31:30.</i></p>
+</body>
+</html>

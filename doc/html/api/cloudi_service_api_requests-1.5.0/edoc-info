@@ -1,4 +1,0 @@
-%% encoding: UTF-8
-{application,cloudi_service_api_requests}.
-{packages,[]}.
-{modules,[cloudi_json_rpc,cloudi_service_api_requests]}.

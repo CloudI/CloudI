@@ -3,7 +3,7 @@
 
 {application, hello_world5,
   [{description, "Hello World Example Application"},
-   {vsn, "1.5.0"},
+   {vsn, "1.5.1"},
    {modules,
     [hello_world5,
      hello_world5_app,

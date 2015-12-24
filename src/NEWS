@@ -1,3 +1,20 @@
+December 23, 2015
+  Version 1.5.1 released.
+  * cloudi_service_monitoring is a new CloudI service that provides
+    metrics based on the Erlang VM and all the running CloudI services
+    with exometer and folsom
+  * cloudi_service_http_rest is a new CloudI service to simplify the creation
+    of HTTP REST API handlers
+  * CloudI service efficiency was improved by switching to maps with 18.x
+  * CloudI now utilizes the new time warp functionality while retaining
+    globally unique transaction ids
+  * The CloudI logging output now has an entry for the function/arity info
+    which is captured in Elixir and can be provided in Erlang (until EEP45)
+  * Javascript CloudI API now works properly with node.js version > 0.12.1
+  * Loadtests were ran (http://cloudi.org/faq.html#5_LoadTesting)
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 April 12, 2015
   Version 1.5.0 released.
   * backwards compatibility difference:

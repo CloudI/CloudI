@@ -31,8 +31,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.5.0<br />
-              last updated on April 12<sup>th</sup> 2015</h3></center>
+  <center><h3>version 1.5.1<br />
+              last updated on December 23<sup>rd</sup> 2015</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -273,14 +273,16 @@ cloudi.API.thread_count()
 CloudI::API.thread_count()
 </pre>
   </td></tr></table>
+  <a name="1_initialization_timeout"></a>
   <p class="paragraph">
     An internal service uses the configured initialization timeout to limit the
     execution time spent within the cloudi_service_init/4 cloudi_service
     behaviour callback function.  An external service uses the configured
     initialization timeout to limit the execution time spent between
     creating an instance of the CloudI API and calling the CloudI API
-    <a href="#1_poll">poll</a> function.  During the service initialization
-    the CloudI API functions that may not be called are:
+    <a href="#1_poll">poll</a> function (for the first time).
+    During the service initialization the CloudI API functions that may not be
+    called are:
     <a href="#1_send_sync">send_sync</a>,
     <a href="#1_recv_async">recv_async</a>,
     <a href="#1_return">return</a> and
@@ -336,13 +338,13 @@ CloudI::API.thread_count()
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.5.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.5.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.5.0/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.5.1/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1124,7 +1126,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1345,7 +1347,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre>
@@ -1615,7 +1617,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.5.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -1718,7 +1720,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.5.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -1805,7 +1807,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.5.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.5.1/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -1990,6 +1992,17 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     A limit on the total memory consumption of incoming service requests that
     are queued while the service is busy (in kilobytes).
   </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_rate_request_max">
+    rate_request_max
+    </a>
+  </td><td>
+    undefined
+  </td><td>
+    A limit on the incoming service request rate (in requests per second).
+    When set to a list ([])
+    <a href="#2_services_add_config_opts_rate_request_max">
+    options can be provided</a> or it can be set to a number value.
+  </td></tr><tr><td>
     dest_refresh_start
   </td><td>
     500
@@ -2052,6 +2065,19 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     <a href="#2_services_add_config_opts_count_process_dynamic">
     options can be provided</a>.
   </td></tr><tr><td>
+    timeout_terminate
+  </td><td>
+    undefined
+  </td><td>
+    Termination timeout (in milliseconds) for all the configured service
+    processes.  When the termination timeout is not set, an upper-bound is used
+    to ensure that the configured service lifetime is finite when
+    errors occur
+    ((1000 * MaxT) / MaxR - 100, if MaxR &gt; 0 and MaxT &gt; 0).
+    When MaxR is 0 the default termination timeout (not an upper-bound) is
+    (1000 * MaxT) - 100, if MaxT &gt; 0, or 2000, if MaxT = 0.
+    All default termination timeout values are clamped to the range [10..60000].
+  </td></tr><tr><td>
     scope
   </td><td>
     default
@@ -2095,7 +2121,16 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     use the settings within the cloudi_core Erlang application configuration.
     The resource limits are based on what the OS supports
     (the supported resource limits can be found in the <a href="http://manpages.ubuntu.com/manpages/natty/man2/setrlimit.2.html" target="_blank">setrlimit</a>
-    manpage).
+    manpage). If the 'owner' service configuration option is set,
+    it will influence the limits that may be set.
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_owner">
+    owner</a>
+  </td><td>
+    []
+  </td><td>
+    (external services only) Set the owner of any OS processes an
+    external service creates.
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_aspects_init_after">
     aspects_init_after</a>
@@ -2222,7 +2257,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the service request handling Erlang
-    process (fullsweep_after, min_heap_size, min_bin_vheap_size).
+    process (priority, fullsweep_after, min_heap_size, min_bin_vheap_size).
   </td></tr><tr><td>
     info_pid_uses
   </td><td>
@@ -2239,7 +2274,31 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     (internal services only) <a href="http://www.erlang.org/doc/man/erlang.html#spawn_opt-2" target="_blank">erlang:spawn_opt/2</a>
     options to control memory usage of the info message handling Erlang process
-    (fullsweep_after, min_heap_size, min_bin_vheap_size).
+    (priority, fullsweep_after, min_heap_size, min_bin_vheap_size).
+  </td></tr></table>
+  <a name="2_services_add_config_opts_rate_request_max"></a>
+  <h4>rate_request_max:</h4>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    period
+  </td><td>
+    5
+  </td><td>
+    Time period (in seconds) for determining the current rate of
+    service requests.
+  </td></tr><tr><td>
+    value
+  </td><td>
+    1000
+  </td><td>
+    Maximum requests per second.  If the current rate of service requests
+    exceeds this limit the service process discards later service requests
+    for the time remaining during the current time period.
   </td></tr></table>
   <a name="2_services_add_config_opts_count_process_dynamic"></a>
   <h4>count_process_dynamic:</h4>
@@ -2342,8 +2401,9 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   <p class="paragraph">
     The value for any option can be an integer or 'infinity' to set the
     current limit or a list to set both the current and the maximum
-    (setting the maximum requires that CloudI is running with user
-     permission to set the maximum limit)
+    (setting the maximum requires that the
+     <a href="api.html#2_services_add_config_opts_owner">owner</a>
+     of the external service has permission to set the maximum limit)
     (e.g., {limit, [{stack, [{current, 8388608}, {maximum, infinity}]}]}).
   </p>
   <table><tr><th>
@@ -2423,6 +2483,26 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     vmem
   </td><td>
     The maximum size of an OS process' mapped address space in bytes.
+  </td></tr></table>
+  <a name="2_services_add_config_opts_owner"></a>
+  <h4>owner:</h4>
+  <p class="paragraph">
+    Set the owner of an external service's OS processes.
+  </p>
+  <table><tr><th>
+    Option
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    user
+  </td><td>
+    Set the user as either a positive integer user id or a string username.
+    If a group is not specified in the owner service configuration option the
+    user's group is used.
+  </td></tr><tr><td>
+    group
+  </td><td>
+    Set the group as either a positive integer group id or a string group name.
   </td></tr></table>
   <a name="2_services_add_config_opts_aspects_init_after"></a>
   <h4>aspects_init_after:</h4>
@@ -2833,6 +2913,12 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6467/cloudi/api/rpc/
   </th><th>
     Details
   </th></tr><tr><td>
+    interface
+  </td><td>
+    {0,0,0,0}
+  </td><td>
+    The interface address (for UDP).
+  </th></tr><tr><td>
     address
   </td><td>
     {224,0,0,1}
@@ -2843,13 +2929,13 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6467/cloudi/api/rpc/
   </td><td>
     4475
   </td><td>
-    The LAN multicast port (for UDP).
+    The multicast port (for UDP).
   </td></tr><tr><td>
     ttl
   </td><td>
     1
   </td><td>
-    The LAN multicast TTL
+    The multicast TTL
     (<a href="http://tools.ietf.org/rfc/rfc2730.txt" target="_blank">RFC</a>, <a href="http://www.tldp.org/HOWTO/Multicast-HOWTO-2.html#ss2.3" target="_blank">Linux</a>).
   </td></tr></table>
   <a name="2_nodes_set_config_discovery_ec2"></a>
@@ -3029,6 +3115,8 @@ curl -X POST -d 'warn' http://localhost:6467/cloudi/api/rpc/logging_level_set.er
     update internally so any logging statements that are turned off
     create no latency.  If set to 'undefined' or 'off', logging
     output will only be sent to syslog and formatters with an output module.
+    The available log levels values are:
+    off, fatal, error, warn, info, debug, trace.
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 

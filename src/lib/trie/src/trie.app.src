@@ -1,7 +1,7 @@
 {application, trie,
   [{description, "Trie Data Structure"},
-   {vsn, "1.5.0"},
+   {vsn, "1.5.1"},
    {modules, [btrie, trie]},
    {registered, []},
-   {applications, [stdlib]}]}.
+   {applications, [stdlib, kernel]}]}.
 

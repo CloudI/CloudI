@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$CloudI::API::VERSION = '1.50';
+$CloudI::API::VERSION = '1.51';
 
 use POSIX qw(getenv);
 use IO::Handle;

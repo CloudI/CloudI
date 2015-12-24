@@ -3,6 +3,7 @@
 
 2015-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 1.5.1 released
     * Update elli
     * Compilation fix for 32bit OpenBSD
 

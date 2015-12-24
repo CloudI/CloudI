@@ -31,8 +31,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.5.0<br />
-              last updated on April 12<sup>th</sup> 2015</h3></center>
+  <center><h3>version 1.5.1<br />
+              last updated on December 23<sup>rd</sup> 2015</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -66,7 +66,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_Twitter"       >2.5 - Twitter</a></li>
     <li><a href="#2_Presentations" >2.6 - Presentations</a></li>
     <li><a href="#2_Articles"      >2.7 - Articles</a></li>
-    <li><a href="#2_Reporting Bugs">2.8 - Reporting Bugs</a></li>
+    <li><a href="#2_ReportingBugs" >2.8 - Reporting Bugs</a></li>
+    <li><a href="#2_CodeOfConduct" >2.9 - Code of Conduct</a></li>
   </ul>
   <a name="3_contents"></a>
   <h2>3 - CloudI Installation Guide</h2>
@@ -131,6 +132,11 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#7_riak"       >7.7 - riak Integration</a></li>
     <li><a href="#7_TokyoTyrant">7.8 - Tokyo Tyrant Integration</a></li>
     <li><a href="#7_Other"      >7.9 - Other Database Integration</a></li>
+  </ul>
+  <a name="8_contents"></a>
+  <h2>8 - Troubleshooting</h2>
+  <ul class="faq">
+    <li><a href="#8_start"      >8.1 - Why does CloudI stop shortly after being started?</a></li>
   </ul>
 
   <hr \>
@@ -530,10 +536,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <h3>1.8 - Is CloudI really free?</h3>
   <p class="paragraph">
     CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
-    which permits reuse for personal or commercial purposes.  Small amounts of
-    source code is included that is under the <a href="http://www.erlang.org/EPLICENSE" target="_blank">Erlang Public License</a>
-    (e.g., part of the <a href="https://github.com/CloudI/CloudI/tree/master/src/api/java/com" target="_blank">Java CloudI API</a> and <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cpg/src/cpg.erl" target="_blank">cpg.erl</a>) like <a href="http://www.erlang.org/" target="_blank">Erlang</a>
-    itself.  All external source code dependencies are also under a
+    which permits reuse for personal or commercial purposes.
+    All external source code dependencies are also under a
     BSD license.  Some conditional external source code dependencies
     (not included by default) are under other licenses
     (e.g., <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
@@ -794,32 +798,37 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
   <a name="2_Presentations"></a>
   <h3>2.6 - Presentations</h3>
-  <table><tr><td>
-  Version 1.3.2
+  <table>
+  <tr><td>
+  Version 1.5.0
+  </td><td>
+  <a href="docs/cloudi_meetup_chicago2015.pdf" target="_blank">2015 Chicago Erlang User Group (slides)</a>
+  </td></tr><tr><td>
+  Version 1.3.2b
   </td><td>
   <a href="docs/cloudi_meetup_seattle2014.pdf" target="_blank">2014 Erlang/Elixir Meetup Seattle (slides)</a>
   </td></tr><tr><td>
-  Version 1.2.5
+  Version 1.2.5b
   </td><td>
   <a href="docs/cloudi_hackntell_seattle2013.pdf" target="_blank">2013 Hack and Tell Seattle (slides)</a>
   </td></tr><tr><td>
-  Version 1.0.0
+  Version 1.0.0b
   </td><td>
   2012 Open Source Bridge Unconference
   </td></tr><tr><td>
-  Version 0.1.6
+  Version 0.1.6a
   </td><td>
   <a href="docs/cloudi_erlounge_vancouver2011.pdf" target="_blank">2011 ErLounge Meetup Vancouver BC (slides)</a>
   </td></tr><tr><td>
-  Version 0.1.5
+  Version 0.1.5a
   </td><td>
   <a href="docs/cloudi_erlounge_sfbay2011.pdf" target="_blank">2011 ErLounge Meetup SF Bay Area (slides)</a>
   </td></tr><tr><td>
-  Version 0.0.9
+  Version 0.0.9a
   </td><td>
   <a href="docs/cloudi_ef_sfbay2010.pdf" target="_blank">2010 Erlang Factory SF Bay Area (slides)</a> <a href="docs/cloudi_ef_sfbay2010.txt" target="_blank">(demo text)</a>
   </td></tr><tr><td>
-  Version 0.0.8
+  Version 0.0.8a
   </td><td>
   <a href="http://vimeo.com/8192137" target="_blank">2009 Erlang User Conference (video)</a> <a href="docs/cloudi_euc2009.pdf" target="_blank">(slides)</a>
   </td></tr></table>
@@ -838,7 +847,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
-  <a name="2_Reporting Bugs"></a>
+  <a name="2_ReportingBugs"></a>
   <h3>2.8 - Reporting Bugs</h3>
   <table><tr><td>
   Bug Reports:
@@ -854,6 +863,57 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     mailing list or utilize the <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">IRC chat room</a>.
     Otherwise, you can easily enter a bug report for the problem by using the
     <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">online form</a>.
+    If you are unable to provide information about the problem publicly,
+    specify the information is private in an email to
+    <a href="mailto:mjtruog@gmail.com">Michael Truog</a>.
+  </p>
+  <div class="top"><a href="#2_contents">Top</a></div>
+
+  <a name="2_CodeOfConduct"></a>
+  <h3>2.9 - Code of Conduct</h3>
+  <p class="paragraph">
+    To make sure there are no barriers to CloudI development for any developers
+    who want to get involved, a Code of Conduct was adopted:
+  </p>
+  <h4>Contributor Code of Conduct</h4>
+  <p>
+    As contributors and maintainers of this project, we pledge to respect all
+    people who contribute through reporting issues, posting feature requests,
+    updating documentation, submitting pull requests or patches, and other
+    activities.
+  </p>
+  <p>
+    We are committed to making participation in this project a harassment-free
+    experience for everyone, regardless of level of experience, gender,
+    gender identity and expression, sexual orientation, disability, personal
+    appearance, body size, race, ethnicity, age, or religion.
+  </p>
+  <p>
+    Examples of unacceptable behavior by participants include the use of
+    sexual language or imagery, derogatory comments or personal attacks,
+    trolling, public or private harassment, insults, or other unprofessional
+    conduct.
+  </p>
+  <p>
+    Project maintainers have the right and responsibility to remove, edit, or
+    reject comments, commits, code, wiki edits, issues, and other contributions
+    that are not aligned to this Code of Conduct. Project maintainers who do
+    not follow the Code of Conduct may be removed from the project team.
+  </p>
+  <p>
+    This code of conduct applies both within project spaces and in public
+    spaces when an individual is representing the project or its community.
+  </p>
+  <p>
+    Instances of abusive, harassing, or otherwise unacceptable behavior may be
+    reported by <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">opening an issue</a>
+    or contacting <a href="mailto:mjtruog@gmail.com">one or more of the project maintainers</a>.
+  </p>
+  <p>
+    This Code of Conduct is adapted from the
+    <a href="http://contributor-covenant.org/" target="_blank">Contributor Covenant</a>,
+    version 1.1.0, available at
+    <a href="http://contributor-covenant.org/version/1/1/0/"target="_blank">http://contributor-covenant.org/version/1/1/0/</a>
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -872,13 +932,20 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </ol>
   </p>
   <p class="paragraph">
-    All the supported languages
-    are currently required for the configuration, so that the generated
-    configuration uses valid paths and the integration tests can be run.
-    So, that means that the configuration will expect a C compiler,
-    a C++ compiler, Java Development Kit (JDK), Python (&ge; 2.7),
-    Ruby (&ge; 1.9), and Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R16</a>).
-    CloudI is tested on each release of Erlang (currently 17.3).
+    All the supported programming languages are expected by the configure
+    script and are required when executing all the integration tests
+    (with the provided cloudi.conf containing the integration test
+     service configurations).
+    The dependencies are a C compiler, a C++ compiler,
+    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">R16</a>),
+    Java Development Kit (JDK &ge; 1.5), node.js (&ge; 0.8.0),
+    Perl (&ge; 5.10), PHP (&ge; 5.3.6), Python (&ge; 2.7), and
+    Ruby (&ge; 1.9).  Use the <a href="#3_Options">--disable-LANGUAGE-support configure argument</a>
+    to disable support for a programming language and the
+    --with-integration-tests-ran=no configure argument to use a minimal
+    cloudi.conf file in the installation.
+  </p>
+  <p class="paragraph">
     Dependencies as they are packaged for different operating systems are
     listed below:
     <table><tr><th>
@@ -1124,14 +1191,17 @@ sudo cloudi stop
     services or utilize CloudI services.  The current integration points are:
     <ul>
       <li>CloudI API</li>
-      <li>ZeroMQ</li>
       <li>HTTP</li>
-      <li>Supported databases
+      <li>ZeroMQ</li>
+      <li>Supported databases:
       <ul>
+        <li>Cassandra</li>
         <li>CouchDB</li>
+        <li>elasticsearch</li>
         <li>memcached</li>
         <li>MySQL</li>
         <li>PostgreSQL</li>
+        <li>riak</li>
         <li>Tokyo Tyrant</li>
       </ul>
       </li>
@@ -1279,8 +1349,26 @@ sudo cloudi stop
     CloudI API.  This means that there can be one ioloop per thread per process
     for maximum throughput.
   </p>
+  <a name="4_API_HTTP"></a>
+  <h4><a href="#6_HTTP">HTTP</a></h4>
+  <p class="paragraph">
+    The Erlang service cloudi_service_http_cowboy
+    (or cloudi_service_http_elli) accepts HTTP traffic and
+    makes the HTTP requests CloudI requests where the HTTP path in the URL
+    is used as the service name.
+    By default, the HTTP method is specified as a suffix on the HTTP path
+    (e.g., "/index.html/get") but this can be disabled with the
+    "use_method_suffix" configuration parameter.
+    When a HTTP request is received
+    the corresponding service name will be called with the request contents
+    (uncompressed, if the request was compressed).  The headers are passed
+    within the "request info" as key-value pairs that is request meta-data.
+    The content type of the
+    response is either forced by the configuration (with "content_type") or
+    it is determined by the file extension on the service name.
+  </p>
   <a name="4_API_ZeroMQ"></a>
-  <h4>ZeroMQ</h4>
+  <h4><a href="#6_ZeroMQ">ZeroMQ</a></h4>
   <p class="paragraph">
     ZeroMQ integration provides a way of connecting to external <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
     messaging or other CloudI nodes by using ZeroMQ as the messaging bus.
@@ -1340,25 +1428,7 @@ sudo cloudi stop
     5000, 5000, 5000, [api], undefined, 2, 5, 300, []}
     </pre>
   </p>
-  <a name="4_API_HTTP"></a>
-  <h4>HTTP</h4>
-  <p class="paragraph">
-    The Erlang service cloudi_service_http_cowboy
-    (or cloudi_service_http_elli) accepts HTTP traffic and
-    makes the HTTP requests CloudI requests where the HTTP path in the URL
-    is used as the service name.
-    By default, the HTTP method is specified as a suffix on the HTTP path
-    (e.g., "/index.html/get") but this can be disabled with the
-    "use_method_suffix" configuration parameter.
-    When a HTTP request is received
-    the corresponding service name will be called with the request contents
-    (uncompressed, if the request was compressed).  The headers are passed
-    within the "request info" as key-value pairs that is request meta-data.
-    The content type of the
-    response is either forced by the configuration (with "content_type") or
-    it is determined by the file extension on the service name.
-  </p>
-  <h4>Supported Databases</h4>
+  <h4><a href="#7_contents">Supported Databases</a></h4>
   <p class="paragraph">
     All the supported databases can be accessed by CloudI services.
     The CloudI Erlang service that provides database support
@@ -1703,12 +1773,13 @@ sudo cloudi stop
   <p class="paragraph">
     CloudI's external service execution is most similar to Erlang port
     integration.  However, CloudI provides many additional features for
-    external services that are normally not present:
+    services that are normally not present:
     <ul>
       <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development.</li>
       <li>Protocol agnostic transactional communication with a small consistent API (i.e., the <a href="api.html#Service" target="_blank">CloudI API</a>).</li>
       <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM which avoids any contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
       <li>All external services are managed with fault-tolerance constraints, in the same way as Erlang/OTP supervisors.</li>
+      <li>All services are both started and stopped with an explicit order but Erlang/OTP application order is provided by release creation which creates ambiguity due to the top-level application's dependencies.</li>
       <li>A service can use service configuration options to easily adjust efficiency and memory consumption (e.g., <a href="api.html#2_services_add_config_opts" target="_blank">queue_limit, hibernate, request_pid_options, etc.</a>).</li>
       <li>Erlang source code within a service can automatically handle more throughput than Erlang/OTP behaviors with <a href="api.html#2_services_add_config_opts" target="_blank">duo_mode</a> set within the service configuration options.</li>
       <li>Every service request receives a unique UUID (Universally Unique IDentifier).</li>
@@ -1934,6 +2005,7 @@ sudo cloudi stop
     loadtesting results can be compared when making CloudI integration
     decisions.  Below are summaries specific to past releases:
     <ul>
+      <li><a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_summary.pdf" target="_blank">1.5.1 summary</a></li>
       <li><a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_summary.pdf" target="_blank">1.4.0 summary</a></li>
       <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_2/201306_summary.pdf" target="_blank">1.2.2 summary</a></li>
       <li><a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf" target="_blank">1.2.1 summary</a></li>
@@ -1944,70 +2016,72 @@ sudo cloudi stop
     To look at service request throughput to a single service name with a
     static request it is possible to use the request_rate test
     (to determine the maximum throughput for a service request during the
-     service request timeout period without any errors).
-    Various configuration scenarios have been tested for the 1.4.0 CloudI
-    release which are summarized <a href="https://github.com/CloudI/CloudI/blob/develop/src/tests/request_rate/results/results_v1_4_0/results.txt" target="_blank">here</a>.
+     service request timeout period without any errors or timeouts):
+    <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/develop/src/tests/request_rate/results/results_v1_5_1/results.txt" target="_blank">1.5.1 results</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/develop/src/tests/request_rate/results/results_v1_4_0/results.txt" target="_blank">1.4.0 results</a></li>
+    </ul>
   </p>
   <p>
-    The latency graphs below show service request performance during the 1.4.0
-    <a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_tsung_output.tar.bz2" target="_blank">Tsung loadtests</a>
+    The latency graphs below show service request performance during the 1.5.1
+    <a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_tsung_output.tar.bz2" target="_blank">Tsung loadtests</a>
     of 20k connections at 10k req/s
-    (with Erlang R16B03-1 and Ubuntu 12.04.5 using CloudI cowboy integration):
+    (with Erlang 18.2.1 and Ubuntu 12.04.5 using CloudI cowboy integration):
     <ul>
       <li>
         C++/C
-        <img src="images/201412_graphes-Transactions-mean_c.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_c.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_c.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_c.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_c.png" width="280" />
         <br /><br />
       </li>
       <li>
         Erlang
-        <img src="images/201412_graphes-Transactions-mean_erlang.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_erlang.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_erlang.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_erlang.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_erlang.png" width="280" />
         <br /><br />
       </li>
       <li>
         Java
-        <img src="images/201412_graphes-Transactions-mean_java.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_java.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_java.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_java.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_java.png" width="280" />
         <br /><br />
       </li>
       <li>
         Javascript
-        <img src="images/201412_graphes-Transactions-mean_javascript.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_javascript.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_javascript.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_javascript.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_javascript.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_javascript.png" width="280" />
         <br /><br />
       </li>
       <li>
         Perl
-        <img src="images/201412_graphes-Transactions-mean_perl.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_perl.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_perl.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_perl.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_perl.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_perl.png" width="280" />
         <br /><br />
       </li>
       <li>
         PHP
-        <img src="images/201412_graphes-Transactions-mean_php.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_php.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_php.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_php.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_php.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_php.png" width="280" />
         <br /><br />
       </li>
       <li>
         Python
-        <img src="images/201412_graphes-Transactions-mean_python_c.png" />
+        <img src="images/201512_graphes-Transactions-mean_python_c.png" />
         (with C integration)
         <br />
-        <img src="images/201412_graphes-Transactions-min_sample_python_c.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_python_c.png" width="280" />
+        <img src="images/201512_graphes-Transactions-min_sample_python_c.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_python_c.png" width="280" />
         <br /><br />
       </li>
       <li>
         Python
-        <img src="images/201412_graphes-Transactions-mean_python.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_python.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_python.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_python.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_python.png" width="280" />
         <br /><br />
       </li>
       <li>
         Ruby
-        <img src="images/201412_graphes-Transactions-mean_ruby.png" /><br />
-        <img src="images/201412_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201412_graphes-Transactions-max_sample_ruby.png" width="280" />
+        <img src="images/201512_graphes-Transactions-mean_ruby.png" /><br />
+        <img src="images/201512_graphes-Transactions-min_sample_ruby.png" width="280" /><img src="images/201512_graphes-Transactions-max_sample_ruby.png" width="280" />
         <br /><br />
       </li>
     </ul>
@@ -2811,6 +2885,32 @@ sudo cloudi stop
     used within the CloudI framework.
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
+
+  <hr \>
+  <h2>8 - Troubleshooting</h2>
+
+  <a name="8_start"></a>
+  <h3>8.1 - Why does CloudI stop shortly after being started?</h3>
+  <p class="paragraph">
+  If any services listed in the CloudI configuration file fail to initialize
+  CloudI will shutdown.  This behavior is required to make sure CloudI services
+  are able to fail-fast when services are unable to initialize.  If this has
+  happened while running the integration tests, please make sure to submit
+  the problem (with the /usr/local/var/log/cloudi/cloudi.log file and the
+  build's config.log file) as <a href="#2_ReportingBugs">a bug</a>.
+  </p>
+  <p class="paragraph">
+  The best place to have validation in a service is during service
+  <a href="api.html#1_initialization_timeout">initialization</a>
+  so the service's starting state is confirmed to be correct.
+  Performing verification during service initialization is important due to
+  the lifetime of a service's execution being typically undefined.
+  Critical CloudI services should have their configuration in the CloudI
+  configuration file (instead of using the CloudI Service API to dynamically
+  start the services with <a href="api.html#2_services_add">services_add</a>)
+  to take advantage of fail-fast service initialization.
+  </p>
+  <div class="top"><a href="#8_contents">Top</a></div>
 
 </div>
 

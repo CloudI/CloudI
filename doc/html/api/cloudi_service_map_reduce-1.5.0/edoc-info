@@ -1,4 +1,0 @@
-%% encoding: UTF-8
-{application,cloudi_service_map_reduce}.
-{packages,[]}.
-{modules,[cloudi_service_map_reduce,cloudi_task_size]}.

@@ -1,8 +1,8 @@
 {application, quickrand,
   [{description, "Quick Random Number Generation"},
-   {vsn, "1.5.0"},
+   {vsn, "1.5.1"},
    {modules, [quickrand, random_wh06_int]},
    {registered, []},
-   {applications, [crypto, kernel, stdlib]},
+   {applications, [crypto, stdlib, kernel]},
    {start_phases, []}]}.
 
