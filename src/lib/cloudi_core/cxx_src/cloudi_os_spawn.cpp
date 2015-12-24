@@ -901,7 +901,7 @@ int32_t spawn(char protocol,
             else if (domain == PF_LOCAL)
             {
                 char port_str[16];
-                ::sprintf(port_str, "%d", ports[i]);
+                ::snprintf(port_str, sizeof(port_str), "%d", ports[i]);
                 assert(socket_path_len <= 104 - 10);
                 struct sockaddr_un local;
                 local.sun_family = domain;
