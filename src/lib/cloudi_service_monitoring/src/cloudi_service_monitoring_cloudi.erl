@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -934,7 +934,8 @@ aspect_request_before_internal_f(Ref) ->
             {_, MetricPrefix, Driver} ->
                 case aspect_pid_to_service_id(Source) of
                     undefined ->
-                        ok;
+                        update(spiral, MetricPrefix ++ [request, nonservice],
+                               1, Driver);
                     ServiceId ->
                         update(spiral, MetricPrefix ++ [request, ServiceId],
                                1, Driver)
@@ -952,7 +953,8 @@ aspect_request_before_external_f() ->
             {_, MetricPrefix, Driver} ->
                 case aspect_pid_to_service_id(Source) of
                     undefined ->
-                        ok;
+                        update(spiral, MetricPrefix ++ [request, nonservice],
+                               1, Driver);
                     ServiceId ->
                         update(spiral, MetricPrefix ++ [request, ServiceId],
                                1, Driver)

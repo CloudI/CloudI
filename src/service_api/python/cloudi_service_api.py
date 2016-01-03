@@ -12,19 +12,6 @@ import jsonrpclib
 import erlang
 import struct
 
-class _ServiceUUID(object):
-    def __init__(self, *args):
-        assert len(args) == 16
-        self.__bytes = args
-
-    def __str__(self):
-        return '<<%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d>>' % (
-            self.__bytes
-        )
-
-    def raw(self):
-        return struct.pack('BBBBBBBBBBBBBBBB', self.__bytes)
-
 class _ServiceDescription(object):
     def __init__(self, *args):
         self.__args = args
@@ -43,20 +30,30 @@ class CloudI(object):
             return self.__services
         elif name == 'services_add':
             return self.__services_add
+        elif name == 'services_search':
+            return self.__services_search
         return self.__server.__getattr__(name)
 
     def __services(self):
         raw = self.__server.services()
         return [
-            (_ServiceUUID(*uuid_tuple),
+            (uuid_string,
              _ServiceDescription(*service_configuration))
-            for uuid_tuple, service_configuration in erlang.consult(raw)
+            for uuid_string, service_configuration in erlang.consult(raw)
         ]
 
     def __services_add(self, L):
         raw = self.__server.services_add(L)
         return [
-            _ServiceUUID(*uuid_tuple)
-            for uuid_tuple in erlang.consult(raw)
+            uuid_string
+            for uuid_string in erlang.consult(raw)
+        ]
+
+    def __services_search(self, L):
+        raw = self.__server.services_search(L)
+        return [
+            (uuid_string,
+             _ServiceDescription(*service_configuration))
+            for uuid_string, service_configuration in erlang.consult(raw)
         ]
 

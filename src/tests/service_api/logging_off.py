@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,6 @@ import time
 if __name__ == '__main__':
     from cloudi_service_api import CloudI
     obj = CloudI()
-    assert obj.loglevel_set('off') == 'ok'
+    assert(obj.logging_level_set('off') == 'ok')
     print('logging turned off')
 

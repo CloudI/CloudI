@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -48,49 +48,47 @@ sys.path.append(
     )
 )
 
-import time
+import time, urllib2
 
 if __name__ == '__main__':
     from cloudi_service_api import CloudI
     obj = CloudI()
-    assert obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok'
-    assert obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok'
-    assert obj.nodes_remove(
+    assert(obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok')
+    assert(obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok')
+    assert(obj.nodes_remove(
         '[foobar1@hostX, foobar2@hostY]'
-    ) == '{error,{node_not_found,foobar1@hostX}}'
+    ) == '{error,{node_not_found,foobar1@hostX}}')
 
-    assert obj.acl_remove('[all]') == 'ok'
-    assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
+    assert(obj.acl_remove('[all]') == 'ok')
+    assert(obj.acl_add('[{all, [database, tests]}]') == 'ok')
 
-    # remove the hexpi services
-    services = obj.services()
-    assert obj.services_remove('[%s, %s]' % (
-        str(services[1][0]), str(services[4][0]),
-    )) == 'ok'
-
-    # start the C flood test
+    # start extra instances of the http_req test
     services_added = obj.services_add("""\
-[{external,
-    "/tests/flood/",
-    "tests/flood/service/flood", "1 tcp 16384",
-    [{"LD_LIBRARY_PATH", "api/c/lib/"},
-    {"DYLD_LIBRARY_PATH", "api/c/lib/"}],
-    none, tcp, 16384,
-    5000, 5000, 5000, [api], undefined, 1, 1, 5, 300, []},
- {internal,
-     "/tests/flood/",
-     cloudi_service_flood,
-     [{flood, "/tests/flood/c", <<"DATA">>, 1000}],
-     lazy_closest,
-     5000, 5000, 5000, [api], undefined, 2, 5, 300, []}]""")
-    assert type(services_added) == list # returns the list of new ServiceIds
-    assert len(services_added) == 2
+[[{prefix, "/json_rpc/1/"},
+  {module, cloudi_service_http_req}],
+ [{prefix, "/json_rpc/2/"},
+  {module, cloudi_service_http_req}],
+ [{prefix, "/json_rpc/3/"},
+  {module, cloudi_service_http_req}],
+ [{prefix, "/json_rpc/4/"},
+  {module, cloudi_service_http_req}]]
+""")
+    assert(type(services_added) == list) # returns the list of new ServiceIds
+    assert(len(services_added) == 4)
 
-    print('waiting 20 seconds...')
-    time.sleep(20)
+    url = 'http://localhost:6464'
+    assert('<http_test><value>5</value></http_test>' ==
+           urllib2.urlopen(url + '/json_rpc/1/erlang.xml?value=5').read())
+    assert('<http_test><value>6</value></http_test>' ==
+           urllib2.urlopen(url + '/json_rpc/2/erlang.xml?value=6').read())
+    assert('<http_test><value>7</value></http_test>' ==
+           urllib2.urlopen(url + '/json_rpc/3/erlang.xml?value=7').read())
+    assert('<http_test><value>8</value></http_test>' ==
+           urllib2.urlopen(url + '/json_rpc/4/erlang.xml?value=8').read())
 
-    # stop the C flood test
-    assert obj.services_remove('[%s, %s]' % (
-        str(services_added[0]), str(services_added[1]),
-    )) == 'ok'
+    # remove the extra instances of the http_req test
+    assert(obj.services_remove('["%s", "%s", "%s", "%s"]' % (
+        services_added[0], services_added[1],
+        services_added[2], services_added[3],
+    )) == 'ok')
 

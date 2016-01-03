@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2012-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -82,7 +82,7 @@
 -define(DEFAULT_MULTIPART_BODY_LENGTH_CHUNK,    8000000).
 -define(DEFAULT_MULTIPART_DESTINATION_LOCK,        true).
 -define(DEFAULT_WEBSOCKET_TIMEOUT,             infinity). % milliseconds
--define(DEFAULT_WEBSOCKET_OUTPUT,             undefined).
+-define(DEFAULT_WEBSOCKET_OUTPUT,                binary).
 -define(DEFAULT_WEBSOCKET_CONNECT_ASYNC,      undefined).
 -define(DEFAULT_WEBSOCKET_CONNECT_SYNC,       undefined).
 -define(DEFAULT_WEBSOCKET_DISCONNECT_ASYNC,   undefined).
@@ -270,7 +270,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      BodyTimeout, BodyLengthRead, BodyLengthChunk, MultipartHeaderTimeout,
      MultipartHeaderLengthRead, MultipartHeaderLengthChunk,
      MultipartBodyTimeout, MultipartBodyLengthRead, MultipartBodyLengthChunk,
-     MultipartDestinationLock, WebSocketTimeout, WebSocketOutputType0,
+     MultipartDestinationLock, WebSocketTimeout, WebSocketOutputType,
      WebSocketConnect0, WebSocketDisconnect0,
      WebSocketConnectAsync0, WebSocketConnectSync,
      WebSocketDisconnectAsync0, WebSocketDisconnectSync,
@@ -305,20 +305,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(MultipartDestinationLock),
     true = (WebSocketTimeout =:= infinity) orelse
            (is_integer(WebSocketTimeout) andalso (WebSocketTimeout > 0)),
-    WebSocketOutputType1 = if
-        WebSocketOutputType0 =:= undefined ->
-            if
-                OutputType =:= external; OutputType =:= internal;
-                OutputType =:= binary ->
-                    binary;
-                OutputType =:= list ->
-                    text
-            end;
-        WebSocketOutputType0 =:= binary ->
-            binary;
-        WebSocketOutputType0 =:= text ->
-            text
-    end,
+    true = (WebSocketOutputType =:= binary) orelse
+           (WebSocketOutputType =:= text),
     WebSocketConnectAsync1 = if
         WebSocketConnectAsync0 =:= undefined ->
             true = (WebSocketConnect0 =:= undefined) orelse
@@ -446,7 +434,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                     set_x_forwarded_for = SetXForwardedFor,
                     status_code_timeout = StatusCodeTimeout,
                     query_get_format = QueryGetFormat,
-                    websocket_output_type = WebSocketOutputType1,
+                    websocket_output_type = WebSocketOutputType,
                     websocket_connect = WebSocketConnect1,
                     websocket_disconnect = WebSocketDisconnect1,
                     websocket_ping = WebSocketPing,
