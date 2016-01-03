@@ -10,6 +10,8 @@
     * Add nonservice metric for monitoring service requests from
       single Erlang processes using the cloudi module in
       cloudi_service_monitoring
+    * Add more validation on {{M, F}} service configuration
+      argument function values
 
 2015-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

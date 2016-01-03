@@ -65,7 +65,7 @@
 
 -record(state,
     {
-        functions :: cloudi_x_trie:trie(), % method -> {F,arity}
+        functions :: cloudi_x_trie:cloudi_x_trie(), % method -> {F,arity}
         prefix :: cloudi:service_name_pattern()
     }).
  

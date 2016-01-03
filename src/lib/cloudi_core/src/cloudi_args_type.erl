@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -72,7 +72,15 @@ function_required({{M, F}}, Arity)
     when is_atom(M), is_atom(F), is_integer(Arity), Arity >= 0 ->
     case erlang:function_exported(M, F, 0) of
         true ->
-            function_required(M:F(), Arity);
+            Function = M:F(),
+            if
+                is_function(Function) ->
+                    function_required(Function, Arity);
+                true ->
+                    ?LOG_ERROR("function ~w:~w/~w does not return a function!",
+                               [M, F, 0]),
+                    erlang:exit(badarg)
+            end;
         false ->
             ?LOG_ERROR("function ~w:~w/~w does not exist!",
                        [M, F, 0]),
@@ -109,7 +117,15 @@ function_required_pick({{M, F}}, [_ | _] = ArityOrder)
     when is_atom(M), is_atom(F) ->
     case erlang:function_exported(M, F, 0) of
         true ->
-            function_required_pick(M:F(), ArityOrder);
+            Function = M:F(),
+            if
+                is_function(Function) ->
+                    function_required_pick(Function, ArityOrder);
+                true ->
+                    ?LOG_ERROR("function ~w:~w/~w does not return a function!",
+                               [M, F, 0]),
+                    erlang:exit(badarg)
+            end;
         false ->
             ?LOG_ERROR("function ~w:~w/~w does not exist!",
                        [M, F, 0]),
