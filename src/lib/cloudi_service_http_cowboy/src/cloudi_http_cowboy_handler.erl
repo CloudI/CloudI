@@ -1278,21 +1278,24 @@ handle_response(NameIncoming, HeadersOutgoing0, Response,
                 Extension == [] ->
                     [{<<"content-type">>, <<"text/html">>}];
                 true ->
-                    case cloudi_response_info:
-                         lookup_content_type(binary, Extension) of
+                    {AttachmentGuess,
+                     ContentType} = case cloudi_response_info:
+                                         lookup_content_type(binary,
+                                                             Extension) of
                         error ->
+                            {attachment, <<"application/octet-stream">>};
+                        {ok, AttachmentGuessContentTypeTuple} ->
+                            AttachmentGuessContentTypeTuple
+                    end,
+                    if
+                        AttachmentGuess =:= attachment,
+                        HttpCode >= 200, HttpCode < 300, HttpCode /= 204 ->
                             [{<<"content-disposition">>,
                               ["attachment; filename=\"",
                                filename:basename(NameIncoming), "\""]},
-                             {<<"content-type">>,
-                              <<"application/octet-stream">>}];
-                        {ok, {request, ContentType}} ->
-                            [{<<"content-type">>, ContentType}];
-                        {ok, {attachment, ContentType}} ->
-                            [{<<"content-disposition">>,
-                              ["attachment; filename=\"",
-                               filename:basename(NameIncoming), "\""]},
-                             {<<"content-type">>, ContentType}]
+                             {<<"content-type">>, ContentType}];
+                        true ->
+                            [{<<"content-type">>, ContentType}]
                     end
             end
     end,

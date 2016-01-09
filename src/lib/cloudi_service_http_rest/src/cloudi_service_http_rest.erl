@@ -11,7 +11,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -90,7 +90,7 @@
         % Provide a list of formats to handle that are added as file type
         % suffixes on the URL path which also determine the content-type used
         % for the request and response.
--define(DEFAULT_SET_CONTENT_DISPOSITION,     true).
+-define(DEFAULT_SET_CONTENT_DISPOSITION,    false).
         % Set the content-disposition header value for any content-type values
         % that are tagged as an attachment.
 -define(DEFAULT_USE_OPTIONS_METHOD,         false).
@@ -491,10 +491,10 @@ subscribe_paths(Method, Path, Formats, API, Lookup, Dispatcher)
 response_info_headers(ResponseInfo0, Name, Format,
                       ContentTypes, ContentDisposition)
     when is_list(ResponseInfo0) ->
-    {ContentTypeTag, ContentType} = dict:fetch(Format, ContentTypes),
+    {AttachmentGuess, ContentType} = dict:fetch(Format, ContentTypes),
     ResponseInfo1 = if
         (ContentDisposition =:= true) andalso
-        (ContentTypeTag =:= attachment) ->
+        (AttachmentGuess =:= attachment) ->
             case lists:keyfind(<<"content-disposition">>, 1,
                                ResponseInfo0) of
                 false ->
