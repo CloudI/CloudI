@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change Travis compilation to use 18.2.1 for the 18.x compilation
+    * Use only LOG_ERROR_SYNC in cloudi_args_type due to its usage during
+      service initialization which can cause a CloudI startup failure
+      when a service is misconfigured
+    * Improve the debug log format of cloudi_service_http_client
+
 2016-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the automatic addition of the HTTP header content-disposition

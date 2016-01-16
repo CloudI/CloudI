@@ -618,12 +618,16 @@ client_debug_end(Level, HttpCode, Method,
                  HeadersIncoming, Request,
                  HeadersOutgoing, Response, RequestStartMicroSec) ->
     client_debug_log(Level,
-                     "~p ~s (~p, ~p) -> (~p, ~p) ~p ms",
+                     "~p ~s ~p ms~n"
+                     "headers__in(~p)~n"
+                     "request__in(~p)~n"
+                     "headers_out(~p)~n"
+                     "request_out(~p)",
                      [HttpCode, Method,
-                      HeadersIncoming, Request,
-                      HeadersOutgoing, Response,
                       (cloudi_x_uuid:get_v1_time(os) -
-                       RequestStartMicroSec) / 1000.0]).
+                       RequestStartMicroSec) / 1000.0,
+                      HeadersIncoming, Request,
+                      HeadersOutgoing, Response]).
 
 result({{ok, {error, _} = Error}, NewAgent}) ->
     {Error, NewAgent};

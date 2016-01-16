@@ -77,13 +77,12 @@ function_required({{M, F}}, Arity)
                 is_function(Function) ->
                     function_required(Function, Arity);
                 true ->
-                    ?LOG_ERROR("function ~w:~w/~w does not return a function!",
-                               [M, F, 0]),
+                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not "
+                                    "return a function!", [M, F, 0]),
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR("function ~w:~w/~w does not exist!",
-                       [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!", [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required({M, F}, Arity)
@@ -92,8 +91,8 @@ function_required({M, F}, Arity)
         true ->
             fun M:F/Arity;
         false ->
-            ?LOG_ERROR("function ~w:~w/~w does not exist!",
-                       [M, F, Arity]),
+            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!",
+                            [M, F, Arity]),
             erlang:exit(badarg)
     end;
 function_required(Function, Arity)
@@ -102,11 +101,11 @@ function_required(Function, Arity)
         is_function(Function, Arity) ->
             Function;
         true ->
-            ?LOG_ERROR("function arity is not ~w!", [Arity]),
+            ?LOG_ERROR_SYNC("function arity is not ~w!", [Arity]),
             erlang:exit(badarg)
     end;
 function_required(Function, _) ->
-    ?LOG_ERROR("not a function: ~p", [Function]),
+    ?LOG_ERROR_SYNC("not a function: ~p", [Function]),
     erlang:exit(badarg).
 
 -spec function_required_pick({{module(), atom()}} | {module(), atom()} | fun(),
@@ -122,13 +121,12 @@ function_required_pick({{M, F}}, [_ | _] = ArityOrder)
                 is_function(Function) ->
                     function_required_pick(Function, ArityOrder);
                 true ->
-                    ?LOG_ERROR("function ~w:~w/~w does not return a function!",
-                               [M, F, 0]),
+                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not "
+                                    "return a function!", [M, F, 0]),
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR("function ~w:~w/~w does not exist!",
-                       [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!", [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required_pick({M, F}, [_ | _] = ArityOrder)
@@ -138,7 +136,7 @@ function_required_pick(Function, [_ | _] = ArityOrder)
     when is_function(Function) ->
     function_required_pick_function(ArityOrder, Function, ArityOrder);
 function_required_pick(Function, [_ | _]) ->
-    ?LOG_ERROR("not a function: ~p", [Function]),
+    ?LOG_ERROR_SYNC("not a function: ~p", [Function]),
     erlang:exit(badarg).
 
 -spec function_optional(undefined |
@@ -160,17 +158,17 @@ service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     try suffix_name_parse(Prefix, Name)
     catch
         exit:badarg ->
-            ?LOG_ERROR("prefix service name mismatch: \"~s\" \"~s\"",
-                       [Prefix, Name]),
+            ?LOG_ERROR_SYNC("prefix service name mismatch: \"~s\" \"~s\"",
+                            [Prefix, Name]),
             erlang:exit(badarg)
     end;
 service_name_suffix([PrefixC | _], Name)
     when is_integer(PrefixC) ->
-    ?LOG_ERROR("invalid service name: ~p", [Name]),
+    ?LOG_ERROR_SYNC("invalid service name: ~p", [Name]),
     erlang:exit(badarg);
 service_name_suffix(Prefix, [NameC | _])
     when is_integer(NameC) ->
-    ?LOG_ERROR("invalid prefix: ~p", [Prefix]),
+    ?LOG_ERROR_SYNC("invalid prefix: ~p", [Prefix]),
     erlang:exit(badarg).
 
 -spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
@@ -182,17 +180,17 @@ service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
     try suffix_pattern_parse(Prefix, Pattern)
     catch
         exit:badarg ->
-            ?LOG_ERROR("prefix service name pattern mismatch: \"~s\" \"~s\"",
-                       [Prefix, Pattern]),
+            ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
+                            "\"~s\" \"~s\"", [Prefix, Pattern]),
             erlang:exit(badarg)
     end;
 service_name_pattern_suffix([PrefixC | _], Pattern)
     when is_integer(PrefixC) ->
-    ?LOG_ERROR("invalid service name pattern: ~p", [Pattern]),
+    ?LOG_ERROR_SYNC("invalid service name pattern: ~p", [Pattern]),
     erlang:exit(badarg);
 service_name_pattern_suffix(Prefix, [PatternC | _])
     when is_integer(PatternC) ->
-    ?LOG_ERROR("invalid prefix: ~p", [Prefix]),
+    ?LOG_ERROR_SYNC("invalid prefix: ~p", [Prefix]),
     erlang:exit(badarg).
 
 %%%------------------------------------------------------------------------
@@ -207,8 +205,8 @@ function_required_pick_module([Arity | ArityL], M, F, ArityOrder)
         false ->
             if
                 ArityL == [] ->
-                    ?LOG_ERROR("function ~w:~w/~w does not exist!",
-                               [M, F, ArityOrder]),
+                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!",
+                                    [M, F, ArityOrder]),
                     erlang:exit(badarg);
                 true ->
                     function_required_pick_module(ArityL, M, F, ArityOrder)
@@ -223,7 +221,7 @@ function_required_pick_function([Arity | ArityL], Function, ArityOrder)
         is_function(Function, Arity) ->
             {Function, Arity};
         ArityL == [] ->
-            ?LOG_ERROR("function arity is not in ~w!", [ArityOrder]),
+            ?LOG_ERROR_SYNC("function arity is not in ~w!", [ArityOrder]),
             erlang:exit(badarg);
         true ->
             function_required_pick_function(ArityL, Function, ArityOrder)
