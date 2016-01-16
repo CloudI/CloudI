@@ -270,6 +270,11 @@ suffix_name_pattern([_ | Name], C) ->
 -include_lib("eunit/include/eunit.hrl").
 
 suffix_test() ->
+    % functions require logging
+    ok = cloudi_x_reltool_util:application_start(sasl,
+                                                 [{sasl_error_logger, false}],
+                                                 infinity),
+    ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
     % based on cloudi_service_name:suffix/2 but enforcing checks on whether
     % it is a service name or service name pattern for service initialization
     "." = service_name_suffix("//", "//."),
@@ -294,6 +299,8 @@ suffix_test() ->
     {'EXIT', badarg} = (catch service_name_pattern_suffix("", ".")),
     {'EXIT', badarg} = (catch service_name_suffix(".", "")),
     {'EXIT', badarg} = (catch service_name_pattern_suffix(".", "")),
+
+    ok = cloudi_x_reltool_util:application_stop(cloudi_core),
     ok.
 
 -endif.
