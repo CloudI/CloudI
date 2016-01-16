@@ -258,25 +258,3 @@ suffix_pattern([C | Name], C) ->
 suffix_pattern([_ | Name], C) ->
     suffix_pattern(Name, C).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-suffix_test() ->
-    "." = cloudi_service_name:suffix("//", "//."),
-    % Name
-    "." = cloudi_service_name:suffix("/*/", "/./."),
-    "." = cloudi_service_name:suffix("/*/", "/..../."),
-    "" = cloudi_service_name:suffix("*", "."),
-    "" = cloudi_service_name:suffix("*.", ".."),
-    "." = cloudi_service_name:suffix("*.", "..."),
-    % Pattern
-    "." = cloudi_service_name:suffix("/*/", "/*/."),
-    "." = cloudi_service_name:suffix("/*", "/*."),
-    % errors
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "//.")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "/*")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix("", ".")),
-    {'EXIT', badarg} = (catch cloudi_service_name:suffix(".", "")),
-    ok.
-
--endif.

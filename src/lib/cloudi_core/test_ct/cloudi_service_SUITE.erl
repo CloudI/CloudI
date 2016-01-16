@@ -7,7 +7,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @copyright 2014-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -79,7 +79,9 @@
          t_service_internal_terminate_2/1,
          t_service_internal_terminate_3/1,
          t_service_internal_terminate_4/1,
-         t_service_internal_log_1/1]).
+         t_service_internal_log_1/1,
+         t_cloudi_args_type_1/1,
+         t_cloudi_service_name_1/1]).
 
 %% test helpers
 -export([service_increment_aspect_init/5,
@@ -263,7 +265,8 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%%------------------------------------------------------------------------
 
 all() ->
-    [{group, service_internal_1}].
+    [{group, service_internal_1},
+     {group, cloudi_modules_1}].
 
 groups() ->
     [{service_internal_1, [],
@@ -278,7 +281,10 @@ groups() ->
        t_service_internal_terminate_2,
        t_service_internal_terminate_3,
        t_service_internal_terminate_4,
-       t_service_internal_log_1]}].
+       t_service_internal_log_1]},
+     {cloudi_modules_1, [],
+      [t_cloudi_args_type_1,
+       t_cloudi_service_name_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -466,8 +472,7 @@ init_per_testcase(TestCase, Config)
            {duo_mode, true}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
-init_per_testcase(TestCase, Config)
-    when (TestCase =:= t_service_internal_log_1) ->
+init_per_testcase(TestCase, Config) ->
     init_per_testcase(TestCase),
     Config.
 
@@ -835,3 +840,59 @@ t_service_internal_log_1(_Config) ->
                        {pid, self()} | ?LOG_METADATA_GET()]),
     ?LOG_INFO("Logging metadata", []),
     ok.
+
+t_cloudi_args_type_1(_Config) ->
+    % based on cloudi_service_name:suffix/2 but enforcing checks on whether
+    % it is a service name or service name pattern for service initialization
+    "." = cloudi_args_type:service_name_suffix("//", "//."),
+    "." = cloudi_args_type:service_name_pattern_suffix("//", "//."),
+    % Name
+    "." = cloudi_args_type:service_name_suffix("/*/", "/./."),
+    "." = cloudi_args_type:service_name_suffix("/*/", "/..../."),
+    "" = cloudi_args_type:service_name_suffix("*", "."),
+    "" = cloudi_args_type:service_name_suffix("*.", ".."),
+    "." = cloudi_args_type:service_name_suffix("*.", "..."),
+    % Pattern
+    "." = cloudi_args_type:service_name_pattern_suffix("/*/", "/*/."),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix("/*/", "/*/.")),
+    "." = cloudi_args_type:service_name_pattern_suffix("/*", "/*."),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix("/*", "/*.")),
+    % errors
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_pattern_suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_pattern_suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix("", ".")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_pattern_suffix("", ".")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_suffix(".", "")),
+    {'EXIT', badarg} = (catch cloudi_args_type:
+                              service_name_pattern_suffix(".", "")),
+    ok.
+
+t_cloudi_service_name_1(_Config) ->
+    "." = cloudi_service_name:suffix("//", "//."),
+    % Name
+    "." = cloudi_service_name:suffix("/*/", "/./."),
+    "." = cloudi_service_name:suffix("/*/", "/..../."),
+    "" = cloudi_service_name:suffix("*", "."),
+    "" = cloudi_service_name:suffix("*.", ".."),
+    "." = cloudi_service_name:suffix("*.", "..."),
+    % Pattern
+    "." = cloudi_service_name:suffix("/*/", "/*/."),
+    "." = cloudi_service_name:suffix("/*", "/*."),
+    % errors
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "//.")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("/*/", "/*")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix("", ".")),
+    {'EXIT', badarg} = (catch cloudi_service_name:suffix(".", "")),
+    ok.
+
