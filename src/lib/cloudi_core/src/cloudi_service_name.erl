@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @copyright 2014-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -137,8 +137,21 @@ parse_with_suffix(Name, Pattern) ->
              NameOrPattern :: string()) ->
     string().
 
-suffix([_ | _] = Prefix, [_ | _] = NameOrPattern) ->
-    suffix_parse(Prefix, NameOrPattern);
+suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)
+    when is_integer(PrefixC), is_integer(NameOrPatternC) ->
+    case lists:member($*, NameOrPattern) of
+        true ->
+            % handle as a pattern
+            suffix_pattern_parse(Prefix, NameOrPattern);
+        false ->
+            % handle as a name
+            case cloudi_x_trie:pattern_suffix(Prefix, NameOrPattern) of
+                error ->
+                    erlang:exit(badarg);
+                Suffix ->
+                    Suffix
+            end
+    end;
 suffix(_, _) ->
     erlang:exit(badarg).
 
@@ -227,34 +240,9 @@ new_select(PatternIn, Parameters,
     new_select(PatternIn, [], Parameters,
                ParametersSelected, ParametersStrictMatching).
 
-suffix_parse([], NameOrPattern) ->
-    NameOrPattern;
-suffix_parse([$*], [H | Pattern]) ->
-    if
-        H =:= $* ->
-            Pattern;
-        true ->
-            ""
-    end;
-suffix_parse([$*, C | Prefix], [H | Name])
-    when H =/= $* ->
-    if
-        C =:= $* ->
-            erlang:exit(badarg);
-        true ->
-            suffix_parse(Prefix, suffix_pattern(Name, C))
-    end;
-suffix_parse([C | Prefix], [C | NameOrPattern]) ->
-    suffix_parse(Prefix, NameOrPattern);
-suffix_parse([_ | _], _) ->
+suffix_pattern_parse([], Pattern) ->
+    Pattern;
+suffix_pattern_parse([C | Prefix], [C | Pattern]) ->
+    suffix_pattern_parse(Prefix, Pattern);
+suffix_pattern_parse([_ | _], _) ->
     erlang:exit(badarg).
-
-suffix_pattern([], _) ->
-    erlang:exit(badarg);
-suffix_pattern([$* | _], _) ->
-    erlang:exit(badarg);
-suffix_pattern([C | Name], C) ->
-    Name;
-suffix_pattern([_ | Name], C) ->
-    suffix_pattern(Name, C).
-

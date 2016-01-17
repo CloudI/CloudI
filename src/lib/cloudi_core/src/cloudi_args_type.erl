@@ -155,12 +155,19 @@ function_optional(Function, Arity) ->
 
 service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     when is_integer(PrefixC), is_integer(NameC) ->
-    try suffix_name_parse(Prefix, Name)
-    catch
-        exit:badarg ->
-            ?LOG_ERROR_SYNC("prefix service name mismatch: \"~s\" \"~s\"",
-                            [Prefix, Name]),
-            erlang:exit(badarg)
+    case lists:member($*, Name) of
+        true ->
+            ?LOG_ERROR_SYNC("service name is pattern: \"~s\"", [Name]),
+            erlang:exit(badarg);
+        false ->
+            case cloudi_x_trie:pattern_suffix(Prefix, Name) of
+                error ->
+                    ?LOG_ERROR_SYNC("prefix service name mismatch: "
+                                    "\"~s\" \"~s\"", [Prefix, Name]),
+                    erlang:exit(badarg);
+                Suffix ->
+                    Suffix
+            end
     end;
 service_name_suffix([PrefixC | _], Name)
     when is_integer(PrefixC) ->
@@ -177,12 +184,13 @@ service_name_suffix(Prefix, [NameC | _])
 
 service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
     when is_integer(PrefixC), is_integer(PatternC) ->
-    try suffix_pattern_parse(Prefix, Pattern)
-    catch
-        exit:badarg ->
+    case suffix_pattern_parse(Prefix, Pattern) of
+        error ->
             ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
                             "\"~s\" \"~s\"", [Prefix, Pattern]),
-            erlang:exit(badarg)
+            erlang:exit(badarg);
+        Suffix ->
+            Suffix
     end;
 service_name_pattern_suffix([PrefixC | _], Pattern)
     when is_integer(PrefixC) ->
@@ -229,40 +237,10 @@ function_required_pick_function([Arity | ArityL], Function, ArityOrder)
 function_required_pick_function(_, _, ArityOrder) ->
     erlang:exit({badarg, ArityOrder}).
 
-suffix_name_parse([], Name) ->
-    Name;
-suffix_name_parse([$*], Name) ->
-    case lists:member($*, Name) of
-        true ->
-            erlang:exit(badarg);
-        false ->
-            ""
-    end;
-suffix_name_parse([$*, C | Prefix], [H | Name]) ->
-    if
-        (C =:= $*) orelse (H =:= $*) ->
-            erlang:exit(badarg);
-        true ->
-            suffix_name_parse(Prefix, suffix_name_pattern(Name, C))
-    end;
-suffix_name_parse([C | Prefix], [C | Name]) ->
-    suffix_name_parse(Prefix, Name);
-suffix_name_parse([_ | _], _) ->
-    erlang:exit(badarg).
-
 suffix_pattern_parse([], Pattern) ->
     Pattern;
 suffix_pattern_parse([C | Prefix], [C | Pattern]) ->
     suffix_pattern_parse(Prefix, Pattern);
 suffix_pattern_parse([_ | _], _) ->
-    erlang:exit(badarg).
-
-suffix_name_pattern([], _) ->
-    erlang:exit(badarg);
-suffix_name_pattern([$* | _], _) ->
-    erlang:exit(badarg);
-suffix_name_pattern([C | Name], C) ->
-    Name;
-suffix_name_pattern([_ | Name], C) ->
-    suffix_name_pattern(Name, C).
+    error.
 

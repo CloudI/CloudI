@@ -20,7 +20,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%%
 %%% Redistribution and use in source and binary forms, with or without
@@ -55,8 +55,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2010-2013 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2010-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -99,6 +99,7 @@
          new/1,
          pattern_parse/2,
          pattern_parse/3,
+         pattern_suffix/2,
          prefix/3,
          size/1,
          store/2,
@@ -239,7 +240,6 @@ find_match_element_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
                     find_match_element_N(T, Key, WildValue, Node)
             end
     end.
-
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -909,6 +909,67 @@ pattern_parse(_, _, _, _, _) ->
     error.
 
 %%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a string based on the supplied wildcard pattern to return only the suffix after the pattern.===
+%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "**" is forbidden.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern_suffix(Pattern :: string(),
+                     L :: string()) ->
+    string() | 'error'.
+
+pattern_suffix([], []) ->
+    [];
+
+pattern_suffix([], [_ | _] = L) ->
+    L;
+
+pattern_suffix([_ | _], [$* | _]) ->
+    erlang:exit(badarg);
+
+pattern_suffix([$*], [_ | _]) ->
+    [];
+
+pattern_suffix([$*, $* | _], [_ | _]) ->
+    erlang:exit(badarg);
+
+pattern_suffix([$*, C | Pattern], [_ | T]) ->
+    pattern_suffix_pattern(Pattern, C, T);
+
+pattern_suffix([C | Pattern], [C | L]) ->
+    pattern_suffix(Pattern, L);
+
+pattern_suffix(_, _) ->
+    error.
+
+pattern_suffix_element(_, []) ->
+    error;
+
+pattern_suffix_element(C, [C | T]) ->
+    {ok, T};
+
+pattern_suffix_element(_, [$* | _]) ->
+    erlang:exit(badarg);
+
+pattern_suffix_element(C, [_ | T]) ->
+    pattern_suffix_element(C, T).
+
+pattern_suffix_pattern(Pattern, C, L) ->
+    case pattern_suffix_element(C, L) of
+        {ok, NewL} ->
+            case pattern_suffix(Pattern, NewL) of
+                error ->
+                    pattern_suffix_pattern(Pattern, C, NewL);
+                Success ->
+                    Success
+            end;
+        error ->
+            error
+    end.
+
+%%-------------------------------------------------------------------------
 %% @private
 %% @doc
 %% ===Regression test.===
@@ -1162,6 +1223,20 @@ test() ->
     error = trie:pattern_parse("aa*a*", "aaabb"),
     ["file.name"] = trie:pattern_parse("*.txt", "file.name.txt"),
     ["//"] = trie:pattern_parse("*/", "///"),
+    "/get" = trie:pattern_suffix("*.txt", "file.name.txt/get"),
+    "/get" = trie:pattern_suffix("*/", "///get"),
+    {ok, "/accounting/balances/fred",
+     empty} = trie:find_match("/accounting/balances/fred",
+                              trie:new(["/accounting/balances/*",
+                                        "/accounting/balances/fred"])),
+    {ok, "/permissions/fred/accounts/*",
+     empty} = trie:find_match("/permissions/fred/accounts/add",
+                              trie:new(["/permissions/*/accounts/*",
+                                        "/permissions/fred/accounts/*",
+                                        "/permissions/*/accounts/add",
+                                        "/permissions/fred/accounts/remove"])),
+    {ok,"*//get",empty} = trie:find_match("///get", trie:new(["*//get"])),
+    {ok,"*/",empty} = trie:find_match("///", trie:new(["*/"])),
     [] = trie:pattern_parse("aaabb", "aaabb"),
     {[], "aaabb"} = trie:pattern_parse("aaabb", "aaabb", with_suffix),
     false = trie:is_pattern("abcdef"),
@@ -1218,6 +1293,19 @@ wildcard_match_lists_valid([$* | _], _) ->
 wildcard_match_lists_valid([_ | L], Result) ->
     wildcard_match_lists_valid(L, Result).
 
+wildcard_match_lists_pattern(Pattern, C, L) ->
+    case wildcard_match_lists_element(C, L) of
+        {ok, NewL} ->
+            case wildcard_match_lists(Pattern, NewL) of
+                true ->
+                    true;
+                false ->
+                    wildcard_match_lists_pattern(Pattern, C, NewL)
+            end;
+        error ->
+            wildcard_match_lists_valid(L, false)
+    end.
+
 wildcard_match_lists([], []) ->
     true;
 
@@ -1230,17 +1318,12 @@ wildcard_match_lists([_ | _], [$* | _]) ->
 wildcard_match_lists([$*], [_ | L]) ->
     wildcard_match_lists_valid(L, true);
 
-wildcard_match_lists([$*, C | Match], [_ | L]) ->
+wildcard_match_lists([$*, C | Pattern], [_ | L]) ->
     true = C =/= $*,
-    case wildcard_match_lists_element(C, L) of
-        {ok, NewL} ->
-            wildcard_match_lists(Match, NewL);
-        error ->
-            wildcard_match_lists_valid(L, false)
-    end;
+    wildcard_match_lists_pattern(Pattern, C, L);
 
-wildcard_match_lists([C | Match], [C | L]) ->
-    wildcard_match_lists(Match, L);
+wildcard_match_lists([C | Pattern], [C | L]) ->
+    wildcard_match_lists(Pattern, L);
 
 wildcard_match_lists(_, L) ->
     wildcard_match_lists_valid(L, false).

@@ -8,6 +8,10 @@
       service initialization which can cause a CloudI startup failure
       when a service is misconfigured
     * Improve the debug log format of cloudi_service_http_client
+    * Fix cloudi_service_name:suffix/2
+    * Fix cloudi_args_type:service_name_suffix/2
+    * Fix cloudi_args_type:service_name_pattern_suffix/2
+    * Update trie
 
 2016-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
