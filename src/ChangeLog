@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-01-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add configuration argument http_clock_skew_max to
+      cloudi_service_filesystem for tolerating HTTP datetime differences
+      when checking the HTTP request headers
+      If-Modified-Since and If-Unmodified-Since
+      to determine the provided datetime is invalid
+      (default setting is 300 seconds)
+
 2016-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change Travis compilation to use 18.2.1 for the 18.x compilation

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -129,6 +129,7 @@
         % mcast_async. If a service name pattern is provided, it must match
         % at least one existing file path.
 -define(DEFAULT_NOTIFY_ON_START,          true). % send notify in init
+-define(DEFAULT_HTTP_CLOCK_SKEW_MAX,       300). % seconds
 -define(DEFAULT_USE_CONTENT_TYPES,        true). % see below:
         % Should the content-type ResponseInfo data be a guess based on
         % the file extension?
@@ -157,6 +158,7 @@
         files_size :: non_neg_integer(),
         refresh :: undefined | pos_integer(),
         cache :: undefined | pos_integer(),
+        http_clock_skew_max :: non_neg_integer() | undefined,
         use_http_get_suffix :: boolean(),
         use_content_disposition :: boolean(),
         read :: read_list_exact(),
@@ -345,12 +347,14 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {notify_one,                   ?DEFAULT_NOTIFY_ONE},
         {notify_all,                   ?DEFAULT_NOTIFY_ALL},
         {notify_on_start,              ?DEFAULT_NOTIFY_ON_START},
+        {http_clock_skew_max,          ?DEFAULT_HTTP_CLOCK_SKEW_MAX},
         {use_content_types,            ?DEFAULT_USE_CONTENT_TYPES},
         {use_content_disposition,      ?DEFAULT_USE_CONTENT_DISPOSITION},
         {use_http_get_suffix,          ?DEFAULT_USE_HTTP_GET_SUFFIX}],
     [DirectoryRaw, FilesSizeLimit0, Refresh, Cache0,
      ReadL0, WriteTruncateL, WriteAppendL, RedirectL,
      NotifyOneL, NotifyAllL, NotifyOnStart,
+     HTTPClockSkewMax,
      UseContentTypes, UseContentDisposition, UseHttpGetSuffix] =
         cloudi_proplists:take_values(Defaults, Args),
     true = is_list(DirectoryRaw),
@@ -379,6 +383,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_list(NotifyOneL),
     true = is_list(NotifyAllL),
     true = is_boolean(NotifyOnStart),
+    true = (is_integer(HTTPClockSkewMax) andalso
+            (HTTPClockSkewMax >= 0)) orelse
+           (HTTPClockSkewMax =:= undefined),
     true = is_boolean(UseContentTypes),
     true = (UseHttpGetSuffix =:= true) orelse
            ((UseHttpGetSuffix =:= false) andalso
@@ -640,6 +647,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 files_size = FilesSizeN,
                 refresh = Refresh,
                 cache = CacheN,
+                http_clock_skew_max = HTTPClockSkewMax,
                 read = ReadLN,
                 toggle = Toggle,
                 files = FilesN,
@@ -827,11 +835,13 @@ request_header(MTimeI, Contents, FileHeaders, RequestInfo,
     end;
 request_header(MTimeI, Contents, FileHeaders, RequestInfo,
                #state{cache = Cache,
+                      http_clock_skew_max = HTTPClockSkewMax,
                       use_http_get_suffix = true} = State) ->
     KeyValues = cloudi_request_info:key_value_parse(RequestInfo),
     NowTime = calendar:now_to_universal_time(os:timestamp()),
+    InvalidTime = invalid_time(NowTime, HTTPClockSkewMax),
     ETag = cache_header_etag(MTimeI),
-    case cache_status(ETag, KeyValues, MTimeI) of
+    case cache_status(ETag, KeyValues, MTimeI, InvalidTime) of
         200 ->
             case contents_ranges_read(ETag, KeyValues, MTimeI) of
                 {206, RangeList} ->
@@ -912,11 +922,13 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
     end;
 request_read(MTimeI, Contents, FileHeaders, RequestInfo,
              #state{cache = Cache,
+                    http_clock_skew_max = HTTPClockSkewMax,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     KeyValues = cloudi_request_info:key_value_parse(RequestInfo),
     NowTime = calendar:now_to_universal_time(os:timestamp()),
+    InvalidTime = invalid_time(NowTime, HTTPClockSkewMax),
     ETag = cache_header_etag(MTimeI),
-    case cache_status(ETag, KeyValues, MTimeI) of
+    case cache_status(ETag, KeyValues, MTimeI, InvalidTime) of
         200 ->
             if
                 UseHttpGetSuffix =:= true ->
@@ -1962,61 +1974,67 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
 read_file_info(FilePath) ->
     file:read_file_info(FilePath, [{time, universal}]).
 
-cache_status(ETag, KeyValues, {MTime, _}) ->
-    cache_status_0(ETag, KeyValues, MTime).
+cache_status(ETag, KeyValues, {MTime, _}, InvalidTime) ->
+    cache_status_0(ETag, KeyValues, MTime, InvalidTime).
 
-cache_status_0(ETag, KeyValues, MTime) ->
+cache_status_0(ETag, KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-none-match">>, KeyValues) of
         {ok, <<"*">>} ->
-            cache_status_1(ETag, KeyValues, MTime);
+            cache_status_1(ETag, KeyValues, MTime, InvalidTime);
         error ->
-            cache_status_1(ETag, KeyValues, MTime);
+            cache_status_1(ETag, KeyValues, MTime, InvalidTime);
         {ok, IfNoneMatch} ->
             case binary:match(IfNoneMatch, ETag) of
                 nomatch ->
-                    cache_status_1(ETag, KeyValues, MTime);
+                    cache_status_1(ETag, KeyValues, MTime, InvalidTime);
                 _ ->
                     304
             end
     end.
 
-cache_status_1(ETag, KeyValues, MTime) ->
+cache_status_1(ETag, KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-match">>, KeyValues) of
         {ok, <<"*">>} ->
-            cache_status_2(KeyValues, MTime);
+            cache_status_2(KeyValues, MTime, InvalidTime);
         error ->
-            cache_status_2(KeyValues, MTime);
+            cache_status_2(KeyValues, MTime, InvalidTime);
         {ok, IfMatch} ->
             case binary:match(IfMatch, ETag) of
                 nomatch ->
                     412;
                 _ ->
-                    cache_status_2(KeyValues, MTime)
+                    cache_status_2(KeyValues, MTime, InvalidTime)
             end
     end.
 
-cache_status_2(KeyValues, MTime) ->
+cache_status_2(KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-modified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
             case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
                 {error, _} ->
-                    cache_status_3(KeyValues, MTime);
-                DateTime when MTime > DateTime ->
+                    cache_status_3(KeyValues, MTime, InvalidTime);
+                DateTime
+                when (MTime > DateTime) orelse
+                     ((InvalidTime /= undefined) andalso
+                      (DateTime > InvalidTime)) ->
                     200;
                 _ ->
                     304
             end;
         error ->
-            cache_status_3(KeyValues, MTime)
+            cache_status_3(KeyValues, MTime, InvalidTime)
     end.
 
-cache_status_3(KeyValues, MTime) ->
+cache_status_3(KeyValues, MTime, InvalidTime) ->
     case cloudi_key_value:find(<<"if-unmodified-since">>, KeyValues) of
         {ok, DateTimeBinary} ->
             case cloudi_service_filesystem_parse:datetime(DateTimeBinary) of
                 {error, _} ->
                     200;
-                DateTime when MTime =< DateTime ->
+                DateTime
+                when (MTime =< DateTime) andalso
+                     ((InvalidTime =:= undefined) orelse
+                      (DateTime =< InvalidTime)) ->
                     412;
                 _ ->
                     200
@@ -2024,6 +2042,12 @@ cache_status_3(KeyValues, MTime) ->
         error ->
             200
     end.
+
+invalid_time(_, undefined) ->
+    undefined;
+invalid_time(NowTime, HTTPClockSkewMax) ->
+    calendar:gregorian_seconds_to_datetime(
+        calendar:datetime_to_gregorian_seconds(NowTime) + HTTPClockSkewMax).
 
 mtime_i_update({MTime, I}, MTime) ->
     {MTime, I + 1};
