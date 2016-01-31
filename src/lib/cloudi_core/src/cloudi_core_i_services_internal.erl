@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -280,6 +280,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
           duo_mode = DuoMode,
           info_pid_options = InfoPidOptions} = ConfigOptions, ID, Parent]) ->
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+    erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
     Dispatcher = self(),
     if
         GroupLeader =:= undefined ->
@@ -294,6 +295,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
         DuoMode =:= true ->
             proc_lib:spawn_opt(fun() ->
                 erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+                erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
                                               queued_word_size = WordSize,
                                               module = Module,

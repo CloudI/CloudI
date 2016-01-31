@@ -152,8 +152,9 @@
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
 
--define(SERVICE_ID_PDICT_KEY, cloudi_service). % all service processes
--define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger). % all logging processes
+-define(SERVICE_ID_PDICT_KEY,      cloudi_service).     % all service processes
+-define(SERVICE_FILE_PDICT_KEY,    cloudi_service_file).% all service processes
+-define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger).      % all logging processes
 
 % create the locally registered name for a cpg scope
 -define(SCOPE_DEFAULT, cpg_default_scope).

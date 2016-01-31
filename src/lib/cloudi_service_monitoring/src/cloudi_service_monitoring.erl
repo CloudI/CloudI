@@ -43,7 +43,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -78,8 +78,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).
@@ -186,6 +186,7 @@
 -record(state,
     {
         service :: pid(),
+        environment :: cloudi_environment:lookup(),
         driver :: driver() | undefined,
         erlang_state :: #erlang_state{},
         erlang_interval :: interval() | undefined,
@@ -578,11 +579,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = is_atom(hd(MetricPrefix)) andalso
            lists:all(fun is_atom/1, MetricPrefix),
     true = is_boolean(UseAspectsOnly),
+    EnvironmentLookup = cloudi_environment:lookup(),
     ProcessInfo0 = dict:new(),
     ProcessInfoN = cloudi_service_monitoring_cloudi:
                    services_init(Interval, ProcessInfo0,
                                  MetricPrefix ++ [services],
-                                 UseAspectsOnly, Driver),
+                                 UseAspectsOnly, Driver, EnvironmentLookup),
     % no binaries are stored within pqueue4, so using 1 for the word size works
     QueuedEmptySize = cloudi_x_erlang_term:byte_size(cloudi_x_pqueue4:new(), 1),
     ErlangState = erlang_init(ErlangMetricPrefix,
@@ -606,6 +608,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     end,
     ok = monitor_nodes(true, cloudi_x_cpg_app:listen_type()),
     {ok, #state{service = Service,
+                environment = EnvironmentLookup,
                 driver = Driver,
                 erlang_state = ErlangState,
                 erlang_interval = ErlangInterval,
@@ -627,6 +630,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
 
 cloudi_service_handle_info(cloudi_update,
                            #state{service = Service,
+                                  environment = EnvironmentLookup,
                                   driver = Driver,
                                   interval = Interval,
                                   metric_prefix = MetricPrefix,
@@ -656,7 +660,7 @@ cloudi_service_handle_info(cloudi_update,
             cloudi_service_monitoring_cloudi:
             services_update(ServicesOld, ServicesNew, ProcessInfo1,
                             QueuedEmptySize, MetricPrefix ++ [services],
-                            UseAspectsOnly, Driver);
+                            UseAspectsOnly, Driver, EnvironmentLookup);
         true ->
             {[], ProcessInfo1}
     end,

@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -288,6 +288,7 @@ init([Protocol, SocketPath,
          Protocol =:= udp;
          Protocol =:= local ->
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+    erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
     Dispatcher = self(),
     InitTimer = erlang:send_after(Timeout, Dispatcher,
                                   'cloudi_service_init_timeout'),

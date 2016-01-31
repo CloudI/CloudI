@@ -64,20 +64,22 @@
          aspect_terminate_before_external/0,
          services_state/1,
          basic_update/1,
-         services_init/5,
+         services_init/6,
          services_terminate/1,
-         services_update/7,
+         services_update/8,
          nodes_update/3]).
 
 -include("cloudi_service_monitoring.hrl").
 -include("cloudi_service_monitoring_cloudi.hrl").
 
+-type pid_object() :: {pid(), metric_name(), module()}.
+
 % monitoring config for aspects_init_after
 -define(ETS_CONFIG, cloudi_service_monitoring_cloudi).
-% service pid to service_id global lookup
--define(ETS_PID2ID, cloudi_service_monitoring_cloudi_pids).
-% aspect function ref to service_id global lookup
--define(ETS_REF2ID, cloudi_service_monitoring_cloudi_refs).
+% service pid to pid_object() global lookup
+-define(ETS_PID2METRIC, cloudi_service_monitoring_cloudi_pids).
+% aspect function ref to pid_object() global lookup
+-define(ETS_REF2METRIC, cloudi_service_monitoring_cloudi_refs).
 
 % timeout for getting state from a service process
 -define(SERVICE_PROCESS_TIMEOUT, 250). % milliseconds
@@ -96,8 +98,8 @@
 -record(service_data,
     {
         process_info :: dict_proxy(pid(), #process_info{}),
-        % modifications to ?ETS_PID2ID
-        ets_insert = [] :: list({pid(), metric_name(), module()}),
+        % modifications to ?ETS_PID2METRIC
+        ets_insert = [] :: list(pid_object()),
         ets_delete = [] :: list(pid()),
         % metrics data
         count_internal = 0 :: non_neg_integer(),
@@ -128,7 +130,7 @@
 %%%------------------------------------------------------------------------
 
 update_or_create(Service, Type, Name, Value, Options) ->
-    try ets:lookup(?ETS_PID2ID, Service) of
+    try ets:lookup(?ETS_PID2METRIC, Service) of
         [] ->
             {error, not_service};
         [{_, MetricPrefix, Driver}] ->
@@ -209,29 +211,32 @@ services_state(Timeout) ->
             {error, Reason}
     end.
 
-services_init(undefined, ProcessInfo0, _, _, _) ->
+services_init(undefined, ProcessInfo0, _, _, _, _) ->
     ProcessInfo0;
-services_init(Interval, ProcessInfo0, MetricPrefix, UseAspectsOnly, Driver) ->
+services_init(Interval, ProcessInfo0,
+              MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
     {ok, Services} = services_state(Interval * 1000),
     ets:new(?ETS_CONFIG,
-            [set, protected, named_table,
-             {read_concurrency, true}]),
-    true = ets:insert(?ETS_CONFIG, [{init, MetricPrefix, Driver}]),
-    ets:new(?ETS_PID2ID,
             [set, public, named_table,
              {read_concurrency, true}]),
-    ets:new(?ETS_REF2ID,
+    true = ets:insert(?ETS_CONFIG, [{init, MetricPrefix, Driver}]),
+    ets:new(?ETS_PID2METRIC,
+            [set, public, named_table,
+             {read_concurrency, true}]),
+    ets:new(?ETS_REF2METRIC,
             [set, public, named_table,
              {read_concurrency, true}]),
     {InsertsN,
-     ProcessInfoN} = cloudi_x_key2value:fold1(fun(ID, Pids, #service{}, A) ->
-        ServiceId = service_id(ID),
+     ProcessInfoN} = cloudi_x_key2value:fold1(fun(_ID, Pids,
+                                                  #service{} = Service, A) ->
+        ServiceMetricId = service_metric_id_from_service(Service,
+                                                         EnvironmentLookup),
         lists:foldl(fun(Pid, {Inserts1, ProcessInfo1}) ->
             Inserts2 = if
                 UseAspectsOnly =:= true ->
                     Inserts1;
                 UseAspectsOnly =:= false ->
-                    [{Pid, MetricPrefix ++ [ServiceId], Driver} | Inserts1]
+                    [{Pid, MetricPrefix ++ ServiceMetricId, Driver} | Inserts1]
             end,
             {Inserts2, process_info_store(Pid, ProcessInfo1)}
         end, A, Pids)
@@ -242,7 +247,7 @@ services_init(Interval, ProcessInfo0, MetricPrefix, UseAspectsOnly, Driver) ->
             % service pid object to be used for service metrics
             ok;
         UseAspectsOnly =:= false ->
-            true = ets:insert(?ETS_PID2ID, InsertsN)
+            true = ets:insert(?ETS_PID2METRIC, InsertsN)
     end,
     ProcessInfoN.
 
@@ -250,68 +255,71 @@ services_terminate(undefined) ->
     ok;
 services_terminate(_) ->
     true = ets:delete(?ETS_CONFIG),
-    true = ets:delete(?ETS_PID2ID),
-    true = ets:delete(?ETS_REF2ID),
+    true = ets:delete(?ETS_PID2METRIC),
+    true = ets:delete(?ETS_REF2METRIC),
     ok.
 
 services_update(undefined, ServicesNew, ProcessInfo0, QueuedEmptySize,
-                MetricPrefix, UseAspectsOnly, Driver) ->
+                MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
     ChangesN = cloudi_x_key2value:
-               fold1(fun(ID, PidsNew,
+               fold1(fun(_ID, PidsNew,
                          #service{} = Service,
                          #service_data{process_info = ProcessInfo1,
                                        ets_insert = Inserts0,
                                        metrics = Metrics0} = Changes1) ->
-        ServiceId = service_id(ID),
-        {Inserts3,
-         ProcessInfo3} = lists:foldl(fun(PidNew, {Inserts1, ProcessInfo2}) ->
-            Inserts2 = if
-                UseAspectsOnly =:= true ->
-                    Inserts1;
-                UseAspectsOnly =:= false ->
-                    [{PidNew, MetricPrefix ++ [ServiceId], Driver} | Inserts1]
-            end,
-            {Inserts2, process_info_store(PidNew, ProcessInfo2)}
-        end, {Inserts0, ProcessInfo1}, PidsNew),
-        {Metrics1,
-         ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
-                                         QueuedEmptySize,
-                                         ServicesNew, [ServiceId]),
-        services_accumulate(Service,
-                            Changes1#service_data{process_info = ProcessInfo4,
-                                                  ets_insert = Inserts3,
-                                                  metrics = Metrics1 ++
-                                                            Metrics0})
-    end, #service_data{process_info = ProcessInfo0}, ServicesNew),
-    #service_data{process_info = ProcessInfoN,
-                  ets_insert = InsertsN,
-                  count_internal = CountInternal,
-                  count_external = CountExternal,
-                  concurrency_internal = ConcurrencyInternal,
-                  concurrency_external = ConcurrencyExternal,
-                  scopes = Scopes,
-                  metrics = MetricsN} = ChangesN,
-    if
-        UseAspectsOnly =:= true ->
-            ok;
-        UseAspectsOnly =:= false ->
-            true = ets:delete_all_objects(?ETS_PID2ID),
-            true = ets:insert(?ETS_PID2ID, InsertsN)
-    end,
-    {services_metrics(CountInternal, CountExternal,
-                      ConcurrencyInternal, ConcurrencyExternal,
-                      Scopes) ++ MetricsN,
-     ProcessInfoN};
-services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
-                MetricPrefix, UseAspectsOnly, Driver) ->
-    ChangesN = cloudi_x_key2value:
-               fold1(fun(ID, PidsNew,
-                         #service{} = Service,
-                         #service_data{process_info = ProcessInfo1,
-                                       ets_insert = Inserts0,
-                                       ets_delete = Deletes0,
-                                       metrics = Metrics0} = Changes1) ->
-        ServiceId = service_id(ID),
+            ServiceMetricId = service_metric_id_from_service(Service,
+                                                             EnvironmentLookup),
+            {Inserts3,
+             ProcessInfo3} = lists:foldl(fun(PidNew, {Inserts1, ProcessInfo2}) ->
+                Inserts2 = if
+                    UseAspectsOnly =:= true ->
+                        Inserts1;
+                    UseAspectsOnly =:= false ->
+                        [{PidNew, MetricPrefix ++ ServiceMetricId, Driver} |
+                         Inserts1]
+                end,
+                {Inserts2, process_info_store(PidNew, ProcessInfo2)}
+            end, {Inserts0, ProcessInfo1}, PidsNew),
+            {Metrics1,
+             ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
+                                             QueuedEmptySize,
+                                             ServicesNew, ServiceMetricId),
+            services_accumulate(Service,
+                                Changes1#service_data{process_info = ProcessInfo4,
+                                                      ets_insert = Inserts3,
+                                                      metrics = Metrics1 ++
+                                                                Metrics0})
+        end, #service_data{process_info = ProcessInfo0}, ServicesNew),
+        #service_data{process_info = ProcessInfoN,
+                      ets_insert = InsertsN,
+                      count_internal = CountInternal,
+                      count_external = CountExternal,
+                      concurrency_internal = ConcurrencyInternal,
+                      concurrency_external = ConcurrencyExternal,
+                      scopes = Scopes,
+                      metrics = MetricsN} = ChangesN,
+        if
+            UseAspectsOnly =:= true ->
+                ok;
+            UseAspectsOnly =:= false ->
+                true = ets:delete_all_objects(?ETS_PID2METRIC),
+                true = ets:insert(?ETS_PID2METRIC, InsertsN)
+        end,
+        {services_metrics(CountInternal, CountExternal,
+                          ConcurrencyInternal, ConcurrencyExternal,
+                          Scopes) ++ MetricsN,
+         ProcessInfoN};
+    services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
+                    MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
+        ChangesN = cloudi_x_key2value:
+                   fold1(fun(ID, PidsNew,
+                             #service{} = Service,
+                             #service_data{process_info = ProcessInfo1,
+                                           ets_insert = Inserts0,
+                                           ets_delete = Deletes0,
+                                           metrics = Metrics0} = Changes1) ->
+            ServiceMetricId = service_metric_id_from_service(Service,
+                                                         EnvironmentLookup),
         Changes2 = case cloudi_x_key2value:find1(ID, ServicesOld) of
             {ok, {PidsNew, #service{}}} ->
                 ProcessInfo3 = lists:foldl(fun(PidNew, ProcessInfo2) ->
@@ -330,7 +338,7 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
                                 UseAspectsOnly =:= true ->
                                     Inserts1;
                                 UseAspectsOnly =:= false ->
-                                    [{PidNew, MetricPrefix ++ [ServiceId],
+                                    [{PidNew, MetricPrefix ++ ServiceMetricId,
                                       Driver} | Inserts1]
                             end
                     end,
@@ -364,7 +372,7 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
                         UseAspectsOnly =:= true ->
                             Inserts1;
                         UseAspectsOnly =:= false ->
-                            [{PidNew, MetricPrefix ++ [ServiceId],
+                            [{PidNew, MetricPrefix ++ ServiceMetricId,
                               Driver} | Inserts1]
                     end,
                     {Inserts2, process_info_store(PidNew, ProcessInfo2)}
@@ -376,7 +384,7 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
         {Metrics1,
          ProcessInfo7} = service_metrics(PidsNew, ProcessInfo6, Service,
                                          QueuedEmptySize,
-                                         ServicesNew, [ServiceId]),
+                                         ServicesNew, ServiceMetricId),
         services_accumulate(Service,
                             Changes2#service_data{process_info = ProcessInfo7,
                                                   metrics = Metrics1 ++
@@ -395,8 +403,8 @@ services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
         UseAspectsOnly =:= true ->
             ok;
         UseAspectsOnly =:= false ->
-            true = ets:insert(?ETS_PID2ID, InsertsN),
-            _ = ets:select_delete(?ETS_PID2ID,
+            true = ets:insert(?ETS_PID2METRIC, InsertsN),
+            _ = ets:select_delete(?ETS_PID2METRIC,
                                   [{{PidOld, '_', '_'},[],[true]}
                                    || PidOld <- DeletesN])
     end,
@@ -844,20 +852,13 @@ aspect_init() ->
             undefined;
         [{init, MetricPrefix, Driver}] ->
             Pid = self(),
-            case erlang:process_info(Pid, dictionary) of
-                {dictionary, Dictionary} ->
-                    case lists:keyfind(?SERVICE_ID_PDICT_KEY, 1, Dictionary) of
-                        false ->
-                            undefined;
-                        {_, ID} ->
-                            ServiceId = service_id(ID),
-                            PidObject = {Pid,
-                                         MetricPrefix ++ [ServiceId], Driver},
-                            true = ets:insert(?ETS_PID2ID, PidObject),
-                            PidObject
-                    end;
+            case service_metric_id_from_pid(Pid) of
                 undefined ->
-                    undefined
+                    undefined;
+                ServiceMetricId ->
+                    PidObject = {Pid, MetricPrefix ++ ServiceMetricId, Driver},
+                    true = ets:insert(?ETS_PID2METRIC, PidObject),
+                    PidObject
             end
     catch
         error:badarg ->
@@ -865,18 +866,18 @@ aspect_init() ->
     end.
 
 aspect_pid_to_service_id(Pid) ->
-    try ets:lookup(?ETS_PID2ID, Pid) of
+    try ets:lookup(?ETS_PID2METRIC, Pid) of
         [] ->
             undefined;
         [{_, MetricPrefix, _}] ->
-            lists:last(MetricPrefix)
+            service_metric_id_from_metric_prefix(MetricPrefix)
     catch
         error:badarg ->
             undefined
     end.
 
 aspect_pid_to_object() ->
-    try ets:lookup(?ETS_PID2ID, self()) of
+    try ets:lookup(?ETS_PID2METRIC, self()) of
         [] ->
             undefined;
         [PidObject] ->
@@ -888,14 +889,14 @@ aspect_pid_to_object() ->
 
 aspect_ref_to_object(Ref, Dispatcher)
     when is_reference(Ref) ->
-    try ets:lookup(?ETS_REF2ID, Ref) of
+    try ets:lookup(?ETS_REF2METRIC, Ref) of
         [] ->
-            case ets:lookup(?ETS_PID2ID, cloudi_service:self(Dispatcher)) of
+            case ets:lookup(?ETS_PID2METRIC, cloudi_service:self(Dispatcher)) of
                 [] ->
                     undefined;
                 [PidObject] ->
                     RefObject = {Ref, PidObject},
-                    true = ets:insert(?ETS_REF2ID, RefObject),
+                    true = ets:insert(?ETS_REF2METRIC, RefObject),
                     PidObject
             end;
         [{Ref, PidObject}] ->
@@ -936,8 +937,9 @@ aspect_request_before_internal_f(Ref) ->
                     undefined ->
                         update(spiral, MetricPrefix ++ [request, nonservice],
                                1, Driver);
-                    ServiceId ->
-                        update(spiral, MetricPrefix ++ [request, ServiceId],
+                    ServiceMetricId ->
+                        update(spiral, MetricPrefix ++ [request |
+                                                        ServiceMetricId],
                                1, Driver)
                 end;
             undefined ->
@@ -955,8 +957,9 @@ aspect_request_before_external_f() ->
                     undefined ->
                         update(spiral, MetricPrefix ++ [request, nonservice],
                                1, Driver);
-                    ServiceId ->
-                        update(spiral, MetricPrefix ++ [request, ServiceId],
+                    ServiceMetricId ->
+                        update(spiral, MetricPrefix ++ [request |
+                                                        ServiceMetricId],
                                1, Driver)
                 end;
             undefined ->
@@ -1035,8 +1038,104 @@ aspect_terminate_before_external_f() ->
         {ok, State}
     end.
 
-service_id(ID) ->
-    cloudi_x_uuid:uuid_to_string(ID, list_nodash).
+service_metric_id_from_service(#service{service_m = cloudi_core_i_spawn,
+                                        service_f = start_internal,
+                                        service_a = [_, Module,
+                                                     _, _, _, _, _, _,
+                                                     _, _, _, _, ID]},
+                               _) ->
+    service_metric_id(Module, ID);
+service_metric_id_from_service(#service{service_m = cloudi_core_i_spawn,
+                                        service_f = start_external,
+                                        service_a = [_, FileNameEnv,
+                                                     _, _, _, _, _, _, _, _,
+                                                     _, _, _, _, _, ID]},
+                               EnvironmentLookup) ->
+    FileName = cloudi_environment:transform(FileNameEnv, EnvironmentLookup),
+    service_metric_id(FileName, ID).
+
+service_metric_id_from_pid(Pid) ->
+    case erlang:process_info(Pid, dictionary) of
+        {dictionary, Dictionary} ->
+            case lists:keyfind(?SERVICE_ID_PDICT_KEY, 1,
+                               Dictionary) of
+                false ->
+                    undefined;
+                {_, ID} ->
+                    case lists:keyfind(?SERVICE_FILE_PDICT_KEY, 1,
+                                       Dictionary) of
+                        false ->
+                            undefined;
+                        {_, FileName} ->
+                            service_metric_id(FileName, ID)
+                    end
+            end;
+        undefined ->
+            undefined
+    end.
+
+service_metric_id_from_metric_prefix(MetricPrefix) ->
+    [Index, MetricIdName, TypeChar | _] = lists:reverse(MetricPrefix),
+    [TypeChar, MetricIdName, Index].
+
+service_metric_id(FileName, ID)
+    when is_atom(FileName) ->
+    ["i",
+     service_metric_id_name_format(FileName),
+     service_metric_id_index(internal, FileName, ID)];
+service_metric_id(FileName, ID)
+    when is_list(FileName) ->
+    ["e",
+     service_metric_id_name_format(FileName),
+     service_metric_id_index(external, FileName, ID)].
+
+service_metric_id_name_format(FileName) ->
+    "_" ++ service_metric_id_name(FileName) ++ "_".
+
+service_metric_id_name(FileName)
+    when is_atom(FileName) ->
+    service_metric_id_name_sanitize(erlang:atom_to_list(FileName));
+service_metric_id_name(FileName)
+    when is_list(FileName) ->
+    service_metric_id_name_sanitize(filename:basename(FileName)).
+
+service_metric_id_name_sanitize(Name) ->
+    service_metric_id_name_sanitize(Name, []).
+
+service_metric_id_name_sanitize([], Name) ->
+    lists:reverse(Name);
+service_metric_id_name_sanitize([H | T], Name) ->
+    if
+        (H >= $a andalso H =< $z) orelse
+        (H >= $A andalso H =< $Z) orelse
+        (H >= $0 andalso H =< $9) orelse
+        (H == $_) ->
+            service_metric_id_name_sanitize(T, [H | Name]);
+        true ->
+            service_metric_id_name_sanitize(T, Name)
+    end.
+
+service_metric_id_index(Type, FileName, ID) ->
+    Key = {Type, FileName},
+    Count = try ets:lookup(?ETS_CONFIG, Key) of
+        [] ->
+            true = ets:insert(?ETS_CONFIG, {Key, [ID]}),
+            1;
+        [{_, IDList}] ->
+            case cloudi_lists:index(ID, IDList) of
+                undefined ->
+                    IDListNew = lists:umerge(IDList, [ID]),
+                    true = ets:insert(?ETS_CONFIG, {Key, IDListNew}),
+                    cloudi_lists:index(ID, IDListNew);
+                CountValue ->
+                    CountValue
+            end
+                
+    catch
+        error:badarg ->
+            1
+    end,
+    erlang:integer_to_list(Count - 1).
 
 update(Type, Name, Value, Driver) ->
     cloudi_service_monitoring:update(Type, Name, Value, Driver).

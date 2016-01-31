@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,21 +43,44 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2009-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([itera/3, itera2/4,
+-export([index/2,
+         itera/3, itera2/4,
          delete_checked/2, delete_all/2,
          take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find the index of the first occurrence of an item within a list.===
+%% The integer index returned is 1-based.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec index(Item :: any(),
+            L :: list()) ->
+    undefined | pos_integer().
+
+index(Item, L)
+    when is_list(L) ->
+    index(Item, L, 1).
+
+index(_, [], _) ->
+    undefined;
+index(Item, [Item | _], I) ->
+    I;
+index(Item, [_ | T], I) ->
+    index(Item, T, I + 1).
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -22,6 +22,7 @@
 
 % definitions copied from cloudi_core_i_constants.hrl
 -define(SERVICE_ID_PDICT_KEY, cloudi_service).
+-define(SERVICE_FILE_PDICT_KEY, cloudi_service_file).
 -define(SCOPE_DEFAULT, cpg_default_scope).
 -define(SCOPE_CUSTOM_PREFIX, "cloudi_x_cpg_x_").
 -define(SCOPE_FORMAT(Name),
