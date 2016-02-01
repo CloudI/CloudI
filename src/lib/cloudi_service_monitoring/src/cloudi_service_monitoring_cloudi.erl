@@ -1081,16 +1081,13 @@ service_metric_id_from_metric_prefix(MetricPrefix) ->
 service_metric_id(FileName, ID)
     when is_atom(FileName) ->
     ["i",
-     service_metric_id_name_format(FileName),
+     service_metric_id_name(FileName),
      service_metric_id_index(internal, FileName, ID)];
 service_metric_id(FileName, ID)
     when is_list(FileName) ->
     ["e",
-     service_metric_id_name_format(FileName),
+     service_metric_id_name(FileName),
      service_metric_id_index(external, FileName, ID)].
-
-service_metric_id_name_format(FileName) ->
-    "_" ++ service_metric_id_name(FileName) ++ "_".
 
 service_metric_id_name(FileName)
     when is_atom(FileName) ->

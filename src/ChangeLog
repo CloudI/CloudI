@@ -1,11 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Minor fixes for cloudi_service monitoring
+
 2016-01-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the service indentifier used in metric names by
       cloudi_service_monitoring from the hexadecimal ServiceId UUID to
-      TYPE._FILENAME_.INDEX
+      TYPE.FILENAME.INDEX
         * TYPE is "e" for external services and "i" for internal services
         * FILENAME is the executable used for external services and the
           service module for internal services
