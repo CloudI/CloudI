@@ -12,7 +12,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_trans_id).
@@ -59,6 +59,7 @@
          datetime/2,
          from_string/1,
          increment/1,
+         microseconds/1,
          to_string/1,
          to_string/2]).
 
@@ -116,6 +117,22 @@ from_string(String) ->
 
 increment(TransId) ->
     cloudi_x_uuid:increment(TransId).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Microseconds since the UNIX epoch.===
+%% The integer value returned is always increasing for each service process
+%% that created the TransId (with the service process uniquely represented
+%% in the node_id section of the v1 UUID).
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds(TransId :: cloudi_x_uuid:cloudi_x_uuid()) ->
+    non_neg_integer().
+
+microseconds(TransId) ->
+    cloudi_x_uuid:get_v1_time(TransId).
 
 %%-------------------------------------------------------------------------
 %% @doc

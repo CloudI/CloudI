@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -54,6 +54,7 @@
 -export([timestamp/0,
          seconds/0,
          milliseconds/0,
+         microseconds/0,
          seconds_filter/3]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -110,6 +111,22 @@ milliseconds() ->
 milliseconds() ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
     MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Microseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+microseconds() ->
+    erlang:system_time(micro_seconds).
+-else.
+microseconds() ->
+    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
+    MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
 -endif.
 
 %%-------------------------------------------------------------------------

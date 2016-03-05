@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_trans_id:microseconds/1 and cloudi_timestamp:microseconds/0
+      (using cloudi_trans_id:microseconds/1 is preferred in a CloudI service
+       since the time value is always increasing within a service process
+       and the function call is more efficient)
+    * Add to cloudi_service_monitoring doc
+
 2016-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Minor fixes for cloudi_service monitoring

@@ -230,7 +230,7 @@ update_or_create(Service, Type, Name, Value) ->
 %% Must be called from a service process.  Use cloudi_service:self/1
 %% to get the service process.  The option service_metric determines
 %% whether the cloudi_service_monitoring service metric prefix is used
-%% (which includes the service id).
+%% (which includes the service id, service_metric defaults to false).
 %% @end
 %%-------------------------------------------------------------------------
 
