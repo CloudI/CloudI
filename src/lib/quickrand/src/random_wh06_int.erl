@@ -1,3 +1,6 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
 %% Modified version of random module
 %% to use Wichmann-Hill algorithm published on 2006
 %% which succeeds the old AS183 algorithm in 1982.
@@ -68,19 +71,26 @@
 %%  1> math:log(21267638781707063560975648195455661513) / math:log(2).
 %%
 
--export([seed/0, seed/1, seed/4,
+-export([seed0/0, seed/0, seed/1, seed/4,
          uniform/0, uniform/1,
-         uniform_s/1, uniform_s/2, seed0/0,
+         uniform_s/1, uniform_s/2,
          next_sequence/1]).
+
+-define(PRIME1, 2147483579).
+-define(PRIME2, 2147483543).
+-define(PRIME3, 2147483423).
+-define(PRIME4, 2147483123).
+
+-define(SEED_DICT, random_wh06_seed).
 
 %%-----------------------------------------------------------------------
 %% The type of the state
 
--type ran() :: {integer(), integer(), integer(), integer()}.
+-type seed() :: {integer(), integer(), integer(), integer()}.
 
 %%-----------------------------------------------------------------------
 
--spec seed0() -> ran().
+-spec seed0() -> seed().
 
 seed0() ->
     {123456789, 345678901, 567890123, 789012345}.
@@ -88,7 +98,7 @@ seed0() ->
 %% seed()
 %%  Seed random number generation with default values
 
--spec seed() -> ran().
+-spec seed() -> seed().
 
 seed() ->
     reseed(seed0()).
@@ -96,7 +106,8 @@ seed() ->
 %% seed({A1, A2, A3, A4}) 
 %%  Seed random number generation 
 
--spec seed({integer(), integer(), integer(), integer()}) -> 'undefined' | ran().
+-spec seed({pos_integer(), pos_integer(), pos_integer(), pos_integer()}) ->
+    'undefined' | seed().
 
 seed({A1, A2, A3, A4}) ->
     seed(A1, A2, A3, A4).
@@ -104,20 +115,22 @@ seed({A1, A2, A3, A4}) ->
 %% seed(A1, A2, A3, A4) 
 %%  Seed random number generation 
 
--spec seed(integer(), integer(), integer(), integer()) -> 'undefined' | ran().
+-spec seed(pos_integer(), pos_integer(), pos_integer(), pos_integer()) ->
+    'undefined' | seed().
 
-%% zero is prohibited for each seed element
-%% (by Richard O'Keefe)
 seed(A1, A2, A3, A4)
-    when A1 /= 0, A2 /= 0, A3 /= 0, A4 /= 0,
-         is_integer(A1), is_integer(A2), is_integer(A3), is_integer(A4) ->
-    put(random_wh06_seed,
-        {abs(A1) rem 2147483579,
-         abs(A2) rem 2147483543,
-         abs(A3) rem 2147483423,
-         abs(A4) rem 2147483123}).
+    when is_integer(A1), A1 > 0,
+         is_integer(A2), A2 > 0,
+         is_integer(A3), A3 > 0,
+         is_integer(A4), A4 > 0 ->
+    put(?SEED_DICT,
+        {A1 rem ?PRIME1,
+         A2 rem ?PRIME2,
+         A3 rem ?PRIME3,
+         A4 rem ?PRIME4}).
 
--spec reseed(ran()) -> ran().
+-spec reseed(seed()) ->
+    seed().
 
 reseed({A1, A2, A3, A4}) ->
     case seed(A1, A2, A3, A4) of
@@ -129,27 +142,26 @@ reseed({A1, A2, A3, A4}) ->
 %%  Returns a random integer between
 %%  0 and 21267638781707063560975648195455661512.
 
--spec uniform() -> integer().
+-spec uniform() -> non_neg_integer().
 
 uniform() ->
-    {A1, A2, A3, A4} = case get(random_wh06_seed) of
+    {A1, A2, A3, A4} = case get(?SEED_DICT) of
                            undefined -> seed0();
                            Tuple -> Tuple
                        end,
 
-    B1 = (11600 * A1) rem 2147483579,
-    B2 = (47003 * A2) rem 2147483543,
-    B3 = (23000 * A3) rem 2147483423,
-    B4 = (33000 * A4) rem 2147483123,
+    B1 = (11600 * A1) rem ?PRIME1,
+    B2 = (47003 * A2) rem ?PRIME2,
+    B3 = (23000 * A3) rem ?PRIME3,
+    B4 = (33000 * A4) rem ?PRIME4,
 
-    put(random_wh06_seed, {B1, B2, B3, B4}),
+    put(?SEED_DICT, {B1, B2, B3, B4}),
 
     I = ((B1 * 9903516371291919229607132747) +
          (B2 * 9903516537312557910938853791) +
          (B3 * 9903517090714727049595319831) +
          (B4 * 9903518474220420479167438931))
         rem 21267638781707063560975648195455661513,
-
     I.
 
 %% uniform(N) -> I
@@ -165,19 +177,21 @@ uniform(N)
 
 %%% Functional versions
 
-%% uniform_s(State) -> {F, NewState}
-%%  Returns a random integer F, between
+%% uniform_s(State) -> {I, NewState}
+%%  Returns a random integer I, between
 %%  0 and 21267638781707063560975648195455661512 (inclusive).
 
--spec uniform_s(ran()) -> {integer(), ran()}.
+-spec uniform_s(seed()) -> {non_neg_integer(), seed()}.
 
 uniform_s({A1, A2, A3, A4})
-    when A1 /= 0, A2 /= 0, A3 /= 0, A4 /= 0,
-         is_integer(A1), is_integer(A2), is_integer(A3), is_integer(A4) ->
-    B1 = (11600 * A1) rem 2147483579,
-    B2 = (47003 * A2) rem 2147483543,
-    B3 = (23000 * A3) rem 2147483423,
-    B4 = (33000 * A4) rem 2147483123,
+    when is_integer(A1), A1 > 0,
+         is_integer(A2), A2 > 0,
+         is_integer(A3), A3 > 0,
+         is_integer(A4), A4 > 0 ->
+    B1 = (11600 * A1) rem ?PRIME1,
+    B2 = (47003 * A2) rem ?PRIME2,
+    B3 = (23000 * A3) rem ?PRIME3,
+    B4 = (33000 * A4) rem ?PRIME4,
 
     I = ((B1 * 9903516371291919229607132747) +
          (B2 * 9903516537312557910938853791) +
@@ -192,7 +206,7 @@ uniform_s({A1, A2, A3, A4})
 %%  uniform(N) returns a random integer
 %%  between 1 and N.
 
--spec uniform_s(pos_integer(), ran()) -> {integer(), ran()}.
+-spec uniform_s(pos_integer(), seed()) -> {pos_integer(), seed()}.
 
 uniform_s(N, State0)
     when is_integer(N), N > 1, N =< 21267638781707063560975648195455661513 ->
@@ -201,14 +215,16 @@ uniform_s(N, State0)
 
 %% generating another seed for multiple sequences
 
--spec next_sequence(ran()) -> ran().
+-spec next_sequence(seed()) -> seed().
 
 next_sequence({A1, A2, A3, A4})
-    when A1 /= 0, A2 /= 0, A3 /= 0, A4 /= 0,
-         is_integer(A1), is_integer(A2), is_integer(A3), is_integer(A4) ->
-    B1 = (11600 * A1) rem 2147483579,
-    B2 = (47003 * A2) rem 2147483543,
-    B3 = (23000 * A3) rem 2147483423,
-    B4 = (33000 * A4) rem 2147483123,
+    when is_integer(A1), A1 > 0,
+         is_integer(A2), A2 > 0,
+         is_integer(A3), A3 > 0,
+         is_integer(A4), A4 > 0 ->
+    B1 = (11600 * A1) rem ?PRIME1,
+    B2 = (47003 * A2) rem ?PRIME2,
+    B3 = (23000 * A3) rem ?PRIME3,
+    B4 = (33000 * A4) rem ?PRIME4,
     {B1, B2, B3, B4}.
 

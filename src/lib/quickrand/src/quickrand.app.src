@@ -1,8 +1,16 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
 {application, quickrand,
   [{description, "Quick Random Number Generation"},
    {vsn, "1.5.1"},
-   {modules, [quickrand, random_wh06_int]},
+   {modules, [
+        quickrand,
+        random_wh82,
+        random_wh06_int]},
    {registered, []},
-   {applications, [crypto, stdlib, kernel]},
-   {start_phases, []}]}.
+   {applications, [
+        crypto,
+        stdlib,
+        kernel]}]}.
 

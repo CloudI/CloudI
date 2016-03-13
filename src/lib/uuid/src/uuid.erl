@@ -19,7 +19,7 @@
 %%%
 %%% BSD LICENSE
 %%%
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%%
 %%% Redistribution and use in source and binary forms, with or without
@@ -54,8 +54,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -78,8 +78,6 @@
          get_v4/0,
          get_v4/1,
          get_v4_urandom/0,
-         get_v4_urandom_bigint/0,
-         get_v4_urandom_native/0,
          is_v4/1,
          get_v5/1,
          get_v5/2,
@@ -101,6 +99,7 @@
 -ifdef(ERLANG_OTP_VERSION_17).
 -define(TIMESTAMP_ERLANG_NOW, true).
 -else.
+-define(ERLANG_OTP_VERSION_18_FEATURES, true).
 -endif.
 -endif.
 
@@ -229,7 +228,7 @@ new(Pid, Options)
     PidByte2 = PidID2 bxor PidSR3,
     PidByte3 = PidID3 bxor PidSR2,
     PidByte4 = PidID4 bxor PidSR1,
-    ClockSeq = random:uniform(16384) - 1,
+    ClockSeq = pseudo_random(16384) - 1,
     TimestampTypeInternal = if
         TimestampType =:= os ->
             os;
@@ -603,77 +602,6 @@ get_v4_urandom() ->
       Rand2:12,
       1:1, 0:1,            % RFC 4122 variant bits
       Rand3:62>>.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Get a v4 UUID (using Wichmann-Hill 1982).===
-%% random:uniform/1 repeats every 2.78e13
-%% (see B.A. Wichmann and I.D.Hill, in
-%%  'An efficient and portable pseudo-random number generator',
-%%  Journal of Applied Statistics. AS183. 1982, or Byte March 1987)
-%% a single random:uniform/1 call can provide a maximum of 45 bits
-%% (currently this is not significantly faster
-%%  because multiple function calls are necessary)
-%%
-%% explain the 45 bits of randomness:
-%%  random:uniform/0 code:
-%%   B1 = (A1*171) rem 30269,
-%%   B2 = (A2*172) rem 30307,
-%%   B3 = (A3*170) rem 30323,
-%%   put(random_seed, {B1,B2,B3}),
-%%   R = A1/30269 + A2/30307 + A3/30323,
-%%   R - trunc(R).
-%%
-%%  {B1, B2, B3} becomes the next seed value {A1, A2, A3}, so:
-%%    R = (918999161 * A1 + 917846887 * A2 + 917362583 * A3) / 27817185604309
-%%  Whatever the values for A1, A2, and A3,
-%%  (918999161 * A1 + 917846887 * A2 + 917362583 * A3) can not exceed
-%%  27817185604309 (30269 * 30307 * 30323) because of the previous modulus.
-%%  So, random:uniform/1 is unable to uniformly sample numbers beyond
-%%  a N of 27817185604309. The bits required to represent 27817185604309:
-%%   1> (math:log(27817185604309) / math:log(2)) + 1.
-%%   45.6610416965467
-%%
-%% @end
-%%-------------------------------------------------------------------------
-
--spec get_v4_urandom_bigint() ->
-    uuid().
-
-get_v4_urandom_bigint() ->
-    Rand1 = random:uniform(2199023255552) - 1, % random 41 bits
-    Rand2 = random:uniform(2199023255552) - 1, % random 41 bits
-    Rand3 = random:uniform(1099511627776) - 1, % random 40 bits
-    <<Rand2a:7, Rand2b:12, Rand2c:22>> = <<Rand2:41>>,
-    <<Rand1:41, Rand2a:7,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      Rand2b:12,
-      1:1, 0:1,            % RFC 4122 variant bits
-      Rand2c:22, Rand3:40>>.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Get a v4 UUID (using Wichmann-Hill 1982).===
-%% Attempt to only use native integers (Erlang limits integers to 27 bits
-%% before using bigints) to investigate the speed when using HiPE.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec get_v4_urandom_native() ->
-    uuid().
-
-get_v4_urandom_native() ->
-    Rand1 = random:uniform(134217728) - 1, % random 27 bits
-    Rand2 = random:uniform(2097152) - 1,   % random 21 bits
-    Rand3 = random:uniform(1048576) - 1,   % random 20 bits
-    Rand4 = random:uniform(134217728) - 1, % random 27 bits
-    Rand5 = random:uniform(134217728) - 1, % random 27 bits
-    <<Rand3a:12, Rand3b:8>> = <<Rand3:20>>,
-    <<Rand1:27, Rand2:21,
-      0:1, 1:1, 0:1, 0:1,  % version 4 bits
-      Rand3a:12,
-      1:1, 0:1,            % RFC 4122 variant bits
-      Rand3b:8, Rand4:27, Rand5:27>>.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1146,6 +1074,19 @@ test() ->
     V1uuid4timeA = uuid:get_v1_time(V1uuid4),
     true = (V1uuid4timeA < V1uuid4timeB) and
            ((V1uuid4timeA + 1000) > V1uuid4timeB),
+    V1State0 = uuid:new(self()),
+    {V1uuid5,  V1State1} = uuid:get_v1(V1State0),
+    {V1uuid6,  V1State2} = uuid:get_v1(V1State1),
+    {V1uuid7,  V1State3} = uuid:get_v1(V1State2),
+    {V1uuid8,  V1State4} = uuid:get_v1(V1State3),
+    {V1uuid9,  V1State5} = uuid:get_v1(V1State4),
+    {V1uuid10, V1State6} = uuid:get_v1(V1State5),
+    {V1uuid11, _} = uuid:get_v1(V1State6),
+    V1uuidL0 = [V1uuid5, V1uuid6, V1uuid7, V1uuid8,
+                V1uuid9, V1uuid10, V1uuid11],
+    V1uuidL1 = [V1uuid11, V1uuid9, V1uuid8, V1uuid7,
+                V1uuid6, V1uuid10, V1uuid5],
+    true = V1uuidL0 == lists:usort(V1uuidL1),
 
     % version 3 tests
     % $ python
@@ -1391,6 +1332,16 @@ mac_address([{_, L} | Rest]) ->
                     MAC
             end
     end.
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+pseudo_random(N) ->
+    % assuming exsplus for 58 bits, period 8.31e34
+    rand:uniform(N).
+-else.
+pseudo_random(N) ->
+    % period 2.78e13
+    random:uniform(N).
+-endif.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

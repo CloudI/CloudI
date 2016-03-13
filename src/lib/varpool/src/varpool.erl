@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 0.1.0 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(varpool).
@@ -78,12 +78,29 @@
         monitors = [] :: list(reference())
     }).
 
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-define(ERLANG_OTP_VERSION_18_FEATURES, true).
+-endif.
+-endif.
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+-define(PSEUDO_RANDOM(N),
+        % assuming exsplus for 58 bits, period 8.31e34
+        rand:uniform(N)).
+-else.
+-define(PSEUDO_RANDOM(N),
+        % period 2.78e13
+        random:uniform(N)).
+-endif.
+
 -define(DEFAULT_MAX_R,                              5). % max restart count
 -define(DEFAULT_MAX_T,                            300). % max time in seconds
 -define(DEFAULT_HASH,             fun erlang:phash2/2).
 -define(DEFAULT_RANDOM,
         fun(Count) ->
-            random:uniform(Count) - 1
+            ?PSEUDO_RANDOM(Count) - 1
         end).
 
 -type group() ::
@@ -335,12 +352,11 @@ take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
     take_values([], DefaultList, List).
 
-take_values(Result, [], List)
-    when is_list(Result), is_list(List) ->
+take_values(Result, [], List) ->
     lists:reverse(Result) ++ List;
 
 take_values(Result, [{Key, Default} | DefaultList], List)
-    when is_list(Result), is_atom(Key), is_list(List) ->
+    when is_atom(Key) ->
     case lists:keytake(Key, 1, List) of
         false ->
             take_values([Default | Result], DefaultList, List);

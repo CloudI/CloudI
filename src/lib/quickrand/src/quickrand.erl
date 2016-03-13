@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2012-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -60,7 +60,7 @@
 -else.
 -ifdef(ERLANG_OTP_VERSION_17).
 -else.
--define(ERLANG_OTP_VERSION_18_FEATURES, undefined).
+-define(ERLANG_OTP_VERSION_18_FEATURES, true).
 -endif.
 -endif.
 
@@ -88,7 +88,7 @@ seed() ->
             error_logger:info_msg("quickrand: low_entropy!~n"),
             crypto:rand_bytes(16)
     end,
-    _ = random:seed(B1, B2, B3),
+    _ = random_wh82:seed(B1, B2, B3),
     _ = random_wh06_int:seed(B1, B2, B3, B4),
     ok = seed_rand(B1, B2, B3),
     ok.
@@ -147,7 +147,7 @@ uniform(N) when is_integer(N), N < 1000000 ->
 
 uniform(N) when is_integer(N), N =< 27817185604309 ->
     % 27817185604309 == 30269 * 30307 * 30323, period 2.78e13
-    random:uniform(N);
+    random_wh82:uniform(N);
 
 uniform(N) when is_integer(N), N =< 21267638781707063560975648195455661513 ->
     % 21267638781707063560975648195455661513 ==
