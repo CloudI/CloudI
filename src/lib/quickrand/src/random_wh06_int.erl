@@ -86,7 +86,7 @@
 %%-----------------------------------------------------------------------
 %% The type of the state
 
--type seed() :: {integer(), integer(), integer(), integer()}.
+-type seed() :: {pos_integer(), pos_integer(), pos_integer(), pos_integer()}.
 
 %%-----------------------------------------------------------------------
 
