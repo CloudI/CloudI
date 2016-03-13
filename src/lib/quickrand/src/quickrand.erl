@@ -79,18 +79,23 @@
 
 seed() ->
     % to provide better seeding than erlang:now() or os:timestamp()
-    <<B1:32/unsigned-integer,
-      B2:32/unsigned-integer,
-      B3:32/unsigned-integer,
-      B4:32/unsigned-integer>> = try crypto:strong_rand_bytes(16)
+    <<I1:32/unsigned-integer,
+      I2:32/unsigned-integer,
+      I3:32/unsigned-integer,
+      I4:32/unsigned-integer>> = try crypto:strong_rand_bytes(16)
     catch
         error:low_entropy ->
-            error_logger:info_msg("quickrand: low_entropy!~n"),
+            error_logger:error_msg("quickrand: low_entropy!~n"),
             crypto:rand_bytes(16)
     end,
-    _ = random_wh82:seed(B1, B2, B3),
-    _ = random_wh06_int:seed(B1, B2, B3, B4),
-    ok = seed_rand(B1, B2, B3),
+    % only use positive integers for setting seed values
+    IP1 = I1 + 1,
+    IP2 = I2 + 1,
+    IP3 = I3 + 1,
+    IP4 = I4 + 1,
+    _ = random_wh82:seed(IP1, IP2, IP3),
+    _ = random_wh06_int:seed(IP1, IP2, IP3, IP4),
+    ok = seed_rand(IP1, IP2, IP3),
     ok.
 
 %%-------------------------------------------------------------------------
