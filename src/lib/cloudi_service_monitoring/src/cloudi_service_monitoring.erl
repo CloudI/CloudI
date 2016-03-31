@@ -210,17 +210,21 @@
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Update/Create a metric.===
-%% Must be called from a service process.  Use cloudi_service:self/1
-%% to get the service process.
+%% Use cloudi_service:self/1 to get the service process when passing a
+%% service metric, otherwise use 'undefined' instead of the service process.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec update_or_create(Service :: cloudi_service:source(),
+-spec update_or_create(Service :: cloudi_service:source() | undefined,
                        Type :: metric_type(),
                        Name :: metric_name(),
                        Value :: metric_value()) ->
     ok | {error, any()}.
 
+update_or_create(undefined, Type, Name, Value) ->
+    cloudi_service_monitoring_cloudi:update_or_create(undefined,
+                                                      Type, Name, Value,
+                                                      []);
 update_or_create(Service, Type, Name, Value) ->
     update_or_create(Service, Type, Name, Value, []).
 

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make cloudi_service_monitoring:update_or_create/4 work outside of
+      a service process
+
 2016-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI now does not use the random Erlang/OTP module with

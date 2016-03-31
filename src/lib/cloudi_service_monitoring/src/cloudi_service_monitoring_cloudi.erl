@@ -129,6 +129,18 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+update_or_create(undefined, Type, Name, Value, []) ->
+    try ets:lookup(?ETS_CONFIG, init) of
+        [] ->
+            {error, invalid_state};
+        [{init, _, Driver}] ->
+            cloudi_service_monitoring:update(Type,
+                                             Name,
+                                             Value, Driver)
+    catch
+        error:badarg ->
+            {error, invalid_state}
+    end;
 update_or_create(Service, Type, Name, Value, Options) ->
     try ets:lookup(?ETS_PID2METRIC, Service) of
         [] ->
