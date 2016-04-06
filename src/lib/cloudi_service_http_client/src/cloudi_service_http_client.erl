@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @copyright 2014-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -55,18 +55,32 @@
 %% external interface
 -export([head/4,
          head/5,
+         head_async/4,
+         head_async/5,
          get/4,
          get/5,
+         get_async/4,
+         get_async/5,
          put/4,
          put/5,
+         put_async/4,
+         put_async/5,
          post/4,
          post/5,
+         post_async/4,
+         post_async/5,
          trace/4,
          trace/5,
+         trace_async/4,
+         trace_async/5,
          options/4,
          options/5,
+         options_async/4,
+         options_async/5,
          delete/4,
-         delete/5]).
+         delete/5,
+         delete_async/4,
+         delete_async/5]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -143,6 +157,41 @@ head(Agent, Prefix, RequestInfo, Request, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===A HTTP HEAD async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec head_async(Agent :: agent(),
+                 Prefix :: service_name(),
+                 RequestInfo :: headers(),
+                 Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+head_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/head",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP HEAD async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec head_async(Agent :: agent(),
+                 Prefix :: service_name(),
+                 RequestInfo :: headers(),
+                 Request :: binary(),
+                 Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+head_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/head",
+                      RequestInfo, Request, Timeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===A HTTP GET request.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -175,6 +224,41 @@ get(Agent, Prefix, RequestInfo, Request) ->
 get(Agent, Prefix, RequestInfo, Request, Timeout) ->
     result(cloudi:send_sync(Agent, Prefix ++ "/get",
                             RequestInfo, Request, Timeout, undefined)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP GET async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_async(Agent :: agent(),
+                Prefix :: service_name(),
+                RequestInfo :: headers(),
+                Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+get_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/get",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP GET async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_async(Agent :: agent(),
+                Prefix :: service_name(),
+                RequestInfo :: headers(),
+                Request :: binary(),
+                Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+get_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/get",
+                      RequestInfo, Request, Timeout, undefined).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -213,6 +297,41 @@ put(Agent, Prefix, RequestInfo, Request, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===A HTTP PUT async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec put_async(Agent :: agent(),
+                Prefix :: service_name(),
+                RequestInfo :: headers(),
+                Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+put_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/put",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP PUT async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec put_async(Agent :: agent(),
+                Prefix :: service_name(),
+                RequestInfo :: headers(),
+                Request :: binary(),
+                Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+put_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/put",
+                      RequestInfo, Request, Timeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===A HTTP POST request.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -245,6 +364,41 @@ post(Agent, Prefix, RequestInfo, Request) ->
 post(Agent, Prefix, RequestInfo, Request, Timeout) ->
     result(cloudi:send_sync(Agent, Prefix ++ "/post",
                             RequestInfo, Request, Timeout, undefined)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP POST async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec post_async(Agent :: agent(),
+                 Prefix :: service_name(),
+                 RequestInfo :: headers(),
+                 Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+post_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/post",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP POST async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec post_async(Agent :: agent(),
+                 Prefix :: service_name(),
+                 RequestInfo :: headers(),
+                 Request :: binary(),
+                 Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+post_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/post",
+                      RequestInfo, Request, Timeout, undefined).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -283,6 +437,41 @@ trace(Agent, Prefix, RequestInfo, Request, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===A HTTP TRACE async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trace_async(Agent :: agent(),
+                  Prefix :: service_name(),
+                  RequestInfo :: headers(),
+                  Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+trace_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/trace",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP TRACE async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trace_async(Agent :: agent(),
+                  Prefix :: service_name(),
+                  RequestInfo :: headers(),
+                  Request :: binary(),
+                  Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+trace_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/trace",
+                      RequestInfo, Request, Timeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===A HTTP OPTIONS request.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -318,6 +507,41 @@ options(Agent, Prefix, RequestInfo, Request, Timeout) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===A HTTP OPTIONS async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec options_async(Agent :: agent(),
+                    Prefix :: service_name(),
+                    RequestInfo :: headers(),
+                    Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+options_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/options",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP OPTIONS async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec options_async(Agent :: agent(),
+                    Prefix :: service_name(),
+                    RequestInfo :: headers(),
+                    Request :: binary(),
+                    Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+options_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/options",
+                      RequestInfo, Request, Timeout, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===A HTTP DELETE request.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -350,6 +574,41 @@ delete(Agent, Prefix, RequestInfo, Request) ->
 delete(Agent, Prefix, RequestInfo, Request, Timeout) ->
     result(cloudi:send_sync(Agent, Prefix ++ "/delete",
                             RequestInfo, Request, Timeout, undefined)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP DELETE async request.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete_async(Agent :: agent(),
+                   Prefix :: service_name(),
+                   RequestInfo :: headers(),
+                   Request :: binary()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+delete_async(Agent, Prefix, RequestInfo, Request) ->
+    cloudi:send_async(Agent, Prefix ++ "/delete",
+                      RequestInfo, Request, undefined, undefined).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===A HTTP DELETE async request with a timeout.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete_async(Agent :: agent(),
+                   Prefix :: service_name(),
+                   RequestInfo :: headers(),
+                   Request :: binary(),
+                   Timeout :: timeout_milliseconds()) ->
+    {{ok, cloudi:trans_id()} | {error, cloudi:error_reason()},
+     NewAgent :: agent()}.
+
+delete_async(Agent, Prefix, RequestInfo, Request, Timeout) ->
+    cloudi:send_async(Agent, Prefix ++ "/delete",
+                      RequestInfo, Request, Timeout, undefined).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service

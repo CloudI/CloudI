@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-04-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add async interface functions to cloudi_service_http_client
+      (head_async, get_async, put_async, post_async,
+       trace_async, options_async, delete_async)
+
 2016-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make cloudi_service_monitoring:update_or_create/4 work outside of
