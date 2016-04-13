@@ -1783,8 +1783,8 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
         end
     catch
         ErrorType:Error ->
-            ?LOG_ERROR("init ~p ~p~n~p",
-                       [ErrorType, Error, erlang:get_stacktrace()]),
+            ?LOG_ERROR_SYNC("init ~p ~p~n~p",
+                            [ErrorType, Error, erlang:get_stacktrace()]),
             erlang:ErrorType(Error)
     end,
     {NewProcessDictionary,
