@@ -4,6 +4,7 @@
 2016-04-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Ensure init failure is logged synchronously for startup
+    * Improve cloudi_service_init/4 exception handling
 
 2016-04-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

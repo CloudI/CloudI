@@ -1783,9 +1783,10 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
         end
     catch
         ErrorType:Error ->
+            Stack = erlang:get_stacktrace(),
             ?LOG_ERROR_SYNC("init ~p ~p~n~p",
-                            [ErrorType, Error, erlang:get_stacktrace()]),
-            erlang:ErrorType(Error)
+                            [ErrorType, Error, Stack]),
+            {stop, {ErrorType, {Error, Stack}}}
     end,
     {NewProcessDictionary,
      #state{options = ConfigOptions} = NextState} =
@@ -3295,9 +3296,10 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                 end
             catch
                 ErrorType:Error ->
-                    ?LOG_ERROR("init ~p ~p~n~p",
-                               [ErrorType, Error, erlang:get_stacktrace()]),
-                    erlang:ErrorType(Error)
+                    Stack = erlang:get_stacktrace(),
+                    ?LOG_ERROR_SYNC("init ~p ~p~n~p",
+                                    [ErrorType, Error, Stack]),
+                    {stop, {ErrorType, {Error, Stack}}}
             end,
             {NewDispatcherProcessDictionary,
              #state{recv_timeouts = RecvTimeouts,
