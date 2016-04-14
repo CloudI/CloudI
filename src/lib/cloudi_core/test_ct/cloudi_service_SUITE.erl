@@ -512,8 +512,9 @@ t_service_internal_sync_1(_Config) ->
     true = cloudi_x_uuid:is_v1(TransId1),
     {error,
      {service_internal_start_failed,
-      {{badmatch, {error, invalid_state}},
-       _}}} = cloudi_service_api:services_add([
+      {error,
+       {{badmatch, {error, invalid_state}},
+        _}}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
@@ -534,8 +535,9 @@ t_service_internal_sync_1(_Config) ->
     true = (TransId2 > TransId1),
     {error,
      {service_internal_start_failed,
-      {{badmatch, {error, invalid_state}},
-       _}}} = cloudi_service_api:services_add([
+      {error,
+       {{badmatch, {error, invalid_state}},
+        _}}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_sync}]},
@@ -595,8 +597,9 @@ t_service_internal_async_1(_Config) ->
     true = cloudi_x_uuid:is_v1(TransId1),
     {error,
      {service_internal_start_failed,
-      {{badmatch, {error, invalid_state}},
-       _}}} = cloudi_service_api:services_add([
+      {error,
+       {{badmatch, {error, invalid_state}},
+        _}}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
@@ -620,8 +623,9 @@ t_service_internal_async_1(_Config) ->
     true = (TransId2 > TransId1),
     {error,
      {service_internal_start_failed,
-      {{badmatch, {error, invalid_state}},
-       _}}} = cloudi_service_api:services_add([
+      {error,
+       {{badmatch, {error, invalid_state}},
+        _}}}} = cloudi_service_api:services_add([
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
