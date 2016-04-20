@@ -4,6 +4,7 @@
 2016-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve handling of node discovery timeouts
+    * Improve handling of internal cloudi_core timeouts
 
 2016-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 

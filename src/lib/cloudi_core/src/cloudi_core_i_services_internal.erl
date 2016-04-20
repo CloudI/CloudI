@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -1841,6 +1841,11 @@ handle_info({'DOWN', _MonitorRef, process, Pid, _Info} = Request, State) ->
                     hibernate_check({noreply, NewState})
             end
     end;
+
+handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
+    hibernate_check({noreply, State});
 
 handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
     if
@@ -3792,6 +3797,11 @@ duo_handle_info({system, From, Msg},
             sys:handle_system_msg(Msg, From, Dispatcher, ?MODULE, [],
                                   State)
     end;
+
+duo_handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
+    {noreply, State};
 
 duo_handle_info(Request,
                 #state_duo{queue_requests = true,

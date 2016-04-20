@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -1399,6 +1399,11 @@ handle_info('cloudi_rate_request_max_rate', StateName,
     {next_state, StateName,
      State#state{options = ConfigOptions#config_service_options{
                      rate_request_max = NewRateRequest}}};
+
+handle_info({ReplyRef, _}, StateName, State) when is_reference(ReplyRef) ->
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
+    {next_state, StateName, State};
 
 handle_info(Request, StateName, State) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

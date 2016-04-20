@@ -11,7 +11,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -452,6 +452,11 @@ handle_info({kill, TimeoutTerm, Pid, Reason, ServiceId, #service{}}, State) ->
         false ->
             ok
     end,
+    {noreply, State};
+
+handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
     {noreply, State};
 
 handle_info(Request, State) ->

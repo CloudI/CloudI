@@ -263,6 +263,11 @@ handle_info({'EXIT', Port, PosixCode},
     end,
     {stop, Reason, State#state{port = undefined}};
 
+handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
+    {noreply, State};
+
 handle_info(Request, State) ->
     ?LOG_WARN("Unknown info \"~p\"~n", [Request]),
     {noreply, State}.

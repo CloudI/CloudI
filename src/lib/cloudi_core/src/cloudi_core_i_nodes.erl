@@ -320,7 +320,8 @@ handle_info(reconnect,
     {noreply, State#state{reconnect_timer = ReconnectTimer}};
 
 handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
-    % discover_check/1 had a timeout, with a reply occurring after the timeout
+    % gen_server:call/3 had a timeout exception that was caught but the
+    % reply arrived later and must be discarded
     {noreply, State};
 
 handle_info(Request, State) ->
