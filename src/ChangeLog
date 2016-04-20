@@ -1,9 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve handling of node discovery timeouts
+
 2016-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Add a process bar to the scope script
+    * Add a progress bar to the scope script
       (which puts the external Erlang dependencies into the
        names prefixed with 'cloudi_x_')
 

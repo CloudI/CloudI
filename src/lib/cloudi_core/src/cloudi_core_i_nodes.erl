@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -318,6 +318,10 @@ handle_info(reconnect,
     end,
     ReconnectTimer = erlang:send_after(ReconnectInterval, self(), reconnect),
     {noreply, State#state{reconnect_timer = ReconnectTimer}};
+
+handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
+    % discover_check/1 had a timeout, with a reply occurring after the timeout
+    {noreply, State};
 
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~p\"", [Request]), State}.
