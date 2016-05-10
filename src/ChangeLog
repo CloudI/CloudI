@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add eunit tests to cloudi_lists
+    * Add cloudi_lists:split/2 and improve cloudi_lists:delete_all/2
+
 2016-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve handling of node discovery timeouts

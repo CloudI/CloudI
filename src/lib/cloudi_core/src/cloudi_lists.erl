@@ -51,14 +51,50 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([index/2,
+-export([delete_all/2, delete_checked/2,
+         index/2,
          itera/3, itera2/4,
-         delete_checked/2, delete_all/2,
+         split/2,
          take_values/2]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===lists:delete/2 functionality, but all instances are deleted.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete_all(Elem :: any(), List :: list()) ->
+    list().
+
+delete_all(_, []) ->
+    [];
+delete_all(Elem, [Elem | T]) ->
+    delete_all(Elem, T);
+delete_all(Elem, [H | T]) ->
+    [H | delete_all(Elem, T)].
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===lists:delete/2 functionality, but returns false when an element is not deleted.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec delete_checked(Elem :: any(), List :: list()) ->
+    list() |
+    'false'.
+
+delete_checked(Elem, List) when is_list(List) ->
+    delete_checked(Elem, [], List).
+delete_checked(Elem, L, [Elem | T]) ->
+    lists:reverse(L) ++ T;
+delete_checked(Elem, L, [H | T]) ->
+    delete_checked(Elem, [H | L], T);
+delete_checked(_, _, []) ->
+    false.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -121,40 +157,25 @@ itera2(F, Acc0, Acc1, [H | T]) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===lists:delete/2 functionality, but returns false when an element is not deleted.===
+%% ===lists:split/2 functionality, but without bounds checking.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec delete_checked(Elem :: any(), List :: list()) ->
-    list() |
-    'false'.
+-spec split(N, L) -> {L1, L2}
+    when N :: non_neg_integer(),
+         L :: list(E),
+         L1 :: list(E),
+         L2 :: list(E),
+         E :: any().
 
-delete_checked(Elem, List) when is_list(List) ->
-    delete_checked(Elem, [], List).
-delete_checked(Elem, L, [Elem | T]) ->
-    lists:reverse(L) ++ T;
-delete_checked(Elem, L, [H | T]) ->
-    delete_checked(Elem, [H | L], T);
-delete_checked(_, _, []) ->
-    false.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===lists:delete/2 functionality, but all instances are deleted.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec delete_all(Elem :: any(), List :: list()) ->
-    list().
-
-delete_all(Elem, List) when is_list(List) ->
-    delete_all(Elem, [], List).
-delete_all(Elem, L, [Elem | T]) ->
-    delete_all(Elem, L, T);
-delete_all(Elem, L, [H | T]) ->
-    delete_all(Elem, [H | L], T);
-delete_all(_, L, []) ->
-    lists:reverse(L).
+split(N, L) when is_integer(N), N >= 0, is_list(L) ->
+    split(N, L, []).
+split(0, L2, L1) ->
+    {lists:reverse(L1, []), L2};
+split(_, [] = L2, L1) ->
+    {lists:reverse(L1, []), L2};
+split(N, [H | L2], L1) ->
+    split(N - 1, L2, [H | L1]).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -184,4 +205,58 @@ take_values(Result, [{Key, Default} | DefaultList], List) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+delete_all_test() ->
+    [b, c] = delete_all(a, [a, b, a, c, a]),
+    ok.
+
+delete_checked_test() ->
+    false = delete_checked(d, [a, b, c]),
+    [b, a, c, a] = delete_checked(a, [a, b, a, c, a]),
+    ok.
+
+index_test() ->
+    4 = index(d, [a, b, c, d, e]),
+    undefined = index(f, [a, b, c, d, e]),
+    ok.
+
+itera_test() ->
+    [d, e, f] = itera(fun(V, A, Itr) ->
+        if
+            V > c ->
+                Itr([V | A]);
+            true ->
+                A
+        end
+    end, [], [f, e, d, c, b, a]),
+    ok.
+
+itera2_test() ->
+    {[d, e, f], 3} = itera2(fun(V, A1, A2, Itr) ->
+        if
+            V > c ->
+                Itr([V | A1], A2 + 1);
+            true ->
+                {A1, A2}
+        end
+    end, [], 0, [f, e, d, c, b, a]),
+    ok.
+
+split_test() ->
+    {[a, b, c], []} = split(10, [a, b, c]),
+    {[a, b, c], [d, e, f]} = split(3, [a, b, c, d, e, f]),
+    ok.
+
+take_values_test() ->
+    [A,
+     B] = take_values([{a, 3},
+                       {b, 2}], [{a, 1}]),
+    true = A == 1,
+    true = B == 2,
+    ok.
+
+-endif.
 
