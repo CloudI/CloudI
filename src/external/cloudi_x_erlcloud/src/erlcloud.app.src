@@ -3,7 +3,7 @@
 
 {application, erlcloud,
  [{description, "Erlang cloud computing library"},
-  {vsn, "0.9.1"},
+  {vsn, git},
   {registered, []},
   {applications, [stdlib,
                   kernel,
@@ -12,9 +12,14 @@
                   ssl,
                   xmerl,
                   inets,
+                  eini,
                   jsx,
+                  %% hackney,
                   lhttpc]},
   {modules, []},
-  {env, []}
+  {env, []},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/erlcloud/erlcloud"}]},
+  {maintainers, []}
  ]
 }.

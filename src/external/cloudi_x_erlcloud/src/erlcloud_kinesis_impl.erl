@@ -102,7 +102,7 @@ request_and_retry(Config, Headers, Body, {attempt, Attempt}) ->
     case erlcloud_httpc:request(
            url(Config), post,
            [{<<"content-type">>, <<"application/x-amz-json-1.1">>} | Headers],
-           Body, Config#aws_config.timeout, Config) of
+           Body, erlcloud_aws:get_timeout(Config), Config) of
 
         {ok, {{200, _}, _, RespBody}} ->
             %% TODO check crc
@@ -156,14 +156,7 @@ client_error(Status, StatusLine, Body) ->
 headers(Config, Operation, Body) ->
     Headers = [{"host", Config#aws_config.kinesis_host},
                {"x-amz-target", Operation}],
-    Region =
-        case string:tokens(Config#aws_config.kinesis_host, ".") of
-            [_, Value, _, _] ->
-                Value;
-            _ ->
-                "us-east-1"
-        end,
-    erlcloud_aws:sign_v4(Config, Headers, Body, Region, "kinesis").
+    erlcloud_aws:sign_v4_headers(Config, Headers, Body, erlcloud_aws:aws_region_from_host(Config#aws_config.kinesis_host), "kinesis").
 
 url(#aws_config{kinesis_scheme = Scheme, kinesis_host = Host} = Config) ->
     lists:flatten([Scheme, Host, port_spec(Config)]).

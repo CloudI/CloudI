@@ -82,12 +82,7 @@ seed() ->
     <<I1:32/unsigned-integer,
       I2:32/unsigned-integer,
       I3:32/unsigned-integer,
-      I4:32/unsigned-integer>> = try crypto:strong_rand_bytes(16)
-    catch
-        error:low_entropy ->
-            error_logger:error_msg("quickrand: low_entropy!~n"),
-            crypto:rand_bytes(16)
-    end,
+      I4:32/unsigned-integer>> = crypto:strong_rand_bytes(16),
     % only use positive integers for setting seed values
     IP1 = I1 + 1,
     IP2 = I2 + 1,

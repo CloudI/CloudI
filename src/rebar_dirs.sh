@@ -41,6 +41,7 @@ REBAR_DIRS="\
     external/cloudi_x_cowlib \
     external/cloudi_x_dynamic_compile \
     external/cloudi_x_ecouchdb \
+    external/cloudi_x_eini \
     external/cloudi_x_elli \
     external/cloudi_x_ememcached \
     external/cloudi_x_emysql \

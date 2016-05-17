@@ -63,10 +63,18 @@ parse_config([unescaped_jsonp|Rest], Config) ->
     parse_config(Rest, Config#config{unescaped_jsonp=true});
 parse_config([dirty_strings|Rest], Config) ->
     parse_config(Rest, Config#config{dirty_strings=true});
+parse_config([multi_term|Rest], Config) ->
+    parse_config(Rest, Config#config{multi_term=true});
+parse_config([return_tail|Rest], Config) ->
+    parse_config(Rest, Config#config{return_tail=true});
+%% retained for backwards compat, now does nothing however
 parse_config([repeat_keys|Rest], Config) ->
-    parse_config(Rest, Config#config{repeat_keys=true});
+    parse_config(Rest, Config);
+parse_config([uescape|Rest], Config) ->
+    parse_config(Rest, Config#config{uescape=true});
 parse_config([strict|Rest], Config) ->
-    parse_config(Rest, Config#config{strict_comments=true,
+    parse_config(Rest, Config#config{
+        strict_comments=true,
         strict_commas=true,
         strict_utf8=true,
         strict_single_quotes=true,
@@ -148,9 +156,12 @@ valid_flags() ->
         escaped_strings,
         unescaped_jsonp,
         dirty_strings,
+        multi_term,
+        return_tail,
         repeat_keys,
         strict,
         stream,
+        uescape,
         error_handler,
         incomplete_handler
     ].
@@ -187,21 +198,26 @@ config_test_() ->
                     escaped_strings = true,
                     unescaped_jsonp = true,
                     dirty_strings = true,
-                    repeat_keys = true,
+                    multi_term = true,
+                    return_tail = true,
                     strict_comments = true,
                     strict_commas = true,
                     strict_utf8 = true,
                     strict_single_quotes = true,
                     strict_escapes = true,
-                    stream = true
+                    stream = true,
+                    uescape = true
                 },
-                parse_config([escaped_forward_slashes,
+                parse_config([dirty_strings,
+                    escaped_forward_slashes,
                     escaped_strings,
                     unescaped_jsonp,
-                    dirty_strings,
+                    multi_term,
+                    return_tail,
                     repeat_keys,
                     strict,
-                    stream
+                    stream,
+                    uescape
                 ])
             )
         },
@@ -265,12 +281,13 @@ config_to_list_test_() ->
             config_to_list(#config{})
         )},
         {"all flags", ?_assertEqual(
-            [escaped_forward_slashes,
+            [dirty_strings,
+                escaped_forward_slashes,
                 escaped_strings,
-                unescaped_jsonp,
-                dirty_strings,
-                repeat_keys,
+                multi_term,
                 stream,
+                uescape,
+                unescaped_jsonp,
                 strict
             ],
             config_to_list(
@@ -278,12 +295,13 @@ config_to_list_test_() ->
                     escaped_strings = true,
                     unescaped_jsonp = true,
                     dirty_strings = true,
-                    repeat_keys = true,
+                    multi_term = true,
                     strict_comments = true,
                     strict_utf8 = true,
                     strict_single_quotes = true,
                     strict_escapes = true,
-                    stream = true
+                    stream = true,
+                    uescape = true
                 }
             )
         )},

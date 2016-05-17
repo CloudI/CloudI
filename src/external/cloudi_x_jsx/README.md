@@ -1,26 +1,22 @@
-# jsx (v2.1.1) #
+# jsx (v2.8.0) #
+
 
 an erlang application for consuming, producing and manipulating [json][json]. 
 inspired by [yajl][yajl]
 
-**jsx** is built via [rebar][rebar] and continuous integration testing provided courtesy [travis-ci][travis]
+**jsx** is built via [rebar3][rebar3], [rebar][rebar] or [mix][mix] and continuous integration testing provided courtesy [travis-ci][travis]
 
 current status: [![Build Status](https://secure.travis-ci.org/talentdeficit/jsx.png?branch=develop)](http://travis-ci.org/talentdeficit/jsx)
 
 **jsx** is released under the terms of the [MIT][MIT] license
 
-copyright 2010-2014 alisdair sullivan
+copyright 2010-2015 alisdair sullivan
 
 ## really important note ##
 
 there are a few changes for users upgrading from 1.x. see [CHANGES.md](CHANGES.md)
 for the overview or [migrating from 1.x](#migrating) for the details
 
-## slightly less important note ##
-
-**jsx** supports encoding maps to json but not decoding json to a map [jsxn][jsxn] is a
-thin wrapper around **jsx** that uses maps as it's object representation if you're into
-that
 
 ## index ##
 
@@ -43,6 +39,7 @@ that
   - [`prettify/1`](#prettify1)
   - [`is_json/1,2`](#is_json12)
   - [`is_term/1,2`](#is_term12)
+  - [`maps_support/0`](#maps_support0)
 * [callback exports](#callback_exports)
   - [`Module:init/1`](#moduleinit1)
   - [`Module:handle_event/2`](#modulehandle_event2)
@@ -54,8 +51,12 @@ that
 #### to build the library and run tests ####
 
 ```bash
+$ rebar3 compile
+$ rebar3 eunit
 $ rebar compile
 $ rebar eunit
+$ mix compile
+$ mix eunit
 ```
 
 #### to convert a utf8 binary containing a json string into an erlang term ####
@@ -63,7 +64,9 @@ $ rebar eunit
 ```erlang
 1> jsx:decode(<<"{\"library\": \"jsx\", \"awesome\": true}">>).
 [{<<"library">>,<<"jsx">>},{<<"awesome">>,true}]
-2> jsx:decode(<<"[\"a\",\"list\",\"of\",\"words\"]">>).
+2> jsx:decode(<<"{\"library\": \"jsx\", \"awesome\": true}">>, [return_maps]).
+#{<<"awesome">> => true,<<"library">> => <<"jsx">>}
+3> jsx:decode(<<"[\"a\",\"list\",\"of\",\"words\"]">>).
 [<<"a">>, <<"list">>, <<"of">>, <<"words">>]
 ```
 
@@ -117,6 +120,12 @@ false
 }">>
 ```
 
+#### to compile **jsx** so that it always decodes json objects to maps ####
+
+```bash
+$ JSX_FORCE_MAPS rebar3 compile
+$ JSX_FORCE_MAPS mix compile
+```
 
 ## description ##
 
@@ -157,11 +166,9 @@ ignores bad escape sequences leaving them in strings unaltered
 if you're migrating from jsx v1.x to v2.x in most cases you won't need to
 make any changes to your code
 
-support for encoding otp 17.0's new map type is now enabled by default when compiling
+support for otp 17.0's new map type is now enabled by default when compiling
 via rebar for any release that supports them. jsx should still compile cleanly for
-earlier releases without any user intervention. if you'd like to disable maps you can
-either set the env variable `JSX_NOMAPS` or by uncommenting the applicable tuple in
-`rebar.config`
+earlier releases without any user intervention
 
 if you used any of `replaced_bad_utf8`, `single_quoted_strings`, `comments`,
 `ignored_bad_escapes` or `relax` you can simply omit them from your calls to jsx,
@@ -222,9 +229,9 @@ see below                       | `datetime()`
     encountered otherwise are replaced with the replacement codepoint (`u+fffd`)
 
     all erlang strings are represented by **valid** `utf8` encoded binaries. the 
-    encoder will check strings for conformance. noncharacters (like `u+ffff`) 
-    are allowed in erlang utf8 encoded binaries, but will be replaced in strings
-    passed to the encoder (although, again, see [options](#option))
+    encoder will check strings for conformance. badly formed `utf8` sequences may
+    be replaced with the replacement codepoint (`u+fffd`) according to the unicode
+    spec
 
     this implementation performs no normalization on strings beyond that 
     detailed here. be careful when comparing strings as equivalent strings 
@@ -243,7 +250,8 @@ see below                       | `datetime()`
 *   objects
 
     json objects are represented by erlang proplists. json maps may also be
-    encoded to json but the decoder will not produce maps
+    encoded to json and optionally decoded to maps (via the `return_maps`
+    option)
     
     the empty object has the special representation `[{}]` to differentiate it
     from the empty list. ambiguities like `[true, false]` prevent the use of
@@ -258,8 +266,7 @@ see below                       | `datetime()`
 
     erlang datetime tuples (`{{Year, Month, Day}, {Hour, Min, Sec}}`) as returned
     from `erlang:localtime/0` are automatically encoded as [iso8601][iso8601]
-    strings. no conversion is attempted of json [iso8601][iso8601] strings in
-    decoded json
+    strings and are assumed to be UTC time. no conversion is attempted of json [iso8601][iso8601] strings in decoded json
 
 
 ### incomplete input ###
@@ -348,6 +355,8 @@ option() = dirty_strings
     | stream
     | strict
     | {strict, [strict_option()]}
+    | return_tail
+    | uescape
     | unescaped_jsonp
 
 strict_option() = comments
@@ -387,10 +396,6 @@ additional options beyond these. see
     control codes and problematic codepoints and replacing them with the 
     appropriate escapes
 
-- `repeat_keys`
-
-    this flag circumvents checking for repeated keys in generated json
-
 - `stream`
 
     see [incomplete input](#incomplete-input)
@@ -424,6 +429,19 @@ additional options beyond these. see
     
     any combination of these can be passed to **jsx** by using `{strict, [strict_option()]}`.
     `strict` is equivalent to `{strict, [comments, bad_utf8, single_quotes, escapes]}` 
+
+- `return_tail`
+
+    upon reaching the end of a valid json term in an input stream return the term and any
+    remaining bytes in the input stream as `{with_tail, term(), binary()}` where the second
+    member of the tuple is the json term and the third is any remaining bytes. note that
+    leading whitespace will be stripped from the tail
+
+- `uescape`
+
+    escape all codepoints outside the ascii range for 7 bit clean output. note
+    this escaping takes place even if no other string escaping is requested (via
+    `escaped_strings`)
 
 - `unescaped_jsonp`
 
@@ -482,7 +500,7 @@ decode(JSON, Opts) -> Term
 
   JSON = json_text()
   Term = json_term()
-  Opts = [option() | labels | {labels, Label}]
+  Opts = [option() | labels | {labels, Label} | return_maps]
     Label = binary | atom | existing_atom | attempt_atom
     F = fun((any()) -> any())
 ```
@@ -499,6 +517,10 @@ new atoms to the atom table and will result in a `badarg` error if the atom
 does not exist. `attempt_atom` will convert keys to atoms when they exist,
 and leave them as binary otherwise
 
+the option `return_maps` will attempt to return objects as maps instead of
+proplists. this option has no effect when used with releases that do not
+support maps
+
 raises a `badarg` error exception if input is not valid json
 
 
@@ -511,7 +533,6 @@ encode(Term, Opts) -> JSON
   Term = json_term()
   JSON = json_text()
   Opts = [option() | space | {space, N} | indent | {indent, N}]
-    F = fun((any()) -> any())
     N = pos_integer()
 ```
 
@@ -609,6 +630,17 @@ returns true if input is a valid erlang representation of json, false if not
 
 what exactly constitutes valid json may be altered via [options](#option)
 
+
+#### `maps_support/0` ####
+
+```erlang
+maps_support() -> true | false
+```
+
+if **jsx** was compiled with map support enabled returns `true`, else
+`false`
+
+
 ## callback exports ##
 
 the following functions should be exported from a **jsx** callback module
@@ -691,12 +723,14 @@ following events must be handled:
 
 ## acknowledgements ##
 
-jsx wouldn't be what it is without the contributions of [paul davis](https://github.com/davisp), [lloyd hilaiel](https://github.com/lloyd), [john engelhart](https://github.com/johnezang), [bob ippolito](https://github.com/etrepum), [fernando benavides](https://github.com/elbrujohalcon), [alex kropivny](https://github.com/amtal), [steve strong](https://github.com/srstrong), [michael truog](https://github.com/okeuday), [devin torres](https://github.com/devinus), [dmitry kolesnikov](https://github.com/fogfish), [emptytea](https://github.com/emptytea), [john daily](https://github.com/macintux), [ola bäckström](https://github.com/olabackstrom), [joseph crowe](https://github.com/JosephCrowe), [patrick gombert](https://github.com/patrickgombert),  [eskuat](https://github.com/eskuat) and [max lapshin](https://github.com/maxlapshin)
+jsx wouldn't be what it is without the contributions of [Paul J. Davis](https://github.com/davisp), [Lloyd Hilaiel](https://github.com/lloyd), [John Engelhart](https://github.com/johnezang), [Bob Ippolito](https://github.com/etrepum), [Brujo Benavides](https://github.com/elbrujohalcon), [Alex Kropivny](https://github.com/amtal), [Steve Strong](https://github.com/srstrong), [Michael Truog](https://github.com/okeuday), [Devin Torres](https://github.com/devinus), [fogfish](https://github.com/fogfish), [emptytea](https://github.com/emptytea), [John Daily](https://github.com/macintux), [Ola Bäckström](https://github.com/olabackstrom), [Joseph Crowe](https://github.com/JosephCrowe), [Patrick Gombert](https://github.com/patrickgombert), [Eshengazin S. Kuat](https://github.com/eskuat), [Max Lapshin](https://github.com/maxlapshin), [Bikram Chatterjee](https://github.com/c-bik), [Michael Uvarov](https://github.com/arcusfelis), [Led](https://github.com/Ledest) and [tvv](https://github.com/tvv)
 
 [json]: http://json.org
 [yajl]: http://lloyd.github.com/yajl
 [MIT]: http://www.opensource.org/licenses/mit-license.html
+[rebar3]: https://rebar3.org
 [rebar]: https://github.com/rebar/rebar
+[mix]: http://elixir-lang.org/getting-started/mix-otp/introduction-to-mix.html
 [meck]: https://github.com/eproxus/meck
 [rfc4627]: http://tools.ietf.org/html/rfc4627
 [travis]: https://travis-ci.org/

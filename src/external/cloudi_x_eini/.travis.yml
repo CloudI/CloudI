@@ -1,0 +1,10 @@
+language: erlang
+notifications:
+  email: false
+otp_release:
+  - R14B03
+  - R14B02
+  - R14B01
+branches:
+  only:
+    - develop

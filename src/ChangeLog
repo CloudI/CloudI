@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Changes for Erlang/OTP 19.0 support:
+        * Update erlcloud, jsx, uuid, quickrand
+        * Add eini as a dependency of erlcloud
+
 2016-05-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add eunit tests to cloudi_lists

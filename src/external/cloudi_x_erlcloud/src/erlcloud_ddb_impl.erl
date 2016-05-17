@@ -38,7 +38,7 @@
 %%
 %% Here is an example retry function that provides logging and an updated error reason:
 %%
-%% `
+%% ```
 %% retry(Error) ->
 %%     RequestId = erlcloud_ddb_impl:request_id_from_error(Error),
 %%     {_, Operation} = lists:keyfind("x-amz-target", 1, Error#ddb2_error.request_headers),
@@ -50,7 +50,7 @@
 %%                   Error#ddb2_error.request_body]),
 %%     Error2 = erlcloud_ddb_impl:error_reason2(Error),
 %%     erlcloud_ddb_impl:retry(Error2).
-%% `
+%% '''
 %%
 %% @end
 
@@ -110,14 +110,12 @@ backoff(Attempt) ->
     timer:sleep(random:uniform((1 bsl (Attempt - 1)) * 100)).
 
 %% HTTPC timeout for a request
-timeout(1, _) ->
+timeout(1, #aws_config{timeout = undefined}) ->
     %% Shorter timeout on first request. This is to avoid long (5s) failover when first DDB
     %% endpoint doesn't respond
     1000;
-timeout(_, Config) ->
-    %% Longer timeout on subsequent requsets - results in less timeouts when system is
-    %% under heavy load
-    Config#aws_config.timeout.
+timeout(_, #aws_config{} = Cfg) ->
+    erlcloud_aws:get_timeout(Cfg).
 
 -type attempt() :: {attempt, pos_integer()} | {error, term()}.
 
@@ -256,14 +254,8 @@ client_error(Body, DDBError) ->
 headers(Config, Operation, Body) ->
     Headers = [{"host", Config#aws_config.ddb_host},
                {"x-amz-target", Operation}],
-    Region =
-        case string:tokens(Config#aws_config.ddb_host, ".") of
-            [_, Value, _, _] ->
-                Value;
-            _ ->
-                "us-east-1"
-        end,
-    erlcloud_aws:sign_v4(Config, Headers, Body, Region, "dynamodb").
+
+    erlcloud_aws:sign_v4_headers(Config, Headers, Body, erlcloud_aws:aws_region_from_host(Config#aws_config.ddb_host), "dynamodb").
 
 url(#aws_config{ddb_scheme = Scheme, ddb_host = Host} = Config) ->
     lists:flatten([Scheme, Host, port_spec(Config)]).

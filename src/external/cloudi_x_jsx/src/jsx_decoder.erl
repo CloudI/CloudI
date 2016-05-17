@@ -23,8 +23,7 @@
 
 -module(jsx_decoder).
 
-%% inline sequence accumulation, handle_event, format_number and maybe_replace
--compile({inline, [new_seq/0, new_seq/1, acc_seq/2, end_seq/1, end_seq/2]}).
+%% inline handle_event, format_number and maybe_replace
 -compile({inline, [handle_event/3]}).
 -compile({inline, [format_number/1]}).
 -compile({inline, [maybe_replace/2]}).
@@ -59,10 +58,7 @@ resume(Rest, State, Handler, Acc, Stack, Config) ->
         colon -> colon(Rest, Handler, Stack, Config);
         key -> key(Rest, Handler, Stack, Config);
         string -> string(Rest, Handler, Acc, Stack, Config);
-        integer -> integer(Rest, Handler, Acc, Stack, Config);
-        decimal -> decimal(Rest, Handler, Acc, Stack, Config);
-        exp -> exp(Rest, Handler, Acc, Stack, Config);
-        zero -> zero(Rest, Handler, Acc, Stack, Config);
+        number -> number(Rest, Handler, Acc, Stack, Config);
         true -> true(Rest, Handler, Stack, Config);
         false -> false(Rest, Handler, Stack, Config);
         null -> null(Rest, Handler, Stack, Config);
@@ -120,10 +116,6 @@ resume(Rest, State, Handler, Acc, Stack, Config) ->
     Symbol >= $1 andalso Symbol =< $9
 ).
 
--define(is_whitespace(Symbol),
-    Symbol =:= ?space; Symbol =:= ?tab; Symbol =:= ?cr; Symbol =:= ?newline
-).
-
 
 %% error is a macro so the stack trace shows the error site when possible
 -ifndef(error).
@@ -161,19 +153,6 @@ incomplete(State, Rest, Handler, Acc, Stack, Config = #config{incomplete_handler
     F(Rest, {decoder, State, Handler, Acc, Stack}, jsx_config:config_to_list(Config)).
 
 
-%% lists are benchmarked to be faster (tho higher in memory usage) than binaries
-new_seq() -> [].
-new_seq(C) -> [C].
-
-acc_seq(Seq, C) when is_list(C) -> lists:reverse(C) ++ Seq;
-acc_seq(Seq, C) -> [C] ++ Seq.
-
-end_seq(Seq) -> unicode:characters_to_binary(lists:reverse(Seq)).
-
-end_seq(Seq, #config{dirty_strings=true}) -> list_to_binary(lists:reverse(Seq));
-end_seq(Seq, _) -> end_seq(Seq).
-
-
 handle_event(Event, {Handler, State}, _Config) -> {Handler, Handler:handle_event(Event, State)}.
 
 
@@ -190,27 +169,55 @@ start(Bin, Handler, Stack, Config) ->
 
 
 value(<<?doublequote, Rest/binary>>, Handler, Stack, Config) ->
-    string(Rest, Handler, new_seq(), Stack, Config);
-value(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
-    string(Rest, Handler, new_seq(), [singlequote|Stack], Config);
+    string(Rest, Handler, Stack, Config);
+value(<<?space, Rest/binary>>, Handler, Stack, Config) ->
+    value(Rest, Handler, Stack, Config);
+value(<<?start_object, Rest/binary>>, Handler, Stack, Config) ->
+    object(Rest, handle_event(start_object, Handler, Config), [key|Stack], Config);
+value(<<?start_array, Rest/binary>>, Handler, Stack, Config) ->
+    array(Rest, handle_event(start_array, Handler, Config), [array|Stack], Config);
+value(<<$t, $r, $u, $e, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, handle_event({literal, true}, Handler, Config), Stack, Config);
+value(<<$f, $a, $l, $s, $e, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, handle_event({literal, false}, Handler, Config), Stack, Config);
+value(<<$n, $u, $l, $l, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, handle_event({literal, null}, Handler, Config), Stack, Config);
+value(<<?zero, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [?zero], [zero|Stack], Config);
+value(<<$1, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$1], [integer|Stack], Config);
+value(<<$2, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$2], [integer|Stack], Config);
+value(<<$3, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$3], [integer|Stack], Config);
+value(<<$4, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$4], [integer|Stack], Config);
+value(<<$5, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$5], [integer|Stack], Config);
+value(<<$6, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$6], [integer|Stack], Config);
+value(<<$7, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$7], [integer|Stack], Config);
+value(<<$8, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$8], [integer|Stack], Config);
+value(<<$9, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$9], [integer|Stack], Config);
+value(<<?negative, Rest/binary>>, Handler, Stack, Config) ->
+    number(Rest, Handler, [$-], [negative|Stack], Config);
+value(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
+    value(Rest, Handler, Stack, Config);
 value(<<$t, Rest/binary>>, Handler, Stack, Config) ->
     true(Rest, Handler, Stack, Config);
 value(<<$f, Rest/binary>>, Handler, Stack, Config) ->
     false(Rest, Handler, Stack, Config);
 value(<<$n, Rest/binary>>, Handler, Stack, Config) ->
     null(Rest, Handler, Stack, Config);
-value(<<?negative, Rest/binary>>, Handler, Stack, Config) ->
-    negative(Rest, Handler, new_seq($-), Stack, Config);
-value(<<?zero, Rest/binary>>, Handler, Stack, Config) ->
-    zero(Rest, Handler, new_seq($0), Stack, Config);
-value(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_nonzero(S) ->
-    integer(Rest, Handler, new_seq(S), Stack, Config);
-value(<<?start_object, Rest/binary>>, Handler, Stack, Config) ->
-    object(Rest, handle_event(start_object, Handler, Config), [key|Stack], Config);
-value(<<?start_array, Rest/binary>>, Handler, Stack, Config) ->
-    array(Rest, handle_event(start_array, Handler, Config), [array|Stack], Config);
-value(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+value(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
     value(Rest, Handler, Stack, Config);
+value(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
+    value(Rest, Handler, Stack, Config);
+value(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
+    string(Rest, Handler, [singlequote|Stack], Config);
 value(<<?end_array, _/binary>> = Rest, Handler, Stack, Config=#config{strict_commas=false}) ->
     maybe_done(Rest, Handler, Stack, Config);
 value(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
@@ -228,13 +235,19 @@ value(Bin, Handler, Stack, Config) ->
 
 
 object(<<?doublequote, Rest/binary>>, Handler, Stack, Config) ->
-    string(Rest, Handler, new_seq(), Stack, Config);
-object(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
-    string(Rest, Handler, new_seq(), [singlequote|Stack], Config);
+    string(Rest, Handler, Stack, Config);
+object(<<?space, Rest/binary>>, Handler, Stack, Config) ->
+    object(Rest, Handler, Stack, Config);
 object(<<?end_object, Rest/binary>>, Handler, [key|Stack], Config) ->
     maybe_done(Rest, handle_event(end_object, Handler, Config), Stack, Config);
-object(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+object(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
     object(Rest, Handler, Stack, Config);
+object(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
+    object(Rest, Handler, Stack, Config);
+object(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
+    object(Rest, Handler, Stack, Config);
+object(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
+    string(Rest, Handler, [singlequote|Stack], Config);
 object(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     ?error(object, <<?solidus, Rest/binary>>, Handler, Stack, Config);
 object(<<?solidus, ?solidus, Rest/binary>>, Handler, Stack, Config) ->
@@ -251,7 +264,13 @@ object(Bin, Handler, Stack, Config) ->
 
 array(<<?end_array, Rest/binary>>, Handler, [array|Stack], Config) ->
     maybe_done(Rest, handle_event(end_array, Handler, Config), Stack, Config);
-array(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+array(<<?space, Rest/binary>>, Handler, Stack, Config) ->
+    array(Rest, Handler, Stack, Config);
+array(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
+    array(Rest, Handler, Stack, Config);
+array(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
+    array(Rest, Handler, Stack, Config);
+array(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
     array(Rest, Handler, Stack, Config);
 array(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     value(<<?solidus, Rest/binary>>, Handler, Stack, Config);
@@ -269,7 +288,13 @@ array(Bin, Handler, Stack, Config) ->
 
 colon(<<?colon, Rest/binary>>, Handler, [key|Stack], Config) ->
     value(Rest, Handler, [object|Stack], Config);
-colon(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+colon(<<?space, Rest/binary>>, Handler, Stack, Config) ->
+    colon(Rest, Handler, Stack, Config);
+colon(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
+    colon(Rest, Handler, Stack, Config);
+colon(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
+    colon(Rest, Handler, Stack, Config);
+colon(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
     colon(Rest, Handler, Stack, Config);
 colon(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     ?error(colon, <<?solidus, Rest/binary>>, Handler, Stack, Config);
@@ -286,13 +311,19 @@ colon(Bin, Handler, Stack, Config) ->
 
 
 key(<<?doublequote, Rest/binary>>, Handler, Stack, Config) ->
-    string(Rest, Handler, new_seq(), Stack, Config);
-key(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
-    string(Rest, Handler, new_seq(), [singlequote|Stack], Config);
-key(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+    string(Rest, Handler, Stack, Config);
+key(<<?space, Rest/binary>>, Handler, Stack, Config) ->
     key(Rest, Handler, Stack, Config);
 key(<<?end_object, Rest/binary>>, Handler, [key|Stack], Config=#config{strict_commas=false}) ->
     maybe_done(<<?end_object, Rest/binary>>, Handler, [object|Stack], Config);
+key(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
+    key(Rest, Handler, Stack, Config);
+key(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
+    key(Rest, Handler, Stack, Config);
+key(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
+    key(Rest, Handler, Stack, Config);
+key(<<?singlequote, Rest/binary>>, Handler, Stack, Config=#config{strict_single_quotes=false}) ->
+    string(Rest, Handler, [singlequote|Stack], Config);
 key(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     ?error(key, <<?solidus, Rest/binary>>, Handler, Stack, Config);
 key(<<?solidus, ?solidus, Rest/binary>>, Handler, Stack, Config) ->
@@ -307,271 +338,56 @@ key(Bin, Handler, Stack, Config) ->
     ?error(key, Bin, Handler, Stack, Config).
 
 
-%% explicitly whitelist ascii set for faster parsing. really? really. someone should
-%%  submit a patch that unrolls simple guards
 %% note that if you encounter an error from string and you can't find the clause that
 %%  caused it here, it might be in unescape below
-string(<<32, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 32), Stack, Config);
-string(<<33, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 33), Stack, Config);
+string(Bin, Handler, Stack, Config) ->
+    string(Bin, Handler, [], Stack, Config).
+
+
 string(<<?doublequote, Rest/binary>>, Handler, Acc, Stack, Config) ->
     doublequote(Rest, Handler, Acc, Stack, Config);
-string(<<35, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 35), Stack, Config);
-string(<<36, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 36), Stack, Config);
-string(<<37, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 37), Stack, Config);
-string(<<38, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 38), Stack, Config);
 string(<<?singlequote, Rest/binary>>, Handler, Acc, Stack, Config) ->
     singlequote(Rest, Handler, Acc, Stack, Config);
-string(<<40, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 40), Stack, Config);
-string(<<41, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 41), Stack, Config);
-string(<<42, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 42), Stack, Config);
-string(<<43, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 43), Stack, Config);
-string(<<44, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 44), Stack, Config);
-string(<<45, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 45), Stack, Config);
-string(<<46, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 46), Stack, Config);
 string(<<?solidus, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace(?solidus, Config)), Stack, Config);
-string(<<48, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 48), Stack, Config);
-string(<<49, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 49), Stack, Config);
-string(<<50, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 50), Stack, Config);
-string(<<51, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 51), Stack, Config);
-string(<<52, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 52), Stack, Config);
-string(<<53, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 53), Stack, Config);
-string(<<54, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 54), Stack, Config);
-string(<<55, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 55), Stack, Config);
-string(<<56, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 56), Stack, Config);
-string(<<57, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 57), Stack, Config);
-string(<<58, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 58), Stack, Config);
-string(<<59, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 59), Stack, Config);
-string(<<60, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 60), Stack, Config);
-string(<<61, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 61), Stack, Config);
-string(<<62, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 62), Stack, Config);
-string(<<63, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 63), Stack, Config);
-string(<<64, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 64), Stack, Config);
-string(<<65, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 65), Stack, Config);
-string(<<66, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 66), Stack, Config);
-string(<<67, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 67), Stack, Config);
-string(<<68, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 68), Stack, Config);
-string(<<69, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 69), Stack, Config);
-string(<<70, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 70), Stack, Config);
-string(<<71, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 71), Stack, Config);
-string(<<72, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 72), Stack, Config);
-string(<<73, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 73), Stack, Config);
-string(<<74, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 74), Stack, Config);
-string(<<75, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 75), Stack, Config);
-string(<<76, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 76), Stack, Config);
-string(<<77, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 77), Stack, Config);
-string(<<78, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 78), Stack, Config);
-string(<<79, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 79), Stack, Config);
-string(<<80, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 80), Stack, Config);
-string(<<81, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 81), Stack, Config);
-string(<<82, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 82), Stack, Config);
-string(<<83, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 83), Stack, Config);
-string(<<84, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 84), Stack, Config);
-string(<<85, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 85), Stack, Config);
-string(<<86, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 86), Stack, Config);
-string(<<87, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 87), Stack, Config);
-string(<<88, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 88), Stack, Config);
-string(<<89, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 89), Stack, Config);
-string(<<90, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 90), Stack, Config);
-string(<<91, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 91), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace(?solidus, Config)], Stack, Config);
 string(<<?rsolidus/utf8, Rest/binary>>, Handler, Acc, Stack, Config) ->
     unescape(Rest, Handler, Acc, Stack, Config);
-string(<<93, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 93), Stack, Config);
-string(<<94, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 94), Stack, Config);
-string(<<95, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 95), Stack, Config);
-string(<<96, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 96), Stack, Config);
-string(<<97, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 97), Stack, Config);
-string(<<98, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 98), Stack, Config);
-string(<<99, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 99), Stack, Config);
-string(<<100, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 100), Stack, Config);
-string(<<101, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 101), Stack, Config);
-string(<<102, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 102), Stack, Config);
-string(<<103, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 103), Stack, Config);
-string(<<104, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 104), Stack, Config);
-string(<<105, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 105), Stack, Config);
-string(<<106, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 106), Stack, Config);
-string(<<107, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 107), Stack, Config);
-string(<<108, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 108), Stack, Config);
-string(<<109, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 109), Stack, Config);
-string(<<110, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 110), Stack, Config);
-string(<<111, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 111), Stack, Config);
-string(<<112, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 112), Stack, Config);
-string(<<113, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 113), Stack, Config);
-string(<<114, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 114), Stack, Config);
-string(<<115, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 115), Stack, Config);
-string(<<116, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 116), Stack, Config);
-string(<<117, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 117), Stack, Config);
-string(<<118, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 118), Stack, Config);
-string(<<119, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 119), Stack, Config);
-string(<<120, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 120), Stack, Config);
-string(<<121, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 121), Stack, Config);
-string(<<122, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 122), Stack, Config);
-string(<<123, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 123), Stack, Config);
-string(<<124, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 124), Stack, Config);
-string(<<125, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 125), Stack, Config);
-string(<<126, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 126), Stack, Config);
-string(<<127, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, 127), Stack, Config);
-string(<<C, Rest/binary>>, Handler, Acc, Stack, Config=#config{dirty_strings=true}) ->
-    string(Rest, Handler, acc_seq(Acc, C), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#20, X < 16#2028 ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X == 16#2028; X == 16#2029 ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace(X, Config)), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X > 16#2029, X < 16#d800 ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X > 16#dfff, X < 16#fdd0 ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X > 16#fdef, X < 16#fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#10000, X < 16#1fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#20000, X < 16#2fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#30000, X < 16#3fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#40000, X < 16#4fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#50000, X < 16#5fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#60000, X < 16#6fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#70000, X < 16#7fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#80000, X < 16#8fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#90000, X < 16#9fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#a0000, X < 16#afffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#b0000, X < 16#bfffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#c0000, X < 16#cfffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#d0000, X < 16#dfffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#e0000, X < 16#efffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#f0000, X < 16#ffffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-string(<<X/utf8, Rest/binary>>, Handler, Acc, Stack, Config) when X >= 16#100000, X < 16#10fffe ->
-    string(Rest, Handler, acc_seq(Acc, X), Stack, Config);
-%% partial utf8 codepoints. check that input could possibly be valid before attempting
-%%  to correct
+%% TODO this is pretty gross and i don't like it
+string(<<X/utf8, Rest/binary>> = Bin, Handler, Acc, Stack, Config=#config{uescape=true}) ->
+    case X of
+        X when X < 16#80 -> count(Bin, Handler, Acc, Stack, Config);
+        X -> string(Rest, Handler, [Acc, json_escape_sequence(X)], Stack, Config)
+    end;
+%% u+2028
+string(<<226, 128, 168, Rest/binary>>, Handler, Acc, Stack, Config) ->
+    string(Rest, Handler, [Acc, maybe_replace(16#2028, Config)], Stack, Config);
+%% u+2029
+string(<<226, 128, 169, Rest/binary>>, Handler, Acc, Stack, Config) ->
+    string(Rest, Handler, [Acc, maybe_replace(16#2029, Config)], Stack, Config);
+string(<<_/utf8, _/binary>> = Bin, Handler, Acc, Stack, Config) ->
+    count(Bin, Handler, Acc, Stack, Config);
+%% necessary for bytes that are badly formed utf8 that won't match in `count`
+string(<<X, Rest/binary>>, Handler, Acc, Stack, Config=#config{dirty_strings=true}) ->
+    string(Rest, Handler, [Acc, X], Stack, Config);
+%% u+fffe and u+ffff for R14BXX (subsequent runtimes will happily match with /utf8
+string(<<239, 191, 190, Rest/binary>>, Handler, Acc, Stack, Config) ->
+    string(Rest, Handler, [Acc, <<16#fffe/utf8>>], Stack, Config);
+string(<<239, 191, 191, Rest/binary>>, Handler, Acc, Stack, Config) ->
+    string(Rest, Handler, [Acc, <<16#ffff/utf8>>], Stack, Config);
 string(<<>>, Handler, Acc, Stack, Config) ->
     incomplete(string, <<>>, Handler, Acc, Stack, Config);
-string(<<X>>, Handler, Acc, Stack, Config) when X >= 16#c2, X =< 16#f4 ->
+%% partial utf8 codepoints
+string(<<X>>, Handler, Acc, Stack, Config) when X >= 2#11000000 ->
     incomplete(string, <<X>>, Handler, Acc, Stack, Config);
-string(<<X, Y>>, Handler, Acc, Stack, Config) when X >= 16#e0, X =< 16#f4, Y >= 16#80, Y =< 16#bf ->
+string(<<X, Y>>, Handler, Acc, Stack, Config) when X >= 2#11100000, Y >= 2#10000000 ->
     incomplete(string, <<X, Y>>, Handler, Acc, Stack, Config);
 string(<<X, Y, Z>>, Handler, Acc, Stack, Config)
-        when X >= 16#f0, X =< 16#f4,
-            Y >= 16#80, Y =< 16#bf,
-            Z >= 16#80, Z =< 16#bf ->
+        when X >= 2#11100000, Y >= 2#10000000, Z >= 2#10000000 ->
     incomplete(string, <<X, Y, Z>>, Handler, Acc, Stack, Config);
 %% surrogates
 string(<<237, X, _, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false})
         when X >= 160 ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config);
-%% u+xfffe, u+xffff, control codes and other noncharacters
-string(<<_/utf8, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false}) ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config);
-%% u+fffe and u+ffff for R14BXX (subsequent runtimes will happily match the
-%%  preceeding clause
-string(<<239, 191, X, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false})
-        when X == 190; X == 191 ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config);
+    string(Rest, Handler, [Acc, <<16#fffd/utf8>>], Stack, Config);
 %% overlong encodings and missing continuations of a 2 byte sequence
 string(<<X, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false})
         when X >= 192, X =< 223 ->
@@ -586,32 +402,307 @@ string(<<X, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false
     strip_continuations(Rest, Handler, Acc, Stack, Config, 3);
 %% incompletes and unexpected bytes, including orphan continuations
 string(<<_, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_utf8=false}) ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config);
+    string(Rest, Handler, [Acc, <<16#fffd/utf8>>], Stack, Config);
 string(Bin, Handler, Acc, Stack, Config) -> ?error(string, Bin, Handler, Acc, Stack, Config).
 
 
+count(Bin, Handler, Acc, Stack, Config) ->
+    Size = count(Bin, 0, Config),
+    <<Clean:Size/binary, Rest/binary>> = Bin,
+    string(Rest, Handler, [Acc, Clean], Stack, Config).
+
+
+%% explicitly whitelist ascii set for faster parsing. really? really. someone should
+%%  submit a patch that unrolls simple guards
+count(<<0, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<1, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<2, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<3, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<4, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<5, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<6, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<7, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<8, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<9, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<10, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<11, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<12, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<13, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<14, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<15, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<16, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<17, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<18, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<19, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<20, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<21, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<22, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<23, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<24, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<25, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<26, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<27, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<28, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<29, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<30, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<31, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<32, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<33, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<?doublequote, _/binary>>, N, _) -> N;
+count(<<35, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<36, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<37, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<38, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<?singlequote, _/binary>>, N, _) -> N;
+count(<<40, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<41, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<42, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<43, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<44, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<45, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<46, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<?solidus, _/binary>>, N, _) -> N;
+count(<<48, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<49, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<50, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<51, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<52, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<53, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<54, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<55, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<56, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<57, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<58, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<59, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<60, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<61, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<62, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<63, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<64, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<65, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<66, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<67, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<68, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<69, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<70, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<71, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<72, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<73, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<74, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<75, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<76, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<77, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<78, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<79, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<80, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<81, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<82, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<83, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<84, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<85, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<86, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<87, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<88, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<89, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<90, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<91, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<?rsolidus, _/binary>>, N, _) -> N;
+count(<<93, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<94, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<95, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<96, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<97, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<98, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<99, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<100, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<101, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<102, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<103, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<104, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<105, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<106, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<107, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<108, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<109, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<110, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<111, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<112, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<113, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<114, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<115, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<116, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<117, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<118, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<119, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<120, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<121, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<122, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<123, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<124, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<125, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<126, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<127, Rest/binary>>, N, Config) ->
+    count(Rest, N + 1, Config);
+count(<<_, Rest/binary>>, N, Config=#config{dirty_strings=true}) ->
+    count(Rest, N + 1, Config);
+count(<<_/utf8, _/binary>>, N, #config{uescape=true}) -> N;
+count(<<X/utf8, Rest/binary>>, N, Config) ->
+    case X of
+        X when X < 16#800 -> count(Rest, N + 2, Config);
+        %% jsonp escaping
+        16#2028 -> N;
+        16#2029 -> N;
+        X when X < 16#10000 -> count(Rest, N + 3, Config);
+        _ -> count(Rest, N + 4, Config)
+    end;
+count(_, N, _) -> N.
+
+
 doublequote(Rest, Handler, Acc, [key|_] = Stack, Config) ->
-    colon(Rest, handle_event({key, end_seq(Acc, Config)}, Handler, Config), Stack, Config);
+    colon(Rest, handle_event({key, iolist_to_binary(Acc)}, Handler, Config), Stack, Config);
 doublequote(Rest, Handler, Acc, [singlequote|_] = Stack, Config) ->
-    string(Rest, Handler,acc_seq(Acc, maybe_replace(?doublequote, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace(?doublequote, Config)], Stack, Config);
 doublequote(<<>>, Handler, Acc, [singlequote|_] = Stack, Config) ->
     incomplete(string, <<?doublequote>>, Handler, Acc, Stack, Config);
 doublequote(Rest, Handler, Acc, Stack, Config) ->
-    maybe_done(Rest, handle_event({string, end_seq(Acc, Config)}, Handler, Config), Stack, Config).
+    maybe_done(Rest, handle_event({string, iolist_to_binary(Acc)}, Handler, Config), Stack, Config).
 
 
 singlequote(Rest, Handler, Acc, [singlequote, key|Stack], Config) ->
-    colon(Rest, handle_event({key, end_seq(Acc, Config)}, Handler, Config), [key|Stack], Config);
+    colon(Rest, handle_event({key, iolist_to_binary(Acc)}, Handler, Config), [key|Stack], Config);
 singlequote(Rest, Handler, Acc, [singlequote|Stack], Config) ->
-    maybe_done(Rest, handle_event({string, end_seq(Acc, Config)}, Handler, Config), Stack, Config);
+    maybe_done(Rest, handle_event({string, iolist_to_binary(Acc)}, Handler, Config), Stack, Config);
 singlequote(Rest, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, ?singlequote), Stack, Config).
+    string(Rest, Handler, [Acc, ?singlequote], Stack, Config).
 
 
 %% strips continuation bytes after bad utf bytes, guards against both too short
 %%  and overlong sequences. N is the maximum number of bytes to strip
 strip_continuations(<<Rest/binary>>, Handler, Acc, Stack, Config, 0) ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config);
+    string(Rest, Handler, [Acc, <<16#fffd/utf8>>], Stack, Config);
 strip_continuations(<<X, Rest/binary>>, Handler, Acc, Stack, Config, N) when X >= 128, X =< 191 ->
     strip_continuations(Rest, Handler, Acc, Stack, Config, N - 1);
 %% if end of input is reached before stripping the max number of continuations
@@ -626,75 +717,80 @@ strip_continuations(<<>>, Handler, Acc, Stack, Config, N) ->
 %% not a continuation byte, insert a replacement character for sequence thus
 %%  far and dispatch back to string
 strip_continuations(<<Rest/binary>>, Handler, Acc, Stack, Config, _) ->
-    string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config).
+    string(Rest, Handler, [Acc, <<16#fffd/utf8>>], Stack, Config).
 
 
 %% this all gets really gross and should probably eventually be folded into
 %%  but for now it fakes being part of string on incompletes and errors
 unescape(<<?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config=#config{dirty_strings=true}) ->
-    string(<<?rsolidus, Rest/binary>>, Handler, acc_seq(Acc, ?rsolidus), Stack, Config);
+    string(<<?rsolidus, Rest/binary>>, Handler, [Acc, <<?rsolidus>>], Stack, Config);
 unescape(<<C, Rest/binary>>, Handler, Acc, Stack, Config=#config{dirty_strings=true}) ->
-    string(Rest, Handler, acc_seq(Acc, [?rsolidus, C]), Stack, Config);
+    string(Rest, Handler, [Acc, <<?rsolidus, C>>], Stack, Config);
 unescape(<<$b, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\b, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\b, Config)], Stack, Config);
 unescape(<<$f, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\f, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\f, Config)], Stack, Config);
 unescape(<<$n, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\n, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\n, Config)], Stack, Config);
 unescape(<<$r, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\r, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\r, Config)], Stack, Config);
 unescape(<<$t, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\t, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\t, Config)], Stack, Config);
 unescape(<<?doublequote, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\", Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\", Config)], Stack, Config);
 unescape(<<?singlequote, Rest/binary>>, Handler, Acc, Stack, Config=#config{strict_single_quotes=false}) ->
-    string(Rest, Handler, acc_seq(Acc, ?singlequote), Stack, Config);
+    string(Rest, Handler, [Acc, <<?singlequote>>], Stack, Config);
 unescape(<<?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($\\, Config)), Stack, Config);
+    string(Rest, Handler, [Acc, maybe_replace($\\, Config)], Stack, Config);
 unescape(<<?solidus, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    string(Rest, Handler, acc_seq(Acc, maybe_replace($/, Config)), Stack, Config);
-unescape(<<$u, $d, A, B, C, ?rsolidus, $u, $d, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
-        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b),
-             (X == $c orelse X == $d orelse X == $e orelse X == $f),
-             ?is_hex(B), ?is_hex(C), ?is_hex(Y), ?is_hex(Z)
+    string(Rest, Handler, [Acc, maybe_replace($/, Config)], Stack, Config);
+unescape(<<$u, F, A, B, C, ?rsolidus, $u, G, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
+        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b orelse A == $A orelse A == $B),
+            (X == $c orelse X == $d orelse X == $e orelse X == $f orelse X == $C orelse X == $D orelse X == $E orelse X == $F),
+            (F == $d orelse F == $D),
+            (G == $d orelse G == $D),
+            ?is_hex(B), ?is_hex(C), ?is_hex(Y), ?is_hex(Z)
         ->
     High = erlang:list_to_integer([$d, A, B, C], 16),
     Low = erlang:list_to_integer([$d, X, Y, Z], 16),
     Codepoint = (High - 16#d800) * 16#400 + (Low - 16#dc00) + 16#10000,
-    string(Rest, Handler, acc_seq(Acc, Codepoint), Stack, Config);
-unescape(<<$u, $d, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
-        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b),
-             ?is_hex(B), ?is_hex(C), ?is_hex(W), ?is_hex(X), ?is_hex(Y), ?is_hex(Z)
+    string(Rest, Handler, [Acc, <<Codepoint/utf8>>], Stack, Config);
+unescape(<<$u, F, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config)
+        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b orelse A == $A orelse A == $B),
+            (F == $d orelse F == $D),
+            ?is_hex(B), ?is_hex(C), ?is_hex(W), ?is_hex(X), ?is_hex(Y), ?is_hex(Z)
         ->
     case Config#config.strict_utf8 of
         true -> ?error(<<$u, $d, A, B, C, ?rsolidus, $u, W, X, Y, Z, Rest/binary>>, Handler, Acc, Stack, Config);
-        false -> string(Rest, Handler, acc_seq(Acc, [16#fffd, 16#fffd]), Stack, Config)
+        false -> string(Rest, Handler, [Acc, <<16#fffd/utf8>>, <<16#fffd/utf8>>], Stack, Config)
     end;
-unescape(<<$u, $d, A, B, C, ?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config)
-        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b),
-             ?is_hex(B), ?is_hex(C)
+unescape(<<$u, F, A, B, C, ?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config)
+        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b orelse A == $A orelse A == $B),
+            (F == $d orelse F == $D),
+            ?is_hex(B), ?is_hex(C)
         ->
     incomplete(string, <<?rsolidus, $u, $d, A, B, C, ?rsolidus, Rest/binary>>, Handler, Acc, Stack, Config);
-unescape(<<$u, $d, A, B, C>>, Handler, Acc, Stack, Config)
-        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b),
-             ?is_hex(B), ?is_hex(C)
+unescape(<<$u, F, A, B, C>>, Handler, Acc, Stack, Config)
+        when (A == $8 orelse A == $9 orelse A == $a orelse A == $b orelse A == $A orelse A == $B),
+            (F == $d orelse F == $D),
+            ?is_hex(B), ?is_hex(C)
         ->
     incomplete(string, <<?rsolidus, $u, $d, A, B, C>>, Handler, Acc, Stack, Config);
 unescape(<<$u, A, B, C, D, Rest/binary>>, Handler, Acc, Stack, Config)
         when ?is_hex(A), ?is_hex(B), ?is_hex(C), ?is_hex(D) ->
     case erlang:list_to_integer([A, B, C, D], 16) of
         Codepoint when Codepoint < 16#d800; Codepoint > 16#dfff ->
-            string(Rest, Handler, acc_seq(Acc, maybe_replace(Codepoint, Config)), Stack, Config);
+            string(Rest, Handler, [Acc, maybe_replace(Codepoint, Config)], Stack, Config);
         _ when Config#config.strict_utf8 ->
             ?error(string, <<?rsolidus, $u, A, B, C, D, Rest/binary>>, Handler, Acc, Stack, Config);
-        _ -> string(Rest, Handler, acc_seq(Acc, 16#fffd), Stack, Config)
+        _ -> string(Rest, Handler, [Acc, <<16#fffd/utf8>>], Stack, Config)
     end;
 unescape(Bin, Handler, Acc, Stack, Config) ->
     case is_partial_escape(Bin) of
         true -> incomplete(string, <<?rsolidus/utf8, Bin/binary>>, Handler, Acc, Stack, Config);
         false -> case Config#config.strict_escapes of
                 true -> ?error(string, <<?rsolidus, Bin/binary>>, Handler, Acc, Stack, Config);
-                false -> string(Bin, Handler, acc_seq(Acc, ?rsolidus), Stack, Config)
+                false -> string(Bin, Handler, [Acc, <<?rsolidus>>], Stack, Config)
             end
     end.
 
@@ -707,32 +803,37 @@ is_partial_escape(<<>>) -> true;
 is_partial_escape(_) -> false.
 
 
-maybe_replace(C, #config{dirty_strings=true}) -> C;
-maybe_replace($\b, #config{escaped_strings=true}) -> [$\\, $b];
-maybe_replace($\t, #config{escaped_strings=true}) -> [$\\, $t];
-maybe_replace($\n, #config{escaped_strings=true}) -> [$\\, $n];
-maybe_replace($\f, #config{escaped_strings=true}) -> [$\\, $f];
-maybe_replace($\r, #config{escaped_strings=true}) -> [$\\, $r];
-maybe_replace($\", #config{escaped_strings=true}) -> [$\\, $\"];
+maybe_replace(C, #config{dirty_strings=true}) -> <<C>>;
+maybe_replace($\b, #config{escaped_strings=true}) -> <<$\\, $b>>;
+maybe_replace($\t, #config{escaped_strings=true}) -> <<$\\, $t>>;
+maybe_replace($\n, #config{escaped_strings=true}) -> <<$\\, $n>>;
+maybe_replace($\f, #config{escaped_strings=true}) -> <<$\\, $f>>;
+maybe_replace($\r, #config{escaped_strings=true}) -> <<$\\, $r>>;
+maybe_replace($\", #config{escaped_strings=true}) -> <<$\\, $\">>;
 maybe_replace($/, Config=#config{escaped_strings=true}) ->
     case Config#config.escaped_forward_slashes of
-        true -> [$\\, $/]
-        ; false -> $/
+        true -> <<$\\, $/>>
+        ; false -> <<$/>>
     end;
-maybe_replace($\\, #config{escaped_strings=true}) -> [$\\, $\\];
+maybe_replace($\\, #config{escaped_strings=true}) -> <<$\\, $\\>>;
 maybe_replace(X, Config=#config{escaped_strings=true})  when X == 16#2028; X == 16#2029 ->
     case Config#config.unescaped_jsonp of
-        true -> X
+        true -> <<X/utf8>>
         ; false -> json_escape_sequence(X)
     end;
-maybe_replace(X, #config{escaped_strings=true}) when X < 32 -> json_escape_sequence(X);
-maybe_replace(X, _Config) -> X.
+maybe_replace(X, #config{escaped_strings=true}) when X < 32 ->
+    json_escape_sequence(X);
+maybe_replace(X, _Config) -> <<X/utf8>>.
 
 
 %% convert a codepoint to it's \uXXXX equiv.
-json_escape_sequence(X) ->
+json_escape_sequence(X) when X < 65536 ->
     <<A:4, B:4, C:4, D:4>> = <<X:16>>,
-    [$\\, $u, (to_hex(A)), (to_hex(B)), (to_hex(C)), (to_hex(D))].
+    <<$\\, $u, (to_hex(A)), (to_hex(B)), (to_hex(C)), (to_hex(D))>>;
+json_escape_sequence(X) ->
+    Adjusted = X - 16#10000,
+    <<A:10, B:10>> = <<Adjusted:20>>,
+    [json_escape_sequence(A + 16#d800), json_escape_sequence(B + 16#dc00)].
 
 
 %% ascii "1" is [49], "2" is [50], etc...
@@ -745,89 +846,174 @@ to_hex(15) -> $f;
 to_hex(X) -> X + 48.
 
 
-%% like in strings, there's some pseudo states in here that will never
-%%  show up in errors or incompletes. some show up in value, some show
-%%  up in integer, decimal or exp
-negative(<<$0, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    zero(Rest, Handler, acc_seq(Acc, $0), Stack, Config);
-negative(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when ?is_nonzero(S) ->
-    integer(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-negative(<<>>, Handler, [?negative], Stack, Config) ->
-    incomplete(value, <<?negative>>, Handler, Stack, Config);
-negative(Bin, Handler, Acc, Stack, Config) ->
-    ?error(value, <<?negative, Bin/binary>>, Handler, Acc, Stack, Config).
+number(<<$e, Rest/binary>>, Handler, Acc, [integer|Stack], Config) ->
+    number(Rest, Handler, [Acc, $., $0, $e], [e|Stack], Config);
+number(<<$E, Rest/binary>>, Handler, Acc, [integer|Stack], Config) ->
+    number(Rest, Handler, [Acc, $., $0, $e], [e|Stack], Config);
+number(<<$e, Rest/binary>>, Handler, Acc, [zero|Stack], Config) ->
+    number(Rest, Handler, [Acc, $., $0, $e], [e|Stack], Config);
+number(<<$E, Rest/binary>>, Handler, Acc, [zero|Stack], Config) ->
+    number(Rest, Handler, [Acc, $., $0, $e], [e|Stack], Config);
+number(<<>>, Handler, Acc, [State|Stack], Config=#config{stream=false}) ->
+    NumType = case State of
+        zero -> integer;
+        integer -> integer;
+        decimal -> float;
+        exp -> float
+    end,
+    finish_number(<<>>, Handler, {NumType, iolist_to_binary(Acc)}, Stack, Config);
+number(<<>>, Handler, Acc, Stack, Config) ->
+    incomplete(number, <<>>, Handler, Acc, Stack, Config);
+number(Bin, Handler, Acc, [State|Stack], Config) ->
+    Counted = case State of
+        zero -> zero(Bin, 0);
+        integer -> integer(Bin, 0);
+        negative -> negative(Bin, 0);
+        initialdecimal -> initialdecimal(Bin, 0);
+        decimal -> decimal(Bin, 0);
+        e -> e(Bin, 0);
+        ex -> ex(Bin, 0);
+        exp -> exp(Bin, 0)
+    end,
+    case Counted of
+        {finish_integer, Size} ->
+            <<Clean:Size/binary, Rest/binary>> = Bin,
+            finish_number(Rest, Handler, {integer, iolist_to_binary([Acc, Clean])}, Stack, Config);
+        {finish_float, Size} ->
+            <<Clean:Size/binary, Rest/binary>> = Bin,
+            finish_number(Rest, Handler, {float, iolist_to_binary([Acc, Clean])}, Stack, Config);
+        {error, Size} ->
+            <<Clean:Size/binary, Rest/binary>> = Bin,
+            ?error(number, Rest, Handler, [Acc, Clean], Stack, Config);
+        {NewState, Size} ->
+            <<Clean:Size/binary, Rest/binary>> = Bin,
+            number(Rest, Handler, [Acc, Clean], [NewState|Stack], Config)
+    end.
 
 
-zero(<<?decimalpoint, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    decimal(Rest, Handler, acc_seq(Acc, ?decimalpoint), Stack, Config);
-zero(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= $e; S =:= $E ->
-    e(Rest, Handler, acc_seq(Acc, ".0e"), Stack, Config);
-zero(Bin, Handler, Acc, Stack, Config) ->
-    finish_number(Bin, Handler, {zero, Acc}, Stack, Config).
+zero(<<?decimalpoint, Rest/binary>>, N) -> initialdecimal(Rest, N + 1);
+zero(<<$e, _/binary>>, N) -> {integer, N};
+zero(<<$E, _/binary>>, N) -> {integer, N};
+zero(<<>>, N) -> {zero, N};
+zero(_, N) -> {finish_integer, N}.
 
 
-integer(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    integer(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-integer(<<?decimalpoint, Rest/binary>>, Handler, Acc, Stack, Config) ->
-    initialdecimal(Rest, Handler, acc_seq(Acc, ?decimalpoint), Stack, Config);
-integer(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= $e; S =:= $E ->
-    e(Rest, Handler, acc_seq(Acc, ".0e"), Stack, Config);
-integer(Bin, Handler, Acc, Stack, Config) ->
-    finish_number(Bin, Handler, {integer, Acc}, Stack, Config).
+integer(<<$0, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$1, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$2, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$3, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$4, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$5, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$6, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$7, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$8, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<$9, Rest/binary>>, N) -> integer(Rest, N + 1);
+integer(<<?decimalpoint, Rest/binary>>, N) -> initialdecimal(Rest, N + 1);
+integer(<<$e, _/binary>>, N) -> {integer, N};
+integer(<<$E, _/binary>>, N) -> {integer, N};
+integer(<<>>, N) -> {integer, N};
+integer(_, N) -> {finish_integer, N}.
 
 
-initialdecimal(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    decimal(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-initialdecimal(<<>>, Handler, [?decimalpoint|Acc], Stack, Config) ->
-    incomplete(integer, <<?decimalpoint>>, Handler, Acc, Stack, Config);
-initialdecimal(Bin, Handler, Acc, Stack, Config) ->
-    ?error(decimal, Bin, Handler, Acc, Stack, Config).
+negative(<<$0, Rest/binary>>, N) -> zero(Rest, N + 1);
+negative(<<$1, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$2, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$3, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$4, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$5, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$6, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$7, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$8, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<$9, Rest/binary>>, N) -> integer(Rest, N + 1);
+negative(<<>>, N) -> {negative, N};
+negative(_, N) -> {error, N}.
 
 
-decimal(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    decimal(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-decimal(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= $e; S =:= $E ->
-    e(Rest, Handler, acc_seq(Acc, $e), Stack, Config);
-decimal(Bin, Handler, Acc, Stack, Config) ->
-    finish_number(Bin, Handler, {decimal, Acc}, Stack, Config).
+initialdecimal(<<$0, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$1, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$2, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$3, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$4, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$5, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$6, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$7, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$8, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<$9, Rest/binary>>, N) -> decimal(Rest, N + 1);
+initialdecimal(<<>>, N) -> {initialdecimal, N};
+initialdecimal(_, N) -> {error, N}.
 
 
-e(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    exp(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-e(<<Sign, Rest/binary>>, Handler, Acc, Stack, Config) when Sign =:= ?positive; Sign =:= ?negative ->
-    ex(Rest, Handler, acc_seq(Acc, Sign), Stack, Config);
-e(<<>>, Handler, [$e|Acc], Stack, Config) ->
-    incomplete(decimal, <<$e>>, Handler, Acc, Stack, Config);
-e(Bin, Handler, Acc, Stack, Config) ->
-    ?error(decimal, <<$e, Bin/binary>>, Handler, Acc, Stack, Config).
+decimal(<<$0, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$1, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$2, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$3, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$4, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$5, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$6, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$7, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$8, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$9, Rest/binary>>, N) -> decimal(Rest, N + 1);
+decimal(<<$e, Rest/binary>>, N) -> e(Rest, N + 1);
+decimal(<<$E, Rest/binary>>, N) -> e(Rest, N + 1);
+decimal(<<>>, N) -> {decimal, N};
+decimal(_, N) -> {finish_float, N}.
 
 
-ex(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    exp(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-ex(<<>>, Handler, [S, $e|Acc], Stack, Config) ->
-    incomplete(decimal, <<$e, S/utf8>>, Handler, Acc, Stack, Config);
-ex(Bin, Handler, [S, $e|Acc], Stack, Config) ->
-    ?error(decimal, <<$e, S, Bin/binary>>, Handler, Acc, Stack, Config).
+e(<<$0, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$1, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$2, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$3, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$4, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$5, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$6, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$7, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$8, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<$9, Rest/binary>>, N) -> exp(Rest, N + 1);
+e(<<?positive, Rest/binary>>, N) -> ex(Rest, N + 1);
+e(<<?negative, Rest/binary>>, N) -> ex(Rest, N + 1);
+e(<<>>, N) -> {e, N};
+e(_, N) -> {error, N}.
 
 
-exp(<<S, Rest/binary>>, Handler, Acc, Stack, Config) when S =:= ?zero; ?is_nonzero(S) ->
-    exp(Rest, Handler, acc_seq(Acc, S), Stack, Config);
-exp(Bin, Handler, Acc, Stack, Config) ->
-    finish_number(Bin, Handler, {exp, Acc}, Stack, Config).
+ex(<<$0, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$1, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$2, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$3, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$4, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$5, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$6, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$7, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$8, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<$9, Rest/binary>>, N) -> exp(Rest, N + 1);
+ex(<<>>, N) -> {ex, N};
+ex(_, N) -> {error, N}.
 
 
-finish_number(Rest, Handler, Acc, [], Config=#config{stream=false}) ->
-    maybe_done(Rest, handle_event(format_number(Acc), Handler, Config), [], Config);
-finish_number(<<>>, Handler, {NumType, Acc}, Stack, Config) ->
-    incomplete(NumType, <<>>, Handler, Acc, Stack, Config);
+exp(<<$0, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$1, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$2, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$3, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$4, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$5, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$6, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$7, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$8, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<$9, Rest/binary>>, N) -> exp(Rest, N + 1);
+exp(<<>>, N) -> {exp, N};
+exp(_, N) -> {finish_float, N}.
+
+
 finish_number(Rest, Handler, Acc, Stack, Config) ->
     maybe_done(Rest, handle_event(format_number(Acc), Handler, Config), Stack, Config).
 
 
-format_number({zero, Acc}) -> {integer, list_to_integer(lists:reverse(Acc))};
-format_number({integer, Acc}) -> {integer, list_to_integer(lists:reverse(Acc))};
-format_number({decimal, Acc}) -> {float, list_to_float(lists:reverse(Acc))};
-format_number({exp, Acc}) -> {float, list_to_float(lists:reverse(Acc))}.
+-ifndef(no_binary_to_whatever).
+format_number({integer, Acc}) -> {integer, binary_to_integer(Acc)};
+format_number({float, Acc}) -> {float, binary_to_float(Acc)}.
+-else.
+format_number({integer, Acc}) -> {integer, list_to_integer(unicode:characters_to_list(Acc))};
+format_number({float, Acc}) -> {float, list_to_float(unicode:characters_to_list(Acc))}.
+-endif.
 
 
 true(<<$r, $u, $e, Rest/binary>>, Handler, Stack, Config) ->
@@ -896,6 +1082,8 @@ comment(Bin, Handler, Resume, Stack, Config) ->
 
 maybe_done(<<Rest/binary>>, Handler, [], Config) ->
     done(Rest, handle_event(end_json, Handler, Config), [], Config);
+maybe_done(<<?space, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, Handler, Stack, Config);
 maybe_done(<<?end_object, Rest/binary>>, Handler, [object|Stack], Config) ->
     maybe_done(Rest, handle_event(end_object, Handler, Config), Stack, Config);
 maybe_done(<<?end_array, Rest/binary>>, Handler, [array|Stack], Config) ->
@@ -904,7 +1092,11 @@ maybe_done(<<?comma, Rest/binary>>, Handler, [object|Stack], Config) ->
     key(Rest, Handler, [key|Stack], Config);
 maybe_done(<<?comma, Rest/binary>>, Handler, [array|_] = Stack, Config) ->
     value(Rest, Handler, Stack, Config);
-maybe_done(<<S, Rest/binary>>, Handler, Stack, Config) when ?is_whitespace(S) ->
+maybe_done(<<?newline, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, Handler, Stack, Config);
+maybe_done(<<?tab, Rest/binary>>, Handler, Stack, Config) ->
+    maybe_done(Rest, Handler, Stack, Config);
+maybe_done(<<?cr, Rest/binary>>, Handler, Stack, Config) ->
     maybe_done(Rest, Handler, Stack, Config);
 maybe_done(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     ?error(maybe_done, <<?solidus, Rest/binary>>, Handler, Stack, Config);
@@ -920,7 +1112,13 @@ maybe_done(Bin, Handler, Stack, Config) ->
     ?error(maybe_done, Bin, Handler, Stack, Config).
 
 
-done(<<S, Rest/binary>>, Handler, [], Config) when ?is_whitespace(S) ->
+done(<<?space, Rest/binary>>, Handler, [], Config) ->
+    done(Rest, Handler, [], Config);
+done(<<?newline, Rest/binary>>, Handler, [], Config) ->
+    done(Rest, Handler, [], Config);
+done(<<?tab, Rest/binary>>, Handler, [], Config) ->
+    done(Rest, Handler, [], Config);
+done(<<?cr, Rest/binary>>, Handler, [], Config) ->
     done(Rest, Handler, [], Config);
 done(<<?solidus, Rest/binary>>, Handler, Stack, Config=#config{strict_comments=true}) ->
     ?error(done, <<?solidus, Rest/binary>>, Handler, Stack, Config);
@@ -930,9 +1128,13 @@ done(<<?solidus, ?star, Rest/binary>>, Handler, Stack, Config) ->
     comment(Rest, Handler, done, [multicomment|Stack], Config);
 done(<<?solidus>>, Handler, Stack, Config) ->
     incomplete(done, <<?solidus>>, Handler, Stack, Config);
+done(Bin, {_Handler, State}, _Stack, #config{return_tail=true}) ->
+     {with_tail,State, Bin};
 done(<<>>, {Handler, State}, [], Config=#config{stream=true}) ->
     incomplete(done, <<>>, {Handler, State}, [], Config);
 done(<<>>, {_Handler, State}, [], _Config) -> State;
+done(Bin, {Handler, State}, _Stack, Config=#config{multi_term=true}) ->
+     value(Bin, {Handler, Handler:reset(State)}, [], Config);
 done(Bin, Handler, Stack, Config) -> ?error(done, Bin, Handler, Stack, Config).
 
 
@@ -972,6 +1174,7 @@ special_number_test_() ->
         {"0e4", [{float, 0.0}, end_json], <<"0e4">>},
         {"1e0", [{float, 1.0}, end_json], <<"1e0">>},
         {"-1e0", [{float, -1.0}, end_json], <<"-1e0">>},
+        {"-0e0", [{float, -0.0}, end_json], <<"-0e0">>},
         {"1e4", [{float, 1.0e4}, end_json], <<"1e4">>},
         {"number terminated by whitespace", 
             [start_array, {integer, 1}, end_array, end_json],
@@ -1264,30 +1467,19 @@ no_comments_test_() ->
 % doing the full unicode range takes foreverrrrrrr so just do boundaries
 % excludes characters that may need escaping
 codepoints() ->
-    [32, 33] ++
+    lists:seq(0, 32) ++
+        [32, 33] ++
         lists:seq(35, 46) ++
         lists:seq(48, 91) ++
         lists:seq(93, 127) ++
-        [16#2027, 16#202a, 16#d7ff, 16#e000, 16#fdcf, 16#fdf0, 16#fffd] ++
-        [16#10000, 16#1fffd, 16#20000, 16#30000, 16#40000, 16#50000] ++
+        [16#2027, 16#202a, 16#d7ff, 16#e000] ++
+        lists:seq(16#fdd0, 16#ffff) ++
+        [16#10000, 16#20000, 16#30000, 16#40000, 16#50000] ++
         [16#60000, 16#70000, 16#80000, 16#90000, 16#a0000, 16#b0000] ++
     [16#c0000, 16#d0000, 16#e0000, 16#f0000, 16#100000].
 
-reserved_space() -> lists:seq(16#fdd0, 16#fdef).
 
 surrogates() -> lists:seq(16#d800, 16#dfff).
-
-noncharacters() -> lists:seq(16#fffe, 16#ffff).
-
-extended_noncharacters() ->
-    [16#1fffe, 16#1ffff, 16#2fffe, 16#2ffff] ++
-        [16#3fffe, 16#3ffff, 16#4fffe, 16#4ffff] ++
-        [16#5fffe, 16#5ffff, 16#6fffe, 16#6ffff] ++
-        [16#7fffe, 16#7ffff, 16#8fffe, 16#8ffff] ++
-        [16#9fffe, 16#9ffff, 16#afffe, 16#affff] ++
-        [16#bfffe, 16#bffff, 16#cfffe, 16#cffff] ++
-        [16#dfffe, 16#dffff, 16#efffe, 16#effff] ++
-    [16#ffffe, 16#fffff, 16#10fffe, 16#10ffff].
 
 
 %% erlang refuses to decode certain codepoints, so fake them all
@@ -1305,7 +1497,7 @@ to_fake_utf8(N) ->
 
 clean_string_test_() ->
     Clean = codepoints(),
-    Dirty = reserved_space() ++ surrogates() ++ noncharacters() ++ extended_noncharacters(),
+    Dirty = surrogates(),
     % clean codepoints
     [{"clean u+" ++ integer_to_list(Codepoint, 16), ?_assertEqual(
             [{string, <<Codepoint/utf8>>}, end_json],
@@ -1363,11 +1555,6 @@ dirty_string_test_() ->
             <<"[\"", 237, 160, 128, "\"]">>,
             [dirty_strings]
         },
-        {"dirty 16#10ffff",
-            [start_array, {string, <<244, 143, 191, 191>>}, end_array, end_json],
-            <<"[\"", 244, 143, 191, 191, "\"]">>,
-            [dirty_strings]
-        },
         {"dirty /",
             [start_array, {string, <<$/>>}, end_array, end_json],
             <<"[\"", $/, "\"]">>,
@@ -1393,8 +1580,6 @@ dirty_string_test_() ->
 
 bad_utf8_test_() ->
     Cases = [
-        {"noncharacter u+fffe", <<16#fffd/utf8>>, <<239, 191, 190>>},
-        {"noncharacter u+ffff", <<16#fffd/utf8>>, <<239, 191, 191>>},
         {"orphan continuation byte u+0080", <<16#fffd/utf8>>, <<16#0080>>},
         {"orphan continuation byte u+00bf", <<16#fffd/utf8>>, <<16#00bf>>},
         {"2 continuation bytes",
@@ -1502,16 +1687,27 @@ unescape_test_() ->
         {"unescape reverse solidus", <<"\\">>, <<"\\\\"/utf8>>},
         {"unescape control", <<0>>, <<"\\u0000"/utf8>>},
         {"unescape surrogate pair", <<16#10000/utf8>>, <<"\\ud800\\udc00"/utf8>>},
+        {"unescape surrogate pair", <<16#10000/utf8>>, <<"\\uD800\\uDC00"/utf8>>},
         {"replace bad high surrogate", <<16#fffd/utf8>>, <<"\\udc00"/utf8>>},
+        {"replace bad high surrogate", <<16#fffd/utf8>>, <<"\\uDC00"/utf8>>},
         {"replace naked high surrogate",
             <<16#fffd/utf8, "hello world">>,
             <<"\\ud800hello world"/utf8>>
+        },
+        {"replace naked high surrogate",
+            <<16#fffd/utf8, "hello world">>,
+            <<"\\uD800hello world"/utf8>>
         },
         {"replace naked low surrogate",
             <<16#fffd/utf8, "hello world">>,
             <<"\\udc00hello world"/utf8>>
         },
-        {"replace bad surrogate pair", <<16#fffd/utf8, 16#fffd/utf8>>, <<"\\ud800\\u0000">>}
+        {"replace naked low surrogate",
+            <<16#fffd/utf8, "hello world">>,
+            <<"\\uDC00hello world"/utf8>>
+        },
+        {"replace bad surrogate pair", <<16#fffd/utf8, 16#fffd/utf8>>, <<"\\ud800\\u0000">>},
+        {"replace bad surrogate pair", <<16#fffd/utf8, 16#fffd/utf8>>, <<"\\uD800\\u0000">>}
     ],
     [{Title, ?_assertEqual([{string, Escaped}, end_json], decode(<<34, JSON/binary, 34>>))}
         || {Title, Escaped, JSON} <- Cases
@@ -1572,6 +1768,30 @@ special_escape_test_() ->
     ].
 
 
+uescape_test_() ->
+    [
+        {"\"\\u0080\"", ?_assertEqual(
+            [{string, <<"\\u0080">>}, end_json],
+            decode(<<34, 128/utf8, 34>>, [uescape])
+        )},
+        {"\"\\u8ca8\\u5481\\u3002\\u0091\\u0091\"", ?_assertEqual(
+            [{string, <<"\\u8ca8\\u5481\\u3002\\u0091\\u0091">>}, end_json],
+            decode(
+                <<34,232,178,168,229,146,129,227,128,130,194,145,194,145,34>>,
+                [uescape]
+            )
+        )},
+        {"\"\\ud834\\udd1e\"", ?_assertEqual(
+            [{string, <<"\\ud834\\udd1e">>}, end_json],
+            decode(<<34, 240, 157, 132, 158, 34>>, [uescape])
+        )},
+        {"\"\\ud83d\\ude0a\"", ?_assertEqual(
+            [{string, <<"\\ud83d\\ude0a">>}, end_json],
+            decode(<<34, 240, 159, 152, 138, 34>>, [uescape])
+        )}
+    ].
+
+
 single_quoted_string_test_() ->
     Cases = [
         {"single quoted string", [{string, <<"hello world">>}, end_json], <<39, "hello world", 39>>},    
@@ -1610,7 +1830,6 @@ embedded_single_quoted_string_test_() ->
             decode(<<34, "quoth the raven, 'nevermore'", 34>>, [{strict, [single_quotes]}])
         )}
     ].
-    
 
 
 ignored_bad_escapes_test_() ->
@@ -1719,5 +1938,39 @@ custom_incomplete_handler_test_() ->
         )}
     ].
 
+
+return_tail_test_() ->
+    [
+        {"return_tail with tail", ?_assertEqual(
+            {with_tail,[{}],<<"3">>},
+            jsx:decode(<<"{} 3">>, [return_tail])
+        )},
+        {"return_tail without tail", ?_assertEqual(
+            {with_tail,[{}],<<"">>},
+            jsx:decode(<<"{}">>, [return_tail])
+        )},
+        {"return_tail with trimmed whitespace", ?_assertEqual(
+            {with_tail,[{}],<<"">>},
+            jsx:decode(<<"{} ">>, [return_tail])
+        )},
+        {"return_tail and streaming", ?_assertEqual(
+            {with_tail,[{}],<<"3">>},
+            begin
+                {incomplete, F} = jsx:decode(<<"{">>, [return_tail, stream]),
+                F(<<"} 3">>)
+            end
+        )},
+        {"return_tail and streaming", ?_assertEqual(
+            {with_tail,[{}],<<"">>},
+            begin
+                %% In case of infinite stream of objects a user does not know
+                %% when to call F(end_stream).
+                %% So, return_tail overwrites conservative stream end.
+                %% This means that we don't need to call end_stream explicitly.
+                {incomplete, F} = jsx:decode(<<"{">>, [return_tail, stream]),
+                F(<<"}">>)
+            end
+        )}
+    ].
 
 -endif.

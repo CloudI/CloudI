@@ -1,6 +1,6 @@
 # erlcloud: Cloud Computing APIs For Erlang #
 
-This is version 0.8.0.  The API is subject to change.
+[![Build Status](https://secure.travis-ci.org/erlcloud/erlcloud.png?branch=master)](http://travis-ci.org/erlcloud/erlcloud)
 
 Service APIs implemented:
 
@@ -20,7 +20,7 @@ The libraries can be used two ways: either you can specify configuration paramet
 You need to clone the repository and download rebar (if it's not already available in your path).
 
 ```
-git clone https://github.com/gleber/erlcloud.git
+git clone https://github.com/erlcloud/erlcloud.git
 cd erlcloud
 wget http://cloud.github.com/downloads/basho/rebar/rebar && chmod u+x rebar
 ```
@@ -33,6 +33,7 @@ export AWS_SECRET_ACCESS_KEY=<Your AWS Secret Access Key>
 ```
 To compile and run erlcloud
 ```
+make
 make run
 ```
 

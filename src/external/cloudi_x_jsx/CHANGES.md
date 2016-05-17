@@ -1,3 +1,82 @@
+v2.8.0
+
+* add `JSX_FORCE_MAPS` env var for forcing decoding to maps rather than
+  attempting to autodetect
+
+v2.7.2
+
+* fix an issue where tuples were assumed to be jsx ast and not checked
+* mask a `function_clause` error in encoder with a `badarg` error for api unity
+
+v2.7.1
+
+* support for milliseconds in datetimes
+
+v2.7.0
+
+* `return_tail` option
+* fixes for edoc generation
+
+v2.6.2
+
+* ensure maps are always enabled when compiling via mix
+
+v2.6.1
+
+* hex.pm maintenance release
+
+v2.6.0
+
+* equivalent to v2.5.3 but created for semver reasons
+
+v2.5.3
+
+* add a `mix.exs` to be buildable by both mix and rebar
+* minor README updates
+
+v2.5.2
+
+* fix regression parsing <<"-0e...">> (thanks @c-bik)
+
+v2.5.1
+
+* assume all datetimes are UTC time and add `Z` designator to indicate
+* fix parsing issue with datetimes in arrays
+
+v2.5.0
+
+* `consult/2` function for reading a file directly to a json term
+* `maps_always` build flag for always returning maps on platforms
+  that support them
+* dialyzer fixes
+
+v2.4.0
+
+* enough performance improvements to justify a new version. 2-3x
+  speedup depending on mode of operation
+
+v2.3.1
+
+* fixes an issue where astral plane json escape sequences were
+  inadvertently being converted to the unicode replacement
+  character
+
+v2.3
+
+* switched to a faster implementation of string parsing in both
+  the decoder and encoder
+* expand `uescape` option to the decoder
+* allow control codes in json passed to decoder (contrary to the spec,
+  yes)
+
+v2.2
+
+* `return_maps` option
+* `uescape` option for 7-bit clean output
+* add `Makefile` for slightly better `erlang.mk` compatibility
+* add `maps_support/0` call to determine whether `jsx` was compiled
+  with support for maps or not
+
 v2.1.1
 
 * faster generation of json via iolists

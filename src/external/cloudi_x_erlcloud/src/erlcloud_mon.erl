@@ -24,9 +24,9 @@
          test2/0
         ]).
 
--include_lib("erlcloud/include/erlcloud.hrl").
--include_lib("erlcloud/include/erlcloud_aws.hrl").
--include_lib("erlcloud/include/erlcloud_mon.hrl").
+-include("erlcloud.hrl").
+-include("erlcloud_aws.hrl").
+-include("erlcloud_mon.hrl").
 -include_lib("xmerl/include/xmerl.hrl").
 
 -import(erlcloud_xml, [get_text/2]).
@@ -184,7 +184,7 @@ params_dimension(Prefix, ND, Dimension) ->
 params_stat(Prefix, StatisticValues) ->
     [
      {Prefix++".StatisticValues.Maximum",    float_to_list(StatisticValues#statistic_set.maximum)},
-     {Prefix++".StatisticValues.Minimum",    float_to_list(StatisticValues#statistic_set.maximum)},
+     {Prefix++".StatisticValues.Minimum",    float_to_list(StatisticValues#statistic_set.minimum)},
      {Prefix++".StatisticValues.Sum",        float_to_list(StatisticValues#statistic_set.sum)},
      {Prefix++".StatisticValues.SampleCount",integer_to_list(StatisticValues#statistic_set.sample_count)}
     ].
@@ -254,13 +254,20 @@ mon_query(Config, Action, Params) ->
 
 mon_query(Config, Action, Params, ApiVersion) ->
     QParams = [{"Action", Action}, {"Version", ApiVersion}|Params],
-    erlcloud_aws:aws_request_xml(get,
+    case erlcloud_aws:aws_request_xml4(get,
                                  Config#aws_config.mon_protocol,
                                  Config#aws_config.mon_host,
                                  Config#aws_config.mon_port,
                                  "/",
                                  QParams,
-                                 Config).
+                                 "monitoring",
+                                 Config)
+    of
+        {ok, Body} ->
+            Body;
+        {error, Reason} ->
+            erlang:error({aws_error, Reason})
+    end.
 
 configure_host(Host, Port, Protocol) ->
     Config = default_config(),
@@ -269,23 +276,23 @@ configure_host(Host, Port, Protocol) ->
                                   mon_protocol=Protocol},
     put(aws_config, NewConfig).
 
--spec(new/2 :: (string(), string()) -> aws_config()).
+-spec new(string(), string()) -> aws_config().
 new(AccessKeyID, SecretAccessKey) ->
     #aws_config{access_key_id=AccessKeyID,
                 secret_access_key=SecretAccessKey}.
 
--spec(new/3 :: (string(), string(), string()) -> aws_config()).
+-spec new(string(), string(), string()) -> aws_config().
 new(AccessKeyID, SecretAccessKey, Host) ->
     #aws_config{access_key_id=AccessKeyID,
                 secret_access_key=SecretAccessKey,
                 mon_host=Host}.
 
--spec(configure/2 :: (string(), string()) -> ok).
+-spec configure(string(), string()) -> ok.
 configure(AccessKeyID, SecretAccessKey) ->
     put(aws_config, new(AccessKeyID, SecretAccessKey)),
     ok.
 
--spec(configure/3 :: (string(), string(), string()) -> ok).
+-spec configure(string(), string(), string()) -> ok.
 configure(AccessKeyID, SecretAccessKey, Host) ->
     put(aws_config, new(AccessKeyID, SecretAccessKey, Host)),
     ok.

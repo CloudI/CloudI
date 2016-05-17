@@ -70,10 +70,8 @@ escriptize(Config0, AppFile) ->
             Shebang = rebar_config:get(Config, escript_shebang,
                                        "#!/usr/bin/env escript\n"),
             Comment = rebar_config:get(Config, escript_comment, "%%\n"),
-            DefaultEmuArgs = ?FMT("%%! -pa ~s/~s/ebin\n",
-                                  [AppNameStr, AppNameStr]),
             EmuArgs = rebar_config:get(Config, escript_emu_args,
-                                       DefaultEmuArgs),
+                                       "%%! \n"),
             Script = iolist_to_binary([Shebang, Comment, EmuArgs, ZipBin]),
             case file:write_file(Filename, Script) of
                 ok ->

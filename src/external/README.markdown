@@ -70,6 +70,15 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Tue Oct 22 11:58:41 PDT 2013`
 - `MIT`
 
+`eini`
+------
+ `An Erlang INI parser`
+ 
+- `https://github.com/accense/eini`
+- `commit 27f384d85d83d394d03828d78d5cb9afe3308749 (1.2.1)`
+- `Tue May 17 11:17:32 PDT 2016`
+- `Apache License 2.0`
+
 `elli`
 ------
 `Erlang HTTP Server`
@@ -137,9 +146,9 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 ----------
 `Cloud Service Integration APIs`
 
-- `https://github.com/gleber/erlcloud`
-- `commit 596cbcde53b84f78d76e7427573833daa9201c79`
-- `Tue Dec  2 13:55:25 PST 2014`
+- `https://github.com/okeuday/erlcloud`
+- `commit 55d8e5c1246c5af48dc349a9dac41ecf938217f9 (fixes_for_19_0)`
+- `Tue May 17 11:17:32 PDT 2016`
 - `MIT`
 
 `erlcql`
@@ -210,8 +219,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Erlang JSON Parsing`
 
 - `https://github.com/talentdeficit/jsx`
-- `commit 4d549dd8a990e282c3d57c5f73213674c05ebf07 (develop, v2.1.1)`
-- `Fri Oct 31 11:38:46 PDT 2014`
+- `commit 3074d4865b3385a050badf7828ad31490d860df5 (2.8.0)`
+- `Tue May 17 11:17:32 PDT 2016`
 - `MIT`
 
 `lager`
@@ -220,6 +229,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 
 - `https://github.com/basho/lager`
 - `commit b6b6cebcb27ccff8acc59ae775acebc2f52e4926 (2.0.3)`
+  `with https://github.com/basho/lager/pull/321/commits/d35670e01a3c6f9f9bcb3150217d26cc92513586`
 - `Fri Dec 11 15:51:53 PST 2015`
 - `Apache License 2.0`
 
@@ -228,8 +238,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `A lightweight Erlang HTTP/1.1 client`
 
 - `https://github.com/talko/lhttpc`
-- `commit 2d01a5f9c7543b77bdd57f44c92e72801f46e423 (master)`
-- `Fri Oct 31 11:38:46 PDT 2014`
+- `commit 2d01a5f9c7543b77bdd57f44c92e72801f46e423 (1.4.0)`
+- `Tue May 17 11:17:32 PDT 2016`
 - `BSD`
 
 `lz4`

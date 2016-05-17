@@ -54,6 +54,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
      -d $(top_srcdir)/external/cloudi_x_ecouchdb/src \
+     -d $(top_srcdir)/external/cloudi_x_eini/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_ememcached/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
@@ -105,8 +106,8 @@ endif
     xref \
     test \
     tests \
-	api-python-test \
-	api-ruby-test \
+    api-python-test \
+    api-ruby-test \
     run
 
 all-local: rel/files/app.config \
@@ -171,7 +172,7 @@ distclean-local: rebar-directories-distclean \
                  erlang-applications-scope-remove
 	rm -f $(top_srcdir)/aclocal.m4 \
           $(top_srcdir)/config.h.in \
-		  $(top_srcdir)/config.h.in~ \
+          $(top_srcdir)/config.h.in~ \
           $(top_srcdir)/config/compile \
           $(top_srcdir)/config/config.guess \
           $(top_srcdir)/config/config.sub \

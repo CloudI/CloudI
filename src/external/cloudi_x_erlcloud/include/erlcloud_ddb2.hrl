@@ -23,7 +23,9 @@
          write_capacity_units :: pos_integer()
         }).
 -record(ddb2_global_secondary_index_description,
-        {index_name :: erlcloud_ddb2:index_name(),
+        {backfilling :: boolean(),
+         index_arn :: binary(),
+         index_name :: erlcloud_ddb2:index_name(),
          index_size_bytes :: integer(),
          index_status :: index_status(),
          item_count :: integer(),
@@ -32,7 +34,8 @@
          provisioned_throughput :: #ddb2_provisioned_throughput_description{}
         }).
 -record(ddb2_local_secondary_index_description,
-        {index_name :: erlcloud_ddb2:index_name(),
+        {index_arn :: binary(),
+         index_name :: erlcloud_ddb2:index_name(),
          index_size_bytes :: integer(),
          item_count :: integer(),
          key_schema :: erlcloud_ddb2:key_schema(),
@@ -41,17 +44,24 @@
 -record(ddb2_table_description,
         {attribute_definitions :: erlcloud_ddb2:attr_defs(),
          creation_date_time :: number(),
+         global_secondary_indexes :: [#ddb2_global_secondary_index_description{}],
          item_count :: integer(),
          key_schema :: erlcloud_ddb2:key_schema(),
+         latest_stream_arn :: binary(),
+         latest_stream_label :: binary(),
          local_secondary_indexes :: [#ddb2_local_secondary_index_description{}],
-         global_secondary_indexes :: [#ddb2_global_secondary_index_description{}],
          provisioned_throughput :: #ddb2_provisioned_throughput_description{},
+         stream_specification :: erlcloud_ddb2:stream_specification(),
+         table_arn :: binary(),
          table_name :: binary(),
          table_size_bytes :: integer(),
          table_status :: table_status()
         }).
 -record(ddb2_consumed_capacity,
         {capacity_units :: number(),
+         global_secondary_indexes :: [{erlcloud_ddb2:index_name(), number()}],
+         local_secondary_indexes :: [{erlcloud_ddb2:index_name(), number()}],
+         table :: number(),
          table_name :: erlcloud_ddb2:table_name()
         }).
 -record(ddb2_item_collection_metrics,
@@ -69,10 +79,6 @@
          unprocessed_keys = [] :: [erlcloud_ddb2:batch_get_item_request_item()]
         }).
 
--record(ddb2_batch_write_item_response,
-        {table :: erlcloud_ddb2:table_name(),
-         consumed_capacity_units :: number()
-        }).
 -record(ddb2_batch_write_item,
         {consumed_capacity :: [#ddb2_consumed_capacity{}],
          item_collection_metrics :: [{erlcloud_ddb2:table_name(), [#ddb2_item_collection_metrics{}]}],
@@ -91,6 +97,13 @@
 
 -record(ddb2_delete_table,
         {table_description :: #ddb2_table_description{}
+        }).
+
+-record(ddb2_describe_limits,
+        {account_max_read_capacity_units :: pos_integer(),
+         account_max_write_capacity_units :: pos_integer(),
+         table_max_read_capacity_units :: pos_integer(),
+         table_max_write_capacity_units :: pos_integer()
         }).
 
 -record(ddb2_describe_table,
@@ -117,7 +130,8 @@
         {consumed_capacity :: #ddb2_consumed_capacity{},
          count :: non_neg_integer(),
          items :: [erlcloud_ddb2:out_item()],
-         last_evaluated_key :: erlcloud_ddb2:key()
+         last_evaluated_key :: erlcloud_ddb2:key(),
+         scanned_count :: non_neg_integer()
         }).
 
 -record(ddb2_scan, 

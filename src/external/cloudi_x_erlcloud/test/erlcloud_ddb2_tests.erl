@@ -39,6 +39,8 @@ operation_test_() ->
       fun delete_item_output_tests/1,
       fun delete_table_input_tests/1,
       fun delete_table_output_tests/1,
+      fun describe_limits_input_tests/1,
+      fun describe_limits_output_tests/1,
       fun describe_table_input_tests/1,
       fun describe_table_output_tests/1,
       fun get_item_input_tests/1,
@@ -240,7 +242,7 @@ error_handling_tests(_) ->
 
 
 %% BatchGetItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_BatchGetItems.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html
 batch_get_item_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -284,6 +286,48 @@ batch_get_item_input_tests(_) ->
             \"AttributesToGet\": [
                 \"Tags\",\"Message\"
             ]
+        }
+    },
+    \"ReturnConsumedCapacity\": \"TOTAL\"
+}"
+            }),
+         ?_ddb_test(
+             {"BatchGetItem example request with ProjectionExpression",
+              ?_f(erlcloud_ddb2:batch_get_item(
+                    [{<<"Forum">>,
+                      [{<<"Name">>, {s, <<"Amazon DynamoDB">>}},
+                       {<<"Name">>, {s, <<"Amazon RDS">>}},
+                       {<<"Name">>, {s, <<"Amazon Redshift">>}}],
+                      [{projection_expression, <<"Id, ISBN, Title, Authors">>}]},
+                     {<<"Thread">>,
+                      [[{<<"ForumName">>, {s, <<"Amazon DynamoDB">>}},
+                        {<<"Subject">>, {s, <<"Concurrent reads">>}}]],
+                      [{projection_expression, <<"Tags, Message">>}]}],
+                    [{return_consumed_capacity, total}])), "
+{
+    \"RequestItems\": {
+        \"Forum\": {
+            \"Keys\": [
+                {
+                    \"Name\":{\"S\":\"Amazon DynamoDB\"}
+                },
+                {
+                    \"Name\":{\"S\":\"Amazon RDS\"}
+                },
+                {
+                    \"Name\":{\"S\":\"Amazon Redshift\"}
+                }
+            ],
+            \"ProjectionExpression\":\"Id, ISBN, Title, Authors\"
+        },
+        \"Thread\": {
+            \"Keys\": [
+                {
+                    \"ForumName\":{\"S\":\"Amazon DynamoDB\"},
+                    \"Subject\":{\"S\":\"Concurrent reads\"}
+                }
+            ],
+            \"ProjectionExpression\":\"Tags, Message\"
         }
     },
     \"ReturnConsumedCapacity\": \"TOTAL\"
@@ -513,7 +557,7 @@ batch_get_item_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:batch_get_item([{<<"table">>, [{<<"k">>, <<"v">>}]}], [{out, record}])), Tests).
 
 %% BatchWriteItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_BatchWriteItem.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
 batch_write_item_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -787,7 +831,7 @@ batch_write_item_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:batch_write_item([], [{out, record}])), Tests).
 
 %% CreateTable test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_CreateTable.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_CreateTable.html
 create_table_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -1369,7 +1413,7 @@ create_table_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:create_table(<<"name">>, [{<<"key">>, s}], <<"key">>, 5, 10)), Tests).
 
 %% DeleteItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_DeleteItem.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DeleteItem.html
 delete_item_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -1394,6 +1438,27 @@ delete_item_input_tests(_) ->
             \"ComparisonOperator\": \"NULL\"
         }
     },
+    \"ReturnValues\": \"ALL_OLD\"
+}"
+            }),
+         ?_ddb_test(
+            {"DeleteItem example request with ConditionExpression",
+             ?_f(erlcloud_ddb2:delete_item(<<"Thread">>,
+                                          [{<<"ForumName">>, {s, <<"Amazon DynamoDB">>}},
+                                           {<<"Subject">>, {s, <<"How do I update multiple items?">>}}],
+                                          [{return_values, all_old},
+                                           {condition_expression, <<"attribute_not_exists(Replies)">>}])), "
+{
+    \"TableName\": \"Thread\",
+    \"Key\": {
+        \"ForumName\": {
+            \"S\": \"Amazon DynamoDB\"
+        },
+        \"Subject\": {
+            \"S\": \"How do I update multiple items?\"
+        }
+    },
+    \"ConditionExpression\": \"attribute_not_exists(Replies)\",
     \"ReturnValues\": \"ALL_OLD\"
 }"
             }),
@@ -1506,7 +1571,7 @@ delete_item_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:delete_item(<<"table">>, {<<"k">>, <<"v">>}, [{out, record}])), Tests).
 
 %% DeleteTable test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_DeleteTable.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DeleteTable.html
 delete_table_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -1564,8 +1629,48 @@ delete_table_output_tests(_) ->
     
     output_tests(?_f(erlcloud_ddb2:delete_table(<<"name">>)), Tests).
 
+%% DescribeLimits test based on the API examples:
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DescribeLimits.html
+describe_limits_input_tests(_) ->
+    Tests =
+        [?_ddb_test(
+            {"DescribeLimits example request",
+             ?_f(erlcloud_ddb2:describe_limits()), "
+{
+}"
+            })
+        ],
+
+    Response = "
+{
+    \"AccountMaxReadCapacityUnits\": 20000,
+    \"AccountMaxWriteCapacityUnits\": 20000,
+    \"TableMaxReadCapacityUnits\": 10000,
+    \"TableMaxWriteCapacityUnits\": 10000
+}",
+    input_tests(Response, Tests).
+
+describe_limits_output_tests(_) ->
+    Tests =
+        [?_ddb_test(
+            {"DescribeLimits example response", "
+{
+    \"AccountMaxReadCapacityUnits\": 20000,
+    \"AccountMaxWriteCapacityUnits\": 20000,
+    \"TableMaxReadCapacityUnits\": 10000,
+    \"TableMaxWriteCapacityUnits\": 10000
+}",
+             {ok, #ddb2_describe_limits
+              {account_max_read_capacity_units = 20000,
+               account_max_write_capacity_units = 20000,
+               table_max_read_capacity_units = 10000,
+               table_max_write_capacity_units = 10000}}})
+        ],
+
+    output_tests(?_f(erlcloud_ddb2:describe_limits()), Tests).
+
 %% DescribeTable test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_DescribeTables.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_DescribeTable.html
 describe_table_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -1775,7 +1880,7 @@ describe_table_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:describe_table(<<"name">>)), Tests).
 
 %% GetItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_GetItem.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_GetItem.html
 get_item_input_tests(_) ->
     Example1Response = "
 {
@@ -1816,6 +1921,30 @@ get_item_input_tests(_) ->
                                         {return_consumed_capacity, total}]
                                       )),
              Example1Response}),
+         ?_ddb_test(
+            {"GetItem example request, with ProjectionExpression",
+             ?_f(erlcloud_ddb2:get_item(<<"Thread">>,
+                                       [{<<"ForumName">>, {s, <<"Amazon DynamoDB">>}},
+                                        {<<"Subject">>, {s, <<"How do I update multiple items?">>}}],
+                                       [{projection_expression, <<"LastPostDateTime, Message, Tags">>},
+                                        consistent_read,
+                                        {return_consumed_capacity, total}]
+                                      )), "
+{
+    \"TableName\": \"Thread\",
+    \"Key\": {
+        \"ForumName\": {
+            \"S\": \"Amazon DynamoDB\"
+        },
+        \"Subject\": {
+            \"S\": \"How do I update multiple items?\"
+        }
+    },
+    \"ProjectionExpression\": \"LastPostDateTime, Message, Tags\",
+    \"ConsistentRead\": true,
+    \"ReturnConsumedCapacity\": \"TOTAL\"
+}"
+            }),
          ?_ddb_test(
             {"GetItem Simple call with only hash key and no options",
              ?_f(erlcloud_ddb2:get_item(<<"TableName">>, {<<"HashKey">>, 1})), "
@@ -1943,7 +2072,7 @@ get_item_output_typed_tests(_) ->
                        <<"table">>, {<<"k">>, <<"v">>}, [{out, typed_record}])), Tests).
 
 %% ListTables test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_ListTables.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_ListTables.html
 list_tables_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -1985,7 +2114,7 @@ list_tables_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:list_tables([{out, record}])), Tests).
 
 %% PutItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_PutItem.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html
 put_item_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -2049,6 +2178,87 @@ put_item_input_tests(_) ->
         \"mixed set\": {
             \"NS\": [\"7.8\", \"9.0\", \"10\"]
         }
+    }
+}"
+            }),
+         ?_ddb_test(
+            {"PutItem example request with ConditionExpression and ExpressionAttributeValues",
+             ?_f(erlcloud_ddb2:put_item(<<"Thread">>,
+                                       [{<<"LastPostedBy">>, <<"fred@example.com">>},
+                                        {<<"ForumName">>, <<"Amazon DynamoDB">>},
+                                        {<<"LastPostDateTime">>, <<"201303190422">>},
+                                        {<<"Tags">>, {ss, [<<"Update">>, <<"Multiple Items">>, <<"HelpMe">>]}},
+                                        {<<"Subject">>, <<"How do I update multiple items?">>},
+                                        {<<"Message">>, <<"I want to update multiple items in a single API call. What's the best way to do that?">>}],
+                                       [{condition_expression, <<"ForumName <> :f and Subject <> :s">>},
+                                        {expression_attribute_values, [
+                                            {<<":f">>, <<"Amazon DynamoDB">>},
+                                            {<<":s">>, <<"How do I update multiple items?">>}]}])), "
+{
+    \"TableName\": \"Thread\",
+    \"Item\": {
+        \"LastPostDateTime\": {
+            \"S\": \"201303190422\"
+        },
+        \"Tags\": {
+            \"SS\": [\"Update\",\"Multiple Items\",\"HelpMe\"]
+        },
+        \"ForumName\": {
+            \"S\": \"Amazon DynamoDB\"
+        },
+        \"Message\": {
+            \"S\": \"I want to update multiple items in a single API call. What's the best way to do that?\"
+        },
+        \"Subject\": {
+            \"S\": \"How do I update multiple items?\"
+        },
+        \"LastPostedBy\": {
+            \"S\": \"fred@example.com\"
+        }
+    },
+    \"ConditionExpression\": \"ForumName <> :f and Subject <> :s\",
+    \"ExpressionAttributeValues\": {
+        \":f\": {
+            \"S\": \"Amazon DynamoDB\"
+        },
+        \":s\": {
+            \"S\": \"How do I update multiple items?\"
+        }
+    }
+}"
+            }),
+        ?_ddb_test(
+            {"PutItem request with complex item",
+             ?_f(erlcloud_ddb2:put_item(<<"Table">>,
+                                       [{<<"bool_true">>, {bool, true}},
+                                        {<<"bool_false">>, {bool, false}},
+                                        {<<"null_value">>, {null, true}},
+                                        {<<"list_value">>, {l, ["string", {ss, ["string1", "string2"]}]}},
+                                        {<<"map_value">>, {m, [
+                                            {<<"key1">>, "value1"},
+                                            {<<"key2">>, {l, ["list_string1", "list_string2"]}}
+                                        ]}}
+                                       ])), "
+{
+    \"TableName\": \"Table\",
+    \"Item\": {
+        \"bool_true\": {\"BOOL\": true},
+        \"bool_false\": {\"BOOL\": false},
+        \"null_value\": {\"NULL\": true},
+        \"list_value\": {\"L\": [
+            {\"S\": \"string\"},
+            {\"SS\": [
+                \"string1\",
+                \"string2\"
+            ]}
+        ]},
+        \"map_value\": {\"M\": {
+            \"key1\": {\"S\": \"value1\"},
+            \"key2\": {\"L\": [
+                {\"S\": \"list_string1\"},
+                {\"S\": \"list_string2\"}
+            ]}
+        }}
     }
 }"
             })
@@ -2118,13 +2328,48 @@ put_item_output_tests(_) ->
                          #ddb2_item_collection_metrics{
                             item_collection_key = <<"Amazon DynamoDB">>,
                             size_estimate_range_gb = {1,2}}
+                     }}}),
+         ?_ddb_test(
+            {"PutItem response with complex item", "
+{
+    \"Attributes\": {
+        \"bool_true\": {\"BOOL\": true},
+        \"bool_false\": {\"BOOL\": false},
+        \"null_value\": {\"NULL\": true},
+        \"list_value\": {\"L\": [
+            {\"S\": \"string\"},
+            {\"SS\": [
+                \"string1\",
+                \"string2\"
+            ]}
+        ]},
+        \"map_value\": {\"M\": {
+            \"key1\": {\"S\": \"value1\"},
+            \"key2\": {\"L\": [
+                {\"S\": \"list_string1\"},
+                {\"S\": \"list_string2\"}
+            ]}
+        }}
+    }
+}",
+
+             {ok, #ddb2_put_item{
+                     attributes = [{<<"bool_true">>, true},
+                                   {<<"bool_false">>, false},
+                                   {<<"null_value">>, undefined},
+                                   {<<"list_value">>, [<<"string">>, [<<"string1">>, <<"string2">>]]},
+                                   {<<"map_value">>, [
+                                       {<<"key1">>, <<"value1">>},
+                                       {<<"key2">>, [<<"list_string1">>, <<"list_string2">>]}
+                                   ]}
+                                  ]
                      }}})
         ],
     
     output_tests(?_f(erlcloud_ddb2:put_item(<<"table">>, [], [{out, record}])), Tests).
 
 %% Query test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_Query.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html
 q_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -2222,6 +2467,34 @@ q_input_tests(_) ->
         }
     }
 }"
+            }),
+         ?_ddb_test(
+            {"Query example request with KeyConditionExpression, ProjectionExpression and ExpressionAttributeValues",
+             ?_f(erlcloud_ddb2:q(<<"Reply">>,
+                                <<"Id = :v1 AND PostedBy BETWEEN :v2a AND :v2b">>,
+                                [{index_name, <<"PostedBy-Index">>},
+                                 {limit, 3},
+                                 {consistent_read, true},
+                                 {projection_expression, <<"Id, PostedBy, ReplyDateTime">>},
+                                 {expression_attribute_values, [
+                                     {<<":v1">>, "Amazon DynamoDB#DynamoDB Thread 1"},
+                                     {<<":v2a">>, "User A"},
+                                     {<<":v2b">>, "User C"}]},
+                                 {return_consumed_capacity, total}])), "
+{
+    \"TableName\": \"Reply\",
+    \"IndexName\": \"PostedBy-Index\",
+    \"Limit\":3,
+    \"ConsistentRead\": true,
+    \"ProjectionExpression\": \"Id, PostedBy, ReplyDateTime\",
+    \"KeyConditionExpression\": \"Id = :v1 AND PostedBy BETWEEN :v2a AND :v2b\",
+    \"ExpressionAttributeValues\": {
+        \":v1\": {\"S\": \"Amazon DynamoDB#DynamoDB Thread 1\"},
+        \":v2a\": {\"S\": \"User A\"},
+        \":v2b\": {\"S\": \"User C\"}
+    },
+    \"ReturnConsumedCapacity\": \"TOTAL\"
+}"
             })
         ],
 
@@ -2284,7 +2557,8 @@ q_output_tests(_) ->
     \"ConsumedCapacity\": {
         \"CapacityUnits\": 2,
         \"TableName\": \"Thread\"
-    }
+    },
+    \"ScannedCount\": 3
 }",
              {ok, #ddb2_q{count = 3,
                          items = [[{<<"LastPostedBy">>, <<"fred@example.com">>},
@@ -2302,7 +2576,8 @@ q_output_tests(_) ->
                          consumed_capacity =
                              #ddb2_consumed_capacity{
                                 capacity_units = 2,
-                                table_name = <<"Thread">>}}}}),
+                                table_name = <<"Thread">>},
+		                 scanned_count = 3}}}),
          ?_ddb_test(
             {"Query example 2 response", "
 {
@@ -2335,7 +2610,7 @@ q_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:q(<<"table">>, [{<<"k">>, <<"v">>, eq}], [{out, record}])), Tests).
 
 %% Scan test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_Scan.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html
 scan_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -2367,6 +2642,15 @@ scan_input_tests(_) ->
 }"
             }),
          ?_ddb_test(
+            {"Scan consistent read",
+             ?_f(erlcloud_ddb2:scan(<<"Reply">>,
+                                   [{consistent_read, true}])), "
+{
+    \"TableName\": \"Reply\",
+    \"ConsistentRead\": true
+}"
+            }),
+         ?_ddb_test(
             {"Scan exclusive start key",
              ?_f(erlcloud_ddb2:scan(<<"Reply">>, 
                                    [{exclusive_start_key, [{<<"ForumName">>, {s, <<"Amazon DynamoDB">>}},
@@ -2392,6 +2676,20 @@ scan_input_tests(_) ->
     \"TableName\": \"Reply\",
     \"Segment\": 1,
     \"TotalSegments\": 2
+}"
+            }),
+         ?_ddb_test(
+            {"Scan example with FilterExpression",
+             ?_f(erlcloud_ddb2:scan(<<"Reply">>,
+                                   [{filter_expression, <<"PostedBy = :val">>},
+                                    {expression_attribute_values, [
+                                        {<<":val">>, {s, <<"joe@example.com">>}}]},
+                                    {return_consumed_capacity, total}])), "
+{
+    \"TableName\": \"Reply\",
+    \"FilterExpression\": \"PostedBy = :val\",
+    \"ExpressionAttributeValues\": {\":val\": {\"S\": \"joe@example.com\"}},
+    \"ReturnConsumedCapacity\": \"TOTAL\"
 }"
             })
         ],
@@ -2674,7 +2972,7 @@ scan_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:scan(<<"name">>, [{out, record}])), Tests).
 
 %% UpdateItem test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_UpdateItem.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateItem.html
 update_item_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -2738,6 +3036,36 @@ update_item_input_tests(_) ->
         }
     },
     \"ReturnValues\" : \"NONE\"
+}"
+            }),
+         ?_ddb_test(
+            {"UpdateItem example request with UpdateExpression and ConditionExpression",
+             ?_f(erlcloud_ddb2:update_item(<<"Thread">>,
+                                          [{<<"ForumName">>, {s, <<"Amazon DynamoDB">>}},
+                                           {<<"Subject">>, {s, <<"Maximum number of items?">>}}],
+                                          <<"set LastPostedBy = :val1">>,
+                                          [{condition_expression, <<"LastPostedBy = :val2">>},
+                                           {expression_attribute_values, [
+                                               {<<":val1">>, "alice@example.com"},
+                                               {<<":val2">>, "fred@example.com"}]},
+                                           {return_values, all_new}])), "
+{
+    \"TableName\": \"Thread\",
+    \"Key\": {
+        \"ForumName\": {
+            \"S\": \"Amazon DynamoDB\"
+        },
+        \"Subject\": {
+            \"S\": \"Maximum number of items?\"
+        }
+    },
+    \"UpdateExpression\": \"set LastPostedBy = :val1\",
+    \"ConditionExpression\": \"LastPostedBy = :val2\",
+    \"ExpressionAttributeValues\": {
+        \":val1\": {\"S\": \"alice@example.com\"},
+        \":val2\": {\"S\": \"fred@example.com\"}
+    },
+    \"ReturnValues\": \"ALL_NEW\"
 }"
             }),
          ?_ddb_test(
@@ -2811,7 +3139,7 @@ update_item_output_tests(_) ->
     output_tests(?_f(erlcloud_ddb2:update_item(<<"table">>, {<<"k">>, <<"v">>}, [])), Tests).
 
 %% UpdateTable test based on the API examples:
-%% http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/API_UpdateTable.html
+%% http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_UpdateTable.html
 update_table_input_tests(_) ->
     Tests =
         [?_ddb_test(
@@ -2841,6 +3169,60 @@ update_table_input_tests(_) ->
                     \"ReadCapacityUnits\": 50,
                     \"WriteCapacityUnits\": 60
                 }
+            }
+        }
+    ]
+}"
+            }),
+        ?_ddb_test(
+            {"UpdateTable example request with new provisioned_throughput opt",
+             ?_f(erlcloud_ddb2:update_table(<<"Thread">>,
+                                            [{provisioned_throughput, {10, 10}}])), "
+{
+    \"TableName\": \"Thread\",
+    \"ProvisionedThroughput\": {
+        \"ReadCapacityUnits\": 10,
+        \"WriteCapacityUnits\": 10
+    }
+}"
+            }),
+        ?_ddb_test(
+            {"UpdateTable example request with Create and Delete GSI",
+             ?_f(erlcloud_ddb2:update_table(<<"Thread">>,
+                                            [{attribute_definitions, [{<<"HashKey1">>, s}]},
+                                             {global_secondary_index_updates, [
+                                                {<<"Index1">>, <<"HashKey1">>, all, 30, 40},
+                                                {<<"Index2">>, delete}]}])), "
+{
+    \"TableName\": \"Thread\",
+    \"AttributeDefinitions\": [
+        {
+            \"AttributeName\": \"HashKey1\",
+            \"AttributeType\": \"S\"
+        }
+    ],
+    \"GlobalSecondaryIndexUpdates\": [
+        {
+            \"Create\": {
+                \"IndexName\": \"Index1\",
+                \"KeySchema\": [
+                    {
+                        \"AttributeName\": \"HashKey1\",
+                        \"KeyType\": \"HASH\"
+                    }
+                ],
+                \"Projection\": {
+                    \"ProjectionType\": \"ALL\"
+                },
+                \"ProvisionedThroughput\": {
+                    \"ReadCapacityUnits\": 30,
+                    \"WriteCapacityUnits\": 40
+                }
+            }
+        },
+        {
+            \"Delete\": {
+                \"IndexName\": \"Index2\"
             }
         }
     ]
