@@ -104,7 +104,8 @@
                list({pid(), {reference(), list(cloudi:trans_id())}}),
         % timeout enforcement for any incoming service requests
         recv_timeouts = ?MAP_NEW()
-            :: maps_proxy(cloudi:trans_id(), reference()) | undefined |
+            :: undefined |
+               maps_proxy(cloudi:trans_id(), reference()) |
                list({cloudi:trans_id(), reference()}),
         % timeout enforcement for any responses to
         % asynchronous outgoing service requests
@@ -115,11 +116,12 @@
                      {cloudi:response_info(), cloudi:response()}}),
         % is the request/info pid busy?
         queue_requests = true
-            :: boolean() | undefined,
+            :: undefined | boolean(),
         % queued incoming service requests
         queued = cloudi_x_pqueue4:new()
-            :: cloudi_x_pqueue4:cloudi_x_pqueue4(
-                   cloudi:message_service_request()) | undefined |
+            :: undefined |
+               cloudi_x_pqueue4:cloudi_x_pqueue4(
+                   cloudi:message_service_request()) |
                list({cloudi:priority_value(), any()}),
 
         % state record fields unique to the dispatcher Erlang process:
@@ -130,7 +132,7 @@
         queued_word_size :: pos_integer(),
         % queued incoming Erlang process messages
         queued_info = queue:new()
-            :: queue_proxy(any()) | undefined |
+            :: undefined | queue_proxy(any()) |
                list(any()),
         % service module
         module :: module(),
@@ -151,26 +153,26 @@
         % duo_mode_pid if duo_mode == true, else dispatcher pid
         receiver_pid :: pid(),
         % separate Erlang process for incoming throughput
-        duo_mode_pid :: pid(),
+        duo_mode_pid :: undefined | pid(),
         % separate Erlang process for service request memory usage
-        request_pid = undefined :: pid() | undefined,
+        request_pid = undefined :: undefined | pid(),
         % separate Erlang process for Erlang message memory usage
-        info_pid = undefined :: pid() | undefined,
+        info_pid = undefined :: undefined | pid(),
         % transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
         % how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
         % cached cpg data for lazy destination refresh methods
         cpg_data
-            :: cloudi_x_cpg_data:state() | undefined |
+            :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for denied destinations
         dest_deny
-            :: cloudi_x_trie:cloudi_x_trie() | undefined |
+            :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for allowed destinations
         dest_allow
-            :: cloudi_x_trie:cloudi_x_trie() | undefined |
+            :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
         % service configuration options
         options
@@ -205,13 +207,13 @@
         % service module
         module :: module(),
         % state internal to the service module source code
-        service_state :: any(),
+        service_state = undefined :: any(),
         % cloudi_service_terminate timeout set by max_r and max_t
         timeout_term :: pos_integer(),
         % separate Erlang process for outgoing throughput
         dispatcher :: pid(),
         % separate Erlang process for service request memory usage
-        request_pid = undefined :: pid() | undefined,
+        request_pid = undefined :: undefined | pid(),
         % service configuration options
         options
             :: #config_service_options{} |

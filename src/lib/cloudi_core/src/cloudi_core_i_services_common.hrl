@@ -6,7 +6,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without

@@ -110,7 +110,7 @@
         file = "logs/cloudi.log"
             :: undefined | string(),
         level = trace
-            :: cloudi_service_api:loglevel(),
+            :: undefined | cloudi_service_api:loglevel(),
         redirect = undefined
             :: undefined | node(),
         syslog = undefined

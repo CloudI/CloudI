@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -89,30 +89,30 @@
 
 -record(hibernate,
     {
-        method :: rate_request,
-        period :: cloudi_service_api:period_seconds(),
+        method = undefined :: undefined | rate_request,
+        period = undefined :: undefined | cloudi_service_api:period_seconds(),
         count = 0 :: non_neg_integer(),
-        rate_min :: number(), % per seconds
+        rate_min = undefined :: undefined | number(), % per seconds
         hibernate = false :: boolean()
     }).
 
 -record(count_process_dynamic,
     {
-        method :: rate_request,
-        period :: cloudi_service_api:period_seconds(),
+        method = undefined :: undefined | rate_request,
+        period = undefined :: undefined | cloudi_service_api:period_seconds(),
         count = 0 :: non_neg_integer(),
-        rate_max :: number(), % per seconds
-        rate_min :: number(), % per seconds
-        count_process_max :: pos_integer(),
-        count_process_min :: pos_integer(),
+        rate_max = undefined :: undefined | number(), % per seconds
+        rate_min = undefined :: undefined | number(), % per seconds
+        count_process_max = undefined :: undefined | pos_integer(),
+        count_process_min = undefined :: undefined | pos_integer(),
         terminate = false :: boolean()
     }).
 
 -record(rate_request,
     {
-        period :: cloudi_service_api:period_seconds(),
+        period = undefined :: undefined | cloudi_service_api:period_seconds(),
         count = 0 :: non_neg_integer(),
-        rate_max :: number(), % per seconds
+        rate_max = undefined :: undefined | number(), % per seconds
         blocking = false :: boolean()
     }).
 

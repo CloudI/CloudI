@@ -6,6 +6,7 @@
     * Changes for Erlang/OTP 19.0 support:
         * Update erlcloud, jsx, uuid, quickrand
         * Add eini as a dependency of erlcloud
+        * Fix cloudi_core dialyzer warnings
 
 2016-05-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 

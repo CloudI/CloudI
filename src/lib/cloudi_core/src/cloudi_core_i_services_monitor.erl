@@ -90,7 +90,7 @@
         % pids is only accurate on the pid lookup (find2)
         % due to the overwrite of #service{}
         pids :: list(pid()),
-        monitor :: reference(),
+        monitor :: undefined | reference(),
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(integer()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),

@@ -26,7 +26,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -61,8 +61,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -95,10 +95,10 @@
 -record(cloudi_queue,
     {
         retry_max :: non_neg_integer(),
-        validate_request_info :: fun((any()) -> boolean()),
-        validate_request :: fun((any(), any()) -> boolean()),
-        validate_response_info :: fun((any()) -> boolean()),
-        validate_response :: fun((any(), any()) -> boolean()),
+        validate_request_info :: undefined | fun((any()) -> boolean()),
+        validate_request :: undefined | fun((any(), any()) -> boolean()),
+        validate_response_info :: undefined | fun((any()) -> boolean()),
+        validate_response :: undefined | fun((any(), any()) -> boolean()),
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),

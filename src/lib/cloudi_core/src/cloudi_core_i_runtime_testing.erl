@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.2 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_runtime_testing).
@@ -69,18 +69,20 @@
 
 -record(monkey_latency,
     {
-        method :: time_uniform | time_gaussian | time_absolute,
-        value1 :: pos_integer(),  % milliseconds
-        value2 :: pos_integer() | float(),
-        result1 :: pos_integer(), % milliseconds
+        method = undefined :: undefined |
+                              time_uniform | time_gaussian | time_absolute,
+        value1 = undefined :: undefined | pos_integer(),  % milliseconds
+        value2 = undefined :: undefined | pos_integer() | float(),
+        result1 = undefined :: undefined | pos_integer(), % milliseconds
         pi2 = math:pi() * 2.0 :: float()
     }).
 
 -record(monkey_chaos,
     {
-        method :: probability_request | probability_day,
-        value1 :: float(),
-        pid :: pid()
+        method = undefined :: undefined |
+                              probability_request | probability_day,
+        value1 = undefined :: undefined | float(),
+        pid = undefined :: undefined | pid()
     }).
 
 %%%------------------------------------------------------------------------

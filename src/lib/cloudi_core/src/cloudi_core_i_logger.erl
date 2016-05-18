@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2009-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -85,18 +85,18 @@
             :: undefined | string(),
         file_level = undefined
             :: undefined | cloudi_service_api:loglevel(),
-        interface_module
-            :: binary(),
+        interface_module = undefined
+            :: undefined | binary(),
         fd = undefined
             :: undefined | file:fd(),
         inode = undefined
             :: undefined | non_neg_integer(),
-        level
-            :: cloudi_service_api:loglevel(),
+        level = undefined
+            :: undefined | cloudi_service_api:loglevel(),
         mode = async
             :: async | sync,
-        destination
-            :: ?MODULE | {?MODULE, node()},
+        destination = undefined
+            :: undefined | ?MODULE | {?MODULE, node()},
         syslog = undefined
             :: undefined | port(),
         syslog_level = undefined

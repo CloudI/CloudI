@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2009-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -249,43 +249,43 @@
      logging_file_invalid |
      logging_level_invalid, any()}.
 
-% cloudi_service_api.hrl records without defaults set so
+% cloudi_service_api.hrl records without defaults or types set so
 % dialyzer doesn't get confused
 -record(internal,
     {
-        prefix             :: cloudi:service_name_pattern(),
-        module             :: atom() | file:filename(),
-        args               :: list(),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_internal()
+        prefix,
+        module,
+        args,
+        dest_refresh,
+        timeout_init,
+        timeout_async,
+        timeout_sync,
+        dest_list_deny,
+        dest_list_allow,
+        count_process,
+        max_r,
+        max_t,
+        options
     }).
 -record(external,
     {
-        prefix             :: cloudi:service_name_pattern(),
-        file_path          :: file:filename(),
-        args               :: string(),
-        env                :: list({string(), string()}),
-        dest_refresh       :: cloudi_service_api:dest_refresh(),
-        protocol           :: 'default' | 'local' | 'tcp' | 'udp',
-        buffer_size        :: 'default' | pos_integer(),
-        timeout_init       :: cloudi_service_api:timeout_milliseconds(),
-        timeout_async      :: cloudi_service_api:timeout_milliseconds(),
-        timeout_sync       :: cloudi_service_api:timeout_milliseconds(),
-        dest_list_deny     :: cloudi_service_api:dest_list(),
-        dest_list_allow    :: cloudi_service_api:dest_list(),
-        count_process      :: pos_integer() | float(),
-        count_thread       :: pos_integer() | float(),
-        max_r              :: non_neg_integer(),
-        max_t              :: cloudi_service_api:seconds(),
-        options            :: cloudi_service_api:service_options_external()
+        prefix,
+        file_path,
+        args,
+        env,
+        dest_refresh,
+        protocol,
+        buffer_size,
+        timeout_init,
+        timeout_async,
+        timeout_sync,
+        dest_list_deny,
+        dest_list_allow,
+        count_process,
+        count_thread,
+        max_r,
+        max_t,
+        options
     }).
 
 %%%------------------------------------------------------------------------
@@ -3614,6 +3614,7 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
             case nodes_discovery_ec2_validate(Groups, Tags) of
                 ok ->
                     Discovery = #config_nodes_discovery{
+                        mode = ec2,
                         module = cloudi_x_nodefinder,
                         start_f = ec2_start,
                         start_a = [AccessKeyId, SecretAccessKey,
@@ -3654,6 +3655,7 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
             {error, {node_discovery_multicast_ttl_invalid, TTL}};
         [Interface, Address, Port, TTL] ->
             Discovery = #config_nodes_discovery{
+                mode = multicast,
                 module = cloudi_x_nodefinder,
                 start_f = multicast_start,
                 start_a = [Interface, Address, Port, TTL, TimeoutSeconds],
