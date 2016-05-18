@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,48 +44,44 @@
 %% cloudi_x_cowboy handler state
 -record(cowboy_state,
     {
-        dispatcher                :: cloudi_service:dispatcher(),
-        timeout_async             :: cloudi_service:
-                                     timeout_value_milliseconds(),
-        timeout_sync              :: cloudi_service:
-                                     timeout_value_milliseconds(),
-        scope                     :: atom(),
-        prefix                    :: string(),
-        timeout_body              :: pos_integer(),
-        timeout_part_header       :: pos_integer(),
-        timeout_part_body         :: pos_integer(),
-        timeout_websocket         :: infinity | pos_integer(),
-        length_body_read          :: pos_integer(),
-        length_body_chunk         :: pos_integer(),
-        length_part_header_read   :: pos_integer(),
-        length_part_header_chunk  :: pos_integer(),
-        length_part_body_read     :: pos_integer(),
-        length_part_body_chunk    :: pos_integer(),
-        parts_destination_lock    :: boolean(),
-        output_type               :: external | internal | list | binary,
-        content_type_forced       :: undefined | binary(),
-        content_types_accepted    :: undefined | binary:cp(),
-        set_x_forwarded_for       :: boolean(),
-        status_code_timeout       :: 100..599,
-        query_get_format          :: raw | text_pairs,
-        websocket_output_type     :: text | binary,
-        websocket_connect         :: undefined |
-                                     {async | sync,
-                                      cloudi_service:service_name()},
-        websocket_disconnect      :: undefined |
-                                     {async | sync,
-                                      cloudi_service:service_name()},
-        websocket_ping            :: undefined | received | pos_integer(),
-        websocket_protocol        :: undefined |
-                                     fun((incoming | outgoing, any()) ->
-                                         {incoming | any(), any()}),
-        websocket_name_unique     :: boolean(),
-        websocket_subscriptions   :: undefined | cloudi_x_trie:cloudi_x_trie(),
-        use_websockets            :: boolean() | exclusively,
-        use_host_prefix           :: boolean(),
-        use_client_ip_prefix      :: boolean(),
-        use_x_method_override     :: boolean(),
-        use_method_suffix         :: boolean(),
-        websocket_state           :: tuple()
+        dispatcher :: cloudi_service:dispatcher(),
+        timeout_async :: cloudi_service:timeout_value_milliseconds(),
+        timeout_sync :: cloudi_service:timeout_value_milliseconds(),
+        scope :: atom(),
+        prefix :: string(),
+        timeout_body :: pos_integer(),
+        timeout_part_header :: pos_integer(),
+        timeout_part_body :: pos_integer(),
+        timeout_websocket :: infinity | pos_integer(),
+        length_body_read :: pos_integer(),
+        length_body_chunk :: pos_integer(),
+        length_part_header_read :: pos_integer(),
+        length_part_header_chunk :: pos_integer(),
+        length_part_body_read :: pos_integer(),
+        length_part_body_chunk :: pos_integer(),
+        parts_destination_lock :: boolean(),
+        output_type :: external | internal | list | binary,
+        content_type_forced :: undefined | binary(),
+        content_types_accepted :: undefined | binary:cp(),
+        set_x_forwarded_for :: boolean(),
+        status_code_timeout :: 100..599,
+        query_get_format :: raw | text_pairs,
+        websocket_output_type :: text | binary,
+        websocket_connect
+            :: undefined | {async | sync, cloudi_service:service_name()},
+        websocket_disconnect
+            :: undefined | {async | sync, cloudi_service:service_name()},
+        websocket_ping :: undefined | received | pos_integer(),
+        websocket_protocol
+            :: undefined |
+               fun((incoming | outgoing, any()) -> {incoming | any(), any()}),
+        websocket_name_unique :: boolean(),
+        websocket_subscriptions :: undefined | cloudi_x_trie:cloudi_x_trie(),
+        use_websockets :: boolean() | exclusively,
+        use_host_prefix :: boolean(),
+        use_client_ip_prefix :: boolean(),
+        use_x_method_override :: boolean(),
+        use_method_suffix :: boolean(),
+        websocket_state = undefined :: undefined | tuple()
     }).
 

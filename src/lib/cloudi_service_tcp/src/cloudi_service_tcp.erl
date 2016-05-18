@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -133,27 +133,33 @@
 
 -record(state,
     {
-        scope :: atom(),
-        listener,
-        acceptor,
-        timeout_recv :: pos_integer() | infinity,
-        socket_options :: list(),
-        interface_formatted :: binary(),
-        port_formatted :: binary(),
-        service :: pid(),
-        timeout_async :: cloudi_service:timeout_value_milliseconds(),
-        timeout_sync :: cloudi_service:timeout_value_milliseconds(),
-        destination :: cloudi_service:service_name(),
-        destination_connect :: cloudi_service:service_name() | undefined,
-        destination_disconnect :: cloudi_service:service_name() | undefined,
+        scope = undefined :: undefined | atom(),
+        listener = undefined,
+        acceptor = undefined,
+        timeout_recv = undefined :: undefined | pos_integer() | infinity,
+        socket_options = undefined :: undefined | list(),
+        interface_formatted = undefined :: undefined | binary(),
+        port_formatted = undefined :: undefined | binary(),
+        service = undefined :: undefined | pid(),
+        timeout_async = undefined
+            :: undefined | cloudi_service:timeout_value_milliseconds(),
+        timeout_sync = undefined
+            :: undefined | cloudi_service:timeout_value_milliseconds(),
+        destination = undefined
+            :: undefined | cloudi_service:service_name(),
+        destination_connect = undefined
+            :: undefined | cloudi_service:service_name(),
+        destination_disconnect = undefined
+            :: undefined | cloudi_service:service_name(),
         connection_count = 0 :: non_neg_integer(),
-        connection_max :: pos_integer(),
+        connection_max = undefined :: undefined | pos_integer(),
         requests = dict:new(),
-        destination_set :: boolean(),
-        protocol_id_check :: undefined |
-                             fun((incoming | outgoing, any()) ->
-                                 {incoming | any(), any()}),
-        debug_level :: off | trace | debug | info | warn | error | fatal
+        destination_set = undefined :: undefined | boolean(),
+        protocol_id_check = undefined
+            :: undefined |
+               fun((incoming | outgoing, any()) -> {incoming | any(), any()}),
+        debug_level = undefined
+            :: undefined | off | trace | debug | info | warn | error | fatal
     }).
 
 -record(state_socket,
@@ -165,24 +171,29 @@
         timeout_async :: cloudi_service:timeout_value_milliseconds(),
         timeout_sync :: cloudi_service:timeout_value_milliseconds(),
         destination :: cloudi_service:service_name(),
-        destination_disconnect :: cloudi_service:service_name() | undefined,
+        destination_disconnect :: undefined | cloudi_service:service_name(),
         request_info :: binary(),
         destination_set :: boolean(),
-        lock :: cloudi:pattern_pid() | undefined,
+        lock :: undefined | cloudi:pattern_pid(),
         debug_level :: off | trace | debug | info | warn | error | fatal,
-        protocol_id_check :: undefined |
-                             fun((incoming | outgoing, any()) ->
-                                 {incoming | any(), any()}),
+        protocol_id_check ::
+            undefined |
+            fun((incoming | outgoing, any()) -> {incoming | any(), any()}),
         response_pending = false :: boolean(),
-        response_timer :: reference(),
-        request_pending :: cloudi:message_service_request(),
-        response_lookup :: dict_proxy(any(),
-                                      {cloudi:message_service_request(),
-                                       reference()}) | undefined,
-        recv_timeouts :: dict_proxy(cloudi:trans_id(),
-                                    reference()) | undefined,
-        queued :: cloudi_x_pqueue4:cloudi_x_pqueue4(
-                      cloudi:message_service_request()) | undefined
+        response_timer = undefined :: undefined | reference(),
+        request_pending = undefined
+            :: undefined | cloudi:message_service_request(),
+        response_lookup
+            :: undefined |
+               dict_proxy(any(),
+                          {cloudi:message_service_request(), reference()}),
+        recv_timeouts
+            :: undefined |
+               dict_proxy(cloudi:trans_id(), reference()),
+        queued
+            :: undefined |
+               cloudi_x_pqueue4:cloudi_x_pqueue4(
+                   cloudi:message_service_request())
     }).
 
 %%%------------------------------------------------------------------------

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2012-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -80,21 +80,26 @@
 -record(websocket_state,
     {
         % for service requests entering CloudI
-        websocket_connect_trans_id   :: undefined | cloudi_service:trans_id(),
-        name_incoming                :: string(),
-        name_outgoing                :: cloudi_service:service_name(),
-        request_info                 :: list({binary(), binary()}) | binary(),
+        websocket_connect_trans_id = undefined
+            :: undefined | cloudi_service:trans_id(),
+        name_incoming :: string(),
+        name_outgoing :: cloudi_service:service_name(),
+        request_info :: list({binary(), binary()}) | binary(),
         % for a service request exiting CloudI
-        response_pending = false     :: boolean(),
-        response_timer               :: reference(),
-        request_pending              :: cloudi:message_service_request(),
-        response_lookup :: dict_proxy(any(),
-                                      {cloudi:message_service_request(),
-                                       reference()}) | undefined,
-        recv_timeouts :: dict_proxy(cloudi:trans_id(),
-                                    reference()) | undefined,
-        queued :: cloudi_x_pqueue4:cloudi_x_pqueue4(
-                      cloudi:message_service_request()) | undefined
+        response_pending = false :: boolean(),
+        response_timer = undefined :: undefined | reference(),
+        request_pending = undefined
+            :: undefined | cloudi:message_service_request(),
+        response_lookup
+            :: undefined |
+               dict_proxy(any(), {cloudi:message_service_request(),
+                                  reference()}),
+        recv_timeouts
+            :: undefined | dict_proxy(cloudi:trans_id(), reference()),
+        queued
+            :: undefined |
+               cloudi_x_pqueue4:cloudi_x_pqueue4(
+                   cloudi:message_service_request())
     }).
 
 %%%------------------------------------------------------------------------

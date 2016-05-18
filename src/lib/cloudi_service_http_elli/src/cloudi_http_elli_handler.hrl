@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,19 +44,17 @@
 %% elli handler state
 -record(elli_state,
     {
-        dispatcher                :: cloudi_service:dispatcher(),
-        timeout_sync              :: cloudi_service:
-                                     timeout_value_milliseconds(),
-        prefix                    :: string(),
-        output_type               :: external | internal | list | binary,
-        content_type_forced       :: undefined | binary(),
-        content_types_accepted    :: undefined | binary:cp(),
-        set_x_forwarded_for       :: boolean(),
-        status_code_timeout       :: 100..599,
-        query_get_format          :: raw | text_pairs,
-        use_host_prefix           :: boolean(),
-        use_client_ip_prefix      :: boolean(),
-        use_x_method_override     :: boolean(),
-        use_method_suffix         :: boolean()
+        dispatcher :: cloudi_service:dispatcher(),
+        timeout_sync :: cloudi_service:timeout_value_milliseconds(),
+        output_type :: external | internal | list | binary,
+        content_type_forced :: undefined | binary(),
+        content_types_accepted :: undefined | binary:cp(),
+        set_x_forwarded_for :: boolean(),
+        status_code_timeout :: 100..599,
+        query_get_format :: raw | text_pairs,
+        use_host_prefix :: boolean(),
+        use_client_ip_prefix :: boolean(),
+        use_x_method_override :: boolean(),
+        use_method_suffix :: boolean()
     }).
 

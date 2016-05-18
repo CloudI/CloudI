@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db).
@@ -78,7 +78,6 @@
     {
         tables = cloudi_x_trie:new() :: cloudi_x_trie:cloudi_x_trie(),
         prefix_length :: integer(),
-        uuid_generator :: cloudi_x_uuid:state(),
         table_module :: atom(),
         output_type :: both | internal | external,
         external_format :: cloudi_request:external_format(),

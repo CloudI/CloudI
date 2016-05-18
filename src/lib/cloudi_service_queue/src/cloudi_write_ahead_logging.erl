@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2014-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -86,9 +86,9 @@
 -endif.
 -record(state,
     {
-        file :: binary() | string(),
-        compression :: 0..9, % zlib compression level
-        position :: non_neg_integer(),
+        file = undefined :: undefined | binary() | string(),
+        compression = undefined :: undefined | 0..9, % zlib compression level
+        position = undefined :: undefined | non_neg_integer(),
         chunks = dict:new() :: dict_proxy(cloudi_service:trans_id(), #chunk{}),
         chunks_free = [] :: list(#chunk{}) % ordered
     }).
