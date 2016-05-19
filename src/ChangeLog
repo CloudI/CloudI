@@ -6,6 +6,7 @@
     * Remove unmaintained example services and their dependencies:
         * cloudi_service_db
         * cloudi_service_timers
+    * Do not run the integration tests by default
 
 2016-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -230,7 +230,7 @@ AC_ARG_WITH([integration-tests-ran],
         [use the default CloudI configuration to run all the integration tests
          (ARG=yes), or use a blank CloudI configuration so nothing is ran by
          default within the installed CloudI configuration (ARG=no)
-         @<:@ARG=yes@:>@ ])],
+         @<:@ARG=no@:>@ ])],
     [
     if test "x$withval" = "xno"; then
         want_integration_tests_ran="no"
@@ -245,7 +245,7 @@ AC_ARG_WITH([integration-tests-ran],
                       not $withval])
     fi
     ],
-    [want_integration_tests_ran="$want_integration_tests"])
+    [want_integration_tests_ran="no"])
 if test "x$want_integration_tests_ran" = "xyes" -a \
         "x$c_support" = "xtrue" -a "x$cxx_support" = "xtrue" -a \
         "x$java_support" = "xtrue" -a "x$javascript_support" = "xtrue" -a \
