@@ -9,7 +9,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 
 ### Supported languages:
 
-* `Erlang >= R16`
+* `Erlang >= 17.5`
 * `C++`
 * `C`
 * `Java`

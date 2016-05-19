@@ -1,16 +1,8 @@
-Items waiting for after the release of version 1.5.0
+Items waiting for after the release of version 1.5.2
 ----------------------------------------------------
-cgroups support (?) with cgclassify
-    * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Moving_a_Process_to_a_Control_Group.html
-    * (cgcreate ?) https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Creating_Cgroups.html
-    * sys filesystem usage seems to be the only low-level usage, no C API
-Add to http://0install.net/ ?
-Use https://github.com/jordansissel/fpm ?
-Add better database integration
-    * update memcached and couchdb drivers
+Use AsciiDoc for tutorials
+Add more database integration?
     * add redis support
-    * add native Riak support
-    * add native CouchDB support
     * add MongoDB support
     * add Kyoto Tycoon support?
 julia CloudI API
@@ -33,4 +25,10 @@ Haskell CloudI API
 Go CloudI API
     * can create automatically with SWIG using the C CloudI API
       (are there threading problems with this approach?)
+Use https://github.com/jordansissel/fpm ?
+Add to http://0install.net/ ?
+cgroups support (?) with cgclassify
+    * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Moving_a_Process_to_a_Control_Group.html
+    * (cgcreate ?) https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Creating_Cgroups.html
+    * sys filesystem usage seems to be the only low-level usage, no C API
 
