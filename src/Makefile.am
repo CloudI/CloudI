@@ -9,7 +9,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -c $(top_srcdir)/lib/ \
      -d $(top_srcdir)/lib/cloudi_core/src \
      -d $(top_srcdir)/lib/cloudi_service_api_requests/src \
-     -d $(top_srcdir)/lib/cloudi_service_db/src \
      -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
@@ -24,7 +23,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
      -d $(top_srcdir)/lib/cloudi_service_router/src \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
-     -d $(top_srcdir)/lib/cloudi_service_timers/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
      -d $(top_srcdir)/lib/cloudi_service_validate/src \
      -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
@@ -207,7 +205,6 @@ dialyze: all \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
-              lib/cloudi_service_db/ebin/ \
               lib/cloudi_service_db_mysql/ebin/ \
               lib/cloudi_service_db_pgsql/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
@@ -222,7 +219,6 @@ dialyze: all \
               lib/cloudi_service_quorum/ebin/ \
               lib/cloudi_service_router/ebin/ \
               lib/cloudi_service_tcp/ebin/ \
-              lib/cloudi_service_timers/ebin/ \
               lib/cloudi_service_udp/ebin/ \
               lib/cloudi_service_validate/ebin/ \
               lib/cloudi_service_zeromq/ebin/ \

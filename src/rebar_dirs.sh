@@ -8,7 +8,6 @@
 REBAR_DIRS="\
     lib/cloudi_core \
     lib/cloudi_service_api_requests \
-    lib/cloudi_service_db \
     lib/cloudi_service_db_mysql \
     lib/cloudi_service_db_pgsql \
     lib/cloudi_service_filesystem \
@@ -23,7 +22,6 @@ REBAR_DIRS="\
     lib/cloudi_service_quorum \
     lib/cloudi_service_router \
     lib/cloudi_service_tcp \
-    lib/cloudi_service_timers \
     lib/cloudi_service_udp \
     lib/cloudi_service_validate \
     lib/cloudi_service_zeromq \

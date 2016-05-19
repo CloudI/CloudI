@@ -33,8 +33,6 @@
   % (i.e., started by the internal service configuration entries)
   {app, cloudi_service_api_requests,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_mysql,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_pgsql,
@@ -62,8 +60,6 @@
   {app, cloudi_service_router,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_tcp,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_timers,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_udp,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},

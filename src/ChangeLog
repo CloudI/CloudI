@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove unmaintained example services and their dependencies:
+        * cloudi_service_db
+        * cloudi_service_timers
+
 2016-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Dialyzer warning fixes with Erlang/OTP 19.0 for

@@ -517,7 +517,6 @@ AC_CONFIG_FILES([
     lib/cloudi_core/cxx_src/Makefile
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
-    lib/cloudi_service_db/src/cloudi_service_db.app.src
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
@@ -532,7 +531,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
     lib/cloudi_service_router/src/cloudi_service_router.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
-    lib/cloudi_service_timers/src/cloudi_service_timers.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
     lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
