@@ -5,6 +5,15 @@
 
     * Dialyzer warning fixes with Erlang/OTP 19.0 for
       included CloudI services
+    * Remove unmaintained example services and their dependencies:
+        * cloudi_service_db_cassandra
+        * cloudi_service_db_cassandra_cql
+        * cloudi_service_db_couchdb
+        * cloudi_service_db_elasticsearch
+        * cloudi_service_db_memcached
+        * cloudi_service_db_riak
+    * Remove the service Erlang application
+    * Update uuid, elli, msgpack, proper, emysql
 
 2016-05-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

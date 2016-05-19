@@ -1,7 +1,0 @@
-@title LZ4 bindings for Erlang
-@author SUZUKI Tetsuya <tetsuya.suzuki@gmail.com>
-@copyright 2012- SUZUKI Tetsuya
-@version 0.1.1
-@reference <a href="http://fastcompression.blogspot.jp/p/lz4.html">RealTime Data Compression: LZ4</a>
-@reference <a href="http://code.google.com/p/lz4/">lz4 - Extremely Fast Compression algorithm</a>
-

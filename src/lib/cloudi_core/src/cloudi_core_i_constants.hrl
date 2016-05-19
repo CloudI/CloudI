@@ -130,7 +130,7 @@
 -define(MAP_STORE(K, V, M),  maps:put(K, V, M)).
 -define(MAP_ERASE(K, M),     maps:remove(K, M)).
 -define(MAP_TO_LIST(M),      maps:to_list(M)).
--define(MSGPACK_MAP, map).
+-define(MSGPACK_MAP, maps).
 -else.
 -type maps_proxy(Key, Value) :: dict_proxy(Key, Value).
 -define(MAP_NEW(),           dict:new()).

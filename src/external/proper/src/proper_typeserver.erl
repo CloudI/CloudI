@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2016 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -161,8 +161,8 @@
 -behaviour(gen_server).
 -export([demo_translate_type/2, demo_is_instance/3]).
 
--export([start/0, restart/0, stop/0, create_spec_test/3, get_exp_specced/1, is_instance/3,
-	 translate_type/1]).
+-export([start/0, restart/0, stop/0, create_spec_test/3, get_exp_specced/1,
+	 is_instance/3, translate_type/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
 	 code_change/3]).
 -export([get_exp_info/1, match/2]).
@@ -177,6 +177,10 @@
 %%------------------------------------------------------------------------------
 
 -define(SRC_FILE_EXT, ".erl").
+
+%% Starting with 18.0 we need to handle both 'type' and 'user_type' tags;
+%% prior Erlang/OTP releases had only 'type' as a tag.
+-define(IS_TYPE_TAG(T), (T =:= type orelse T =:= user_type)).
 
 %% CAUTION: all these must be sorted
 -define(STD_TYPES_0,
@@ -232,7 +236,11 @@
 
 -type type_kind() :: 'type' | 'record'.
 -type type_ref() :: {type_kind(),type_name(),arity()}.
--type substs_dict() :: any(). %% dict(field_name(),ret_type())
+-ifdef(NO_MODULES_IN_OPAQUES).
+-type substs_dict() :: dict(). %% dict(field_name(),ret_type())
+-else.
+-type substs_dict() :: dict:dict(field_name(),ret_type()).
+-endif.
 -type full_type_ref() :: {mod_name(),type_kind(),type_name(),
 			  [ret_type()] | substs_dict()}.
 -type symb_info() :: 'not_symb' | {'orig_abs',abs_type()}.
@@ -259,18 +267,37 @@
 -type pattern() :: loose_tuple(pat_field()).
 -type next_step() :: 'none' | 'take_head' | {'match_with',pattern()}.
 
+-ifdef(NO_MODULES_IN_OPAQUES).
 %% @private_type
--type mod_exp_types() :: any(). %% set(imm_type_ref())
--type mod_types() :: any(). %% dict(type_ref(),type_repr())
+-type mod_exp_types() :: set(). %% set(imm_type_ref())
+-type mod_types() :: dict(). %% dict(type_ref(),type_repr())
 %% @private_type
--type mod_exp_funs() :: any(). %% set(fun_ref())
--type mod_specs() :: any(). %% dict(fun_ref(),fun_repr())
+-type mod_exp_funs() :: set(). %% set(fun_ref())
+-type mod_specs() :: dict(). %% dict(fun_ref(),fun_repr())
+-else.
+%% @private_type
+-type mod_exp_types() :: sets:set(imm_type_ref()).
+-type mod_types() :: dict:dict(type_ref(),type_repr()).
+%% @private_type
+-type mod_exp_funs() :: sets:set(fun_ref()).
+-type mod_specs() :: dict:dict(fun_ref(),fun_repr()).
+-endif.
+
+-ifdef(NO_MODULES_IN_OPAQUES).
 -record(state,
-	{cached    = dict:new() :: any(),   %% dict(imm_type(),fin_type())
-	 exp_types = dict:new() :: any(),   %% dict(mod_name(),mod_exp_types())
-	 types     = dict:new() :: any(),   %% dict(mod_name(),mod_types())
-	 exp_specs = dict:new() :: any()}). %% dict(mod_name(),mod_specs())
+	{cached    = dict:new() :: dict(),   %% dict(imm_type(),fin_type())
+	 exp_types = dict:new() :: dict(),   %% dict(mod_name(),mod_exp_types())
+	 types     = dict:new() :: dict(),   %% dict(mod_name(),mod_types())
+	 exp_specs = dict:new() :: dict()}). %% dict(mod_name(),mod_specs())
+-else.
+-record(state,
+	{cached    = dict:new() :: dict:dict(imm_type(),fin_type()),
+	 exp_types = dict:new() :: dict:dict(mod_name(),mod_exp_types()),
+	 types     = dict:new() :: dict:dict(mod_name(),mod_types()),
+	 exp_specs = dict:new() :: dict:dict(mod_name(),mod_specs())}).
+-endif.
 -type state() :: #state{}.
+
 -record(mod_info,
 	{mod_exp_types = sets:new() :: mod_exp_types(),
 	 mod_types     = dict:new() :: mod_types(),
@@ -280,7 +307,11 @@
 -type mod_info() :: #mod_info{}.
 
 -type stack() :: [full_type_ref() | 'tuple' | 'list' | 'union' | 'fun'].
--type var_dict() :: any(). %% dict(var_name(),ret_type())
+-ifdef(NO_MODULES_IN_OPAQUES).
+-type var_dict() :: dict(). %% dict(var_name(),ret_type())
+-else.
+-type var_dict() :: dict:dict(var_name(),ret_type()).
+-endif.
 %% @private_type
 -type imm_type() :: {mod_name(),string()}.
 %% @alias
@@ -499,14 +530,14 @@ apply_spec_test({Mod,Fun,_Arity}=MFA, {_Domain,Range}, SpecTimeout, FalsePositiv
              begin
                  %% NOTE: only call apply/3 inside try/catch (do not trust ?MODULE:is_instance/3)
                  Result =
-                     try apply(Mod,Fun,Args) of
+                     try apply(Mod, Fun, Args) of
                          X -> {ok, X}
                      catch
                          X:Y -> {X, Y}
                      end,
                  case Result of
                      {ok, Z} ->
-                         case ?MODULE:is_instance(Z,Mod,Range) of
+                         case ?MODULE:is_instance(Z, Mod, Range) of
                              true ->
                                  true;
                              false when is_function(FalsePositiveMFAs) ->
@@ -622,7 +653,7 @@ add_module(Mod, #state{exp_types = ExpTypes} = State) ->
 		{ok,AbsCode,ModExpFuns} ->
 		    RawModInfo = get_mod_info(Mod, AbsCode, ModExpFuns),
 		    ModInfo = process_adts(Mod, RawModInfo),
-		    {ok, store_mod_info(Mod,ModInfo,State)};
+		    {ok, store_mod_info(Mod, ModInfo, State)};
 		{error,Reason} ->
 		    {error, {cant_load_code,Mod,Reason}}
 	    end
@@ -744,13 +775,13 @@ add_mod_info({attribute,_Line,type,{{record,RecName},Fields,[]}},
     NewModTypes = dict:store({record,RecName,0}, {abs_record,FieldInfo},
 			     ModTypes),
     ModInfo#mod_info{mod_types = NewModTypes};
-add_mod_info({attribute,_Line,record,{RecName,Fields}},
+add_mod_info({attribute,Line,record,{RecName,Fields}},
 	     #mod_info{mod_types = ModTypes} = ModInfo) ->
     case dict:is_key(RecName, ModTypes) of
 	true ->
 	    ModInfo;
-	false ->
-	    TypedRecord = {attribute,0,type,{{record,RecName},Fields,[]}},
+	false ->  % fake an opaque term by using the same Line as annotation
+	    TypedRecord = {attribute,Line,type,{{record,RecName},Fields,[]}},
 	    add_mod_info(TypedRecord, ModInfo)
     end;
 add_mod_info({attribute,_Line,Kind,{Name,TypeForm,VarForms}},
@@ -947,8 +978,8 @@ unwrap_range(FullADTRef, Call, {type,_,union,Choices}, TestRun) ->
 		    error
 	    end
     end;
-unwrap_range({_Mod,SameName,Arity}, Call, {type,_,SameName,ArgForms},
-	     _TestRun) ->
+unwrap_range({_Mod,SameName,Arity}, Call, {T,_,SameName,ArgForms},
+	     _TestRun) when ?IS_TYPE_TAG(T) ->
     RangeVars = [V || {var,_,V} <- ArgForms, V =/= '_'],
     case length(ArgForms) =:= Arity andalso length(RangeVars) =:= Arity of
 	true  -> {ok, Call, RangeVars};
@@ -1054,8 +1085,12 @@ multi_collect_vars({_Mod,_Name,Arity} = FullADTRef, Forms, UsedVars) ->
     CombineVars = fun(L1,L2) -> lists:zipwith(fun erlang:'++'/2, L1, L2) end,
     lists:foldl(CombineVars, UsedVars, MoreUsedVars).
 
--spec update_vars(abs_type(), any(), boolean()) -> abs_type().
-%% dict(var_name(),abs_type())
+-ifdef(NO_MODULES_IN_OPAQUES).
+-type var_substs_dict() :: dict().
+-else.
+-type var_substs_dict() :: dict:dict(var_name(),abs_type()).
+-endif.
+-spec update_vars(abs_type(), var_substs_dict(), boolean()) -> abs_type().
 update_vars({paren_type,Line,[Type]}, VarSubstsDict, UnboundToAny) ->
     {paren_type, Line, [update_vars(Type,VarSubstsDict,UnboundToAny)]};
 update_vars({ann_type,Line,[Var,Type]}, VarSubstsDict, UnboundToAny) ->
@@ -1073,11 +1108,11 @@ update_vars({remote_type,Line,[RemModForm,NameForm,ArgForms]}, VarSubstsDict,
 	    UnboundToAny) ->
     NewArgForms = [update_vars(A,VarSubstsDict,UnboundToAny) || A <- ArgForms],
     {remote_type, Line, [RemModForm,NameForm,NewArgForms]};
-update_vars({type,_,tuple,any} = Call, _VarSubstsDict, _UnboundToAny) ->
+update_vars({T,_,tuple,any} = Call, _VarSubstsDict, _UnboundToAny) when ?IS_TYPE_TAG(T) ->
     Call;
-update_vars({type,Line,Name,ArgForms}, VarSubstsDict, UnboundToAny) ->
-    {type, Line, Name, [update_vars(A,VarSubstsDict,UnboundToAny)
-			|| A <- ArgForms]};
+update_vars({T,Line,Name,ArgForms}, VarSubstsDict, UnboundToAny) when ?IS_TYPE_TAG(T) ->
+    NewArgForms = [update_vars(A,VarSubstsDict,UnboundToAny) || A <- ArgForms],
+    {T, Line, Name, NewArgForms};
 update_vars(Call, _VarSubstsDict, _UnboundToAny) ->
     Call.
 
@@ -1314,8 +1349,19 @@ is_instance(X, _Mod, {type,_,binary,[BaseExpr,UnitExpr]}, _Stack) ->
 	{ok,Base} when Base >= 0 ->
 	    case eval_int(UnitExpr) of
 		{ok,Unit} when Unit >= 0 ->
-		    is_bitstring(X) andalso bit_size(X) >= Base
-			andalso (bit_size(X) - Base) rem Unit =:= 0;
+		    case is_bitstring(X) of
+			true ->
+			    BitSizeX = bit_size(X),
+			    case Unit =:= 0 of
+				true ->
+				    BitSizeX =:= Base;
+			        false ->
+				    BitSizeX >= Base
+					andalso
+					  (BitSizeX - Base) rem Unit =:= 0
+			    end;
+			false -> false
+		    end;
 		_ ->
 		    abs_expr_error(invalid_unit, UnitExpr)
 	    end;
@@ -1398,14 +1444,14 @@ is_instance(X, Mod, {type,_,tuple,Fields}, _Stack) ->
 is_instance(X, Mod, {type,_,union,Choices}, Stack) ->
     IsInstance = fun(Choice) -> is_instance(X,Mod,Choice,Stack) end,
     lists:any(IsInstance, Choices);
-is_instance(X, Mod, {type,_,Name,[]}, Stack) ->
+is_instance(X, Mod, {T,_,Name,[]}, Stack) when ?IS_TYPE_TAG(T) ->
     case orddict:find(Name, ?EQUIV_TYPES) of
 	{ok,EquivType} ->
 	    is_instance(X, Mod, EquivType, Stack);
 	error ->
 	    is_maybe_hard_adt(X, Mod, Name, [], Stack)
     end;
-is_instance(X, Mod, {type,_,Name,ArgForms}, Stack) ->
+is_instance(X, Mod, {T,_,Name,ArgForms}, Stack) when ?IS_TYPE_TAG(T) ->
     is_maybe_hard_adt(X, Mod, Name, ArgForms, Stack);
 is_instance(_X, _Mod, _Type, _Stack) ->
     false.
@@ -1631,14 +1677,14 @@ convert(Mod, {type,_,nonempty_maybe_improper_list,[Cont,_Term]}, State, Stack,
 convert(Mod, {type,_,iodata,[]}, State, Stack, VarDict) ->
     RealType = {type,0,union,[{type,0,binary,[]},{type,0,iolist,[]}]},
     convert(Mod, RealType, State, Stack, VarDict);
-convert(Mod, {type,_,Name,[]}, State, Stack, VarDict) ->
+convert(Mod, {T,_,Name,[]}, State, Stack, VarDict) when ?IS_TYPE_TAG(T) ->
     case ordsets:is_element(Name, ?STD_TYPES_0) of
 	true ->
 	    {ok, {simple,proper_types:Name()}, State};
 	false ->
 	    convert_maybe_hard_adt(Mod, Name, [], State, Stack, VarDict)
     end;
-convert(Mod, {type,_,Name,ArgForms}, State, Stack, VarDict) ->
+convert(Mod, {T,_,Name,ArgForms}, State, Stack, VarDict) when ?IS_TYPE_TAG(T) ->
     convert_maybe_hard_adt(Mod, Name, ArgForms, State, Stack, VarDict);
 convert(_Mod, TypeForm, _State, _Stack, _VarDict) ->
     {error, {unsupported_type,TypeForm}}.

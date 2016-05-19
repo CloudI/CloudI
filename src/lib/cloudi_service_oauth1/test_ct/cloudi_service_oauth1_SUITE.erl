@@ -72,16 +72,16 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 
 all() ->
     test_conditions_merge([
-        test_condition_riak([{group, riak}]),
+        %test_condition_riak([{group, riak}]),
         test_condition_pgsql([{group, pgsql}])]).
 
 groups() ->
     [{pgsql, [],
       [{group, example_without_db},
        {group, example_with_db}]},
-     {riak, [],
-      [{group, example_without_db},
-       {group, example_with_db}]},
+     %{riak, [],
+     % [{group, example_without_db},
+     %  {group, example_with_db}]},
      {example_without_db, [],
       [t_example_without_db_1,
        t_example_without_db_2]},

@@ -1,4 +1,13 @@
 # CHANGELOG
+## v1.0.5
+
+ * Optimization of SSL accept by Tristan Sloughter
+
+ * Dependency cleanup by Adam Lindberg
+
+## v1.0.4
+
+ * OTP 18.0 compatibility, contributed by Florian Odronitz.
 
 ## v1.0.3
 

@@ -1,4 +1,4 @@
-%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2016 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc This modules contains PropEr's Unit tests. You need the EUnit
@@ -25,6 +25,7 @@
 
 -module(proper_tests).
 
+-include("compile_flags.hrl").
 -include("proper.hrl").
 
 -include_lib("eunit/include/eunit.hrl").
@@ -124,15 +125,15 @@ assertEqualsOneOf(X, List) ->
 
 -define(_assertFailRun(ExpCExm, AllCExms, Test, Opts),
 	?_test(begin
-	    ShortResult = proper:quickcheck(Test, Opts),
-	    CExm1 = get_cexm(),
-	    ?checkCExm(CExm1, ExpCExm, AllCExms, Test, Opts),
-	    ?assertEqual(false, ShortResult),
-	    LongResult = proper:quickcheck(Test, [long_result|Opts]),
-	    CExm2 = get_cexm(),
-	    ?checkCExm(CExm2, ExpCExm, AllCExms, Test, Opts),
-	    ?checkCExm(LongResult, ExpCExm, AllCExms, Test, Opts)
-	end)).
+		   ShortResult = proper:quickcheck(Test, Opts),
+		   CExm1 = get_cexm(),
+		   ?checkCExm(CExm1, ExpCExm, AllCExms, Test, Opts),
+		   ?assertEqual(false, ShortResult),
+		   LongResult = proper:quickcheck(Test, [long_result|Opts]),
+		   CExm2 = get_cexm(),
+		   ?checkCExm(CExm2, ExpCExm, AllCExms, Test, Opts),
+		   ?checkCExm(LongResult, ExpCExm, AllCExms, Test, Opts)
+	       end)).
 
 get_cexm() ->
     CExm = proper:counterexample(),
@@ -152,12 +153,12 @@ get_cexm() ->
 
 -define(_assertTempBecomesN(N, ExpShortResult, Prop, Opts),
 	?_test(begin
-	    ?assertMatch(ExpShortResult, proper:quickcheck(Prop,Opts)),
-	    ?assertEqual(N, get_temp()),
-	    erase_temp(),
-	    proper:clean_garbage(),
-	    ?assert(state_is_clean())
-	end)).
+		   ?assertMatch(ExpShortResult, proper:quickcheck(Prop, Opts)),
+		   ?assertEqual(N, get_temp()),
+		   erase_temp(),
+		   proper:clean_garbage(),
+		   ?assert(state_is_clean())
+	       end)).
 
 inc_temp() ->
     inc_temp(1).
@@ -251,7 +252,7 @@ assert_is_instance(X, Type) ->
 
 assert_can_generate(Type, CheckIsInstance) ->
     lists:foreach(fun(Size) -> try_generate(Type,Size,CheckIsInstance) end,
-		  [1,2,5,10,20,40,50]).
+		  [1, 2, 5, 10, 20, 40, 50]).
 
 try_generate(Type, Size, CheckIsInstance) ->
     {ok,Instance} = proper_gen:pick(Type, Size),
@@ -266,7 +267,7 @@ assert_seeded_runs_return_same_result(Type) ->
                   [1, 2, 5, 10, 20, 40, 50]).
 
 try_generate_seeded(Type, Size) ->
-    Seed = now(),
+    Seed = os:timestamp(),
     {ok, Instance1} = proper_gen:pick(Type, Size, Seed),
     {ok, Instance2} = proper_gen:pick(Type, Size, Seed),
     ?assert(Instance1 =:= Instance2).
@@ -391,6 +392,8 @@ simple_types_with_data() ->
       none},
      {?SUCHTHATMAYBE(X,non_neg_integer(),X rem 4 =:= 1), [1,2,3,4,5,37,89], 0,
       [1.1,2.2,-12], "non_neg_integer()"},
+     {?SUCHTHAT(L, non_empty(list(non_neg_integer())), hd(L) < 5),
+      [[1], [1,2,3,4], [0,2]], [0], [[], "Fail","something", [5]], none},
      {any(), [1,-12,0,99.9,-42.2,0.0,an_atom,'',<<>>,<<1,2>>,<<1,2,3:5>>,[],
 	      [42,<<>>],{},{tag,12},{tag,[vals,12,12.2],[],<<>>}],
 	     0, [], "any()"},
@@ -460,7 +463,25 @@ constructed_types_with_data() ->
       null, [{'$to_part',null}], "k()"},
      {none, [{'$used',[null,null,{'$used',[null,null],{tag,null,[null]}}],
 	      {tag,null,[null,{tag,null,[null]}]}}, {'$to_part',null}],
-      null, [{'$used',[null],{tag,null,[]}}], "l()"}].
+      null, [{'$used',[null],{tag,null,[]}}], "l()"},
+     {utf8(), [{'$used',{'$used',0,[]},<<>>}, {'$used',{'$used',1,[0]},<<0>>},
+	       {'$used',{'$used',1,[127]},<<127>>},
+	       {'$used',{'$used',1,[353]},<<197,161>>}],
+      <<>>, [{'$used',{'$used',1,[128]},<<128>>}], none},
+     {utf8(0), [{'$used',{'$used',0,[]},<<>>}], <<>>, [], none},
+     {utf8(1), [{'$used',{'$used',0,[]},<<>>},
+		{'$used',{'$used',1,[127]},<<127>>},
+		{'$used',{'$used',1,[353]},<<197,161>>}], <<>>, [], none},
+     {utf8(2), [{'$used',{'$used',1,[353]},<<197,161>>},
+		{'$used',{'$used',2,[127,353]},<<127,197,161>>}],
+      <<>>, [], none},
+     {utf8(inf, 1), [{'$used',{'$used',0,[]},<<>>},
+		     {'$used',{'$used',1,[0]},<<0>>},
+		     {'$used',{'$used',2,[0,0]},<<0,0>>},
+		     {'$used',{'$used',3,[0,0,0]},<<0,0,0>>}], <<>>, [], none},
+     {utf8(inf, 2), [{'$used',{'$used',3,[0,0,0]},<<0,0,0>>},
+		     {'$used',{'$used',1,[353]},<<197,161>>}],
+      <<>>, [], none}].
 
 function_types() ->
     [{function([],atom()), "fun(() -> atom())"},
@@ -485,7 +506,9 @@ impossible_types() ->
      ?SUCHTHAT(X, float(0.0,10.0), X < 0.0),
      ?SUCHTHAT(L, vector(12,integer()), length(L) =/= 12),
      ?SUCHTHAT(B, binary(), lists:member(256,binary_to_list(B))),
-     ?SUCHTHAT(X, exactly('Lelouch'), X =:= 'vi Brittania')].
+     ?SUCHTHAT(X, exactly('Lelouch'), X =:= 'vi Brittania'),
+     ?SUCHTHAT(X, utf8(), unicode:characters_to_list(X) =:= [16#D800]),
+     ?SUCHTHAT(X, utf8(1, 1), size(X) > 1)].
 
 impossible_native_types() ->
     [{types_test1, ["1.1","no_such_module:type1()","no_such_type()"]},
@@ -532,9 +555,10 @@ combinations() ->
      {[{1,[1,3,5]}, {2,[7,8,9]}, {3,[2,4,6]}], 3, 9, [1,3,5,7,8,9], 3, 2,
       [{1,[6,8,9]}, {2,[1,3,5]}, {3,[2,4,7]}]}].
 
-first_comb() -> [{10,3,3,[{1,[7,8,9,10]}, {2,[4,5,6]}, {3,[1,2,3]}]},
-		 {11,5,2,[{1,[6,7,8,9,10,11]}, {2,[1,2,3,4,5]}]},
-		 {12,3,4,[{1,[10,11,12]}, {2,[7,8,9]}, {3,[4,5,6]}, {4,[1,2,3]}]}].
+first_comb() ->
+    [{10,3,3,[{1,[7,8,9,10]}, {2,[4,5,6]}, {3,[1,2,3]}]},
+     {11,5,2,[{1,[6,7,8,9,10,11]}, {2,[1,2,3,4,5]}]},
+     {12,3,4,[{1,[10,11,12]}, {2,[7,8,9]}, {3,[4,5,6]}, {4,[1,2,3]}]}].
 
 lists_to_zip() ->
     [{[],[],[]},
@@ -722,7 +746,8 @@ parse_transform_test_() ->
     [?_passes(auto_export_test1:prop_1()),
      ?_assertError(undef, auto_export_test2:prop_1()),
      ?_assertError(undef, no_native_parse_test:prop_1()),
-     ?_assertError(undef, no_out_of_forall_test:prop_1())].
+     ?_passes(let_tests:prop_1()),
+     ?_failsWith([3*42], let_tests:prop_2())].
 
 native_type_props_test_() ->
     [?_passes(?FORALL({X,Y}, {my_native_type(),my_proper_type()},
@@ -771,8 +796,45 @@ native_type_props_test_() ->
      ?_passes(?FORALL(X, ?LET(L,lof(),lists:min([99999.9|L])),
 		      is_float(X))),
      ?_shrinksTo(0, ?LETSHRINK([X],[my_native_type()],{'tag',X})),
+     {"Shrinking tuples",
+      [{"All elements are generators",
+        [?_shrinksTo({0,0}, proper_types:tuple([proper_types:integer(), proper_types:integer()])),
+         ?_shrinksTo({0,0}, {proper_types:integer(), proper_types:integer()})]},
+       {"Some elements are generators",
+        [?_shrinksTo({0,0}, proper_types:tuple([proper_types:integer(), 0])),
+         ?_shrinksTo({0,2}, proper_types:tuple([proper_types:integer(), 2])),
+         ?_shrinksTo({0,0}, {proper_types:integer(), 0}),
+         ?_shrinksTo({0,2}, {proper_types:integer(), 2})]},
+       {"All elements are consts",
+         [?_shrinksTo({3,2}, proper_types:tuple([3, 2])),
+          ?_shrinksTo({3,2}, {3, 2})]}]},
+     {"Shrinking fixed lists",
+      [{"All elements are generators",
+        [?_shrinksTo([0,0], proper_types:fixed_list([proper_types:integer(), proper_types:integer()])),
+         ?_shrinksTo([0,0], [proper_types:integer(), proper_types:integer()]),
+         ?_shrinksTo([0|0], [proper_types:integer()|proper_types:integer()])]},
+       {"Some elements are generators",
+        [?_shrinksTo([0,0], proper_types:fixed_list([proper_types:integer(), 0])),
+         ?_shrinksTo([0,2], proper_types:fixed_list([proper_types:integer(), 2])),
+         ?_shrinksTo([0|2], proper_types:fixed_list([proper_types:integer()|2])),
+         ?_shrinksTo([0,0], [proper_types:integer(), 0]),
+         ?_shrinksTo([0,2], [proper_types:integer(), 2]),
+         ?_shrinksTo([12,42], [12,42|list(integer())])]},
+       {"All elements are consts",
+         [?_shrinksTo([3|2], proper_types:fixed_list([3|2])),
+          ?_shrinksTo([3,2], proper_types:fixed_list([3, 2])),
+          ?_shrinksTo([3,2], [3, 2])]}]},
      ?_passes(weird_types:prop_export_all_works()),
-     ?_passes(weird_types:prop_no_auto_import_works())].
+     ?_passes(weird_types:prop_no_auto_import_works()),
+
+     ?_passes(?FORALL(B, utf8(), unicode:characters_to_binary(B) =:= B)),
+     ?_passes(?FORALL(B, utf8(1), length(unicode:characters_to_list(B)) =< 1)),
+     ?_passes(?FORALL(B, utf8(1, 1), size(B) =< 1)),
+     ?_passes(?FORALL(B, utf8(2, 1), size(B) =< 2)),
+     ?_passes(?FORALL(B, utf8(4), size(B) =< 16)),
+     ?_passes(?FORALL(B, utf8(),
+                      length(unicode:characters_to_list(B)) =< size(B)))
+    ].
 
 -type bin4()   :: <<_:32>>.
 -type bits42() :: <<_:42>>.
@@ -823,6 +885,7 @@ true_props_test_() ->
 		  {three, conjunction([{a,true},{b,true}])}
 	      ])),
      ?_passes(?FORALL(X, untyped(), is_record(X, untyped))),
+     ?_passes(improper_lists_statem:prop_simple()),
      ?_passes(pdict_statem:prop_pdict()),
      ?_passes(symb_statem:prop_simple()),
      {timeout, 20, ?_passes(symb_statem:prop_parallel_simple())},
@@ -970,15 +1033,24 @@ options_test_() ->
 		 ?FORALL(_,?SIZED(Size,integer(Size,Size)),false),
 		 [{start_size,12}])].
 
+-ifdef(NO_MODULES_IN_OPAQUES).
+-define(SET,  set).
+-define(DICT, dict).
+-else.
+-define(SET,  sets:set).
+-define(DICT, dict:dict).
+-endif.
+
 adts_test_() ->
     [{timeout, 20,	% for Kostis' old laptop
-      ?_passes(?FORALL({X,S},{integer(),set()},
+      ?_passes(?FORALL({X,S},{integer(),?SET()},
 		       sets:is_element(X,sets:add_element(X,S))), [20])},
-     ?_passes(?FORALL({X,Y,D},
-		      {integer(),float(),dict(integer(),float())},
-		      dict:fetch(X,dict:store(X,Y,eval(D))) =:= Y), [30]),
+     {timeout, 40,	% for 18.x (and onwards?)
+      ?_passes(?FORALL({X,Y,D},
+		       {integer(),float(),?DICT(integer(),float())},
+		       dict:fetch(X,dict:store(X,Y,eval(D))) =:= Y), [30])},
      ?_fails(?FORALL({X,D},
-	     {boolean(),dict(boolean(),integer())},
+	     {boolean(),?DICT(boolean(),integer())},
 	     dict:erase(X, dict:store(X,42,D)) =:= D))].
 
 parameter_test_() ->
@@ -995,6 +1067,22 @@ zip_test_() ->
 
 command_names_test_() ->
     [?_assertEqual(proper_statem:command_names(Cmds), Expected)
+     || {Cmds,Expected} <- command_names()].
+
+command_names_parallel1_test_() ->
+    [?_assertEqual(proper_statem:command_names({Cmds,[]}), Expected)
+     || {Cmds,Expected} <- command_names()].
+
+command_names_parallel2_test_() ->
+    [?_assertEqual(proper_statem:command_names({[],[Cmds]}), Expected)
+     || {Cmds,Expected} <- command_names()].
+
+command_names_parallel3_test_() ->
+    [?_assertEqual(proper_statem:command_names({Cmds,[Cmds]}), Expected++Expected)
+     || {Cmds,Expected} <- command_names()].
+
+command_names_parallel4_test_() ->
+    [?_assertEqual(proper_statem:command_names({Cmds,[Cmds,Cmds]}), Expected++Expected++Expected)
      || {Cmds,Expected} <- command_names()].
 
 valid_cmds_test_() ->
@@ -1053,11 +1141,11 @@ run_init_error_test_() ->
 		   setup_run_commands(Mod, Cmds, Env))
      || {Mod,Cmds,Env,_Shrunk} <- symbolic_init_invalid_sequences()].
 
-run_postcondition_false() ->
+run_postcondition_false_test() ->
     ?_assertMatch({_H,_S,{postcondition,false}},
 		  run_commands(post_false, proper_statem:commands(post_false))).
 
-run_exception() ->
+run_exception_test() ->
     ?_assertMatch(
        {_H,_S,{exception,throw,badarg,_}},
        run_commands(post_false, proper_statem:commands(error_statem))).
@@ -1073,10 +1161,10 @@ mk_first_comb_test_() ->
 
 args_not_defined_test() ->
     [?_assertNot(proper_statem:args_defined(Args, SymbEnv))
-     || {Args,SymbEnv} <- arguments_not_defined()].
+     || {Args, SymbEnv} <- arguments_not_defined()].
 
 command_props_test_() ->
-    {timeout, 150, [?_assertEqual([], proper:module(command_props, 50))]}.
+    {timeout, 150, [?_assertEqual([], proper:module(command_props))]}.
 
 %% TODO: is_instance check fails because of ?LET in fsm_commands/1?
 can_generate_fsm_commands_test_() ->
@@ -1094,19 +1182,31 @@ dollar_only_cp_test_() ->
 	     re:run(atom_to_list(K), ["^[$]"], [{capture,none}]) =:= match]).
 
 
+sampleshrink_test_() ->
+    [{"Test type with restrain",
+      [{"Try another way to call shrinking (not sampleshrink)",
+        ?_shrinksTo([a], non_empty(?LET({Len,List},
+                                        {range(0,5), list(a)},
+                                        lists:sublist(List, Len))))},
+       ?_test(proper_gen:sampleshrink(non_empty(?LET({Len,List},
+                                       {range(0,5), list(a)},
+                                       lists:sublist(List, Len)))))]}].
+
+
 %%------------------------------------------------------------------------------
 %% Performance tests
 %%------------------------------------------------------------------------------
 
 max_size_test() ->
     %% issue a call to load the test module and ensure the test exists
-    true = lists:member({prop_identity,0}, perf_max_size:module_info(exports)),
+    ?assert(lists:member({prop_identity,0},
+			 perf_max_size:module_info(exports))),
     %% run some tests with a small and a big max_size option
     {Ts,true} = timer:tc(fun() -> max_size_test_aux(42) end),
     {Tb,true} = timer:tc(fun() -> max_size_test_aux(16#ffffffff) end),
     %% ensure that the test with the big max_size option does not take
     %% much longer than the small one to complete
-    ?assertEqual(true, 2*Ts >= Tb).
+    ?assert(2*Ts >= Tb).
 
 max_size_test_aux(Size) ->
     proper:quickcheck(perf_max_size:prop_identity(), [5,{max_size,Size}]).
@@ -1159,7 +1259,7 @@ equal_ignoring_chars([Char1|Rest1] = Str1, [Char2|Rest2] = Str2, Ignore) ->
     end.
 
 smaller_lengths_than_my_own(L) ->
-    lists:seq(0,length(L)).
+    lists:seq(0, length(L)).
 
 is_zero(X) -> X =:= 0.
 

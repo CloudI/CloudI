@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Eirini Arvaniti
 
@@ -236,7 +236,7 @@
 
 -export([index/2, all_insertions/3, insert_all/2]).
 -export([is_valid/4, args_defined/2]).
--export([get_next/6, mk_first_comb/3, fix_parallel/8, mk_dict/2]).
+-export([get_next/6, mk_first_comb/3]).
 -export([execute/4, check/6, run/3, get_initial_state/2]).
 
 
@@ -262,7 +262,8 @@
 			 | {'postcondition', 'false' | proper:exception()}
 			 | proper:exception()
 			 | 'no_possible_interleaving'.
--type indices()     :: [pos_integer()].
+-type index()       :: pos_integer().
+-type indices()     :: [index()].
 -type combination() :: [{pos_integer(),indices()}].
 -type lookup()      :: orddict:orddict().
 
@@ -426,7 +427,7 @@ parallel_shrinker(Mod, [{init,I} = Init|Seq], Parallel) ->
 		fun(P) -> is_valid(Mod, I, Seq1 ++ P, []) end,
 		Parallel1));
 parallel_shrinker(Mod, Seq, Parallel) ->
-    I= Mod:initial_state(),
+    I = Mod:initial_state(),
     ?SUCHTHAT({Seq1, Parallel1},
 	      ?LET(ParInstances,
 		   [proper_types:shrink_list(P) || P <- Parallel],
@@ -437,7 +438,7 @@ parallel_shrinker(Mod, Seq, Parallel) ->
 		fun(P) -> is_valid(Mod, I, Seq1 ++ P, []) end,
 		Parallel1)).
 
--spec move_shrinker(command_list(), [command_list()], pos_integer()) ->
+-spec move_shrinker(command_list(), [command_list()], index()) ->
 	 proper_types:type().
 move_shrinker(Seq, Par, 1) ->
     ?SHRINK({Seq, Par},
@@ -464,7 +465,9 @@ move_shrinker(Seq, Par, I) ->
 %%   {{@type dynamic_state()}, {@type term()}}, specifying the state prior to
 %%   command execution and the actual result of the command.</li>
 %% <li>`DynamicState' contains the state of the abstract state machine at
-%%   the moment when execution stopped.</li>
+%%   the moment when execution stopped. In case execution has stopped due to a
+%%   false postcondition, `DynamicState' corresponds to the state prior to
+%%   execution of the last command.</li>
 %% <li>`Result' specifies the outcome of command execution. It can be
 %%   classified in one of the following categories:
 %%   <ul>
@@ -644,7 +647,7 @@ execute(Cmds, Env, Mod, History) ->
 -spec pmap(fun((command_list()) -> parallel_history()), [command_list()]) ->
          [parallel_history()].
 pmap(F, L) ->
-    await(lists:reverse(spawn_jobs(F,L))).
+    await(spawn_jobs(F,L)).
 
 -spec spawn_jobs(fun((command_list()) -> parallel_history()),
 		 [command_list()]) -> [pid()].
@@ -654,15 +657,11 @@ spawn_jobs(F, L) ->
      || X <- L].
 
 -spec await([pid()]) -> [parallel_history()].
-await(Pids) ->
-    await_tr(Pids, []).
-
--spec await_tr([pid()], [parallel_history()]) -> [parallel_history()].
-await_tr([], Acc) -> Acc;
-await_tr([H|T], Acc) ->
+await([]) -> [];
+await([H|T]) ->
     receive
 	{H, {ok, Res}} ->
-	    await_tr(T, [Res|Acc]);
+        [Res|await(T)];
 	{H, {'EXIT',_} = Err} ->
 	    _ = [exit(Pid, kill) || Pid <- T],
 	    _ = [receive {P,_} -> d_ after 0 -> i_ end || P <- T],
@@ -711,7 +710,9 @@ check(Mod, State, Env, Changed, Tried, [P|ToTry]) ->
 %% {@link proper:aggregate/2} in order to collect statistics about command
 %% execution.
 
--spec command_names(command_list()) -> [mfa()].
+-spec command_names(command_list() | parallel_testcase()) -> [mfa()].
+command_names({Cmds, L}) ->
+    lists:flatten([command_names(Cmds)|[ command_names(Cs) || Cs <- L ]]);
 command_names(Cmds) ->
     [{M, F, length(Args)} || {set, _Var, {call,M,F,Args}} <- Cmds].
 
@@ -739,15 +740,9 @@ state_env_after(Mod, Cmds) ->
 %% useful for zipping a command sequence with its (failing) execution history.
 
 -spec zip([A], [B]) -> [{A,B}].
-zip(X, Y) ->
-    zip(X, Y, []).
-
--spec zip([A], [B], [{A,B}]) -> [{A,B}].
-zip([], _, Accum) -> lists:reverse(Accum);
-zip(_, [], Accum) -> lists:reverse(Accum);
-zip([X|Tail1], [Y|Tail2], Accum) ->
-    zip(Tail1, Tail2, [{X,Y}|Accum]).
-
+zip([A|X], [B|Y]) -> [{A,B}|zip(X, Y)];
+zip(_, []) -> [];
+zip([], _) -> [].
 
 %% -----------------------------------------------------------------------------
 %% Utility functions
@@ -774,8 +769,8 @@ arg_defined({var,I} = V, SymbEnv) when is_integer(I) ->
     lists:member(V, SymbEnv);
 arg_defined(Tuple, SymbEnv) when is_tuple(Tuple) ->
     args_defined(tuple_to_list(Tuple), SymbEnv);
-arg_defined(List, SymbEnv) when is_list(List) ->
-    args_defined(List, SymbEnv);
+arg_defined([Head|Tail], SymbEnv) ->
+    arg_defined(Head, SymbEnv) andalso arg_defined(Tail, SymbEnv);
 arg_defined(_, _) ->
     true.
 
@@ -786,7 +781,7 @@ get_initial_state(Mod, Cmds) when is_list(Cmds) ->
     Mod:initial_state().
 
 %% @private
--spec fix_parallel(pos_integer(), non_neg_integer(), combination() | 'done',
+-spec fix_parallel(index(), non_neg_integer(), combination() | 'done',
 		   lookup(), mod_name(), symbolic_state(), [symb_var()],
 		   pos_integer()) -> [command_list()].
 fix_parallel(_, 0, done, _, _, _, _, _) ->
@@ -862,11 +857,11 @@ all_insertions_tr(X, Limit, LengthFront, Front, Back = [BackH|BackT], Acc) ->
     end.
 
 %% @private
--spec index(term(), [term(),...]) -> pos_integer().
+-spec index(term(), [term(),...]) -> index().
 index(X, List) ->
     index(X, List, 1).
 
--spec index(term(), [term(),...], pos_integer()) -> pos_integer().
+-spec index(term(), [term(),...], index()) -> index().
 index(X, [X|_], N) -> N;
 index(X, [_|Rest], N) -> index(X, Rest, N+1).
 
@@ -899,7 +894,7 @@ lookup_cmd_lists(Combination, LookUp) ->
     [lookup_cmds(Indices, LookUp) || {_, Indices} <- Combination].
 
 %% @private
--spec get_next(combination(), non_neg_integer(), pos_integer(), indices(),
+-spec get_next(combination(), non_neg_integer(), index(), indices(),
 	       pos_integer(), pos_integer()) -> combination() | 'done'.
 get_next(L, _Len, _MaxIndex, Available, _Workers, 1) ->
     [{1,Available}|proplists:delete(1, L)];
@@ -925,7 +920,7 @@ get_next(L, Len, MaxIndex, Available, Workers, N) ->
 		     Len, MaxIndex, Available -- C, Workers, N-1)
     end.
 
--spec next_comb(pos_integer(), indices(), indices()) -> indices() | 'done'.
+-spec next_comb(index(), indices(), indices()) -> indices() | 'done'.
 next_comb(MaxIndex, Indices, Available) ->
     Res = next_comb_tr(MaxIndex, lists:reverse(Indices), []),
     case is_well_defined(Res, Available) of
@@ -939,23 +934,23 @@ is_well_defined(Comb, Available) ->
     lists:usort(Comb) =:= Comb andalso
 	lists:all(fun(X) -> lists:member(X, Available) end, Comb).
 
--spec next_comb_tr(pos_integer(), indices(), indices()) -> indices() | 'done'.
+-spec next_comb_tr(index(), indices(), indices()) -> indices() | 'done'.
 next_comb_tr(_MaxIndex, [], _Acc) ->
     done;
 next_comb_tr(MaxIndex, [MaxIndex | Rest], Acc) ->
     next_comb_tr(MaxIndex, Rest, [1 | Acc]);
 next_comb_tr(_MaxIndex, [X | Rest], Acc) ->
-    lists:reverse(Rest) ++ [X+1] ++ Acc.
+    lists:reverse(Rest, [X+1|Acc]).
 
--spec remove_slice(pos_integer(), command_list(), [command_list(),...]) ->
+-spec remove_slice(index(), command_list(), [command_list(),...]) ->
          [command_list(),...].
 remove_slice(Index, Slice, List) ->
     remove_slice_tr(Index, Slice, List, [], 1).
 
--spec remove_slice_tr(pos_integer(), command_list(), [command_list(),...],
+-spec remove_slice_tr(index(), command_list(), [command_list(),...],
 		      [command_list()], pos_integer()) -> [command_list(),...].
 remove_slice_tr(Index, Slice, [H|T], Acc, Index) ->
-    lists:reverse(Acc) ++ [H -- Slice] ++ T;
+    lists:reverse(Acc, [H -- Slice] ++ T);
 remove_slice_tr(Index, Slice, [H|T], Acc, N) ->
     remove_slice_tr(Index, Slice, T, [H|Acc], N+1).
 

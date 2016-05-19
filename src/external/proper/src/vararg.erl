@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2015 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2015 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc This module contains a helper parse transform that allows the creation
@@ -75,12 +75,12 @@ add_vararg_wrapper(Arity, Handler, Err) ->
     Clauses = lists:reverse([CatchAll | RevClauses]),
     {'case',0,Arity,Clauses}.
 
--spec wrapper_clauses(arity(), abs_expr()) -> [abs_clause()].
+-spec wrapper_clauses(arity(), abs_expr()) -> [abs_clause(),...].
 wrapper_clauses(MaxArity, Handler) ->
     wrapper_clauses(0, MaxArity, Handler, [], [], {nil,0}).
 
 -spec wrapper_clauses(arity(), arity(), abs_expr(), [abs_clause()],
-		      [abs_expr()], abs_expr()) -> [abs_clause()].
+		      [abs_expr()], abs_expr()) -> [abs_clause(),...].
 wrapper_clauses(MaxArity, MaxArity, Handler, Clauses, Args, ArgsList) ->
     FinalClause = wrapper_clause(MaxArity, Handler, Args, ArgsList),
     [FinalClause | Clauses];

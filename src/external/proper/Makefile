@@ -1,4 +1,4 @@
-# Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+# Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
 #                     Eirini Arvaniti <eirinibob@gmail.com>
 #                 and Kostis Sagonas <kostis@cs.ntua.gr>
 #
@@ -22,29 +22,40 @@
 
 .PHONY: default fast all get-deps compile dialyzer check_escripts tests doc clean distclean rebuild retest
 
-default: fast dialyzer
+ifneq (,$(findstring Windows,$(OS)))
+    SEP := $(strip \)
+else
+    SEP := $(strip /)
+endif
+
+REBAR := .$(SEP)rebar
+
+default: fast
 
 fast: get-deps compile
 
-all: default doc tests
+all: fast dialyzer doc tests
 
-include/compile_flags.hrl:
+include/compile_flags.hrl: write_compile_flags
 	./write_compile_flags $@
 
 get-deps:
-	./rebar get-deps
+	$(REBAR) get-deps
 
 compile:
-	./rebar compile
+	$(REBAR) compile
 
-dialyzer: compile
-	dialyzer -n -nn -Wunmatched_returns ebin $(find .  -path 'deps/*/ebin/*.beam')
+dialyzer: .plt/proper_plt compile
+	dialyzer -n -nn --plt $< -Wunmatched_returns ebin $(find .  -path 'deps/*/ebin/*.beam')
+
+.plt/proper_plt: .plt
+	dialyzer --build_plt --output_plt $@ --apps erts kernel stdlib compiler crypto
 
 check_escripts:
 	./check_escripts.sh make_doc write_compile_flags
 
 tests: compile
-	./rebar eunit
+	$(REBAR) eunit
 
 doc:
 	./make_doc
@@ -53,12 +64,12 @@ clean:
 	./clean_temp.sh
 
 distclean: clean
-	rm -f include/compile_flags.hrl
-	./rebar clean
+	rm -f include/compile_flags.hrl .plt/proper_plt
+	$(REBAR) clean
 
 rebuild: distclean include/compile_flags.hrl
-	./rebar compile
+	$(REBAR) compile
 
 retest: compile
 	rm -rf .eunit
-	./rebar eunit
+	$(REBAR) eunit

@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_response).
@@ -77,9 +77,9 @@ external_format(Response, Format) ->
         Format =:= erlang_term ->
             erlang:term_to_binary(Response);
         Format =:= msgpack ->
-            Outgoing = cloudi_x_msgpack:pack(msgpack_response(Response),
-                                             [{enable_str, true},
-                                              {format, ?MSGPACK_MAP}]),
+            Outgoing = cloudi_x_msgpack:
+                       pack(msgpack_response(Response),
+                            [{map_format, ?MSGPACK_MAP}]),
             true = is_binary(Outgoing),
             Outgoing
     end.

@@ -9,8 +9,6 @@
    {registered,[
         ]},
    {applications, [
-        cloudi_service_db_pgsql,
-        cloudi_service_db_riak,
         cloudi_core,
         cloudi_x_cowlib,
         cloudi_x_jsx,

@@ -24,33 +24,25 @@
 -include_lib("eunit/include/eunit.hrl").
 
 
--ifndef(without_map).         
--export([unpack_map/3]).
--endif.
-
--export([unpack_map_jiffy/3, unpack_map_jsx/3]).
+-export([unpack_map/3, unpack_map_jiffy/3, unpack_map_jsx/3]).
 
 %% unpack them all
--spec unpack_stream(Bin::binary(), msgpack_option()) -> {msgpack:object(), binary()} | no_return().
+-spec unpack_stream(Bin::binary(), ?OPTION{}) -> {msgpack:object(), binary()} | no_return().
 %% ATOMS
-unpack_stream(<<16#C0, Rest/binary>>, _Opt = ?OPTION{interface=jsx}) ->
-    {null, Rest};
-unpack_stream(<<16#C0, Rest/binary>>, _Opt = ?OPTION{interface=jiffy}) ->
-    {null, Rest};
 unpack_stream(<<16#C0, Rest/binary>>, _) ->
-    {nil, Rest};
+    {null, Rest};
 unpack_stream(<<16#C2, Rest/binary>>, _) ->
     {false, Rest};
 unpack_stream(<<16#C3, Rest/binary>>, _) ->
     {true, Rest};
 
 %% Raw bytes
-unpack_stream(<<16#C4, L:8/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, _) ->
-    {V, Rest};
-unpack_stream(<<16#C5, L:16/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, _) ->
-    {V, Rest};
-unpack_stream(<<16#C6, L:32/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, _) ->
-    {V, Rest};
+unpack_stream(<<16#C4, L:8/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, Opt) ->
+    {maybe_bin(V, Opt), Rest};
+unpack_stream(<<16#C5, L:16/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, Opt) ->
+    {maybe_bin(V, Opt), Rest};
+unpack_stream(<<16#C6, L:32/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, Opt) ->
+    {maybe_bin(V, Opt), Rest};
 
 %% Floats
 unpack_stream(<<16#CA, V:32/float-unit:1, Rest/binary>>, _) ->
@@ -80,17 +72,19 @@ unpack_stream(<<16#D3, V:64/big-signed-integer-unit:1, Rest/binary>>, _) ->
 
 %% Strings as new spec, or Raw bytes as old spec
 unpack_stream(<<2#101:3, L:5, V:L/binary, Rest/binary>>, Opt) ->
-    unpack_string_or_raw(V, Opt, Rest);
+    unpack_str_or_raw(V, Opt, Rest);
 
 unpack_stream(<<16#D9, L:8/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>,
-              ?OPTION{enable_str=true} = _Opt) ->
-    {unpack_string(V), Rest};
+              ?OPTION{spec=new} = Opt) ->
+    %% D9 is only for new spec
+    unpack_str_or_raw(V, Opt, Rest);
 
 unpack_stream(<<16#DA, L:16/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, Opt) ->
-    unpack_string_or_raw(V, Opt, Rest);
+    %% DA and DB, are string/binary
+    unpack_str_or_raw(V, Opt, Rest);
 
 unpack_stream(<<16#DB, L:32/big-unsigned-integer-unit:1, V:L/binary, Rest/binary>>, Opt) ->
-    unpack_string_or_raw(V, Opt, Rest);
+    unpack_str_or_raw(V, Opt, Rest);
 
 %% Arrays
 unpack_stream(<<2#1001:4, L:4, Rest/binary>>, Opt) ->
@@ -119,7 +113,6 @@ unpack_stream(<<0:1, V:7, Rest/binary>>, _) -> {V, Rest};
 %% negative int
 unpack_stream(<<2#111:3, V:5, Rest/binary>>, _) -> {V - 2#100000, Rest};
 
-
 %% Invalid data
 unpack_stream(<<16#C1, _R/binary>>, _) ->  throw({badarg, 16#C1});
 
@@ -127,47 +120,48 @@ unpack_stream(<<16#C1, _R/binary>>, _) ->  throw({badarg, 16#C1});
 
 %% fixext 1 stores an integer and a byte array whose length is 1 byte
 unpack_stream(<<16#D4, T:1/signed-integer-unit:8, Data:1/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#D4, Unpack, T, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#D4, Unpack, T, Data, Rest, Orig, Opt);
 
 %% fixext 2 stores an integer and a byte array whose length is 2 bytes
 unpack_stream(<<16#D5, T:1/signed-integer-unit:8, Data:2/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#D5, Unpack, T, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#D5, Unpack, T, Data, Rest, Orig, Opt);
 
 %% fixext 4 stores an integer and a byte array whose length is 4 bytes
 unpack_stream(<<16#D6, T:1/signed-integer-unit:8, Data:4/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#D6, Unpack, T, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#D6, Unpack, T, Data, Rest, Orig, Opt);
 
 %% fixext 8 stores an integer and a byte array whose length is 8 bytes
 unpack_stream(<<16#D7, T:1/signed-integer-unit:8, Data:8/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#D7, Unpack, T, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#D7, Unpack, T, Data, Rest, Orig, Opt);
 
 %% fixext 16 stores an integer and a byte array whose length is 16 bytes
 unpack_stream(<<16#D8, T:1/signed-integer-unit:8, Data:16/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#D8, Unpack, T, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#D8, Unpack, T, Data, Rest, Orig, Opt);
 
 %% ext 8 stores an integer and a byte array whose length is upto (2^8)-1 bytes:
 unpack_stream(<<16#C7, Len:8, Type:1/signed-integer-unit:8, Data:Len/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#C7, Unpack, Type, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#C7, Unpack, Type, Data, Rest, Orig, Opt);
 
 %% ext 16 stores an integer and a byte array whose length is upto (2^16)-1 bytes:
 unpack_stream(<<16#C8, Len:16, Type:1/signed-integer-unit:8, Data:Len/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt) ->
-    maybe_unpack_ext(16#C8, Unpack, Type, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt) ->
+    maybe_unpack_ext(16#C8, Unpack, Type, Data, Rest, Orig, Opt);
 
 %% ext 32 stores an integer and a byte array whose length is upto (2^32)-1 bytes:
 unpack_stream(<<16#C9, Len:32, Type:1/signed-integer-unit:8, Data:Len/binary, Rest/binary>>,
-              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = _Opt)  ->
-    maybe_unpack_ext(16#C9, Unpack, Type, Data, Rest, Orig);
+              ?OPTION{ext_unpacker=Unpack, original_list=Orig} = Opt)  ->
+    maybe_unpack_ext(16#C9, Unpack, Type, Data, Rest, Orig, Opt);
 
-unpack_stream(_Bin, _) -> throw(incomplete).
+unpack_stream(_Bin, _Opt) ->
+    throw(incomplete).
 
--spec unpack_array(binary(), non_neg_integer(), [msgpack:object()], msgpack_option()) ->
+-spec unpack_array(binary(), non_neg_integer(), [msgpack:object()], ?OPTION{}) ->
                           {[msgpack:object()], binary()} | no_return().
 unpack_array(Bin, 0,   Acc, _) ->
     {lists:reverse(Acc), Bin};
@@ -175,45 +169,34 @@ unpack_array(Bin, Len, Acc, Opt) ->
     {Term, Rest} = unpack_stream(Bin, Opt),
     unpack_array(Rest, Len-1, [Term|Acc], Opt).
 
--ifdef(without_map).
-map_unpacker(jiffy) ->
-    fun ?MODULE:unpack_map_jiffy/3;
-map_unpacker(jsx) ->
-    fun ?MODULE:unpack_map_jsx/3.
--else.
 map_unpacker(map) ->
     fun ?MODULE:unpack_map/3;
 map_unpacker(jiffy) ->
     fun ?MODULE:unpack_map_jiffy/3;
 map_unpacker(jsx) ->
     fun ?MODULE:unpack_map_jsx/3.
--endif.
 
-
-
--ifndef(without_map).
--spec unpack_map(binary(), non_neg_integer(), msgpack_option()) ->
+-spec unpack_map(binary(), non_neg_integer(), ?OPTION{}) ->
                         {map(), binary()} | no_return().
 unpack_map(Bin, Len, Opt) ->
+    %% TODO: optimize with unpack_map/4
     {Map, Rest} = unpack_map_as_proplist(Bin, Len, [], Opt),
     {maps:from_list(Map), Rest}.
-%%     unpack_map(Bin, Len, #{}, Opt).
 
 %% unpack_map(Bin, Len, Acc, _) -> {Acc, Bin};
 %% unpack_map(Bin, Len, Acc, Opt) ->
 %%     {Key, Rest} = unpack_stream(Bin, Opt),
 %%     {Value, Rest2} = unpack_stream(Rest, Opt),
 %%     unpack_map(Rest2, Len-1, maps:put(Key, Value, Acc), Opt).
--endif.
 
 %% Users SHOULD NOT send too long list: this uses lists:reverse/1
--spec unpack_map_jiffy(binary(), non_neg_integer(), msgpack_option()) ->
+-spec unpack_map_jiffy(binary(), non_neg_integer(), ?OPTION{}) ->
                               {msgpack:msgpack_map_jiffy(), binary()} | no_return().
 unpack_map_jiffy(Bin, Len, Opt) ->
     {Map, Rest} = unpack_map_as_proplist(Bin, Len, [], Opt),
     {{Map}, Rest}.
 
--spec unpack_map_jsx(binary(), non_neg_integer(), msgpack_option()) ->
+-spec unpack_map_jsx(binary(), non_neg_integer(), ?OPTION{}) ->
                             {msgpack:msgpack_map_jsx(), binary()} | no_return().
 unpack_map_jsx(Bin, Len, Opt) ->
     case unpack_map_as_proplist(Bin, Len, [], Opt) of
@@ -221,7 +204,7 @@ unpack_map_jsx(Bin, Len, Opt) ->
         {Map, Rest} -> {Map, Rest}
     end.
 
--spec unpack_map_as_proplist(binary(), non_neg_integer(), proplists:proplist(), msgpack_option()) ->
+-spec unpack_map_as_proplist(binary(), non_neg_integer(), proplists:proplist(), ?OPTION{}) ->
                                     {proplists:proplist(), binary()} | no_return().
 unpack_map_as_proplist(Bin, 0, Acc, _) ->
     {lists:reverse(Acc), Bin};
@@ -230,26 +213,41 @@ unpack_map_as_proplist(Bin, Len, Acc, Opt) ->
     {Value, Rest2} = unpack_stream(Rest, Opt),
     unpack_map_as_proplist(Rest2, Len-1, [{Key,Value}|Acc], Opt).
 
-unpack_string_or_raw(V, ?OPTION{enable_str=true} = _Opt, Rest) ->
-    {unpack_string(V), Rest};
-unpack_string_or_raw(V, ?OPTION{enable_str=false} = _Opt, Rest) ->
-    {V, Rest}.
+unpack_str_or_raw(V, ?OPTION{spec=old} = Opt, Rest) ->
+    {maybe_bin(V, Opt), Rest};
+unpack_str_or_raw(V, ?OPTION{spec=new,
+                             unpack_str=UnpackStr,
+                             validate_string=ValidateString} = Opt, Rest) ->
+    {case UnpackStr of
+         as_binary when ValidateString -> unpack_str(V), maybe_bin(V, Opt);
+         as_binary -> maybe_bin(V, Opt);
+         as_list -> unpack_str(V)
+     end, Rest}.
+
+maybe_bin(Bin, _) ->
+    Bin.
 
 %% NOTE: msgpack DOES validate the binary as valid unicode string.
-unpack_string(Binary) ->
+unpack_str(Binary) ->
     case unicode:characters_to_list(Binary) of
-        {error, _S, _Rest} -> throw({error, {invalid_string, Binary}});
-        {incomplete, _S, _Rest} -> throw({error, {invalid_string, Binary}});
+        {error, _S, _Rest} -> throw({invalid_string, Binary});
+        {incomplete, _S, _Rest} -> throw({invalid_string, Binary});
         String -> String
     end.
 
-maybe_unpack_ext(F, undefined, _, _, _Rest, _) -> throw({badarg, {bad_ext, F}});
-maybe_unpack_ext(_, Unpack, Type, Data, Rest, Orig) when is_function(Unpack, 3) ->
+maybe_unpack_ext(F, _, _, _, _Rest, _, ?OPTION{spec=old}) ->
+    %% trying to unpack new ext formats with old unpacker
+    throw({badarg, {new_spec, F}});
+maybe_unpack_ext(F, undefined, _, _, _Rest, _, _) ->
+    throw({badarg, {bad_ext, F}});
+maybe_unpack_ext(_, Unpack, Type, Data, Rest, Orig, _)
+  when is_function(Unpack, 3) ->
     case Unpack(Type, Data, Orig) of
         {ok, Term} -> {Term, Rest};
         {error, E} -> {error, E}
     end;
-maybe_unpack_ext(_, Unpack, Type, Data, Rest, _) when is_function(Unpack, 2) ->
+maybe_unpack_ext(_, Unpack, Type, Data, Rest, _, _)
+  when is_function(Unpack, 2) ->
     case Unpack(Type, Data) of
         {ok, Term} -> {Term, Rest};
         {error, E} -> {error, E}

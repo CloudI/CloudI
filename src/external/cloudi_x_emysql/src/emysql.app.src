@@ -4,7 +4,7 @@
 
 {application, emysql, [
     {description, "Emysql - Erlang MySQL driver"},
-    {vsn, "0.4.1"},
+    {vsn, "0.4.2"},
     {modules, []}, 
     {mod, {emysql_app, ["%MAKETIME%"]}},
     {registered, [emysql_conn_mgr, emysql_statements, emysql_sup]},

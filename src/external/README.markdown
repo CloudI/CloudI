@@ -61,15 +61,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Mon Oct 13 13:58:48 PDT 2014`
 - `MIT`
 
-`ecouchdb (erlang_couchdb)`
----------------------------
-`Erlang CouchDB (native) Driver`
-
-- `https://github.com/okeuday/ecouchdb`
-- `commit dd8bf6d694327feea202c6552cdb09c650831ba5`
-- `Tue Oct 22 11:58:41 PDT 2013`
-- `MIT`
-
 `eini`
 ------
  `An Erlang INI parser`
@@ -84,17 +75,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Erlang HTTP Server`
 
 - `https://github.com/knutin/elli`
-- `commit 4fbdf68198949ea926a5762e6f438265a04ac605 (v1.0.4)`
-- `Wed Dec 23 18:41:56 PST 2015`
-- `MIT`
-
-`ememcached (previously mcerlang)`
-----------------------------------
-`Erlang memcached Driver`
-
-- `https://github.com/okeuday/ememcached`
-- `commit a44340caa9b14cefb590ba47c3baa2ac83270dcc`
-- `Tue Oct 22 11:58:41 PDT 2013`
+- `commit 0cae1521190459bdb16958be7350191df710d799 (v1.0.5)`
+- `Wed May 18 19:39:55 PDT 2016`
 - `MIT`
 
 `emysql`
@@ -102,8 +84,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
  `Erlang MySQL (native) Driver`
  
 - `https://github.com/okeuday/emysql`
-- `commit 9281bcf4850d26ac4968ab7f93bb443328b465d3 (v0.4.1_CloudI)`
-- `Thu Sep 18 16:41:01 PDT 2014`
+- `commit 1b58bc3a0d08608824c5bc52c31551fdf357ec32 (v0.4.2_CloudI)`
+- `Wed May 18 19:39:55 PDT 2016`
 - `MIT`
 
 `epgsql`
@@ -124,24 +106,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Mon May  5 12:36:52 PDT 2014`
 - `BSD`
 
-`erlasticsearch`
-----------------
-`Erlang ElasticSearch (thrift) Driver`
-
-- `https://github.com/dieswaytoofast/erlasticsearch`
-- `commit 56ebf0d6f1aaab31c7d0f25d17ad4383f7c9051c`
-- `Wed Dec  3 10:00:52 PST 2014`
-- `New BSD`
-
-`erlang_cassandra`
-------------------
-`Erlang Cassandra (thrift) Driver`
-
-- `https://github.com/dieswaytoofast/erlang_cassandra`
-- `commit 6d026bfb06f8efd53e63a32f9b887a01bcc550ad`
-- `Sat May 31 13:01:02 PDT 2014`
-- `New BSD`
-
 `erlcloud`
 ----------
 `Cloud Service Integration APIs`
@@ -149,15 +113,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `https://github.com/okeuday/erlcloud`
 - `commit 55d8e5c1246c5af48dc349a9dac41ecf938217f9 (fixes_for_19_0)`
 - `Tue May 17 11:17:32 PDT 2016`
-- `MIT`
-
-`erlcql`
---------
-`Cassandra native protocol CQL client for Erlang`
-
-- `https://github.com/rpt/erlcql`
-- `commit 44ff63e3048140c7877faffda94a0b90ab19deb5 (branch develop)`
-- `Wed Jun 25 13:01:35 PDT 2014`
 - `MIT`
 
 `exometer`
@@ -242,15 +197,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Tue May 17 11:17:32 PDT 2016`
 - `BSD`
 
-`lz4`
------
-`LZ4 bindings for Erlang`
-
-- `https://github.com/szktty/erlang-lz4`
-- `commit 86361e5c95200fa3b4fcba3f9d6c871f8c48a7f1`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `New BSD`
-
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 -------------------------------------------------------------------
 `autoconf m4 macros for boost detection`
@@ -304,9 +250,9 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 ---------
 `MessagePack in Erlang`
 
-- `https://github.com/msgpack/msgpack-erlang`
-- `commit c666a5f6568ac2e15687bb155442025dbb8b74ff (0.3.3)`
-- `Mon May 25 11:14:25 PDT 2015`
+- `https://github.com/okeuday/msgpack-erlang`
+- `commit 3fcb204e41683bf68afba602177a34fbc05fbf3b`
+- `Wed May 18 19:39:55 PDT 2016`
 - `Apache License 2.0`
 
 `nodefinder`
@@ -336,32 +282,14 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Tue Sep  1 21:59:06 PDT 2015`
 - `BSD`
 
-`poolboy`
----------
-`Poolboy - A hunky Erlang worker pool factory`
-
-- `https://github.com/devinus/poolboy`
-- `1.0.0`
-- `Tue Apr 16 13:47:17 EDT 2013`
-- `Apache License 2.0`
-
 `proper`
 --------
 `PropEr (PROPerty-based testing tool for ERlang)`
 
 - `https://github.com/manopapad/proper`
-- `commit 87e4a56e8f97f1972cde44ed30500daa4641595f (v1.1)`
-- `Tue Jan 14 11:33:13 PST 2014`
+- `commit 6b562a2fb8a719cee5d99d7a93d5fe56c89a8824`
+- `Wed May 18 19:39:55 PDT 2016`
 - `GPLv3` (build/test-time dependency only)
-
-`protobuffs`
-------------
-`Erlang Protocol Buffers`
-
-- `https://github.com/basho/erlang_protobuffs`
-- `commit ec7e99f57f5bbcd91c56242091485d41bc78c3d4 (0.8.1p1)`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `MIT`
 
 `ranch`
 -------
@@ -381,24 +309,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Tue Feb 12 12:32:53 PST 2013`
 - `Apache License 2.0`
 
-`riak_pb`
----------
-`Erlang Riak Protocol Buffers`
-
-- `https://github.com/basho/riak_pb`
-- `commit 0353be3e04b971ac802acbd6b78d74589db2f6df (1.4.4.0)`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `Apache License 2.0`
-
-`riakc`
--------
-`Erlang Riak driver`
-
-- `https://github.com/basho/riak-erlang-client`
-- `commit 8d33c020f4ca392200b2d0d973c77dd48164b263 (1.4.2)`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `Apache License 2.0`
-
 `setup`
 -------
 `Erlang Setup Application`
@@ -408,15 +318,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Fri Dec 11 15:51:53 PST 2015`
 - `Mozilla Public License 2.0`
 
-`snappy`
---------
-`An Erlang NIF wrapper for Google's snappy compressor/decompressor`
-
-- `https://github.com/rpt/snappy`
-- `commit 95ce8e8074ca4a514ba8396d7f14e5ec572a8e45`
-- `Fri Jun 20 12:11:49 PDT 2014`
-- `Apache License 2.0`
-
 `syslog`
 --------
 `Erlang syslog port driver`
@@ -425,15 +326,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `commit e24c9ee8f7bb3f066ec152c210af10c2c712759a (1.0.3)`
 - `Sat Aug  8 12:52:40 PDT 2015`
 - `BSD`
-
-`thrift`
---------
-`Erlang Thrift software library`
-
-- `https://github.com/dieswaytoofast/thrift`
-- `commit 1e04570a702b782df600c31537105f46ce0813f2 (0.9.3)`
-- `Sat May 31 13:06:15 PDT 2014`
-- `Apache License 2.0`
 
 `zeromq/v?/erlzmq`
 ------------------

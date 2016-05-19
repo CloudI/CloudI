@@ -1,7 +1,0 @@
-{application, rebar_modules,
-  [{description, "Build-Time Modules To Bridge Scope With Rebar Dependencies"},
-   {vsn, "1.3.3"},
-   {modules, []},
-   {registered, []},
-   {applications, [cloudi_x_protobuffs]}]}.
-

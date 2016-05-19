@@ -28,7 +28,6 @@
   % CloudI source code, including dependencies
   {app, cloudi_core,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  @SERVICE_RELTOOL@
 
   % CloudI services, not automatically started
   % (i.e., started by the internal service configuration entries)
@@ -36,21 +35,9 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_cassandra,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_cassandra_cql,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_couchdb,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_elasticsearch,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_memcached,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_mysql,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_pgsql,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_db_riak,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_filesystem,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
@@ -89,8 +76,7 @@
   % (reltool has a bug due to xref usage,
   %  http://erlang.org/pipermail/erlang-bugs/2014-May/004390.html)
 
-  % syntax_tools from cloudi_x_erlasticsearch, cloudi_x_erlang_cassandra, and
-  %                   cloudi_x_goldrush
+  % syntax_tools from cloudi_x_goldrush
   {app, syntax_tools,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   % cloudi_x_exometer from cloudi_service_monitoring
@@ -115,7 +101,6 @@
    [
     % CloudI
     cloudi_core,
-    @SERVICE_APPCONF@
     % Erlang
     sasl,
     stdlib,

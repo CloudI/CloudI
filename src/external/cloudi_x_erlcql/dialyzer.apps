@@ -1,5 +1,0 @@
-erts
-kernel
-stdlib
-deps/snappy/ebin
-deps/lz4/ebin

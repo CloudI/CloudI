@@ -10,14 +10,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_core/src \
      -d $(top_srcdir)/lib/cloudi_service_api_requests/src \
      -d $(top_srcdir)/lib/cloudi_service_db/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_cassandra/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_couchdb/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_elasticsearch/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_memcached/src \
      -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
-     -d $(top_srcdir)/lib/cloudi_service_db_riak/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
      -d $(top_srcdir)/lib/cloudi_service_http_client/src \
      -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
@@ -53,17 +47,12 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
-     -d $(top_srcdir)/external/cloudi_x_ecouchdb/src \
      -d $(top_srcdir)/external/cloudi_x_eini/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
-     -d $(top_srcdir)/external/cloudi_x_ememcached/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql_wg/src \
-     -d $(top_srcdir)/external/cloudi_x_erlang_cassandra/src \
-     -d $(top_srcdir)/external/cloudi_x_erlasticsearch/src \
      -d $(top_srcdir)/external/cloudi_x_erlcloud/src \
-     -d $(top_srcdir)/external/cloudi_x_erlcql/src \
      -d $(top_srcdir)/external/cloudi_x_exometer/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_core/src \
      -d $(top_srcdir)/external/cloudi_x_folsom/src \
@@ -75,13 +64,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
-     -d $(top_srcdir)/external/cloudi_x_poolboy/src \
-     -d $(top_srcdir)/external/cloudi_x_protobuffs/src \
      -d $(top_srcdir)/external/cloudi_x_ranch/src \
-     -d $(top_srcdir)/external/cloudi_x_riak_pb/src \
-     -d $(top_srcdir)/external/cloudi_x_riakc/src \
-     -d $(top_srcdir)/external/cloudi_x_setup/src \
-     -d $(top_srcdir)/external/cloudi_x_thrift/src
+     -d $(top_srcdir)/external/cloudi_x_setup/src
 
 if PYTHON_SUPPORT
     PYTHON_TEST_HOOK = api-python-test
@@ -191,12 +175,8 @@ distclean-local: rebar-directories-distclean \
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
            $(top_srcdir)/lib/cloudi_core/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_db_cassandra/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_db_cassandra_cql/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_db_elasticsearch/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_mysql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
-           $(top_srcdir)/lib/cloudi_service_db_riak/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_filesystem/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_http_client/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_queue/test_ct/logs \
@@ -228,14 +208,8 @@ dialyze: all \
               lib/cloudi_core/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
               lib/cloudi_service_db/ebin/ \
-              lib/cloudi_service_db_cassandra/ebin/ \
-              lib/cloudi_service_db_cassandra_cql/ebin/ \
-              lib/cloudi_service_db_couchdb/ebin/ \
-              lib/cloudi_service_db_elasticsearch/ebin/ \
-              lib/cloudi_service_db_memcached/ebin/ \
               lib/cloudi_service_db_mysql/ebin/ \
               lib/cloudi_service_db_pgsql/ebin/ \
-              lib/cloudi_service_db_riak/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
               lib/cloudi_service_http_client/ebin/ \
               lib/cloudi_service_http_cowboy/ebin/ \
@@ -268,16 +242,11 @@ dialyze: all \
               tests/messaging/ebin/ \
               tests/msg_size/ebin/ \
               tests/http_req/ebin/ \
-              external/cloudi_x_cowboy/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_dynamic_compile/ebin \
-              external/cloudi_x_ecouchdb/ebin \
-              external/cloudi_x_elli/ebin \
-              external/cloudi_x_ememcached/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_epgsql_wg/ebin \
-              external/cloudi_x_jsx/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
               external/cloudi_x_syslog/ebin

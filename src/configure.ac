@@ -443,8 +443,8 @@ AM_CONDITIONAL([RUBY_SUPPORT], [test "x$ruby_support" = "xtrue"])
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AX_ERLANG_REQUIRE_OTP_VER([R16], ,
-    [AC_MSG_ERROR([Erlang >= R16 not found])])
+AX_ERLANG_REQUIRE_OTP_VER([17.5], ,
+    [AC_MSG_ERROR([Erlang >= 17.5 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AX_ERLANG_SUBST_OTP_VER
@@ -498,32 +498,6 @@ fi
 AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 AX_ZEROMQ_ERLZMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 
-# service Erlang application
-AC_ARG_WITH([service],
-    [AS_HELP_STRING([--with-service@<:@=ARG@:>@],
-        [include the service Erlang application (ARG=yes),
-         or exclude the service Erlang application to avoid module name
-         conflicts with external modules that use the service prefix (ARG=no)
-         @<:@ARG=yes@:>@ ])],
-    [
-    if test "x$withval" = "xno"; then
-        want_service="no"
-    elif test "x$withval" = "xyes"; then
-        want_service="yes"
-    else
-        AC_MSG_ERROR([--with-service needs yes or no, not $withval])
-    fi
-    ],
-    [want_service="yes"])
-if test "x$want_service" = "xyes"; then
-    SERVICE_RELTOOL="{app, service, @<:@{incl_cond, include}, {mod_cond, all}, {app_file, keep}@:>@},"
-    SERVICE_APPCONF="service,"
-    SERVICE_PATH=',"lib/service"'
-    AC_SUBST(SERVICE_RELTOOL)
-    AC_SUBST(SERVICE_APPCONF)
-    AC_SUBST(SERVICE_PATH)
-fi
-
 if test "x$integration_tests_ran" = "xtrue" ; then
     CLOUDI_CONF="cloudi_tests.conf"
 else
@@ -544,14 +518,8 @@ AC_CONFIG_FILES([
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_db/src/cloudi_service_db.app.src
-    lib/cloudi_service_db_cassandra/src/cloudi_service_db_cassandra.app.src
-    lib/cloudi_service_db_cassandra_cql/src/cloudi_service_db_cassandra_cql.app.src
-    lib/cloudi_service_db_couchdb/src/cloudi_service_db_couchdb.app.src
-    lib/cloudi_service_db_elasticsearch/src/cloudi_service_db_elasticsearch.app.src
-    lib/cloudi_service_db_memcached/src/cloudi_service_db_memcached.app.src
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
-    lib/cloudi_service_db_riak/src/cloudi_service_db_riak.app.src
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
     lib/cloudi_service_http_client/src/cloudi_service_http_client.app.src
     lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.app.src
@@ -568,7 +536,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
     lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
-    lib/service/src/service.app.src
     api/Makefile
     api/c/Makefile
     api/erlang/Makefile

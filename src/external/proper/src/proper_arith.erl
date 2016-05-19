@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2015 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2015 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc This module contains helper arithmetic, list handling and random
@@ -72,7 +72,7 @@ safe_map_tr(_Fun, [], AccList) ->
 safe_map_tr(Fun, [Head | Tail], AccList) ->
     safe_map_tr(Fun, Tail, [Fun(Head) | AccList]);
 safe_map_tr(Fun, ImproperTail, AccList) ->
-    lists:reverse(AccList) ++ Fun(ImproperTail).
+    lists:reverse(AccList, Fun(ImproperTail)).
 
 -spec safe_foldl(fun((T,A) -> A), A, maybe_improper_list(T,T | [])) -> A.
 safe_foldl(_Fun, Acc, []) ->
@@ -176,7 +176,7 @@ remove(Xs, Positions) ->
 
 -spec remove_tr([T], [position()], position(), [T]) -> [T].
 remove_tr(Xs, [], _Pos, Acc) ->
-    lists:reverse(Acc) ++ Xs;
+    lists:reverse(Acc, Xs);
 remove_tr([_X | XsTail], [Pos | PosTail], Pos, Acc) ->
     remove_tr(XsTail, PosTail, Pos + 1, Acc);
 remove_tr([X | XsTail], Positions, Pos, Acc) ->
@@ -188,7 +188,7 @@ insert(Xs, Positions, Ys) ->
 
 -spec insert_tr([T], [position()], [T], position(), [T]) -> [T].
 insert_tr([], [], Ys, _Pos, Acc) ->
-    lists:reverse(Acc) ++ Ys;
+    lists:reverse(Acc, Ys);
 insert_tr([X | XsTail], [Pos | PosTail], Ys, Pos, Acc) ->
     insert_tr(XsTail, PosTail, Ys, Pos + 1, [X | Acc]);
 insert_tr(Xs, Positions, [Y | YsTail], Pos, Acc) ->
@@ -232,7 +232,7 @@ rand_restart(Seed) ->
 rand_reseed() ->
     %% TODO: This should use the pid of the process somehow, in case two
     %%       spawned functions call it simultaneously?
-    _ = ?RANDOM_MOD:seed(now()),
+    _ = ?RANDOM_MOD:seed(os:timestamp()),
     ok.
 
 -spec rand_stop() -> 'ok'.

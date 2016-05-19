@@ -1,7 +1,7 @@
 %%
 %% MessagePack for Erlang
 %%
-%% Copyright (C) 2009-2013 UENISHI Kota
+%% Copyright (C) 2009-2016 UENISHI Kota
 %%
 %%    Licensed under the Apache License, Version 2.0 (the "License");
 %%    you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 %%     <tr><th>    erlang    </th><th>                            msgpack                                      </th></tr>
 %%     <tr><td> integer()    </td><td> pos_fixnum/neg_fixnum/uint8/uint16/uint32/uint64/int8/int16/int32/int64 </td></tr>
 %%     <tr><td> float()      </td><td> float/double                                                            </td></tr>
-%%     <tr><td> nil          </td><td> nil                                                                     </td></tr>
+%%     <tr><td> null         </td><td> null                                                                    </td></tr>
 %%     <tr><td> boolean()    </td><td> boolean                                                                 </td></tr>
 %%     <tr><td> binary()     </td><td> fix_raw/raw16/raw32                                                     </td></tr>
 %%     <tr><td> list()       </td><td> fix_array/array16/array32                                               </td></tr>
@@ -45,10 +45,32 @@
 
 -include("msgpack.hrl").
 
-%% for export
--export_type([object/0, msgpack_map/0, options/0]).
+-export_type([object/0, msgpack_map/0, options/0, ext_packer/0, ext_unpacker/0]).
 -type object() :: msgpack_term().
--type options() :: msgpack_list_options().
+
+-type options() :: 
+        [{spec, new|old} |
+         {allow_atom, none|pack} |
+         {known_atoms, [atom()]} |
+         {unpack_str, as_binary|as_list} |
+         {validate_string, boolean()} |
+         {pack_str, from_binary|from_list|none} |
+         {map_format, map|jiffy|jsx} |
+         {ext, {msgpack:ext_packer(), msgpack:ext_unpacker()} | module()}].
+
+-type opt_record() :: ?OPTION{}.
+-export_type([opt_record/0]).
+
+%% @doc ext_packer that packs only tuples with length > 2
+-type ext_packer()   :: fun((tuple(), msgpack:options()) ->
+                                   {ok, {Type::byte(), Data::binary()}} |
+                                   {error, any()}).
+-type ext_unpacker() ::
+        fun((byte(), binary(), msgpack:options()) ->
+                   {ok, msgpack_term()} | {error, any()})
+      | fun((byte(), binary()) ->
+                   {ok, msgpack_term()} | {error, any()}).
+
 
 -spec term_to_binary(term()) -> binary().
 term_to_binary(Term) ->
@@ -114,39 +136,43 @@ unpack_stream(Bin, Opts0) when is_binary(Bin) ->
 unpack_stream(Other, _) -> {error, {badarg, Other}}.
 
 %% @private
--spec parse_options(msgpack:options()) -> msgpack_option().
+-spec parse_options(msgpack:options()) -> ?OPTION{}.
 
 parse_options(Opt) ->
     parse_options(Opt, ?OPTION{original_list=Opt}).
 
 %% @private
--spec parse_options(msgpack:options(), msgpack_option()) -> msgpack_option().
+-spec parse_options(msgpack:options(), ?OPTION{}) -> ?OPTION{}.
 parse_options([], Opt) -> Opt;
 
-parse_options([jsx|TL], Opt0) ->
-    Opt = Opt0?OPTION{interface=jsx,
-                      map_unpack_fun=msgpack_unpacker:map_unpacker(jsx)},
-    parse_options(TL, Opt);
-parse_options([jiffy|TL], Opt0) ->
-    Opt = Opt0?OPTION{interface=jiffy,
-                      map_unpack_fun=msgpack_unpacker:map_unpacker(jiffy)},
-    parse_options(TL, Opt);
-parse_options([{format,Type}|TL], Opt0)
-  when Type =:= jsx; Type =:= jiffy; Type =:= map->
-    Opt = Opt0?OPTION{interface=Type,
-                      map_unpack_fun=msgpack_unpacker:map_unpacker(Type)},
-    parse_options(TL, Opt);
+parse_options([{spec, Spec}|T], Opt0) when Spec =:= new orelse Spec =:= old ->
+    parse_options(T, Opt0?OPTION{spec = Spec});
 
-parse_options([{allow_atom,Type}|TL], Opt0) ->
+parse_options([{allow_atom,Type}|T], Opt0) ->
     Opt = case Type of
               none -> Opt0?OPTION{allow_atom=none};
               pack -> Opt0?OPTION{allow_atom=pack}
           end,
-    parse_options(TL, Opt);
+    parse_options(T, Opt);
 
-parse_options([{enable_str,Bool}|TL], Opt0) ->
-    Opt = Opt0?OPTION{enable_str=Bool},
-    parse_options(TL, Opt);
+parse_options([{known_atoms, Atoms}|T], Opt0) when is_list(Atoms) ->
+    parse_options(T, Opt0?OPTION{known_atoms=Atoms});
+
+parse_options([{unpack_str, As}|T], Opt0) when As =:= as_binary orelse As =:= as_list ->
+    parse_options(T, Opt0?OPTION{unpack_str=As});
+
+parse_options([{validate_string, Bool}|T], Opt) when is_boolean(Bool) ->
+    parse_options(T, Opt?OPTION{validate_string=Bool});
+
+parse_options([{pack_str, From}|T], Opt)
+  when From =:= from_binary orelse From =:= from_list orelse From =:= none ->
+    parse_options(T, Opt?OPTION{pack_str=From});
+
+parse_options([{map_format,Type}|T], Opt0)
+  when Type =:= jsx; Type =:= jiffy; Type =:= map ->
+    Opt = Opt0?OPTION{map_format=Type,
+                      map_unpack_fun=msgpack_unpacker:map_unpacker(Type)},
+    parse_options(T, Opt);
 
 parse_options([{ext, Module}|TL], Opt0) when is_atom(Module) ->
     Opt = Opt0?OPTION{ext_packer=fun Module:pack_ext/2,
@@ -165,6 +191,8 @@ parse_options([{ext, {Packer,Unpacker}}|TL], Opt0) when
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
+-ifdef(default_map).
+
 test_data()->
     [true, false, null,
      0, 1, 2, 123, 512, 1230, 678908, 16#FFFFFFFFFF,
@@ -179,11 +207,29 @@ test_data()->
      42
     ].
 
+-else.
+
+test_data()->
+    [true, false, null,
+     0, 1, 2, 123, 512, 1230, 678908, 16#FFFFFFFFFF,
+     -1, -23, -512, -1230, -567898, -16#FFFFFFFFFF,
+     -16#80000001,
+     123.123, -234.4355, 1.0e-34, 1.0e64,
+     [23, 234, 0.23],
+     <<"hogehoge">>, <<"243546rf7g68h798j", 0, 23, 255>>,
+     <<"hoasfdafdas][">>,
+     [0,42, <<"sum">>, [1,2]], [1,42, null, [3]],
+     -234, -40000, -16#10000000, -16#100000000,
+     42
+    ].
+
+-endif.
+
 enable_str_test() ->
-    ?assertEqual(<<167:8, (<<"saitama">>)/binary >>,
-                 msgpack:pack(<<"saitama">>, [{enable_str, false}])),
-    ?assertEqual(<<196,7,115,97,105,116,97,109,97>>,
-                 msgpack:pack(<<"saitama">>, [{enable_str, true}])).
+    ?assertEqual(<<167:8, "saitama">>,
+                 msgpack:pack(<<"saitama">>, [{spec,old}])),
+    ?assertEqual(<<2#101:3, 7:5, "saitama">>, %% binary becomes str8 from_binary
+                 msgpack:pack(<<"saitama">>, [{spec,new},{pack_str,from_binary}])).
 
 basic_test()->
     Tests = test_data(),
@@ -220,9 +266,9 @@ other_test()->
     ?assertEqual({error,incomplete},msgpack:unpack(<<>>)).
 
 error_test()->
-    ?assertEqual({error,{badarg, atom}}, msgpack:pack(atom)),
+    ?assertEqual({error,{badarg, atom}}, msgpack:pack(atom, [{allow_atom, none}])),
     Term = {"hoge", "hage", atom},
-    ?assertEqual({error,{badarg, Term}}, msgpack:pack(Term)).
+    ?assertEqual({error,{badarg, Term}}, msgpack:pack(Term, [{allow_atom, none}])).
 
 long_binary_test()->
     A = msgpack:pack(1),

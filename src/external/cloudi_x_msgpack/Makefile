@@ -1,6 +1,6 @@
-.PHONY: compile xref eunit clean doc check make deps test
+.PHONY: compile xref eunit clean check-all make deps test
 
-REBAR=./rebar
+REBAR=rebar3
 
 all: compile
 
@@ -10,51 +10,22 @@ ma: all
 mak: all
 make: all
 
-console: compile
-	@erl -pa ebin
-deps:
-	@$(REBAR) update-deps get-deps
-
 compile:
 	@$(REBAR) compile
 
-xref: compile
+xref:
 	@$(REBAR) xref
 
-test: compile xref
-	@./rebar eunit
+test:
+	@$(REBAR) as test eunit eqc
 
 clean:
 	@$(REBAR) clean
 
-doc:
-	@$(REBAR) doc
+dialyzer:
+	@$(REBAR) dialyzer
 
-APPS = kernel stdlib runtime_tools
-COMBO_PLT = $(HOME)/.msgpack_dialyzer_plt
-
-check_plt: xref
-	dialyzer --check_plt --plt $(COMBO_PLT) --apps $(APPS)
-
-build_plt: xref
-	dialyzer --build_plt --output_plt $(COMBO_PLT) --apps $(APPS)
-
-dialyzer: xref
-	@echo
-	@echo Use "'make check_plt'" to check PLT prior to using this target.
-	@echo Use "'make build_plt'" to build PLT prior to using this target.
-	@echo
-	@sleep 1
-	dialyzer -Wno_return --plt $(COMBO_PLT) ebin | fgrep -v -f ./dialyzer.ignore-warnings
-
-
-
-check: compile xref
-#	@echo "you need $(REBAR) build-plt before make check"
-#	@$(REBAR) build-plt
-	dialyzer --check
-#	@$(REBAR) check-plt
-#	@$(REBAR) dialyze
+check-all: test xref dialyzer
 
 crosslang:
 	@echo "do ERL_LIBS=../ before you make crosslang or fail"

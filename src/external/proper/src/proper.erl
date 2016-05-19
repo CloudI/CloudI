@@ -1,4 +1,4 @@
-%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2015 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2015 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -360,7 +360,8 @@
 -export([pure_check/1, pure_check/2]).
 -export([forall/2, implies/2, whenfail/2, trapexit/1, timeout/2]).
 
--export_type([test/0, outer_test/0, counterexample/0, exception/0, false_positive_mfas/0]).
+-export_type([test/0, outer_test/0, counterexample/0, exception/0,
+	      false_positive_mfas/0]).
 
 -include("proper_internal.hrl").
 
@@ -406,8 +407,7 @@
 %% Such a function will be called at the end of testing (in case no test fails)
 %% with a sorted list of collected terms. A commonly used stats-printer is
 %% `with_title/1'.
--type numeric_stat() :: number() | 'undefined'.
--type numeric_stats() :: {numeric_stat(),numeric_stat(),numeric_stat()}.
+-type numeric_stats() :: {number(), float(), number()}.
 -type time_period() :: non_neg_integer().
 
 %% TODO: This should be opaque.
@@ -463,35 +463,34 @@
 %% TODO: Rename this to 'options()'?
 -type user_opt() :: 'quiet'
 		  | 'verbose'
-		  | {'to_file',file:io_device()}
+		  | {'to_file',io:device()}
 		  | {'on_output',output_fun()}
 		  | 'long_result'
-		  | {'numtests', pos_integer()}
+		  | {'numtests',pos_integer()}
 		  | pos_integer()
 		  | {'start_size',size()}
-		  | {'max_size', size()}
+		  | {'max_size',size()}
 		  | {'max_shrinks',non_neg_integer()}
 		  | 'noshrink'
 		  | {'constraint_tries',pos_integer()}
 		  | 'fails'
 		  | 'any_to_integer'
 		  | {'spec_timeout',timeout()}
-		  | {'skip_mfas', [mfa()]}
-		  | {'false_positive_mfas', false_positive_mfas()}.
+		  | {'skip_mfas',[mfa()]}
+		  | {'false_positive_mfas',false_positive_mfas()}.
 
 -type user_opts() :: [user_opt()] | user_opt().
 -record(opts, {output_fun       = fun io:format/2 :: output_fun(),
 	       long_result      = false           :: boolean(),
 	       numtests         = 100             :: pos_integer(),
 	       start_size       = 1               :: size(),
-	       seed                               :: seed(),
+	       seed             = os:timestamp()  :: seed(),
 	       max_size         = 42              :: size(),
 	       max_shrinks      = 500             :: non_neg_integer(),
 	       noshrink         = false           :: boolean(),
 	       constraint_tries = 50              :: pos_integer(),
 	       expect_fail      = false           :: boolean(),
-	       any_type	                          :: {'type',
-						      proper_types:type()},
+	       any_type	        :: {'type', proper_types:type()} | 'undefined',
 	       spec_timeout     = infinity        :: timeout(),
 	       skip_mfas        = []              :: [mfa()],
 	       false_positive_mfas                :: false_positive_mfas()}).
@@ -508,14 +507,14 @@
 %% Result types
 %%-----------------------------------------------------------------------------
 
--record(pass, {reason    :: pass_reason(),
+-record(pass, {reason    :: pass_reason() | 'undefined',
 	       samples   :: [sample()],
 	       printers  :: [stats_printer()],
-	       performed :: pos_integer()}).
--record(fail, {reason    :: fail_reason(),
+	       performed :: pos_integer() | 'undefined'}).
+-record(fail, {reason    :: fail_reason() | 'undefined',
 	       bound     :: imm_testcase() | counterexample(),
 	       actions   :: fail_actions(),
-	       performed :: pos_integer()}).
+	       performed :: pos_integer() | 'undefined'}).
 %% @alias
 -type error() :: {'error', error_reason()}.
 
@@ -635,14 +634,9 @@ global_state_init(#opts{start_size = StartSize, constraint_tries = CTries,
     put('$left', 0),
     grow_size(Opts),
     put('$constraint_tries', CTries),
-    put('$any_type',AnyType),
-    S = case Seed of
-        undefined ->
-            now();
-        _ ->
-            Seed
-    end,
-    proper_arith:rand_restart(S),
+    put('$any_type', AnyType),
+    {_, _, _} = Seed, % just an assertion
+    proper_arith:rand_restart(Seed),
     proper_typeserver:restart(),
     ok.
 
@@ -736,7 +730,7 @@ counterexample(OuterTest) ->
 %% @doc Same as {@link counterexample/1}, but also accepts a list of options.
 -spec counterexample(outer_test(), user_opts()) -> long_result().
 counterexample(OuterTest, UserOpts) ->
-    quickcheck(OuterTest, add_user_opt(long_result,UserOpts)).
+    quickcheck(OuterTest, add_user_opt(long_result, UserOpts)).
 
 %% @private
 %% @doc Runs PropEr in pure mode. Under this mode, PropEr will perform no I/O
@@ -752,9 +746,9 @@ pure_check(OuterTest) ->
 pure_check(OuterTest, ImmUserOpts) ->
     Parent = self(),
     UserOpts = add_user_opt(quiet, ImmUserOpts),
-    spawn_link(fun() -> Parent ! {result,quickcheck(OuterTest,UserOpts)} end),
+    spawn_link(fun() -> Parent ! {result, quickcheck(OuterTest, UserOpts)} end),
     receive
-	{result,Result} -> Result
+	{result, Result} -> Result
     end.
 
 %% @doc Tests the accuracy of an exported function's spec.
@@ -1105,7 +1099,7 @@ cook_test({spec,MFA}, #opts{spec_timeout = SpecTimeout, false_positive_mfas = Fa
     case proper_typeserver:create_spec_test(MFA, SpecTimeout, FalsePositiveMFAs) of
 	{ok,Test} ->
 	    Test;
-	{error,Reason}  ->
+	{error,Reason} ->
 	    ?FORALL(_, dummy, throw({'$typeserver',Reason}))
     end.
 
@@ -1133,11 +1127,11 @@ get_rerun_result(#fail{}) ->
 get_rerun_result({error,_Reason} = ErrorResult) ->
     ErrorResult.
 
--spec perform(non_neg_integer(), test(), opts()) -> imm_result().
+-spec perform(pos_integer(), test(), opts()) -> imm_result().
 perform(NumTests, Test, Opts) ->
     perform(0, NumTests, ?MAX_TRIES_FACTOR * NumTests, Test, none, none, Opts).
 
--spec perform(non_neg_integer(), non_neg_integer(), non_neg_integer(), test(),
+-spec perform(non_neg_integer(), pos_integer(), non_neg_integer(), test(),
 	      [sample()] | 'none', [stats_printer()] | 'none', opts()) ->
 	  imm_result().
 perform(Passed, _ToPass, 0, _Test, Samples, Printers, _Opts) ->
@@ -1328,12 +1322,12 @@ run_all([{Tag,Prop}|Rest], OldSubBound, SubReasons,
 	end,
     case run(Prop, #ctx{mode = Mode, bound = SubCtxBound}) of
 	#pass{samples = MoreSamples, printers = MorePrinters} ->
-	    NewSamples = lists:reverse(MoreSamples) ++ Samples,
-	    NewPrinters = lists:reverse(MorePrinters) ++ Printers,
+	    NewSamples = lists:reverse(MoreSamples, Samples),
+	    NewPrinters = lists:reverse(MorePrinters, Printers),
 	    NewCtx = Ctx#ctx{samples = NewSamples, printers = NewPrinters},
 	    run_all(Rest, SubBound, SubReasons, NewCtx);
 	#fail{reason = Reason, bound = SubImmTC, actions = MoreActions} ->
-	    NewActions = lists:reverse(MoreActions) ++ Actions,
+	    NewActions = lists:reverse(MoreActions, Actions),
 	    NewCtx = Ctx#ctx{actions = NewActions},
 	    NewSubBound =
 		case Mode of
@@ -1547,7 +1541,7 @@ fix_shrink(ImmTestCase, StrTest, Reason, Shrinks, ShrinksLeft, Opts) ->
 shrink(Shrunk, TestTail, StrTest, _Reason,
        Shrinks, ShrinksLeft, _State, _Opts) when is_boolean(StrTest)
 					  orelse ShrinksLeft =:= 0 ->
-    {Shrinks, lists:reverse(Shrunk) ++ TestTail};
+    {Shrinks, lists:reverse(Shrunk, TestTail)};
 shrink(Shrunk, [ImmInstance | Rest], {_Type,Prop}, Reason,
        Shrinks, ShrinksLeft, done, Opts) ->
     Instance = proper_gen:clean_instance(ImmInstance),
@@ -1583,7 +1577,7 @@ shrink(Shrunk, [{'$conjunction',SubImmTCs}], SubProps, {sub_props,SubReasons},
 	  shrinking_result().
 shrink_all(ShrunkHead, Shrunk, SubImmTCs, _SubProps, _SubReasons,
 	   Shrinks, 0, _Opts) ->
-    ShrunkSubImmTCs = lists:reverse(Shrunk) ++ SubImmTCs,
+    ShrunkSubImmTCs = lists:reverse(Shrunk, SubImmTCs),
     ImmTC = lists:reverse([{'$conjunction',ShrunkSubImmTCs} | ShrunkHead]),
     {Shrinks, ImmTC};
 shrink_all(ShrunkHead, Shrunk, [], [], [],
@@ -1720,8 +1714,7 @@ report_imm_result(#pass{samples = Samples, printers = Printers,
     end,
     SortedSamples = [lists:sort(Sample) || Sample <- Samples],
     lists:foreach(fun({P,S}) -> apply_stats_printer(P, S, Print) end,
-		  proper_arith:safe_zip(Printers, SortedSamples)),
-    ok;
+		  proper_arith:safe_zip(Printers, SortedSamples));
 report_imm_result(#fail{reason = Reason, bound = Bound, actions = Actions,
 			performed = Performed},
 		  #opts{expect_fail = ExpectF, output_fun = Print}) ->
@@ -1806,8 +1799,7 @@ report_fail_reason({sub_props,SubReasons}, Prefix, Print) ->
 	    Print(Prefix ++ "Sub-property ~w failed.~n", [Tag]),
 	    report_fail_reason(Reason, ">> " ++ Prefix, Print)
 	end,
-    lists:foreach(Report, SubReasons),
-    ok.
+    lists:foreach(Report, SubReasons).
 
 -spec print_imm_testcase(imm_testcase(), string(), output_fun()) -> 'ok'.
 print_imm_testcase(ImmTestCase, Prefix, Print) ->
@@ -1818,8 +1810,7 @@ print_imm_testcase(ImmTestCase, Prefix, Print) ->
 	  'ok'.
 print_imm_counterexample(ImmCExm, Prefix, Print) ->
     PrintImmCleanInput = fun(I) -> print_imm_clean_input(I, Prefix, Print) end,
-    lists:foreach(PrintImmCleanInput, ImmCExm),
-    ok.
+    lists:foreach(PrintImmCleanInput, ImmCExm).
 
 -spec print_imm_clean_input(imm_clean_input(), string(), output_fun()) -> 'ok'.
 print_imm_clean_input({'$conjunction',SubImmCExms}, Prefix, Print) ->
@@ -1828,15 +1819,13 @@ print_imm_clean_input({'$conjunction',SubImmCExms}, Prefix, Print) ->
 	    Print(Prefix ++ "~w:~n", [Tag]),
 	    print_imm_counterexample(ImmCExm, ">> " ++ Prefix, Print)
 	end,
-    lists:foreach(PrintSubImmCExm, SubImmCExms),
-    ok;
+    lists:foreach(PrintSubImmCExm, SubImmCExms);
 print_imm_clean_input(Instance, Prefix, Print) ->
     Print(Prefix ++ "~w~n", [Instance]).
 
 -spec execute_actions(fail_actions()) -> 'ok'.
 execute_actions(Actions) ->
-    lists:foreach(fun(A) -> ?FORCE(A) end, Actions),
-    ok.
+    lists:foreach(fun(A) -> ?FORCE(A) end, Actions).
 
 -spec report_shrinking(non_neg_integer(), imm_testcase(), fail_actions(),
 		       output_fun()) -> 'ok'.
@@ -1913,15 +1902,16 @@ num_stats_printer(SortedSample, Print, Title) ->
     {Min,Avg,Max} = get_numeric_stats(SortedSample),
     Print("minimum: ~w~naverage: ~w~nmaximum: ~w~n", [Min,Avg,Max]).
 
--spec get_numeric_stats([number()]) -> numeric_stats().
+-spec get_numeric_stats([]) -> {'undefined', 'undefined', 'undefined'};
+		       ([number(),...]) -> numeric_stats().
 get_numeric_stats([]) ->
     {undefined, undefined, undefined};
 get_numeric_stats([Min | _Rest] = SortedSample) ->
-    {Avg,Max} = avg_and_last(SortedSample, 0, 0),
+    {Avg, Max} = avg_and_last(SortedSample, 0, 0),
     {Min, Avg, Max}.
 
 -spec avg_and_last([number(),...], number(), non_neg_integer()) ->
-	  {number(),number()}.
+	  {float(), number()}.
 avg_and_last([Last], Sum, Len) ->
     {(Sum + Last) / (Len + 1), Last};
 avg_and_last([X | Rest], Sum, Len) ->

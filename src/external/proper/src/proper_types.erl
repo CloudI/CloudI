@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -138,7 +138,7 @@
 -export([is_inst/2, is_inst/3]).
 
 -export([integer/2, float/2, atom/0, binary/0, binary/1, bitstring/0,
-	 bitstring/1, list/1, vector/2, union/1, weighted_union/1,tuple/1,
+	 bitstring/1, list/1, vector/2, union/1, weighted_union/1, tuple/1,
 	 loose_tuple/1, exactly/1, fixed_list/1, function/2, any/0,
 	 shrink_list/1, safe_union/1, safe_weighted_union/1]).
 -export([integer/0, non_neg_integer/0, pos_integer/0, neg_integer/0, range/2,
@@ -339,7 +339,9 @@ to_binary(Type) ->
     term_to_binary(Type).
 
 %% @private
-%% TODO: restore: -spec from_binary(binary()) -> proper_types:type().
+-ifdef(AT_LEAST_17).
+-spec from_binary(binary()) -> proper_types:type().
+-endif.
 from_binary(Binary) ->
     binary_to_term(Binary).
 
@@ -455,7 +457,9 @@ wrapper_test(ImmInstance, Type) ->
     lists:any(fun(T) -> is_instance(ImmInstance, T) end, unwrap(Type)).
 
 %% @private
-%% TODO: restore:-spec unwrap(proper_types:type()) -> [proper_types:type(),...].
+-ifdef(AT_LEAST_17).
+-spec unwrap(proper_types:type()) -> [proper_types:type(),...].
+-endif.
 %% TODO: check if it's actually a raw type that's returned?
 unwrap(Type) ->
     RawInnerTypes = proper_gen:alt_gens(Type) ++ [proper_gen:normal_gen(Type)],
@@ -501,27 +505,37 @@ weakly({B1,_B2}) -> B1.
 -spec strongly({boolean(),boolean()}) -> boolean().
 strongly({_B1,B2}) -> B2.
 
--spec satisfies(proper_gen:instance(), {constraint_fun(),boolean()})
-	  -> {boolean(),boolean()}.
-satisfies(Instance, {Test,false}) ->
-    {true,Test(Instance)};
-satisfies(Instance, {Test,true}) ->
-    Result = Test(Instance),
-    {Result,Result}.
-
 %% @private
 -spec satisfies_all(proper_gen:instance(), proper_types:type()) ->
 	  {boolean(),boolean()}.
 satisfies_all(Instance, Type) ->
     case find_prop(constraints, Type) of
 	{ok, Constraints} ->
-	    L = [satisfies(Instance, C) || C <- Constraints],
-	    {L1,L2} = lists:unzip(L),
-	    {lists:all(fun(B) -> B end, L1), lists:all(fun(B) -> B end, L2)};
+            satisfies_all_1(Constraints, Instance);
 	error ->
 	    {true,true}
     end.
 
+-spec satisfies_all_1([{constraint_fun(), boolean()}], proper_gen:instance()) ->
+			     {boolean(), boolean()}.
+satisfies_all_1([], _Instance) -> {true, true};
+satisfies_all_1([{Test, Strict} | Constraints], Instance) ->
+    case Test(Instance) of
+	true -> satisfies_all_1(Constraints, Instance);
+	false ->
+	    case Strict of
+		true -> {false, false};
+		false -> {satisfies_all_strict(Constraints, Instance), false}
+	    end
+    end.
+
+-spec satisfies_all_strict([{constraint_fun(), boolean()}], proper_gen:instance()) ->
+				  boolean().
+satisfies_all_strict(Constraints, Instance) ->
+    %% We've already failed another non-strict constraint, so there's no point to
+    %% check further ones.
+    lists:all(fun({Test,true}) -> Test(Instance) end,
+	      [Constraint || {_,true} = Constraint <- Constraints]).
 
 %%------------------------------------------------------------------------------
 %% Type definition functions
@@ -601,9 +615,7 @@ integer_gen(Type, Size) ->
 
 integer_is_instance(Type, X) ->
     {Low, High} = get_prop(env, Type),
-    is_integer(X)
-    andalso le(Low, X)
-    andalso le(X, High).
+    is_integer(X) andalso le(Low, X) andalso le(X, High).
 
 number_shrinker(X, Type, S) ->
     {Low, High} = get_prop(env, Type),
@@ -630,9 +642,7 @@ float_gen(Type, Size) ->
 
 float_is_instance(Type, X) ->
     {Low, High} = get_prop(env, Type),
-    is_float(X)
-    andalso le(Low, X)
-    andalso le(X, High).
+    is_float(X) andalso le(Low, X) andalso le(X, High).
 
 %% @private
 -spec le(extnum(), extnum()) -> boolean().
@@ -774,8 +784,7 @@ is_sublist(Slice, [_|T2]) -> is_sublist(Slice, T2).
 
 -spec list_test(proper_gen:imm_instance(), proper_types:type()) -> boolean().
 list_test(X, ElemType) ->
-    is_list(X)
-    andalso lists:all(fun(E) -> is_instance(E, ElemType) end, X).
+    is_list(X) andalso lists:all(fun(E) -> is_instance(E, ElemType) end, X).
 
 %% @private
 -spec list_get_indices(proper_gen:generator(), list()) -> [position()].
@@ -932,7 +941,7 @@ tuple_gen(Type) ->
     proper_gen:tuple_gen(Fields).
 
 tuple_is_instance(Type, X) ->
-    Fields = proper_types:get_prop(env, Type),
+    Fields = get_prop(env, Type),
     is_tuple(X) andalso fixed_list_test(tuple_to_list(X), Fields).
 
 tuple_get_indices(Type, _X) ->
@@ -959,11 +968,11 @@ loose_tuple_gen(Type, Size) ->
     proper_gen:loose_tuple_gen(Size, ElemType).
 
 loose_tuple_rev(Type, X) ->
-    ElemType = proper_types:get_prop(env, Type),
+    ElemType = get_prop(env, Type),
     proper_gen:loose_tuple_rev(X, ElemType).
 
 loose_tuple_is_instance(Type, X) ->
-    ElemType = proper_types:get_prop(env, Type),
+    ElemType = get_prop(env, Type),
     is_tuple(X) andalso list_test(tuple_to_list(X), ElemType).
 
 %% @doc Singleton type consisting only of `E'. `E' must be an evaluated term.

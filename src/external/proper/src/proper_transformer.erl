@@ -1,4 +1,4 @@
-%%% Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2015 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2011 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2015 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -51,12 +51,18 @@
 		   no_autos   = sets:new() :: proper_typeserver:mod_exp_funs(),
 		   exp_types  = sets:new() :: proper_typeserver:mod_exp_types(),
 		   exp_funs   = sets:new() :: proper_typeserver:mod_exp_funs(),
-		   helper_pid              :: pid()}).
+		   helper_pid              :: pid() | 'undefined'}).
 -type mod_info() :: #mod_info{}.
--type exp_dict() :: any().
-%% dict(mod_name(),'no_data' | {'data',proper_typeserver:mod_exp_types(),
-%%                                     proper_typeserver:mod_exp_funs()})
 
+-ifdef(NO_MODULES_IN_OPAQUES).
+-type exp_dict() :: dict().
+-else.
+-type exp_mod_data () :: 'nodata'
+                       | {'data',
+			  proper_typeserver:mod_exp_types(),
+			  proper_typeserver:mod_exp_funs()}.
+-type exp_dict() :: dict:dict(mod_name(), exp_mod_data()).
+-endif.
 
 %%------------------------------------------------------------------------------
 %% Top-level functions
@@ -133,19 +139,12 @@ is_prop(_) ->
     false.
 
 -spec add_exports([abs_form()], [{fun_name(),arity()}]) -> [abs_form()].
-add_exports(Forms, ToExport) ->
-    add_exports_tr(Forms, [], ToExport).
-
--spec add_exports_tr([abs_form()], [abs_form()], [{fun_name(),arity()}]) ->
-	  [abs_form()].
-add_exports_tr([], Acc, _ToExport) ->
-    lists:reverse(Acc);
-add_exports_tr([{attribute,_,module,_} = ModAttr | Rest], Acc, ToExport) ->
+add_exports([], _ToExport) -> [];
+add_exports([{attribute,_,module,_} = ModAttr | Rest], ToExport) ->
     ExpAttr = {attribute,0,export,ToExport},
-    lists:reverse(Acc) ++ [ModAttr, ExpAttr | Rest];
-add_exports_tr([Form | Rest], Acc, ToExport) ->
-    add_exports_tr(Rest, [Form | Acc], ToExport).
-
+    [ModAttr, ExpAttr | Rest];
+add_exports([Form | Rest], ToExport) ->
+    [Form | add_exports(Rest, ToExport)].
 
 %%------------------------------------------------------------------------------
 %% Helper server interface
@@ -277,6 +276,12 @@ rewrite_expr({call,Line,
     NewRawType = rewrite_type(RawType, ModInfo),
     NewProp = rewrite_expr(Prop, ModInfo),
     {call,Line,FunRef,[NewRawType,NewProp]};
+rewrite_expr({call, Line,
+              {remote,_,{atom,_,proper_types}, {atom, _, bind}} = FunRef,
+              [RawType, Gen, ShrinkToParts]}, ModInfo) ->
+    NewRawType = rewrite_type(RawType, ModInfo),
+    NewGen = rewrite_expr(Gen, ModInfo),
+    {call, Line, FunRef, [NewRawType,NewGen, ShrinkToParts]};
 rewrite_expr({call,Line,FunRef,Args}, ModInfo) ->
     NewFunRef = rewrite_expr(FunRef, ModInfo),
     NewArgs = [rewrite_expr(A,ModInfo) || A <- Args],

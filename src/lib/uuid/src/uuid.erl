@@ -359,30 +359,11 @@ get_v1_time(Value)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec get_v1_datetime(Value :: timestamp_type() | state() | uuid()) ->
+-spec get_v1_datetime(Value :: timestamp_type() | state() | uuid() |
+                               erlang:timestamp()) ->
     string().
 
-get_v1_datetime(Value) ->
-    get_v1_datetime(Value, 0).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Get an ISO8601 datetime in UTC from a v1 UUID's time value with an offset in microseconds.===
-%% http://www.w3.org/TR/NOTE-datetime
-%% @end
-%%-------------------------------------------------------------------------
-
--spec get_v1_datetime(Value :: timestamp_type() | state() | uuid(),
-                      MicroSecondsOffset :: integer()) ->
-    string().
-
-get_v1_datetime(Value, MicroSecondsOffset)
-    when is_integer(MicroSecondsOffset) ->
-    MicroSecondsTotal = get_v1_time(Value) + MicroSecondsOffset,
-    MegaSeconds = MicroSecondsTotal div 1000000000000,
-    Seconds = (MicroSecondsTotal div 1000000) - MegaSeconds * 1000000,
-    MicroSeconds = MicroSecondsTotal rem 1000000,
-    Timestamp = {MegaSeconds, Seconds, MicroSeconds},
+get_v1_datetime({_, _, MicroSeconds} = Timestamp) ->
     {{DateYYYY, DateMM, DateDD},
      {TimeHH, TimeMM, TimeSS}} = calendar:now_to_universal_time(Timestamp),
     [DateYYYY0, DateYYYY1,
@@ -400,7 +381,29 @@ get_v1_datetime(Value, MicroSecondsOffset)
      TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
      MicroSeconds0, MicroSeconds1,
      MicroSeconds2, MicroSeconds3,
-     MicroSeconds4, MicroSeconds5, $Z].
+     MicroSeconds4, MicroSeconds5, $Z];
+get_v1_datetime(Value) ->
+    get_v1_datetime(Value, 0).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get an ISO8601 datetime in UTC from a v1 UUID's time value with an offset in microseconds.===
+%% http://www.w3.org/TR/NOTE-datetime
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec get_v1_datetime(Value :: timestamp_type() | state() | uuid() |
+                               erlang:timestamp(),
+                      MicroSecondsOffset :: integer()) ->
+    string().
+
+get_v1_datetime(Value, MicroSecondsOffset)
+    when is_integer(MicroSecondsOffset) ->
+    MicroSecondsTotal = get_v1_time(Value) + MicroSecondsOffset,
+    MegaSeconds = MicroSecondsTotal div 1000000000000,
+    Seconds = (MicroSecondsTotal div 1000000) - MegaSeconds * 1000000,
+    MicroSeconds = MicroSecondsTotal rem 1000000,
+    get_v1_datetime({MegaSeconds, Seconds, MicroSeconds}).
 
 %%-------------------------------------------------------------------------
 %% @doc

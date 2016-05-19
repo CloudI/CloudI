@@ -1,4 +1,4 @@
-%%% Copyright 2010-2012 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +17,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2012 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc User header file: This file should be included in each file containing
@@ -63,6 +63,12 @@
 		       function3/1, function4/1, weighted_default/2, parameter/1,
 		       parameter/2, with_parameter/3, with_parameters/2]).
 
+%%------------------------------------------------------------------------------
+%% Unicode
+%%------------------------------------------------------------------------------
+
+-import(proper_unicode, [utf8/0, utf8/1, utf8/2]).
+
 
 %%------------------------------------------------------------------------------
 %% Type manipulation functions
@@ -88,6 +94,11 @@
 -import(proper_statem, [run_commands/2, run_commands/3,  state_after/2,
 			command_names/1, zip/2, run_parallel_commands/2,
 			run_parallel_commands/3]).
+
+-ifndef(PROPER_NO_IMPORT_PARSE).
+-import(proper_unused_imports_remover, []).
+-compile({parse_transform, proper_unused_imports_remover}).
+-endif.
 
 -endif.
 

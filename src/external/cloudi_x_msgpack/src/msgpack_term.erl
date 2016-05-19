@@ -21,8 +21,10 @@
          pack_ext/2, unpack_ext/3]).
 -behaviour(msgpack_ext).
 
+-include_lib("eunit/include/eunit.hrl").
+
 -define(ERLANG_TERM, 127).
--define(TERM_OPTION, [{enable_str,true},{ext,?MODULE},{allow_atom,none}]).
+-define(TERM_OPTION, [{spec,new},{ext,?MODULE},{allow_atom,none}]).
 
 %% @doc experimental
 -spec to_binary(term()) -> binary().
@@ -76,7 +78,6 @@ test_data() ->
 
 t2b_b2t_test() ->
     Data = test_data(),
-    ?assertEqual(Data,
-                 msgpack:binary_to_term(msgpack:term_to_binary(Data))).
+    ?assertEqual(Data, msgpack:binary_to_term(msgpack:term_to_binary(Data))).
 
 -endif.
