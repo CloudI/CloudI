@@ -118,10 +118,15 @@
 -ifdef(ERLANG_OTP_VERSION_17).
 -else.
 -define(ERLANG_OTP_VERSION_18_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_18).
+-else.
+-define(ERLANG_OTP_VERSION_19_FEATURES, true).
+-endif.
 -endif.
 -endif.
 
 % provide a simple way of switching from the dict module to the maps module
+% (the maps interface was not regarded as stable until Erlang/OTP 18.0)
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 -type maps_proxy(_Key, _Value) :: any().
 -define(MAP_NEW(),           maps:new()).

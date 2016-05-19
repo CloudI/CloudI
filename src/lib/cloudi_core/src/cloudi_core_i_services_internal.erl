@@ -295,7 +295,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     NewConfigOptions = check_init_send(ConfigOptions),
     DuoModePid = if
         DuoMode =:= true ->
-            proc_lib:spawn_opt(fun() ->
+            spawn_opt_proc_lib(fun() ->
                 erlang:put(?SERVICE_ID_PDICT_KEY, ID),
                 erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
@@ -3061,13 +3061,13 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
             case cloudi_core_i_rate_based_configuration:
                  hibernate_check(Hibernate) of
                 false ->
-                    erlang:spawn_opt(fun() ->
+                    spawn_opt_erlang(fun() ->
                         handle_module_request_loop_normal(RequestPidUses,
                                                           ModuleRequest,
                                                           ResultPid)
                     end, RequestPidOptions);
                 true ->
-                    erlang:spawn_opt(fun() ->
+                    spawn_opt_erlang(fun() ->
                         handle_module_request_loop_hibernate(RequestPidUses,
                                                              ModuleRequest,
                                                              ResultPid)
@@ -3177,13 +3177,13 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
             case cloudi_core_i_rate_based_configuration:
                  hibernate_check(Hibernate) of
                 false ->
-                    erlang:spawn_opt(fun() ->
+                    spawn_opt_erlang(fun() ->
                         handle_module_info_loop_normal(InfoPidUses,
                                                        ModuleInfo,
                                                        ResultPid)
                     end, InfoPidOptions);
                 true ->
-                    erlang:spawn_opt(fun() ->
+                    spawn_opt_erlang(fun() ->
                         handle_module_info_loop_hibernate(InfoPidUses,
                                                           ModuleInfo,
                                                           ResultPid)
@@ -4039,4 +4039,27 @@ aspects_info([F | L], Request, ServiceState, Dispatcher) ->
         {stop, _, _} = Stop ->
             Stop
     end.
+
+spawn_opt_proc_lib(F, Options0) ->
+    spawn_opt_pid(proc_lib, F, Options0).
+
+spawn_opt_erlang(F, Options0) ->
+    spawn_opt_pid(erlang, F, Options0).
+
+spawn_opt_pid(M, F, Options0) ->
+    {Sensitive, OptionsN} = case lists:keytake(sensitive, 1, Options0) of
+        {value, {_, SensitiveValue}, Options1} ->
+            {SensitiveValue, Options1};
+        false ->
+            {false, Options0}
+    end,
+    M:spawn_opt(fun() ->
+        if
+            Sensitive =:= true ->
+                erlang:process_flag(sensitive, true);
+            Sensitive =:= false ->
+                false
+        end,
+        F()
+    end, OptionsN).
 

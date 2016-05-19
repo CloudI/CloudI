@@ -30,6 +30,10 @@ into its own native CloudI library.  The external languages are ran as separate
 OS processes with separate threads (using any native threading library) that
 initialize the CloudI API and call its event-loop (in the "poll" function).
 
+An example [SWIG](http://www.swig.org/) interface file is provided based on the
+C CloudI API in [cloudi.i](https://github.com/CloudI/CloudI/blob/develop/src/api/c/cloudi.i).
+SWIG could be used to create a CloudI API for Lua, R, Go, Ocaml, D, etc.
+
 ### Examples exist within the tests:
 
 * [Erlang](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl) (`hexpi` test controller)

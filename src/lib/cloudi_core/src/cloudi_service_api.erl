@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -348,13 +348,19 @@
           list({priority, low | normal | high} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
-               {min_bin_vheap_size, non_neg_integer()})} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {info_pid_uses, infinity | pos_integer()} |
          {info_pid_options,
           list({priority, low | normal | high} |
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
-               {min_bin_vheap_size, non_neg_integer()})} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {duo_mode, boolean()} |
          {hibernate, boolean()} |
          {reload, boolean()}).

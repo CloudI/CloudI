@@ -7,6 +7,10 @@
         * cloudi_service_db
         * cloudi_service_timers
     * Do not run the integration tests by default
+    * Add sensitive, max_heap_size and message_queue_data to both
+      request_pid_options and info_pid_options
+    * Add SWIG interface file example for generating SWIG bindings based
+      on the C CloudI API file with api/c/cloudi.i
 
 2016-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
@@ -21,6 +25,7 @@
         * cloudi_service_db_riak
     * Remove the service Erlang application
     * Update uuid, elli, msgpack, proper, emysql
+    * Switch to requiring Erlang >= 17.5 due to msgpack
 
 2016-05-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

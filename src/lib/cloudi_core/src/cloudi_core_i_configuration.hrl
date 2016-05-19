@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -308,7 +308,10 @@
             :: list({priority, low | normal | high} |
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
-                    {min_bin_vheap_size, non_neg_integer()}),
+                    {min_bin_vheap_size, non_neg_integer()} |
+                    {max_heap_size, non_neg_integer() | #{}} |
+                    {sensitive, boolean()} |
+                    {message_queue_data, off_heap | on_heap | mixed}),
         % how many info messages should restart the Erlang process used for
         % handling the info message
         % (an integer greater than 0 or the atom 'infinity' are valid values)
@@ -320,7 +323,10 @@
             :: list({priority, low | normal | high} |
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
-                    {min_bin_vheap_size, non_neg_integer()}),
+                    {min_bin_vheap_size, non_neg_integer()} |
+                    {max_heap_size, non_neg_integer() | #{}} |
+                    {sensitive, boolean()} |
+                    {message_queue_data, off_heap | on_heap | mixed}),
         % use two Erlang processes instead of one for an internal service to
         % keep send operations separate from receive operations.  better
         % throughput can be achieved with duo_mode, especially when sending to

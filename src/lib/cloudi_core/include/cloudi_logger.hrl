@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -61,11 +61,11 @@
 -else.
 -ifdef(ERLANG_OTP_VERSION_18).
 -else.
--define(ERLANG_OTP_VERSION_19_FEATURES, true). % EEP45
+-define(ERLANG_OTP_VERSION_19_EEP45, true).
 -endif.
 -endif.
 -endif.
--ifndef(ERLANG_OTP_VERSION_19_FEATURES).
+-ifndef(ERLANG_OTP_VERSION_19_EEP45).
 -define(FUNCTION_NAME,
     erlang:element(2,
         erlang:element(2,

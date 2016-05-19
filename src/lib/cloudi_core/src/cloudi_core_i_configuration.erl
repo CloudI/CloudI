@@ -3040,8 +3040,28 @@ services_validate_options_common_checks(RateRequestMax,
 services_validate_option_pid_options(OptionsList) ->
     services_validate_option_pid_options(OptionsList, [link]).
 
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+-define(PID_OPTIONS_ERLANG_OTP_VERSION_19,
+    ;
+services_validate_option_pid_options([{max_heap_size, V} = PidOption |
+                                      OptionsList], Output)
+    when is_integer(V) andalso V >= 0; is_map(V) ->
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+services_validate_option_pid_options([{message_queue_data, V} = PidOption |
+                                      OptionsList], Output)
+    when V =:= off_heap; V =:= on_heap; V =:= mixed ->
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);).
+-else.
+-define(PID_OPTIONS_ERLANG_OTP_VERSION_19,
+    ;).
+-endif.
+
 services_validate_option_pid_options([], Output) ->
     {ok, lists:reverse(Output)};
+services_validate_option_pid_options([{sensitive, V} = PidOption |
+                                      OptionsList], Output)
+    when is_boolean(V) ->
+    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([{fullsweep_after, V} = PidOption |
                                       OptionsList], Output)
     when is_integer(V), V >= 0 ->
@@ -3053,7 +3073,8 @@ services_validate_option_pid_options([{min_heap_size, V} = PidOption |
 services_validate_option_pid_options([{min_bin_vheap_size, V} = PidOption |
                                       OptionsList], Output)
     when is_integer(V), V >= 0 ->
-    services_validate_option_pid_options(OptionsList, [PidOption | Output]);
+    services_validate_option_pid_options(OptionsList, [PidOption | Output])
+?PID_OPTIONS_ERLANG_OTP_VERSION_19
 services_validate_option_pid_options([{priority, V} = PidOption |
                                       OptionsList], Output)
     when (V =:= high) orelse (V =:= low) orelse (V =:= normal) ->
