@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CloudI Service API services_update function
+      (currently, only for updating internal services)
+    * Update trie, reltool_util
+
 2016-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove unmaintained example services and their dependencies:

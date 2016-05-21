@@ -1,10 +1,6 @@
-Items waiting for after the release of version 1.5.2
+Items waiting for after the release of version 1.5.1
 ----------------------------------------------------
 Use AsciiDoc for tutorials
-Add more database integration?
-    * add redis support
-    * add MongoDB support
-    * add Kyoto Tycoon support?
 julia CloudI API
     * fdio([name::String], fd::Integer[, own::Bool]) -> IOStream
       name not needed, own == false, then write/read
@@ -27,8 +23,3 @@ Go CloudI API
       (are there threading problems with this approach?)
 Use https://github.com/jordansissel/fpm ?
 Add to http://0install.net/ ?
-cgroups support (?) with cgclassify
-    * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Moving_a_Process_to_a_Control_Group.html
-    * (cgcreate ?) https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/sec-Creating_Cgroups.html
-    * sys filesystem usage seems to be the only low-level usage, no C API
-

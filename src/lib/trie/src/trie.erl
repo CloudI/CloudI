@@ -566,10 +566,10 @@ is_prefix([H], {I0, _, Data})
     case erlang:element(H - I0 + 1, Data) of
         {{_, _, _}, _} ->
             true;
-        {[], Value} ->
-            (Value =/= error);
-        _ ->
-            false
+        {_, error} ->
+            false;
+        {_, _} ->
+            true
     end;
 
 is_prefix([H | T], {I0, _, Data})
@@ -609,7 +609,7 @@ is_prefixed([H], {I0, _, Data})
             true;
         {[], _} ->
             true;
-        _ ->
+        {[_ | _], _} ->
             false
     end;
 
@@ -624,8 +624,8 @@ is_prefixed([H | T], {I0, _, Data})
             false;
         {T, _} ->
             true;
-        _ ->
-            false
+        {L, _} ->
+            lists:prefix(L, T)
     end;
 
 is_prefixed(_, []) ->
@@ -651,15 +651,13 @@ is_prefixed_match([H | _], _, _, {I0, I1, _})
 is_prefixed_match([H], Matched, Exclude, {I0, _, Data})
     when is_integer(H) ->
     case erlang:element(H - I0 + 1, Data) of
-        {{_, _, _}, error} ->
+        {_, error} ->
             false;
         {{_, _, _}, _} ->
             Matched orelse (not lists:member(H, Exclude));
-        {_, error} ->
-            false;
         {[], _} ->
             Matched orelse (not lists:member(H, Exclude));
-        _ ->
+        {[_ | _], _} ->
             false
     end;
 
@@ -679,7 +677,7 @@ is_prefixed_match([H | T], Matched, Exclude, {I0, _, Data})
         {_, error} ->
             false;
         {L, _} ->
-            is_prefixed_match_check(T, L,
+            is_prefixed_match_check(L, T,
                                     Matched orelse
                                     (not lists:member(H, Exclude)),
                                     Exclude)
@@ -688,7 +686,7 @@ is_prefixed_match([H | T], Matched, Exclude, {I0, _, Data})
 is_prefixed_match(_, _, _, []) ->
     false.
 
-is_prefixed_match_check([], [], Matched, _) ->
+is_prefixed_match_check([], _, Matched, _) ->
     Matched;
 
 is_prefixed_match_check([H | T1], [H | T2], Matched, Exclude) ->
@@ -1252,6 +1250,21 @@ test() ->
     ["00"] = trie:fetch_keys_similar("0", RootNode7),
     RootNode9 = trie:new([{"abc", 123}]),
     {97,97,{{"bc",456}}} = trie:store("abc", 456, RootNode9),
+    RootNode10 = trie:store("abc", value, trie:new()),
+    RootNode11 = trie:store("abcd", value, RootNode10),
+    true = trie:is_prefixed("abcdefghijk", RootNode10),
+    true = trie:is_prefixed("abcdefghijk", RootNode11),
+    true = trie:is_prefix("a", RootNode10),
+    true = trie:is_prefix("a", RootNode11),
+    true = trie:is_prefix("ab", RootNode10),
+    true = trie:is_prefix("ab", RootNode11),
+    true = trie:is_prefixed("abcdefghijk", "", RootNode10),
+    true = trie:is_prefixed("abcdefghijk", "", RootNode11),
+    false = trie:is_prefixed("abcdefghijk", "abc", RootNode10),
+    true = trie:is_prefixed("abcdefghijk", "abc", RootNode11),
+    true = trie:is_prefixed("abcdefghijk", "ac", RootNode10),
+    true = trie:is_prefixed("abcdefghijk", "bc", RootNode10),
+    true = trie:is_prefixed("abcdefghijk", "ab", RootNode10),
     ok.
 
 %%%------------------------------------------------------------------------

@@ -58,6 +58,7 @@
          services_add/3,
          services_remove/3,
          services_restart/3,
+         services_update/3,
          services_search/2,
          services/1,
          service_format/1,
@@ -159,6 +160,16 @@
 -type error_reason_services_restart_configuration() ::
     {service_invalid |
      service_not_found, any()}.
+-type error_reason_services_update_configuration() ::
+    {update_invalid |
+     service_update_invalid |
+     service_update_type_invalid |
+     service_update_module_invalid |
+     service_update_module_state_invalid |
+     service_update_modules_load_invalid |
+     service_update_modules_unload_invalid |
+     service_update_code_paths_add_invalid |
+     service_update_code_paths_remove_invalid, any()}.
 -type error_reason_nodes_add_configuration() ::
     {node_invalid, any()}.
 -type error_reason_nodes_remove_configuration() ::
@@ -216,6 +227,9 @@
 -type error_reason_services_restart() ::
     error_reason_services_restart_configuration() |
     cloudi_core_i_configurator:error_reason_service_restart().
+-type error_reason_services_update() ::
+    error_reason_services_update_configuration() |
+    cloudi_core_i_configurator:error_reason_service_update().
 -type error_reason_nodes_add() ::
     error_reason_nodes_add_configuration().
 -type error_reason_nodes_remove() ::
@@ -231,6 +245,7 @@
               error_reason_services_add/0,
               error_reason_services_remove/0,
               error_reason_services_restart/0,
+              error_reason_services_update/0,
               error_reason_nodes_add/0,
               error_reason_nodes_remove/0,
               error_reason_nodes_set/0,
@@ -499,8 +514,9 @@ acl(#config{acl = ACL}) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_add(Value :: list(#internal{} | #external{} |
-                                 cloudi_service_api:service_proplist()),
+-spec services_add(Value :: nonempty_list(#internal{} | #external{} |
+                                          cloudi_service_api:
+                                          service_proplist()),
                    Config :: #config{},
                    Timeout :: cloudi_service_api:timeout_milliseconds() |
                               infinity) ->
@@ -539,7 +555,7 @@ services_add(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_remove(Value :: list(cloudi_service_api:service_id()),
+-spec services_remove(Value :: nonempty_list(cloudi_service_api:service_id()),
                       Config :: #config{},
                       Timeout :: cloudi_service_api:timeout_milliseconds() |
                                  infinity) ->
@@ -564,7 +580,7 @@ services_remove(Value, _, _) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(Value :: list(cloudi_service_api:service_id()),
+-spec services_restart(Value :: nonempty_list(cloudi_service_api:service_id()),
                        Config :: #config{},
                        Timeout :: cloudi_service_api:timeout_milliseconds() |
                                   infinity) ->
@@ -582,6 +598,30 @@ services_restart([ID | _] = Value,
     end;
 services_restart(Value, _, _) ->
     {error, {service_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update services XXX.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_update(Plan :: list(),
+                      Config :: #config{},
+                      Timeout :: cloudi_service_api:timeout_milliseconds() |
+                                 infinity) ->
+    {ok, ok | {error, any()}, #config{}} |
+    {error, error_reason_services_update()}.
+
+services_update([_ | _] = Plan,
+                #config{services = Services} = Config, Timeout) ->
+    case services_update_plan(Plan, Services, Timeout) of
+        {ok, Result, NewServices} ->
+            {ok, Result, Config#config{services = NewServices}};
+        {error, _} = Error ->
+            Error
+    end;
+services_update(Value, _, _) ->
+    {error, {update_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -3049,7 +3089,7 @@ services_validate_option_pid_options([{max_heap_size, V} = PidOption |
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([{message_queue_data, V} = PidOption |
                                       OptionsList], Output)
-    when V =:= off_heap; V =:= on_heap; V =:= mixed ->
+    when (V =:= off_heap) orelse (V =:= on_heap) orelse (V =:= mixed) ->
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);).
 -else.
 -define(PID_OPTIONS_ERLANG_OTP_VERSION_19,
@@ -3521,6 +3561,176 @@ services_restart_all([Service | RestartServices], Timeout) ->
         {error, _} = Error ->
             Error
     end.
+
+services_update_plan(Value, Services, Timeout) ->
+    services_update_plan(Value, [], Services, Timeout).
+
+services_update_plan([], UpdatePlans, Services, Timeout) ->
+    services_update_all(lists:reverse(UpdatePlans), Services, Timeout);
+services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
+    when is_binary(ID), (byte_size(ID) == 16) orelse (byte_size(ID) == 0) ->
+    UpdatePlan = #config_service_update{},
+    Defaults = [
+        {type,
+         UpdatePlan#config_service_update.type},
+        {module,
+         UpdatePlan#config_service_update.module},
+        {module_state,
+         UpdatePlan#config_service_update.module_state},
+        {modules_load,
+         UpdatePlan#config_service_update.modules_load},
+        {modules_unload,
+         UpdatePlan#config_service_update.modules_unload},
+        {code_paths_add,
+         UpdatePlan#config_service_update.code_paths_add},
+        {code_paths_remove,
+         UpdatePlan#config_service_update.code_paths_remove}],
+    case cloudi_proplists:take_values(Defaults, Plan) of
+        [Type, _, _,
+         _, _, _, _]
+        when not ((Type =:= undefined) orelse
+                  (Type =:= internal) orelse (Type =:= external)) ->
+            {error, {service_update_type_invalid,
+                     Type}};
+        [_, Module, _,
+         _, _, _, _]
+        when not is_atom(Module) ->
+            {error, {service_update_module_invalid,
+                     Module}};
+        [_, _, ModuleState,
+         _, _, _, _]
+        when not ((ModuleState =:= undefined) orelse
+                  is_tuple(ModuleState) orelse
+                  is_function(ModuleState, 2)) ->
+            {error, {service_update_module_state_invalid,
+                     ModuleState}};
+        [_, _, _,
+         ModulesLoad, _, _, _]
+        when not (is_list(ModulesLoad) andalso
+                  is_atom(hd(ModulesLoad))) ->
+            {error, {service_update_modules_load_invalid,
+                     ModulesLoad}};
+        [_, _, _,
+         _, ModulesUnload, _, _]
+        when not (is_list(ModulesUnload) andalso
+                  is_atom(hd(ModulesUnload))) ->
+            {error, {service_update_modules_unload_invalid,
+                     ModulesUnload}};
+        [_, _, _,
+         _, _, CodePathsAdd, _]
+        when not (is_list(CodePathsAdd) andalso
+                  is_list(hd(CodePathsAdd)) andalso
+                  is_integer(hd(hd(CodePathsAdd)))) ->
+            {error, {service_update_code_paths_add_invalid,
+                     CodePathsAdd}};
+        [_, _, _,
+         _, _, _, CodePathsRemove]
+        when not (is_list(CodePathsRemove) andalso
+                  is_list(hd(CodePathsRemove)) andalso
+                  is_integer(hd(hd(CodePathsRemove)))) ->
+            {error, {service_update_code_paths_remove_invalid,
+                     CodePathsRemove}};
+        [Type, Module, _,
+         _, _, _, _]
+        when not (((Type =:= undefined) orelse (Type =:= internal)) andalso
+                  (Module =/= undefined)) ->
+            {error, {service_update_type_invalid,
+                     Type}};
+        [_, Module, ModuleState,
+         ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
+        when Module =/= undefined ->
+            ModuleIDs = lists:foldr(fun(S, IDs) ->
+                if
+                    is_record(S, config_service_internal),
+                    S#config_service_internal.module =:= Module ->
+                        [S#config_service_internal.uuid | IDs];
+                    true ->
+                        IDs
+                end
+            end, [], Services),
+            UpdateValid = case ModuleIDs of
+                [_ | _] when ID == <<>> ->
+                    true;
+                [ID] ->
+                    true;
+                _ ->
+                    false
+            end,
+            if
+                UpdateValid =:= true ->
+                    case services_update_plan_module_state(ModuleState) of
+                        {ok, NewModuleState} ->
+                            ModuleVersion = cloudi_x_reltool_util:
+                                            module_version(Module),
+                            NewUpdatePlans =
+                                [UpdatePlan#config_service_update{
+                                     type = internal,
+                                     module = Module,
+                                     module_version = ModuleVersion,
+                                     module_state = NewModuleState,
+                                     modules_load = ModulesLoad,
+                                     modules_unload = ModulesUnload,
+                                     code_paths_add = CodePathsAdd,
+                                     code_paths_remove = CodePathsRemove,
+                                     uuids = ModuleIDs} |
+                                 UpdatePlans],
+                            services_update_plan(L, NewUpdatePlans,
+                                                 Services, Timeout);
+                        {error, _} = Error ->
+                            Error
+                    end;
+                UpdateValid =:= false ->
+                    {error, {update_invalid, ID}}
+            end;
+        [_, _, _,
+         _, _, _, _ | Invalid] ->
+            {error, {service_update_invalid,
+                     Invalid}}
+    end;
+services_update_plan([{ID, _} | _], _, _, _) ->
+    {error, {update_invalid, ID}}.
+
+services_update_all([], Services, _) ->
+    {ok, ok, Services};
+services_update_all([UpdatePlan | UpdatePlans], Services, Timeout) ->
+    case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
+        ok ->
+            % XXX modify Services as required
+            services_update_all(UpdatePlans, Services, Timeout);
+        {error, _} = Error ->
+            {ok, Error, Services}
+    end.
+
+services_update_plan_module_state(undefined) ->
+    {ok, undefined};
+services_update_plan_module_state(ModuleState)
+    when is_function(ModuleState, 2) ->
+    {ok, ModuleState};
+services_update_plan_module_state({M, F} = ModuleState) ->
+    case erlang:function_exported(M, F, 2) of
+        true ->
+            {ok, fun M:F/2};
+        false ->
+            {error, {service_update_module_state_invalid,
+                     ModuleState}}
+    end;
+services_update_plan_module_state({{M, F}} = ModuleState) ->
+    Function = case erlang:function_exported(M, F, 0) of
+        true ->
+            M:F();
+        false ->
+            undefined
+    end,
+    if
+        is_function(Function, 2) ->
+            {ok, Function};
+        true ->
+            {error, {service_update_module_state_invalid,
+                     ModuleState}}
+    end;
+services_update_plan_module_state(ModuleState) ->
+    {error, {service_update_module_state_invalid,
+             ModuleState}}.
 
 service_name_valid(Name, ErrorReason) ->
     try cloudi_x_trie:is_pattern(Name) of

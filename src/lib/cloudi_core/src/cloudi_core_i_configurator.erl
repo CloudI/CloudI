@@ -63,6 +63,7 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_update/2,
          services_search/3,
          services/1,
          nodes_set/2,
@@ -78,6 +79,7 @@
          service_start/2,
          service_stop/3,
          service_restart/2,
+         service_update/2,
          service_initialized_process/1,
          service_dead/1]).
 
@@ -112,9 +114,13 @@
 -type error_reason_service_restart() ::
     {service_internal_restart_failed |
      service_external_restart_failed, any()}.
+-type error_reason_service_update() ::
+    {service_internal_update_failed |
+     service_external_update_failed, any()}.
 -export_type([error_reason_service_start/0,
               error_reason_service_stop/0,
-              error_reason_service_restart/0]).
+              error_reason_service_restart/0,
+              error_reason_service_update/0]).
 
 -record(state,
     {
@@ -167,6 +173,11 @@ services_remove(L, Timeout) ->
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_restart, L,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+services_update(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_update, L,
                                  timeout_decr(Timeout)}, Timeout)).
 
 services_search(Scope, ServiceName, Timeout) ->
@@ -297,6 +308,24 @@ service_restart(#config_service_internal{} = Service, Timeout) ->
 service_restart(#config_service_external{} = Service, Timeout) ->
     service_restart_external(Service, timeout_decr(Timeout)).
 
+-spec service_update(#config_service_update{},
+                     Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, error_reason_service_update()}.
+
+service_update(#config_service_update{type = Type} = UpdatePlan, Timeout) ->
+    case cloudi_core_i_services_monitor:update(UpdatePlan, Timeout) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            if
+                Type =:= internal ->
+                    {error, {service_internal_update_failed, Reason}};
+                Type =:= external ->
+                    {error, {service_external_update_failed, Reason}}
+            end
+    end.
+
 service_initialized_process(Pid)
     when is_pid(Pid) ->
     ?MODULE ! {service_initialized_process, Pid},
@@ -374,6 +403,15 @@ handle_call({services_restart, L, Timeout}, _,
     case cloudi_core_i_configuration:services_restart(L, Config, Timeout) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({services_update, L, Timeout}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:services_update(L, Config, Timeout) of
+        {ok, Result, NewConfig} ->
+            {reply, Result, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;

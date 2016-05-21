@@ -59,6 +59,7 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_update/2,
          services_search/2,
          services/1,
          nodes_set/2,
@@ -157,10 +158,12 @@
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_init_after_internal() ::
     aspect_init_after_internal_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_init_after_external() ::
     aspect_init_after_external_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -export_type([aspect_init_after_internal_f/0,
               aspect_init_after_external_f/0,
               aspect_init_after_internal/0,
@@ -223,16 +226,20 @@
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_request_before_internal() ::
     aspect_request_before_internal_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_request_before_external() ::
     aspect_request_before_external_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_request_after_internal() ::
     aspect_request_after_internal_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_request_after_external() ::
     aspect_request_after_external_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -export_type([aspect_request_before_internal_f/0,
               aspect_request_before_external_f/0,
               aspect_request_after_internal_f/0,
@@ -249,7 +256,8 @@
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_info_internal() ::
     aspect_info_internal_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_info_before_internal_f() ::
     aspect_info_internal_f().
 -type aspect_info_after_internal_f() ::
@@ -273,10 +281,12 @@
     aspect_terminate_f().
 -type aspect_terminate_before_internal() ::
     aspect_terminate_before_internal_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -type aspect_terminate_before_external() ::
     aspect_terminate_before_external_f() |
-    {Module :: module(), Function :: atom()}.
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
 -export_type([aspect_terminate_before_internal_f/0,
               aspect_terminate_before_external_f/0,
               aspect_terminate_before_internal/0,
@@ -438,6 +448,41 @@
               service_external/0,
               service/0,
               service_proplist/0]).
+
+-type module_version() :: list(any()).
+-type module_state_internal_f() ::
+    fun((OldModuleVersion :: module_version(),
+         OldState :: any()) ->
+        {ok, NewState :: any()} |
+        {error, Reason :: any()}).
+-type module_state_internal() ::
+    module_state_internal_f() |
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
+-type service_update_plan_internal() ::
+    nonempty_list({type, internal} |
+                  {module, atom()} |
+                  {module_state, undefined | module_state_internal()} |
+                  {modules_load, list(atom())} |
+                  {modules_unload, list(atom())} |
+                  {code_paths_add, list(string())} |
+                  {code_paths_remove, list(string())}).
+%-type service_update_plan_external() ::
+%    nonempty_list({type, external} |
+%                  {file_path, string()} |
+%                  {args, string()} |
+%                  {env, list(string(), string())} |
+%                  {update_sync, boolean()} |
+%                  {modules_load, list(atom())} |
+%                  {modules_unload, list(atom())} |
+%                  {code_paths_add, list(string())} |
+%                  {code_paths_remove, list(string())}).
+-type service_update_plan() ::
+    service_update_plan_internal().
+-export_type([module_version/0,
+              module_state_internal_f/0,
+              module_state_internal/0,
+              service_update_plan/0]).
 
 -type node_reconnect_delay_seconds() ::
     period_seconds().
@@ -689,6 +734,35 @@ services_restart([_ | _] = L, Timeout)
         {ok, ServiceIdsValid} ->
             cloudi_core_i_configurator:services_restart(ServiceIdsValid,
                                                         Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update service instances.===
+%% Update service instances without interrupting the incoming service
+%% requests.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_update(L :: nonempty_list({string() | binary(),
+                                          service_update_plan()}),
+                      Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} |
+     cloudi_core_i_configuration:error_reason_services_update()}.
+
+services_update([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    case service_ids_convert_update(L) of
+        {ok, NewL} ->
+            cloudi_core_i_configurator:services_update(NewL, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -1107,6 +1181,25 @@ log_redirect(Node, Timeout) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+service_ids_convert_update(L) ->
+    service_ids_convert_update(L, []).
+
+service_ids_convert_update([], Output) ->
+    {ok, lists:reverse(Output)};
+service_ids_convert_update([{<<>>, _} = Entry | L], Output) ->
+    service_ids_convert_update(L, [Entry | Output]);
+service_ids_convert_update([{"", Plan} | L], Output) ->
+    service_ids_convert_update(L, [{<<>>, Plan} | Output]);
+service_ids_convert_update([{ServiceId, Plan} | L], Output) ->
+    case service_id_convert(ServiceId) of
+        {ok, ServiceIdValid} ->
+            service_ids_convert_update(L, [{ServiceIdValid, Plan} | Output]);
+        {error, _} = Error ->
+            Error
+    end;
+service_ids_convert_update([Entry | _], _) ->
+    {error, {update_invalid, Entry}}.
 
 service_ids_convert(ServiceIds) ->
     service_ids_convert(ServiceIds, []).

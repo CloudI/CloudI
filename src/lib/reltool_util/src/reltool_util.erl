@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -73,12 +73,14 @@
          ensure_application_loaded/1,
          ensure_application_started/1,
          ensure_application_stopped/1,
+         config_load/1,
          module_loaded/1,
          is_module_loaded/1,
          is_module_loaded/2,
          module_purged/1,
          module_purged/2,
          module_exports/1,
+         module_version/1,
          script_start/1,
          script_remove/1,
          script_remove/2,
@@ -565,6 +567,24 @@ ensure_application_stopped(Application) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Load a config file from a release.===
+%% All applications with configuration values are loaded if they are not
+%% already loaded.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec config_load(FilePath :: string()) ->
+    {ok, list(atom())} |
+    {error, any()}.
+
+config_load(FilePath)
+    when is_list(FilePath) ->
+    true = lists:suffix(".config", FilePath),
+    {ok, [ApplicationEnvs]} = file:consult(FilePath),
+    config_load_application(ApplicationEnvs, []).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Make sure a module is loaded.===
 %% If the module is not loaded, attempt to load it.
 %% @end
@@ -679,6 +699,31 @@ module_exports(Module)
     {value, _, L1} = lists:keytake(module_info, 1, L0),
     {value, _, L2} = lists:keytake(module_info, 1, L1),
     L2.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the current version of the module.===
+%% A list is returned with an entry for each use of the -vsn attribute
+%% in the order within the module file for the currently loaded version
+%% (the result is consistent with beam_lib:version/1).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_version(Module :: atom()) ->
+    list(any()).
+
+module_version(Module)
+    when is_atom(Module) ->
+    {attributes, L} = lists:keyfind(attributes, 1, Module:module_info()),
+    Version = lists:flatmap(fun(Attribute) ->
+        case Attribute of
+            {vsn, VSN} ->
+                VSN;
+            _ ->
+                []
+        end
+    end, L),
+    Version.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1414,6 +1459,20 @@ ensure_code_paths([P | Paths], Apps) ->
             {error, {version_mismatch, Application, VSN, InvalidVSN}};
         false ->
             {error, {not_loaded, Application, VSN}}
+    end.
+
+config_load_application([], Applications) ->
+    {ok, lists:reverse(Applications)};
+config_load_application([{Application, Env} | ApplicationEnvs], Applications) ->
+    case ensure_application_loaded(Application) of
+        ok ->
+            lists:foreach(fun({Key, Value}) ->
+                ok = application:set_env(Application, Key, Value)
+            end, Env),
+            config_load_application(ApplicationEnvs,
+                                    [Application | Applications]);
+        {error, _} = Error ->
+            Error
     end.
 
 is_module_loaded_check(Module) when is_atom(Module) ->

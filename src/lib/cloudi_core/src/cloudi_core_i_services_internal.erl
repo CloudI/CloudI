@@ -114,6 +114,9 @@
                           {cloudi:response_info(), cloudi:response()}) |
                list({cloudi:trans_id(),
                      {cloudi:response_info(), cloudi:response()}}),
+        % pending update configuration
+        update_plan = undefined
+            :: undefined | #config_service_update{},
         % is the request/info pid busy?
         queue_requests = true
             :: undefined | boolean(),
@@ -189,6 +192,9 @@
         recv_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(), reference()) |
                list({cloudi:trans_id(), reference()}),
+        % pending update configuration
+        update_plan = undefined
+            :: undefined | #config_service_update{},
         % is the request pid busy?
         queue_requests = true :: boolean(),
         % queued incoming service requests
@@ -1760,6 +1766,33 @@ handle_info({'EXIT', Dispatcher, Reason},
 handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
     {stop, Reason, State};
+
+handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
+            #state{dispatcher = Dispatcher,
+                   duo_mode_pid = undefined} = State) ->
+    MonitorPid ! {'cloudi_service_update', Dispatcher},
+    hibernate_check({noreply,
+                     State#state{
+                         update_plan = UpdatePlan,
+                         queue_requests = true}});
+
+handle_info({'cloudi_service_update_now', MonitorPid},
+            #state{dispatcher = Dispatcher,
+                   update_plan = UpdatePlan,
+                   module = Module,
+                   service_state = ServiceState,
+                   duo_mode_pid = undefined} = State) ->
+    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
+        {ok, NextServiceState} ->
+            MonitorPid ! {'cloudi_service_update_now', Dispatcher, ok},
+            NextServiceState;
+        {error, _} = Error ->
+            MonitorPid ! {'cloudi_service_update_now', Dispatcher, Error},
+            ServiceState
+    end,
+    NewState = State#state{update_plan = undefined},
+    hibernate_check({noreply,
+                     process_queues(NewServiceState, NewState)});
 
 handle_info({'cloudi_service_init_execute', Args, Timeout,
              ProcessDictionary, State},
@@ -3785,6 +3818,28 @@ duo_handle_info('cloudi_rate_request_max_rate',
      State#state_duo{options = ConfigOptions#config_service_options{
                          rate_request_max = NewRateRequest}}};
 
+duo_handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
+                #state_duo{duo_mode_pid = DuoModePid} = State) ->
+    MonitorPid ! {'cloudi_service_update', DuoModePid},
+    {noreply, State#state_duo{update_plan = UpdatePlan,
+                              queue_requests = true}};
+
+duo_handle_info({'cloudi_service_update_now', MonitorPid},
+                #state_duo{duo_mode_pid = DuoModePid,
+                           update_plan = UpdatePlan,
+                           module = Module,
+                           service_state = ServiceState} = State) ->
+    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
+        {ok, NextServiceState} ->
+            MonitorPid ! {'cloudi_service_update_now', DuoModePid, ok},
+            NextServiceState;
+        {error, _} = Error ->
+            MonitorPid ! {'cloudi_service_update_now', DuoModePid, Error},
+            ServiceState
+    end,
+    NewState = State#state_duo{update_plan = undefined},
+    {noreply, duo_process_queues(NewServiceState, NewState)};
+
 duo_handle_info({system, From, Msg},
                 #state_duo{dispatcher = Dispatcher} = State) ->
     case Msg of
@@ -4062,4 +4117,31 @@ spawn_opt_pid(M, F, Options0) ->
         end,
         F()
     end, OptionsN).
+
+update(_, #config_service_update{type = Type}, _)
+    when Type =/= internal ->
+    {error, type};
+update(_, #config_service_update{module = Module}, ModuleNow)
+    when Module =/= ModuleNow ->
+    {error, module};
+update(ServiceState,
+       #config_service_update{
+           module_state = undefined}, _) ->
+    {ok, ServiceState};
+update(ServiceState,
+       #config_service_update{
+           module_version = OldModuleVersion,
+           module_state = ModuleState}, _) ->
+    try ModuleState(OldModuleVersion,
+                    ServiceState) of
+        {ok, _} = Success ->
+            Success;
+        {error, _} = Error ->
+            Error;
+        Invalid ->
+            {error, {result, Invalid}}
+    catch
+        Type:Error ->
+            {error, {Type, Error}}
+    end.
 

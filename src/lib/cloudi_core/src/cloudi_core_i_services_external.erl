@@ -118,6 +118,9 @@
         async_responses = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(), {binary(), binary()}) |
                list({cloudi:trans_id(), {binary(), binary()}}),
+        % pending update configuration
+        update_plan = undefined
+            :: undefined | #config_service_update{},
         % is the external service OS process thread busy?
         queue_requests = true :: boolean(),
         % queued incoming service requests

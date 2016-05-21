@@ -398,6 +398,45 @@
         uuid               :: cloudi_service_api:service_id()
     }).
 
+% service update plan
+-record(config_service_update,
+    {
+        type = undefined
+            :: undefined | internal | external,
+        % internal service module to update
+        module = undefined
+            :: atom(),
+        % old module version passed to module_state function
+        module_version = undefined
+            :: undefined | cloudi_service_api:module_version(),
+        % equivalent to Module:code_change/3 with an Erlang/OTP behaviour
+        % but without Extra, due to the function existing only for the purpose
+        % of the upgrade, with arity 2.  The VSN of the old module will always
+        % be the module VSN, not a down tuple.
+        module_state = undefined
+            :: undefined |
+               fun((OldModuleVerson :: cloudi_service_api:module_version(),
+                    OldState :: any()) ->
+                   {ok, NewState :: any()} | {error, Reason :: any()} | any()),
+        % additional modules to load before module_state is called, if provided
+        modules_load = []
+            :: list(atom()),
+        % modules to unload after module_state is called, if provided
+        modules_unload = []
+            :: list(atom()),
+        % code paths to add before modules are loaded
+        code_paths_add = []
+            :: list(string()),
+        % code paths to remove after the update is successful
+        code_paths_remove = []
+            :: list(string()),
+        % service ids of affected services
+        % (internal services must have all usage of a module represented in
+        %  this list)
+        uuids = undefined
+            :: undefined | list(cloudi_service_api:service_id())
+    }).
+
 -record(config_nodes_discovery,
     {
         % nodefinder interface
