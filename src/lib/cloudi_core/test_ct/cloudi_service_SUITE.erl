@@ -79,6 +79,7 @@
          t_service_internal_terminate_2/1,
          t_service_internal_terminate_3/1,
          t_service_internal_terminate_4/1,
+         t_service_internal_update_1/1,
          t_service_internal_log_1/1,
          t_cloudi_args_type_1/1,
          t_cloudi_service_name_1/1]).
@@ -108,6 +109,7 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(VSN, {"test", "version", "(any erlang term data can be used)"}).
 -define(SERVICE_PREFIX1, "/").
 -define(SERVICE_SUFFIX1, "service_name").
 -define(RESPONSE_INFO1, <<"response_info">>).
@@ -126,6 +128,7 @@
 -define(REQUEST6, <<"count">>).
 -define(REQUEST_INFO7, <<>>).
 -define(REQUEST7, <<"crash">>).
+-vsn(?VSN).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -281,6 +284,7 @@ groups() ->
        t_service_internal_terminate_2,
        t_service_internal_terminate_3,
        t_service_internal_terminate_4,
+       t_service_internal_update_1,
        t_service_internal_log_1]},
      {cloudi_modules_1, [],
       [t_cloudi_args_type_1,
@@ -313,17 +317,20 @@ end_per_group(_GroupName, Config) ->
 init_per_testcase(TestCase) ->
     error_logger:info_msg("~p init~n", [TestCase]),
     error_logger:tty(false),
+    ?LOG_INFO("~p init", [TestCase]),
     ok.
 
 end_per_testcase(TestCase) ->
     error_logger:tty(true),
     error_logger:info_msg("~p end~n", [TestCase]),
+    ?LOG_INFO("~p end", [TestCase]),
     ok.
 
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_service_internal_sync_1) orelse
          (TestCase =:= t_service_internal_sync_2) orelse
-         (TestCase =:= t_service_internal_async_1) ->
+         (TestCase =:= t_service_internal_async_1) orelse
+         (TestCase =:= t_service_internal_update_1) ->
     init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
@@ -838,6 +845,54 @@ t_service_internal_terminate_3(_Config) ->
 
 t_service_internal_terminate_4(Config) ->
     t_service_internal_terminate_3(Config).
+
+t_service_internal_update_1(Config) ->
+    % update state
+    Context0 = cloudi:new(),
+    ServiceName = ?SERVICE_PREFIX1 ++ ?SERVICE_SUFFIX1,
+    {{ok, Count0},
+     Context1} = cloudi:send_sync(Context0,
+                                  ServiceName,
+                                  ?REQUEST_INFO6, ?REQUEST6,
+                                  undefined, undefined),
+    0 = Count0,
+    {ok, [{ServiceId, _}]} = cloudi_service_api:services(infinity),
+    [ServiceId] = ?config(service_ids, Config),
+    ModuleState0 = fun(OldModuleVersion, #state{count = Count0} = OldState) ->
+        true = [?VSN] == OldModuleVersion,
+        {ok, OldState#state{count = Count0 + 100}}
+    end,
+    % an exact service_id can be used since the module is only used once
+    % (if the module was used in many services, "" or <<>> would need to be
+    %  used as the service_id for the update)
+    ok = cloudi_service_api:
+         services_update([{ServiceId,
+                           [{module, ?MODULE},
+                            {module_state, ModuleState0}]}],
+                         infinity),
+    {{ok, Count1},
+     Context2} = cloudi:send_sync(Context1,
+                                  ServiceName,
+                                  ?REQUEST_INFO6, ?REQUEST6,
+                                  undefined, undefined),
+    100 = Count1,
+    ModuleState1 = fun(OldModuleVersion, #state{count = Count1}) ->
+        true = [?VSN] == OldModuleVersion,
+        {error, not_updating}
+    end,
+    {error,
+     {service_internal_update_failed,
+      [not_updating]}} = cloudi_service_api:
+                         services_update([{ServiceId,
+                                           [{module, ?MODULE},
+                                            {module_state, ModuleState1}]}],
+                                         infinity),
+    {{ok, Count1},
+     _Context3} = cloudi:send_sync(Context2,
+                                   ServiceName,
+                                   ?REQUEST_INFO6, ?REQUEST6,
+                                   undefined, undefined),
+    ok.
 
 t_service_internal_log_1(_Config) ->
     ?LOG_METADATA_SET([{test, t_service_internal_log_1},

@@ -273,11 +273,11 @@ api-python-test:
 api-ruby-test:
 	$(RUBY) $(top_srcdir)/api/ruby/tests/erlang_tests.rb
 
-ct:
+ct: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct)
 
-eunit:
+eunit: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
 

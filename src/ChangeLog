@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CT test of services_update
+    * Change services_update to not load the module of an
+      internal service by default
+    * Finalize services_update error result
+
 2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudI Service API services_update function

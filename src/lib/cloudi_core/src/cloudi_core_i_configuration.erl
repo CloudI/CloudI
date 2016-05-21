@@ -601,7 +601,7 @@ services_restart(Value, _, _) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Update services XXX.===
+%% ===Update services after checking their UUID.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -3636,6 +3636,12 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                   (Module =/= undefined)) ->
             {error, {service_update_type_invalid,
                      Type}};
+        [_, Module, ModuleState,
+         ModulesLoad, ModulesUnload, _, _]
+        when Module =/= undefined, ModuleState =:= undefined,
+             ModulesLoad == [], ModulesUnload == [] ->
+            {error, {service_update_invalid,
+                     no_update}};
         [_, Module, ModuleState,
          ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
         when Module =/= undefined ->

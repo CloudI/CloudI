@@ -326,14 +326,14 @@ handle_call({update,
                 UpdateResults == [ok] ->
                     {reply, ok, State};
                 true ->
-                    ErrorReasons = lists:map(fun(UpdateResult) ->
+                    ErrorReasons = lists:foldr(fun(UpdateResult, Reasons) ->
                         case UpdateResult of
                             ok ->
-                                ok;
+                                Reasons;
                             {error, Reason} ->
-                                Reason
+                                [Reason | Reasons]
                         end
-                    end, UpdateResults),
+                    end, [], UpdateResults),
                     {reply, {error, ErrorReasons}, State}
             end;
         {error, _} = Error ->
@@ -939,10 +939,9 @@ update_module_load([CodePathAdd | CodePathsAdd], ModulesLoad) ->
     end.
     
 update_global_load(#config_service_update{
-                       module = Module,
                        modules_load = ModulesLoad,
                        code_paths_add = CodePathsAdd}) ->
-    update_module_load(CodePathsAdd, [Module | ModulesLoad]).
+    update_module_load(CodePathsAdd, ModulesLoad).
 
 update_module_unload([]) ->
     ok;
