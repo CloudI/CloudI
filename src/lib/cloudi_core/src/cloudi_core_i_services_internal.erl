@@ -4130,9 +4130,12 @@ update(ServiceState,
     {ok, ServiceState};
 update(ServiceState,
        #config_service_update{
-           module_version = OldModuleVersion,
+           module = Module,
+           module_version_old = OldModuleVersion,
            module_state = ModuleState}, _) ->
+    NewModuleVersion = cloudi_x_reltool_util:module_version(Module),
     try ModuleState(OldModuleVersion,
+                    NewModuleVersion,
                     ServiceState) of
         {ok, _} = Success ->
             Success;

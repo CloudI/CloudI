@@ -7,6 +7,7 @@
     * Change services_update to not load the module of an
       internal service by default
     * Finalize services_update error result
+    * Add the new module version to the update function for services_update
 
 2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

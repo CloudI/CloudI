@@ -407,15 +407,15 @@
         module = undefined
             :: atom(),
         % old module version passed to module_state function
-        module_version = undefined
+        module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
         % equivalent to Module:code_change/3 with an Erlang/OTP behaviour
-        % but without Extra, due to the function existing only for the purpose
-        % of the upgrade, with arity 2.  The VSN of the old module will always
-        % be the module VSN, not a down tuple.
+        % but with the addition of the new module version and without the
+        % Extra variable (due to the function existing only for the upgrade).
         module_state = undefined
             :: undefined |
                fun((OldModuleVerson :: cloudi_service_api:module_version(),
+                    NewModuleVerson :: cloudi_service_api:module_version(),
                     OldState :: any()) ->
                    {ok, NewState :: any()} | {error, Reason :: any()} | any()),
         % additional modules to load before module_state is called, if provided

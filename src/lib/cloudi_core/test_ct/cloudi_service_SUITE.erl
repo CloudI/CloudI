@@ -858,8 +858,9 @@ t_service_internal_update_1(Config) ->
     0 = Count0,
     {ok, [{ServiceId, _}]} = cloudi_service_api:services(infinity),
     [ServiceId] = ?config(service_ids, Config),
-    ModuleState0 = fun(OldModuleVersion, #state{count = Count0} = OldState) ->
-        true = [?VSN] == OldModuleVersion,
+    ModuleState0 = fun(ModuleVersion, ModuleVersion,
+                       #state{count = Count0} = OldState) ->
+        true = [?VSN] == ModuleVersion,
         {ok, OldState#state{count = Count0 + 100}}
     end,
     % an exact service_id can be used since the module is only used once
@@ -876,8 +877,9 @@ t_service_internal_update_1(Config) ->
                                   ?REQUEST_INFO6, ?REQUEST6,
                                   undefined, undefined),
     100 = Count1,
-    ModuleState1 = fun(OldModuleVersion, #state{count = Count1}) ->
-        true = [?VSN] == OldModuleVersion,
+    ModuleState1 = fun(ModuleVersion, ModuleVersion,
+                       #state{count = Count1}) ->
+        true = [?VSN] == ModuleVersion,
         {error, not_updating}
     end,
     {error,

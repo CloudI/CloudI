@@ -452,6 +452,7 @@
 -type module_version() :: list(any()).
 -type module_state_internal_f() ::
     fun((OldModuleVersion :: module_version(),
+         NewModuleVersion :: module_version(),
          OldState :: any()) ->
         {ok, NewState :: any()} |
         {error, Reason :: any()}).

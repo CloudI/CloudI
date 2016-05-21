@@ -3601,7 +3601,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _, _]
         when not ((ModuleState =:= undefined) orelse
                   is_tuple(ModuleState) orelse
-                  is_function(ModuleState, 2)) ->
+                  is_function(ModuleState, 3)) ->
             {error, {service_update_module_state_invalid,
                      ModuleState}};
         [_, _, _,
@@ -3672,7 +3672,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                                 [UpdatePlan#config_service_update{
                                      type = internal,
                                      module = Module,
-                                     module_version = ModuleVersion,
+                                     module_version_old = ModuleVersion,
                                      module_state = NewModuleState,
                                      modules_load = ModulesLoad,
                                      modules_unload = ModulesUnload,
@@ -3710,12 +3710,12 @@ services_update_all([UpdatePlan | UpdatePlans], Services, Timeout) ->
 services_update_plan_module_state(undefined) ->
     {ok, undefined};
 services_update_plan_module_state(ModuleState)
-    when is_function(ModuleState, 2) ->
+    when is_function(ModuleState, 3) ->
     {ok, ModuleState};
 services_update_plan_module_state({M, F} = ModuleState) ->
-    case erlang:function_exported(M, F, 2) of
+    case erlang:function_exported(M, F, 3) of
         true ->
-            {ok, fun M:F/2};
+            {ok, fun M:F/3};
         false ->
             {error, {service_update_module_state_invalid,
                      ModuleState}}
@@ -3728,7 +3728,7 @@ services_update_plan_module_state({{M, F}} = ModuleState) ->
             undefined
     end,
     if
-        is_function(Function, 2) ->
+        is_function(Function, 3) ->
             {ok, Function};
         true ->
             {error, {service_update_module_state_invalid,
