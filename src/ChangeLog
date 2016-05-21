@@ -8,6 +8,7 @@
       internal service by default
     * Finalize services_update error result
     * Add the new module version to the update function for services_update
+    * Fix services_update error when a process is handling a service request
 
 2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

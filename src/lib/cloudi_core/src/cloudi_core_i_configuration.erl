@@ -3672,13 +3672,13 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                                 [UpdatePlan#config_service_update{
                                      type = internal,
                                      module = Module,
-                                     module_version_old = ModuleVersion,
                                      module_state = NewModuleState,
                                      modules_load = ModulesLoad,
                                      modules_unload = ModulesUnload,
                                      code_paths_add = CodePathsAdd,
                                      code_paths_remove = CodePathsRemove,
-                                     uuids = ModuleIDs} |
+                                     uuids = ModuleIDs,
+                                     module_version_old = ModuleVersion} |
                                  UpdatePlans],
                             services_update_plan(L, NewUpdatePlans,
                                                  Services, Timeout);

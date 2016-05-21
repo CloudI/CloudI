@@ -401,14 +401,13 @@
 % service update plan
 -record(config_service_update,
     {
+        % service update plan configuration
+
         type = undefined
             :: undefined | internal | external,
         % internal service module to update
         module = undefined
             :: atom(),
-        % old module version passed to module_state function
-        module_version_old = undefined
-            :: undefined | cloudi_service_api:module_version(),
         % equivalent to Module:code_change/3 with an Erlang/OTP behaviour
         % but with the addition of the new module version and without the
         % Extra variable (due to the function existing only for the upgrade).
@@ -430,11 +429,23 @@
         % code paths to remove after the update is successful
         code_paths_remove = []
             :: list(string()),
+
+        % service update plan state
+
         % service ids of affected services
         % (internal services must have all usage of a module represented in
         %  this list)
         uuids = undefined
-            :: undefined | list(cloudi_service_api:service_id())
+            :: undefined | list(cloudi_service_api:service_id()),
+        % old module version passed to module_state function
+        module_version_old = undefined
+            :: undefined | cloudi_service_api:module_version(),
+        % can the update occur now?
+        update_now = undefined
+            :: undefined | pid(),
+        % does the service still need to queue requests?
+        queue_requests = undefined
+            :: undefined | boolean()
     }).
 
 -record(config_nodes_discovery,
