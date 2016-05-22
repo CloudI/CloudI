@@ -750,7 +750,12 @@ services_restart([_ | _] = L, Timeout)
 -spec services_update(L :: nonempty_list({string() | binary(),
                                           service_update_plan()}),
                       Timeout :: api_timeout_milliseconds()) ->
-    ok |
+    {ok, ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
+    {error,
+     {ServiceIdsSetError :: nonempty_list(service_id()),
+      Reason :: {service_internal_update_failed |
+                 service_external_update_failed, any()}},
+     ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
     {error,
      timeout | noproc |
      {service_id_invalid, any()} |

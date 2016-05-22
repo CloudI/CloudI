@@ -310,19 +310,22 @@ service_restart(#config_service_external{} = Service, Timeout) ->
 
 -spec service_update(#config_service_update{},
                      Timeout :: pos_integer() | infinity) ->
-    ok |
-    {error, error_reason_service_update()}.
+    {ok, nonempty_list(cloudi_service_api:service_id())} |
+    {error, nonempty_list(cloudi_service_api:service_id()),
+     error_reason_service_update()}.
 
 service_update(#config_service_update{type = Type} = UpdatePlan, Timeout) ->
     case cloudi_core_i_services_monitor:update(UpdatePlan, Timeout) of
-        ok ->
-            ok;
-        {error, Reason} ->
+        {ok, _} = Success ->
+            Success;
+        {error, ServiceIdList, Reason} ->
             if
                 Type =:= internal ->
-                    {error, {service_internal_update_failed, Reason}};
+                    {error, ServiceIdList,
+                     {service_internal_update_failed, Reason}};
                 Type =:= external ->
-                    {error, {service_external_update_failed, Reason}}
+                    {error, ServiceIdList,
+                     {service_external_update_failed, Reason}}
             end
     end.
 

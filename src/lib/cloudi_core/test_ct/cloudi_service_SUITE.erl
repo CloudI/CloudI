@@ -866,11 +866,11 @@ t_service_internal_update_1(Config) ->
     % an exact service_id can be used since the module is only used once
     % (if the module was used in many services, "" or <<>> would need to be
     %  used as the service_id for the update)
-    ok = cloudi_service_api:
-         services_update([{ServiceId,
-                           [{module, ?MODULE},
-                            {module_state, ModuleState0}]}],
-                         infinity),
+    {ok, [[ServiceId]]} = cloudi_service_api:
+                          services_update([{ServiceId,
+                                            [{module, ?MODULE},
+                                             {module_state, ModuleState0}]}],
+                                          infinity),
     {{ok, Count1},
      Context2} = cloudi:send_sync(Context1,
                                   ServiceName,
@@ -883,12 +883,14 @@ t_service_internal_update_1(Config) ->
         {error, not_updating}
     end,
     {error,
-     {service_internal_update_failed,
-      [not_updating]}} = cloudi_service_api:
-                         services_update([{ServiceId,
-                                           [{module, ?MODULE},
-                                            {module_state, ModuleState1}]}],
-                                         infinity),
+     {[ServiceId],
+      {service_internal_update_failed,
+       [not_updating]}},
+     []} = cloudi_service_api:
+           services_update([{ServiceId,
+                             [{module, ?MODULE},
+                              {module_state, ModuleState1}]}],
+                           infinity),
     {{ok, Count1},
      _Context3} = cloudi:send_sync(Context2,
                                    ServiceName,

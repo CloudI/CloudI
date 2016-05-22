@@ -440,12 +440,9 @@
         % old module version passed to module_state function
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
-        % can the update occur now?
-        update_now = undefined
-            :: undefined | pid(),
-        % does the service still need to queue requests?
-        queue_requests = undefined
-            :: undefined | boolean()
+        % is the service busy handling a service request?
+        update_pending = undefined
+            :: undefined | pid()
     }).
 
 -record(config_nodes_discovery,

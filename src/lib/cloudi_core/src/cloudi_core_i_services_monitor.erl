@@ -324,7 +324,7 @@ handle_call({update,
             update_global_unload(UpdatePlan),
             if
                 UpdateResults == [ok] ->
-                    {reply, ok, State};
+                    {reply, {ok, ServiceIdList}, State};
                 true ->
                     ErrorReasons = lists:foldr(fun(UpdateResult, Reasons) ->
                         case UpdateResult of
@@ -334,10 +334,10 @@ handle_call({update,
                                 [Reason | Reasons]
                         end
                     end, [], UpdateResults),
-                    {reply, {error, ErrorReasons}, State}
+                    {reply, {error, ServiceIdList, ErrorReasons}, State}
             end;
-        {error, _} = Error ->
-            {reply, Error, State}
+        {error, Reason} ->
+            {reply, {error, ServiceIdList, Reason}, State}
     end;
 
 handle_call({search, PidList}, _,

@@ -228,8 +228,7 @@
     error_reason_services_restart_configuration() |
     cloudi_core_i_configurator:error_reason_service_restart().
 -type error_reason_services_update() ::
-    error_reason_services_update_configuration() |
-    cloudi_core_i_configurator:error_reason_service_update().
+    error_reason_services_update_configuration().
 -type error_reason_nodes_add() ::
     error_reason_nodes_add_configuration().
 -type error_reason_nodes_remove() ::
@@ -609,7 +608,13 @@ services_restart(Value, _, _) ->
                       Config :: #config{},
                       Timeout :: cloudi_service_api:timeout_milliseconds() |
                                  infinity) ->
-    {ok, ok | {error, any()}, #config{}} |
+    {ok,
+     {ok, nonempty_list(nonempty_list(cloudi_service_api:service_id()))} |
+     {error,
+      {nonempty_list(cloudi_service_api:service_id()),
+       cloudi_core_i_configurator:error_reason_service_update()},
+      nonempty_list(nonempty_list(cloudi_service_api:service_id()))},
+     #config{}} |
     {error, error_reason_services_update()}.
 
 services_update([_ | _] = Plan,
@@ -3696,14 +3701,22 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
 services_update_plan([{ID, _} | _], _, _, _) ->
     {error, {update_invalid, ID}}.
 
-services_update_all([], Services, _) ->
-    {ok, ok, Services};
-services_update_all([UpdatePlan | UpdatePlans], Services, Timeout) ->
+services_update_all(UpdatePlans, Services, Timeout) ->
+    services_update_all(UpdatePlans, [], Services, Timeout).
+
+services_update_all([], ServiceIdLists, Services, _) ->
+    {ok, {ok, lists:reverse(ServiceIdLists)}, Services};
+services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
+                    Services, Timeout) ->
     case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
-        ok ->
+        {ok, ServiceIdList} ->
             % XXX modify Services as required
-            services_update_all(UpdatePlans, Services, Timeout);
-        {error, _} = Error ->
+            services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
+                                Services, Timeout);
+        {error, ServiceIdList, Reason} ->
+            Error = {error,
+                     {ServiceIdList, Reason},
+                     lists:reverse(ServiceIdLists)},
             {ok, Error, Services}
     end.
 

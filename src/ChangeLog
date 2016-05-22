@@ -6,9 +6,9 @@
     * Add CT test of services_update
     * Change services_update to not load the module of an
       internal service by default
-    * Finalize services_update error result
     * Add the new module version to the update function for services_update
     * Fix services_update error when a process is handling a service request
+    * Finalize services_update return value
 
 2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
