@@ -3154,7 +3154,6 @@ services_validate_option_aspects_f([{M, F} = Entry | AspectsOld], AspectsNew,
                         {module, _} ->
                             V = erlang:function_exported(M, F, Arity),
                             true = code:delete(M),
-                            false = code:purge(M),
                             V;
                         {error, _} ->
                             false
@@ -3197,7 +3196,6 @@ services_validate_option_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
                                     {false, undefined}
                             end,
                             true = code:delete(M),
-                            false = code:purge(M),
                             V;
                         {error, _} ->
                             {false, undefined}

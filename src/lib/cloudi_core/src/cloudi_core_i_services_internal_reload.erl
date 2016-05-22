@@ -166,17 +166,7 @@ handle_info(reload, #state{services = Services,
             {ok, #file_info{mtime = Mtime}}
                 when Mtime >= ReloadStartOld,
                      Mtime < ReloadStartNew ->
-                % make sure no old code exists
-                code:purge(Module),
-                % load the new current code
-                case code:load_file(Module) of
-                    {module, Module} ->
-                        % remove the old code
-                        code:soft_purge(Module),
-                        ok;
-                    {error, _} ->
-                        ok
-                end;
+                cloudi_x_reltool_util:module_reload(Module);
             _ ->
                 ok
         end

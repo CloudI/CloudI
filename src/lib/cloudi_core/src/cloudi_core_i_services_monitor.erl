@@ -918,11 +918,8 @@ service_ids_pids([ServiceId | ServiceIdList], Pids, Services) ->
 update_module_load([]) ->
     ok;
 update_module_load([Module | ModulesLoad]) ->
-    code:purge(Module),
-    LoadResult = code:load_file(Module),
-    code:soft_purge(Module), 
-    case LoadResult of
-        {module, Module} ->
+    case cloudi_x_reltool_util:module_reload(Module) of
+        ok ->
             update_module_load(ModulesLoad);
         {error, _} = Error ->
             Error
@@ -952,7 +949,7 @@ update_module_unload([CodePathRemove | CodePathsRemove]) ->
 update_module_unload([], CodePathsRemove) ->
     update_module_unload(CodePathsRemove);
 update_module_unload([Module | ModulesUnload], CodePathsRemove) ->
-    code:purge(Module),
+    cloudi_x_reltool_util:module_unload(Module),
     update_module_unload(ModulesUnload, CodePathsRemove).
 
 update_global_unload(#config_service_update{
