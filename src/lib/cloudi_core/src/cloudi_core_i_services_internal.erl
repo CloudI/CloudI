@@ -1767,7 +1767,7 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
     {stop, Reason, State};
 
-handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
+handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
             #state{dispatcher = Dispatcher,
                    update_plan = undefined,
                    queue_requests = QueueRequests,
@@ -1775,31 +1775,30 @@ handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
     #config_service_update{sync = Sync} = UpdatePlan,
     NewUpdatePlan = if
         Sync =:= true, QueueRequests =:= true ->
-            UpdatePlan#config_service_update{update_pending = MonitorPid};
+            UpdatePlan#config_service_update{update_pending = UpdatePending,
+                                             queue_requests = QueueRequests};
         true ->
-            MonitorPid ! {'cloudi_service_update', Dispatcher},
-            UpdatePlan
+            UpdatePending ! {'cloudi_service_update', Dispatcher},
+            UpdatePlan#config_service_update{queue_requests = QueueRequests}
     end,
     hibernate_check({noreply, State#state{update_plan = NewUpdatePlan,
                                           queue_requests = true}});
 
-handle_info({'cloudi_service_update_now', MonitorPid},
-            #state{dispatcher = Dispatcher,
-                   update_plan = UpdatePlan,
-                   module = Module,
+handle_info({'cloudi_service_update_now', UpdateNow},
+            #state{update_plan = UpdatePlan,
                    service_state = ServiceState,
                    duo_mode_pid = undefined} = State) ->
-    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
-        {ok, NextServiceState} ->
-            MonitorPid ! {'cloudi_service_update_now', Dispatcher, ok},
-            NextServiceState;
-        {error, _} = Error ->
-            MonitorPid ! {'cloudi_service_update_now', Dispatcher, Error},
-            ServiceState
-    end,
-    hibernate_check({noreply,
-                     process_queues(NewServiceState,
-                                    State#state{update_plan = undefined})});
+    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    NewUpdatePlan = UpdatePlan#config_service_update{update_now = UpdateNow},
+    if
+        QueueRequests =:= true ->
+            hibernate_check({noreply,
+                             State#state{update_plan = NewUpdatePlan}});
+        QueueRequests =:= false ->
+            hibernate_check({noreply,
+                             process_update(NewUpdatePlan,
+                                            ServiceState, State)})
+    end;
 
 handle_info({'cloudi_service_init_execute', Args, Timeout,
              ProcessDictionary, State},
@@ -3028,20 +3027,43 @@ process_queue_info(NewServiceState,
                 options = NewConfigOptions}
     end.
 
+process_update(UpdatePlan, ServiceState,
+               #state{dispatcher = Dispatcher,
+                      module = Module} = State) ->
+    #config_service_update{update_now = UpdateNow,
+                           queue_requests = false} = UpdatePlan,
+    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
+        {ok, NextServiceState} ->
+            UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
+            NextServiceState;
+        {error, _} = Error ->
+            UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
+            ServiceState
+    end,
+    process_queues(NewServiceState,
+                   State#state{update_plan = undefined}).
+
 process_queues(NewServiceState,
                #state{dispatcher = Dispatcher,
                       update_plan = UpdatePlan} = State)
     when is_record(UpdatePlan, config_service_update) ->
-    #config_service_update{update_pending = MonitorPid} = UpdatePlan,
+    #config_service_update{update_pending = UpdatePending,
+                           update_now = UpdateNow} = UpdatePlan,
     NewUpdatePlan = if
-        is_pid(MonitorPid) ->
-            MonitorPid ! {'cloudi_service_update', Dispatcher},
-            UpdatePlan#config_service_update{update_pending = undefined};
-        MonitorPid =:= undefined ->
-            UpdatePlan
+        is_pid(UpdatePending) ->
+            UpdatePending ! {'cloudi_service_update', Dispatcher},
+            UpdatePlan#config_service_update{update_pending = undefined,
+                                             queue_requests = false};
+        UpdatePending =:= undefined ->
+            UpdatePlan#config_service_update{queue_requests = false}
     end,
-    State#state{update_plan = NewUpdatePlan,
-                service_state = NewServiceState};
+    if
+        is_pid(UpdateNow) ->
+            process_update(NewUpdatePlan, NewServiceState, State);
+        UpdateNow =:= undefined ->
+            State#state{update_plan = NewUpdatePlan,
+                        service_state = NewServiceState}
+    end;
 process_queues(NewServiceState, State) ->
     % info messages should be processed before service requests
     NewState = process_queue_info(NewServiceState, State),
@@ -3839,37 +3861,33 @@ duo_handle_info('cloudi_rate_request_max_rate',
      State#state_duo{options = ConfigOptions#config_service_options{
                          rate_request_max = NewRateRequest}}};
 
-duo_handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
+duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                 #state_duo{duo_mode_pid = DuoModePid,
                            update_plan = undefined,
                            queue_requests = QueueRequests} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
     NewUpdatePlan = if
         Sync =:= true, QueueRequests =:= true ->
-            UpdatePlan#config_service_update{update_pending = MonitorPid};
+            UpdatePlan#config_service_update{update_pending = UpdatePending,
+                                             queue_requests = QueueRequests};
         true ->
-            MonitorPid ! {'cloudi_service_update', DuoModePid},
-            UpdatePlan
+            UpdatePending ! {'cloudi_service_update', DuoModePid},
+            UpdatePlan#config_service_update{queue_requests = QueueRequests}
     end,
     {noreply, State#state_duo{update_plan = NewUpdatePlan,
                               queue_requests = true}};
 
-duo_handle_info({'cloudi_service_update_now', MonitorPid},
-                #state_duo{duo_mode_pid = DuoModePid,
-                           update_plan = UpdatePlan,
-                           module = Module,
+duo_handle_info({'cloudi_service_update_now', UpdateNow},
+                #state_duo{update_plan = UpdatePlan,
                            service_state = ServiceState} = State) ->
-    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
-        {ok, NextServiceState} ->
-            MonitorPid ! {'cloudi_service_update_now', DuoModePid, ok},
-            NextServiceState;
-        {error, _} = Error ->
-            MonitorPid ! {'cloudi_service_update_now', DuoModePid, Error},
-            ServiceState
-    end,
-    {noreply,
-     duo_process_queues(NewServiceState,
-                        State#state_duo{update_plan = undefined})};
+    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    NewUpdatePlan = UpdatePlan#config_service_update{update_now = UpdateNow},
+    if
+        QueueRequests =:= true ->
+            {noreply, State#state_duo{update_plan = NewUpdatePlan}};
+        QueueRequests =:= false ->
+            {noreply, duo_process_update(NewUpdatePlan, ServiceState, State)}
+    end;
 
 duo_handle_info({system, From, Msg},
                 #state_duo{dispatcher = Dispatcher} = State) ->
@@ -4025,20 +4043,43 @@ duo_process_queue(NewServiceState,
                 options = NewConfigOptions}
     end.
 
+duo_process_update(UpdatePlan, ServiceState,
+                   #state_duo{duo_mode_pid = DuoModePid,
+                              module = Module} = State) ->
+    #config_service_update{update_now = UpdateNow,
+                           queue_requests = false} = UpdatePlan,
+    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
+        {ok, NextServiceState} ->
+            UpdateNow ! {'cloudi_service_update_now', DuoModePid, ok},
+            NextServiceState;
+        {error, _} = Error ->
+            UpdateNow ! {'cloudi_service_update_now', DuoModePid, Error},
+            ServiceState
+    end,
+    duo_process_queues(NewServiceState,
+                       State#state_duo{update_plan = undefined}).
+
 duo_process_queues(NewServiceState,
                    #state_duo{duo_mode_pid = DuoModePid,
                               update_plan = UpdatePlan} = State)
     when is_record(UpdatePlan, config_service_update) ->
-    #config_service_update{update_pending = MonitorPid} = UpdatePlan,
+    #config_service_update{update_pending = UpdatePending,
+                           update_now = UpdateNow} = UpdatePlan,
     NewUpdatePlan = if
-        is_pid(MonitorPid) ->
-            MonitorPid ! {'cloudi_service_update', DuoModePid},
-            UpdatePlan#config_service_update{update_pending = undefined};
-        MonitorPid =:= undefined ->
-            UpdatePlan
+        is_pid(UpdatePending) ->
+            UpdatePending ! {'cloudi_service_update', DuoModePid},
+            UpdatePlan#config_service_update{update_pending = undefined,
+                                             queue_requests = false};
+        UpdatePending =:= undefined ->
+            UpdatePlan#config_service_update{queue_requests = false}
     end,
-    State#state_duo{update_plan = NewUpdatePlan,
-                    service_state = NewServiceState};
+    if
+        is_pid(UpdateNow) ->
+            duo_process_update(NewUpdatePlan, NewServiceState, State);
+        UpdateNow =:= undefined ->
+            State#state_duo{update_plan = NewUpdatePlan,
+                            service_state = NewServiceState}
+    end;
 duo_process_queues(NewServiceState, State) ->
     % info messages should be processed before service requests
     NewState = duo_process_queue_info(NewServiceState, State),

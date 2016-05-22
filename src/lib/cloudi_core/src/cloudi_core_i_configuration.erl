@@ -3650,12 +3650,6 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_type_invalid,
                      Type}};
         [_, Module, ModuleState,
-         Sync, _, _, _, _]
-        when Module =/= undefined, ModuleState =/= undefined,
-             Sync =:= false ->
-            {error, {service_update_sync_invalid,
-                     module_state}};
-        [_, Module, ModuleState,
          _, ModulesLoad, ModulesUnload, _, _]
         when Module =/= undefined, ModuleState =:= undefined,
              ModulesLoad == [], ModulesUnload == [] ->

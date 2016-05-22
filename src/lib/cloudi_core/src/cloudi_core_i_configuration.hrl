@@ -446,14 +446,16 @@
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
         % is the service busy handling a service request?
-        % (If the service is blocking on a response from its own service
-        %  (a separate process or thread of the service),
-        %  it is likely that an update will cause service requests to fail
-        %  after the blocking operation's timeout period elapses.
-        %  This does not prevent the update from occurring, but it may
-        %  cause an extreme delay with the update.)
+        % (when sync == true)
         update_pending = undefined
-            :: undefined | pid()
+            :: undefined | pid(),
+        % should the update occur now
+        % (when sync == false)
+        update_now = undefined
+            :: undefined | pid(),
+        % is a service request currently being handled?
+        queue_requests = undefined
+            :: undefined | boolean()
     }).
 
 -record(config_nodes_discovery,

@@ -10,7 +10,7 @@
     * Fix services_update error when a process is handling a service request
     * Finalize services_update return value
     * Add sync configuration option for services_update
-      (can only be false for internal services if module_state is not set)
+    * Fix services_update when using sync == false with module_state assigned
 
 2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
