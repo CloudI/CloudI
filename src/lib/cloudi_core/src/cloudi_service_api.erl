@@ -464,6 +464,7 @@
     nonempty_list({type, internal} |
                   {module, atom()} |
                   {module_state, undefined | module_state_internal()} |
+                  {sync, boolean()} |
                   {modules_load, list(atom())} |
                   {modules_unload, list(atom())} |
                   {code_paths_add, list(string())} |
@@ -473,7 +474,6 @@
 %                  {file_path, string()} |
 %                  {args, string()} |
 %                  {env, list(string(), string())} |
-%                  {update_sync, boolean()} |
 %                  {modules_load, list(atom())} |
 %                  {modules_unload, list(atom())} |
 %                  {code_paths_add, list(string())} |

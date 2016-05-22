@@ -1772,10 +1772,11 @@ handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
                    update_plan = undefined,
                    queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
+    #config_service_update{sync = Sync} = UpdatePlan,
     NewUpdatePlan = if
-        QueueRequests =:= true ->
+        Sync =:= true, QueueRequests =:= true ->
             UpdatePlan#config_service_update{update_pending = MonitorPid};
-        QueueRequests =:= false ->
+        true ->
             MonitorPid ! {'cloudi_service_update', Dispatcher},
             UpdatePlan
     end,
@@ -3842,10 +3843,11 @@ duo_handle_info({'cloudi_service_update', MonitorPid, UpdatePlan},
                 #state_duo{duo_mode_pid = DuoModePid,
                            update_plan = undefined,
                            queue_requests = QueueRequests} = State) ->
+    #config_service_update{sync = Sync} = UpdatePlan,
     NewUpdatePlan = if
-        QueueRequests =:= true ->
+        Sync =:= true, QueueRequests =:= true ->
             UpdatePlan#config_service_update{update_pending = MonitorPid};
-        QueueRequests =:= false ->
+        true ->
             MonitorPid ! {'cloudi_service_update', DuoModePid},
             UpdatePlan
     end,

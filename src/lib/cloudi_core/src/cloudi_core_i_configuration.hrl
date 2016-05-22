@@ -417,6 +417,11 @@
                     NewModuleVerson :: cloudi_service_api:module_version(),
                     OldState :: any()) ->
                    {ok, NewState :: any()} | {error, Reason :: any()} | any()),
+        % should the update be done synchronously among all service processes
+        % (i.e., should the update operation be coordinated to not occur
+        %  while a service request is being handled)
+        sync = true
+            :: boolean(),
         % additional modules to load before module_state is called, if provided
         modules_load = []
             :: list(atom()),
@@ -441,6 +446,12 @@
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
         % is the service busy handling a service request?
+        % (If the service is blocking on a response from its own service
+        %  (a separate process or thread of the service),
+        %  it is likely that an update will cause service requests to fail
+        %  after the blocking operation's timeout period elapses.
+        %  This does not prevent the update from occurring, but it may
+        %  cause an extreme delay with the update.)
         update_pending = undefined
             :: undefined | pid()
     }).

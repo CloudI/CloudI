@@ -166,6 +166,7 @@
      service_update_type_invalid |
      service_update_module_invalid |
      service_update_module_state_invalid |
+     service_update_sync_invalid |
      service_update_modules_load_invalid |
      service_update_modules_unload_invalid |
      service_update_code_paths_add_invalid |
@@ -3582,6 +3583,8 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.module},
         {module_state,
          UpdatePlan#config_service_update.module_state},
+        {sync,
+         UpdatePlan#config_service_update.sync},
         {modules_load,
          UpdatePlan#config_service_update.modules_load},
         {modules_unload,
@@ -3592,63 +3595,74 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.code_paths_remove}],
     case cloudi_proplists:take_values(Defaults, Plan) of
         [Type, _, _,
-         _, _, _, _]
+         _, _, _, _, _]
         when not ((Type =:= undefined) orelse
                   (Type =:= internal) orelse (Type =:= external)) ->
             {error, {service_update_type_invalid,
                      Type}};
         [_, Module, _,
-         _, _, _, _]
+         _, _, _, _, _]
         when not is_atom(Module) ->
             {error, {service_update_module_invalid,
                      Module}};
         [_, _, ModuleState,
-         _, _, _, _]
+         _, _, _, _, _]
         when not ((ModuleState =:= undefined) orelse
                   is_tuple(ModuleState) orelse
                   is_function(ModuleState, 3)) ->
             {error, {service_update_module_state_invalid,
                      ModuleState}};
         [_, _, _,
-         ModulesLoad, _, _, _]
+         Sync, _, _, _, _]
+        when not is_boolean(Sync) ->
+            {error, {service_update_sync_invalid,
+                     Sync}};
+        [_, _, _,
+         _, ModulesLoad, _, _, _]
         when not (is_list(ModulesLoad) andalso
                   is_atom(hd(ModulesLoad))) ->
             {error, {service_update_modules_load_invalid,
                      ModulesLoad}};
         [_, _, _,
-         _, ModulesUnload, _, _]
+         _, _, ModulesUnload, _, _]
         when not (is_list(ModulesUnload) andalso
                   is_atom(hd(ModulesUnload))) ->
             {error, {service_update_modules_unload_invalid,
                      ModulesUnload}};
         [_, _, _,
-         _, _, CodePathsAdd, _]
+         _, _, _, CodePathsAdd, _]
         when not (is_list(CodePathsAdd) andalso
                   is_list(hd(CodePathsAdd)) andalso
                   is_integer(hd(hd(CodePathsAdd)))) ->
             {error, {service_update_code_paths_add_invalid,
                      CodePathsAdd}};
         [_, _, _,
-         _, _, _, CodePathsRemove]
+         _, _, _, _, CodePathsRemove]
         when not (is_list(CodePathsRemove) andalso
                   is_list(hd(CodePathsRemove)) andalso
                   is_integer(hd(hd(CodePathsRemove)))) ->
             {error, {service_update_code_paths_remove_invalid,
                      CodePathsRemove}};
         [Type, Module, _,
-         _, _, _, _]
+         _, _, _, _, _]
         when not (((Type =:= undefined) orelse (Type =:= internal)) andalso
                   (Module =/= undefined)) ->
             {error, {service_update_type_invalid,
                      Type}};
         [_, Module, ModuleState,
-         ModulesLoad, ModulesUnload, _, _]
+         Sync, _, _, _, _]
+        when Module =/= undefined, ModuleState =/= undefined,
+             Sync =:= false ->
+            {error, {service_update_sync_invalid,
+                     module_state}};
+        [_, Module, ModuleState,
+         _, ModulesLoad, ModulesUnload, _, _]
         when Module =/= undefined, ModuleState =:= undefined,
              ModulesLoad == [], ModulesUnload == [] ->
             {error, {service_update_invalid,
                      no_update}};
         [_, Module, ModuleState,
-         ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
+         Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
         when Module =/= undefined ->
             ModuleIDs = lists:foldr(fun(S, IDs) ->
                 if
@@ -3678,6 +3692,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                                      type = internal,
                                      module = Module,
                                      module_state = NewModuleState,
+                                     sync = Sync,
                                      modules_load = ModulesLoad,
                                      modules_unload = ModulesUnload,
                                      code_paths_add = CodePathsAdd,
@@ -3694,7 +3709,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                     {error, {update_invalid, ID}}
             end;
         [_, _, _,
-         _, _, _, _ | Invalid] ->
+         _, _, _, _, _ | Invalid] ->
             {error, {service_update_invalid,
                      Invalid}}
     end;
