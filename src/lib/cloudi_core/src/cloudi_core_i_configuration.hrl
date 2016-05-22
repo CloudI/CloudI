@@ -446,11 +446,13 @@
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
         % is the service busy handling a service request?
-        % (when sync == true)
+        % (when sync == true, delay module loading until after
+        %  all service requests currently being handled are done)
         update_pending = undefined
             :: undefined | pid(),
         % should the update occur now
-        % (when sync == false)
+        % (when sync == false, delay the module_state update until after
+        %  a service request currently being handled is done in the process)
         update_now = undefined
             :: undefined | pid(),
         % is a service request currently being handled?
