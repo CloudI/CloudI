@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix aspect function validation
+    * Update key2value
+
 2016-05-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix services_update modules_unload

@@ -12,7 +12,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -68,7 +68,9 @@
          is_key2/2,
          new/0,
          new/1,
-         store/4]).
+         store/4,
+         update1/3,
+         update2/3]).
 
 -record(key2value,
     {
@@ -291,9 +293,48 @@ store(K1, K2, V,
     F2 = fun({L, _}) ->
         {lists:umerge(L, K1L), V}
     end,
-    State#key2value{module = Module,
-                    lookup1 = Module:update(K1, F1, {K2L, V}, Lookup1),
+    State#key2value{lookup1 = Module:update(K1, F1, {K2L, V}, Lookup1),
                     lookup2 = Module:update(K2, F2, {K1L, V}, Lookup2)}.
+
+-spec update1(K1 :: key1(),
+              F :: fun((value()) -> value()),
+              key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
+
+update1(K1, F,
+        #key2value{module = Module,
+                   lookup1 = Lookup1,
+                   lookup2 = Lookup2} = State)
+    when is_function(F, 1) ->
+    {ok, {K2L, _}} = Module:find(K1, Lookup1),
+    FN = fun({L, V}) ->
+        {L, F(V)}
+    end,
+    NewLookup2 = lists:foldl(fun(K2, NextLookup2) ->
+        Module:update(K2, FN, NextLookup2)
+    end, Lookup2, K2L),
+    State#key2value{lookup1 = Module:update(K1, FN, Lookup1),
+                    lookup2 = NewLookup2}.
+
+-spec update2(K2 :: key2(),
+              F :: fun((value()) -> value()),
+              key2value(key1(), key2(), value())) ->
+    key2value(key1(), key2(), value()).
+
+update2(K2, F,
+        #key2value{module = Module,
+                   lookup1 = Lookup1,
+                   lookup2 = Lookup2} = State)
+    when is_function(F, 1) ->
+    {ok, {K1L, _}} = Module:find(K2, Lookup2),
+    FN = fun({L, V}) ->
+        {L, F(V)}
+    end,
+    NewLookup1 = lists:foldl(fun(K1, NextLookup1) ->
+        Module:update(K1, FN, NextLookup1)
+    end, Lookup1, K1L),
+    State#key2value{lookup1 = NewLookup1,
+                    lookup2 = Module:update(K2, FN, Lookup2)}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

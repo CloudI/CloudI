@@ -405,9 +405,13 @@
 
         type = undefined
             :: undefined | internal | external,
+
+        % internal service update configuration
+
         % internal service module to update
         module = undefined
             :: atom(),
+        % internal service state update
         % equivalent to Module:code_change/3 with an Erlang/OTP behaviour
         % but with the addition of the new module version and without the
         % Extra variable (due to the function existing only for the upgrade).
@@ -417,6 +421,21 @@
                     NewModuleVerson :: cloudi_service_api:module_version(),
                     OldState :: any()) ->
                    {ok, NewState :: any()} | {error, Reason :: any()} | any()),
+
+        % external service update configuration
+
+        % external service executable to use after the update
+        file_path = undefined
+            :: undefined | file:filename(),
+        % external service executable command-line arguments for the update
+        args = undefined
+            :: undefined | string(),
+        % external service executable environment variables for the update
+        env = undefined
+            :: undefined | list({string(), string()}),
+
+        % common update configuration
+
         % should the update be done synchronously among all service processes
         % (i.e., should the update operation be coordinated to not occur
         %  while a service request is being handled)
@@ -438,11 +457,13 @@
         % service update plan state
 
         % service ids of affected services
-        % (internal services must have all usage of a module represented in
-        %  this list)
-        uuids = undefined
-            :: undefined | list(cloudi_service_api:service_id()),
+        % (internal services must have all usage of the
+        %  service module represented in this list while
+        %  external services always have a list of length 1)
+        uuids = []
+            :: list(cloudi_service_api:service_id()),
         % old module version passed to module_state function
+        % (internal services only)
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
         % is the service busy handling a service request?
@@ -455,6 +476,10 @@
         %  a service request currently being handled is done in the process)
         update_now = undefined
             :: undefined | pid(),
+        % can the update start as anticipated?
+        % (false if processes died during the update attempt)
+        update_start = true
+            :: boolean(),
         % is a service request currently being handled?
         queue_requests = undefined
             :: undefined | boolean()

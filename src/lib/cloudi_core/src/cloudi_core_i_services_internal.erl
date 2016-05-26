@@ -1784,12 +1784,14 @@ handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
     hibernate_check({noreply, State#state{update_plan = NewUpdatePlan,
                                           queue_requests = true}});
 
-handle_info({'cloudi_service_update_now', UpdateNow},
+handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
             #state{update_plan = UpdatePlan,
                    service_state = ServiceState,
                    duo_mode_pid = undefined} = State) ->
     #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
-    NewUpdatePlan = UpdatePlan#config_service_update{update_now = UpdateNow},
+    NewUpdatePlan = UpdatePlan#config_service_update{
+                        update_now = UpdateNow,
+                        update_start = UpdateStart},
     if
         QueueRequests =:= true ->
             hibernate_check({noreply,
@@ -3877,11 +3879,13 @@ duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
     {noreply, State#state_duo{update_plan = NewUpdatePlan,
                               queue_requests = true}};
 
-duo_handle_info({'cloudi_service_update_now', UpdateNow},
+duo_handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
                 #state_duo{update_plan = UpdatePlan,
                            service_state = ServiceState} = State) ->
     #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
-    NewUpdatePlan = UpdatePlan#config_service_update{update_now = UpdateNow},
+    NewUpdatePlan = UpdatePlan#config_service_update{
+                        update_now = UpdateNow,
+                        update_start = UpdateStart},
     if
         QueueRequests =:= true ->
             {noreply, State#state_duo{update_plan = NewUpdatePlan}};
@@ -4210,6 +4214,8 @@ update(_, #config_service_update{type = Type}, _)
 update(_, #config_service_update{module = Module}, ModuleNow)
     when Module =/= ModuleNow ->
     {error, module};
+update(_, #config_service_update{update_start = false}, _) ->
+    {error, update_start_failed};
 update(ServiceState,
        #config_service_update{
            module_state = undefined}, _) ->

@@ -166,6 +166,9 @@
      service_update_type_invalid |
      service_update_module_invalid |
      service_update_module_state_invalid |
+     service_update_file_path_invalid |
+     service_update_args_invalid |
+     service_update_env_invalid |
      service_update_sync_invalid |
      service_update_modules_load_invalid |
      service_update_modules_unload_invalid |
@@ -3154,6 +3157,7 @@ services_validate_option_aspects_f([{M, F} = Entry | AspectsOld], AspectsNew,
                         {module, _} ->
                             V = erlang:function_exported(M, F, Arity),
                             true = code:delete(M),
+                            false = code:purge(M),
                             V;
                         {error, _} ->
                             false
@@ -3196,6 +3200,7 @@ services_validate_option_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
                                     {false, undefined}
                             end,
                             true = code:delete(M),
+                            false = code:purge(M),
                             V;
                         {error, _} ->
                             {false, undefined}
@@ -3581,6 +3586,12 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.module},
         {module_state,
          UpdatePlan#config_service_update.module_state},
+        {file_path,
+         UpdatePlan#config_service_update.file_path},
+        {args,
+         UpdatePlan#config_service_update.args},
+        {env,
+         UpdatePlan#config_service_update.env},
         {sync,
          UpdatePlan#config_service_update.sync},
         {modules_load,
@@ -3593,41 +3604,79 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.code_paths_remove}],
     case cloudi_proplists:take_values(Defaults, Plan) of
         [Type, _, _,
+         _, _, _,
          _, _, _, _, _]
         when not ((Type =:= undefined) orelse
                   (Type =:= internal) orelse (Type =:= external)) ->
             {error, {service_update_type_invalid,
                      Type}};
-        [_, Module, _,
+        [Type, Module, _,
+         _, _, _,
          _, _, _, _, _]
-        when not is_atom(Module) ->
+        when not ((Module =:= undefined) orelse
+                  (((Type =:= undefined) orelse (Type =:= internal)) andalso
+                   is_atom(Module))) ->
             {error, {service_update_module_invalid,
                      Module}};
-        [_, _, ModuleState,
+        [Type, _, ModuleState,
+         _, _, _,
          _, _, _, _, _]
         when not ((ModuleState =:= undefined) orelse
-                  is_tuple(ModuleState) orelse
-                  is_function(ModuleState, 3)) ->
+                  (((Type =:= undefined) orelse (Type =:= internal)) andalso
+                   (is_tuple(ModuleState) orelse
+                    is_function(ModuleState, 3)))) ->
             {error, {service_update_module_state_invalid,
                      ModuleState}};
+        [Type, _, _,
+         FilePath, _, _,
+         _, _, _, _, _]
+        when not ((FilePath =:= undefined) orelse
+                  (((Type =:= undefined) orelse (Type =:= external)) andalso
+                   (is_list(FilePath) andalso
+                    (length(FilePath) > 0) andalso
+                    is_integer(hd(FilePath))))) ->
+            {error, {service_update_file_path_invalid,
+                     FilePath}};
+        [Type, _, _,
+         _, Args, _,
+         _, _, _, _, _]
+        when not ((Args =:= undefined) orelse
+                  (((Type =:= undefined) orelse (Type =:= external)) andalso
+                   (is_list(Args) andalso
+                    ((Args == "") orelse
+                     is_integer(hd(Args)))))) ->
+            {error, {service_update_args_invalid,
+                     Args}};
+        [Type, _, _,
+         _, _, Env,
+         _, _, _, _, _]
+        when not ((Env =:= undefined) orelse
+                  (((Type =:= undefined) orelse (Type =:= external)) andalso
+                   is_list(Env))) ->
+            {error, {service_update_env_invalid,
+                     Env}};
         [_, _, _,
+         _, _, _,
          Sync, _, _, _, _]
         when not is_boolean(Sync) ->
             {error, {service_update_sync_invalid,
                      Sync}};
         [_, _, _,
+         _, _, _,
          _, ModulesLoad, _, _, _]
         when not (is_list(ModulesLoad) andalso
                   is_atom(hd(ModulesLoad))) ->
             {error, {service_update_modules_load_invalid,
                      ModulesLoad}};
         [_, _, _,
+         _, _, _,
          _, _, ModulesUnload, _, _]
         when not (is_list(ModulesUnload) andalso
                   is_atom(hd(ModulesUnload))) ->
             {error, {service_update_modules_unload_invalid,
                      ModulesUnload}};
         [_, _, _,
+         _, _, _,
          _, _, _, CodePathsAdd, _]
         when not (is_list(CodePathsAdd) andalso
                   is_list(hd(CodePathsAdd)) andalso
@@ -3635,6 +3684,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_code_paths_add_invalid,
                      CodePathsAdd}};
         [_, _, _,
+         _, _, _,
          _, _, _, _, CodePathsRemove]
         when not (is_list(CodePathsRemove) andalso
                   is_list(hd(CodePathsRemove)) andalso
@@ -3642,18 +3692,33 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_code_paths_remove_invalid,
                      CodePathsRemove}};
         [Type, Module, _,
+         FilePath, _, _,
          _, _, _, _, _]
-        when not (((Type =:= undefined) orelse (Type =:= internal)) andalso
-                  (Module =/= undefined)) ->
+        when not ((((Type =:= undefined) orelse (Type =:= internal)) andalso
+                   (Module =/= undefined)) orelse
+                  (((Type =:= undefined) orelse (Type =:= external)) andalso
+                   (FilePath =/= undefined))) ->
+            {error, {service_update_type_invalid,
+                     Type}};
+        [Type, Module, ModuleState,
+         FilePath, Args, Env,
+         _, _, _, _, _]
+        when ((Module =/= undefined) orelse
+              (ModuleState =/= undefined)) andalso
+             ((FilePath =/= undefined) orelse
+              (Args =/= undefined) orelse
+              (Env =/= undefined)) ->
             {error, {service_update_type_invalid,
                      Type}};
         [_, Module, ModuleState,
+         _, _, _,
          _, ModulesLoad, ModulesUnload, _, _]
         when Module =/= undefined, ModuleState =:= undefined,
              ModulesLoad == [], ModulesUnload == [] ->
             {error, {service_update_invalid,
                      no_update}};
         [_, Module, ModuleState,
+         _, _, _,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
         when Module =/= undefined ->
             ModuleIDs = lists:foldr(fun(S, IDs) ->
@@ -3701,31 +3766,49 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                     {error, {update_invalid, ID}}
             end;
         [_, _, _,
+         FilePath, Args, Env,
+         Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
+        when FilePath =/= undefined ->
+            UpdateValid = if
+                ID == <<>> ->
+                    false;
+                true ->
+                    case lists:keyfind(ID, #config_service_external.uuid,
+                                       Services) of
+                        #config_service_external{} ->
+                            true;
+                        false ->
+                            false
+                    end
+            end,
+            if
+                UpdateValid =:= true ->
+                    NewUpdatePlans =
+                        [UpdatePlan#config_service_update{
+                             type = external,
+                             file_path = FilePath,
+                             args = Args,
+                             env = Env,
+                             sync = Sync,
+                             modules_load = ModulesLoad,
+                             modules_unload = ModulesUnload,
+                             code_paths_add = CodePathsAdd,
+                             code_paths_remove = CodePathsRemove,
+                             uuids = [ID]} |
+                         UpdatePlans],
+                    services_update_plan(L, NewUpdatePlans,
+                                         Services, Timeout);
+                UpdateValid =:= false ->
+                    {error, {update_invalid, ID}}
+            end;
+        [_, _, _,
+         _, _, _,
          _, _, _, _, _ | Invalid] ->
             {error, {service_update_invalid,
                      Invalid}}
     end;
 services_update_plan([{ID, _} | _], _, _, _) ->
     {error, {update_invalid, ID}}.
-
-services_update_all(UpdatePlans, Services, Timeout) ->
-    services_update_all(UpdatePlans, [], Services, Timeout).
-
-services_update_all([], ServiceIdLists, Services, _) ->
-    {ok, {ok, lists:reverse(ServiceIdLists)}, Services};
-services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
-                    Services, Timeout) ->
-    case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
-        {ok, ServiceIdList} ->
-            % XXX modify Services as required
-            services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
-                                Services, Timeout);
-        {error, ServiceIdList, Reason} ->
-            Error = {error,
-                     {ServiceIdList, Reason},
-                     lists:reverse(ServiceIdLists)},
-            {ok, Error, Services}
-    end.
 
 services_update_plan_module_state(undefined) ->
     {ok, undefined};
@@ -3757,6 +3840,60 @@ services_update_plan_module_state({{M, F}} = ModuleState) ->
 services_update_plan_module_state(ModuleState) ->
     {error, {service_update_module_state_invalid,
              ModuleState}}.
+
+services_update_all(UpdatePlans, Services, Timeout) ->
+    services_update_all(UpdatePlans, [], Services, Timeout).
+
+services_update_all([], ServiceIdLists, Services, _) ->
+    {ok, {ok, lists:reverse(ServiceIdLists)}, Services};
+services_update_all([UpdatePlan | UpdatePlans], ServiceIdLists,
+                    Services, Timeout) ->
+    case cloudi_core_i_configurator:service_update(UpdatePlan, Timeout) of
+        {ok, ServiceIdList} ->
+            NewServices = service_update_done(ServiceIdList,
+                                              UpdatePlan,
+                                              Services),
+            services_update_all(UpdatePlans, [ServiceIdList | ServiceIdLists],
+                                NewServices, Timeout);
+        {error, ServiceIdList, Reason} ->
+            Error = {error,
+                     {ServiceIdList, Reason},
+                     lists:reverse(ServiceIdLists)},
+            {ok, Error, Services}
+    end.
+
+service_update_done(_, #config_service_update{type = internal}, Services) ->
+    Services;
+service_update_done([ID],
+                    #config_service_update{
+                        type = external,
+                        file_path = FilePath,
+                        args = Args,
+                        env = Env}, Services) ->
+    #config_service_external{} = Service0 =
+        lists:keyfind(ID, #config_service_external.uuid, Services),
+    Service1 = if
+        is_list(FilePath) ->
+            Service0#config_service_external{
+                file_path = FilePath};
+        FilePath =:= undefined ->
+            Service0
+    end,
+    Service2 = if
+        is_list(Args) ->
+            Service1#config_service_external{
+                args = Args};
+        Args =:= undefined ->
+            Service1
+    end,
+    ServiceN = if
+        is_list(Env) ->
+            Service2#config_service_external{
+                env = Env};
+        Env =:= undefined ->
+            Service2
+    end,
+    lists:keystore(ID, #config_service_external.uuid, Services, ServiceN).
 
 service_name_valid(Name, ErrorReason) ->
     try cloudi_x_trie:is_pattern(Name) of

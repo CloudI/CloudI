@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -55,7 +55,8 @@
          environment_transform/1,
          environment_transform/2,
          start_internal/15,
-         start_external/18]).
+         start_external/18,
+         update_external_f/4]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -253,6 +254,35 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
         {error, _} = Error ->
             Error
     end.
+
+update_external_f(NewFilename, NewArguments, NewEnvironment,
+                  [ProcessIndex, ProcessCount, ThreadsPerProcess,
+                   OldFilename, OldArguments, OldEnvironment,
+                   Protocol, BufferSize, Timeout, Prefix,
+                   TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+                   DestDenyList, DestAllowList, ConfigOptions, ID]) ->
+    [ProcessIndex, ProcessCount, ThreadsPerProcess,
+     if
+        is_list(NewFilename) ->
+            NewFilename;
+        NewFilename =:= undefined ->
+            OldFilename
+     end,
+     if
+        is_list(NewArguments) ->
+            NewArguments;
+        NewArguments =:= undefined ->
+            OldArguments
+     end,
+     if
+        is_list(NewEnvironment) ->
+            NewEnvironment;
+        NewEnvironment =:= undefined ->
+            OldEnvironment
+     end,
+     Protocol, BufferSize, Timeout, Prefix,
+     TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+     DestDenyList, DestAllowList, ConfigOptions, ID].
 
 %%%------------------------------------------------------------------------
 %%% Private functions

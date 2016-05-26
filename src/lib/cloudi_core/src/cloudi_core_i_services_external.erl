@@ -95,7 +95,7 @@
         % state record fields common for cloudi_core_i_services_common.hrl:
 
         % self() value cached
-        dispatcher = undefined :: undefined | pid(),
+        dispatcher :: pid(),
         % timeout enforcement for any outgoing service requests
         send_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(),
@@ -134,11 +134,11 @@
         % queued size in bytes
         queued_size = 0 :: non_neg_integer(),
         % erlang:system_info(wordsize) cached
-        queued_word_size = undefined :: undefined | pos_integer(),
+        queued_word_size :: pos_integer(),
         % external thread connection protocol
-        protocol :: tcp | udp | local,
+        protocol = undefined :: undefined | tcp | udp | local,
         % external thread connection port
-        port :: inet:port_number(),
+        port = undefined :: undefined | inet:port_number(),
         % wait for cloudi_core_i_services_monitor to send initialize when
         % all of the service instance processes have been spawned
         initialize = false :: boolean(),
@@ -151,7 +151,7 @@
         % local socket filesystem path
         socket_path = undefined :: undefined | string(),
         % common socket options
-        socket_options :: list(),
+        socket_options = undefined :: undefined | list(),
         % data socket
         socket = undefined,
         % service state for executing aspect functions
@@ -160,52 +160,64 @@
         % pending aspects_request_after
         aspects_request_after_f = undefined,
         % 0-based index of the Erlang process in all service instance processes
-        process_index = undefined :: undefined | non_neg_integer(),
+        process_index :: non_neg_integer(),
         % current count of all Erlang processes for the service instance
-        process_count = undefined :: undefined | pos_integer(),
+        process_count :: pos_integer(),
         % command line of OS execve
-        command_line = undefined,
+        command_line :: list(string()),
         % subscribe/unsubscribe name prefix set in service configuration
-        prefix = undefined :: undefined | cloudi:service_name_pattern(),
+        prefix :: cloudi:service_name_pattern(),
         % pre-poll() timeout in the external service thread
-        timeout_init = undefined :: undefined |
-                                    cloudi_service_api:timeout_milliseconds(),
+        timeout_init :: cloudi_service_api:timeout_milliseconds(),
         % default timeout for send_async set in service configuration
-        timeout_async = undefined :: undefined |
-                                     cloudi_service_api:timeout_milliseconds(),
+        timeout_async :: cloudi_service_api:timeout_milliseconds(),
         % default timeout for send_sync set in service configuration
-        timeout_sync = undefined :: undefined |
-                                    cloudi_service_api:timeout_milliseconds(),
+        timeout_sync :: cloudi_service_api:timeout_milliseconds(),
         % post-poll() timeout in the external service thread
-        timeout_term = undefined :: undefined |
-                                    cloudi_service_api:timeout_milliseconds(),
+        timeout_term :: cloudi_service_api:timeout_milliseconds(),
         % OS process pid for SIGKILL
         os_pid = undefined :: undefined | pos_integer(),
         % udp keepalive succeeded
         keepalive = undefined :: undefined | received,
         % init timeout handler
-        init_timer = undefined :: undefined | reference(),
+        init_timer :: undefined | reference(),
         % transaction id (UUIDv1) generator
-        uuid_generator = undefined :: undefined | cloudi_x_uuid:state(),
+        uuid_generator :: cloudi_x_uuid:state(),
         % how service destination lookups occur for a service request send
-        dest_refresh = undefined :: undefined |
-                                    cloudi_service_api:dest_refresh(),
+        dest_refresh :: cloudi_service_api:dest_refresh(),
         % cached cpg data for lazy destination refresh methods
-        cpg_data = undefined
+        cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for denied destinations
-        dest_deny = undefined
+        dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
         % ACL lookup for allowed destinations
-        dest_allow = undefined
+        dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
         % service configuration options
-        options = undefined
-            :: undefined | #config_service_options{} |
+        options
+            :: #config_service_options{} |
                cloudi_service_api:service_options_external()
+    }).
+
+-record(state_socket,
+    {
+        % write/read fields
+        protocol :: tcp | udp | local,
+        port :: inet:port_number(),
+        listener = undefined,
+        acceptor = undefined,
+        socket_path = undefined :: undefined | string(),
+        socket_options :: list(),
+        socket = undefined,
+        % read-only fields
+        incoming_port = undefined :: undefined | inet:port_number(),
+        timeout_term = undefined :: undefined |
+                                    cloudi_service_api:timeout_milliseconds(),
+        os_pid = undefined :: undefined | pos_integer()
     }).
 
 -include("cloudi_core_i_services_common.hrl").
@@ -301,7 +313,7 @@ init([Protocol, SocketPath,
     InitTimer = erlang:send_after(Timeout, Dispatcher,
                                   'cloudi_service_init_timeout'),
     case socket_open(Protocol, SocketPath, ThreadIndex, BufferSize) of
-        {ok, State} ->
+        {ok, StateSocket} ->
             cloudi_x_quickrand:seed(),
             WordSize = erlang:system_info(wordsize),
             NewConfigOptions =
@@ -334,24 +346,25 @@ init([Protocol, SocketPath,
             process_flag(trap_exit, true),
             destination_refresh_first(DestRefresh, Dispatcher,
                                       NewConfigOptions),
+            State = #state{dispatcher = Dispatcher,
+                           queued_word_size = WordSize,
+                           process_index = ProcessIndex,
+                           process_count = ProcessCount,
+                           command_line = CommandLine,
+                           prefix = Prefix,
+                           timeout_init = Timeout,
+                           timeout_async = TimeoutAsync,
+                           timeout_sync = TimeoutSync,
+                           timeout_term = TimeoutTerm,
+                           init_timer = InitTimer,
+                           uuid_generator = UUID,
+                           dest_refresh = DestRefresh,
+                           cpg_data = Groups,
+                           dest_deny = DestDeny,
+                           dest_allow = DestAllow,
+                           options = NewConfigOptions},
             {ok, 'CONNECT',
-             State#state{dispatcher = Dispatcher,
-                         queued_word_size = WordSize,
-                         process_index = ProcessIndex,
-                         process_count = ProcessCount,
-                         command_line = CommandLine,
-                         prefix = Prefix,
-                         timeout_init = Timeout,
-                         timeout_async = TimeoutAsync,
-                         timeout_sync = TimeoutSync,
-                         timeout_term = TimeoutTerm,
-                         init_timer = InitTimer,
-                         uuid_generator = UUID,
-                         dest_refresh = DestRefresh,
-                         cpg_data = Groups,
-                         dest_deny = DestDeny,
-                         dest_allow = DestAllow,
-                         options = NewConfigOptions}};
+             socket_data_to_state(StateSocket, State)};
         {error, Reason} ->
             {stop, Reason}
     end.
@@ -441,8 +454,8 @@ init([Protocol, SocketPath,
             ok = cloudi_core_i_configurator:
                  service_initialized_process(Dispatcher),
             {next_state, 'HANDLE',
-             process_queue(State#state{service_state = NewServiceState,
-                                       init_timer = undefined})};
+             process_queues(State#state{service_state = NewServiceState,
+                                        init_timer = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
@@ -614,8 +627,8 @@ init([Protocol, SocketPath,
                     ok
             end,
             {next_state, 'HANDLE',
-             process_queue(State#state{service_state = NewServiceState,
-                                       aspects_request_after_f = undefined})};
+             process_queues(State#state{service_state = NewServiceState,
+                                        aspects_request_after_f = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
@@ -687,8 +700,8 @@ init([Protocol, SocketPath,
                     ok
             end,
             {next_state, 'HANDLE',
-             process_queue(State#state{service_state = NewServiceState,
-                                       aspects_request_after_f = undefined})};
+             process_queues(State#state{service_state = NewServiceState,
+                                        aspects_request_after_f = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
@@ -741,8 +754,8 @@ init([Protocol, SocketPath,
                               NewTimeout, TransId, Source}
             end,
             {next_state, 'HANDLE',
-             process_queue(State#state{service_state = NewServiceState,
-                                       aspects_request_after_f = undefined})};
+             process_queues(State#state{service_state = NewServiceState,
+                                        aspects_request_after_f = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
@@ -1229,24 +1242,18 @@ handle_info({'cloudi_service_recv_async_timeout', TransId}, StateName,
     {next_state, StateName,
      State#state{async_responses = ?MAP_ERASE(TransId, AsyncResponses)}};
 
+handle_info({udp, Socket, _, Port, _} = UDP, StateName,
+            #state{protocol = udp,
+                   incoming_port = undefined,
+                   socket = Socket} = State) ->
+    handle_info(UDP, StateName, State#state{incoming_port = Port});
+
 handle_info({udp, Socket, _, Port, Data}, StateName,
             #state{protocol = udp,
                    incoming_port = Port,
                    socket = Socket} = State) ->
     inet:setopts(Socket, [{active, once}]),
     try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]), State)
-    catch
-        error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
-            {stop, {error, protocol}, State}
-    end;
-
-handle_info({udp, Socket, _, Port, Data}, StateName,
-            #state{protocol = udp,
-                   socket = Socket} = State) ->
-    inet:setopts(Socket, [{active, once}]),
-    try ?MODULE:StateName(erlang:binary_to_term(Data, [safe]),
-                          State#state{incoming_port = Port})
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
@@ -1303,28 +1310,11 @@ handle_info({tcp_error, Socket, Reason}, _,
     when Protocol =:= tcp; Protocol =:= local ->
     {stop, Reason, State};
 
-handle_info({inet_async, Listener, Acceptor, {ok, Socket}}, StateName,
-            #state{protocol = tcp,
-                   listener = Listener,
-                   acceptor = Acceptor,
-                   socket_options = SocketOptions} = State) ->
-    true = inet_db:register_socket(Socket, inet_tcp),
-    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
-    {next_state, StateName, State#state{listener = undefined,
-                                        acceptor = undefined,
-                                        socket = Socket}};
-
-handle_info({inet_async, undefined, undefined, {ok, FileDescriptor}}, StateName,
-            #state{protocol = local,
-                   socket_options = SocketOptions} = State) ->
-    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
-    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
-    ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
-                                          ReceiveBufferSize, SendBufferSize),
-    {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
-    ok = inet:setopts(Socket, [{active, once}]),
-    {next_state, StateName, State#state{socket = Socket}};
+handle_info({inet_async, _, _, {ok, _}} = Accept, StateName, State) ->
+    StateSocket = socket_data_from_state(State),
+    NewStateSocket = socket_accept(Accept, StateSocket),
+    {next_state, StateName,
+     socket_data_to_state(NewStateSocket, State)};
 
 handle_info({inet_async, Listener, Acceptor, Error}, StateName,
             #state{protocol = Protocol,
@@ -1345,13 +1335,6 @@ handle_info(initialize, StateName, State) ->
 
 handle_info('cloudi_service_init_timeout', _, State) ->
     {stop, timeout, State};
-
-handle_info({'EXIT', _, Reason}, _, State) ->
-    {stop, Reason, State};
-
-handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName, State) ->
-    {_, NewState} = send_timeout_dead(Pid, State),
-    {next_state, StateName, NewState};
 
 handle_info('cloudi_count_process_dynamic_rate', StateName,
             #state{dispatcher = Dispatcher,
@@ -1408,6 +1391,45 @@ handle_info('cloudi_rate_request_max_rate', StateName,
      State#state{options = ConfigOptions#config_service_options{
                      rate_request_max = NewRateRequest}}};
 
+handle_info({'EXIT', _, Reason}, _, State) ->
+    {stop, Reason, State};
+
+handle_info({'cloudi_service_update', UpdatePending, UpdatePlan}, StateName,
+            #state{dispatcher = Dispatcher,
+                   update_plan = undefined,
+                   queue_requests = QueueRequests} = State) ->
+    #config_service_update{sync = Sync} = UpdatePlan,
+    NewUpdatePlan = if
+        Sync =:= true, QueueRequests =:= true ->
+            UpdatePlan#config_service_update{update_pending = UpdatePending,
+                                             queue_requests = QueueRequests};
+        true ->
+            UpdatePending ! {'cloudi_service_update', Dispatcher},
+            UpdatePlan#config_service_update{queue_requests = QueueRequests}
+    end,
+    {next_state, StateName,
+     State#state{update_plan = NewUpdatePlan,
+                 queue_requests = true}};
+
+handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart}, StateName,
+            #state{update_plan = UpdatePlan} = State) ->
+    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    NewUpdatePlan = UpdatePlan#config_service_update{
+                        update_now = UpdateNow,
+                        update_start = UpdateStart},
+    if
+        QueueRequests =:= true ->
+            {next_state, StateName,
+             State#state{update_plan = NewUpdatePlan}};
+        QueueRequests =:= false ->
+            {next_state, StateName,
+             process_update(NewUpdatePlan, State)}
+    end;
+
+handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName, State) ->
+    {_, NewState} = send_timeout_dead(Pid, State),
+    {next_state, StateName, NewState};
+
 handle_info({ReplyRef, _}, StateName, State) when is_reference(ReplyRef) ->
     % gen_server:call/3 had a timeout exception that was caught but the
     % reply arrived later and must be discarded
@@ -1425,7 +1447,7 @@ terminate(Reason, _,
                      aspects_terminate_before = Aspects}} = State) ->
     _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher, Reason),
     {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
-    ok = socket_close(Reason, State),
+    ok = socket_close(Reason, socket_data_from_state(State)),
     ok.
 
 code_change(_, StateName, State, _) ->
@@ -1819,16 +1841,6 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
     <<?MESSAGE_SUBSCRIBE_COUNT:32/unsigned-integer-native,
       Count:32/unsigned-integer-native>>.
 
-send(Data, #state{protocol = Protocol,
-                  incoming_port = Port,
-                  socket = Socket}) when is_binary(Data) ->
-    if
-        Protocol =:= tcp; Protocol =:= local ->
-            gen_tcp:send(Socket, Data);
-        Protocol =:= udp ->
-            gen_udp:send(Socket, {127,0,0,1}, Port, Data)
-    end.
-
 recv_timeout_start(Timeout, Priority, TransId, Size, T,
                    #state{dispatcher = Dispatcher,
                           recv_timeouts = RecvTimeouts,
@@ -1972,63 +1984,157 @@ process_queue(#state{dispatcher = Dispatcher,
             end
     end.
 
+process_update(UpdatePlan,
+               #state{dispatcher = Dispatcher} = State) ->
+    #config_service_update{update_now = UpdateNow,
+                           queue_requests = false} = UpdatePlan,
+    NewState = case update(UpdatePlan, State) of
+        {ok, NextState} ->
+            UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
+            NextState;
+        {error, _} = Error ->
+            UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
+            State
+    end,
+    process_queues(NewState#state{update_plan = undefined}).
+
+process_queues(#state{dispatcher = Dispatcher,
+                      update_plan = UpdatePlan} = State)
+    when is_record(UpdatePlan, config_service_update) ->
+    #config_service_update{update_pending = UpdatePending,
+                           update_now = UpdateNow} = UpdatePlan,
+    NewUpdatePlan = if
+        is_pid(UpdatePending) ->
+            UpdatePending ! {'cloudi_service_update', Dispatcher},
+            UpdatePlan#config_service_update{update_pending = undefined,
+                                             queue_requests = false};
+        UpdatePending =:= undefined ->
+            UpdatePlan#config_service_update{queue_requests = false}
+    end,
+    if
+        is_pid(UpdateNow) ->
+            process_update(NewUpdatePlan, State);
+        UpdateNow =:= undefined ->
+            State#state{update_plan = NewUpdatePlan}
+    end;
+process_queues(State) ->
+    process_queue(State).
+
+send(Data, #state{protocol = Protocol,
+                  incoming_port = IncomingPort,
+                  socket = Socket}) when is_binary(Data) ->
+    socket_send(Socket, IncomingPort, Data, Protocol);
+send(Data, #state_socket{protocol = Protocol,
+                         incoming_port = IncomingPort,
+                         socket = Socket}) when is_binary(Data) ->
+    socket_send(Socket, IncomingPort, Data, Protocol).
+
+socket_send(Socket, _, Data, Protocol)
+    when Protocol =:= tcp; Protocol =:= local ->
+    gen_tcp:send(Socket, Data);
+socket_send(Socket, IncomingPort, Data, Protocol)
+    when Protocol =:= udp ->
+    gen_udp:send(Socket, {127,0,0,1}, IncomingPort, Data).
+
+socket_new(#state{protocol = Protocol,
+                  port = Port,
+                  socket_path = SocketPath,
+                  socket_options = SocketOptions}) ->
+    if
+        Protocol =:= tcp ->
+            socket_open_tcp(SocketOptions);
+        Protocol =:= udp ->
+            socket_open_udp(SocketOptions);
+        Protocol =:= local ->
+            socket_open_local(SocketOptions, Port, SocketPath)
+    end.
+
 socket_open(tcp, _, _, BufferSize) ->
     SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
                      {nodelay, true}, {delay_send, false}, {keepalive, false},
                      {send_timeout, 5000}, {send_timeout_close, true}],
+    socket_open_tcp(SocketOptions);
+socket_open(udp, _, _, BufferSize) ->
+    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize}],
+    socket_open_udp(SocketOptions);
+socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
+    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
+                     {nodelay, true}, {delay_send, false}, {keepalive, false},
+                     {send_timeout, 5000}, {send_timeout_close, true}],
+    ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
+    socket_open_local(SocketOptions, ThreadIndex, ThreadSocketPath).
+
+socket_open_tcp(SocketOptions) ->
     case gen_tcp:listen(0, [binary, inet, {ip, {127,0,0,1}},
                             {packet, 4}, {backlog, 0},
                             {active, false} | SocketOptions]) of
         {ok, Listener} ->
             {ok, Port} = inet:port(Listener),
             {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
-            {ok, #state{protocol = tcp,
-                        port = Port,
-                        listener = Listener,
-                        acceptor = Acceptor,
-                        socket_options = SocketOptions}};
+            {ok, #state_socket{protocol = tcp,
+                               port = Port,
+                               listener = Listener,
+                               acceptor = Acceptor,
+                               socket_options = SocketOptions}};
         {error, _} = Error ->
             Error
-    end;
+    end.
 
-socket_open(udp, _, _, BufferSize) ->
-    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize}],
+socket_open_udp(SocketOptions) ->
     case gen_udp:open(0, [binary, inet, {ip, {127,0,0,1}},
                           {active, once} | SocketOptions]) of
         {ok, Socket} ->
             {ok, Port} = inet:port(Socket),
-            {ok, #state{protocol = udp,
-                        port = Port,
-                        socket_options = SocketOptions,
-                        socket = Socket}};
+            {ok, #state_socket{protocol = udp,
+                               port = Port,
+                               socket_options = SocketOptions,
+                               socket = Socket}};
         {error, _} = Error ->
             Error
-    end;
+    end.
 
-socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
-    SocketOptions = [{recbuf, BufferSize}, {sndbuf, BufferSize},
-                     {nodelay, true}, {delay_send, false}, {keepalive, false},
-                     {send_timeout, 5000}, {send_timeout_close, true}],
-    ThreadSocketPath = SocketPath ++ erlang:integer_to_list(ThreadIndex),
-    ok = cloudi_core_i_socket:local(ThreadSocketPath),
-    {ok, #state{protocol = local,
-                port = ThreadIndex,
-                socket_path = ThreadSocketPath,
-                socket_options = SocketOptions}}.
+socket_open_local(SocketOptions, Port, SocketPath) ->
+    ok = cloudi_core_i_socket:local(SocketPath),
+    {ok, #state_socket{protocol = local,
+                       port = Port,
+                       socket_path = SocketPath,
+                       socket_options = SocketOptions}}.
 
-socket_close(Reason, #state{protocol = Protocol,
+socket_accept({inet_async, Listener, Acceptor, {ok, Socket}},
+              #state_socket{protocol = tcp,
                             listener = Listener,
-                            socket_path = SocketPath,
-                            socket = Socket,
-                            timeout_term = TimeoutTerm,
-                            os_pid = OsPid} = State)
+                            acceptor = Acceptor,
+                            socket_options = SocketOptions} = StateSocket) ->
+    true = inet_db:register_socket(Socket, inet_tcp),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
+    catch gen_tcp:close(Listener),
+    StateSocket#state_socket{listener = undefined,
+                             acceptor = undefined,
+                             socket = Socket};
+socket_accept({inet_async, undefined, undefined, {ok, FileDescriptor}},
+              #state_socket{protocol = local,
+                            socket_options = SocketOptions} = StateSocket) ->
+    {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
+    {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
+    ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
+                                          ReceiveBufferSize, SendBufferSize),
+    {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
+    ok = inet:setopts(Socket, [{active, once}]),
+    StateSocket#state_socket{socket = Socket}.
+
+socket_close(Reason, #state_socket{protocol = Protocol,
+                                   listener = Listener,
+                                   socket_path = SocketPath,
+                                   socket = Socket,
+                                   timeout_term = TimeoutTerm,
+                                   os_pid = OsPid} = StateSocket)
     when Protocol =:= tcp; Protocol =:= local ->
     if
         Reason =:= socket_closed;
         Socket =:= undefined ->
             ok;
         is_port(Socket) ->
-            case send('terminate_out'(), State) of
+            case send('terminate_out'(), StateSocket) of
                 ok ->
                     receive
                         {tcp_closed, Socket} ->
@@ -2053,16 +2159,16 @@ socket_close(Reason, #state{protocol = Protocol,
     end,
     ok = os_pid_kill(OsPid),
     ok;
-socket_close(Reason, #state{protocol = udp,
-                            socket = Socket,
-                            timeout_term = TimeoutTerm,
-                            os_pid = OsPid} = State) ->
+socket_close(Reason, #state_socket{protocol = udp,
+                                   socket = Socket,
+                                   timeout_term = TimeoutTerm,
+                                   os_pid = OsPid} = StateSocket) ->
     if
         Reason =:= socket_closed;
         Socket =:= undefined ->
             ok;
         is_port(Socket) ->
-            case send('terminate_out'(), State) of
+            case send('terminate_out'(), StateSocket) of
                 ok ->
                     TerminateSleep = erlang:min(?KEEPALIVE_UDP, TimeoutTerm),
                     receive after TerminateSleep -> ok end;
@@ -2073,6 +2179,42 @@ socket_close(Reason, #state{protocol = udp,
     end,
     ok = os_pid_kill(OsPid),
     ok.
+
+socket_data_to_state(#state_socket{protocol = Protocol,
+                                   port = Port,
+                                   listener = Listener,
+                                   acceptor = Acceptor,
+                                   socket_path = SocketPath,
+                                   socket_options = SocketOptions,
+                                   socket = Socket}, State) ->
+    State#state{protocol = Protocol,
+                port = Port,
+                listener = Listener,
+                acceptor = Acceptor,
+                socket_path = SocketPath,
+                socket_options = SocketOptions,
+                socket = Socket}.
+
+socket_data_from_state(#state{protocol = Protocol,
+                              port = Port,
+                              incoming_port = IncomingPort,
+                              listener = Listener,
+                              acceptor = Acceptor,
+                              socket_path = SocketPath,
+                              socket_options = SocketOptions,
+                              socket = Socket,
+                              timeout_term = TimeoutTerm,
+                              os_pid = OsPid}) ->
+    #state_socket{protocol = Protocol,
+                  port = Port,
+                  listener = Listener,
+                  acceptor = Acceptor,
+                  socket_path = SocketPath,
+                  socket_options = SocketOptions,
+                  socket = Socket,
+                  incoming_port = IncomingPort,
+                  timeout_term = TimeoutTerm,
+                  os_pid = OsPid}.
 
 cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % setup an inet socket within Erlang whose file descriptor can be used
@@ -2229,5 +2371,19 @@ aspects_request_after_f([F | L], Type,
                                     Result, NewServiceState, RequestTimeoutF);
         {stop, _, _} = Stop ->
             Stop
+    end.
+
+update(#config_service_update{type = Type}, _)
+    when Type =/= external ->
+    {error, type};
+update(#config_service_update{update_start = false}, _) ->
+    {error, update_start_failed};
+update(#config_service_update{}, State) ->
+    case socket_new(State) of
+        {ok, _StateSocket} ->
+            %XXX
+            {ok, State};
+        {error, _} = Error ->
+            Error
     end.
 
