@@ -299,7 +299,7 @@ handle_call({update,
                             {reply, {ok, ServiceIdList},
                              State#state{services = NewServices}};
                         UpdateSuccess =:= false ->
-                            {reply, {error, ServiceIdList, ResultsN}, State}
+                            {reply, {error, ServiceIdList, ResultsError}, State}
                     end;
                 {Results0, PidListN} ->
                     ResultsN = update_now(PidListN, Results0, false),
@@ -307,7 +307,7 @@ handle_call({update,
                     {reply, {error, ServiceIdList, ResultsError}, State}
             end;
         {error, Reason} ->
-            {reply, {error, ServiceIdList, Reason}, State}
+            {reply, {error, ServiceIdList, [Reason]}, State}
     end;
 
 handle_call({search, PidList}, _,

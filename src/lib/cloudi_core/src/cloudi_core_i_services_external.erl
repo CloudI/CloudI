@@ -2005,30 +2005,34 @@ process_update(UpdatePlan,
                #state{dispatcher = Dispatcher} = State) ->
     #config_service_update{update_now = UpdateNow,
                            queue_requests = false} = UpdatePlan,
-    NewState = case update(UpdatePlan, State) of
+    {NewOsProcess, NewState} = case update(UpdatePlan, State) of
         {ok, undefined, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
-            NextState;
+            {false, NextState};
         {ok, #state_socket{port = Port} = StateSocket, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, {ok, Port}},
             receive
                 {'cloudi_service_update_after', ok} ->
-                    update_after(StateSocket, NextState);
+                    {true, update_after(StateSocket, NextState)};
                 {'cloudi_service_update_after', error} ->
                     ok = socket_close(StateSocket),
                     erlang:exit(update_failed)
             end;
         {ok, {error, _} = Error} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
-            State;
+            {false, State};
         {error, _} = Error ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             erlang:exit(update_failed)
     end,
-    % will need to get 'polling' to make sure initialization is complete
-    % with the newly created OS process
-    NewState#state{update_plan = undefined,
-                   queue_requests = true}.
+    if
+        NewOsProcess =:= true ->
+            % wait to receive 'polling' to make sure initialization is complete
+            % with the newly created OS process
+            NewState#state{update_plan = undefined};
+        NewOsProcess =:= false ->
+            process_queues(NewState#state{update_plan = undefined})
+    end.
 
 process_queues(#state{dispatcher = Dispatcher,
                       update_plan = UpdatePlan} = State)
