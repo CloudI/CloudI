@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add CloudI Service API services_update external service functionality
+    * Fix text_pairs format for HTTP GET query strings in
+      cloudi_service_http_cowboy and cloudi_service_http_elli
+
 2016-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix aspect function validation

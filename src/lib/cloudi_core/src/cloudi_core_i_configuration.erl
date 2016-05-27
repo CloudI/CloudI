@@ -3696,8 +3696,8 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _, _, _]
         when not ((((Type =:= undefined) orelse (Type =:= internal)) andalso
                    (Module =/= undefined)) orelse
-                  (((Type =:= undefined) orelse (Type =:= external)) andalso
-                   (FilePath =/= undefined))) ->
+                  (((Type =:= undefined) andalso 
+                    (FilePath =/= undefined)) orelse (Type =:= external))) ->
             {error, {service_update_type_invalid,
                      Type}};
         [Type, Module, ModuleState,
@@ -3765,10 +3765,10 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                 UpdateValid =:= false ->
                     {error, {update_invalid, ID}}
             end;
-        [_, _, _,
+        [Type, _, _,
          FilePath, Args, Env,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove]
-        when FilePath =/= undefined ->
+        when (Type =:= external) orelse (FilePath =/= undefined) ->
             UpdateValid = if
                 ID == <<>> ->
                     false;
@@ -3783,6 +3783,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             end,
             if
                 UpdateValid =:= true ->
+                    SpawnOsProcess = not ((FilePath =:= undefined) andalso
+                                          (Args =:= undefined) andalso
+                                          (Env =:= undefined)),
                     NewUpdatePlans =
                         [UpdatePlan#config_service_update{
                              type = external,
@@ -3794,7 +3797,8 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                              modules_unload = ModulesUnload,
                              code_paths_add = CodePathsAdd,
                              code_paths_remove = CodePathsRemove,
-                             uuids = [ID]} |
+                             uuids = [ID],
+                             spawn_os_process = SpawnOsProcess} |
                          UpdatePlans],
                     services_update_plan(L, NewUpdatePlans,
                                          Services, Timeout);

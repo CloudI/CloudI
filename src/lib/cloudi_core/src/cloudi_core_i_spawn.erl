@@ -56,6 +56,7 @@
          environment_transform/2,
          start_internal/15,
          start_external/18,
+         update_external/3,
          update_external_f/4]).
 
 -include("cloudi_logger.hrl").
@@ -155,7 +156,133 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions, ID)
+               DestDenyList, DestAllowList, ConfigOptions, ID) ->
+    case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
+                               Filename, Arguments, Environment,
+                               Protocol, BufferSize, Timeout, Prefix,
+                               TimeoutAsync, TimeoutSync, TimeoutTerm,
+                               DestRefresh, DestDenyList, DestAllowList,
+                               ConfigOptions, ID) of
+        {ok,
+         SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
+         CommandLine, NewFilename, NewArguments,
+         EnvironmentLookup, DestDeny, DestAllow} ->
+            case start_external_threads(ThreadsPerProcess,
+                                        ProcessIndex,
+                                        ProcessCount,
+                                        CommandLine,
+                                        Protocol, SocketPath,
+                                        BufferSize, Timeout,
+                                        Prefix,
+                                        TimeoutAsync,
+                                        TimeoutSync,
+                                        TimeoutTerm,
+                                        DestRefresh,
+                                        DestDeny, DestAllow,
+                                        ConfigOptions, ID) of
+                {ok, Pids, Ports} ->
+                    start_external_spawn(SpawnProcess,
+                                         SpawnProtocol,
+                                         SocketPath,
+                                         Pids, Ports,
+                                         Rlimits, Owner,
+                                         ThreadsPerProcess,
+                                         CommandLine,
+                                         NewFilename,
+                                         NewArguments,
+                                         Environment,
+                                         EnvironmentLookup,
+                                         Protocol, BufferSize);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+update_external(Pids, Ports,
+                [ProcessIndex, ProcessCount, ThreadsPerProcess,
+                 Filename, Arguments, Environment,
+                 Protocol, BufferSize, Timeout, Prefix,
+                 TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+                 DestDenyList, DestAllowList, ConfigOptions, ID]) ->
+    case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
+                               Filename, Arguments, Environment,
+                               Protocol, BufferSize, Timeout, Prefix,
+                               TimeoutAsync, TimeoutSync, TimeoutTerm,
+                               DestRefresh, DestDenyList, DestAllowList,
+                               ConfigOptions, ID) of
+        {ok,
+         SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
+         CommandLine, NewFilename, NewArguments,
+         EnvironmentLookup, _, _} ->
+            case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
+                                      Pids, Ports, Rlimits, Owner,
+                                      ThreadsPerProcess,
+                                      CommandLine, NewFilename, NewArguments,
+                                      Environment, EnvironmentLookup,
+                                      Protocol, BufferSize) of
+                {ok, Pids} ->
+                    ok;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+update_external_f(NewFilename, NewArguments, NewEnvironment,
+                  [ThreadsPerProcess,
+                   OldFilename, OldArguments, OldEnvironment,
+                   Protocol, BufferSize, Timeout, Prefix,
+                   TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+                   DestDenyList, DestAllowList, ConfigOptions, ID]) ->
+    [ThreadsPerProcess,
+     if
+        is_list(NewFilename) ->
+            NewFilename;
+        NewFilename =:= undefined ->
+            OldFilename
+     end,
+     if
+        is_list(NewArguments) ->
+            NewArguments;
+        NewArguments =:= undefined ->
+            OldArguments
+     end,
+     if
+        is_list(NewEnvironment) ->
+            NewEnvironment;
+        NewEnvironment =:= undefined ->
+            OldEnvironment
+     end,
+     Protocol, BufferSize, Timeout, Prefix,
+     TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+     DestDenyList, DestAllowList, ConfigOptions, ID].
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+rlimits(#config_service_options{limit = L}) ->
+    cloudi_core_i_os_process:limit_format(L).
+
+owner(#config_service_options{owner = L}, EnvironmentLookup) ->
+    cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
+
+create_socket_path(TemporaryDirectory, ID)
+    when is_binary(ID) ->
+    Path = filename:join([TemporaryDirectory,
+                          "cloudi_socket_" ++
+                          cloudi_x_uuid:uuid_to_string(ID, nodash) ++ "_"]),
+    false = filelib:is_file(Path),
+    Path.
+
+start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
+                      Filename, Arguments, Environment,
+                      Protocol, BufferSize, Timeout, Prefix,
+                      TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+                      DestDenyList, DestAllowList, ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
@@ -208,45 +335,25 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                 {ok, NewArguments} ->
                     CommandLine = [NewFilename |
                                    string:tokens(NewArguments, [0])],
-                    case start_external_threads(ThreadsPerProcess,
-                                                ProcessIndex, ProcessCount,
-                                                CommandLine,
-                                                Protocol, SocketPath,
-                                                BufferSize, Timeout, Prefix,
-                                                TimeoutAsync, TimeoutSync,
-                                                TimeoutTerm, DestRefresh,
-                                                DestDeny, DestAllow,
-                                                ConfigOptions, ID) of
-                        {ok, Pids, Ports} ->
-                            Rlimits = rlimits(ConfigOptions),
-                            Owner = owner(ConfigOptions, EnvironmentLookup),
-                            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
-                                SpawnProcess when is_pid(SpawnProcess) ->
-                                    SpawnProtocol = if
-                                        Protocol =:= tcp ->
-                                            $t; % inet
-                                        Protocol =:= udp ->
-                                            $u; % inet
-                                        Protocol =:= local ->
-                                            $l  % tcp local (unix domain socket)
-                                    end,
-                                    start_external_spawn(SpawnProcess,
-                                                         SpawnProtocol,
-                                                         SocketPath,
-                                                         Pids, Ports,
-                                                         Rlimits, Owner,
-                                                         ThreadsPerProcess,
-                                                         CommandLine,
-                                                         NewFilename,
-                                                         NewArguments,
-                                                         Environment,
-                                                         EnvironmentLookup,
-                                                         Protocol, BufferSize);
-                                undefined ->
-                                    {error, noproc}
-                            end;
-                        {error, _} = Error ->
-                            Error
+                    Rlimits = rlimits(ConfigOptions),
+                    Owner = owner(ConfigOptions, EnvironmentLookup),
+                    case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
+                        SpawnProcess when is_pid(SpawnProcess) ->
+                            SpawnProtocol = if
+                                Protocol =:= tcp ->
+                                    $t; % inet
+                                Protocol =:= udp ->
+                                    $u; % inet
+                                Protocol =:= local ->
+                                    $l  % tcp local (unix domain socket)
+                            end,
+                            {ok,
+                             SpawnProcess, SpawnProtocol, SocketPath,
+                             Rlimits, Owner,
+                             CommandLine, NewFilename, NewArguments,
+                             EnvironmentLookup, DestDeny, DestAllow};
+                        undefined ->
+                            {error, noproc}
                     end;
                 {error, _} = Error ->
                     Error
@@ -254,53 +361,6 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
         {error, _} = Error ->
             Error
     end.
-
-update_external_f(NewFilename, NewArguments, NewEnvironment,
-                  [ProcessIndex, ProcessCount, ThreadsPerProcess,
-                   OldFilename, OldArguments, OldEnvironment,
-                   Protocol, BufferSize, Timeout, Prefix,
-                   TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                   DestDenyList, DestAllowList, ConfigOptions, ID]) ->
-    [ProcessIndex, ProcessCount, ThreadsPerProcess,
-     if
-        is_list(NewFilename) ->
-            NewFilename;
-        NewFilename =:= undefined ->
-            OldFilename
-     end,
-     if
-        is_list(NewArguments) ->
-            NewArguments;
-        NewArguments =:= undefined ->
-            OldArguments
-     end,
-     if
-        is_list(NewEnvironment) ->
-            NewEnvironment;
-        NewEnvironment =:= undefined ->
-            OldEnvironment
-     end,
-     Protocol, BufferSize, Timeout, Prefix,
-     TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-     DestDenyList, DestAllowList, ConfigOptions, ID].
-
-%%%------------------------------------------------------------------------
-%%% Private functions
-%%%------------------------------------------------------------------------
-
-rlimits(#config_service_options{limit = L}) ->
-    cloudi_core_i_os_process:limit_format(L).
-
-owner(#config_service_options{owner = L}, EnvironmentLookup) ->
-    cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
-
-create_socket_path(TemporaryDirectory, ID)
-    when is_binary(ID) ->
-    Path = filename:join([TemporaryDirectory,
-                          "cloudi_socket_" ++
-                          cloudi_x_uuid:uuid_to_string(ID, nodash) ++ "_"]),
-    false = filelib:is_file(Path),
-    Path.
 
 start_external_thread(0, Pids, Ports,
                       _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->

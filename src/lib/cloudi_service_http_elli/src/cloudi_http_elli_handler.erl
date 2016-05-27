@@ -391,6 +391,8 @@ headers_external_outgoing(ResponseInfo)
 
 headers_external_outgoing_text([<<>>]) ->
     [];
+headers_external_outgoing_text([K, <<>>]) ->
+    [{K, <<>>}];
 headers_external_outgoing_text([K, V | L]) ->
     [{K, V} | headers_external_outgoing_text(L)].
 

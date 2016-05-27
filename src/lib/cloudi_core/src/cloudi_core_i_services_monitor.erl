@@ -285,14 +285,15 @@ handle_call({update,
     case service_ids_pids(ServiceIdList, Services) of
         {ok, PidList0} ->
             case update_start(PidList0, UpdatePlan) of
-                {true, PidListN, _UpdateStartResponses} ->
-                    %XXX
-                    {Results0,
-                     NewServices} = update_load_global(UpdatePlan, Services),
-                    Results1 = update_now(PidListN, Results0, true),
-                    ResultsN = update_errors(Results1),
-                    UpdateSuccess = (ResultsN == []),
-                    update_unload_global(UpdatePlan),
+                {[], PidListN} ->
+                    Results0 = update_before(UpdatePlan),
+                    ResultsN = update_now(PidListN, Results0, true),
+                    {ResultsSuccess,
+                     ResultsError} = update_results(ResultsN),
+                    UpdateSuccess = (ResultsError == []),
+                    NewServices = update_after(UpdateSuccess,
+                                               PidListN, ResultsSuccess,
+                                               UpdatePlan, Services),
                     if
                         UpdateSuccess =:= true ->
                             {reply, {ok, ServiceIdList},
@@ -300,10 +301,10 @@ handle_call({update,
                         UpdateSuccess =:= false ->
                             {reply, {error, ServiceIdList, ResultsN}, State}
                     end;
-                {false, PidListN, _} ->
-                    Results1 = update_now(PidListN, [], false),
-                    ResultsN = update_errors(Results1),
-                    {reply, {error, ServiceIdList, ResultsN}, State}
+                {Results0, PidListN} ->
+                    ResultsN = update_now(PidListN, Results0, false),
+                    {[], ResultsError} = update_results(ResultsN),
+                    {reply, {error, ServiceIdList, ResultsError}, State}
             end;
         {error, Reason} ->
             {reply, {error, ServiceIdList, Reason}, State}
@@ -877,9 +878,27 @@ service_ids_pids(ServiceIdList, Services) ->
 service_ids_pids([], Pids, _) ->
     {ok, Pids};
 service_ids_pids([ServiceId | ServiceIdList], Pids, Services) ->
-    case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {PidList, #service{}}} ->
+    case service_id_pids(ServiceId, Services) of
+        {ok, PidList} ->
             service_ids_pids(ServiceIdList, Pids ++ PidList, Services);
+        {error, _} = Error ->
+            Error
+    end.
+
+service_id_pids(ServiceId, Services) ->
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {Pids, #service{}}} ->
+            % all pids must be in process_index order
+            PidsOrdered1 = lists:foldl(fun(Pid, PidsOrdered0) ->
+                {_, Service} = cloudi_x_key2value:fetch2(Pid, Services),
+                #service{process_index = ProcessIndex,
+                         pids = ProcessPids} = Service,
+                lists:umerge(PidsOrdered0, [{ProcessIndex, ProcessPids}])
+            end, [], Pids),
+            PidsOrderedN = lists:flatmap(fun({_, PidList}) ->
+                PidList
+            end, PidsOrdered1),
+            {ok, PidsOrderedN};
         error ->
             {error, not_found}
     end.
@@ -887,57 +906,65 @@ service_ids_pids([ServiceId | ServiceIdList], Pids, Services) ->
 update_start(PidList, UpdatePlan) ->
     Self = self(),
     [Pid ! {'cloudi_service_update', Self, UpdatePlan} || Pid <- PidList],
-    update_start_recv(PidList, [], [], true).
+    update_start_recv(PidList, [], []).
 
-update_start_recv([], NewPidList,
-                  UpdateStartResponses, UpdateStart) ->
-    {UpdateStart,
-     lists:reverse(NewPidList),
-     lists:reverse(UpdateStartResponses)};
-update_start_recv([Pid | PidList], NewPidList,
-                  UpdateStartResponses, UpdateStart)
+update_start_recv([], NewPidList, UpdateResults) ->
+    {UpdateResults, lists:reverse(NewPidList)};
+update_start_recv([Pid | PidList], NewPidList, UpdateResults)
     when is_pid(Pid) ->
     receive
         {'DOWN', _, 'process', Pid, _} = DOWN ->
             self() ! DOWN,
             update_start_recv(PidList, [undefined | NewPidList],
-                              [undefined | UpdateStartResponses], false);
+                              [{error, pid_died} | UpdateResults]);
         {'cloudi_service_update', Pid} ->
             update_start_recv(PidList, [Pid | NewPidList],
-                              [undefined | UpdateStartResponses], UpdateStart);
-        {'cloudi_service_update', Pid, Response} ->
-            update_start_recv(PidList, [Pid | NewPidList],
-                              [Response | UpdateStartResponses], UpdateStart)
+                              UpdateResults);
+        {'cloudi_service_update', Pid, {error, _} = UpdateResult} ->
+            update_start_recv(PidList, [undefined | NewPidList],
+                              [UpdateResult | UpdateResults])
     end.
 
 update_now(PidList, UpdateResults, UpdateStart) ->
     Self = self(),
-    [Pid ! {'cloudi_service_update_now', Self, UpdateStart} || Pid <- PidList],
+    lists:foreach(fun(Pid) ->
+        if
+            Pid =:= undefined ->
+                ok;
+            is_pid(Pid) ->
+                Pid ! {'cloudi_service_update_now', Self, UpdateStart}
+        end
+    end, PidList),
     update_now_recv(PidList, UpdateResults).
 
 update_now_recv([], UpdateResults) ->
-    UpdateResults;
+    lists:reverse(UpdateResults);
 update_now_recv([Pid | PidList], UpdateResults) ->
-    UpdateResult = if
+    if
         Pid =:= undefined ->
-            {error, pid_died};
+            update_now_recv(PidList, UpdateResults);
         is_pid(Pid) ->
-            receive
+            UpdateResult = receive
                 {'DOWN', _, 'process', Pid, _} = DOWN ->
                     self() ! DOWN,
                     {error, pid_died};
                 {'cloudi_service_update_now', Pid, Result} ->
                     Result
-            end
-    end,
-    update_now_recv(PidList, lists:umerge(UpdateResults, [UpdateResult])).
+            end,
+            update_now_recv(PidList, [UpdateResult | UpdateResults])
+    end.
 
-update_errors([]) ->
-    [];
-update_errors([ok | UpdateResults]) ->
-    update_errors(UpdateResults);
-update_errors([{error, Reason} | UpdateResults]) ->
-    [Reason | update_errors(UpdateResults)].
+update_results(Results) ->
+    update_results(Results, [], []).
+
+update_results([], ResultsSuccess, ResultsError) ->
+    {lists:reverse(ResultsSuccess), lists:usort(ResultsError)};
+update_results([ok | Results], ResultsSuccess, ResultsError) ->
+    update_results(Results, ResultsSuccess, ResultsError);
+update_results([{ok, Result} | Results], ResultsSuccess, ResultsError) ->
+    update_results(Results, [Result | ResultsSuccess], ResultsError);
+update_results([{error, Reason} | Results], ResultsSuccess, ResultsError) ->
+    update_results(Results, ResultsSuccess, [Reason | ResultsError]).
 
 update_load_module([]) ->
     ok;
@@ -959,29 +986,11 @@ update_load_module([CodePathAdd | CodePathsAdd], ModulesLoad) ->
             Error
     end.
     
-update_load_service(#config_service_update{type = internal}, Services) ->
-    Services;
-update_load_service(#config_service_update{
-                        type = external,
-                        file_path = FilePath,
-                        args = Args,
-                        env = Env,
-                        uuids = [ServiceId]}, Services) ->
-    cloudi_x_key2value:update1(ServiceId, fun(Service) ->
-        #service{service_m = Module,
-                 service_a = ServiceArguments} = Service,
-        cloudi_core_i_spawn = Module,
-        NewServiceArguments = Module:update_external_f(FilePath, Args, Env,
-                                                       ServiceArguments),
-        Service#service{service_a = NewServiceArguments}
-    end, Services).
-
-update_load_global(#config_service_update{
-                       modules_load = ModulesLoad,
-                       code_paths_add = CodePathsAdd} = UpdatePlan, Services) ->
+update_before(#config_service_update{
+                  modules_load = ModulesLoad,
+                  code_paths_add = CodePathsAdd}) ->
     UpdateModuleResult = update_load_module(CodePathsAdd, ModulesLoad),
-    NewServices = update_load_service(UpdatePlan, Services),
-    {[UpdateModuleResult], NewServices}.
+    [UpdateModuleResult].
 
 update_unload_module([]) ->
     ok;
@@ -995,10 +1004,59 @@ update_unload_module([Module | ModulesUnload], CodePathsRemove) ->
     cloudi_x_reltool_util:module_unload(Module),
     update_unload_module(ModulesUnload, CodePathsRemove).
 
-update_unload_global(#config_service_update{
-                         modules_unload = ModulesUnload,
-                         code_paths_remove = CodePathsRemove}) ->
-    update_unload_module(ModulesUnload, CodePathsRemove).
+update_service(_, _, #config_service_update{type = internal}, Services) ->
+    Services;
+update_service(Pids, Ports,
+               #config_service_update{
+                        type = external,
+                        file_path = FilePath,
+                        args = Args,
+                        env = Env,
+                        uuids = [ServiceId]}, Services) ->
+    NewServices = cloudi_x_key2value:update1(ServiceId, fun(OldService) ->
+        #service{service_m = Module,
+                 service_a = Arguments} = OldService,
+        cloudi_core_i_spawn = Module,
+        OldService#service{service_a = Module:update_external_f(FilePath,
+                                                                Args,
+                                                                Env,
+                                                                Arguments)}
+    end, Services),
+    if
+        Ports == [] ->
+            ok;
+        length(Pids) == length(Ports) ->
+            {_, NewService} = cloudi_x_key2value:fetch1(ServiceId,
+                                                        NewServices),
+            #service{service_a = NewArguments,
+                     count_process = CountProcess,
+                     count_thread = CountThread} = NewService,
+            Result = case cloudi_core_i_configurator:
+                          service_update_external(Pids, Ports, NewArguments,
+                                                  CountThread, CountProcess) of
+                ok ->
+                    ok;
+                {error, _} = Error ->
+                    ?LOG_ERROR("failed ~p service update~n ~p",
+                               [Error, service_id(ServiceId)]),
+                    error
+            end,
+            [Pid ! {'cloudi_service_update_after', Result} || Pid <- Pids]
+    end,
+    NewServices.
+
+update_after(UpdateSuccess, PidList, ResultsSuccess,
+             #config_service_update{
+                 modules_unload = ModulesUnload,
+                 code_paths_remove = CodePathsRemove} = UpdatePlan, Services) ->
+    NewServices = if
+        UpdateSuccess =:= true ->
+            update_service(PidList, ResultsSuccess, UpdatePlan, Services);
+        UpdateSuccess =:= false ->
+            Services
+    end,
+    update_unload_module(ModulesUnload, CodePathsRemove),
+    NewServices.
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).

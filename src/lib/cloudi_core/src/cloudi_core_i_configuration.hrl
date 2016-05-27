@@ -466,6 +466,10 @@
         % (internal services only)
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
+        % should a new OS process be created?
+        % (external services only)
+        spawn_os_process = false
+            :: boolean(),
         % is the service busy handling a service request?
         % (when sync == true, delay module loading until after
         %  all service requests currently being handled are done)

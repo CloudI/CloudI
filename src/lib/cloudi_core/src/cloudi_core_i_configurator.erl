@@ -80,6 +80,7 @@
          service_stop/3,
          service_restart/2,
          service_update/2,
+         service_update_external/5,
          service_initialized_process/1,
          service_dead/1]).
 
@@ -328,6 +329,11 @@ service_update(#config_service_update{type = Type} = UpdatePlan, Timeout) ->
                      {service_external_update_failed, Reason}}
             end
     end.
+
+service_update_external(Pids, Ports, Arguments,
+                        CountThread, CountProcess) ->
+    service_update_external(0, Pids, Ports, Arguments,
+                            CountThread, CountProcess).
 
 service_initialized_process(Pid)
     when is_pid(Pid) ->
@@ -1102,6 +1108,23 @@ service_restart_external(#config_service_external{
             ok;
         {error, Reason} ->
             {error, {service_external_restart_failed, Reason}}
+    end.
+
+service_update_external(CountProcess, [], [], _, _, CountProcess) ->
+    ok;
+service_update_external(IndexProcess, Pids, Ports, Arguments,
+                        CountThread, CountProcess) ->
+    {ProcessPids, RemainingPids} = lists:split(CountThread, Pids),
+    {ProcessPorts, RemainingPorts} = lists:split(CountThread, Ports),
+    case cloudi_core_i_spawn:
+         update_external(ProcessPids, ProcessPorts,
+                         [IndexProcess, CountProcess | Arguments]) of
+        ok ->
+            service_update_external(IndexProcess + 1,
+                                    RemainingPids, RemainingPorts, Arguments,
+                                    CountThread, CountProcess);
+        {error, Reason} ->
+            {error, {service_external_update_failed, Reason}}
     end.
 
 nodes_call_remote_result(aborted) ->
