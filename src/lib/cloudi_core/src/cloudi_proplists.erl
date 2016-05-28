@@ -74,7 +74,12 @@ delete_all([], List) ->
 
 delete_all([Key | Keys], List)
     when is_atom(Key), is_list(List) ->
-    delete_all(Keys, proplists:delete(Key, List)).
+    case lists:keytake(Key, 1, List) of
+        {value, _, NewList} ->
+            delete_all(Keys, NewList);
+        false ->
+            delete_all(Keys, List)
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -115,3 +120,25 @@ take_values(Result, [{Key, Default} | DefaultList], List)
             take_values([Value | Result], DefaultList, RemainingList)
     end.
 
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+delete_all_test() ->
+    [{d, true}] = delete_all([a, b, c], [{a, true}, {d, true}]),
+    ok.
+
+partition_test() ->
+    {[{a, true}, {a, false}],
+     [{b, false}]} = partition(a, [{a, true}, {a, false}, {b, false}]),
+    ok.
+
+take_values_test() ->
+    [{a, 1}, {b, 5}, {c, 3}] = take_values([{a, 1}, {b, 2}, {c, 3}],
+                                           [{b, 5}]),
+    ok.
+
+-endif.

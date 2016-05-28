@@ -1004,30 +1004,61 @@ update_unload_module([Module | ModulesUnload], CodePathsRemove) ->
     cloudi_x_reltool_util:module_unload(Module),
     update_unload_module(ModulesUnload, CodePathsRemove).
 
-update_service(_, _, #config_service_update{type = internal}, Services) ->
-    Services;
+update_service(_, _,
+               #config_service_update{
+                   type = internal,
+                   timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   options_keys = OptionsKeys,
+                   options = Options,
+                   uuids = ServiceIds}, Services0) ->
+    ServicesN = lists:foldl(fun(ServiceId, Services1) ->
+        cloudi_x_key2value:update1(ServiceId, fun(OldService) ->
+            #service{service_m = Module,
+                     service_a = Arguments} = OldService,
+            cloudi_core_i_spawn = Module,
+            NewArguments = Module:update_internal_f(TimeoutAsync,
+                                                    TimeoutSync,
+                                                    OptionsKeys,
+                                                    Options,
+                                                    Arguments),
+            OldService#service{service_a = NewArguments}
+        end, Services1)
+    end, Services0, ServiceIds),
+    ServicesN;
 update_service(Pids, Ports,
                #config_service_update{
-                        type = external,
-                        file_path = FilePath,
-                        args = Args,
-                        env = Env,
-                        uuids = [ServiceId]}, Services) ->
-    NewServices = cloudi_x_key2value:update1(ServiceId, fun(OldService) ->
+                   type = external,
+                   file_path = FilePath,
+                   args = Args,
+                   env = Env,
+                   timeout_init = TimeoutInit,
+                   timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   options_keys = OptionsKeys,
+                   options = Options,
+                   uuids = [ServiceId]}, Services0) ->
+    ServicesN = cloudi_x_key2value:update1(ServiceId, fun(OldService) ->
         #service{service_m = Module,
                  service_a = Arguments} = OldService,
         cloudi_core_i_spawn = Module,
-        OldService#service{service_a = Module:update_external_f(FilePath,
-                                                                Args,
-                                                                Env,
-                                                                Arguments)}
-    end, Services),
+        NextArguments = Module:update_external_f(FilePath,
+                                                 Args,
+                                                 Env,
+                                                 TimeoutInit,
+                                                 TimeoutAsync,
+                                                 TimeoutSync,
+                                                 OptionsKeys,
+                                                 Options,
+                                                 Arguments),
+        OldService#service{service_a = NextArguments}
+    end, Services0),
     if
         Ports == [] ->
             ok;
         length(Pids) == length(Ports) ->
             {_, NewService} = cloudi_x_key2value:fetch1(ServiceId,
-                                                        NewServices),
+                                                        ServicesN),
             #service{service_a = NewArguments,
                      count_process = CountProcess,
                      count_thread = CountThread} = NewService,
@@ -1043,7 +1074,7 @@ update_service(Pids, Ports,
             end,
             [Pid ! {'cloudi_service_update_after', Result} || Pid <- Pids]
     end,
-    NewServices.
+    ServicesN.
 
 update_after(UpdateSuccess, PidList, ResultsSuccess,
              #config_service_update{

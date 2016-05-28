@@ -372,7 +372,9 @@
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {duo_mode, boolean()} |
-         {hibernate, boolean()} |
+         {hibernate,
+          list({period, period_seconds()} |
+               {rate_request_min, number()}) | boolean()} |
          {reload, boolean()}).
 -type service_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
@@ -468,18 +470,112 @@
                   {modules_load, list(atom())} |
                   {modules_unload, list(atom())} |
                   {code_paths_add, list(string())} |
-                  {code_paths_remove, list(string())}).
-%-type service_update_plan_external() ::
-%    nonempty_list({type, external} |
-%                  {file_path, string()} |
-%                  {args, string()} |
-%                  {env, list(string(), string())} |
-%                  {modules_load, list(atom())} |
-%                  {modules_unload, list(atom())} |
-%                  {code_paths_add, list(string())} |
-%                  {code_paths_remove, list(string())}).
+                  {code_paths_remove, list(string())} |
+                  {timeout_init, timeout_milliseconds()} |
+                  {timeout_async, timeout_milliseconds()} |
+                  {timeout_sync, timeout_milliseconds()} |
+                  {options, service_update_plan_options_internal()}).
+-type service_update_plan_external() ::
+    nonempty_list({type, external} |
+                  {file_path, string()} |
+                  {args, string()} |
+                  {env, list({string(), string()})} |
+                  {sync, boolean()} |
+                  {modules_load, list(atom())} |
+                  {modules_unload, list(atom())} |
+                  {code_paths_add, list(string())} |
+                  {code_paths_remove, list(string())} |
+                  {timeout_init, timeout_milliseconds()} |
+                  {timeout_async, timeout_milliseconds()} |
+                  {timeout_sync, timeout_milliseconds()} |
+                  {options, service_update_plan_options_external()}).
+-type service_update_plan_options_internal() ::
+    list({priority_default, priority()} |
+         {queue_limit, undefined | non_neg_integer()} |
+         {queue_size, undefined | pos_integer()} |
+         %{rate_request_max,
+         % list({period, period_seconds()} |
+         %      {value, number()}) | number() | undefined} |
+         %{dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         %{dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {request_name_lookup, sync | async} |
+         {request_timeout_adjustment, boolean()} |
+         {request_timeout_immediate_max,
+          request_timeout_immediate_max_milliseconds()} |
+         {response_timeout_adjustment, boolean()} |
+         {response_timeout_immediate_max,
+          response_timeout_immediate_max_milliseconds()} |
+         %{monkey_latency,
+         % list({time_uniform_min, latency_time_milliseconds()} |
+         %      {time_uniform_max, latency_time_milliseconds()} |
+         %      {time_gaussian_mean, latency_time_milliseconds()} |
+         %      {time_gaussian_stddev, float()} |
+         %      {time_absolute, latency_time_milliseconds()}) | system | false} |
+         %{monkey_chaos,
+         % list({probability_request, float()} |
+         %      {probability_day, float()}) | system | false} |
+         %{aspects_init_after, list(aspect_init_after_internal())} |
+         %{aspects_request_before, list(aspect_request_before_internal())} |
+         %{aspects_request_after, list(aspect_request_after_internal())} |
+         %{aspects_info_before, list(aspect_info_before_internal())} |
+         %{aspects_info_after, list(aspect_info_after_internal())} |
+         %{aspects_terminate_before, list(aspect_terminate_before_internal())} |
+         {request_pid_uses, infinity | pos_integer()} |
+         {request_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
+         {info_pid_uses, infinity | pos_integer()} |
+         {info_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})}% |
+         %{hibernate,
+         % list({period, period_seconds()} |
+         %      {rate_request_min, number()}) | boolean()} |
+         %{reload, boolean()}
+         ).
+-type service_update_plan_options_external() ::
+    list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
+         {queue_limit, undefined | non_neg_integer()} |
+         {queue_size, undefined | pos_integer()} |
+         %{rate_request_max,
+         % list({period, period_seconds()} |
+         %      {value, number()}) | number() | undefined} |
+         %{dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         %{dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {request_name_lookup, sync | async} |
+         {request_timeout_adjustment, boolean()} |
+         {request_timeout_immediate_max,
+          request_timeout_immediate_max_milliseconds()} |
+         {response_timeout_adjustment, boolean()} |
+         {response_timeout_immediate_max,
+          response_timeout_immediate_max_milliseconds()} |
+         %{monkey_latency,
+         % list({time_uniform_min, latency_time_milliseconds()} |
+         %      {time_uniform_max, latency_time_milliseconds()} |
+         %      {time_gaussian_mean, latency_time_milliseconds()} |
+         %      {time_gaussian_stddev, float()} |
+         %      {time_absolute, latency_time_milliseconds()}) | system | false} |
+         %{monkey_chaos,
+         % list({probability_request, float()} |
+         %      {probability_day, float()}) | system | false} |
+         %{aspects_init_after, list(aspect_init_after_external())} |
+         %{aspects_request_before, list(aspect_request_before_external())} |
+         %{aspects_request_after, list(aspect_request_after_external())} |
+         %{aspects_terminate_before, list(aspect_terminate_before_external())} |
+         {limit, limit_external()}).
 -type service_update_plan() ::
-    service_update_plan_internal().
+    service_update_plan_internal() |
+    service_update_plan_external().
 -export_type([module_version/0,
               module_state_internal_f/0,
               module_state_internal/0,

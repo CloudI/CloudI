@@ -57,7 +57,8 @@
          start_internal/15,
          start_external/18,
          update_external/3,
-         update_external_f/4]).
+         update_internal_f/5,
+         update_external_f/9]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -231,12 +232,41 @@ update_external(Pids, Ports,
             Error
     end.
 
+update_internal_f(NewTimeoutAsync, NewTimeoutSync,
+                  OptionsKeys, NewConfigOptions,
+                  [GroupLeader,
+                   Module, Args, Timeout, Prefix,
+                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm, DestRefresh,
+                   DestDenyList, DestAllowList, OldConfigOptions, ID]) ->
+    [GroupLeader,
+     Module, Args, Timeout, Prefix,
+     if
+        is_integer(NewTimeoutAsync) ->
+            NewTimeoutAsync;
+        NewTimeoutAsync =:= undefined ->
+            OldTimeoutAsync
+     end,
+     if
+        is_integer(NewTimeoutSync) ->
+            NewTimeoutSync;
+        NewTimeoutSync =:= undefined ->
+            OldTimeoutSync
+     end,
+     TimeoutTerm, DestRefresh,
+     DestDenyList, DestAllowList,
+     cloudi_core_i_configuration:service_options_copy(OptionsKeys,
+                                                      OldConfigOptions,
+                                                      NewConfigOptions),
+     ID].
+
 update_external_f(NewFilename, NewArguments, NewEnvironment,
+                  NewTimeoutInit, NewTimeoutAsync, NewTimeoutSync,
+                  OptionsKeys, NewConfigOptions,
                   [ThreadsPerProcess,
                    OldFilename, OldArguments, OldEnvironment,
-                   Protocol, BufferSize, Timeout, Prefix,
-                   TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                   DestDenyList, DestAllowList, ConfigOptions, ID]) ->
+                   Protocol, BufferSize, OldTimeoutInit, Prefix,
+                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm, DestRefresh,
+                   DestDenyList, DestAllowList, OldConfigOptions, ID]) ->
     [ThreadsPerProcess,
      if
         is_list(NewFilename) ->
@@ -256,9 +286,32 @@ update_external_f(NewFilename, NewArguments, NewEnvironment,
         NewEnvironment =:= undefined ->
             OldEnvironment
      end,
-     Protocol, BufferSize, Timeout, Prefix,
-     TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-     DestDenyList, DestAllowList, ConfigOptions, ID].
+     Protocol, BufferSize,
+     if
+        is_integer(NewTimeoutInit) ->
+            NewTimeoutInit;
+        NewTimeoutInit =:= undefined ->
+            OldTimeoutInit
+     end,
+     Prefix,
+     if
+        is_integer(NewTimeoutAsync) ->
+            NewTimeoutAsync;
+        NewTimeoutAsync =:= undefined ->
+            OldTimeoutAsync
+     end,
+     if
+        is_integer(NewTimeoutSync) ->
+            NewTimeoutSync;
+        NewTimeoutSync =:= undefined ->
+            OldTimeoutSync
+     end,
+     TimeoutTerm, DestRefresh,
+     DestDenyList, DestAllowList,
+     cloudi_core_i_configuration:service_options_copy(OptionsKeys,
+                                                      OldConfigOptions,
+                                                      NewConfigOptions),
+     ID].
 
 %%%------------------------------------------------------------------------
 %%% Private functions

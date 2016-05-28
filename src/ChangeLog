@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add some options parsing for services_update input
+
 2016-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudI Service API services_update external service functionality

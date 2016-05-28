@@ -433,6 +433,9 @@
         % external service executable environment variables for the update
         env = undefined
             :: undefined | list({string(), string()}),
+        % external service executable initialization timeout
+        timeout_init = undefined
+            :: undefined | cloudi_service_api:timeout_milliseconds(),
 
         % common update configuration
 
@@ -453,6 +456,18 @@
         % code paths to remove after the update is successful
         code_paths_remove = []
             :: list(string()),
+        % default async timeout
+        timeout_async = undefined
+            :: undefined | cloudi_service_api:timeout_milliseconds(),
+        % default sync timeout
+        timeout_sync = undefined
+            :: undefined | cloudi_service_api:timeout_milliseconds(),
+        % service configuration option keys to update
+        options_keys = []
+            :: list(atom()),
+        % service configuration options to update
+        options = undefined
+            :: undefined | #config_service_options{},
 
         % service update plan state
 

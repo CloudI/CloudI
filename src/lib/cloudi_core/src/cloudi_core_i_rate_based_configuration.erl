@@ -236,13 +236,16 @@ count_process_dynamic_format(#count_process_dynamic{
 %% convert the configuration format to internal state
 
 -spec count_process_dynamic_validate(Options :: list({atom(), any()}) | false,
-                                     CountProcess :: number()) ->
+                                     CountProcess :: number() | undefined) ->
     {ok, #count_process_dynamic{} | false} |
     {error, {service_options_count_process_dynamic_invalid, any()}}.
 
+count_process_dynamic_validate(false, undefined) ->
+    {ok, false};
 count_process_dynamic_validate(false, _) ->
     {ok, false};
-count_process_dynamic_validate(Options, CountProcess) ->
+count_process_dynamic_validate(Options, CountProcess)
+    when is_number(CountProcess) ->
     CountProcessInteger = cloudi_concurrency:count(CountProcess),
     count_process_dynamic_validate(Options,
                                    #count_process_dynamic{},
