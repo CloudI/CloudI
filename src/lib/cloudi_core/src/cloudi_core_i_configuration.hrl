@@ -466,8 +466,8 @@
         options_keys = []
             :: list(atom()),
         % service configuration options to update
-        options = undefined
-            :: undefined | #config_service_options{},
+        options = []
+            :: [] | #config_service_options{},
 
         % service update plan state
 
