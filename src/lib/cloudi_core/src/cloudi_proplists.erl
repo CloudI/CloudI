@@ -137,8 +137,8 @@ partition_test() ->
     ok.
 
 take_values_test() ->
-    [{a, 1}, {b, 5}, {c, 3}] = take_values([{a, 1}, {b, 2}, {c, 3}],
-                                           [{b, 5}]),
+    [1, 5, 3] = take_values([{a, 1}, {b, 2}, {c, 3}],
+                            [{b, 5}]),
     ok.
 
 -endif.
