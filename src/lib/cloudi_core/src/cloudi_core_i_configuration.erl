@@ -3979,12 +3979,13 @@ services_update_plan_external(FilePath, Args, Env, Options, ID, Services) ->
     end,
     if
         UpdateValid =:= true ->
-            case services_update_plan_options_external(Options) of
+            SpawnOsProcess = not ((FilePath =:= undefined) andalso
+                                  (Args =:= undefined) andalso
+                                  (Env =:= undefined)),
+            case services_update_plan_options_external(SpawnOsProcess,
+                                                       Options) of
                 {ok, NewOptions} ->
                     OptionsKeys = [Key || {Key, _} <- Options],
-                    SpawnOsProcess = not ((FilePath =:= undefined) andalso
-                                          (Args =:= undefined) andalso
-                                          (Env =:= undefined)),
                     {ok, OptionsKeys, NewOptions, SpawnOsProcess};
                 {error, _} = Error ->
                     Error
@@ -3994,14 +3995,12 @@ services_update_plan_external(FilePath, Args, Env, Options, ID, Services) ->
     end.
 
 services_update_plan_options_internal(OptionsList) ->
-    %XXX
-%    ValidKeys = [priority_default, queue_limit, queue_size,
-%                 request_name_lookup,
-%                 request_timeout_adjustment, request_timeout_immediate_max,
-%                 response_timeout_adjustment, response_timeout_immediate_max,
-%                 request_pid_uses, request_pid_options,
-%                 info_pid_uses, info_pid_options],
-    ValidKeys = [],
+    ValidKeys = [priority_default, queue_limit, queue_size,
+                 request_name_lookup,
+                 request_timeout_adjustment, request_timeout_immediate_max,
+                 response_timeout_adjustment, response_timeout_immediate_max,
+                 request_pid_uses, request_pid_options,
+                 info_pid_uses, info_pid_options],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->
             case services_validate_options_internal(OptionsList,
@@ -4017,21 +4016,28 @@ services_update_plan_options_internal(OptionsList) ->
                      InvalidOptions}}
     end.
 
-services_update_plan_options_external(OptionsList) ->
-    %XXX
-%    ValidKeys = [priority_default, queue_limit, queue_size,
-%                 request_name_lookup,
-%                 request_timeout_adjustment, request_timeout_immediate_max,
-%                 response_timeout_adjustment, response_timeout_immediate_max,
-%                 limit],
-    ValidKeys = [],
+services_update_plan_options_external(SpawnOsProcess, OptionsList) ->
+    ValidKeys = [priority_default, queue_limit, queue_size,
+                 request_name_lookup,
+                 request_timeout_adjustment, request_timeout_immediate_max,
+                 response_timeout_adjustment, response_timeout_immediate_max,
+                 limit],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->
             case services_validate_options_external(OptionsList,
                                                     undefined,
                                                     undefined, undefined) of
                 {ok, _, Options} ->
-                    {ok, Options};
+                    RequiresSpawn = cloudi_proplists:
+                                    find_any([limit], OptionsList),
+                    if
+                        RequiresSpawn =:= true,
+                        SpawnOsProcess =:= false ->
+                            {error, {service_update_file_path_invalid,
+                                     undefined}};
+                        true ->
+                            {ok, Options}
+                    end;
                 {error, _} = Error ->
                     Error
             end;

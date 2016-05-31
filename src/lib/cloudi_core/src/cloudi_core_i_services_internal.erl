@@ -1802,6 +1802,11 @@ handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
                                             ServiceState, State)})
     end;
 
+handle_info({'cloudi_service_update_state', UpdatePlan},
+            #state{duo_mode_pid = DuoModePid} = State) ->
+    true = is_pid(DuoModePid),
+    hibernate_check({noreply, update_state(State, UpdatePlan)});
+
 handle_info({'cloudi_service_init_execute', Args, Timeout,
              ProcessDictionary, State},
             #state{dispatcher = Dispatcher,
@@ -3030,20 +3035,20 @@ process_queue_info(NewServiceState,
     end.
 
 process_update(UpdatePlan, ServiceState,
-               #state{dispatcher = Dispatcher,
-                      module = Module} = State) ->
+               #state{dispatcher = Dispatcher} = State) ->
     #config_service_update{update_now = UpdateNow,
                            queue_requests = false} = UpdatePlan,
-    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
-        {ok, NextServiceState} ->
+    {NewServiceState,
+     NewState} = case update(ServiceState, State, UpdatePlan) of
+        {ok, NextServiceState, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
-            NextServiceState;
+            {NextServiceState, NextState};
         {error, _} = Error ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
-            ServiceState
+            {ServiceState, State}
     end,
     process_queues(NewServiceState,
-                   State#state{update_plan = undefined}).
+                   NewState#state{update_plan = undefined}).
 
 process_queues(NewServiceState,
                #state{dispatcher = Dispatcher,
@@ -3158,6 +3163,8 @@ handle_module_request_loop_pid(OldRequestPid, ModuleRequest,
 
 handle_module_request_loop_normal(Uses, ResultPid) ->
     receive
+        'cloudi_service_request_loop_exit' ->
+            ok;
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3176,6 +3183,8 @@ handle_module_request_loop_normal(Uses, ResultPid) ->
 
 handle_module_request_loop_hibernate(Uses, ResultPid) ->
     receive
+        'cloudi_service_request_loop_exit' ->
+            ok;
         {'cloudi_hibernate', false} ->
             handle_module_request_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3274,6 +3283,8 @@ handle_module_info_loop_pid(OldInfoPid, ModuleInfo,
 
 handle_module_info_loop_normal(Uses, ResultPid) ->
     receive
+        'cloudi_service_info_loop_exit' ->
+            ok;
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -3289,6 +3300,8 @@ handle_module_info_loop_normal(Uses, ResultPid) ->
 
 handle_module_info_loop_hibernate(Uses, ResultPid) ->
     receive
+        'cloudi_service_info_loop_exit' ->
+            ok;
         {'cloudi_hibernate', false} ->
             handle_module_info_loop_normal(Uses, ResultPid);
         {'cloudi_hibernate', true} ->
@@ -4048,20 +4061,20 @@ duo_process_queue(NewServiceState,
     end.
 
 duo_process_update(UpdatePlan, ServiceState,
-                   #state_duo{duo_mode_pid = DuoModePid,
-                              module = Module} = State) ->
+                   #state_duo{duo_mode_pid = DuoModePid} = State) ->
     #config_service_update{update_now = UpdateNow,
                            queue_requests = false} = UpdatePlan,
-    NewServiceState = case update(ServiceState, UpdatePlan, Module) of
-        {ok, NextServiceState} ->
+    {NewServiceState,
+     NewState} = case update(ServiceState, State, UpdatePlan) of
+        {ok, NextServiceState, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', DuoModePid, ok},
-            NextServiceState;
+            {NextServiceState, NextState};
         {error, _} = Error ->
             UpdateNow ! {'cloudi_service_update_now', DuoModePid, Error},
-            ServiceState
+            {ServiceState, State}
     end,
     duo_process_queues(NewServiceState,
-                       State#state_duo{update_plan = undefined}).
+                       NewState#state_duo{update_plan = undefined}).
 
 duo_process_queues(NewServiceState,
                    #state_duo{duo_mode_pid = DuoModePid,
@@ -4208,29 +4221,26 @@ spawn_opt_pid(M, F, Options0) ->
         F()
     end, OptionsN).
 
-update(_, #config_service_update{type = Type}, _)
+update(_, _, #config_service_update{type = Type})
     when Type =/= internal ->
     {error, type};
-update(_, #config_service_update{module = Module}, ModuleNow)
-    when Module =/= ModuleNow ->
-    {error, module};
-update(_, #config_service_update{update_start = false}, _) ->
+update(_, _, #config_service_update{update_start = false}) ->
     {error, update_start_failed};
-update(ServiceState,
+update(ServiceState, State,
        #config_service_update{
-           module_state = undefined}, _) ->
-    {ok, ServiceState};
-update(ServiceState,
+           module_state = undefined} = UpdatePlan) ->
+    {ok, ServiceState, update_state(State, UpdatePlan)};
+update(ServiceState, State,
        #config_service_update{
            module = Module,
            module_state = ModuleState,
-           module_version_old = OldModuleVersion}, _) ->
+           module_version_old = OldModuleVersion} = UpdatePlan) ->
     NewModuleVersion = cloudi_x_reltool_util:module_version(Module),
     try ModuleState(OldModuleVersion,
                     NewModuleVersion,
                     ServiceState) of
-        {ok, _} = Success ->
-            Success;
+        {ok, NewServiceState} ->
+            {ok, NewServiceState, update_state(State, UpdatePlan)};
         {error, _} = Error ->
             Error;
         Invalid ->
@@ -4239,4 +4249,76 @@ update(ServiceState,
         Type:Error ->
             {error, {Type, Error}}
     end.
+
+update_state(#state{timeout_async = OldTimeoutAsync,
+                    timeout_sync = OldTimeoutSync,
+                    request_pid = RequestPid,
+                    info_pid = InfoPid,
+                    options = OldConfigOptions} = State,
+             #config_service_update{
+                 timeout_async = NewTimeoutAsync,
+                 timeout_sync = NewTimeoutSync,
+                 options_keys = OptionsKeys,
+                 options = NewConfigOptions}) ->
+    TimeoutAsync = if
+        NewTimeoutAsync =:= undefined ->
+            OldTimeoutAsync;
+        is_integer(NewTimeoutAsync) ->
+            NewTimeoutAsync
+    end,
+    TimeoutSync = if
+        NewTimeoutSync =:= undefined ->
+            OldTimeoutSync;
+        is_integer(NewTimeoutSync) ->
+            NewTimeoutSync
+    end,
+    NewRequestPid = case cloudi_lists:member_any([request_pid_uses,
+                                                  request_pid_options],
+                                                 OptionsKeys) of
+        true when is_pid(RequestPid) ->
+            RequestPid ! 'cloudi_service_request_loop_exit',
+            undefined;
+        _ ->
+            RequestPid
+    end,
+    NewInfoPid = case cloudi_lists:member_any([info_pid_uses,
+                                               info_pid_options],
+                                              OptionsKeys) of
+        true when is_pid(InfoPid) ->
+            InfoPid ! 'cloudi_service_info_loop_exit',
+            undefined;
+        _ ->
+            InfoPid
+    end,
+    ConfigOptions = cloudi_core_i_configuration:
+                    service_options_copy(OptionsKeys,
+                                         OldConfigOptions,
+                                         NewConfigOptions),
+    State#state{timeout_async = TimeoutAsync,
+                timeout_sync = TimeoutSync,
+                request_pid = NewRequestPid,
+                info_pid = NewInfoPid,
+                options = ConfigOptions};
+update_state(#state_duo{dispatcher = Dispatcher,
+                        request_pid = RequestPid,
+                        options = OldConfigOptions} = State,
+             #config_service_update{
+                 options_keys = OptionsKeys,
+                 options = NewConfigOptions} = UpdatePlan) ->
+    Dispatcher ! {'cloudi_service_update_state', UpdatePlan},
+    NewRequestPid = case cloudi_lists:member_any([request_pid_uses,
+                                                  request_pid_options],
+                                                 OptionsKeys) of
+        true when is_pid(RequestPid) ->
+            RequestPid ! 'cloudi_service_request_loop_exit',
+            undefined;
+        _ ->
+            RequestPid
+    end,
+    ConfigOptions = cloudi_core_i_configuration:
+                    service_options_copy(OptionsKeys,
+                                         OldConfigOptions,
+                                         NewConfigOptions),
+    State#state_duo{request_pid = NewRequestPid,
+                    options = ConfigOptions}.
 

@@ -224,6 +224,8 @@ update_external(Pids, Ports,
                                       Environment, EnvironmentLookup,
                                       Protocol, BufferSize) of
                 {ok, Pids} ->
+                    [Pid ! {'cloudi_service_update_state', CommandLine}
+                     || Pid <- Pids],
                     ok;
                 {error, _} = Error ->
                     Error

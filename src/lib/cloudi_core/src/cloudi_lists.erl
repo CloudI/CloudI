@@ -54,6 +54,7 @@
 -export([delete_all/2, delete_checked/2,
          index/2,
          itera/3, itera2/4,
+         member_any/2,
          split/2,
          take_values/2]).
 
@@ -157,6 +158,27 @@ itera2(F, Acc0, Acc1, [H | T]) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===lists:member/2 functionality, but with a list of elements.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec member_any(ElemL :: list(), List :: list()) ->
+    boolean().
+
+member_any([], _) ->
+    false;
+member_any(_, []) ->
+    false;
+member_any([Elem | ElemL], [_ | _] = List) ->
+    case lists:member(Elem, List) of
+        true ->
+            true;
+        false ->
+            member_any(ElemL, List)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===lists:split/2 functionality, but without bounds checking.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -243,6 +265,11 @@ itera2_test() ->
                 {A1, A2}
         end
     end, [], 0, [f, e, d, c, b, a]),
+    ok.
+
+member_any_test() ->
+    true = member_any([a, b], [a]),
+    false = member_any([a, b], [c]),
     ok.
 
 split_test() ->

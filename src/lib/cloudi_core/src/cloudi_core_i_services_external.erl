@@ -1405,6 +1405,11 @@ handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart}, StateName,
              process_update(NewUpdatePlan, State)}
     end;
 
+handle_info({'cloudi_service_update_state', CommandLine}, StateName, State) ->
+    % state updates when #config_service_update{spawn_os_process = true}
+    erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
+    {next_state, StateName, State};
+
 handle_info({'DOWN', _MonitorRef, process, Pid, _Info}, StateName, State) ->
     {_, NewState} = send_timeout_dead(Pid, State),
     {next_state, StateName, NewState};
@@ -2005,7 +2010,7 @@ process_update(UpdatePlan,
                #state{dispatcher = Dispatcher} = State) ->
     #config_service_update{update_now = UpdateNow,
                            queue_requests = false} = UpdatePlan,
-    {NewOsProcess, NewState} = case update(UpdatePlan, State) of
+    {NewOsProcess, NewState} = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
             {false, NextState};
@@ -2485,27 +2490,66 @@ aspects_request_after_f([F | L], Type,
             Stop
     end.
 
-update(#config_service_update{type = Type}, _)
+update(_, #config_service_update{type = Type})
     when Type =/= external ->
     {ok, {error, type}};
-update(#config_service_update{update_start = false}, _) ->
+update(_, #config_service_update{update_start = false}) ->
     {ok, {error, update_start_failed}};
-update(#config_service_update{spawn_os_process = false}, State) ->
-    {ok, undefined, State};
-update(#config_service_update{spawn_os_process = true},
-       #state{dispatcher = Dispatcher,
-              timeout_init = Timeout} = State) ->
+update(State, #config_service_update{spawn_os_process = false} = UpdatePlan) ->
+    {ok, undefined, update_state(State, UpdatePlan)};
+update(#state{dispatcher = Dispatcher} = State,
+       #config_service_update{spawn_os_process = true} = UpdatePlan) ->
     ok = socket_close(update, socket_data_from_state(State)),
-    case socket_new(State) of
+    NewState = update_state(State, UpdatePlan),
+    case socket_new(NewState) of
         {ok, StateSocket} ->
+            #state{timeout_init = Timeout} = NewState,
             InitTimer = erlang:send_after(Timeout, Dispatcher,
                                           'cloudi_service_init_timeout'),
-            NewState = State#state{os_pid = undefined,
-                                   init_timer = InitTimer},
-            {ok, StateSocket, socket_data_to_state(StateSocket, NewState)};
+            {ok, StateSocket,
+             socket_data_to_state(StateSocket,
+                                  NewState#state{os_pid = undefined,
+                                                 init_timer = InitTimer})};
         {error, _} = Error ->
             Error
     end.
+
+update_state(#state{timeout_init = OldTimeoutInit,
+                    timeout_async = OldTimeoutAsync,
+                    timeout_sync = OldTimeoutSync,
+                    options = OldConfigOptions} = State,
+             #config_service_update{
+                 timeout_init = NewTimeoutInit,
+                 timeout_async = NewTimeoutAsync,
+                 timeout_sync = NewTimeoutSync,
+                 options_keys = OptionsKeys,
+                 options = NewConfigOptions}) ->
+    TimeoutInit = if
+        NewTimeoutInit =:= undefined ->
+            OldTimeoutInit;
+        is_integer(NewTimeoutInit) ->
+            NewTimeoutInit
+    end,
+    TimeoutAsync = if
+        NewTimeoutAsync =:= undefined ->
+            OldTimeoutAsync;
+        is_integer(NewTimeoutAsync) ->
+            NewTimeoutAsync
+    end,
+    TimeoutSync = if
+        NewTimeoutSync =:= undefined ->
+            OldTimeoutSync;
+        is_integer(NewTimeoutSync) ->
+            NewTimeoutSync
+    end,
+    ConfigOptions = cloudi_core_i_configuration:
+                    service_options_copy(OptionsKeys,
+                                         OldConfigOptions,
+                                         NewConfigOptions),
+    State#state{timeout_init = TimeoutInit,
+                timeout_async = TimeoutAsync,
+                timeout_sync = TimeoutSync,
+                options = ConfigOptions}.
 
 update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of

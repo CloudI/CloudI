@@ -51,6 +51,7 @@
 -author('mjtruog [at] gmail (dot) com').
 
 -export([delete_all/2,
+         find_any/2,
          partition/2,
          take_values/2]).
 
@@ -79,6 +80,27 @@ delete_all([Key | Keys], List)
             delete_all(Keys, NewList);
         false ->
             delete_all(Keys, List)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Determine if any of the keys provided are present.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_any(Keys :: list(atom()),
+               List :: tuplelist()) -> boolean().
+
+find_any([], _) ->
+    false;
+
+find_any([Key | Keys], List)
+    when is_atom(Key), is_list(List) ->
+    case lists:keyfind(Key, 1, List) of
+        {Key, _} ->
+            true;
+        false ->
+            find_any(Keys, List)
     end.
 
 %%-------------------------------------------------------------------------
@@ -129,6 +151,11 @@ take_values(Result, [{Key, Default} | DefaultList], List)
 
 delete_all_test() ->
     [{d, true}] = delete_all([a, b, c], [{a, true}, {d, true}]),
+    ok.
+
+find_any_test() ->
+    false = find_any([b], [{a, true}, {d, true}]),
+    true = find_any([d], [{a, true}, {d, true}]),
     ok.
 
 partition_test() ->

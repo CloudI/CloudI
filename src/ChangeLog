@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add preliminary service configuration update with services_update
+
 2016-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add some options parsing for services_update input
