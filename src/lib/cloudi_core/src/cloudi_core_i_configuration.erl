@@ -175,9 +175,12 @@
      service_update_modules_unload_invalid |
      service_update_code_paths_add_invalid |
      service_update_code_paths_remove_invalid |
+     service_update_dest_refresh_invalid |
      service_update_timeout_init_invalid |
      service_update_timeout_async_invalid |
      service_update_timeout_sync_invalid |
+     service_update_dest_list_deny_invalid |
+     service_update_dest_list_allow_invalid |
      service_options_priority_default_invalid |
      service_options_queue_limit_invalid |
      service_options_queue_size_invalid |
@@ -563,7 +566,7 @@ services_add([T | _] = Value,
     when is_record(T, internal); is_record(T, external); is_list(T) ->
     case services_validate(Value, UUID) of
         {ok, ValidatedServices, IDs} ->
-            case services_acl_update(ValidatedServices, ACL) of
+            case services_acl_expand(ValidatedServices, ACL) of
                 {ok, NextServices} ->
                     case services_add_service(NextServices, Timeout) of
                         {ok, NewServices} ->
@@ -652,8 +655,8 @@ services_restart(Value, _, _) ->
     {error, error_reason_services_update()}.
 
 services_update([_ | _] = Plan,
-                #config{services = Services} = Config, Timeout) ->
-    case services_update_plan(Plan, Services, Timeout) of
+                #config{services = Services, acl = ACL} = Config, Timeout) ->
+    case services_update_plan(Plan, Services, ACL, Timeout) of
         {ok, Result, NewServices} ->
             {ok, Result, Config#config{services = NewServices}};
         {error, _} = Error ->
@@ -1513,7 +1516,7 @@ load_verify(Terms) ->
     {error, error_reason_new()}.
 
 new([], #config{services = Services, acl = ACL} = Config) ->
-    case services_acl_update(Services, ACL) of
+    case services_acl_expand(Services, ACL) of
         {ok, NewServices} ->
             {ok, Config#config{services = NewServices}};
         {error, _} = Error ->
@@ -1645,85 +1648,6 @@ services_add_service([Service | Services], Added, Timeout) ->
             services_add_service(Services, [NewService | Added], Timeout);
         {error, _} = Error ->
             Error
-    end.
-
-services_acl_update([], _) ->
-    {ok, []};
-services_acl_update([_ | _] = Services, Lookup) ->
-    services_acl_update(Services, [], Lookup).
-
--define(CLOUDI_CORE_SUPPORT_INTERNAL_ACL,
-services_acl_update([#config_service_internal{
-                        dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L],
-                    Output, Lookup) ->
-    case services_acl_update_list(Deny, [], Lookup) of
-        {ok, NewDeny} ->
-            case services_acl_update_list(Allow, [], Lookup) of
-                {ok, NewAllow} ->
-                    services_acl_update(L,
-                        [Service#config_service_internal{
-                            dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], Lookup);
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    ).
--ifdef(CLOUDI_CORE_STANDALONE).
--define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
-    end).
--else.
--define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
-    end;
-services_acl_update([#config_service_external{
-                        dest_list_deny = Deny,
-                        dest_list_allow = Allow} = Service | L],
-                    Output, Lookup) ->
-    case services_acl_update_list(Deny, [], Lookup) of
-        {ok, NewDeny} ->
-            case services_acl_update_list(Allow, [], Lookup) of
-                {ok, NewAllow} ->
-                    services_acl_update(L,
-                        [Service#config_service_external{
-                            dest_list_deny = NewDeny,
-                            dest_list_allow = NewAllow} | Output], Lookup);
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
-    end).
--endif.
-services_acl_update([], Output, _) ->
-    {ok, lists:reverse(Output)};
-?CLOUDI_CORE_SUPPORT_INTERNAL_ACL
-?CLOUDI_CORE_SUPPORT_EXTERNAL_ACL
-    .
-
-services_acl_update_list(undefined, _, _) ->
-    {ok, undefined};
-services_acl_update_list([], Output, _) ->
-    {ok, lists:reverse(Output)};
-services_acl_update_list([E | L], Output, Lookup)
-    when is_atom(E) ->
-    case dict:find(E, Lookup) of
-        {ok, Value} ->
-            services_acl_update_list(L, Value ++ Output, Lookup);
-        error ->
-            {error, {acl_not_found, E}}
-    end;
-services_acl_update_list([E | L], Output, Lookup)
-    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern(E) of
-        true ->
-            services_acl_update_list(L, [E | Output], Lookup);
-        false ->
-            services_acl_update_list(L, [E ++ "*" | Output], Lookup)
-    catch
-        exit:badarg ->
-            {error, {acl_invalid, E}}
     end.
 
 -spec services_validate(Services :: list(#internal{} | #external{} |
@@ -3466,72 +3390,6 @@ services_validate_option_aspects_external(AspectsInitAfter,
             Error
     end.
 
-acl_lookup_new(L) ->
-    acl_lookup_add(L, dict:new()).
-
-acl_lookup_add(L, OldLookup) ->
-    case acl_store(L, OldLookup) of
-        {ok, NewLookup} ->
-            acl_expand(L, OldLookup, NewLookup);
-        {error, _} = Error ->
-            Error
-    end.
-
-acl_store([], Lookup) ->
-    {ok, Lookup};
-acl_store([{Key, [E | _] = Value} | L], Lookup)
-    when is_atom(E);
-         (is_list(E) andalso (length(E) > 0) andalso is_integer(hd(E))) ->
-    acl_store(L, dict:store(Key, Value, Lookup));
-acl_store([H | _], _) ->
-    {error, {acl_invalid, H}}.
-
-acl_expand([], LookupFinal, _) ->
-    {ok, LookupFinal};
-acl_expand([{Key, Value} | L], LookupFinal, LookupConfig) ->
-    case acl_expand_values(Value, [], [], Key, LookupConfig) of
-        {ok, NewValue} ->
-            acl_expand(L, dict:store(Key, NewValue, LookupFinal),
-                       LookupConfig);
-        {error, _} = Error ->
-            Error
-    end.
-
-acl_expand_values([], Output, _Path, _Key, _Lookup) ->
-    {ok, lists:reverse(Output)};
-acl_expand_values([E | L], Output, Path, Key, Lookup)
-    when is_atom(E) ->
-    case lists:member(E, Path) of
-        true ->
-            {error, {acl_cyclic, Key, E}};
-        false ->
-            case dict:find(E, Lookup) of
-                error ->
-                    {error, {acl_not_found, E}};
-                {ok, OtherL} ->
-                    case acl_expand_values(OtherL, Output,
-                                           [E | Path], Key, Lookup) of
-                        {ok, NewOutput} ->
-                            acl_expand_values(L, NewOutput, Path, Key, Lookup);
-                        {error, _} = Error ->
-                            Error
-                    end
-            end
-    end;
-acl_expand_values([E | L], Output, Path, Key, Lookup)
-    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern(E) of
-        true ->
-            acl_expand_values(L, [E | Output], Path, Key, Lookup);
-        false ->
-            acl_expand_values(L, [E ++ "*" | Output], Path, Key, Lookup)
-    catch
-        exit:badarg ->
-            {error, {acl_invalid, E}}
-    end;
-acl_expand_values([E | _], _, _, _, _) ->
-    {error, {acl_invalid, E}}.
-
 services_remove_uuid(Value, Services, Timeout) ->
     services_remove_uuid(Value, [], Services, Timeout).
 
@@ -3631,12 +3489,12 @@ services_restart_all([Service | RestartServices], Timeout) ->
             Error
     end.
 
-services_update_plan(Value, Services, Timeout) ->
-    services_update_plan(Value, [], Services, Timeout).
+services_update_plan(Value, Services, ACL, Timeout) ->
+    services_update_plan(Value, [], Services, ACL, Timeout).
 
-services_update_plan([], UpdatePlans, Services, Timeout) ->
+services_update_plan([], UpdatePlans, Services, _, Timeout) ->
     services_update_all(lists:reverse(UpdatePlans), Services, Timeout);
-services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
+services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
     when is_binary(ID), (byte_size(ID) == 16) orelse (byte_size(ID) == 0) ->
     UpdatePlan = #config_service_update{},
     Defaults = [
@@ -3884,15 +3742,15 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _,
          _, ModulesLoad, ModulesUnload, _, _,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
-         DestDenyList, DestAllowList, Options]
+         DestListDeny, DestListAllow, Options]
         when (Module =/= undefined) andalso (ModuleState =:= undefined) andalso
              (ModulesLoad == []) andalso (ModulesUnload == []) andalso
              (DestRefresh =:= undefined) andalso
              (TimeoutInit =:= undefined) andalso
              (TimeoutAsync =:= undefined) andalso
              (TimeoutSync =:= undefined) andalso
-             (DestDenyList =:= invalid) andalso
-             (DestAllowList =:= invalid) andalso
+             (DestListDeny =:= invalid) andalso
+             (DestListAllow =:= invalid) andalso
              (Options == []) ->
             {error, {service_update_invalid,
                      no_update}};
@@ -3900,7 +3758,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          FilePath, Args, Env,
          _, ModulesLoad, ModulesUnload, _, _,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
-         DestDenyList, DestAllowList, Options]
+         DestListDeny, DestListAllow, Options]
         when (Type =:= external) andalso
              (FilePath =:= undefined) andalso
              (Args =:= undefined) andalso
@@ -3910,8 +3768,8 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
              (TimeoutInit =:= undefined) andalso
              (TimeoutAsync =:= undefined) andalso
              (TimeoutSync =:= undefined) andalso
-             (DestDenyList =:= invalid) andalso
-             (DestAllowList =:= invalid) andalso
+             (DestListDeny =:= invalid) andalso
+             (DestListAllow =:= invalid) andalso
              (Options == []) ->
             {error, {service_update_invalid,
                      no_update}};
@@ -3919,11 +3777,13 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
-         DestDenyList, DestAllowList, Options]
+         DestListDeny, DestListAllow, Options]
         when Module =/= undefined ->
             case services_update_plan_internal(Module, ModuleState,
-                                               Options, ID, Services) of
+                                               DestListDeny, DestListAllow,
+                                               Options, ID, Services, ACL) of
                 {ok, IDs, NewModuleState,
+                 NewDestListDeny, NewDestListAllow,
                  OptionsKeys, NewOptions, ModuleVersion} ->
                     NewUpdatePlans =
                         [UpdatePlan#config_service_update{
@@ -3939,15 +3799,15 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                              timeout_init = TimeoutInit,
                              timeout_async = TimeoutAsync,
                              timeout_sync = TimeoutSync,
-                             dest_list_deny = DestDenyList,
-                             dest_list_allow = DestAllowList,
+                             dest_list_deny = NewDestListDeny,
+                             dest_list_allow = NewDestListAllow,
                              options_keys = OptionsKeys,
                              options = NewOptions,
                              uuids = IDs,
                              module_version_old = ModuleVersion} |
                          UpdatePlans],
                     services_update_plan(L, NewUpdatePlans,
-                                         Services, Timeout);
+                                         Services, ACL, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -3955,14 +3815,16 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          FilePath, Args, Env,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
-         DestDenyList, DestAllowList, Options]
+         DestListDeny, DestListAllow, Options]
         when (Type =:= external) orelse
              ((FilePath =/= undefined) orelse
               (Args =/= undefined) orelse
               (Env =/= undefined)) ->
             case services_update_plan_external(FilePath, Args, Env,
-                                               Options, ID, Services) of
-                {ok, OptionsKeys, NewOptions, SpawnOsProcess} ->
+                                               DestListDeny, DestListAllow,
+                                               Options, ID, Services, ACL) of
+                {ok, NewDestListDeny, NewDestListAllow,
+                 OptionsKeys, NewOptions, SpawnOsProcess} ->
                     NewUpdatePlans =
                         [UpdatePlan#config_service_update{
                              type = external,
@@ -3978,15 +3840,15 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                              timeout_init = TimeoutInit,
                              timeout_async = TimeoutAsync,
                              timeout_sync = TimeoutSync,
-                             dest_list_deny = DestDenyList,
-                             dest_list_allow = DestAllowList,
+                             dest_list_deny = NewDestListDeny,
+                             dest_list_allow = NewDestListAllow,
                              options_keys = OptionsKeys,
                              options = NewOptions,
                              uuids = [ID],
                              spawn_os_process = SpawnOsProcess} |
                          UpdatePlans],
                     services_update_plan(L, NewUpdatePlans,
-                                         Services, Timeout);
+                                         Services, ACL, Timeout);
                 {error, _} = Error ->
                     Error
             end;
@@ -3997,10 +3859,12 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_invalid,
                      Invalid}}
     end;
-services_update_plan([{ID, _} | _], _, _, _) ->
+services_update_plan([{ID, _} | _], _, _, _, _) ->
     {error, {update_invalid, ID}}.
 
-services_update_plan_internal(Module, ModuleState, Options, ID, Services) ->
+services_update_plan_internal(Module, ModuleState,
+                              DestListDeny, DestListAllow,
+                              Options, ID, Services, ACL) ->
     ModuleIDs = lists:foldr(fun(S, IDs) ->
         if
             is_record(S, config_service_internal),
@@ -4022,13 +3886,21 @@ services_update_plan_internal(Module, ModuleState, Options, ID, Services) ->
         UpdateValid =:= true ->
             case services_update_plan_module_state(ModuleState) of
                 {ok, NewModuleState} ->
-                    case services_update_plan_options_internal(Options) of
-                        {ok, NewOptions} ->
+                    case service_acl_expand_lists(DestListDeny,
+                                                  DestListAllow,
+                                                  ACL) of
+                        {ok, NewDestListDeny, NewDestListAllow} ->
                             OptionsKeys = [Key || {Key, _} <- Options],
-                            ModuleVersion = cloudi_x_reltool_util:
-                                            module_version(Module),
-                            {ok, ModuleIDs, NewModuleState,
-                             OptionsKeys, NewOptions, ModuleVersion};
+                            case services_update_plan_options_internal(Options) of
+                                {ok, NewOptions} ->
+                                    ModuleVersion = cloudi_x_reltool_util:
+                                                    module_version(Module),
+                                    {ok, ModuleIDs, NewModuleState,
+                                     NewDestListDeny, NewDestListAllow,
+                                     OptionsKeys, NewOptions, ModuleVersion};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, _} = Error ->
                             Error
                     end;
@@ -4039,7 +3911,9 @@ services_update_plan_internal(Module, ModuleState, Options, ID, Services) ->
             {error, {update_invalid, ID}}
     end.
 
-services_update_plan_external(FilePath, Args, Env, Options, ID, Services) ->
+services_update_plan_external(FilePath, Args, Env,
+                              DestListDeny, DestListAllow,
+                              Options, ID, Services, ACL) ->
     UpdateValid = if
         ID == <<>> ->
             false;
@@ -4054,14 +3928,22 @@ services_update_plan_external(FilePath, Args, Env, Options, ID, Services) ->
     end,
     if
         UpdateValid =:= true ->
-            SpawnOsProcess = not ((FilePath =:= undefined) andalso
-                                  (Args =:= undefined) andalso
-                                  (Env =:= undefined)),
-            case services_update_plan_options_external(SpawnOsProcess,
-                                                       Options) of
-                {ok, NewOptions} ->
+            case service_acl_expand_lists(DestListDeny,
+                                          DestListAllow,
+                                          ACL) of
+                {ok, NewDestListDeny, NewDestListAllow} ->
+                    SpawnOsProcess = not ((FilePath =:= undefined) andalso
+                                          (Args =:= undefined) andalso
+                                          (Env =:= undefined)),
                     OptionsKeys = [Key || {Key, _} <- Options],
-                    {ok, OptionsKeys, NewOptions, SpawnOsProcess};
+                    case services_update_plan_options_external(SpawnOsProcess,
+                                                               Options) of
+                        {ok, NewOptions} ->
+                            {ok, NewDestListDeny, NewDestListAllow,
+                             OptionsKeys, NewOptions, SpawnOsProcess};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -4309,6 +4191,162 @@ service_update_done_common(Service0,
                                                NewOptions)}
     end,
     ServiceN.
+
+services_acl_expand([], _) ->
+    {ok, []};
+services_acl_expand([_ | _] = Services, ACL) ->
+    services_acl_expand(Services, [], ACL).
+
+services_acl_expand([], Output, _) ->
+    {ok, lists:reverse(Output)};
+services_acl_expand([Service | Services], Output, ACL) ->
+    case service_acl_expand(Service, ACL) of
+        {ok, NewService} ->
+            services_acl_expand(Services, [NewService | Output], ACL);
+        {error, _} = Error ->
+            Error
+    end.
+
+-define(CLOUDI_CORE_SUPPORT_INTERNAL_ACL,
+service_acl_expand(#config_service_internal{
+                       dest_list_deny = DestListDeny,
+                       dest_list_allow = DestListAllow} = Service,
+                   ACL) ->
+    case service_acl_expand_lists(DestListDeny, DestListAllow, ACL) of
+        {ok, NewDestListDeny, NewDestListAllow} ->
+            {ok, Service#config_service_internal{
+                     dest_list_deny = NewDestListDeny,
+                     dest_list_allow = NewDestListAllow}};
+        {error, _} = Error ->
+            Error
+    ).
+-ifdef(CLOUDI_CORE_STANDALONE).
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
+    end).
+-else.
+-define(CLOUDI_CORE_SUPPORT_EXTERNAL_ACL,
+    end;
+service_acl_expand(#config_service_external{
+                       dest_list_deny = DestListDeny,
+                       dest_list_allow = DestListAllow} = Service,
+                   ACL) ->
+    case service_acl_expand_lists(DestListDeny, DestListAllow, ACL) of
+        {ok, NewDestListDeny, NewDestListAllow} ->
+            {ok, Service#config_service_external{
+                     dest_list_deny = NewDestListDeny,
+                     dest_list_allow = NewDestListAllow}};
+        {error, _} = Error ->
+            Error
+    end).
+-endif.
+?CLOUDI_CORE_SUPPORT_INTERNAL_ACL
+?CLOUDI_CORE_SUPPORT_EXTERNAL_ACL
+    .
+
+service_acl_expand_lists(DestListDeny, DestListAllow, ACL) ->
+    case service_acl_expand_list(DestListDeny, [], ACL) of
+        {ok, NewDestListDeny} ->
+            case service_acl_expand_list(DestListAllow, [], ACL) of
+                {ok, NewDestListAllow} ->
+                    {ok, NewDestListDeny, NewDestListAllow};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+service_acl_expand_list(invalid, _, _) ->
+    {ok, invalid};
+service_acl_expand_list(undefined, _, _) ->
+    {ok, undefined};
+service_acl_expand_list([], Output, _) ->
+    {ok, lists:reverse(Output)};
+service_acl_expand_list([E | L], Output, ACL)
+    when is_atom(E) ->
+    case dict:find(E, ACL) of
+        {ok, Value} ->
+            service_acl_expand_list(L, Value ++ Output, ACL);
+        error ->
+            {error, {acl_not_found, E}}
+    end;
+service_acl_expand_list([E | L], Output, ACL)
+    when is_list(E), (length(E) > 0), is_integer(hd(E)) ->
+    try cloudi_x_trie:is_pattern(E) of
+        true ->
+            service_acl_expand_list(L, [E | Output], ACL);
+        false ->
+            service_acl_expand_list(L, [E ++ "*" | Output], ACL)
+    catch
+        exit:badarg ->
+            {error, {acl_invalid, E}}
+    end.
+
+acl_lookup_new(L) ->
+    acl_lookup_add(L, dict:new()).
+
+acl_lookup_add(L, OldACL) ->
+    case acl_store(L, OldACL) of
+        {ok, NewACL} ->
+            acl_update(L, OldACL, NewACL);
+        {error, _} = Error ->
+            Error
+    end.
+
+acl_store([], ACL) ->
+    {ok, ACL};
+acl_store([{Key, [E | _] = Value} | L], ACL)
+    when is_atom(E);
+         (is_list(E) andalso is_integer(hd(E))) ->
+    acl_store(L, dict:store(Key, Value, ACL));
+acl_store([H | _], _) ->
+    {error, {acl_invalid, H}}.
+
+acl_update([], ACLFinal, _) ->
+    {ok, ACLFinal};
+acl_update([{Key, Value} | L], ACLFinal, ACLConfig) ->
+    case acl_update_values(Value, [], [], Key, ACLConfig) of
+        {ok, NewValue} ->
+            acl_update(L, dict:store(Key, NewValue, ACLFinal),
+                       ACLConfig);
+        {error, _} = Error ->
+            Error
+    end.
+
+acl_update_values([], Output, _Path, _Key, _ACL) ->
+    {ok, lists:reverse(Output)};
+acl_update_values([E | L], Output, Path, Key, ACL)
+    when is_atom(E) ->
+    case lists:member(E, Path) of
+        true ->
+            {error, {acl_cyclic, Key, E}};
+        false ->
+            case dict:find(E, ACL) of
+                error ->
+                    {error, {acl_not_found, E}};
+                {ok, OtherL} ->
+                    case acl_update_values(OtherL, Output,
+                                           [E | Path], Key, ACL) of
+                        {ok, NewOutput} ->
+                            acl_update_values(L, NewOutput, Path, Key, ACL);
+                        {error, _} = Error ->
+                            Error
+                    end
+            end
+    end;
+acl_update_values([E | L], Output, Path, Key, ACL)
+    when is_list(E), is_integer(hd(E)) ->
+    try cloudi_x_trie:is_pattern(E) of
+        true ->
+            acl_update_values(L, [E | Output], Path, Key, ACL);
+        false ->
+            acl_update_values(L, [E ++ "*" | Output], Path, Key, ACL)
+    catch
+        exit:badarg ->
+            {error, {acl_invalid, E}}
+    end;
+acl_update_values([E | _], _, _, _, _) ->
+    {error, {acl_invalid, E}}.
 
 service_name_valid(Name, ErrorReason) ->
     try cloudi_x_trie:is_pattern(Name) of
