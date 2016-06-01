@@ -57,8 +57,8 @@
          start_internal/15,
          start_external/18,
          update_external/3,
-         update_internal_f/5,
-         update_external_f/9]).
+         update_internal_f/9,
+         update_external_f/12]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
@@ -105,7 +105,7 @@ environment_transform(String, EnvironmentLookup) ->
 start_internal(ProcessIndex, ProcessCount, GroupLeader,
                Module, Args, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions, ID)
+               DestListDeny, DestListAllow, ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
@@ -128,16 +128,16 @@ start_internal(ProcessIndex, ProcessCount, GroupLeader,
            (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     DestDeny = if
-        DestDenyList =:= undefined ->
+        DestListDeny =:= undefined ->
             undefined;
-        is_list(DestDenyList) ->
-            cloudi_x_trie:new(DestDenyList)
+        is_list(DestListDeny) ->
+            cloudi_x_trie:new(DestListDeny)
     end,
     DestAllow = if
-        DestAllowList =:= undefined ->
+        DestListAllow =:= undefined ->
             undefined;
-        is_list(DestAllowList) ->
-            cloudi_x_trie:new(DestAllowList)
+        is_list(DestListAllow) ->
+            cloudi_x_trie:new(DestListAllow)
     end,
     case cloudi_x_reltool_util:is_module_loaded(Module, Timeout) of
         {ok, NewTimeout} ->
@@ -157,12 +157,12 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                Filename, Arguments, Environment,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-               DestDenyList, DestAllowList, ConfigOptions, ID) ->
+               DestListDeny, DestListAllow, ConfigOptions, ID) ->
     case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                Filename, Arguments, Environment,
                                Protocol, BufferSize, Timeout, Prefix,
                                TimeoutAsync, TimeoutSync, TimeoutTerm,
-                               DestRefresh, DestDenyList, DestAllowList,
+                               DestRefresh, DestListDeny, DestListAllow,
                                ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
@@ -206,12 +206,12 @@ update_external(Pids, Ports,
                  Filename, Arguments, Environment,
                  Protocol, BufferSize, Timeout, Prefix,
                  TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                 DestDenyList, DestAllowList, ConfigOptions, ID]) ->
+                 DestListDeny, DestListAllow, ConfigOptions, ID]) ->
     case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                Filename, Arguments, Environment,
                                Protocol, BufferSize, Timeout, Prefix,
                                TimeoutAsync, TimeoutSync, TimeoutTerm,
-                               DestRefresh, DestDenyList, DestAllowList,
+                               DestRefresh, DestListDeny, DestListAllow,
                                ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
@@ -234,41 +234,71 @@ update_external(Pids, Ports,
             Error
     end.
 
-update_internal_f(NewTimeoutAsync, NewTimeoutSync,
+update_internal_f(NewDestRefresh, NewTimeoutInit,
+                  NewTimeoutAsync, NewTimeoutSync,
+                  NewDestListDeny, NewDestListAllow,
                   OptionsKeys, NewConfigOptions,
                   [GroupLeader,
-                   Module, Args, Timeout, Prefix,
-                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm, DestRefresh,
-                   DestDenyList, DestAllowList, OldConfigOptions, ID]) ->
+                   Module, Args, OldTimeoutInit, Prefix,
+                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm,
+                   OldDestRefresh, OldDestListDeny, OldDestListAllow,
+                   OldConfigOptions, ID]) ->
     [GroupLeader,
-     Module, Args, Timeout, Prefix,
+     Module, Args,
      if
-        is_integer(NewTimeoutAsync) ->
-            NewTimeoutAsync;
+        NewTimeoutInit =:= undefined ->
+            OldTimeoutInit;
+        is_integer(NewTimeoutInit) ->
+            NewTimeoutInit
+     end,
+     Prefix,
+     if
         NewTimeoutAsync =:= undefined ->
-            OldTimeoutAsync
+            OldTimeoutAsync;
+        is_integer(NewTimeoutAsync) ->
+            NewTimeoutAsync
      end,
      if
-        is_integer(NewTimeoutSync) ->
-            NewTimeoutSync;
         NewTimeoutSync =:= undefined ->
-            OldTimeoutSync
+            OldTimeoutSync;
+        is_integer(NewTimeoutSync) ->
+            NewTimeoutSync
      end,
-     TimeoutTerm, DestRefresh,
-     DestDenyList, DestAllowList,
+     TimeoutTerm,
+     if
+        NewDestRefresh =:= undefined ->
+            OldDestRefresh;
+        is_atom(NewDestRefresh) ->
+            NewDestRefresh
+     end,
+     if
+        NewDestListDeny =:= invalid ->
+            OldDestListDeny;
+        NewDestListDeny =:= undefined; is_list(NewDestListDeny) ->
+            NewDestListDeny
+     end,
+     if
+        NewDestListAllow =:= invalid ->
+            OldDestListAllow;
+        NewDestListAllow =:= undefined; is_list(NewDestListAllow) ->
+            NewDestListAllow
+     end,
      cloudi_core_i_configuration:service_options_copy(OptionsKeys,
                                                       OldConfigOptions,
                                                       NewConfigOptions),
      ID].
 
 update_external_f(NewFilename, NewArguments, NewEnvironment,
+                  NewDestRefresh,
                   NewTimeoutInit, NewTimeoutAsync, NewTimeoutSync,
+                  NewDestListDeny, NewDestListAllow,
                   OptionsKeys, NewConfigOptions,
                   [ThreadsPerProcess,
                    OldFilename, OldArguments, OldEnvironment,
                    Protocol, BufferSize, OldTimeoutInit, Prefix,
-                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm, DestRefresh,
-                   DestDenyList, DestAllowList, OldConfigOptions, ID]) ->
+                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm,
+                   OldDestRefresh, OldDestListDeny, OldDestListAllow,
+                   OldConfigOptions, ID]) ->
     [ThreadsPerProcess,
      if
         is_list(NewFilename) ->
@@ -308,8 +338,25 @@ update_external_f(NewFilename, NewArguments, NewEnvironment,
         NewTimeoutSync =:= undefined ->
             OldTimeoutSync
      end,
-     TimeoutTerm, DestRefresh,
-     DestDenyList, DestAllowList,
+     TimeoutTerm,
+     if
+        NewDestRefresh =:= undefined ->
+            OldDestRefresh;
+        is_atom(NewDestRefresh) ->
+            NewDestRefresh
+     end,
+     if
+        NewDestListDeny =:= invalid ->
+            OldDestListDeny;
+        NewDestListDeny =:= undefined; is_list(NewDestListDeny) ->
+            NewDestListDeny
+     end,
+     if
+        NewDestListAllow =:= invalid ->
+            OldDestListAllow;
+        NewDestListAllow =:= undefined; is_list(NewDestListAllow) ->
+            NewDestListAllow
+     end,
      cloudi_core_i_configuration:service_options_copy(OptionsKeys,
                                                       OldConfigOptions,
                                                       NewConfigOptions),
@@ -337,7 +384,7 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                       Filename, Arguments, Environment,
                       Protocol, BufferSize, Timeout, Prefix,
                       TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                      DestDenyList, DestAllowList, ConfigOptions, ID)
+                      DestListDeny, DestListAllow, ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
@@ -365,16 +412,16 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
            (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
     DestDeny = if
-        DestDenyList =:= undefined ->
+        DestListDeny =:= undefined ->
             undefined;
-        is_list(DestDenyList) ->
-            cloudi_x_trie:new(DestDenyList)
+        is_list(DestListDeny) ->
+            cloudi_x_trie:new(DestListDeny)
     end,
     DestAllow = if
-        DestAllowList =:= undefined ->
+        DestListAllow =:= undefined ->
             undefined;
-        is_list(DestAllowList) ->
-            cloudi_x_trie:new(DestAllowList)
+        is_list(DestListAllow) ->
+            cloudi_x_trie:new(DestListAllow)
     end,
     TemporaryDirectory = case os:getenv("TMPDIR") of
         false ->

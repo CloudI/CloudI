@@ -4,6 +4,8 @@
 2016-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add preliminary service configuration update with services_update
+    * Add dest_refresh, dest_list_deny, dest_list_allow to services_update
+    * Allow timeout_init for internal services with services_update
 
 2016-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

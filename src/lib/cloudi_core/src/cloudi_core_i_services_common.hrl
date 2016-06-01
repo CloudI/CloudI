@@ -42,18 +42,17 @@
 %%%
 %%%------------------------------------------------------------------------
 
+-include("cloudi_core_i_common.hrl").
+
 % When using the state record within this file, only the state elements
 % that are common among cloudi_core_i_services_internal.erl and
-% cloudi_core_i_services_external.erl may be used (to avoid GC delays)
+% cloudi_core_i_services_external.erl may be used
 
 -compile({nowarn_unused_function,
           [{recv_async_select_random, 1},
            {recv_async_select_oldest, 1}]}).
 -compile({inline,
           [{cancel_timer_async, 1}]}).
-
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
 
 destination_allowed([], _, _) ->
     false;
@@ -89,58 +88,6 @@ destination_allowed(Name, DestDeny, DestAllow) ->
                     false
             end
     end.
-
-destination_refresh_first(DestRefresh, Dispatcher,
-                          #config_service_options{
-                              dest_refresh_start = Delay,
-                              scope = Scope})
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Dispatcher, Delay);
-
-destination_refresh_first(DestRefresh, _, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    ok;
-
-destination_refresh_first(none, _, _) ->
-    ok.
-
-destination_refresh_start(DestRefresh, Dispatcher,
-                          #config_service_options{
-                              dest_refresh_delay = Delay,
-                              scope = Scope})
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Dispatcher, Delay);
-
-destination_refresh_start(DestRefresh, _, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    ok;
-
-destination_refresh_start(none, _, _) ->
-    ok.
 
 destination_get(lazy_closest, _, Name, Pid, Groups, _) ->
     cloudi_x_cpg_data:get_closest_pid(Name, Pid, Groups);

@@ -471,9 +471,12 @@
                   {modules_unload, list(atom())} |
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
+                  {dest_refresh, dest_refresh()} |
                   {timeout_init, timeout_milliseconds()} |
                   {timeout_async, timeout_milliseconds()} |
                   {timeout_sync, timeout_milliseconds()} |
+                  {dest_list_deny, dest_list()} |
+                  {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_internal()}).
 -type service_update_plan_external() ::
     nonempty_list({type, external} |
@@ -485,9 +488,12 @@
                   {modules_unload, list(atom())} |
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
+                  {dest_refresh, dest_refresh()} |
                   {timeout_init, timeout_milliseconds()} |
                   {timeout_async, timeout_milliseconds()} |
                   {timeout_sync, timeout_milliseconds()} |
+                  {dest_list_deny, dest_list()} |
+                  {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_external()}).
 -type service_update_plan_options_internal() ::
     list({priority_default, priority()} |

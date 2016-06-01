@@ -324,25 +324,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     {ok, TimestampType} = application:get_env(cloudi_core, timestamp_type),
     UUID = cloudi_x_uuid:new(Dispatcher, [{timestamp_type, TimestampType},
                                           {mac_address, MacAddress}]),
-    Groups = if
-        DestRefresh =:= none orelse
-        DestRefresh =:= immediate_closest orelse
-        DestRefresh =:= immediate_furthest orelse
-        DestRefresh =:= immediate_random orelse
-        DestRefresh =:= immediate_local orelse
-        DestRefresh =:= immediate_remote orelse
-        DestRefresh =:= immediate_newest orelse
-        DestRefresh =:= immediate_oldest ->
-            undefined;
-        DestRefresh =:= lazy_closest orelse
-        DestRefresh =:= lazy_furthest orelse
-        DestRefresh =:= lazy_random orelse
-        DestRefresh =:= lazy_local orelse
-        DestRefresh =:= lazy_remote orelse
-        DestRefresh =:= lazy_newest orelse
-        DestRefresh =:= lazy_oldest ->
-            cloudi_x_cpg_data:get_empty_groups()
-    end,
+    Groups = destination_refresh_groups(DestRefresh, undefined),
     State = #state{dispatcher = Dispatcher,
                    queued_word_size = WordSize,
                    module = Module,
@@ -370,7 +352,10 @@ init([ProcessIndex, ProcessCount, GroupLeader,
     ok = cloudi_core_i_services_internal_sup:
          create_internal_done(Parent, Dispatcher, ReceiverPid),
 
-    destination_refresh_first(DestRefresh, Dispatcher, NewConfigOptions),
+    #config_service_options{
+        dest_refresh_start = Delay,
+        scope = Scope} = NewConfigOptions,
+    destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
     {ok, State}.
 
 handle_call(process_index, _,
@@ -1585,8 +1570,10 @@ handle_info({'cloudi_service_send_sync_minimal',
 handle_info({cloudi_cpg_data, Groups},
             #state{dispatcher = Dispatcher,
                    dest_refresh = DestRefresh,
-                   options = ConfigOptions} = State) ->
-    destination_refresh_start(DestRefresh, Dispatcher, ConfigOptions),
+                   options = #config_service_options{
+                       dest_refresh_delay = Delay,
+                       scope = Scope}} = State) ->
+    destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
     hibernate_check({noreply, State#state{cpg_data = Groups}});
 
 handle_info('cloudi_hibernate_rate',
@@ -4250,16 +4237,31 @@ update(ServiceState, State,
             {error, {Type, Error}}
     end.
 
-update_state(#state{timeout_async = OldTimeoutAsync,
+update_state(#state{dispatcher = Dispatcher,
+                    timeout_async = OldTimeoutAsync,
                     timeout_sync = OldTimeoutSync,
-                    request_pid = RequestPid,
-                    info_pid = InfoPid,
+                    request_pid = OldRequestPid,
+                    info_pid = OldInfoPid,
+                    dest_refresh = OldDestRefresh,
+                    cpg_data = OldGroups,
+                    dest_deny = OldDestDeny,
+                    dest_allow = OldDestAllow,
                     options = OldConfigOptions} = State,
              #config_service_update{
+                 dest_refresh = NewDestRefresh,
                  timeout_async = NewTimeoutAsync,
                  timeout_sync = NewTimeoutSync,
+                 dest_list_deny = NewDestListDeny,
+                 dest_list_allow = NewDestListAllow,
                  options_keys = OptionsKeys,
                  options = NewConfigOptions}) ->
+    DestRefresh = if
+        NewDestRefresh =:= undefined ->
+            OldDestRefresh;
+        is_atom(NewDestRefresh) ->
+            NewDestRefresh
+    end,
+    Groups = destination_refresh_groups(DestRefresh, OldGroups),
     TimeoutAsync = if
         NewTimeoutAsync =:= undefined ->
             OldTimeoutAsync;
@@ -4272,35 +4274,77 @@ update_state(#state{timeout_async = OldTimeoutAsync,
         is_integer(NewTimeoutSync) ->
             NewTimeoutSync
     end,
+    DestDeny = if
+        NewDestListDeny =:= invalid ->
+            OldDestDeny;
+        NewDestListDeny =:= undefined ->
+            undefined;
+        is_list(NewDestListDeny) ->
+            cloudi_x_trie:new(NewDestListDeny)
+    end,
+    DestAllow = if
+        NewDestListAllow =:= invalid ->
+            OldDestAllow;
+        NewDestListAllow =:= undefined ->
+            undefined;
+        is_list(NewDestListAllow) ->
+            cloudi_x_trie:new(NewDestListAllow)
+    end,
     NewRequestPid = case cloudi_lists:member_any([request_pid_uses,
                                                   request_pid_options],
                                                  OptionsKeys) of
-        true when is_pid(RequestPid) ->
-            RequestPid ! 'cloudi_service_request_loop_exit',
+        true when is_pid(OldRequestPid) ->
+            OldRequestPid ! 'cloudi_service_request_loop_exit',
             undefined;
         _ ->
-            RequestPid
+            OldRequestPid
     end,
     NewInfoPid = case cloudi_lists:member_any([info_pid_uses,
                                                info_pid_options],
                                               OptionsKeys) of
-        true when is_pid(InfoPid) ->
-            InfoPid ! 'cloudi_service_info_loop_exit',
+        true when is_pid(OldInfoPid) ->
+            OldInfoPid ! 'cloudi_service_info_loop_exit',
             undefined;
         _ ->
-            InfoPid
+            OldInfoPid
     end,
     ConfigOptions = cloudi_core_i_configuration:
                     service_options_copy(OptionsKeys,
                                          OldConfigOptions,
                                          NewConfigOptions),
+    if
+        (OldDestRefresh =:= immediate_closest orelse
+         OldDestRefresh =:= immediate_furthest orelse
+         OldDestRefresh =:= immediate_random orelse
+         OldDestRefresh =:= immediate_local orelse
+         OldDestRefresh =:= immediate_remote orelse
+         OldDestRefresh =:= immediate_newest orelse
+         OldDestRefresh =:= immediate_oldest) andalso
+        (NewDestRefresh =:= lazy_closest orelse
+         NewDestRefresh =:= lazy_furthest orelse
+         NewDestRefresh =:= lazy_random orelse
+         NewDestRefresh =:= lazy_local orelse
+         NewDestRefresh =:= lazy_remote orelse
+         NewDestRefresh =:= lazy_newest orelse
+         NewDestRefresh =:= lazy_oldest) ->
+            #config_service_options{
+                dest_refresh_delay = Delay,
+                scope = Scope} = ConfigOptions,
+            destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
+        true ->
+            ok
+    end,
     State#state{timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
                 request_pid = NewRequestPid,
                 info_pid = NewInfoPid,
+                dest_refresh = DestRefresh,
+                cpg_data = Groups,
+                dest_deny = DestDeny,
+                dest_allow = DestAllow,
                 options = ConfigOptions};
 update_state(#state_duo{dispatcher = Dispatcher,
-                        request_pid = RequestPid,
+                        request_pid = OldRequestPid,
                         options = OldConfigOptions} = State,
              #config_service_update{
                  options_keys = OptionsKeys,
@@ -4309,11 +4353,11 @@ update_state(#state_duo{dispatcher = Dispatcher,
     NewRequestPid = case cloudi_lists:member_any([request_pid_uses,
                                                   request_pid_options],
                                                  OptionsKeys) of
-        true when is_pid(RequestPid) ->
-            RequestPid ! 'cloudi_service_request_loop_exit',
+        true when is_pid(OldRequestPid) ->
+            OldRequestPid ! 'cloudi_service_request_loop_exit',
             undefined;
         _ ->
-            RequestPid
+            OldRequestPid
     end,
     ConfigOptions = cloudi_core_i_configuration:
                     service_options_copy(OptionsKeys,

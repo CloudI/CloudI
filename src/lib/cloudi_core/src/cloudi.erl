@@ -201,6 +201,8 @@
 -export_type([request_type/0,
               dispatcher/0]).
 
+-include("cloudi_core_i_common.hrl").
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -239,7 +241,7 @@ new(Options)
         {priority_default,                     ?DEFAULT_PRIORITY},
         {scope,                                   ?DEFAULT_SCOPE},
         {uuid,                                         undefined},
-        {groups,            cloudi_x_cpg_data:get_empty_groups()},
+        {groups,                                       undefined},
         {groups_scope,                                 undefined},
         {groups_static,                                    false}
         ],
@@ -290,24 +292,27 @@ new(Options)
         true ->
             GroupsScope
     end,
-    Self = self(),
+    Receiver = self(),
     UUID = if
         OldUUID =:= undefined ->
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             {ok, TimestampType} = application:get_env(cloudi_core,
                                                       timestamp_type),
-            cloudi_x_uuid:new(Self, [{timestamp_type, TimestampType},
-                                     {mac_address, MacAddress}]);
+            cloudi_x_uuid:new(Receiver,
+                              [{timestamp_type, TimestampType},
+                               {mac_address, MacAddress}]);
         true ->
             OldUUID
     end,
     Groups = if
         GroupsStatic =:= true ->
-            OldGroups;
+            destination_refresh_groups(DestRefresh,
+                                       OldGroups);
         GroupsStatic =:= false ->
-            destination_refresh_first(DestRefresh,
-                                      DestRefreshStart,
-                                      ConfiguredScope),
+            destination_refresh(DestRefresh,
+                                Receiver,
+                                DestRefreshStart,
+                                ConfiguredScope),
             if
                 ((DestRefresh =:= lazy_closest) orelse
                  (DestRefresh =:= lazy_furthest) orelse
@@ -319,16 +324,19 @@ new(Options)
                 DestRefreshStart < ?DEFAULT_DEST_REFRESH_START ->
                     receive
                         {cloudi_cpg_data, G} ->
-                            destination_refresh_start(DestRefresh,
-                                                      DestRefreshDelay,
-                                                      ConfiguredScope),
+                            destination_refresh(DestRefresh,
+                                                Receiver,
+                                                DestRefreshDelay,
+                                                ConfiguredScope),
                             G
                     after
                         ?DEFAULT_DEST_REFRESH_START ->
-                            OldGroups
+                            destination_refresh_groups(DestRefresh,
+                                                       OldGroups)
                     end;
                 true ->
-                    OldGroups
+                    destination_refresh_groups(DestRefresh,
+                                               OldGroups)
             end
     end,
     #cloudi_context{
@@ -339,7 +347,7 @@ new(Options)
         timeout_sync = DefaultTimeoutSync,
         priority_default = PriorityDefault,
         scope = ConfiguredScope,
-        receiver = Self,
+        receiver = Receiver,
         uuid_generator = UUID,
         cpg_data = Groups
     }.
@@ -363,9 +371,10 @@ new(Options)
 destinations_refresh(#cloudi_context{
                          dest_refresh = DestRefresh,
                          dest_refresh_delay = DestRefreshDelay,
-                         scope = Scope} = Context,
+                         scope = Scope,
+                         receiver = Receiver} = Context,
                      {cloudi_cpg_data, Groups}) ->
-    destination_refresh_start(DestRefresh, DestRefreshDelay, Scope),
+    destination_refresh(DestRefresh, Receiver, DestRefreshDelay, Scope),
     Context#cloudi_context{cpg_data = Groups}.
 
 %%-------------------------------------------------------------------------
@@ -1626,58 +1635,16 @@ result(#cloudi_context{
            dest_refresh = DestRefresh,
            dest_refresh_delay = DestRefreshDelay,
            scope = Scope,
+           receiver = Receiver,
            cpg_data_stale = SendGroups} = Context, Result) ->
     if
         SendGroups =:= true ->
-            destination_refresh_start(DestRefresh,
-                                      DestRefreshDelay, Scope),
+            destination_refresh(DestRefresh, Receiver,
+                                DestRefreshDelay, Scope),
             {Result, Context#cloudi_context{cpg_data_stale = false}};
         SendGroups =:= false ->
             {Result, Context}
     end.
-
-destination_refresh_first(DestRefresh, Delay, Scope)
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Delay);
-
-destination_refresh_first(DestRefresh, _, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    ok.
-
-destination_refresh_start(DestRefresh, Delay, Scope)
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Delay);
-
-destination_refresh_start(DestRefresh, _, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    ok.
-
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
 
 destination_get(lazy_closest, _, Name, Groups, _) ->
     cloudi_x_cpg_data:get_closest_pid(Name, Groups);

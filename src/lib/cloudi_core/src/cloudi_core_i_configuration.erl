@@ -3652,8 +3652,6 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.args},
         {env,
          UpdatePlan#config_service_update.env},
-        {timeout_init,
-         UpdatePlan#config_service_update.timeout_init},
         {sync,
          UpdatePlan#config_service_update.sync},
         {modules_load,
@@ -3664,34 +3662,42 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          UpdatePlan#config_service_update.code_paths_add},
         {code_paths_remove,
          UpdatePlan#config_service_update.code_paths_remove},
+        {dest_refresh,
+         UpdatePlan#config_service_update.dest_refresh},
+        {timeout_init,
+         UpdatePlan#config_service_update.timeout_init},
         {timeout_async,
          UpdatePlan#config_service_update.timeout_async},
         {timeout_sync,
          UpdatePlan#config_service_update.timeout_sync},
+        {dest_list_deny,
+         UpdatePlan#config_service_update.dest_list_deny},
+        {dest_list_allow,
+         UpdatePlan#config_service_update.dest_list_allow},
         {options,
          UpdatePlan#config_service_update.options}],
     case cloudi_proplists:take_values(Defaults, Plan) of
         [Type, _, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((Type =:= undefined) orelse
                   (Type =:= internal) orelse (Type =:= external)) ->
             {error, {service_update_type_invalid,
                      Type}};
         [Type, Module, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((Module =:= undefined) orelse
                   (((Type =:= undefined) orelse (Type =:= internal)) andalso
                    is_atom(Module))) ->
             {error, {service_update_module_invalid,
                      Module}};
         [Type, _, ModuleState,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((ModuleState =:= undefined) orelse
                   (((Type =:= undefined) orelse (Type =:= internal)) andalso
                    (is_tuple(ModuleState) orelse
@@ -3699,9 +3705,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_module_state_invalid,
                      ModuleState}};
         [Type, _, _,
-         FilePath, _, _, _,
+         FilePath, _, _,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((FilePath =:= undefined) orelse
                   (((Type =:= undefined) orelse (Type =:= external)) andalso
                    (is_list(FilePath) andalso
@@ -3710,9 +3716,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_file_path_invalid,
                      FilePath}};
         [Type, _, _,
-         _, Args, _, _,
+         _, Args, _,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((Args =:= undefined) orelse
                   (((Type =:= undefined) orelse (Type =:= external)) andalso
                    (is_list(Args) andalso
@@ -3721,18 +3727,81 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_args_invalid,
                      Args}};
         [Type, _, _,
-         _, _, Env, _,
+         _, _, Env,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((Env =:= undefined) orelse
                   (((Type =:= undefined) orelse (Type =:= external)) andalso
                    is_list(Env))) ->
             {error, {service_update_env_invalid,
                      Env}};
         [_, _, _,
-         _, _, _, TimeoutInit,
+         _, _, _,
+         Sync, _, _, _, _,
+         _, _, _, _, _, _, _]
+        when not is_boolean(Sync) ->
+            {error, {service_update_sync_invalid,
+                     Sync}};
+        [_, _, _,
+         _, _, _,
+         _, ModulesLoad, _, _, _,
+         _, _, _, _, _, _, _]
+        when not (is_list(ModulesLoad) andalso
+                  is_atom(hd(ModulesLoad))) ->
+            {error, {service_update_modules_load_invalid,
+                     ModulesLoad}};
+        [_, _, _,
+         _, _, _,
+         _, _, ModulesUnload, _, _,
+         _, _, _, _, _, _, _]
+        when not (is_list(ModulesUnload) andalso
+                  is_atom(hd(ModulesUnload))) ->
+            {error, {service_update_modules_unload_invalid,
+                     ModulesUnload}};
+        [_, _, _,
+         _, _, _,
+         _, _, _, CodePathsAdd, _,
+         _, _, _, _, _, _, _]
+        when not (is_list(CodePathsAdd) andalso
+                  is_list(hd(CodePathsAdd)) andalso
+                  is_integer(hd(hd(CodePathsAdd)))) ->
+            {error, {service_update_code_paths_add_invalid,
+                     CodePathsAdd}};
+        [_, _, _,
+         _, _, _,
+         _, _, _, _, CodePathsRemove,
+         _, _, _, _, _, _, _]
+        when not (is_list(CodePathsRemove) andalso
+                  is_list(hd(CodePathsRemove)) andalso
+                  is_integer(hd(hd(CodePathsRemove)))) ->
+            {error, {service_update_code_paths_remove_invalid,
+                     CodePathsRemove}};
+        [_, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, _]
+         DestRefresh, _, _, _, _, _, _]
+        when not (is_atom(DestRefresh) andalso
+                  ((DestRefresh =:= immediate_closest) orelse
+                   (DestRefresh =:= lazy_closest) orelse
+                   (DestRefresh =:= immediate_furthest) orelse
+                   (DestRefresh =:= lazy_furthest) orelse
+                   (DestRefresh =:= immediate_random) orelse
+                   (DestRefresh =:= lazy_random) orelse
+                   (DestRefresh =:= immediate_local) orelse
+                   (DestRefresh =:= lazy_local) orelse
+                   (DestRefresh =:= immediate_remote) orelse
+                   (DestRefresh =:= lazy_remote) orelse
+                   (DestRefresh =:= immediate_newest) orelse
+                   (DestRefresh =:= lazy_newest) orelse
+                   (DestRefresh =:= immediate_oldest) orelse
+                   (DestRefresh =:= lazy_oldest) orelse
+                   (DestRefresh =:= none))) ->
+            {error, {service_update_dest_refresh_invalid,
+                     DestRefresh}};
+        [_, _, _,
+         _, _, _,
+         _, _, _, _, _,
+         _, TimeoutInit, _, _, _, _, _]
         when not ((TimeoutInit =:= undefined) orelse
                   (is_integer(TimeoutInit) andalso
                    (TimeoutInit > ?TIMEOUT_DELTA) andalso
@@ -3740,50 +3809,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_timeout_init_invalid,
                      TimeoutInit}};
         [_, _, _,
-         _, _, _, _,
-         Sync, _, _, _, _,
-         _, _, _]
-        when not is_boolean(Sync) ->
-            {error, {service_update_sync_invalid,
-                     Sync}};
-        [_, _, _,
-         _, _, _, _,
-         _, ModulesLoad, _, _, _,
-         _, _, _]
-        when not (is_list(ModulesLoad) andalso
-                  is_atom(hd(ModulesLoad))) ->
-            {error, {service_update_modules_load_invalid,
-                     ModulesLoad}};
-        [_, _, _,
-         _, _, _, _,
-         _, _, ModulesUnload, _, _,
-         _, _, _]
-        when not (is_list(ModulesUnload) andalso
-                  is_atom(hd(ModulesUnload))) ->
-            {error, {service_update_modules_unload_invalid,
-                     ModulesUnload}};
-        [_, _, _,
-         _, _, _, _,
-         _, _, _, CodePathsAdd, _,
-         _, _, _]
-        when not (is_list(CodePathsAdd) andalso
-                  is_list(hd(CodePathsAdd)) andalso
-                  is_integer(hd(hd(CodePathsAdd)))) ->
-            {error, {service_update_code_paths_add_invalid,
-                     CodePathsAdd}};
-        [_, _, _,
-         _, _, _, _,
-         _, _, _, _, CodePathsRemove,
-         _, _, _]
-        when not (is_list(CodePathsRemove) andalso
-                  is_list(hd(CodePathsRemove)) andalso
-                  is_integer(hd(hd(CodePathsRemove)))) ->
-            {error, {service_update_code_paths_remove_invalid,
-                     CodePathsRemove}};
-        [_, _, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         TimeoutAsync, _, _]
+         _, _, TimeoutAsync, _, _, _, _]
         when not ((TimeoutAsync =:= undefined) orelse
                   (is_integer(TimeoutAsync) andalso
                    (TimeoutAsync > ?TIMEOUT_DELTA) andalso
@@ -3791,9 +3819,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_timeout_async_invalid,
                      TimeoutAsync}};
         [_, _, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, TimeoutSync, _]
+         _, _, _, TimeoutSync, _, _, _]
         when not ((TimeoutSync =:= undefined) orelse
                   (is_integer(TimeoutSync) andalso
                    (TimeoutSync > ?TIMEOUT_DELTA) andalso
@@ -3801,16 +3829,36 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_timeout_sync_invalid,
                      TimeoutSync}};
         [_, _, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, Options]
+         DestRefresh, _, _, _, DestListDeny, _, _]
+        when not (is_list(DestListDeny) orelse
+                  (DestListDeny =:= undefined) orelse
+                  (DestListDeny =:= invalid)) orelse
+             ((DestRefresh =:= none) andalso is_list(DestListDeny)) ->
+            {error, {service_update_dest_list_deny_invalid,
+                     DestListDeny}};
+        [_, _, _,
+         _, _, _,
+         _, _, _, _, _,
+         DestRefresh, _, _, _, _, DestListAllow, _]
+        when not (is_list(DestListAllow) orelse
+                  (DestListAllow =:= undefined) orelse
+                  (DestListAllow =:= invalid)) orelse
+             ((DestRefresh =:= none) andalso is_list(DestListAllow)) ->
+            {error, {service_update_dest_list_allow_invalid,
+                     DestListAllow}};
+        [_, _, _,
+         _, _, _,
+         _, _, _, _, _,
+         _, _, _, _, _, _, Options]
         when not is_list(Options) ->
             {error, {service_update_options_invalid,
                      Options}};
         [Type, Module, _,
-         FilePath, Args, Env, _,
+         FilePath, Args, Env,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when not ((((Type =:= undefined) orelse (Type =:= internal)) andalso
                    (Module =/= undefined)) orelse
                   ((Type =:= external) orelse
@@ -3821,9 +3869,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
             {error, {service_update_type_invalid,
                      Type}};
         [Type, Module, ModuleState,
-         FilePath, Args, Env, _,
+         FilePath, Args, Env,
          _, _, _, _, _,
-         _, _, _]
+         _, _, _, _, _, _, _]
         when ((Module =/= undefined) orelse
               (ModuleState =/= undefined)) andalso
              ((FilePath =/= undefined) orelse
@@ -3831,28 +3879,24 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
               (Env =/= undefined)) ->
             {error, {service_update_type_invalid,
                      Type}};
-        [_, Module, _,
-         _, _, _, TimeoutInit,
-         _, _, _, _, _,
-         _, _, _]
-        when (Module =/= undefined) andalso
-             (TimeoutInit =/= undefined) ->
-            {error, {service_update_timeout_init_invalid,
-                     TimeoutInit}};
         [_, Module, ModuleState,
-         _, _, _, _,
+         _, _, _,
          _, ModulesLoad, ModulesUnload, _, _,
-         TimeoutAsync, TimeoutSync, Options]
+         DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
+         DestDenyList, DestAllowList, Options]
         when Module =/= undefined, ModuleState =:= undefined,
              ModulesLoad == [], ModulesUnload == [],
+             DestRefresh =:= undefined, TimeoutInit =:= undefined,
              TimeoutAsync =:= undefined, TimeoutSync =:= undefined,
+             DestDenyList =:= invalid, DestAllowList =:= invalid,
              Options == [] ->
             {error, {service_update_invalid,
                      no_update}};
         [_, Module, ModuleState,
-         _, _, _, _,
+         _, _, _,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove,
-         TimeoutAsync, TimeoutSync, Options]
+         DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
+         DestDenyList, DestAllowList, Options]
         when Module =/= undefined ->
             case services_update_plan_internal(Module, ModuleState,
                                                Options, ID, Services) of
@@ -3868,8 +3912,12 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                              modules_unload = ModulesUnload,
                              code_paths_add = CodePathsAdd,
                              code_paths_remove = CodePathsRemove,
+                             dest_refresh = DestRefresh,
+                             timeout_init = TimeoutInit,
                              timeout_async = TimeoutAsync,
                              timeout_sync = TimeoutSync,
+                             dest_list_deny = DestDenyList,
+                             dest_list_allow = DestAllowList,
                              options_keys = OptionsKeys,
                              options = NewOptions,
                              uuids = IDs,
@@ -3881,9 +3929,10 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                     Error
             end;
         [Type, _, _,
-         FilePath, Args, Env, TimeoutInit,
+         FilePath, Args, Env,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove,
-         TimeoutAsync, TimeoutSync, Options]
+         DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
+         DestDenyList, DestAllowList, Options]
         when (Type =:= external) orelse
              ((FilePath =/= undefined) orelse
               (Args =/= undefined) orelse
@@ -3897,14 +3946,17 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                              file_path = FilePath,
                              args = Args,
                              env = Env,
-                             timeout_init = TimeoutInit,
                              sync = Sync,
                              modules_load = ModulesLoad,
                              modules_unload = ModulesUnload,
                              code_paths_add = CodePathsAdd,
                              code_paths_remove = CodePathsRemove,
+                             dest_refresh = DestRefresh,
+                             timeout_init = TimeoutInit,
                              timeout_async = TimeoutAsync,
                              timeout_sync = TimeoutSync,
+                             dest_list_deny = DestDenyList,
+                             dest_list_allow = DestAllowList,
                              options_keys = OptionsKeys,
                              options = NewOptions,
                              uuids = [ID],
@@ -3916,9 +3968,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
                     Error
             end;
         [_, _, _,
-         _, _, _, _,
+         _, _, _,
          _, _, _, _, _,
-         _, _, _ | Invalid] ->
+         _, _, _, _, _, _, _ | Invalid] ->
             {error, {service_update_invalid,
                      Invalid}}
     end;
@@ -4113,8 +4165,7 @@ service_update_done([ID],
                         type = external,
                         file_path = FilePath,
                         args = Args,
-                        env = Env,
-                        timeout_init = TimeoutInit} = UpdatePlan, Services) ->
+                        env = Env} = UpdatePlan, Services) ->
     #config_service_external{} = Service0 =
         lists:keyfind(ID, #config_service_external.uuid, Services),
     Service1 = if
@@ -4138,59 +4189,98 @@ service_update_done([ID],
         Env =:= undefined ->
             Service2
     end,
-    Service4 = if
-        is_integer(TimeoutInit) ->
-            Service3#config_service_external{
-                timeout_init = TimeoutInit};
-        TimeoutInit =:= undefined ->
-            Service3
-    end,
-    ServiceN = service_update_done_common(Service4, UpdatePlan),
+    ServiceN = service_update_done_common(Service3, UpdatePlan),
     lists:keystore(ID, #config_service_external.uuid, Services, ServiceN).
 
 service_update_done_common(Service0,
                            #config_service_update{
                                type = Type,
+                               dest_refresh = DestRefresh,
+                               timeout_init = TimeoutInit,
                                timeout_async = TimeoutAsync,
                                timeout_sync = TimeoutSync,
+                               dest_list_deny = DestListDeny,
+                               dest_list_allow = DestListAllow,
                                options_keys = OptionsKeys,
                                options = NewOptions}) ->
     Service1 = if
-        TimeoutAsync =:= undefined ->
+        DestRefresh =:= undefined ->
             Service0;
         Type =:= internal ->
-            true = is_integer(TimeoutAsync),
             Service0#config_service_internal{
+                dest_refresh = DestRefresh};
+        Type =:= external ->
+            Service0#config_service_external{
+                dest_refresh = DestRefresh}
+    end,
+    Service2 = if
+        TimeoutInit =:= undefined ->
+            Service1;
+        Type =:= internal ->
+            true = is_integer(TimeoutInit),
+            Service1#config_service_internal{
+                timeout_init = TimeoutInit};
+        Type =:= external ->
+            true = is_integer(TimeoutInit),
+            Service1#config_service_external{
+                timeout_init = TimeoutInit}
+    end,
+    Service3 = if
+        TimeoutAsync =:= undefined ->
+            Service2;
+        Type =:= internal ->
+            true = is_integer(TimeoutAsync),
+            Service2#config_service_internal{
                 timeout_async = TimeoutAsync};
         Type =:= external ->
             true = is_integer(TimeoutAsync),
-            Service0#config_service_external{
+            Service2#config_service_external{
                 timeout_async = TimeoutAsync}
     end,
-    Service2 = if
+    Service4 = if
         TimeoutSync =:= undefined ->
-            Service1;
+            Service3;
         Type =:= internal ->
             true = is_integer(TimeoutSync),
-            Service1#config_service_internal{
+            Service3#config_service_internal{
                 timeout_sync = TimeoutSync};
         Type =:= external ->
             true = is_integer(TimeoutSync),
-            Service1#config_service_external{
+            Service3#config_service_external{
                 timeout_sync = TimeoutSync}
+    end,
+    Service5 = if
+        DestListDeny =:= invalid ->
+            Service4;
+        Type =:= internal ->
+            Service4#config_service_internal{
+                dest_list_deny = DestListDeny};
+        Type =:= external ->
+            Service4#config_service_external{
+                dest_list_deny = DestListDeny}
+    end,
+    Service6 = if
+        DestListAllow =:= invalid ->
+            Service5;
+        Type =:= internal ->
+            Service5#config_service_internal{
+                dest_list_allow = DestListAllow};
+        Type =:= external ->
+            Service5#config_service_external{
+                dest_list_allow = DestListAllow}
     end,
     ServiceN = if
         Type =:= internal ->
             #config_service_internal{
-                options = OldOptions} = Service2,
-            Service2#config_service_internal{
+                options = OldOptions} = Service6,
+            Service6#config_service_internal{
                 options = service_options_copy(OptionsKeys,
                                                OldOptions,
                                                NewOptions)};
         Type =:= external ->
             #config_service_external{
-                options = OldOptions} = Service2,
-            Service2#config_service_external{
+                options = OldOptions} = Service6,
+            Service6#config_service_external{
                 options = service_options_copy(OptionsKeys,
                                                OldOptions,
                                                NewOptions)}
