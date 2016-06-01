@@ -3780,22 +3780,23 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _,
          _, _, _, _, _,
          DestRefresh, _, _, _, _, _, _]
-        when not (is_atom(DestRefresh) andalso
-                  ((DestRefresh =:= immediate_closest) orelse
-                   (DestRefresh =:= lazy_closest) orelse
-                   (DestRefresh =:= immediate_furthest) orelse
-                   (DestRefresh =:= lazy_furthest) orelse
-                   (DestRefresh =:= immediate_random) orelse
-                   (DestRefresh =:= lazy_random) orelse
-                   (DestRefresh =:= immediate_local) orelse
-                   (DestRefresh =:= lazy_local) orelse
-                   (DestRefresh =:= immediate_remote) orelse
-                   (DestRefresh =:= lazy_remote) orelse
-                   (DestRefresh =:= immediate_newest) orelse
-                   (DestRefresh =:= lazy_newest) orelse
-                   (DestRefresh =:= immediate_oldest) orelse
-                   (DestRefresh =:= lazy_oldest) orelse
-                   (DestRefresh =:= none))) ->
+        when not ((DestRefresh =:= undefined) orelse
+                  (is_atom(DestRefresh) andalso
+                   ((DestRefresh =:= immediate_closest) orelse
+                    (DestRefresh =:= lazy_closest) orelse
+                    (DestRefresh =:= immediate_furthest) orelse
+                    (DestRefresh =:= lazy_furthest) orelse
+                    (DestRefresh =:= immediate_random) orelse
+                    (DestRefresh =:= lazy_random) orelse
+                    (DestRefresh =:= immediate_local) orelse
+                    (DestRefresh =:= lazy_local) orelse
+                    (DestRefresh =:= immediate_remote) orelse
+                    (DestRefresh =:= lazy_remote) orelse
+                    (DestRefresh =:= immediate_newest) orelse
+                    (DestRefresh =:= lazy_newest) orelse
+                    (DestRefresh =:= immediate_oldest) orelse
+                    (DestRefresh =:= lazy_oldest) orelse
+                    (DestRefresh =:= none)))) ->
             {error, {service_update_dest_refresh_invalid,
                      DestRefresh}};
         [_, _, _,
@@ -3832,9 +3833,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _,
          _, _, _, _, _,
          DestRefresh, _, _, _, DestListDeny, _, _]
-        when not (is_list(DestListDeny) orelse
-                  (DestListDeny =:= undefined) orelse
-                  (DestListDeny =:= invalid)) orelse
+        when not ((DestListDeny =:= invalid) orelse
+                  is_list(DestListDeny) orelse
+                  (DestListDeny =:= undefined)) orelse
              ((DestRefresh =:= none) andalso is_list(DestListDeny)) ->
             {error, {service_update_dest_list_deny_invalid,
                      DestListDeny}};
@@ -3842,9 +3843,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, _, _,
          _, _, _, _, _,
          DestRefresh, _, _, _, _, DestListAllow, _]
-        when not (is_list(DestListAllow) orelse
-                  (DestListAllow =:= undefined) orelse
-                  (DestListAllow =:= invalid)) orelse
+        when not ((DestListAllow =:= invalid) orelse
+                  is_list(DestListAllow) orelse
+                  (DestListAllow =:= undefined)) orelse
              ((DestRefresh =:= none) andalso is_list(DestListAllow)) ->
             {error, {service_update_dest_list_allow_invalid,
                      DestListAllow}};
@@ -3884,12 +3885,34 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, Timeout)
          _, ModulesLoad, ModulesUnload, _, _,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
          DestDenyList, DestAllowList, Options]
-        when Module =/= undefined, ModuleState =:= undefined,
-             ModulesLoad == [], ModulesUnload == [],
-             DestRefresh =:= undefined, TimeoutInit =:= undefined,
-             TimeoutAsync =:= undefined, TimeoutSync =:= undefined,
-             DestDenyList =:= invalid, DestAllowList =:= invalid,
-             Options == [] ->
+        when (Module =/= undefined) andalso (ModuleState =:= undefined) andalso
+             (ModulesLoad == []) andalso (ModulesUnload == []) andalso
+             (DestRefresh =:= undefined) andalso
+             (TimeoutInit =:= undefined) andalso
+             (TimeoutAsync =:= undefined) andalso
+             (TimeoutSync =:= undefined) andalso
+             (DestDenyList =:= invalid) andalso
+             (DestAllowList =:= invalid) andalso
+             (Options == []) ->
+            {error, {service_update_invalid,
+                     no_update}};
+        [Type, _, _,
+         FilePath, Args, Env,
+         _, ModulesLoad, ModulesUnload, _, _,
+         DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
+         DestDenyList, DestAllowList, Options]
+        when (Type =:= external) andalso
+             (FilePath =:= undefined) andalso
+             (Args =:= undefined) andalso
+             (Env =:= undefined) andalso
+             (ModulesLoad == []) andalso (ModulesUnload == []) andalso
+             (DestRefresh =:= undefined) andalso
+             (TimeoutInit =:= undefined) andalso
+             (TimeoutAsync =:= undefined) andalso
+             (TimeoutSync =:= undefined) andalso
+             (DestDenyList =:= invalid) andalso
+             (DestAllowList =:= invalid) andalso
+             (Options == []) ->
             {error, {service_update_invalid,
                      no_update}};
         [_, Module, ModuleState,
