@@ -3073,16 +3073,16 @@ process_queues(NewServiceState, State) ->
 
 hibernate_check({reply, _,
                  #state{options = #config_service_options{
-                            hibernate = false}}} = Result) ->
-    Result;
+                            hibernate = false}}} = NoHibernate) ->
+    NoHibernate;
 
 hibernate_check({noreply,
                  #state{options = #config_service_options{
-                            hibernate = false}}} = Result) ->
-    Result;
+                            hibernate = false}}} = NoHibernate) ->
+    NoHibernate;
 
-hibernate_check({stop, _, _} = Result) ->
-    Result;
+hibernate_check({stop, _, _} = NoHibernate) ->
+    NoHibernate;
 
 hibernate_check({reply, Reply,
                  #state{options = #config_service_options{
@@ -3096,24 +3096,24 @@ hibernate_check({noreply,
 
 hibernate_check({reply, Reply,
                  #state{options = #config_service_options{
-                            hibernate = Hibernate}} = State})
+                            hibernate = Hibernate}} = State} = NoHibernate)
     when is_tuple(Hibernate) ->
     case cloudi_core_i_rate_based_configuration:
          hibernate_check(Hibernate) of
         false ->
-            {reply, Reply, State};
+            NoHibernate;
         true ->
             {reply, Reply, State, hibernate}
     end;
 
 hibernate_check({noreply,
                  #state{options = #config_service_options{
-                            hibernate = Hibernate}} = State})
+                            hibernate = Hibernate}} = State} = NoHibernate)
     when is_tuple(Hibernate) ->
     case cloudi_core_i_rate_based_configuration:
          hibernate_check(Hibernate) of
         false ->
-            {noreply, State};
+            NoHibernate;
         true ->
             {noreply, State, hibernate}
     end.

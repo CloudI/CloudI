@@ -2334,16 +2334,16 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     ok = prim_inet:ignorefd(Socket, true),
     % sets inet_descriptor's is_ignored to true
     % for usage of the fd outside of inet_drv
-    {ok, NewSocket} = gen_tcp:fdopen(FileDescriptorInternal,
-                                     [binary, {packet, 4},
-                                      {active, false} | SocketOptions]),
+    {ok, _} = Success = gen_tcp:fdopen(FileDescriptorInternal,
+                                       [binary, {packet, 4},
+                                        {active, false} | SocketOptions]),
     % NewSocket is internally marked as prebound (in ERTS) so that Erlang
     % will not attempt to reconnect or close the socket file descriptor
     % (due to using gen_tcp:fdopen/2)
     ok = cloudi_core_i_socket:set(FileDescriptorInternal, FileDescriptor),
     catch gen_tcp:close(Client),
     % do not close Socket!
-    {ok, NewSocket}.
+    Success.
 
 aspects_init([], _, _, _, ServiceState) ->
     {ok, ServiceState};

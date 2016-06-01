@@ -243,7 +243,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                                     Scope, Pids, erlang:monitor(process, Pid),
                                     TimeoutTerm, MaxR, MaxT), Services),
             {reply, {ok, Pids}, State#state{services = NewServices}};
-        {ok, [Pid | _] = Pids} when is_pid(Pid) ->
+        {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     new_service_process(M, F, A,
@@ -251,7 +251,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                                         Scope, Pids, erlang:monitor(process, P),
                                         TimeoutTerm, MaxR, MaxT), D)
             end, Services, Pids),
-            {reply, {ok, Pids}, State#state{services = NewServices}};
+            {reply, Success, State#state{services = NewServices}};
         {error, _} = Error ->
             {reply, Error, State}
     end;

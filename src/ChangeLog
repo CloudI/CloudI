@@ -4,6 +4,8 @@
 2016-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix dest_list_deny and dest_list_allow expansion in services_update
+    * Improve Erlang term reuse in the source code
+      (Thanks to Anthony Ramine spotting problems)
 
 2016-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
