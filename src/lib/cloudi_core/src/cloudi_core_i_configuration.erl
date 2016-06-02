@@ -184,15 +184,14 @@
      service_options_priority_default_invalid |
      service_options_queue_limit_invalid |
      service_options_queue_size_invalid |
-     %service_options_rate_request_max_invalid |
-     %service_options_dest_refresh_start_invalid |
-     %service_options_dest_refresh_delay_invalid |
+     service_options_rate_request_max_invalid |
+     service_options_dest_refresh_start_invalid |
+     service_options_dest_refresh_delay_invalid |
      service_options_request_name_lookup_invalid |
      service_options_request_timeout_adjustment_invalid |
      service_options_request_timeout_immediate_max_invalid |
      service_options_response_timeout_adjustment_invalid |
      service_options_response_timeout_immediate_max_invalid |
-     %service_options_hibernate_invalid |
      %service_options_monkey_latency_invalid |
      %service_options_monkey_chaos_invalid |
      %service_options_aspects_init_invalid |
@@ -203,8 +202,8 @@
      service_options_request_pid_options_invalid |
      service_options_info_pid_uses_invalid |
      service_options_info_pid_options_invalid |
-     %service_options_hibernate_invalid |
-     %service_options_reload_invalid |
+     service_options_hibernate_invalid |
+     service_options_reload_invalid |
      service_options_limit_invalid |
      service_update_options_invalid, any()}.
 -type error_reason_nodes_add_configuration() ::
@@ -3784,7 +3783,7 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                                                Options, ID, Services, ACL) of
                 {ok, IDs, NewModuleState,
                  NewDestListDeny, NewDestListAllow,
-                 OptionsKeys, NewOptions, ModuleVersion} ->
+                 OptionsKeys, NewOptions, ModuleVersion, ReloadStop} ->
                     NewUpdatePlans =
                         [UpdatePlan#config_service_update{
                              type = internal,
@@ -3804,7 +3803,8 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              options_keys = OptionsKeys,
                              options = NewOptions,
                              uuids = IDs,
-                             module_version_old = ModuleVersion} |
+                             module_version_old = ModuleVersion,
+                             reload_stop = ReloadStop} |
                          UpdatePlans],
                     services_update_plan(L, NewUpdatePlans,
                                          Services, ACL, Timeout);
@@ -3864,23 +3864,29 @@ services_update_plan([{ID, _} | _], _, _, _, _) ->
 
 services_update_plan_internal(Module, ModuleState,
                               DestListDeny, DestListAllow,
-                              Options, ID, Services, ACL) ->
-    ModuleIDs = lists:foldr(fun(S, IDs) ->
-        if
-            is_record(S, config_service_internal),
-            S#config_service_internal.module =:= Module ->
-                [S#config_service_internal.uuid | IDs];
-            true ->
-                IDs
+                              Options, UpdateID, Services, ACL) ->
+    {ModuleIDs,
+     ReloadStop} = lists:foldr(fun(S, {IDs, ReloadModule} = Next) ->
+        case S of
+            #config_service_internal{
+                module = Module,
+                options = #config_service_options{
+                    reload = Reload},
+                uuid = ID} ->
+                {[ID | IDs], ReloadModule orelse Reload};
+            _ ->
+                Next
         end
-    end, [], Services),
-    UpdateValid = case ModuleIDs of
-        [_ | _] when ID == <<>> ->
-            true;
-        [ID] ->
-            true;
+    end, {[], false}, Services),
+    {UpdateValid, UpdateIDs} = case ModuleIDs of
+        [_ | _] when UpdateID == <<>> ->
+            {true, ModuleIDs};
+        [UpdateID] ->
+            {true, ModuleIDs};
+        [_ | _] when ModuleState =:= undefined ->
+            {lists:member(UpdateID, ModuleIDs), [UpdateID]};
         _ ->
-            false
+            {false, []}
     end,
     if
         UpdateValid =:= true ->
@@ -3895,9 +3901,10 @@ services_update_plan_internal(Module, ModuleState,
                                 {ok, NewOptions} ->
                                     ModuleVersion = cloudi_x_reltool_util:
                                                     module_version(Module),
-                                    {ok, ModuleIDs, NewModuleState,
+                                    {ok, UpdateIDs, NewModuleState,
                                      NewDestListDeny, NewDestListAllow,
-                                     OptionsKeys, NewOptions, ModuleVersion};
+                                     OptionsKeys, NewOptions,
+                                     ModuleVersion, ReloadStop};
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -3908,17 +3915,17 @@ services_update_plan_internal(Module, ModuleState,
                     Error
             end;
         UpdateValid =:= false ->
-            {error, {update_invalid, ID}}
+            {error, {update_invalid, UpdateID}}
     end.
 
 services_update_plan_external(FilePath, Args, Env,
                               DestListDeny, DestListAllow,
-                              Options, ID, Services, ACL) ->
+                              Options, UpdateID, Services, ACL) ->
     UpdateValid = if
-        ID == <<>> ->
+        UpdateID == <<>> ->
             false;
         true ->
-            case lists:keyfind(ID, #config_service_external.uuid,
+            case lists:keyfind(UpdateID, #config_service_external.uuid,
                                Services) of
                 #config_service_external{} ->
                     true;
@@ -3932,13 +3939,13 @@ services_update_plan_external(FilePath, Args, Env,
                                           DestListAllow,
                                           ACL) of
                 {ok, NewDestListDeny, NewDestListAllow} ->
-                    SpawnOsProcess = not ((FilePath =:= undefined) andalso
-                                          (Args =:= undefined) andalso
-                                          (Env =:= undefined)),
                     OptionsKeys = [Key || {Key, _} <- Options],
-                    case services_update_plan_options_external(SpawnOsProcess,
-                                                               Options) of
+                    case services_update_plan_options_external(Options) of
                         {ok, NewOptions} ->
+                            SpawnOsProcess =
+                                not ((FilePath =:= undefined) andalso
+                                     (Args =:= undefined) andalso
+                                     (Env =:= undefined)),
                             {ok, NewDestListDeny, NewDestListAllow,
                              OptionsKeys, NewOptions, SpawnOsProcess};
                         {error, _} = Error ->
@@ -3948,16 +3955,18 @@ services_update_plan_external(FilePath, Args, Env,
                     Error
             end;
         UpdateValid =:= false ->
-            {error, {update_invalid, ID}}
+            {error, {update_invalid, UpdateID}}
     end.
 
 services_update_plan_options_internal(OptionsList) ->
     ValidKeys = [priority_default, queue_limit, queue_size,
+                 rate_request_max, dest_refresh_start, dest_refresh_delay,
                  request_name_lookup,
                  request_timeout_adjustment, request_timeout_immediate_max,
                  response_timeout_adjustment, response_timeout_immediate_max,
                  request_pid_uses, request_pid_options,
-                 info_pid_uses, info_pid_options],
+                 info_pid_uses, info_pid_options,
+                 hibernate, reload],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->
             case services_validate_options_internal(OptionsList,
@@ -3973,8 +3982,9 @@ services_update_plan_options_internal(OptionsList) ->
                      InvalidOptions}}
     end.
 
-services_update_plan_options_external(SpawnOsProcess, OptionsList) ->
+services_update_plan_options_external(OptionsList) ->
     ValidKeys = [priority_default, queue_limit, queue_size,
+                 rate_request_max, dest_refresh_start, dest_refresh_delay,
                  request_name_lookup,
                  request_timeout_adjustment, request_timeout_immediate_max,
                  response_timeout_adjustment, response_timeout_immediate_max,
@@ -3985,16 +3995,7 @@ services_update_plan_options_external(SpawnOsProcess, OptionsList) ->
                                                     undefined,
                                                     undefined, undefined) of
                 {ok, _, Options} ->
-                    RequiresSpawn = cloudi_proplists:
-                                    find_any([limit], OptionsList),
-                    if
-                        RequiresSpawn =:= true,
-                        SpawnOsProcess =:= false ->
-                            {error, {service_update_file_path_invalid,
-                                     undefined}};
-                        true ->
-                            {ok, Options}
-                    end;
+                    {ok, Options};
                 {error, _} = Error ->
                     Error
             end;

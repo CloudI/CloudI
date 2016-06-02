@@ -490,6 +490,10 @@
         % (internal services only)
         module_version_old = undefined
             :: undefined | cloudi_service_api:module_version(),
+        % should auto-reloading of the module be stopped during the update?
+        % (internal services only)
+        reload_stop = false
+            :: boolean(),
         % should a new OS process be created?
         % (external services only)
         spawn_os_process = false

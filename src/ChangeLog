@@ -6,6 +6,15 @@
     * Fix dest_list_deny and dest_list_allow expansion in services_update
     * Improve Erlang term reuse in the source code
       (Thanks to Anthony Ramine spotting problems)
+    * Add service configuration options rate_request_max,
+      dest_refresh_start, dest_refresh_delay, hibernate, and reload
+      to service_updates
+    * Allow specific internal service updates with service_updates if
+      module_state is provided
+    * Do not force an external service restart for the limit
+      service configuration option
+    * Add -deprecated attribute usage in the
+      cloudi_service and cloudi_service_api Erlang modules
 
 2016-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 

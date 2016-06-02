@@ -59,7 +59,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -94,8 +94,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -200,6 +200,20 @@
          'Module:cloudi_service_handle_request'/11,
          'Module:cloudi_service_handle_info'/3,
          'Module:cloudi_service_terminate'/3]).
+
+-deprecated([environment_lookup/0,
+             environment_transform/1,
+             environment_transform/2,
+             service_name_new/2,
+             service_name_new/4,
+             service_name_parse/2,
+             service_name_parse_with_suffix/2,
+             request_http_qs_parse/1,
+             request_info_key_value_new/1,
+             request_info_key_value_parse/1,
+             key_value_erase/2,
+             key_value_find/2,
+             key_value_store/3]).
 
 -include("cloudi_core_i_constants.hrl").
 

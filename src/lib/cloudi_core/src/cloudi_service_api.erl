@@ -83,6 +83,9 @@
          % deprecated, renamed to logging_redirect_set/2
          log_redirect/2]).
 
+-deprecated([loglevel_set/2,
+             log_redirect/2]).
+
 -include("cloudi_service_api.hrl").
 -include("cloudi_core_i_constants.hrl").
 
@@ -499,11 +502,11 @@
     list({priority_default, priority()} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
-         %{rate_request_max,
-         % list({period, period_seconds()} |
-         %      {value, number()}) | number() | undefined} |
-         %{dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         %{dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {rate_request_max,
+          list({period, period_seconds()} |
+               {value, number()}) | number() | undefined} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,
@@ -543,21 +546,21 @@
                {min_bin_vheap_size, non_neg_integer()} |
                {max_heap_size, non_neg_integer() | #{}} |
                {sensitive, boolean()} |
-               {message_queue_data, off_heap | on_heap | mixed})}% |
-         %{hibernate,
-         % list({period, period_seconds()} |
-         %      {rate_request_min, number()}) | boolean()} |
-         %{reload, boolean()}
+               {message_queue_data, off_heap | on_heap | mixed})} |
+         {hibernate,
+          list({period, period_seconds()} |
+               {rate_request_min, number()}) | boolean()} |
+         {reload, boolean()}
          ).
 -type service_update_plan_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | non_neg_integer()} |
          {queue_size, undefined | pos_integer()} |
-         %{rate_request_max,
-         % list({period, period_seconds()} |
-         %      {value, number()}) | number() | undefined} |
-         %{dest_refresh_start, dest_refresh_delay_milliseconds()} |
-         %{dest_refresh_delay, dest_refresh_delay_milliseconds()} |
+         {rate_request_max,
+          list({period, period_seconds()} |
+               {value, number()}) | number() | undefined} |
+         {dest_refresh_start, dest_refresh_delay_milliseconds()} |
+         {dest_refresh_delay, dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
          {request_timeout_adjustment, boolean()} |
          {request_timeout_immediate_max,

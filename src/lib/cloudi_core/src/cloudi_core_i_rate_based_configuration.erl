@@ -161,9 +161,12 @@ hibernate_init(#hibernate{method = rate_request,
 
 %% called by handle_info('cloudi_hibernate_rate', ...)
 
--spec hibernate_reinit(Hibernate :: #hibernate{}) ->
-    {boolean(), #hibernate{}}.
+-spec hibernate_reinit(Hibernate :: #hibernate{} | boolean()) ->
+    {boolean(), #hibernate{} | boolean()}.
 
+hibernate_reinit(Hibernate)
+    when is_boolean(Hibernate) ->
+    {Hibernate, Hibernate};
 hibernate_reinit(#hibernate{method = rate_request,
                             period = Period,
                             count = Count,
@@ -401,9 +404,11 @@ rate_request_init(#rate_request{period = Period} = RateRequest) ->
 
 %% called by handle_info('cloudi_rate_request_max_rate', ...)
 
--spec rate_request_reinit(RateRequest :: #rate_request{}) ->
+-spec rate_request_reinit(RateRequest :: #rate_request{} | undefined) ->
     #rate_request{}.
 
+rate_request_reinit(undefined) ->
+    undefined;
 rate_request_reinit(#rate_request{period = Period,
                                   count = Count,
                                   blocking = Blocking} = RateRequest) ->

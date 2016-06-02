@@ -985,10 +985,50 @@ update_load_module([CodePathAdd | CodePathsAdd], ModulesLoad) ->
         {error, _} = Error ->
             Error
     end.
-    
+
+update_reload_stop(#config_service_update{
+                       type = internal,
+                       module = Module,
+                       reload_stop = ReloadStop}) ->
+    if
+        ReloadStop =:= true ->
+            ok = cloudi_core_i_services_internal_reload:
+                 service_remove(Module);
+        ReloadStop =:= false ->
+            ok
+    end;
+update_reload_stop(#config_service_update{
+                       type = external}) ->
+    ok.
+
+update_reload_start(#config_service_update{
+                        type = internal,
+                        module = Module,
+                        options_keys = OptionsKeys,
+                        options = #config_service_options{
+                            reload = ReloadStart},
+                        reload_stop = ReloadStop}) ->
+    Reload = case lists:member(reload, OptionsKeys) of
+        true ->
+            ReloadStart;
+        false ->
+            ReloadStop
+    end,
+    if
+        Reload =:= true ->
+            ok = cloudi_core_i_services_internal_reload:
+                 service_add(Module);
+        Reload =:= false ->
+            ok
+    end;
+update_reload_start(#config_service_update{
+                        type = external}) ->
+    ok.
+
 update_before(#config_service_update{
                   modules_load = ModulesLoad,
-                  code_paths_add = CodePathsAdd}) ->
+                  code_paths_add = CodePathsAdd} = UpdatePlan) ->
+    ok = update_reload_stop(UpdatePlan),
     UpdateModuleResult = update_load_module(CodePathsAdd, ModulesLoad),
     [UpdateModuleResult].
 
@@ -1101,6 +1141,7 @@ update_after(UpdateSuccess, PidList, ResultsSuccess,
             Services
     end,
     update_unload_module(ModulesUnload, CodePathsRemove),
+    ok = update_reload_start(UpdatePlan),
     NewServices.
 
 service_id(ID) ->
