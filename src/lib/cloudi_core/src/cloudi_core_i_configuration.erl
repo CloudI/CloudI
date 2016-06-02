@@ -192,12 +192,12 @@
      service_options_request_timeout_immediate_max_invalid |
      service_options_response_timeout_adjustment_invalid |
      service_options_response_timeout_immediate_max_invalid |
-     %service_options_monkey_latency_invalid |
-     %service_options_monkey_chaos_invalid |
-     %service_options_aspects_init_invalid |
-     %service_options_aspects_request_invalid |
-     %service_options_aspects_info_invalid |
-     %service_options_aspects_terminate_invalid |
+     service_options_monkey_latency_invalid |
+     service_options_monkey_chaos_invalid |
+     service_options_aspects_init_invalid |
+     service_options_aspects_request_invalid |
+     service_options_aspects_info_invalid |
+     service_options_aspects_terminate_invalid |
      service_options_request_pid_uses_invalid |
      service_options_request_pid_options_invalid |
      service_options_info_pid_uses_invalid |

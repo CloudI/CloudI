@@ -468,7 +468,7 @@
 -type service_update_plan_internal() ::
     nonempty_list({type, internal} |
                   {module, atom()} |
-                  {module_state, undefined | module_state_internal()} |
+                  {module_state, module_state_internal()} |
                   {sync, boolean()} |
                   {modules_load, list(atom())} |
                   {modules_unload, list(atom())} |
@@ -550,8 +550,7 @@
          {hibernate,
           list({period, period_seconds()} |
                {rate_request_min, number()}) | boolean()} |
-         {reload, boolean()}
-         ).
+         {reload, boolean()}).
 -type service_update_plan_options_external() ::
     list({priority_default, ?PRIORITY_HIGH..?PRIORITY_LOW} |
          {queue_limit, undefined | non_neg_integer()} |
@@ -847,8 +846,8 @@ services_restart([_ | _] = L, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Update service instances.===
-%% Update service instances without interrupting the incoming service
-%% requests.
+%% Update service instances without losing service requests and other
+%% service-specific data within the Erlang VM.
 %% @end
 %%-------------------------------------------------------------------------
 
