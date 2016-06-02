@@ -3896,9 +3896,9 @@ services_update_plan_internal(Module, ModuleState,
                                                   DestListAllow,
                                                   ACL) of
                         {ok, NewDestListDeny, NewDestListAllow} ->
-                            OptionsKeys = [Key || {Key, _} <- Options],
                             case services_update_plan_options_internal(Options) of
                                 {ok, NewOptions} ->
+                                    OptionsKeys = [Key || {Key, _} <- Options],
                                     ModuleVersion = cloudi_x_reltool_util:
                                                     module_version(Module),
                                     {ok, UpdateIDs, NewModuleState,
@@ -3939,9 +3939,9 @@ services_update_plan_external(FilePath, Args, Env,
                                           DestListAllow,
                                           ACL) of
                 {ok, NewDestListDeny, NewDestListAllow} ->
-                    OptionsKeys = [Key || {Key, _} <- Options],
                     case services_update_plan_options_external(Options) of
                         {ok, NewOptions} ->
+                            OptionsKeys = [Key || {Key, _} <- Options],
                             SpawnOsProcess =
                                 not ((FilePath =:= undefined) andalso
                                      (Args =:= undefined) andalso
@@ -3964,6 +3964,11 @@ services_update_plan_options_internal(OptionsList) ->
                  request_name_lookup,
                  request_timeout_adjustment, request_timeout_immediate_max,
                  response_timeout_adjustment, response_timeout_immediate_max,
+                 monkey_latency, monkey_chaos,
+                 aspects_init_after,
+                 aspects_request_before, aspects_request_after,
+                 aspects_info_before, aspects_info_after,
+                 aspects_terminate_before,
                  request_pid_uses, request_pid_options,
                  info_pid_uses, info_pid_options,
                  hibernate, reload],
@@ -3988,6 +3993,10 @@ services_update_plan_options_external(OptionsList) ->
                  request_name_lookup,
                  request_timeout_adjustment, request_timeout_immediate_max,
                  response_timeout_adjustment, response_timeout_immediate_max,
+                 monkey_latency, monkey_chaos,
+                 aspects_init_after,
+                 aspects_request_before, aspects_request_after,
+                 aspects_terminate_before,
                  limit],
     case cloudi_proplists:delete_all(ValidKeys, OptionsList) of
         [] ->

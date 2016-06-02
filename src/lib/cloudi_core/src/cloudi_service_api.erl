@@ -514,21 +514,21 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
-         %{monkey_latency,
-         % list({time_uniform_min, latency_time_milliseconds()} |
-         %      {time_uniform_max, latency_time_milliseconds()} |
-         %      {time_gaussian_mean, latency_time_milliseconds()} |
-         %      {time_gaussian_stddev, float()} |
-         %      {time_absolute, latency_time_milliseconds()}) | system | false} |
-         %{monkey_chaos,
-         % list({probability_request, float()} |
-         %      {probability_day, float()}) | system | false} |
-         %{aspects_init_after, list(aspect_init_after_internal())} |
-         %{aspects_request_before, list(aspect_request_before_internal())} |
-         %{aspects_request_after, list(aspect_request_after_internal())} |
-         %{aspects_info_before, list(aspect_info_before_internal())} |
-         %{aspects_info_after, list(aspect_info_after_internal())} |
-         %{aspects_terminate_before, list(aspect_terminate_before_internal())} |
+         {monkey_latency,
+          list({time_uniform_min, latency_time_milliseconds()} |
+               {time_uniform_max, latency_time_milliseconds()} |
+               {time_gaussian_mean, latency_time_milliseconds()} |
+               {time_gaussian_stddev, float()} |
+               {time_absolute, latency_time_milliseconds()}) | system | false} |
+         {monkey_chaos,
+          list({probability_request, float()} |
+               {probability_day, float()}) | system | false} |
+         {aspects_init_after, list(aspect_init_after_internal())} |
+         {aspects_request_before, list(aspect_request_before_internal())} |
+         {aspects_request_after, list(aspect_request_after_internal())} |
+         {aspects_info_before, list(aspect_info_before_internal())} |
+         {aspects_info_after, list(aspect_info_after_internal())} |
+         {aspects_terminate_before, list(aspect_terminate_before_internal())} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
@@ -568,19 +568,19 @@
          {response_timeout_adjustment, boolean()} |
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
-         %{monkey_latency,
-         % list({time_uniform_min, latency_time_milliseconds()} |
-         %      {time_uniform_max, latency_time_milliseconds()} |
-         %      {time_gaussian_mean, latency_time_milliseconds()} |
-         %      {time_gaussian_stddev, float()} |
-         %      {time_absolute, latency_time_milliseconds()}) | system | false} |
-         %{monkey_chaos,
-         % list({probability_request, float()} |
-         %      {probability_day, float()}) | system | false} |
-         %{aspects_init_after, list(aspect_init_after_external())} |
-         %{aspects_request_before, list(aspect_request_before_external())} |
-         %{aspects_request_after, list(aspect_request_after_external())} |
-         %{aspects_terminate_before, list(aspect_terminate_before_external())} |
+         {monkey_latency,
+          list({time_uniform_min, latency_time_milliseconds()} |
+               {time_uniform_max, latency_time_milliseconds()} |
+               {time_gaussian_mean, latency_time_milliseconds()} |
+               {time_gaussian_stddev, float()} |
+               {time_absolute, latency_time_milliseconds()}) | system | false} |
+         {monkey_chaos,
+          list({probability_request, float()} |
+               {probability_day, float()}) | system | false} |
+         {aspects_init_after, list(aspect_init_after_external())} |
+         {aspects_request_before, list(aspect_request_before_external())} |
+         {aspects_request_after, list(aspect_request_after_external())} |
+         {aspects_terminate_before, list(aspect_terminate_before_external())} |
          {limit, limit_external()}).
 -type service_update_plan() ::
     service_update_plan_internal() |

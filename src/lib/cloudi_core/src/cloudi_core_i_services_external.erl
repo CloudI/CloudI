@@ -2559,10 +2559,35 @@ update_state(#state{dispatcher = Dispatcher,
         is_list(NewDestListAllow) ->
             cloudi_x_trie:new(NewDestListAllow)
     end,
-    ConfigOptions = cloudi_core_i_configuration:
-                    service_options_copy(OptionsKeys,
-                                         OldConfigOptions,
-                                         NewConfigOptions),
+    case lists:member(monkey_chaos, OptionsKeys) of
+        true ->
+            #config_service_options{
+                monkey_chaos = OldMonkeyChaos} = OldConfigOptions,
+            cloudi_core_i_runtime_testing:
+            monkey_chaos_destroy(OldMonkeyChaos);
+        false ->
+            ok
+    end,
+    ConfigOptions0 = cloudi_core_i_configuration:
+                     service_options_copy(OptionsKeys,
+                                          OldConfigOptions,
+                                          NewConfigOptions),
+    ConfigOptionsN = case lists:member(rate_request_max, OptionsKeys) of
+        true ->
+            #config_service_options{
+                rate_request_max = RateRequest} = ConfigOptions0,
+            NewRateRequest = if
+                RateRequest =/= undefined ->
+                    cloudi_core_i_rate_based_configuration:
+                    rate_request_init(RateRequest);
+                true ->
+                    RateRequest
+            end,
+            ConfigOptions0#config_service_options{
+                rate_request_max = NewRateRequest};
+        false ->
+            ConfigOptions0
+    end,
     if
         (OldDestRefresh =:= immediate_closest orelse
          OldDestRefresh =:= immediate_furthest orelse
@@ -2580,7 +2605,7 @@ update_state(#state{dispatcher = Dispatcher,
          NewDestRefresh =:= lazy_oldest) ->
             #config_service_options{
                 dest_refresh_delay = Delay,
-                scope = Scope} = ConfigOptions,
+                scope = Scope} = ConfigOptionsN,
             destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
         true ->
             ok
@@ -2592,7 +2617,7 @@ update_state(#state{dispatcher = Dispatcher,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
-                options = ConfigOptions}.
+                options = ConfigOptionsN}.
 
 update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of

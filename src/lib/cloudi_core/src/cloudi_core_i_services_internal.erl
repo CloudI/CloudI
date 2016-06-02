@@ -1789,10 +1789,12 @@ handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
                                             ServiceState, State)})
     end;
 
-handle_info({'cloudi_service_update_state', UpdatePlan},
+handle_info({'cloudi_service_update_state',
+             #config_service_update{options = ConfigOptions} = UpdatePlan},
             #state{duo_mode_pid = DuoModePid} = State) ->
     true = is_pid(DuoModePid),
-    hibernate_check({noreply, update_state(State, UpdatePlan)});
+    NewState = update_state(State#state{options = ConfigOptions}, UpdatePlan),
+    hibernate_check({noreply, NewState});
 
 handle_info({'cloudi_service_init_execute', Args, Timeout,
              ProcessDictionary, State},
@@ -3409,12 +3411,14 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         queued = Queued,
                         queued_info = QueuedInfo,
                         options = NewConfigOptions},
+                    NewDispatcherConfigOptions =
+                        duo_mode_dispatcher_options(NewConfigOptions),
                     NewDispatcherState = NextDispatcherState#state{
                         recv_timeouts = undefined,
                         queue_requests = undefined,
                         queued = undefined,
                         queued_info = undefined,
-                        options = NewConfigOptions},
+                        options = NewDispatcherConfigOptions},
                     case aspects_init(Aspects, Args, Prefix, Timeout,
                                       ServiceState, Dispatcher) of
                         {ok, NewServiceState} ->
@@ -3512,6 +3516,12 @@ duo_mode_loop_terminate(Reason, ServiceState,
     end,
     erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
+
+duo_mode_dispatcher_options(ConfigOptions) ->
+    ConfigOptions#config_service_options{
+        rate_request_max = undefined,
+        count_process_dynamic = false,
+        hibernate = false}.
 
 duo_handle_info({'cloudi_service_return_async',
                  _, _, _, _, _, _, Source} = T,
@@ -4308,10 +4318,51 @@ update_state(#state{dispatcher = Dispatcher,
         _ ->
             OldInfoPid
     end,
-    ConfigOptions = cloudi_core_i_configuration:
-                    service_options_copy(OptionsKeys,
-                                         OldConfigOptions,
-                                         NewConfigOptions),
+    case lists:member(monkey_chaos, OptionsKeys) of
+        true ->
+            #config_service_options{
+                monkey_chaos = OldMonkeyChaos} = OldConfigOptions,
+            cloudi_core_i_runtime_testing:
+            monkey_chaos_destroy(OldMonkeyChaos);
+        false ->
+            ok
+    end,
+    ConfigOptions0 = cloudi_core_i_configuration:
+                     service_options_copy(OptionsKeys,
+                                          OldConfigOptions,
+                                          NewConfigOptions),
+    ConfigOptions1 = case lists:member(rate_request_max, OptionsKeys) of
+        true ->
+            #config_service_options{
+                rate_request_max = RateRequest} = ConfigOptions0,
+            NewRateRequest = if
+                RateRequest =/= undefined ->
+                    cloudi_core_i_rate_based_configuration:
+                    rate_request_init(RateRequest);
+                true ->
+                    RateRequest
+            end,
+            ConfigOptions0#config_service_options{
+                rate_request_max = NewRateRequest};
+        false ->
+            ConfigOptions0
+    end,
+    ConfigOptionsN = case lists:member(hibernate, OptionsKeys) of
+        true ->
+            #config_service_options{
+                hibernate = Hibernate} = ConfigOptions1,
+            NewHibernate = if
+                not is_boolean(Hibernate) ->
+                    cloudi_core_i_rate_based_configuration:
+                    hibernate_init(Hibernate);
+                true ->
+                    Hibernate
+            end,
+            ConfigOptions1#config_service_options{
+                hibernate = NewHibernate};
+        false ->
+            ConfigOptions1
+    end,
     if
         (OldDestRefresh =:= immediate_closest orelse
          OldDestRefresh =:= immediate_furthest orelse
@@ -4329,7 +4380,7 @@ update_state(#state{dispatcher = Dispatcher,
          NewDestRefresh =:= lazy_oldest) ->
             #config_service_options{
                 dest_refresh_delay = Delay,
-                scope = Scope} = ConfigOptions,
+                scope = Scope} = ConfigOptionsN,
             destination_refresh(DestRefresh, Dispatcher, Delay, Scope);
         true ->
             ok
@@ -4342,14 +4393,13 @@ update_state(#state{dispatcher = Dispatcher,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
                 dest_allow = DestAllow,
-                options = ConfigOptions};
+                options = ConfigOptionsN};
 update_state(#state_duo{dispatcher = Dispatcher,
                         request_pid = OldRequestPid,
                         options = OldConfigOptions} = State,
              #config_service_update{
                  options_keys = OptionsKeys,
                  options = NewConfigOptions} = UpdatePlan) ->
-    Dispatcher ! {'cloudi_service_update_state', UpdatePlan},
     NewRequestPid = case cloudi_lists:member_any([request_pid_uses,
                                                   request_pid_options],
                                                  OptionsKeys) of
@@ -4359,10 +4409,60 @@ update_state(#state_duo{dispatcher = Dispatcher,
         _ ->
             OldRequestPid
     end,
-    ConfigOptions = cloudi_core_i_configuration:
-                    service_options_copy(OptionsKeys,
-                                         OldConfigOptions,
-                                         NewConfigOptions),
+    case lists:member(monkey_chaos, OptionsKeys) of
+        true ->
+            #config_service_options{
+                monkey_chaos = OldMonkeyChaos} = OldConfigOptions,
+            cloudi_core_i_runtime_testing:
+            monkey_chaos_destroy(OldMonkeyChaos);
+        false ->
+            ok
+    end,
+    % info_pid_options won't change, due to info_pid_uses == infinity
+    % info_pid_uses won't change, due to duo_mode == true
+    % (so these changes would require a service restart after the update)
+    ConfigOptions0 = cloudi_core_i_configuration:
+                     service_options_copy(OptionsKeys --
+                                          [info_pid_uses,
+                                           info_pid_options],
+                                          OldConfigOptions,
+                                          NewConfigOptions),
+    ConfigOptions1 = case lists:member(rate_request_max, OptionsKeys) of
+        true ->
+            #config_service_options{
+                rate_request_max = RateRequest} = ConfigOptions0,
+            NewRateRequest = if
+                RateRequest =/= undefined ->
+                    cloudi_core_i_rate_based_configuration:
+                    rate_request_init(RateRequest);
+                true ->
+                    RateRequest
+            end,
+            ConfigOptions0#config_service_options{
+                rate_request_max = NewRateRequest};
+        false ->
+            ConfigOptions0
+    end,
+    ConfigOptionsN = case lists:member(hibernate, OptionsKeys) of
+        true ->
+            #config_service_options{
+                hibernate = Hibernate} = ConfigOptions1,
+            NewHibernate = if
+                not is_boolean(Hibernate) ->
+                    cloudi_core_i_rate_based_configuration:
+                    hibernate_init(Hibernate);
+                true ->
+                    Hibernate
+            end,
+            ConfigOptions1#config_service_options{
+                hibernate = NewHibernate};
+        false ->
+            ConfigOptions1
+    end,
+    Dispatcher ! {'cloudi_service_update_state',
+                  UpdatePlan#config_service_update{
+                      options_keys = [],
+                      options = duo_mode_dispatcher_options(ConfigOptionsN)}},
     State#state_duo{request_pid = NewRequestPid,
-                    options = ConfigOptions}.
+                    options = ConfigOptionsN}.
 

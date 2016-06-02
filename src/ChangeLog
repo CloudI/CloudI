@@ -3,6 +3,19 @@
 
 2016-06-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add monkey_latency, monkey_chaos, aspects_init_after,
+      aspects_request_before, aspects_request_after,
+      aspects_info_before, aspects_info_after, and
+      aspects_terminate_before service configuration options to
+      service_updates
+    * Fix service_updates usage of the service configuration options
+      rate_request_max and hibernate
+    * Fix service_updates usage of the service configuration options
+      info_pid_uses and/or info_pid_options with an internal service that
+      uses duo_mode == true
+    * Fix internal service usage of rate_request_max,
+      count_process_dynamic, and/or hibernate with duo_mode == true
+      (so the options do not affect the dispatcher process)
     * Update varpool, reltool_util
 
 2016-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>

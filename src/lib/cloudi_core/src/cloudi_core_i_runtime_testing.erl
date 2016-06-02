@@ -59,7 +59,8 @@
          monkey_chaos_format/1,
          monkey_chaos_validate/1,
          monkey_chaos_init/1,
-         monkey_chaos_check/1]).
+         monkey_chaos_check/1,
+         monkey_chaos_destroy/1]).
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -231,6 +232,23 @@ monkey_chaos_check(#monkey_chaos{method = probability_day,
 monkey_chaos_check(#monkey_chaos{method = probability_day} = MonkeyChaos) ->
     MonkeyChaos.
 
+-spec monkey_chaos_destroy(#monkey_chaos{} | false) ->
+    ok.
+
+monkey_chaos_destroy(false) ->
+    ok;
+monkey_chaos_destroy(#monkey_chaos{method = probability_request}) ->
+    ok;
+monkey_chaos_destroy(#monkey_chaos{method = probability_day,
+                                   pid = Pid}) ->
+    if
+        is_pid(Pid) ->
+            Pid ! 'monkey_chaos_destroy';
+        Pid =:= undefined ->
+            ok
+    end,
+    ok.
+
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
@@ -384,6 +402,8 @@ monkey_chaos_pid_day(Percent)
             % kill the service during a day, after?
             Delay = erlang:round(DayMilliseconds * random()),
             receive
+                'monkey_chaos_destroy' ->
+                    ok;
                 {'EXIT', _, _} ->
                     ok % parent pid died
             after
@@ -392,6 +412,8 @@ monkey_chaos_pid_day(Percent)
             end;
         true ->
             receive
+                'monkey_chaos_destroy' ->
+                    ok;
                 {'EXIT', _, _} ->
                     ok % parent pid died
             after
