@@ -197,15 +197,4 @@ special_behaviour([_ | L]) ->
     special_behaviour(L).
 
 module_behaviour(M) ->
-    Attributes = M:module_info(attributes),
-    case lists:keyfind(behaviour, 1, Attributes) of
-        false ->
-            case lists:keyfind(behavior, 1, Attributes) of
-                false ->
-                    undefined;
-                {_, L} ->
-                    special_behaviour(L)
-            end;
-        {_, L} ->
-            special_behaviour(L)
-    end.
+    special_behaviour(reltool_util:module_behaviours(M)).

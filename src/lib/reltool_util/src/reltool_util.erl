@@ -83,6 +83,8 @@
          module_purged/1,
          module_purged/2,
          module_exports/1,
+         module_behaviours/1,
+         is_deprecated/3,
          module_version/1,
          script_start/1,
          script_remove/1,
@@ -770,10 +772,73 @@ module_exports(Module)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===List the behaviours used by a module.===
+%% The information will not be present if the beam file was stripped.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec module_behaviours(Module :: module()) ->
+    list(module()).
+
+module_behaviours(Module)
+    when is_atom(Module) ->
+    Behaviours = lists:flatmap(fun(Attribute) ->
+        case Attribute of
+            {behaviour, L} ->
+                L;
+            {behavior, L} ->
+                L;
+            _ ->
+                []
+        end
+    end, Module:module_info(attributes)),
+    Behaviours.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Check if a module function is marked as deprecated.===
+%% The value false will always be returned if the beam file was stripped.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_deprecated(Module :: module(),
+                    Function :: atom(),
+                    Arity :: non_neg_integer()) ->
+    boolean().
+
+is_deprecated(Module, Function, Arity) ->
+    Attributes = Module:module_info(attributes),
+    lists:any(fun(Attribute) ->
+        case Attribute of
+            {deprecated, [_ | _] = Deprecated} ->
+                lists:any(fun(Deprecate) ->
+                    case Deprecate of
+                        module ->
+                            true;
+                        {Function, FunctionArity}
+                            when FunctionArity == Arity;
+                                 FunctionArity == '_' ->
+                            true;
+                        {Function, FunctionArity, _}
+                            when FunctionArity == Arity;
+                                 FunctionArity == '_' ->
+                            true;
+                        _ ->
+                            false
+                    end
+                end, Deprecated);
+            _ ->
+                false
+        end
+    end, Attributes).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Provide the current version of the module.===
 %% A list is returned with an entry for each use of the -vsn attribute
 %% in the order within the module file for the currently loaded version
 %% (the result is consistent with beam_lib:version/1).
+%% The information will not be present if the beam file was stripped.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -782,7 +847,6 @@ module_exports(Module)
 
 module_version(Module)
     when is_atom(Module) ->
-    {attributes, L} = lists:keyfind(attributes, 1, Module:module_info()),
     Version = lists:flatmap(fun(Attribute) ->
         case Attribute of
             {vsn, VSN} ->
@@ -790,7 +854,7 @@ module_version(Module)
             _ ->
                 []
         end
-    end, L),
+    end, Module:module_info(attributes)),
     Version.
 
 %%-------------------------------------------------------------------------
@@ -1588,32 +1652,18 @@ modules_filter([], Modules, _) ->
 modules_filter([{Behaviour, Name} | Options], Modules, Loaded)
     when Behaviour =:= behaviour; Behaviour =:= behavior ->
     NewModules = lists:filter(fun(Module) ->
-        Attributes = if
+        Names = if
             Loaded =:= true ->
-                lists:keyfind(attributes, 1, Module:module_info());
+                module_behaviours(Module);
             Loaded =:= false ->
                 case code:is_loaded(Module) of
                     {file, _} ->
-                        lists:keyfind(attributes, 1, Module:module_info());
+                        module_behaviours(Module);
                     false ->
-                        false
+                        []
                 end
         end,
-        case Attributes of
-            false ->
-                false;
-            {attributes, []} ->
-                false;
-            {attributes, AttributesL} ->
-                case lists:keyfind(behaviour, 1, AttributesL) of
-                    false ->
-                        false;
-                    {behaviour, []} ->
-                        false;
-                    {behaviour, Names} ->
-                        lists:member(Name, Names)
-                end
-        end
+        lists:member(Name, Names)
     end, Modules),
     modules_filter(Options, NewModules, true);
 modules_filter([_ | _], _, _) ->
