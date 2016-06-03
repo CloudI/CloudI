@@ -464,7 +464,7 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
             Error
     end.
 
-start_external_thread(0, Pids, Ports, _,
+start_external_thread(ThreadsPerProcess, Pids, Ports, ThreadsPerProcess,
                       _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
 
@@ -482,7 +482,7 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                           DestRefresh, DestDeny, DestAllow,
                           ConfigOptions, ID) of
         {ok, Pid, Port} ->
-            start_external_thread(I - 1, [Pid | Pids], [Port | Ports],
+            start_external_thread(I + 1, [Pid | Pids], [Port | Ports],
                                   ThreadsPerProcess,
                                   ProcessIndex, ProcessCount, CommandLine,
                                   Protocol, SocketPath, BufferSize, Timeout,
@@ -501,7 +501,7 @@ start_external_threads(ThreadsPerProcess,
                        Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                        DestRefresh, DestDeny, DestAllow,
                        ConfigOptions, ID) ->
-    start_external_thread(ThreadsPerProcess, [], [], ThreadsPerProcess,
+    start_external_thread(0, [], [], ThreadsPerProcess,
                           ProcessIndex, ProcessCount, CommandLine,
                           Protocol, SocketPath, BufferSize, Timeout,
                           Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
