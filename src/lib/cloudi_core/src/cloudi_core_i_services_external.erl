@@ -2172,8 +2172,6 @@ socket_open_udp(SocketOptions) ->
 
 -ifdef(ERLANG_OTP_VERSION_19_FEATURES).
 socket_open_local(SocketOptions, Port, SocketPath) ->
-error_logger:error_msg("using ~p~n", [SocketPath]),
-process_flag(trap_exit, true),
     case gen_tcp:listen(0, [binary, local, {ifaddr, {local, SocketPath}},
                             {packet, 4}, {backlog, 0},
                             {active, false} | SocketOptions]) of
