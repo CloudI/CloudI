@@ -2170,27 +2170,71 @@ socket_open_udp(SocketOptions) ->
             Error
     end.
 
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+socket_open_local(SocketOptions, Port, SocketPath) ->
+error_logger:error_msg("using ~p~n", [SocketPath]),
+process_flag(trap_exit, true),
+    case gen_tcp:listen(0, [binary, local, {ifaddr, {local, SocketPath}},
+                            {packet, 4}, {backlog, 0},
+                            {active, false} | SocketOptions]) of
+        {ok, Listener} ->
+            {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
+            {ok, #state_socket{protocol = local,
+                               port = Port,
+                               listener = Listener,
+                               acceptor = Acceptor,
+                               socket_path = SocketPath,
+                               socket_options = SocketOptions}};
+        {error, _} = Error ->
+            Error
+    end.
+-else.
 socket_open_local(SocketOptions, Port, SocketPath) ->
     ok = cloudi_core_i_socket:local(SocketPath),
     {ok, #state_socket{protocol = local,
                        port = Port,
                        socket_path = SocketPath,
                        socket_options = SocketOptions}}.
+-endif.
 
-socket_accept({inet_async, Listener, Acceptor, {ok, Socket}},
-              #state_socket{protocol = tcp,
-                            listener = Listener,
-                            acceptor = Acceptor,
-                            socket_options = SocketOptions} = StateSocket) ->
+socket_accept(Accept, #state_socket{protocol = tcp} = StateSocket) ->
+    socket_accept_tcp(Accept, StateSocket);
+socket_accept(Accept, #state_socket{protocol = local} = StateSocket) ->
+    socket_accept_local(Accept, StateSocket).
+
+socket_accept_tcp({inet_async, Listener, Acceptor, {ok, Socket}},
+                  #state_socket{
+                      protocol = tcp,
+                      listener = Listener,
+                      acceptor = Acceptor,
+                      socket_options = SocketOptions} = StateSocket) ->
     true = inet_db:register_socket(Socket, inet_tcp),
     ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
     catch gen_tcp:close(Listener),
     StateSocket#state_socket{listener = undefined,
                              acceptor = undefined,
-                             socket = Socket};
-socket_accept({inet_async, undefined, undefined, {ok, FileDescriptor}},
-              #state_socket{protocol = local,
-                            socket_options = SocketOptions} = StateSocket) ->
+                             socket = Socket}.
+
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+-compile({nowarn_unused_function,
+          [{cloudi_socket_set, 2}]}).
+socket_accept_local({inet_async, Listener, Acceptor, {ok, Socket}},
+                    #state_socket{
+                        protocol = local,
+                        listener = Listener,
+                        acceptor = Acceptor,
+                        socket_options = SocketOptions} = StateSocket) ->
+    true = inet_db:register_socket(Socket, local_tcp),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
+    catch gen_tcp:close(Listener),
+    StateSocket#state_socket{listener = undefined,
+                             acceptor = undefined,
+                             socket = Socket}.
+-else.
+socket_accept_local({inet_async, undefined, undefined, {ok, FileDescriptor}},
+                    #state_socket{
+                        protocol = local,
+                        socket_options = SocketOptions} = StateSocket) ->
     {recbuf, ReceiveBufferSize} = lists:keyfind(recbuf, 1, SocketOptions),
     {sndbuf, SendBufferSize} = lists:keyfind(sndbuf, 1, SocketOptions),
     ok = cloudi_core_i_socket:setsockopts(FileDescriptor,
@@ -2198,6 +2242,7 @@ socket_accept({inet_async, undefined, undefined, {ok, FileDescriptor}},
     {ok, Socket} = cloudi_socket_set(FileDescriptor, SocketOptions),
     ok = inet:setopts(Socket, [{active, once}]),
     StateSocket#state_socket{socket = Socket}.
+-endif.
 
 socket_close(socket_closed = Reason,
              #state_socket{socket = Socket} = StateSocket)

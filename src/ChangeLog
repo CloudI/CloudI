@@ -3,6 +3,11 @@
 
 2016-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add usage of the new unix domain socket functionality
+      in Erlang/OTP 19.0rc2 for external service usage of the protocol local
+      (default == local) to avoid using a NIF
+    * Fix external service usage of protocol local
+      with count_process > 1
     * Improve Erlang NIF compilation
 
 2016-06-02 Michael Truog   <mjtruog [at] gmail (dot) com>

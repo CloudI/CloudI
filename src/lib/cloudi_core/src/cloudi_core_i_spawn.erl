@@ -464,24 +464,26 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
             Error
     end.
 
-start_external_thread(0, Pids, Ports,
+start_external_thread(0, Pids, Ports, _,
                       _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(Pids), lists:reverse(Ports)};
 
-start_external_thread(I, Pids, Ports,
+start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                       ProcessIndex, ProcessCount, CommandLine,
                       Protocol, SocketPath, BufferSize, Timeout,
                       Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                       DestRefresh, DestDeny, DestAllow,
                       ConfigOptions, ID) ->
     case ?CREATE_EXTERNAL(Protocol, SocketPath,
-                          I, ProcessIndex, ProcessCount, CommandLine,
+                          I + ThreadsPerProcess * ProcessIndex,
+                          ProcessIndex, ProcessCount, CommandLine,
                           BufferSize, Timeout,
                           Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                           DestRefresh, DestDeny, DestAllow,
                           ConfigOptions, ID) of
         {ok, Pid, Port} ->
             start_external_thread(I - 1, [Pid | Pids], [Port | Ports],
+                                  ThreadsPerProcess,
                                   ProcessIndex, ProcessCount, CommandLine,
                                   Protocol, SocketPath, BufferSize, Timeout,
                                   Prefix, TimeoutAsync, TimeoutSync,
@@ -499,7 +501,7 @@ start_external_threads(ThreadsPerProcess,
                        Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                        DestRefresh, DestDeny, DestAllow,
                        ConfigOptions, ID) ->
-    start_external_thread(ThreadsPerProcess, [], [],
+    start_external_thread(ThreadsPerProcess, [], [], ThreadsPerProcess,
                           ProcessIndex, ProcessCount, CommandLine,
                           Protocol, SocketPath, BufferSize, Timeout,
                           Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,

@@ -68,6 +68,10 @@
 init() ->
     ok.
 -else.
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+init() ->
+    ok.
+-else.
 init() ->
     case cloudi_core_i_app:test() of
         true ->
@@ -77,6 +81,7 @@ init() ->
             erlang:load_nif(filename:join([Path,
                                            "libcloudi_socket_drv"]), [])
     end.
+-endif.
 -endif.
 
 -spec local(_SocketPath :: string()) ->
