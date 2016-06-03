@@ -61,9 +61,12 @@
     ERL_NIF_TERM NIF_NAME(name)(ErlNifEnv * env,\
                                 int argc,\
                                 const ERL_NIF_TERM * argv)
-#if ((ERL_NIF_MAJOR_VERSION == 2) && (ERL_NIF_MINOR_VERSION >= 7)) || \
+#if ((ERL_NIF_MAJOR_VERSION == 2) && (ERL_NIF_MINOR_VERSION >= 8)) || \
     (ERL_NIF_MAJOR_VERSION > 2)
-// bypass bug in 17.3 release
+// Erlang/OTP 18.0 and higher
+#define DIRTY_SCHEDULERS_VERSION 2
+#elif (ERL_NIF_MAJOR_VERSION == 2) && (ERL_NIF_MINOR_VERSION == 7)
+// bypass bug in Erlang/OTP 17.3 release
 #define DIRTY_SCHEDULERS_VERSION 1
 #else
 #define DIRTY_SCHEDULERS_VERSION 0
