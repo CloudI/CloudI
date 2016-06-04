@@ -1330,7 +1330,7 @@ logging_level_highest([_ | _] = Levels) ->
 
 logging_syslog_set(Value, #config{logging = OldLogging} = Config)
     when is_list(Value) ->
-    case logging_syslog_validate(Value) of
+    case logging_validate_syslog(Value) of
         {ok, SyslogConfig} ->
             {ok,
              Config#config{
@@ -1354,7 +1354,7 @@ logging_syslog_set(Value, #config{logging = OldLogging} = Config)
 
 logging_formatters_set(Value, #config{logging = OldLogging} = Config)
     when is_list(Value) ->
-    case logging_formatters_validate(Value) of
+    case logging_validate_formatters(Value) of
         {ok, FormattersConfig} ->
             {ok,
              Config#config{
@@ -1373,11 +1373,14 @@ logging_formatters_set(Value, #config{logging = OldLogging} = Config)
 -spec logging(#config{}) ->
     cloudi_service_api:logging_proplist().
 
-logging(#config{logging = #config_logging{file = File,
-                                          level = Level,
-                                          redirect = Redirect,
-                                          syslog = Syslog,
-                                          formatters = Formatters}}) ->
+logging(#config{logging = #config_logging{
+                              file = File,
+                              level = Level,
+                              redirect = Redirect,
+                              syslog = Syslog,
+                              formatters = Formatters,
+                              aspects_log_before = AspectsLogBefore,
+                              aspects_log_after = AspectsLogAfter}}) ->
     Defaults = #config_logging{},
     LoggingList0 = [],
     LoggingList1 = if
@@ -1514,7 +1517,19 @@ logging(#config{logging = #config_logging{file = File,
             [{formatters, FormattersList1} | LoggingList4]
            
     end,
-    lists:reverse(LoggingList5).
+    LoggingList6 = if
+        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
+            LoggingList5;
+        true ->
+            [{aspects_log_before, AspectsLogBefore} | LoggingList5]
+    end,
+    LoggingList7 = if
+        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+            LoggingList6;
+        true ->
+            [{aspects_log_after, AspectsLogAfter} | LoggingList6]
+    end,
+    lists:reverse(LoggingList7).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -1578,35 +1593,39 @@ new([{'nodes', [_ | _] = Value} | Terms], Config) ->
     end;
 new([{'logging', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'logging', [T | _] = Value} | Terms], Config)
+new([{'logging', [T | _] = Value} | Terms],
+    #config{logging = Logging} = Config)
     when is_atom(element(1, T)) ->
     Defaults = [
-        {level, (Config#config.logging)#config_logging.level},
-        {file, (Config#config.logging)#config_logging.file},
-        {redirect, (Config#config.logging)#config_logging.redirect},
-        {syslog, (Config#config.logging)#config_logging.syslog},
-        {formatters, (Config#config.logging)#config_logging.formatters}],
+        {level, Logging#config_logging.level},
+        {file, Logging#config_logging.file},
+        {redirect, Logging#config_logging.redirect},
+        {syslog, Logging#config_logging.syslog},
+        {formatters, Logging#config_logging.formatters},
+        {aspects_log_before, Logging#config_logging.aspects_log_before},
+        {aspects_log_after, Logging#config_logging.aspects_log_after}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _, _ | _]
+        [Level, _, _, _, _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_level_invalid, Level}};
-        [_, File, _, _, _ | _]
+        [_, File, _, _, _, _, _]
             when not ((is_list(File) andalso
                        (length(File) > 0) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
             {error, {logging_file_invalid, File}};
-        [_, _, Redirect, _, _ | _]
+        [_, _, Redirect, _, _, _, _]
             when not is_atom(Redirect) ->
             {error, {logging_redirect_invalid, Redirect}};
-        [_, _, _, Syslog, _ | _]
+        [_, _, _, Syslog, _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
             {error, {logging_syslog_invalid, Syslog}};
-        [Level, File, Redirect, Syslog, Formatters] ->
+        [Level, File, Redirect, Syslog, Formatters,
+         AspectsLogBefore, AspectsLogAfter] ->
             NewFile = if
                 Level =:= undefined ->
                     undefined;
@@ -1619,35 +1638,23 @@ new([{'logging', [T | _] = Value} | Terms], Config)
                 true ->
                     Level
             end,
-            case logging_syslog_validate(Syslog) of
-                {ok, SyslogConfig} ->
-                    case logging_formatters_validate(Formatters) of
-                        {ok, FormattersConfig} ->
-                            NewConfig = Config#config{
-                                            logging = #config_logging{
-                                                level = NewLevel,
-                                                file = NewFile,
-                                                redirect = Redirect,
-                                                syslog = SyslogConfig,
-                                                formatters = FormattersConfig}},
-                            if
-                                Redirect =:= undefined ->
-                                    new(Terms, NewConfig);
-                                true ->
-                                    case node_validate(Redirect) of
-                                        ok ->
-                                            new(Terms, NewConfig);
-                                        {error, _} = Error ->
-                                            Error
-                                    end
-                            end;
-                        {error, _} = Error ->
-                            Error
-                    end;
+            case logging_validate(Redirect, Syslog, Formatters,
+                                  AspectsLogBefore, AspectsLogAfter) of
+                {ok, SyslogConfig, FormattersConfig,
+                     NewAspectsLogBefore, NewAspectsLogAfter} ->
+                    NewLogging = Logging#config_logging{
+                                     level = NewLevel,
+                                     file = NewFile,
+                                     redirect = Redirect,
+                                     syslog = SyslogConfig,
+                                     formatters = FormattersConfig,
+                                     aspects_log_before = NewAspectsLogBefore,
+                                     aspects_log_after = NewAspectsLogAfter},
+                    new(Terms, Config#config{logging = NewLogging});
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end;
 new([Term | _], _) ->
@@ -3218,99 +3225,9 @@ services_validate_option_pid_options([{priority, V} = PidOption |
 services_validate_option_pid_options([PidOption | _], _) ->
     {error, {service_options_pid_invalid, PidOption}}.
 
-services_validate_option_aspects_f(Aspects, Arity, AutomaticLoading) ->
-    services_validate_option_aspects_f(Aspects, [], Arity, AutomaticLoading).
-
-services_validate_option_aspects_f([], AspectsNew, _, _) ->
-    {ok, lists:reverse(AspectsNew)};
-services_validate_option_aspects_f([F | AspectsOld], AspectsNew,
-                                   Arity, AutomaticLoading)
-    when is_function(F, Arity) ->
-    services_validate_option_aspects_f(AspectsOld, [F | AspectsNew],
-                                       Arity, AutomaticLoading);
-services_validate_option_aspects_f([{M, F} = Entry | AspectsOld], AspectsNew,
-                                   Arity, AutomaticLoading)
-    when is_atom(M), is_atom(F) ->
-    % check if a function is exported
-    % if the module is not currently loaded,
-    % only load the module for the check
-    Exported = case code:is_loaded(M) of
-        {file, _} ->
-            erlang:function_exported(M, F, Arity);
-        false ->
-            if
-                AutomaticLoading =:= true ->
-                    case code:load_file(M) of
-                        {module, _} ->
-                            V = erlang:function_exported(M, F, Arity),
-                            true = code:delete(M),
-                            false = code:purge(M),
-                            V;
-                        {error, _} ->
-                            false
-                    end;
-                AutomaticLoading =:= false ->
-                    false
-            end
-    end,
-    if
-        Exported =:= true ->
-            services_validate_option_aspects_f(AspectsOld,
-                                               [Entry | AspectsNew],
-                                               Arity, AutomaticLoading);
-        Exported =:= false ->
-            {error, Entry}
-    end;
-services_validate_option_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
-                                   Arity, AutomaticLoading)
-    when is_atom(M), is_atom(F) ->
-    % check if a function is exported
-    % if the module is not currently loaded,
-    % only load the module to make a function
-    {Exported, Function} = case code:is_loaded(M) of
-        {file, _} ->
-            case erlang:function_exported(M, F, 0) of
-                true ->
-                    {true, M:F()};
-                false ->
-                    {false, undefined}
-            end;
-        false ->
-            if
-                AutomaticLoading =:= true ->
-                    case code:load_file(M) of
-                        {module, _} ->
-                            V = case erlang:function_exported(M, F, 0) of
-                                true ->
-                                    {true, M:F()};
-                                false ->
-                                    {false, undefined}
-                            end,
-                            true = code:delete(M),
-                            false = code:purge(M),
-                            V;
-                        {error, _} ->
-                            {false, undefined}
-                    end;
-                AutomaticLoading =:= false ->
-                    {false, undefined}
-            end
-    end,
-    if
-        Exported =:= true, is_function(Function, Arity) ->
-            services_validate_option_aspects_f(AspectsOld,
-                                               [Function | AspectsNew],
-                                               Arity, AutomaticLoading);
-        Exported =:= false ->
-            {error, Entry}
-    end;
-services_validate_option_aspects_f([Entry | _], _, _, _) ->
-    {error, Entry}.
-
 services_validate_option_aspects_terminate_before(AspectsTerminate,
                                                   AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsTerminate, 3,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsTerminate, 3, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3319,8 +3236,7 @@ services_validate_option_aspects_terminate_before(AspectsTerminate,
 
 services_validate_option_aspects_init_after_internal(AspectsInit,
                                                      AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInit, 5,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsInit, 5, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3329,8 +3245,7 @@ services_validate_option_aspects_init_after_internal(AspectsInit,
 
 services_validate_option_aspects_request_before_internal(AspectsRequest,
                                                          AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsRequest, 11,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsRequest, 11, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3339,8 +3254,7 @@ services_validate_option_aspects_request_before_internal(AspectsRequest,
 
 services_validate_option_aspects_request_after_internal(AspectsRequest,
                                                         AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsRequest, 12,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsRequest, 12, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3349,8 +3263,7 @@ services_validate_option_aspects_request_after_internal(AspectsRequest,
 
 services_validate_option_aspects_info_before_internal(AspectsInfo,
                                                       AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInfo, 3,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsInfo, 3, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3359,8 +3272,7 @@ services_validate_option_aspects_info_before_internal(AspectsInfo,
 
 services_validate_option_aspects_info_after_internal(AspectsInfo,
                                                       AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInfo, 3,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsInfo, 3, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3426,8 +3338,7 @@ services_validate_option_aspects_internal(AspectsInitAfter,
 
 services_validate_option_aspects_init_after_external(AspectsInit,
                                                      AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsInit, 4,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsInit, 4, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3436,8 +3347,7 @@ services_validate_option_aspects_init_after_external(AspectsInit,
 
 services_validate_option_aspects_request_before_external(AspectsRequest,
                                                          AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsRequest, 10,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsRequest, 10, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -3446,8 +3356,7 @@ services_validate_option_aspects_request_before_external(AspectsRequest,
 
 services_validate_option_aspects_request_after_external(AspectsRequest,
                                                         AutomaticLoading) ->
-    case services_validate_option_aspects_f(AspectsRequest, 11,
-                                            AutomaticLoading) of
+    case validate_aspects_f(AspectsRequest, 11, AutomaticLoading) of
         {ok, _} = Success ->
             Success;
         {error, Entry} ->
@@ -4474,19 +4383,11 @@ service_name_valid(Name, ErrorReason) ->
             {error, {ErrorReason, Name}}
     end.
 
-node_validate(A) ->
-    case lists:member($@, erlang:atom_to_list(A)) of
-        true ->
-            ok;
-        false ->
-            {error, {node_invalid, A}}
-    end.
-
 nodes_validate([]) ->
     ok;
 nodes_validate([A | As])
     when is_atom(A) ->
-    case node_validate(A) of
+    case validate_node(A) of
         ok ->
             nodes_validate(As);
         {error, _} = Error ->
@@ -4502,7 +4403,7 @@ nodes_elements_add([A | As], NodesConfig)
     nodes_elements_add(As, NodesConfig);
 nodes_elements_add([A | As], #config_nodes{nodes = Nodes} = NodesConfig)
     when is_atom(A) ->
-    case node_validate(A) of
+    case validate_node(A) of
         ok ->
             NewNodes = lists:umerge(Nodes, [A]),
             nodes_elements_add(As,
@@ -4552,26 +4453,26 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
         {groups, []},
         {tags, []}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [AccessKeyId, _, _, _, _ | _]
+        [AccessKeyId, _, _, _, _]
             when not (is_list(AccessKeyId) orelse
                       is_integer(hd(AccessKeyId))) ->
             {error, {node_discovery_ec2_access_key_id_invalid,
                      AccessKeyId}};
-        [_, SecretAccessKey, _, _, _ | _]
+        [_, SecretAccessKey, _, _, _]
             when not (is_list(SecretAccessKey) orelse
                       is_integer(hd(SecretAccessKey))) ->
             {error, {node_discovery_ec2_secret_access_key_invalid,
                      SecretAccessKey}};
-        [_, _, Host, _, _ | _]
+        [_, _, Host, _, _]
             when not (is_list(Host) orelse
                       is_integer(hd(Host))) ->
             {error, {node_discovery_ec2_host_invalid, Host}};
         [_, _, _, [], []] ->
             {error, {node_discovery_ec2_tags_selection_null, []}};
-        [_, _, _, Groups, _ | _]
+        [_, _, _, Groups, _]
             when not is_list(Groups) ->
             {error, {node_discovery_ec2_groups_invalid, Groups}};
-        [_, _, _, _, Tags | _]
+        [_, _, _, _, Tags]
             when not is_list(Tags) ->
             {error, {node_discovery_ec2_tags_invalid, Tags}};
         [AccessKeyId, SecretAccessKey, Host, Groups, Tags] ->
@@ -4603,17 +4504,17 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
         {port, 4475},
         {ttl, 1}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Interface, _, _, _ | _]
+        [Interface, _, _, _]
             when not is_tuple(Interface) ->
             {error, {node_discovery_multicast_interface_invalid, Interface}};
-        [_, Address, _, _ | _]
+        [_, Address, _, _]
             when not is_tuple(Address) ->
             {error, {node_discovery_multicast_address_invalid, Address}};
-        [_, _, Port, _ | _]
+        [_, _, Port, _]
             when not (is_integer(Port) andalso
                       (Port > 0)) ->
             {error, {node_discovery_multicast_port_invalid, Port}};
-        [_, _, _, TTL | _]
+        [_, _, _, TTL]
             when not (is_integer(TTL) andalso
                       (TTL >= 0)) ->
             {error, {node_discovery_multicast_ttl_invalid, TTL}};
@@ -4639,10 +4540,10 @@ nodes_discovery_options(Value, NodesConfig) ->
         {multicast, []},
         {ec2, []}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [MulticastOptions, _ | _]
+        [MulticastOptions, _]
             when not is_list(MulticastOptions) ->
             {error, {node_discovery_multicast_invalid, MulticastOptions}};
-        [_, EC2Options | _]
+        [_, EC2Options]
             when not is_list(EC2Options) ->
             {error, {node_discovery_ec2_invalid, EC2Options}};
         [[_ | _], [_ | _]] ->
@@ -4674,39 +4575,39 @@ nodes_options(Nodes0, Value) ->
          NodesConfig#config_nodes.discovery}],
     ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _, _, _, _ | _]
+        [Nodes1, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
             {error, {node_invalid, Nodes1}};
-        [_, ReconnectStart, _, _, _, _, _ | _]
+        [_, ReconnectStart, _, _, _, _, _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0) andalso
                       (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_start_invalid, ReconnectStart}};
-        [_, ReconnectStart, _, _, _, _, _ | _]
+        [_, ReconnectStart, _, _, _, _, _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
             {error, {node_reconnect_start_min, ConnectTimeSeconds}};
-        [_, _, ReconnectDelay, _, _, _, _ | _]
+        [_, _, ReconnectDelay, _, _, _, _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0) andalso
                       (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_delay_invalid, ReconnectDelay}};
-        [_, _, ReconnectDelay, _, _, _, _ | _]
+        [_, _, ReconnectDelay, _, _, _, _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
             {error, {node_reconnect_delay_min, ConnectTimeSeconds}};
-        [_, _, _, Listen, _, _, _ | _]
+        [_, _, _, Listen, _, _, _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->
             {error, {node_listen_invalid, Listen}};
-        [_, _, _, _, Connect, _, _ | _]
+        [_, _, _, _, Connect, _, _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
             {error, {node_connect_invalid, Connect}};
-        [_, _, _, _, _, TimestampType, _ | _]
+        [_, _, _, _, _, TimestampType, _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os) orelse
                       (TimestampType =:= warp)) ->
             {error, {node_timestamp_type_invalid, TimestampType}};
-        [_, _, _, _, _, _, Discovery | _]
+        [_, _, _, _, _, _, Discovery]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {node_discovery_invalid, Discovery}};
@@ -4744,11 +4645,50 @@ nodes_proplist(Value) ->
             Error
     end.
 
-logging_syslog_validate(undefined) ->
+logging_validate(Redirect, Syslog, Formatters,
+                 AspectsLogBefore, AspectsLogAfter) ->
+    RedirectValid = if
+        Redirect =:= undefined ->
+            ok;
+        true ->
+            case validate_node(Redirect) of
+                ok ->
+                    ok;
+                {error, _} = RedirectError ->
+                    RedirectError
+            end
+    end,
+    if
+        RedirectValid =/= ok ->
+            RedirectValid;
+        true ->
+            case logging_validate_syslog(Syslog) of
+                {ok, SyslogConfig} ->
+                    case logging_validate_formatters(Formatters) of
+                        {ok, FormattersConfig} ->
+                            case logging_validate_aspects(AspectsLogBefore,
+                                                          AspectsLogAfter) of
+                                {ok, NewAspectsLogBefore,
+                                     NewAspectsLogAfter} ->
+                                    {ok, SyslogConfig, FormattersConfig,
+                                         NewAspectsLogBefore,
+                                         NewAspectsLogAfter};
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end
+    end.
+
+logging_validate_syslog(undefined) ->
     {ok, undefined};
-logging_syslog_validate([]) ->
+logging_validate_syslog([]) ->
     {ok, #config_logging_syslog{}};
-logging_syslog_validate([_ | _] = Value) ->
+logging_validate_syslog([_ | _] = Value) ->
     SyslogConfig = #config_logging_syslog{},
     Defaults = [
         {identity,
@@ -4758,17 +4698,17 @@ logging_syslog_validate([_ | _] = Value) ->
         {level,
          SyslogConfig#config_logging_syslog.level}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Identity, _, _ | _]
+        [Identity, _, _]
             when not (is_list(Identity) andalso
                       (length(Identity) > 0) andalso
                       is_integer(hd(Identity))) ->
             {error, {logging_syslog_identity_invalid, Identity}};
-        [_, Facility, _ | _]
+        [_, Facility, _]
             when not (is_atom(Facility) orelse
                       (is_integer(Facility) andalso
                        (Facility >= 0))) ->
             {error, {logging_syslog_facility_invalid, Facility}};
-        [_, _, Level | _]
+        [_, _, Level]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
@@ -4792,23 +4732,23 @@ logging_syslog_validate([_ | _] = Value) ->
             {error, {logging_syslog_invalid, Extra}}
     end.
 
-logging_formatters_validate(undefined) ->
+logging_validate_formatters(undefined) ->
     {ok, undefined};
-logging_formatters_validate([]) ->
+logging_validate_formatters([]) ->
     {ok, undefined};
-logging_formatters_validate([_ | _] = Value) ->
-    logging_formatters_validate(Value, [undefined],
+logging_validate_formatters([_ | _] = Value) ->
+    logging_validate_formatters(Value, [undefined],
                                 #config_logging_formatters{}).
 
-logging_formatters_validate([], Levels, FormattersConfig) ->
+logging_validate_formatters([], Levels, FormattersConfig) ->
     {ok,
      FormattersConfig#config_logging_formatters{
          level = logging_level_highest(Levels)}};
-logging_formatters_validate([{any, Options} | L], Levels,
+logging_validate_formatters([{any, Options} | L], Levels,
                             #config_logging_formatters{
                                 default = undefined} = FormattersConfig)
     when is_list(Options) ->
-    case logging_formatter_validate(any, Options) of
+    case logging_validate_formatter(any, Options) of
         {ok, #config_logging_formatter{level = Level,
                                        output = Output} = Formatter} ->
             NewLevels = if
@@ -4817,20 +4757,20 @@ logging_formatters_validate([{any, Options} | L], Levels,
                 true ->
                     [Level | Levels]
             end,
-            logging_formatters_validate(L, NewLevels,
+            logging_validate_formatters(L, NewLevels,
                 FormattersConfig#config_logging_formatters{
                     default = Formatter});
         {error, _} = Error ->
             Error
     end;
-logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
+logging_validate_formatters([{[_ | _] = Modules, Options} | L], Levels,
                             #config_logging_formatters{
                                 lookup = Lookup} = FormattersConfig)
     when is_list(Options) ->
     case (lists:all(fun is_atom/1, Modules) andalso
           (not cloudi_x_keys1value:is_key(Modules, Lookup))) of
         true ->
-            case logging_formatter_validate(Modules, Options) of
+            case logging_validate_formatter(Modules, Options) of
                 {ok, #config_logging_formatter{level = Level,
                                                output = Output} = Formatter} ->
                     NewLookup = cloudi_x_keys1value:
@@ -4841,7 +4781,7 @@ logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
                         true ->
                             [Level | Levels]
                     end,
-                    logging_formatters_validate(L, NewLevels,
+                    logging_validate_formatters(L, NewLevels,
                         FormattersConfig#config_logging_formatters{
                             lookup = NewLookup});
                 {error, _} = Error ->
@@ -4850,7 +4790,7 @@ logging_formatters_validate([{[_ | _] = Modules, Options} | L], Levels,
         false ->
             {error, {logging_formatter_modules_invalid, Modules}}
     end;
-logging_formatters_validate([Entry | _], _, _) ->
+logging_validate_formatters([Entry | _], _, _) ->
     {error, {logging_formatters_invalid, Entry}}.
 
 % handle a conversion from lager log levels to CloudI log levels, if necessary
@@ -4885,7 +4825,7 @@ logging_formatter_level(undefined) ->
 logging_formatter_level(Invalid) ->
     {error, {logging_formatter_level_invalid, Invalid}}.
 
-logging_formatter_validate(Key, Value) ->
+logging_validate_formatter(Key, Value) ->
     NewValue = lists:map(fun(A) ->
         % handle lager logging level atoms in the proplist
         if
@@ -4912,27 +4852,27 @@ logging_formatter_validate(Key, Value) ->
         {formatter_config,
          FormatterConfig#config_logging_formatter.formatter_config}],
     case cloudi_proplists:take_values(Defaults, NewValue) of
-        [Level, _, _, _, _, _, _ | _]
+        [Level, _, _, _, _, _, _ ]
             when not is_atom(Level) ->
             {error, {logging_formatter_level_invalid, Level}};
-        [_, Output, _, _, _, _, _ | _]
+        [_, Output, _, _, _, _, _]
             when not is_atom(Output) ->
             {error, {logging_formatter_output_invalid, Output}};
-        [_, _, OutputArgs, _, _, _, _ | _]
+        [_, _, OutputArgs, _, _, _, _]
             when not is_list(OutputArgs) ->
             {error, {logging_formatter_output_args_invalid, OutputArgs}};
-        [_, _, _, OutputMaxR, _, _, _ | _]
+        [_, _, _, OutputMaxR, _, _, _]
             when not (is_integer(OutputMaxR) andalso (OutputMaxR >= 0)) ->
             {error, {logging_formatter_output_max_r_invalid, OutputMaxR}};
-        [_, _, _, _, OutputMaxT, _, _ | _]
+        [_, _, _, _, OutputMaxT, _, _]
             when not (is_integer(OutputMaxT) andalso (OutputMaxT >= 0)) ->
             {error, {logging_formatter_output_max_t_invalid, OutputMaxT}};
-        [_, Output, _, _, _, Formatter, _ | _]
+        [_, Output, _, _, _, Formatter, _]
             when not (is_atom(Formatter) andalso
                       (not ((Output =:= undefined) andalso
                             (Formatter =:= undefined)))) ->
             {error, {logging_formatter_formatter_invalid, Formatter}};
-        [_, _, _, _, _, _, Config | _]
+        [_, _, _, _, _, _, Config]
             when not is_list(Config) ->
             {error, {logging_formatter_formatter_config_invalid, Config}};
         [Level, Output, OutputArgs, OutputMaxR, OutputMaxT,
@@ -4986,5 +4926,130 @@ logging_formatter_validate(Key, Value) ->
             end;
         [_, _, _, _, _, _, _ | Extra] ->
             {error, {logging_formatter_invalid, Extra}}
+    end.
+
+logging_validate_aspects(AspectsLogBefore,
+                         AspectsLogAfter) ->
+    case logging_validate_aspects_log_before(AspectsLogBefore) of
+        {ok, NewAspectsLogBefore} ->
+            case logging_validate_aspects_log_after(AspectsLogAfter) of
+                {ok, NewAspectsLogAfter} ->
+                    {ok, NewAspectsLogBefore, NewAspectsLogAfter};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+logging_validate_aspects_log_before(AspectsLogBefore) ->
+    case validate_aspects_f(AspectsLogBefore, 10, true) of
+        {ok, _} = Success ->
+            Success;
+        {error, Entry} ->
+            {error, {logging_aspects_log_before_invalid, Entry}}
+    end.
+
+logging_validate_aspects_log_after(AspectsLogAfter) ->
+    case validate_aspects_f(AspectsLogAfter, 10, true) of
+        {ok, _} = Success ->
+            Success;
+        {error, Entry} ->
+            {error, {logging_aspects_log_after_invalid, Entry}}
+    end.
+
+validate_aspects_f(Aspects, Arity, AutomaticLoading) ->
+    validate_aspects_f(Aspects, [], Arity, AutomaticLoading).
+
+validate_aspects_f([], AspectsNew, _, _) ->
+    {ok, lists:reverse(AspectsNew)};
+validate_aspects_f([F | AspectsOld], AspectsNew,
+                   Arity, AutomaticLoading)
+    when is_function(F, Arity) ->
+    validate_aspects_f(AspectsOld, [F | AspectsNew],
+                       Arity, AutomaticLoading);
+validate_aspects_f([{M, F} = Entry | AspectsOld], AspectsNew,
+                   Arity, AutomaticLoading)
+    when is_atom(M), is_atom(F) ->
+    % check if a function is exported
+    % if the module is not currently loaded,
+    % only load the module for the check
+    Exported = case code:is_loaded(M) of
+        {file, _} ->
+            erlang:function_exported(M, F, Arity);
+        false ->
+            if
+                AutomaticLoading =:= true ->
+                    case code:load_file(M) of
+                        {module, _} ->
+                            V = erlang:function_exported(M, F, Arity),
+                            true = code:delete(M),
+                            false = code:purge(M),
+                            V;
+                        {error, _} ->
+                            false
+                    end;
+                AutomaticLoading =:= false ->
+                    false
+            end
+    end,
+    if
+        Exported =:= true ->
+            validate_aspects_f(AspectsOld, [Entry | AspectsNew],
+                               Arity, AutomaticLoading);
+        Exported =:= false ->
+            {error, Entry}
+    end;
+validate_aspects_f([{{M, F}} = Entry | AspectsOld], AspectsNew,
+                   Arity, AutomaticLoading)
+    when is_atom(M), is_atom(F) ->
+    % check if a function is exported
+    % if the module is not currently loaded,
+    % only load the module to make a function
+    {Exported, Function} = case code:is_loaded(M) of
+        {file, _} ->
+            case erlang:function_exported(M, F, 0) of
+                true ->
+                    {true, M:F()};
+                false ->
+                    {false, undefined}
+            end;
+        false ->
+            if
+                AutomaticLoading =:= true ->
+                    case code:load_file(M) of
+                        {module, _} ->
+                            V = case erlang:function_exported(M, F, 0) of
+                                true ->
+                                    {true, M:F()};
+                                false ->
+                                    {false, undefined}
+                            end,
+                            true = code:delete(M),
+                            false = code:purge(M),
+                            V;
+                        {error, _} ->
+                            {false, undefined}
+                    end;
+                AutomaticLoading =:= false ->
+                    {false, undefined}
+            end
+    end,
+    if
+        Exported =:= true, is_function(Function, Arity) ->
+            validate_aspects_f(AspectsOld, [Function | AspectsNew],
+                               Arity, AutomaticLoading);
+        Exported =:= false ->
+            {error, Entry}
+    end;
+validate_aspects_f([Entry | _], _, _, _) ->
+    {error, Entry}.
+
+validate_node(A) ->
+    case lists:member($@, erlang:atom_to_list(A)) of
+        true ->
+            ok;
+        false ->
+            {error, {node_invalid, A}}
     end.
 

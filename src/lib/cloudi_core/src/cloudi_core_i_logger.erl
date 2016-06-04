@@ -104,7 +104,11 @@
         formatters
             :: undefined | #config_logging_formatters{},
         formatters_level
-            :: undefined | cloudi_service_api:loglevel()
+            :: undefined | cloudi_service_api:loglevel(),
+        aspects_log_before
+            :: list(cloudi_service_api:aspect_log_before()),
+        aspects_log_after
+            :: list(cloudi_service_api:aspect_log_after())
     }).
 
 %%%------------------------------------------------------------------------
@@ -450,7 +454,9 @@ init([#config_logging{file = FilePath,
                       level = FileLevel,
                       redirect = NodeLogger,
                       syslog = SyslogConfig,
-                      formatters = FormattersConfig}]) ->
+                      formatters = FormattersConfig,
+                      aspects_log_before = AspectsLogBefore,
+                      aspects_log_after = AspectsLogAfter}]) ->
     FormattersLevel = case FormattersConfig of
         undefined ->
             undefined;
@@ -459,7 +465,9 @@ init([#config_logging{file = FilePath,
     end,
     #state{mode = Mode} = State = #state{file_level = FileLevel,
                                          formatters = FormattersConfig,
-                                         formatters_level = FormattersLevel},
+                                         formatters_level = FormattersLevel,
+                                         aspects_log_before = AspectsLogBefore,
+                                         aspects_log_after = AspectsLogAfter},
     #state{syslog_level = SyslogLevel} = StateNext = case SyslogConfig of
         undefined ->
             State;
@@ -1081,13 +1089,19 @@ log_message_internal(Level, Timestamp, Node, Pid,
                      MetaData, LogMessage,
                      #state{file_level = FileLevel,
                             syslog_level = SyslogLevel,
-                            formatters = FormattersConfig} = State0)
+                            formatters = FormattersConfig,
+                            aspects_log_before = AspectsLogBefore,
+                            aspects_log_after = AspectsLogAfter} = State0)
     when Level =:= fatal; Level =:= error; Level =:= warn;
          Level =:= info; Level =:= debug; Level =:= trace ->
     Message = log_message_formatters(Level, Timestamp, Node, Pid,
                                      Module, Line, Function, Arity,
                                      MetaData, LogMessage,
                                      FormattersConfig),
+    ok = aspects_log(AspectsLogBefore,
+                     Level, Timestamp, Node, Pid,
+                     Module, Line, Function, Arity,
+                     MetaData, LogMessage),
     {FileResult, State1} = case log_level_allowed(FileLevel, Level) of
         true ->
             log_file(Message, State0);
@@ -1100,6 +1114,10 @@ log_message_internal(Level, Timestamp, Node, Pid,
         false ->
             {ok, State1}
     end,
+    ok = aspects_log(AspectsLogAfter,
+                     Level, Timestamp, Node, Pid,
+                     Module, Line, Function, Arity,
+                     MetaData, LogMessage),
     log_message_internal_result(FileResult, SyslogResult, StateN).
 
 log_message_internal_result(ok, ok, State) ->
@@ -1689,6 +1707,33 @@ syslog_open(SyslogIdentity, SyslogFacility) ->
     {ok, Syslog} = cloudi_x_syslog:open(SyslogIdentity,
                                         [ndelay, pid], SyslogFacility),
     Syslog.
+
+aspects_log([], _, _, _, _, _, _, _, _, _, _) ->
+    ok;
+aspects_log([{M, F} | L], Level, Timestamp, Node, Pid,
+            Module, Line, Function, Arity, MetaData, LogMessage) ->
+    try M:F(Level, Timestamp, Node, Pid,
+            Module, Line, Function, Arity, MetaData, LogMessage) of
+        _ ->
+            aspects_log(L, Level, Timestamp, Node, Pid,
+                        Module, Line, Function, Arity, MetaData, LogMessage)
+    catch
+        _:_ ->
+            aspects_log(L, Level, Timestamp, Node, Pid,
+                        Module, Line, Function, Arity, MetaData, LogMessage)
+    end;
+aspects_log([F | L], Level, Timestamp, Node, Pid,
+            Module, Line, Function, Arity, MetaData, LogMessage) ->
+    try F(Level, Timestamp, Node, Pid,
+          Module, Line, Function, Arity, MetaData, LogMessage) of
+        _ ->
+            aspects_log(L, Level, Timestamp, Node, Pid,
+                        Module, Line, Function, Arity, MetaData, LogMessage)
+    catch
+        _:_ ->
+            aspects_log(L, Level, Timestamp, Node, Pid,
+                        Module, Line, Function, Arity, MetaData, LogMessage)
+    end.
 
 %%%------------------------------------------------------------------------
 %%% lager integration based on lager source code

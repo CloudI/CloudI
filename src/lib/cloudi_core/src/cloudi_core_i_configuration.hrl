@@ -116,7 +116,11 @@
         syslog = undefined
             :: undefined | #config_logging_syslog{},
         formatters = undefined
-            :: undefined | #config_logging_formatters{}
+            :: undefined | #config_logging_formatters{},
+        aspects_log_before = []
+            :: list(cloudi_service_api:aspect_log_before()),
+        aspects_log_after = []
+            :: list(cloudi_service_api:aspect_log_after())
     }).
 
 -record(config_service_options,

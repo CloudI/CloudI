@@ -62,6 +62,7 @@
          aspect_info_after_internal/0,
          aspect_terminate_before_internal/0,
          aspect_terminate_before_external/0,
+         aspect_log/1,
          services_state/1,
          basic_update/1,
          services_init/6,
@@ -194,6 +195,9 @@ aspect_terminate_before_internal() ->
 aspect_terminate_before_external() ->
     aspect_terminate_before_external_f().
 
+aspect_log(OutputTime) ->
+    aspect_log_f(OutputTime).
+
 basic_update(ProcessInfo0) ->
     LoggingPid = whereis(cloudi_core_i_logger),
     {Logging,
@@ -248,7 +252,9 @@ services_init(Interval, ProcessInfo0,
                 UseAspectsOnly =:= true ->
                     Inserts1;
                 UseAspectsOnly =:= false ->
-                    [{Pid, MetricPrefix ++ ServiceMetricId, Driver} | Inserts1]
+                    ServiceMetricPrefix = MetricPrefix ++
+                                          [services | ServiceMetricId],
+                    [{Pid, ServiceMetricPrefix, Driver} | Inserts1]
             end,
             {Inserts2, process_info_store(Pid, ProcessInfo1)}
         end, A, Pids)
@@ -868,7 +874,9 @@ aspect_init() ->
                 undefined ->
                     undefined;
                 ServiceMetricId ->
-                    PidObject = {Pid, MetricPrefix ++ ServiceMetricId, Driver},
+                    ServiceMetricPrefix = MetricPrefix ++
+                                          [services | ServiceMetricId],
+                    PidObject = {Pid, ServiceMetricPrefix, Driver},
                     true = ets:insert(?ETS_PID2METRIC, PidObject),
                     PidObject
             end
@@ -913,6 +921,17 @@ aspect_ref_to_object(Ref, Dispatcher)
             end;
         [{Ref, PidObject}] ->
             PidObject
+    catch
+        error:badarg ->
+            undefined
+    end.
+
+aspect_cloudi() ->
+    try ets:lookup(?ETS_CONFIG, init) of
+        [] ->
+            undefined;
+        [{_, _, _} = Init] ->
+            Init
     catch
         error:badarg ->
             undefined
@@ -1048,6 +1067,20 @@ aspect_terminate_before_external_f() ->
                 ok
         end,
         {ok, State}
+    end.
+
+aspect_log_f(OutputTime)
+    when OutputTime =:= 'before'; OutputTime =:= 'after' ->
+    fun(Level, _Timestamp, _Node, _Pid,
+        _Module, _Line, _Function, _Arity, _MetaData, _LogMessage) ->
+        case aspect_cloudi() of
+            {_, MetricPrefix, Driver} ->
+                Name = MetricPrefix ++ [logging, output, OutputTime, Level],
+                update(spiral, Name, 1, Driver);
+            undefined ->
+                ok
+        end,
+        ok
     end.
 
 service_metric_id_from_service(#service{service_m = cloudi_core_i_spawn,

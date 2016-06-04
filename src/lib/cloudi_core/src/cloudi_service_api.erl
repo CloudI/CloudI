@@ -660,7 +660,31 @@
                                                      string())})})}).
 -export_type([nodes_proplist/0]).
 
--type loglevel() :: fatal | error | warn | info | debug | trace | off.
+-type aspect_log_f() ::
+    fun((Level :: loglevel_on(),
+         Timestamp :: erlang:timestamp(),
+         Node :: node(),
+         Pid :: pid(),
+         Module :: module(),
+         Line :: pos_integer(),
+         Function :: atom() | undefined,
+         Arity :: non_neg_integer() | undefined,
+         MetaData :: list(),
+         LogMessage :: string()) ->
+        ok).
+-type aspect_log_before() ::
+    aspect_log_f() |
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
+-type aspect_log_after() ::
+    aspect_log_f() |
+    {Module :: module(), Function :: atom()} |
+    {{Module :: module(), Function :: atom()}}.
+-export_type([aspect_log_f/0,
+              aspect_log_before/0,
+              aspect_log_after/0]).
+-type loglevel() :: loglevel_on() | off.
+-type loglevel_on() :: fatal | error | warn | info | debug | trace.
 -type logging_syslog_set_proplist() ::
     list({identity, string()} |
          {facility, kern | user | mail | daemon | auth | syslog | lpr |
@@ -684,10 +708,13 @@
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
                   {level, loglevel()} |
+                  {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |
                   {formatters, logging_formatters_set_proplist() | undefined} |
-                  {redirect, node() | undefined}).
+                  {aspects_log_before, list(aspect_log_before())} |
+                  {aspects_log_after, list(aspect_log_after())}).
 -export_type([loglevel/0,
+              loglevel_on/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
               logging_proplist/0]).

@@ -65,6 +65,7 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 
+-define(DAY_MILLISECONDS, (24 * 60 * 60 * 1000)).
 -define(MONKEY_LATENCY_DEFAULT, 5000). % milliseconds
 -define(MONKEY_LATENCY_LOG, 5000). % milliseconds
 
@@ -395,29 +396,24 @@ sleep_loop(Time) ->
 
 monkey_chaos_pid_day(Percent)
     when is_float(Percent) ->
-    DayMilliseconds = 24 * 60 * 60 * 1000,
-    X = random(),
-    if
-        X =< Percent ->
-            % kill the service during a day, after?
-            Delay = erlang:round(DayMilliseconds * random()),
-            receive
-                'monkey_chaos_destroy' ->
-                    ok;
-                {'EXIT', _, _} ->
-                    ok % parent pid died
-            after
-                Delay ->
-                    erlang:exit(monkey_chaos)
-            end;
-        true ->
-            receive
-                'monkey_chaos_destroy' ->
-                    ok;
-                {'EXIT', _, _} ->
-                    ok % parent pid died
-            after
-                DayMilliseconds ->
+    DieToday = random() =< Percent,
+    Delay = if
+        DieToday =:= true ->
+            erlang:round(?DAY_MILLISECONDS * random());
+        DieToday =:= false ->
+            ?DAY_MILLISECONDS
+    end,
+    receive
+        'monkey_chaos_destroy' ->
+            ok;
+        {'EXIT', _, _} ->
+            ok % parent pid died
+    after
+        Delay ->
+            if
+                DieToday =:= true ->
+                    erlang:exit(monkey_chaos);
+                DieToday =:= false ->
                     monkey_chaos_pid_day(Percent)
             end
     end.

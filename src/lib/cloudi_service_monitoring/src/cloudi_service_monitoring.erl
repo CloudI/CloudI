@@ -39,6 +39,10 @@
 %%%  {aspects_terminate_before,
 %%%   [{{cloudi_service_monitoring, aspect_terminate_before_external}}]}
 %%%
+%%% To monitor logging usage, add (to the logging configuration):
+%%%  {aspects_log_after,
+%%%   [{{cloudi_service_monitoring, aspect_log_after}}]},
+%%%
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -100,7 +104,9 @@
          aspect_info_before_internal/0,
          aspect_info_after_internal/0,
          aspect_terminate_before_internal/0,
-         aspect_terminate_before_external/0]).
+         aspect_terminate_before_external/0,
+         aspect_log_before/0,
+         aspect_log_after/0]).
 
 %% internal interface
 -export([update/4]).
@@ -414,6 +420,32 @@ aspect_terminate_before_internal() ->
 aspect_terminate_before_external() ->
     cloudi_service_monitoring_cloudi:aspect_terminate_before_external().
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function for aspects_log_before logging configuration option.===
+%% Add as {{cloudi_service_monitoring, aspect_log_before}}.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec aspect_log_before() ->
+    cloudi_service_api:aspect_log_f().
+
+aspect_log_before() ->
+    cloudi_service_monitoring_cloudi:aspect_log('before').
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Function for aspects_log_after logging configuration option.===
+%% Add as {{cloudi_service_monitoring, aspect_log_after}}.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec aspect_log_after() ->
+    cloudi_service_api:aspect_log_f().
+
+aspect_log_after() ->
+    cloudi_service_monitoring_cloudi:aspect_log('after').
+
 %%%------------------------------------------------------------------------
 %%% Internal interface functions
 %%%------------------------------------------------------------------------
@@ -586,8 +618,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     EnvironmentLookup = cloudi_environment:lookup(),
     ProcessInfo0 = dict:new(),
     ProcessInfoN = cloudi_service_monitoring_cloudi:
-                   services_init(Interval, ProcessInfo0,
-                                 MetricPrefix ++ [services],
+                   services_init(Interval, ProcessInfo0, MetricPrefix,
                                  UseAspectsOnly, Driver, EnvironmentLookup),
     % no binaries are stored within pqueue4, so using 1 for the word size works
     QueuedEmptySize = cloudi_x_erlang_term:byte_size(cloudi_x_pqueue4:new(), 1),
