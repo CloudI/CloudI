@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 %%%
 %%%------------------------------------------------------------------------
-%%% CloudI Services Fuctions Common to Both Internal and External Services
+%%% Fuctions Common to Both Internal and External Services
 %%%
 %%% BSD LICENSE
 %%% 
@@ -43,6 +43,7 @@
 %%%------------------------------------------------------------------------
 
 -include("cloudi_core_i_common.hrl").
+-include("cloudi_core_i_services_common_init.hrl").
 
 % When using the state record within this file, only the state elements
 % that are common among cloudi_core_i_services_internal.erl and

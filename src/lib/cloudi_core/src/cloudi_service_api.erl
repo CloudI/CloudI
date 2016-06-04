@@ -349,6 +349,14 @@
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
          {automatic_loading, boolean()} |
+         {dispatcher_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
          {aspects_request_before, list(aspect_request_before_internal())} |
          {aspects_request_after, list(aspect_request_after_internal())} |
@@ -356,6 +364,14 @@
          {aspects_info_after, list(aspect_info_after_internal())} |
          {aspects_terminate_before, list(aspect_terminate_before_internal())} |
          {application_name, undefined | atom()} |
+         {init_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
@@ -414,6 +430,14 @@
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
          {automatic_loading, boolean()} |
+         {dispatcher_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_external())} |
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |
@@ -523,12 +547,28 @@
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
+         {dispatcher_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
          {aspects_request_before, list(aspect_request_before_internal())} |
          {aspects_request_after, list(aspect_request_after_internal())} |
          {aspects_info_before, list(aspect_info_before_internal())} |
          {aspects_info_after, list(aspect_info_after_internal())} |
          {aspects_terminate_before, list(aspect_terminate_before_internal())} |
+         {init_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {request_pid_uses, infinity | pos_integer()} |
          {request_pid_options,
           list({priority, low | normal | high} |
@@ -576,6 +616,14 @@
          {monkey_chaos,
           list({probability_request, float()} |
                {probability_day, float()}) | system | false} |
+         {dispatcher_pid_options,
+          list({priority, low | normal | high} |
+               {fullsweep_after, non_neg_integer()} |
+               {min_heap_size, non_neg_integer()} |
+               {min_bin_vheap_size, non_neg_integer()} |
+               {max_heap_size, non_neg_integer() | #{}} |
+               {sensitive, boolean()} |
+               {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_external())} |
          {aspects_request_before, list(aspect_request_before_external())} |
          {aspects_request_after, list(aspect_request_after_external())} |

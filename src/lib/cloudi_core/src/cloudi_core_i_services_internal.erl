@@ -237,7 +237,9 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
-               scope = Scope} = ConfigOptions, ID, Parent)
+               scope = Scope,
+               dispatcher_pid_options = PidOptions} = ConfigOptions, ID,
+           Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_atom(Module), is_list(Args), is_integer(Timeout),
          is_integer(PrefixC), is_integer(TimeoutAsync), is_integer(TimeoutSync),
@@ -265,7 +267,9 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                                    TimeoutAsync, TimeoutSync, TimeoutTerm,
                                    DestRefresh, DestDeny, DestAllow,
                                    ConfigOptions, ID, Parent],
-                                  [{timeout, Timeout + ?TIMEOUT_DELTA}]);
+                                  [{timeout, Timeout + ?TIMEOUT_DELTA},
+                                   {spawn_opt,
+                                    spawn_opt_options_before(PidOptions)}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
     end.
@@ -285,8 +289,10 @@ init([ProcessIndex, ProcessCount, GroupLeader,
       TimeoutAsync, TimeoutSync, TimeoutTerm,
       DestRefresh, DestDeny, DestAllow,
       #config_service_options{
-          duo_mode = DuoMode,
-          info_pid_options = InfoPidOptions} = ConfigOptions, ID, Parent]) ->
+          dispatcher_pid_options = PidOptions,
+          info_pid_options = InfoPidOptions,
+          duo_mode = DuoMode} = ConfigOptions, ID, Parent]) ->
+    ok = spawn_opt_options_after(PidOptions),
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
     Dispatcher = self(),
@@ -1802,10 +1808,13 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                    queue_requests = true,
                    module = Module,
                    prefix = Prefix,
-                   duo_mode_pid = undefined} = State) ->
+                   duo_mode_pid = undefined,
+                   options = #config_service_options{
+                       init_pid_options = PidOptions}} = State) ->
     ok = initialize_wait(Timeout),
     {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
-                            start_link(Timeout, ProcessDictionary, State),
+                            start_link(Timeout, PidOptions,
+                                       ProcessDictionary, State),
     Result = try
         begin
             case erlang:function_exported(Module, cloudi_service_init, 4) of
@@ -3361,10 +3370,12 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
     receive
         {'cloudi_service_init_execute', Args, Timeout,
          DispatcherProcessDictionary,
-         #state{prefix = Prefix} = DispatcherState} ->
+         #state{prefix = Prefix,
+                options = #config_service_options{
+                    init_pid_options = PidOptions}} = DispatcherState} ->
             ok = initialize_wait(Timeout),
             {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
-                                    start_link(Timeout,
+                                    start_link(Timeout, PidOptions,
                                                DispatcherProcessDictionary,
                                                DispatcherState),
             Result = try
@@ -4201,22 +4212,11 @@ spawn_opt_proc_lib(F, Options0) ->
 spawn_opt_erlang(F, Options0) ->
     spawn_opt_pid(erlang, F, Options0).
 
-spawn_opt_pid(M, F, Options0) ->
-    {Sensitive, OptionsN} = case lists:keytake(sensitive, 1, Options0) of
-        {value, {_, SensitiveValue}, Options1} ->
-            {SensitiveValue, Options1};
-        false ->
-            {false, Options0}
-    end,
+spawn_opt_pid(M, F, Options) ->
     M:spawn_opt(fun() ->
-        if
-            Sensitive =:= true ->
-                erlang:process_flag(sensitive, true);
-            Sensitive =:= false ->
-                false
-        end,
+        spawn_opt_options_after(Options),
         F()
-    end, OptionsN).
+    end, spawn_opt_options_before(Options)).
 
 update(_, _, #config_service_update{type = Type})
     when Type =/= internal ->

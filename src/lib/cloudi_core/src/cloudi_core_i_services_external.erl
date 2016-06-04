@@ -232,7 +232,8 @@ start_link(Protocol, SocketPath,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
-               scope = Scope} = ConfigOptions, ID)
+               scope = Scope,
+               dispatcher_pid_options = PidOptions} = ConfigOptions, ID)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_list(CommandLine),
@@ -266,7 +267,9 @@ start_link(Protocol, SocketPath,
                                 TimeoutAsync, TimeoutSync, TimeoutTerm,
                                 DestRefresh, DestDeny, DestAllow,
                                 ConfigOptions, ID],
-                               [{timeout, Timeout + ?TIMEOUT_DELTA}]);
+                               [{timeout, Timeout + ?TIMEOUT_DELTA},
+                                {spawn_opt,
+                                 spawn_opt_options_before(PidOptions)}]);
         {error, Reason} ->
             {error, {service_options_scope_invalid, Reason}}
     end.
@@ -303,10 +306,12 @@ init([Protocol, SocketPath,
       CommandLine, BufferSize, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, TimeoutTerm,
       DestRefresh, DestDeny, DestAllow,
-      ConfigOptions, ID])
+      #config_service_options{
+          dispatcher_pid_options = PidOptions} = ConfigOptions, ID])
     when Protocol =:= tcp;
          Protocol =:= udp;
          Protocol =:= local ->
+    ok = spawn_opt_options_after(PidOptions),
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
     Dispatcher = self(),

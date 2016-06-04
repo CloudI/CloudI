@@ -57,7 +57,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/3,
+-export([start_link/4,
          stop_link/1,
          process_dictionary_get/0,
          process_dictionary_set/1]).
@@ -75,15 +75,19 @@
 
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
+-include("cloudi_core_i_services_common_init.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Timeout, ProcessDictionary, InternalState) ->
+start_link(Timeout, PidOptions, ProcessDictionary, InternalState) ->
     gen_server:start_link(?MODULE,
-                          [Timeout, ProcessDictionary, InternalState],
-                          [{timeout, Timeout}]).
+                          [Timeout, PidOptions,
+                           ProcessDictionary, InternalState],
+                          [{timeout, Timeout},
+                           {spawn_opt,
+                            spawn_opt_options_before(PidOptions)}]).
 stop_link(Pid) ->
     gen_server:call(Pid, stop, infinity).
 
@@ -101,7 +105,8 @@ process_dictionary_set(ProcessDictionary) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([Timeout, ProcessDictionary, InternalState]) ->
+init([Timeout, PidOptions, ProcessDictionary, InternalState]) ->
+    ok = spawn_opt_options_after(PidOptions),
     InitTimeout = erlang:send_after(Timeout, self(),
                                     'cloudi_service_init_timeout'),
     lists:foreach(fun({K, V}) ->

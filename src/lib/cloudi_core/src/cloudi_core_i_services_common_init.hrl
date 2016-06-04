@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 %%%
 %%%------------------------------------------------------------------------
-%%% Fuctions Common to Service Usage
+%%% Fuctions Common to Both Internal and External Services Initialization
 %%%
 %%% BSD LICENSE
 %%% 
@@ -42,57 +42,15 @@
 %%%
 %%%------------------------------------------------------------------------
 
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
+spawn_opt_options_before(Options0) ->
+    OptionsN = lists:keydelete(sensitive, 1, Options0),
+    OptionsN.
 
-destination_refresh_groups(DestRefresh, OldGroups)
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    case OldGroups of
-        {_, _} ->
-            OldGroups;
-        undefined ->
-            cloudi_x_cpg_data:get_empty_groups()
-    end;
-
-destination_refresh_groups(DestRefresh, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    undefined;
-
-destination_refresh_groups(none, _) ->
-    undefined.
-
-destination_refresh(DestRefresh, Pid, Delay, Scope)
-    when (DestRefresh =:= lazy_closest orelse
-          DestRefresh =:= lazy_furthest orelse
-          DestRefresh =:= lazy_random orelse
-          DestRefresh =:= lazy_local orelse
-          DestRefresh =:= lazy_remote orelse
-          DestRefresh =:= lazy_newest orelse
-          DestRefresh =:= lazy_oldest) ->
-    cloudi_x_cpg_data:get_groups(Scope, Pid, Delay);
-
-destination_refresh(DestRefresh, _, _, _)
-    when (DestRefresh =:= immediate_closest orelse
-          DestRefresh =:= immediate_furthest orelse
-          DestRefresh =:= immediate_random orelse
-          DestRefresh =:= immediate_local orelse
-          DestRefresh =:= immediate_remote orelse
-          DestRefresh =:= immediate_newest orelse
-          DestRefresh =:= immediate_oldest) ->
-    ok;
-
-destination_refresh(none, _, _, _) ->
+spawn_opt_options_after(Options0) ->
+    case lists:keyfind(sensitive, 1, Options0) of
+        {sensitive, true} ->
+            erlang:process_flag(sensitive, true);
+        _ ->
+            ok
+    end,
     ok.
-

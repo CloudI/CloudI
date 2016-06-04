@@ -259,6 +259,17 @@
         % (or the aspect module be automatically loaded)
         automatic_loading = true
             :: boolean(),
+        % what erlang:spawn_opt/2 options should be used, if any, by the
+        % service's long-lived service request sending Erlang process
+        dispatcher_pid_options = []
+            :: list(link |
+                    {priority, low | normal | high} |
+                    {fullsweep_after, non_neg_integer()} |
+                    {min_heap_size, non_neg_integer()} |
+                    {min_bin_vheap_size, non_neg_integer()} |
+                    {max_heap_size, non_neg_integer() | #{}} |
+                    {sensitive, boolean()} |
+                    {message_queue_data, off_heap | on_heap | mixed}),
 
         % Relevant for both Internal and External Services, different values:
 
@@ -297,6 +308,17 @@
         % the CloudI service module name
         application_name = undefined
             :: atom(),
+        % what erlang:spawn_opt/2 options should be used, if any, by the
+        % service init handling Erlang process
+        init_pid_options = []
+            :: list(link |
+                    {priority, low | normal | high} |
+                    {fullsweep_after, non_neg_integer()} |
+                    {min_heap_size, non_neg_integer()} |
+                    {min_bin_vheap_size, non_neg_integer()} |
+                    {max_heap_size, non_neg_integer() | #{}} |
+                    {sensitive, boolean()} |
+                    {message_queue_data, off_heap | on_heap | mixed}),
         % how many service requests should restart the Erlang process used for
         % handling the service requests
         % (an integer greater than 0 or the atom 'infinity' are valid values)
@@ -305,7 +327,8 @@
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % service request handling Erlang process
         request_pid_options = []
-            :: list({priority, low | normal | high} |
+            :: list(link |
+                    {priority, low | normal | high} |
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |
@@ -320,7 +343,8 @@
         % what erlang:spawn_opt/2 options should be used, if any, by the
         % info message handling Erlang process
         info_pid_options = []
-            :: list({priority, low | normal | high} |
+            :: list(link |
+                    {priority, low | normal | high} |
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |

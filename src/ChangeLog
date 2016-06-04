@@ -3,6 +3,8 @@
 
 2016-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add dispatcher_pid_options and init_pid_options
+      service configuration options to services_add and services_update
     * Add usage of the new unix domain socket functionality
       in Erlang/OTP 19.0rc2 for external service usage of the protocol local
       (default == local) to avoid using a NIF
