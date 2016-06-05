@@ -669,7 +669,7 @@
          Line :: pos_integer(),
          Function :: atom() | undefined,
          Arity :: non_neg_integer() | undefined,
-         MetaData :: list(),
+         MetaData :: list({atom(), any()}),
          LogMessage :: string()) ->
         ok).
 -type aspect_log_before() ::

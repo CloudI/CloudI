@@ -125,6 +125,23 @@
 -endif.
 -endif.
 
+% The cloudi_core_i_socket library is the only Erlang NIF CloudI has used
+% in the past, to add unix domain socket support by bypassing some
+% validation within the Erlang VM.  In Erlang/OTP 19.0 unix domain socket
+% support was added, making the cloudi_core_i_socket NIF no longer necessary
+% (cloudi_core_i_socket is only used for external services with
+%  Protocol == local or Protocol == default).
+% (The only other custom NIF being used within the cloudi_core source code
+%  is cloudi_x_syslog, when logging syslog support is enabled
+%  (it is not enabled with the default configuration).)
+-ifdef(CLOUDI_CORE_STANDALONE).
+-else.
+-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+-else.
+-define(CLOUDI_CORE_SOCKET_NIF, true).
+-endif.
+-endif.
+
 % provide a simple way of switching from the dict module to the maps module
 % (the maps interface was not regarded as stable until Erlang/OTP 18.0)
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
@@ -157,11 +174,13 @@
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
 
+% process dictionary keys used by the cloudi_core source code
 -define(SERVICE_ID_PDICT_KEY,      cloudi_service).     % all service processes
 -define(SERVICE_FILE_PDICT_KEY,    cloudi_service_file).% all service processes
 -define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger).      % all logging processes
 
 % create the locally registered name for a cpg scope
+% (in a way that does not cause conflict with custom cpg scopes)
 -define(SCOPE_DEFAULT, cpg_default_scope).
 -define(SCOPE_CUSTOM_PREFIX, "cloudi_x_cpg_x_").
 -define(SCOPE_ASSIGN(Scope),

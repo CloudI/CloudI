@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013 Michael Truog
-%%% @version 1.2.4 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_socket).
@@ -64,14 +64,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--ifdef(CLOUDI_CORE_STANDALONE).
-init() ->
-    ok.
--else.
--ifdef(ERLANG_OTP_VERSION_19_FEATURES).
-init() ->
-    ok.
--else.
+-ifdef(CLOUDI_CORE_SOCKET_NIF).
 init() ->
     case cloudi_core_i_app:test() of
         true ->
@@ -81,7 +74,9 @@ init() ->
             erlang:load_nif(filename:join([Path,
                                            "libcloudi_socket_drv"]), [])
     end.
--endif.
+-else.
+init() ->
+    ok.
 -endif.
 
 -spec local(_SocketPath :: string()) ->

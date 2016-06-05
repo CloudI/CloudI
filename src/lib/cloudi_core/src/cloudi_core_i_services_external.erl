@@ -2185,7 +2185,14 @@ socket_open_udp(SocketOptions) ->
             {error, {ErrorType, ErrorReason}}
     end.
 
--ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+-ifdef(CLOUDI_CORE_SOCKET_NIF).
+socket_open_local(SocketOptions, Port, SocketPath) ->
+    ok = cloudi_core_i_socket:local(SocketPath),
+    {ok, #state_socket{protocol = local,
+                       port = Port,
+                       socket_path = SocketPath,
+                       socket_options = SocketOptions}}.
+-else.
 socket_open_local(SocketOptions, Port, SocketPath) ->
     try
         case gen_tcp:listen(0, [binary, local, {ifaddr, {local, SocketPath}},
@@ -2206,13 +2213,6 @@ socket_open_local(SocketOptions, Port, SocketPath) ->
         ErrorType:ErrorReason ->
             {error, {ErrorType, ErrorReason}}
     end.
--else.
-socket_open_local(SocketOptions, Port, SocketPath) ->
-    ok = cloudi_core_i_socket:local(SocketPath),
-    {ok, #state_socket{protocol = local,
-                       port = Port,
-                       socket_path = SocketPath,
-                       socket_options = SocketOptions}}.
 -endif.
 
 socket_accept(Accept, #state_socket{protocol = tcp} = StateSocket) ->
@@ -2233,20 +2233,7 @@ socket_accept_tcp({inet_async, Listener, Acceptor, {ok, Socket}},
                              acceptor = undefined,
                              socket = Socket}.
 
--ifdef(ERLANG_OTP_VERSION_19_FEATURES).
-socket_accept_local({inet_async, Listener, Acceptor, {ok, Socket}},
-                    #state_socket{
-                        protocol = local,
-                        listener = Listener,
-                        acceptor = Acceptor,
-                        socket_options = SocketOptions} = StateSocket) ->
-    true = inet_db:register_socket(Socket, local_tcp),
-    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
-    catch gen_tcp:close(Listener),
-    StateSocket#state_socket{listener = undefined,
-                             acceptor = undefined,
-                             socket = Socket}.
--else.
+-ifdef(CLOUDI_CORE_SOCKET_NIF).
 socket_accept_local({inet_async, undefined, undefined, {ok, FileDescriptor}},
                     #state_socket{
                         protocol = local,
@@ -2284,6 +2271,19 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     catch gen_tcp:close(Client),
     % do not close Socket!
     Success.
+-else.
+socket_accept_local({inet_async, Listener, Acceptor, {ok, Socket}},
+                    #state_socket{
+                        protocol = local,
+                        listener = Listener,
+                        acceptor = Acceptor,
+                        socket_options = SocketOptions} = StateSocket) ->
+    true = inet_db:register_socket(Socket, local_tcp),
+    ok = inet:setopts(Socket, [{active, once} | SocketOptions]),
+    catch gen_tcp:close(Listener),
+    StateSocket#state_socket{listener = undefined,
+                             acceptor = undefined,
+                             socket = Socket}.
 -endif.
 
 socket_close(socket_closed = Reason,
