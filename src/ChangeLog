@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add string UUID formatting for the services_update result in
+      cloudi_service_api_requests
+    * Update cpg README
+
 2016-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve cloudi_service_api:aspect_log_f() type

@@ -7,9 +7,8 @@ Purpose
 -------
 
 CPG provides a process group interface that is similar to the pg2 module
-within Erlang OTP.  The pg Erlang OTP module is experimental and people
-have avoided using it.  However, the pg2 module is used internally by
-Erlang OTP, and is currently the most common approach to the combination of
+within Erlang OTP.  The pg2 module is used internally by
+Erlang/OTP, and is currently the most common approach to the combination of
 availability and partition tolerance in Erlang (as they relate to the
 CAP theorem).  When comparing these goals with gproc (and its usage of
 `gen_leader`), gproc is focused on availability and consistency (as it relates
@@ -18,7 +17,8 @@ to the CAP theorem), which makes its goals similar to mnesia.
 The cpg interface was created to avoid some problems with pg2 while pursuing
 better availability and partition tolerance.  pg2 utilizes ets (global
 key/value storage in Erlang which requires internal memory locking,
-which limits scalability) but cpg uses internal process memory.  By default,
+which limits scalability) but cpg uses internal process memory
+(see the **Design** section for more information).  By default,
 cpg utilizes Erlang strings for group names (list of integers) and provides
 the ability to set a pattern string as a group name.  A pattern string
 is a string that includes the`"*"`wildcard character (equivalent to ".+"
@@ -38,14 +38,51 @@ the distributed Erlang functionality, provided natively by Erlang OTP.
 The distributed Erlang functionality automatically creates a fully-connected
 network topology and is only meant for a Local Area Network (LAN).
 Since a fully-connected network topology is created that requires a
-net tick time average of 60 seconds (the net tick time is not changed
-because of the problems that occur due to the assumptions based on its
-default value, which impacts typical Erlang OTP functionality, e.g.,
-Erlang process links between distributed Erlang nodes) the distributed
+net tick time average of 60 seconds (the net tick time is not increased
+to ensure distributed Erlang nodes fail-fast) the distributed
 Erlang node connections are limited to roughly 50-100 nodes.  So, that
 means these process group solutions are only targeting a cluster of Erlang
 nodes, given the constraints of distributed Erlang and a fully-connected
 network topology.
+
+Design
+------
+
+cpg is a Commutative/Convergent Replicated Data-Type (CRDT) that uses
+node ownership of Erlang processes to ensure a set of keys has
+add and remove operations that commute with an internal map data structure.
+The cpg module provides add and remove operations with the function names
+join and leave, that may only be called on the node that owns the
+Erlang process which is the value for the join or leave operation.
+The key is the process group name which represents a list of Erlang processes
+(with an single Erlang process being able to be added or removed any
+number of times).
+
+All cpg join and leave operations change global state as a
+Commutative Replicated Data-Type (CmRDT) by sending the operation to the
+associated cpg Erlang process as a distributed Erlang message to all remote
+nodes after the operation successfully completes on the local node.
+
+cpg also uses distributed Erlang node monitoring to handle netsplits as a
+Convergent Replicated Data-Type (CvRDT) by sending all of the internal
+cpg state to remote nodes that have recently connected.  The associated
+cpg Erlang process on the remote node then performs a merge operation to
+make sure the count of each Erlang pid is consistent with the internal
+cpg state it received.
+
+The CRDT functionality in cpg may look similar to a PN-Set due to tracking
+all the Erlang pids and the count of how many times they have been added.
+However, the consistency of the internal cpg state relies on serialized
+mutability on the local node (naturally, due to a single Erlang process
+owning the internal cpg data) before the operation is sent to the remote nodes
+(for join or leave function calls that operate as a CmRDT).
+
+The design description above assumes `GROUP_NAME_WITH_LOCAL_PIDS_ONLY` is
+defined within `cpg_constants.hrl` when cpg is compiled, which is always
+the default.  If `GROUP_NAME_WITH_LOCAL_PIDS_ONLY` is not defined, then
+cpg would use the global transaction locking that pg2 uses, which should
+cause partition tolerance problems.  The macro is present in case it is
+necessary to replicate pg2 semantics with cpg.
 
 Build
 -----

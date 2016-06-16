@@ -218,6 +218,17 @@ cloudi_service_api_call(services_add = Method, Input, Timeout) ->
         {error, _} = Error ->
             Error
     end;
+cloudi_service_api_call(services_update = Method, Input, Timeout) ->
+    case cloudi_service_api:Method(Input, Timeout) of
+        {ok, SuccessSet} ->
+            {ok, [[service_id(UUID) || UUID <- L] || L <- SuccessSet]};
+        {error, {ErrorL, Reason}, SuccessSet} ->
+            {error,
+             {[service_id(UUID) || UUID <- ErrorL], Reason},
+             [[service_id(UUID) || UUID <- L] || L <- SuccessSet]};
+        {error, _} = Error ->
+            Error
+    end;
 cloudi_service_api_call(Method, Input, Timeout) ->
     cloudi_service_api:Method(Input, Timeout).
 
