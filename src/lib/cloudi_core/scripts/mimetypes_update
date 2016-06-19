@@ -19,7 +19,8 @@ main(_) ->
                 {".xml",     {request, <<"text/xml">>}},
                 {".csv",     {request, <<"text/csv">>}},
                 {".htm",     {request, <<"text/html">>}},
-                {".html",    {request, <<"text/html">>}}],
+                {".html",    {request, <<"text/html">>}},
+                {".adoc",    {attachment, <<"text/asciidoc">>}}],
     ok = shell("curl -O "
                "http://svn.apache.org/repos"
                "/asf/httpd/httpd/trunk/docs/conf/mime.types", []),
@@ -57,7 +58,7 @@ main(_) ->
     end, MimeTypes0, Defaults),
     io:fwrite(IncludeFile,
               "-define(LOOKUP_CONTENT_TYPE_DATA,~n"
-              "~p).~n",[MimeTypesN]),
+              "~p).~n",[lists:keysort(1, MimeTypesN)]),
     ok = file:close(IncludeFile),
     exit_code(0).
 
