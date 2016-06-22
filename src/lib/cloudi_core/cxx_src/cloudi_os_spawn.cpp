@@ -834,11 +834,6 @@ int32_t spawn(char protocol,
         if (::close(fds_stderr[0]) == -1 || close(fds_stderr[1]) == -1)
             ::_exit(spawn_status::errno_close());
 
-        if (owner(user_i, user_str, user_str_len,
-                  group_i, group_str, group_str_len))
-            ::_exit(spawn_status::invalid_input);
-        if (rlimit(rlimits, rlimits_len))
-            ::_exit(spawn_status::invalid_input);
         char pid_message[1024];
         int pid_message_index = 0;
         if (use_header)
@@ -985,6 +980,12 @@ int32_t spawn(char protocol,
                 assert(index == env_count);
             }
         }
+
+        if (owner(user_i, user_str, user_str_len,
+                  group_i, group_str, group_str_len))
+            ::_exit(spawn_status::invalid_input);
+        if (rlimit(rlimits, rlimits_len))
+            ::_exit(spawn_status::invalid_input);
 
         ::execve(filename, execve_argv, execve_env);
         ::_exit(spawn_status::errno_exec());

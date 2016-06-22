@@ -1762,22 +1762,22 @@ public class API
 
         public UUID toObject()
         {
-            return new UUID(((this.id[0] & 0xff) << 56) |
-                            ((this.id[1] & 0xff) << 48) |
-                            ((this.id[2] & 0xff) << 40) |
-                            ((this.id[3] & 0xff) << 32) |
-                            ((this.id[4] & 0xff) << 24) |
-                            ((this.id[5] & 0xff) << 16) |
-                            ((this.id[6] & 0xff) <<  8) |
-                            (this.id[7] & 0xff),
-                            ((this.id[8] & 0xff) << 56) |
-                            ((this.id[9] & 0xff) << 48) |
-                            ((this.id[10] & 0xff) << 40) |
-                            ((this.id[11] & 0xff) << 32) |
-                            ((this.id[12] & 0xff) << 24) |
-                            ((this.id[13] & 0xff) << 16) |
-                            ((this.id[14] & 0xff) <<  8) |
-                            (this.id[15] & 0xff));
+            return new UUID((((long) (this.id[ 0] & 0xff)) << 56) |
+                            (((long) (this.id[ 1] & 0xff)) << 48) |
+                            (((long) (this.id[ 2] & 0xff)) << 40) |
+                            (((long) (this.id[ 3] & 0xff)) << 32) |
+                            (((long) (this.id[ 4] & 0xff)) << 24) |
+                            (((long) (this.id[ 5] & 0xff)) << 16) |
+                            (((long) (this.id[ 6] & 0xff)) <<  8) |
+                            (long) (this.id[7] & 0xff),
+                            (((long) (this.id[ 8] & 0xff)) << 56) |
+                            (((long) (this.id[ 9] & 0xff)) << 48) |
+                            (((long) (this.id[10] & 0xff)) << 40) |
+                            (((long) (this.id[11] & 0xff)) << 32) |
+                            (((long) (this.id[12] & 0xff)) << 24) |
+                            (((long) (this.id[13] & 0xff)) << 16) |
+                            (((long) (this.id[14] & 0xff)) <<  8) |
+                            (long) (this.id[15] & 0xff));
         }
 
         public String toString()

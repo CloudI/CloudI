@@ -5,6 +5,7 @@
 
     * Make the Java CloudI API TransId class publicly accessible and
       add a conversion to a UUID object
+    * Fix owner service configuration option usage
 
 2016-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
