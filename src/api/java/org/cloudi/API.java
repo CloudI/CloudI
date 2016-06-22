@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;
@@ -1740,11 +1741,11 @@ public class API
     public static final byte[] TransIdNull = {0, 0, 0, 0, 0, 0, 0, 0,
                                               0, 0, 0, 0, 0, 0, 0, 0};
 
-    public class TransId
+    public static class TransId
     {
         public final byte[] id;
 
-        TransId(byte[] trans_id)
+        public TransId(byte[] trans_id)
         {
             this.id = trans_id;
         }
@@ -1759,9 +1760,29 @@ public class API
             return equals(API.TransIdNull);
         }
 
+        public UUID toObject()
+        {
+            return new UUID(((this.id[0] & 0xff) << 56) |
+                            ((this.id[1] & 0xff) << 48) |
+                            ((this.id[2] & 0xff) << 40) |
+                            ((this.id[3] & 0xff) << 32) |
+                            ((this.id[4] & 0xff) << 24) |
+                            ((this.id[5] & 0xff) << 16) |
+                            ((this.id[6] & 0xff) <<  8) |
+                            (this.id[7] & 0xff),
+                            ((this.id[8] & 0xff) << 56) |
+                            ((this.id[9] & 0xff) << 48) |
+                            ((this.id[10] & 0xff) << 40) |
+                            ((this.id[11] & 0xff) << 32) |
+                            ((this.id[12] & 0xff) << 24) |
+                            ((this.id[13] & 0xff) << 16) |
+                            ((this.id[14] & 0xff) <<  8) |
+                            (this.id[15] & 0xff));
+        }
+
         public String toString()
         {
-            return new String(this.id);
+            return toObject().toString().replace("-", "");
         }
     }
 

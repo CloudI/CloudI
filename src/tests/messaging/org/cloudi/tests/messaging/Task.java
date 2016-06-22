@@ -641,7 +641,7 @@ public class Task implements Runnable
                                     ("start").getBytes());
             }
 
-            Object result = api.poll();
+            Object result = this.api.poll();
             assert result == Boolean.FALSE;
         }
         catch (API.TerminateException e)

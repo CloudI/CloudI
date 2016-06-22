@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-06-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make the Java CloudI API TransId class publicly accessible and
+      add a conversion to a UUID object
+
 2016-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update mimetypes
