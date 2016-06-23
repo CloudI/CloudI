@@ -46,6 +46,7 @@ import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.LinkedList;
@@ -81,9 +82,20 @@ import com.ericsson.otp.erlang.OtpErlangTuple;
 
 public class API
 {
-    // unbuffered output is with API.err.printf(), etc.
-    public static final PrintStream out = new PrintStream(System.out, true);
-    public static final PrintStream err = new PrintStream(System.err, true);
+    // unbuffered output is with API.err.format(), etc.
+    private static PrintStream unbuffered(final PrintStream stream)
+    {
+        try
+        {
+            return new PrintStream(stream, true, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e)
+        {
+            return new PrintStream(stream, true);
+        }
+    }
+    public static final PrintStream out = unbuffered(System.out);
+    public static final PrintStream err = unbuffered(System.err);
 
     public static final int ASYNC  =  1;
     public static final int SYNC   = -1;
