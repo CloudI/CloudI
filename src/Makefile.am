@@ -44,7 +44,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_bear/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
-     -d $(top_srcdir)/external/cloudi_x_dynamic_compile/src \
      -d $(top_srcdir)/external/cloudi_x_eini/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
@@ -239,7 +238,6 @@ dialyze: all \
               tests/msg_size/ebin/ \
               tests/http_req/ebin/ \
               external/cloudi_x_cowlib/ebin \
-              external/cloudi_x_dynamic_compile/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_epgsql_wg/ebin \

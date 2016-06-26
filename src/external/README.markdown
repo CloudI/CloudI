@@ -52,15 +52,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Mon Aug 11 10:57:20 PDT 2014`
 - `MIT`
 
-`dynamic_compile`
------------------
-`Dynamic compilation of Erlang modules`
-
-- `https://github.com/okeuday/dynamic_compile`
-- `commit 2684dcf703b6bac70421dff717293772c5da8f05 (v1.0.0)`
-- `Mon Oct 13 13:58:48 PDT 2014`
-- `MIT`
-
 `eini`
 ------
  `An Erlang INI parser`

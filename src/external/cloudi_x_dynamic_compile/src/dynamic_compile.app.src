@@ -1,6 +1,0 @@
-{application, dynamic_compile,
-   [{description, "compile and load erlang modules from string input"},
-    {vsn, "1.0.0"},
-    {modules, [dynamic_compile]},
-    {registered, []},
-    {applications, [compiler, kernel, stdlib]}]}.

@@ -72,6 +72,7 @@
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include_lib("kernel/include/file.hrl").
+-include_lib("syntax_tools/include/merl.hrl").
 
 %% logging macros used only within this module
 -define(LOG_INFO_T0(Format, Args, State),
@@ -1686,18 +1687,18 @@ interface(trace, Mode, Process) ->
 load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};
 load_interface_module(Level, Mode, Process) when is_atom(Level) ->
-    {Module, Binary} = cloudi_x_dynamic_compile:from_string(interface(Level,
-                                                                      Mode,
-                                                                      Process)),
+    {ok, Module,
+     Binary} = merl:compile(?Q(interface(Level, Mode, Process))),
+    cloudi_core_i_logger_interface = Module,
     % make sure no old code exists
-    code:purge(cloudi_core_i_logger_interface),
+    code:purge(Module),
     % load the new current code
     case code:load_binary(Module,
-                          "cloudi_core_i_logger_interface.erl",
+                          erlang:atom_to_list(Module) ++ ".erl",
                           Binary) of
         {module, Module} ->
             % remove the old code
-            code:soft_purge(cloudi_core_i_logger_interface),
+            code:soft_purge(Module),
             {ok, Binary};
         {error, _} = Error ->
             Error

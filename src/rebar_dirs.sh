@@ -30,7 +30,6 @@ REBAR_DIRS="\
     external/cloudi_x_bear \
     external/cloudi_x_cowboy \
     external/cloudi_x_cowlib \
-    external/cloudi_x_dynamic_compile \
     external/cloudi_x_eini \
     external/cloudi_x_elli \
     external/cloudi_x_emysql \
