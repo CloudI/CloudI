@@ -67,7 +67,6 @@
         ]},
    {applications, [
         cloudi_x_nodefinder,
-        cloudi_x_dynamic_compile,
         cloudi_x_pqueue,
         cloudi_x_quickrand,
         cloudi_x_supool,
