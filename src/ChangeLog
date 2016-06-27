@@ -6,6 +6,7 @@
     * No longer use the dynamic_compile dependency in the cloudi_core logger
       (instead rely on merl)
     * Switch to requiring Erlang >= 18.0 due to merl in syntax_tools
+    * Update proper
 
 2016-06-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

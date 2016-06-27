@@ -278,8 +278,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `PropEr (PROPerty-based testing tool for ERlang)`
 
 - `https://github.com/manopapad/proper`
-- `commit 6b562a2fb8a719cee5d99d7a93d5fe56c89a8824`
-- `Wed May 18 19:39:55 PDT 2016`
+- `commit 5f0d69c831b6c9f52535c3d1846efca480f6190d (v1.2)`
+- `Sun Jun 26 22:55:05 PDT 2016`
 - `GPLv3` (build/test-time dependency only)
 
 `ranch`
