@@ -165,7 +165,8 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                DestRefresh, DestListDeny, DestListAllow,
                                ConfigOptions, ID) of
         {ok,
-         SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
+         SpawnProcess, SpawnProtocol, SocketPath,
+         Rlimits, Owner, Directory,
          CommandLine, NewFilename, NewArguments,
          EnvironmentLookup, DestDeny, DestAllow} ->
             case start_external_threads(ThreadsPerProcess,
@@ -186,7 +187,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                          SpawnProtocol,
                                          SocketPath,
                                          Pids, Ports,
-                                         Rlimits, Owner,
+                                         Rlimits, Owner, Directory,
                                          ThreadsPerProcess,
                                          CommandLine,
                                          NewFilename,
@@ -214,11 +215,12 @@ update_external(Pids, Ports,
                                DestRefresh, DestListDeny, DestListAllow,
                                ConfigOptions, ID) of
         {ok,
-         SpawnProcess, SpawnProtocol, SocketPath, Rlimits, Owner,
+         SpawnProcess, SpawnProtocol, SocketPath,
+         Rlimits, Owner, Directory,
          CommandLine, NewFilename, NewArguments,
          EnvironmentLookup, _, _} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                                      Pids, Ports, Rlimits, Owner,
+                                      Pids, Ports, Rlimits, Owner, Directory,
                                       ThreadsPerProcess,
                                       CommandLine, NewFilename, NewArguments,
                                       Environment, EnvironmentLookup,
@@ -372,6 +374,9 @@ rlimits(#config_service_options{limit = L}) ->
 owner(#config_service_options{owner = L}, EnvironmentLookup) ->
     cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
 
+directory(#config_service_options{directory = Directory}, EnvironmentLookup) ->
+    cloudi_core_i_os_process:directory_format(Directory, EnvironmentLookup).
+
 create_socket_path(TemporaryDirectory, ID)
     when is_binary(ID) ->
     Path = filename:join([TemporaryDirectory,
@@ -431,31 +436,50 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
     end,
     SocketPath = create_socket_path(TemporaryDirectory, ID),
     EnvironmentLookup = environment_lookup(),
+    case start_external_params_parse(Filename, Arguments, ConfigOptions,
+                                     EnvironmentLookup) of
+        {ok, CommandLine, NewFilename, NewArguments, Directory} ->
+            Rlimits = rlimits(ConfigOptions),
+            Owner = owner(ConfigOptions, EnvironmentLookup),
+            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
+                SpawnProcess when is_pid(SpawnProcess) ->
+                    SpawnProtocol = if
+                        Protocol =:= tcp ->
+                            $t; % inet
+                        Protocol =:= udp ->
+                            $u; % inet
+                        Protocol =:= local ->
+                            $l  % tcp local (unix domain socket)
+                    end,
+                    {ok,
+                     SpawnProcess, SpawnProtocol, SocketPath,
+                     Rlimits, Owner, Directory,
+                     CommandLine, NewFilename, NewArguments,
+                     EnvironmentLookup, DestDeny, DestAllow};
+                undefined ->
+                    {error, noproc}
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+start_external_params_parse(Filename, Arguments, ConfigOptions,
+                            EnvironmentLookup) ->
     case filename_parse(Filename, EnvironmentLookup) of
         {ok, NewFilename} ->
             case arguments_parse(Arguments, EnvironmentLookup) of
                 {ok, NewArguments} ->
                     CommandLine = [NewFilename |
                                    string:tokens(NewArguments, [0])],
-                    Rlimits = rlimits(ConfigOptions),
-                    Owner = owner(ConfigOptions, EnvironmentLookup),
-                    case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
-                        SpawnProcess when is_pid(SpawnProcess) ->
-                            SpawnProtocol = if
-                                Protocol =:= tcp ->
-                                    $t; % inet
-                                Protocol =:= udp ->
-                                    $u; % inet
-                                Protocol =:= local ->
-                                    $l  % tcp local (unix domain socket)
-                            end,
+                    case directory(ConfigOptions, EnvironmentLookup) of
+                        {ok, Directory} ->
                             {ok,
-                             SpawnProcess, SpawnProtocol, SocketPath,
-                             Rlimits, Owner,
-                             CommandLine, NewFilename, NewArguments,
-                             EnvironmentLookup, DestDeny, DestAllow};
-                        undefined ->
-                            {error, noproc}
+                             CommandLine,
+                             NewFilename,
+                             NewArguments,
+                             Directory};
+                        {error, _} = Error ->
+                            Error
                     end;
                 {error, _} = Error ->
                     Error
@@ -509,7 +533,7 @@ start_external_threads(ThreadsPerProcess,
                           ConfigOptions, ID).
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                     Pids, Ports, Rlimits, Owner,
+                     Pids, Ports, Rlimits, Owner, Directory,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
@@ -526,6 +550,7 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       string_terminate(UserStr),
                                       GroupI,
                                       string_terminate(GroupStr),
+                                      string_terminate(Directory),
                                       string_terminate(Filename),
                                       string_terminate(Arguments),
                                       SpawnEnvironment) of

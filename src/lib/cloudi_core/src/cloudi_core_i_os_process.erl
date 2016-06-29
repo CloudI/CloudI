@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2015-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -56,7 +56,8 @@
 -export([limit_validate/1,
          limit_format/1,
          owner_validate/1,
-         owner_format/2]).
+         owner_format/2,
+         directory_format/2]).
 
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
@@ -316,4 +317,20 @@ owner_format(Values, EnvironmentLookup) ->
             {0, ""}
     end,
     {UserI, UserStr, GroupI, GroupStr}.
+
+-spec directory_format(Directory :: cloudi_service_api:directory_external(),
+                       EnvironmentLookup :: cloudi_environment:lookup()) ->
+    {ok, NewDirectory :: string()} |
+    {error, any()}.
+
+directory_format(undefined, _) ->
+    {ok, ""};
+directory_format(Directory, EnvironmentLookup) ->
+    NewDirectory = cloudi_environment:transform(Directory, EnvironmentLookup),
+    case filelib:is_dir(NewDirectory) of
+        true ->
+            {ok, NewDirectory};
+        false ->
+            {error, {service_options_directory_invalid, NewDirectory}}
+    end.
 

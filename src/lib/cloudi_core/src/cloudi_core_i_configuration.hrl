@@ -306,6 +306,10 @@
         owner = []
             :: cloudi_service_api:owner_external(),
 
+        % set the current directory for spawning the OS process
+        directory = undefined
+            :: file:filename() | undefined,
+
         % Only Relevant for Internal Services:
 
         % specify an Erlang application name, so it can be different from

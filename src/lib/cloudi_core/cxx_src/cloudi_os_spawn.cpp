@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -778,6 +778,7 @@ int32_t spawn(char protocol,
               char * user_str, uint32_t user_str_len,
               uint64_t group_i,
               char * group_str, uint32_t group_str_len,
+              char * directory, uint32_t directory_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
               char * env, uint32_t env_len)
@@ -986,6 +987,11 @@ int32_t spawn(char protocol,
             ::_exit(spawn_status::invalid_input);
         if (rlimit(rlimits, rlimits_len))
             ::_exit(spawn_status::invalid_input);
+        if (directory_len > 1)
+        {
+            if (::chdir(directory))
+                ::_exit(spawn_status::invalid_input);
+        }
 
         ::execve(filename, execve_argv, execve_env);
         ::_exit(spawn_status::errno_exec());

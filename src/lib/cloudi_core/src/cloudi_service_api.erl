@@ -309,10 +309,13 @@
 -type owner_external() ::
     list({user, pos_integer() | string()} |
          {group, pos_integer() | string()}).
+-type directory_external() ::
+    file:filename() | undefined.
 -export_type([limit_external_key/0,
               limit_external_value/0,
               limit_external/0,
-              owner_external/0]).
+              owner_external/0,
+              directory_external/0]).
 
 -type service_options_internal() ::
     list({priority_default, priority()} |
@@ -443,7 +446,8 @@
          {aspects_request_after, list(aspect_request_after_external())} |
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
          {limit, limit_external()} |
-         {owner, owner_external()}).
+         {owner, owner_external()} |
+         {directory, directory_external()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
 
@@ -507,7 +511,7 @@
                   {options, service_update_plan_options_internal()}).
 -type service_update_plan_external() ::
     nonempty_list({type, external} |
-                  {file_path, string()} |
+                  {file_path, file:filename()} |
                   {args, string()} |
                   {env, list({string(), string()})} |
                   {sync, boolean()} |

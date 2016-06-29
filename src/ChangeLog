@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-06-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add directory external service configuration option to set the 
+      current working directory for the external service OS process
+
 2016-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * No longer use the dynamic_compile dependency in the cloudi_core logger
