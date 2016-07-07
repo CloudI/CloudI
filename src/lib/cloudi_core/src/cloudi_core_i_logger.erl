@@ -72,7 +72,6 @@
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 -include_lib("kernel/include/file.hrl").
--include_lib("syntax_tools/include/merl.hrl").
 
 %% logging macros used only within this module
 -define(LOG_INFO_T0(Format, Args, State),
@@ -1688,7 +1687,7 @@ load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};
 load_interface_module(Level, Mode, Process) when is_atom(Level) ->
     {ok, Module,
-     Binary} = merl:compile(?Q(interface(Level, Mode, Process))),
+     Binary} = merl:compile(merl:quote(interface(Level, Mode, Process))),
     cloudi_core_i_logger_interface = Module,
     % make sure no old code exists
     code:purge(Module),
