@@ -101,9 +101,9 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 ----------
 `Cloud Service Integration APIs`
 
-- `https://github.com/okeuday/erlcloud`
-- `commit 55d8e5c1246c5af48dc349a9dac41ecf938217f9 (fixes_for_19_0)`
-- `Tue May 17 11:17:32 PDT 2016`
+- `https://github.com/erlcloud/erlcloud`
+- `commit ea39146ccbd98feaffa1832c5dec190bbc89a752 (0.13.5)`
+- `Thu Jul 21 16:23:20 PDT 2016`
 - `MIT`
 
 `exometer`
