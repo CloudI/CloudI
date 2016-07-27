@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,9 +47,10 @@
 %%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 %%% DAMAGE.
 %%%
-%%% queue_remove_unique/2 is based on queue:filter/2 which is under the EPL:
+%%% queue_remove_unique/2 is based on queue:filter/2
+%%% which is under the Apache License 2.0:
 %%%
-%%% Copyright Ericsson AB 1996-2014. All Rights Reserved.
+%%% Copyright Ericsson AB 1996-2016. All Rights Reserved.
 %%% 
 %%% Licensed under the Apache License, Version 2.0 (the "License");
 %%% you may not use this file except in compliance with the License.
@@ -64,8 +65,8 @@
 %%% limitations under the License.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
@@ -11601,7 +11602,8 @@ proper_test_() ->
 %% @hidden
 %% remove a unique value from a queue based on a binary predicate,
 %% traversal order is undefined to keep it efficient (i.e., shouldn't matter)
-%% (based on the implementation of queue:filter/2 which is under the EPL)
+%% (based on the implementation of queue:filter/2
+%%  which is under the Apache License 2.0)
 %%-------------------------------------------------------------------------
 
 -spec queue_remove_unique(F :: fun((any()) -> boolean()),

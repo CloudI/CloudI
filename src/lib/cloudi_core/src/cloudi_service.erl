@@ -338,6 +338,9 @@
     ok.
 -endif.
 
+-optional_callbacks([cloudi_service_handle_request/11,
+                     cloudi_service_handle_info/3]).
+
 %%%------------------------------------------------------------------------
 %%% Behavior interface functions
 %%%------------------------------------------------------------------------

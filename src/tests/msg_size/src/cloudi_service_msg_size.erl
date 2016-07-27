@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2014 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_msg_size).
@@ -61,7 +61,6 @@
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
-         cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -156,10 +155,6 @@ cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
               [NewI, NewName, Timeout]),
     {forward, NewName, RequestInfo, NewRequest,
      State#state{suffixes = Suffixes ++ [Suffix]}}.
-
-cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ?LOG_INFO("terminate msg_size erlang", []),

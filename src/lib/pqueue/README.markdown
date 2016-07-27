@@ -27,6 +27,5 @@ Thanks
 License
 -------
 
-(`pqueue4:queue_remove_unique/2` is under the Erlang Public License)
 BSD
 

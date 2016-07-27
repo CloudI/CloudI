@@ -54,7 +54,6 @@
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
-         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
@@ -227,12 +226,6 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 request_fail = 0,
                 request_ids = dict:new(),
                 tick_length = TickLength}}.
-
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              #state{} = State,
-                              _Dispatcher) ->
-    {noreply, State}.
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,

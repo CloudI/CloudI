@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-07-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow internal CloudI services to optionally use the callbacks
+      cloudi_service_handle_request/11 and
+      cloudi_service_handle_info/3
+    * Update pqueue
+
 2016-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify logger module creation
