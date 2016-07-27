@@ -8,6 +8,10 @@
       cloudi_service_handle_info/3
     * Update pqueue
 
+2016-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update erlcloud
+
 2016-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Simplify logger module creation
