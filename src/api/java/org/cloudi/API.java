@@ -53,6 +53,8 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.Date;
+import java.text.SimpleDateFormat;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Callable;
@@ -1790,6 +1792,44 @@ public class API
                             (((long) (this.id[13] & 0xff)) << 16) |
                             (((long) (this.id[14] & 0xff)) <<  8) |
                             (long) (this.id[15] & 0xff));
+        }
+
+        public Date toDate()
+        {
+            // millisecond resolution
+            return new Date((((((long) (this.id[6] & 0x0f)) << 56) |
+                              (((long) (this.id[7] & 0xff)) << 48) |
+                              (((long) (this.id[4] & 0xff)) << 40) |
+                              (((long) (this.id[5] & 0xff)) << 32) |
+                              (((long) (this.id[0] & 0xff)) << 24) |
+                              (((long) (this.id[1] & 0xff)) << 16) |
+                              (((long) (this.id[2] & 0xff)) <<  8) |
+                              ((long) (this.id[3] & 0xff))) -
+                             0x01b21dd213814000L) / 10000);
+        }
+
+        public String toTimestamp()
+        {
+            // microsecond resolution (ISO8601 datetime in UTC)
+            final long micro = (((((long) (this.id[6] & 0x0f)) << 56) |
+                                 (((long) (this.id[7] & 0xff)) << 48) |
+                                 (((long) (this.id[4] & 0xff)) << 40) |
+                                 (((long) (this.id[5] & 0xff)) << 32) |
+                                 (((long) (this.id[0] & 0xff)) << 24) |
+                                 (((long) (this.id[1] & 0xff)) << 16) |
+                                 (((long) (this.id[2] & 0xff)) <<  8) |
+                                 ((long) (this.id[3] & 0xff))) -
+                                0x01b21dd213814000L) / 10;
+            final Date date = new Date(micro / 1000);
+            final String str =
+                (new SimpleDateFormat("yyyy-MM-ddHH:mm:ss.SSS")).format(date);
+            StringBuilder ISO8601 = new StringBuilder();
+            ISO8601.append(str.substring(0, 10));
+            ISO8601.append("T");
+            ISO8601.append(str.substring(10, 22));
+            ISO8601.append(String.format("%03d", micro % 1000));
+            ISO8601.append("Z");
+            return ISO8601.toString();
         }
 
         public String toString()
