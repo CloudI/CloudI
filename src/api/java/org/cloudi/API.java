@@ -1810,6 +1810,16 @@ public class API
 
         public String toTimestamp()
         {
+            return toTimestampString(false);
+        }
+
+        public String toTimestampSQL()
+        {
+            return toTimestampString(true);
+        }
+
+        private String toTimestampString(final boolean SQL)
+        {
             // microsecond resolution (ISO8601 datetime in UTC)
             final long micro = (((((long) (this.id[6] & 0x0f)) << 56) |
                                  (((long) (this.id[7] & 0xff)) << 48) |
@@ -1825,7 +1835,10 @@ public class API
                 (new SimpleDateFormat("yyyy-MM-ddHH:mm:ss.SSS")).format(date);
             StringBuilder ISO8601 = new StringBuilder();
             ISO8601.append(str.substring(0, 10));
-            ISO8601.append("T");
+            if (SQL)
+                ISO8601.append(" ");
+            else
+                ISO8601.append("T");
             ISO8601.append(str.substring(10, 22));
             ISO8601.append(String.format("%03d", micro % 1000));
             ISO8601.append("Z");

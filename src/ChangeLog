@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add Java CloudI API timestamp accessor for ISO8601 SQL variation
+
 2016-08-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add Java CloudI API accessors on the TransId class to get
