@@ -1797,15 +1797,7 @@ public class API
         public Date toDate()
         {
             // millisecond resolution
-            return new Date((((((long) (this.id[6] & 0x0f)) << 56) |
-                              (((long) (this.id[7] & 0xff)) << 48) |
-                              (((long) (this.id[4] & 0xff)) << 40) |
-                              (((long) (this.id[5] & 0xff)) << 32) |
-                              (((long) (this.id[0] & 0xff)) << 24) |
-                              (((long) (this.id[1] & 0xff)) << 16) |
-                              (((long) (this.id[2] & 0xff)) <<  8) |
-                              ((long) (this.id[3] & 0xff))) -
-                             0x01b21dd213814000L) / 10000);
+            return new Date(toTimestampMicroSeconds() / 1000);
         }
 
         public String toTimestamp()

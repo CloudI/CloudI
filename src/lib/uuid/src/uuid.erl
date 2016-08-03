@@ -1035,6 +1035,13 @@ test() ->
         (V1Time1mega * 1000000 + V1Time1sec) * 1000000),
     {{2012, 12, 8}, {3, 13, 58}} =
         calendar:now_to_datetime({V1Time1mega, V1Time1sec, V1Time1micro}),
+    % max version 1 timestamp:
+    "5236-03-31T21:21:00.684697Z" = uuid:get_v1_datetime(<<16#ffffffff:32,
+                                                           16#ffff:16,
+                                                           0:1, 0:1, 0:1, 1:1,
+                                                           16#fff:12,
+                                                           1:1, 0:1,
+                                                           0:14, 0:48>>),
     % $ python
     % >>> import uuid
     % >>> import time
