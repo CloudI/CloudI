@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2012, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -45,22 +45,41 @@ import java.lang.reflect.InvocationTargetException;
 
 public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
 {
-    private Object instance;
-    private String methodName;
+    private final Object instance;
+    private final String methodName;
     private Method method;
 
     public Function9(final Object instance, final String methodName)
+        throws NoSuchMethodException
     {
         this.instance = instance;
         this.methodName = methodName;
-        this.method = null;
+
+        // make sure the method exists with the same arity
+        // (unable to type check due to generic type usage in Function9)
+        final Method[] methods = this.instance.getClass()
+                                              .getMethods();
+        boolean exists = false;
+        for (Method possibleMethod : methods)
+        {
+            if (possibleMethod.getName().equals(this.methodName) &&
+                possibleMethod.getParameterTypes().length == 9)
+            {
+                exists = true;
+                break;
+            }
+        }
+        if (! exists)
+        {
+            throw new NoSuchMethodException(this.instance.getClass()
+                                                         .getCanonicalName() +
+                                            "." + this.methodName + "(...)");
+        }
     }
 
-    public Object invoke(C1 a1, C2 a2, C3 a3, C4 a4, C5 a5, C6 a6,
-                         C7 a7, C8 a8, C9 a9)
-                         throws Throwable,
-                                IllegalAccessException,
-                                NoSuchMethodException
+    public Object invoke(C1 a1, C2 a2, C3 a3, C4 a4, C5 a5,
+                         C6 a6, C7 a7, C8 a8, C9 a9)
+        throws Throwable
     {
         try
         {
@@ -68,7 +87,7 @@ public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
             {
                 this.method = this.instance
                                   .getClass()
-                                  .getDeclaredMethod(methodName,
+                                  .getDeclaredMethod(this.methodName,
                                                      a1.getClass(),
                                                      a2.getClass(),
                                                      a3.getClass(),
@@ -79,8 +98,8 @@ public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
                                                      a8.getClass(),
                                                      a9.getClass());
             }
-            return this.method.invoke(this.instance, a1, a2, a3, a4, a5, a6,
-                                      a7, a8, a9);
+            return this.method.invoke(this.instance,
+                                      a1, a2, a3, a4, a5, a6, a7, a8, a9);
         }
         catch (InvocationTargetException e)
         {
