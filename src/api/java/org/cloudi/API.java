@@ -114,9 +114,9 @@ public class API
     private static final int MESSAGE_SUBSCRIBE_COUNT     = 10;
     private static final int MESSAGE_TERM                = 11;
 
-    private FileDescriptor fd_in;
-    private FileDescriptor fd_out;
-    private boolean use_header;
+    private final FileDescriptor fd_in;
+    private final FileDescriptor fd_out;
+    private final boolean use_header;
     private final FileOutputStream output;
     private final FileInputStream input;
     private final ExecutorService poll_timer_executor;
