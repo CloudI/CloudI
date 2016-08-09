@@ -117,21 +117,12 @@ public class API
     private FileDescriptor fd_in;
     private FileDescriptor fd_out;
     private boolean use_header;
-    private FileOutputStream output;
-    private FileInputStream input;
-    private ExecutorService poll_timer_executor;
+    private final FileOutputStream output;
+    private final FileInputStream input;
+    private final ExecutorService poll_timer_executor;
     private boolean initialization_complete;
     private boolean terminate;
-    private HashMap<String,
-                    LinkedList< Function9<Integer,
-                                          String,
-                                          String,
-                                          byte[],
-                                          byte[],
-                                          Integer,
-                                          Byte,
-                                          byte[],
-                                          OtpErlangPid> > > callbacks;
+    private final HashMap<String, LinkedList<FunctionInterface9>> callbacks;
     private final int buffer_size;
     private long request_timer;
     private Integer request_timeout;
@@ -185,16 +176,7 @@ public class API
         this.poll_timer_executor = Executors.newFixedThreadPool(1);
         this.initialization_complete = false;
         this.terminate = false;
-        this.callbacks = new HashMap<String,
-                                     LinkedList< Function9<Integer,
-                                                           String,
-                                                           String,
-                                                           byte[],
-                                                           byte[],
-                                                           Integer,
-                                                           Byte,
-                                                           byte[],
-                                                           OtpErlangPid> > >();
+        this.callbacks = new HashMap<String, LinkedList<FunctionInterface9>>();
         this.buffer_size = Integer.parseInt(buffer_size_str);
         this.process_index = 0;
         this.process_count = 0;
@@ -234,51 +216,28 @@ public class API
      * @param  instance    the object instance
      * @param  methodName  the object method to handle matching requests
      */ 
-    public void subscribe(final String pattern,
-                          final Object instance,
-                          final String methodName)
+    public final void subscribe(final String pattern,
+                                final Object instance,
+                                final String methodName)
         throws NoSuchMethodException
     {
+        this.subscribe(pattern, new FunctionObject9(instance, methodName));
+    }
+
+    /**
+     * Subscribes an object method to a service name pattern. 
+     *
+     * @param  pattern     the service name pattern
+     * @param  callback    method reference for callback (Java 8 or higher)
+     */ 
+    public final void subscribe(final String pattern,
+                                final FunctionInterface9 callback)
+    {
         final String s = this.prefix + pattern;
-        Function9<Integer,
-                  String,
-                  String,
-                  byte[],
-                  byte[],
-                  Integer,
-                  Byte,
-                  byte[],
-                  OtpErlangPid>
-                  callback = new Function9<Integer,
-                                           String,
-                                           String,
-                                           byte[],
-                                           byte[],
-                                           Integer,
-                                           Byte,
-                                           byte[],
-                                           OtpErlangPid>(instance, methodName);
-        LinkedList< Function9<Integer,
-                              String,
-                              String,
-                              byte[],
-                              byte[],
-                              Integer,
-                              Byte,
-                              byte[],
-                              OtpErlangPid> >
-                    callback_list = this.callbacks.get(s);
+        LinkedList<FunctionInterface9> callback_list = this.callbacks.get(s);
         if (callback_list == null)
         {
-            callback_list = new LinkedList< Function9<Integer,
-                                                      String,
-                                                      String,
-                                                      byte[],
-                                                      byte[],
-                                                      Integer,
-                                                      Byte,
-                                                      byte[],
-                                                      OtpErlangPid> >();
+            callback_list = new LinkedList<FunctionInterface9>();
             callback_list.addLast(callback);
             this.callbacks.put(s, callback_list);
         }
@@ -326,20 +285,11 @@ public class API
      *
      * @param pattern  the service name pattern
      */
-    public void unsubscribe(final String pattern)
+    public final void unsubscribe(final String pattern)
         throws InvalidInputException
     {
         final String s = this.prefix + pattern;
-        LinkedList< Function9<Integer,
-                              String,
-                              String,
-                              byte[],
-                              byte[],
-                              Integer,
-                              Byte,
-                              byte[],
-                              OtpErlangPid> >
-                    callback_list = this.callbacks.get(s);
+        LinkedList<FunctionInterface9> callback_list = this.callbacks.get(s);
         if (callback_list == null)
         {
             throw new InvalidInputException();
@@ -368,7 +318,8 @@ public class API
      * @param request  the request data
      * @return         a transaction ID
      */
-    public TransId send_async(String name, byte[] request)
+    public TransId send_async(final String name,
+                              final byte[] request)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -388,8 +339,11 @@ public class API
      * @param priority      the request priority
      * @return              a transaction ID
      */
-    public TransId send_async(String name, byte[] request_info, byte[] request,
-                              Integer timeout, Byte priority)
+    public TransId send_async(final String name,
+                              final byte[] request_info,
+                              final byte[] request,
+                              final Integer timeout,
+                              final Byte priority)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -423,7 +377,8 @@ public class API
      * @param request       the request data
      * @return              the response
      */
-    public Response send_sync(String name, byte[] request)
+    public Response send_sync(final String name,
+                              final byte[] request)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -443,8 +398,11 @@ public class API
      * @param priority      the request priority
      * @return              the response
      */
-    public Response send_sync(String name, byte[] request_info, byte[] request,
-                              Integer timeout, Byte priority)
+    public Response send_sync(final String name,
+                              final byte[] request_info,
+                              final byte[] request,
+                              final Integer timeout,
+                              final Byte priority)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -478,7 +436,8 @@ public class API
      * @param request       the request data
      * @return              transaction IDs
      */
-    public List<TransId> mcast_async(String name, byte[] request)
+    public List<TransId> mcast_async(final String name,
+                                     final byte[] request)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -499,9 +458,11 @@ public class API
      * @return              transaction IDs
      */
     @SuppressWarnings("unchecked")
-    public List<TransId> mcast_async(String name,
-                                     byte[] request_info, byte[] request,
-                                     Integer timeout, Byte priority)
+    public List<TransId> mcast_async(final String name,
+                                     final byte[] request_info,
+                                     final byte[] request,
+                                     final Integer timeout,
+                                     final Byte priority)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -540,10 +501,14 @@ public class API
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
      */
-    public void forward_(Integer command,
-                         String name, byte[] request_info, byte[] request,
-                         Integer timeout, Byte priority,
-                         byte[] trans_id, OtpErlangPid pid)
+    public final void forward_(final Integer command,
+                               final String name,
+                               final byte[] request_info,
+                               final byte[] request,
+                               final Integer timeout,
+                               final Byte priority,
+                               final byte[] trans_id,
+                               final OtpErlangPid pid)
         throws ForwardAsyncException,
                ForwardSyncException,
                InvalidInputException
@@ -570,9 +535,13 @@ public class API
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
      */
-    public void forward_async(String name, byte[] request_info, byte[] request,
-                              Integer timeout, Byte priority,
-                              byte[] trans_id, OtpErlangPid pid)
+    public final void forward_async(final String name,
+                                    final byte[] request_info,
+                                    final byte[] request,
+                                    Integer timeout,
+                                    final Byte priority,
+                                    final byte[] trans_id,
+                                    final OtpErlangPid pid)
         throws ForwardAsyncException
     {
         if (this.request_timeout_adjustment)
@@ -626,9 +595,13 @@ public class API
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
      */
-    public void forward_sync(String name, byte[] request_info, byte[] request,
-                             Integer timeout, Byte priority,
-                             byte[] trans_id, OtpErlangPid pid)
+    public final void forward_sync(final String name,
+                                   final byte[] request_info,
+                                   final byte[] request,
+                                   Integer timeout,
+                                   final Byte priority,
+                                   final byte[] trans_id,
+                                   final OtpErlangPid pid)
         throws ForwardSyncException
     {
         if (this.request_timeout_adjustment)
@@ -682,10 +655,14 @@ public class API
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
      */
-    public void return_(Integer command,
-                        String name, String pattern,
-                        byte[] response_info, byte[] response,
-                        Integer timeout, byte[] trans_id, OtpErlangPid pid)
+    public final void return_(final Integer command,
+                              final String name,
+                              final String pattern,
+                              final byte[] response_info,
+                              final byte[] response,
+                              final Integer timeout,
+                              final byte[] trans_id,
+                              final OtpErlangPid pid)
         throws ReturnAsyncException,
                ReturnSyncException,
                InvalidInputException
@@ -711,9 +688,13 @@ public class API
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
      */
-    public void return_async(String name, String pattern,
-                             byte[] response_info, byte[] response,
-                             Integer timeout, byte[] trans_id, OtpErlangPid pid)
+    public final void return_async(final String name,
+                                   final String pattern,
+                                   byte[] response_info,
+                                   byte[] response,
+                                   Integer timeout,
+                                   final byte[] trans_id,
+                                   final OtpErlangPid pid)
         throws ReturnAsyncException
     {
         if (this.request_timeout_adjustment)
@@ -768,9 +749,13 @@ public class API
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
      */
-    public void return_sync(String name, String pattern,
-                            byte[] response_info, byte[] response,
-                            Integer timeout, byte[] trans_id, OtpErlangPid pid)
+    public final void return_sync(final String name,
+                                  final String pattern,
+                                  byte[] response_info,
+                                  byte[] response,
+                                  Integer timeout,
+                                  final byte[] trans_id,
+                                  final OtpErlangPid pid)
         throws ReturnSyncException
     {
         if (this.request_timeout_adjustment)
@@ -833,7 +818,7 @@ public class API
      * @param timeout  the receive timeout in milliseconds
      * @return         the response
      */
-    public Response recv_async(Integer timeout)
+    public Response recv_async(final Integer timeout)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -847,7 +832,7 @@ public class API
      * @param trans_id the transaction ID to receive
      * @return         the response
      */
-    public Response recv_async(byte[] trans_id)
+    public Response recv_async(final byte[] trans_id)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -863,7 +848,7 @@ public class API
      *                 the future
      * @return         the response
      */
-    public Response recv_async(boolean consume)
+    public Response recv_async(final boolean consume)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -878,7 +863,8 @@ public class API
      * @param trans_id the transaction ID to receive
      * @return         the response
      */
-    public Response recv_async(Integer timeout, byte[] trans_id)
+    public Response recv_async(final Integer timeout,
+                               final byte[] trans_id)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -895,7 +881,8 @@ public class API
      *                 the future
      * @return         the response
      */
-    public Response recv_async(Integer timeout, boolean consume)
+    public Response recv_async(final Integer timeout,
+                               final boolean consume)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -912,7 +899,8 @@ public class API
      *                 the future
      * @return         the response
      */
-    public Response recv_async(byte[] trans_id, boolean consume)
+    public Response recv_async(final byte[] trans_id,
+                               final boolean consume)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -930,8 +918,9 @@ public class API
      *                 the future
      * @return         the response
      */
-    public Response recv_async(Integer timeout, byte[] trans_id,
-                               boolean consume)
+    public Response recv_async(final Integer timeout,
+                               final byte[] trans_id,
+                               final boolean consume)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -957,55 +946,60 @@ public class API
         }
     }
 
-    public int process_index()
+    public final int process_index()
     {
         return this.process_index;
     }
 
-    public int process_count()
+    public final int process_count()
     {
         return this.process_count;
     }
 
-    public int process_count_max()
+    public final int process_count_max()
     {
         return this.process_count_max;
     }
 
-    public int process_count_min()
+    public final int process_count_min()
     {
         return this.process_count_min;
     }
 
-    public String prefix()
+    public final String prefix()
     {
         return this.prefix;
     }
 
-    public int timeout_initialize()
+    public final int timeout_initialize()
     {
         return this.timeout_initialize;
     }
 
-    public int timeout_async()
+    public final int timeout_async()
     {
         return this.timeout_async;
     }
 
-    public int timeout_sync()
+    public final int timeout_sync()
     {
         return this.timeout_sync;
     }
 
-    public int timeout_terminate()
+    public final int timeout_terminate()
     {
         return this.timeout_terminate;
     }
 
-    private void callback(int command, String name, String pattern,
-                          byte[] request_info, byte[] request,
-                          Integer timeout, Byte priority,
-                          byte[] trans_id, OtpErlangPid pid)
+    private void callback(final int command,
+                          final String name,
+                          final String pattern,
+                          final byte[] request_info,
+                          final byte[] request,
+                          final Integer timeout,
+                          final Byte priority,
+                          final byte[] trans_id,
+                          final OtpErlangPid pid)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -1016,26 +1010,10 @@ public class API
             this.request_timer = System.nanoTime();
             this.request_timeout = timeout;
         }
-        LinkedList< Function9<Integer,
-                              String,
-                              String,
-                              byte[],
-                              byte[],
-                              Integer,
-                              Byte,
-                              byte[],
-                              OtpErlangPid> >
-                    callback_list = this.callbacks.get(pattern);
+        LinkedList<FunctionInterface9> callback_list =
+            this.callbacks.get(pattern);
         callback_list.addLast(callback_list.removeFirst());
-        Function9<Integer,
-                  String,
-                  String,
-                  byte[],
-                  byte[],
-                  Integer,
-                  Byte,
-                  byte[],
-                  OtpErlangPid> callback = callback_list.peekLast();
+        FunctionInterface9 callback = callback_list.peekLast();
         if (command == MESSAGE_SEND_ASYNC)
         {
             try
@@ -1182,16 +1160,16 @@ public class API
         }
     }
 
-    private boolean handle_events(boolean external,
-                                  ByteBuffer buffer)
+    private boolean handle_events(final boolean external,
+                                  final ByteBuffer buffer)
         throws MessageDecodingException,
                TerminateException
     {
         return handle_events(external, buffer, 0);
     }
 
-    private boolean handle_events(boolean external,
-                                  ByteBuffer buffer,
+    private boolean handle_events(final boolean external,
+                                  final ByteBuffer buffer,
                                   int command)
         throws MessageDecodingException,
                TerminateException,
@@ -1235,7 +1213,8 @@ public class API
         }
     }
 
-    private Object poll_request(Integer timeout, boolean external)
+    private Object poll_request(Integer timeout,
+                                final boolean external)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -1451,7 +1430,7 @@ public class API
         return poll(-1);
     }
 
-    public Object poll(int timeout)
+    public Object poll(final int timeout)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -1459,24 +1438,25 @@ public class API
         return poll_request(timeout, true);
     }
 
-    private HashMap<String, List<String> > binary_key_value_parse(byte[] binary)
+    private final HashMap<String,
+                          List<String>> binary_key_value_parse(final byte[] b)
     {
         HashMap<String, List<String> > result =
             new HashMap<String, List<String> >();
         String key = null;
         int binary_i = 0;
-        for (int binary_j = 0; binary_j < binary.length; ++binary_j)
+        for (int binary_j = 0; binary_j < b.length; ++binary_j)
         {
-            if (binary[binary_j] == 0)
+            if (b[binary_j] == 0)
             {
                 if (key == null)
                 {
-                    key = new String(binary, binary_i, binary_j - binary_i);
+                    key = new String(b, binary_i, binary_j - binary_i);
                 }
                 else
                 {
                     List<String> value = result.get(key);
-                    final String element = new String(binary, binary_i,
+                    final String element = new String(b, binary_i,
                                                       binary_j - binary_i);
                     if (value == null)
                     {
@@ -1496,17 +1476,19 @@ public class API
         return result;
     }
 
-    public HashMap<String, List<String> > request_http_qs_parse(byte[] request)
+    public final HashMap<String,
+                         List<String>> request_http_qs_parse(final byte[] r)
     {
-        return binary_key_value_parse(request);
+        return binary_key_value_parse(r);
     }
 
-    public HashMap<String, List<String> > info_key_value_parse(byte[] info)
+    public final HashMap<String,
+                         List<String>> info_key_value_parse(final byte[] info)
     {
         return binary_key_value_parse(info);
     }
 
-    private void send(OtpOutputStream command)
+    private final void send(final OtpOutputStream command)
     {
         try
         {
@@ -1528,7 +1510,8 @@ public class API
         }
     }
 
-    private ByteBuffer recv(ByteBuffer buffer_in, Integer timeout)
+    private final ByteBuffer recv(final ByteBuffer buffer_in,
+                                  final Integer timeout)
         throws IOException
     {
         final ByteArrayOutputStream output =
@@ -1644,14 +1627,14 @@ public class API
         return buffer_out;
     }
 
-    private static String getString(ByteBuffer buffer, final int size)
+    private static String getString(final ByteBuffer buffer, final int size)
     {
         final String value = new String(API.getBytes(buffer, size - 1));
         buffer.position(buffer.position() + 1); // skip the '\0' terminator
         return value;
     }
 
-    private static OtpErlangPid getPid(ByteBuffer buffer, final int size)
+    private static OtpErlangPid getPid(final ByteBuffer buffer, final int size)
     {
         try
         {
@@ -1664,7 +1647,7 @@ public class API
         }
     }
 
-    private static byte[] getBytes(ByteBuffer buffer, final int size)
+    private static byte[] getBytes(final ByteBuffer buffer, final int size)
     {
         final byte[] data = new byte[size];
         buffer.get(data, 0, size);
@@ -1673,9 +1656,8 @@ public class API
 
     private static FileDescriptor storeFD(final int fd)
     {
-        Class<FileDescriptor> clazz = FileDescriptor.class;
-
-        Constructor<FileDescriptor> c;
+        final Class<FileDescriptor> clazz = FileDescriptor.class;
+        final Constructor<FileDescriptor> c;
         try
         {
             Class<?>[] intarg = { Integer.TYPE };
@@ -1721,30 +1703,30 @@ public class API
         return object;
     }
 
-    public class Response
+    public static class Response
     {
         public final byte[] response_info;
         public final byte[] response;
         public final byte[] id;
 
-        Response(byte[] info, byte[] resp, byte[] trans_id)
+        Response(final byte[] info, final byte[] resp, final byte[] trans_id)
         {
             this.response_info = info;
             this.response = resp;
             this.id = trans_id;
         }
 
-        public boolean isEmpty()
+        public final boolean isEmpty()
         {
             return response.length == 0;
         }
 
-        public boolean isTimeout()
+        public final boolean isTimeout()
         {
             return Arrays.equals(this.id, API.TransIdNull);
         }
 
-        public String toString()
+        public final String toString()
         {
             StringBuilder result = new StringBuilder();
             result.append("('");
@@ -1765,22 +1747,22 @@ public class API
     {
         public final byte[] id;
 
-        public TransId(byte[] trans_id)
+        public TransId(final byte[] trans_id)
         {
             this.id = trans_id;
         }
 
-        public boolean equals(byte[] bytes)
+        public final boolean equals(final byte[] bytes)
         {
             return Arrays.equals(this.id, bytes);
         }
 
-        public boolean isTimeout()
+        public final boolean isTimeout()
         {
             return equals(API.TransIdNull);
         }
 
-        public UUID toObject()
+        public final UUID toObject()
         {
             return new UUID((((long) (this.id[ 0] & 0xff)) << 56) |
                             (((long) (this.id[ 1] & 0xff)) << 48) |
@@ -1800,23 +1782,23 @@ public class API
                             (long) (this.id[15] & 0xff));
         }
 
-        public Date toDate()
+        public final Date toDate()
         {
             // millisecond resolution
             return new Date(toTimestampMicroSeconds() / 1000);
         }
 
-        public String toTimestamp()
+        public final String toTimestamp()
         {
             return toTimestampString(false);
         }
 
-        public String toTimestampSQL()
+        public final String toTimestampSQL()
         {
             return toTimestampString(true);
         }
 
-        public long toTimestampMicroSeconds()
+        public final long toTimestampMicroSeconds()
         {
             // v1 UUID is limited to 60 bit time value
             // (overflows 60 bits after 5236-03-31 21:21:00)
@@ -1831,7 +1813,7 @@ public class API
                     0x01b21dd213814000L) / 10;
         }
 
-        private String toTimestampString(final boolean SQL)
+        private final String toTimestampString(final boolean SQL)
         {
             // microsecond resolution (ISO8601 datetime in UTC)
             final long micro = toTimestampMicroSeconds();
@@ -1850,7 +1832,7 @@ public class API
             return ISO8601.toString();
         }
 
-        public String toString()
+        public final String toString()
         {
             return toObject().toString().replace("-", "");
         }
@@ -1868,7 +1850,6 @@ public class API
     public static class ReturnSyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-
         ReturnSyncException()
         {
             super("Synchronous Call Return Invalid");
@@ -1878,7 +1859,6 @@ public class API
     public static class ReturnAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-
         ReturnAsyncException()
         {
             super("Asynchronous Call Return Invalid");
@@ -1888,7 +1868,6 @@ public class API
     public static class ForwardSyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-
         ForwardSyncException()
         {
             super("Synchronous Call Forward Invalid");
@@ -1898,7 +1877,6 @@ public class API
     public static class ForwardAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
-
         ForwardAsyncException()
         {
             super("Asynchronous Call Forward Invalid");
@@ -1923,7 +1901,7 @@ public class API
             super("Terminate");
             this.timeout = timeout;
         }
-        public int timeout()
+        public final int timeout()
         {
             return this.timeout;
         }

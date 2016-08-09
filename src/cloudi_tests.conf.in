@@ -992,7 +992,7 @@
         "/tests/messaging/java/",
         "@JAVA@",
         % based on http://www.infoq.com/articles/benchmarking-jvm
-        "-Xbatch -server -Xmx1G -Xms1G -XX:PermSize=64m -XX:MaxPermSize=64m "
+        "-Xbatch -server -Xmx1G -Xms1G "
         % enable assertions
         "-ea:org.cloudi... "
         "-jar tests/messaging/jar/messaging.jar",

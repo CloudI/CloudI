@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add Java 8 method reference support to the Java CloudI API
+    * Improve the constant usage within the Java CloudI API
+
 2016-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add arity checking in the Java CloudI API subscribe function

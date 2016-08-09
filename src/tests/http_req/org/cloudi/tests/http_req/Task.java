@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -72,13 +72,13 @@ public class Task implements Runnable
         }
     }
 
-    public void request(Integer command, String name, String pattern,
-                        byte[] request_info, byte[] request,
-                        Integer timeout, Byte priority,
-                        byte[] trans_id, OtpErlangPid pid)
-                        throws API.ReturnAsyncException,
-                               API.ReturnSyncException,
-                               API.InvalidInputException
+    public Object request(Integer command, String name, String pattern,
+                          byte[] request_info, byte[] request,
+                          Integer timeout, Byte priority,
+                          byte[] trans_id, OtpErlangPid pid)
+        throws API.ReturnAsyncException,
+               API.ReturnSyncException,
+               API.InvalidInputException
     {
         HashMap<String, List<String> > http_qs =
             this.api.request_http_qs_parse(request);
@@ -107,6 +107,7 @@ public class Task implements Runnable
         this.api.return_(command, name, pattern,
                          ("").getBytes(), response.getBytes(),
                          timeout, trans_id, pid);
+        return null;
     }
  
     public void run()
@@ -114,7 +115,13 @@ public class Task implements Runnable
         try
         {
             assert this.api.subscribe_count("java.xml/get") == 0;
+
+            // possible with Java >= 8
+            //this.api.subscribe("java.xml/get", this::request);
+
+            // required with Java < 8
             this.api.subscribe("java.xml/get", this, "request");
+
             assert this.api.subscribe_count("java.xml/get") == 1;
             Object result = this.api.poll();
             assert result == Boolean.FALSE;
