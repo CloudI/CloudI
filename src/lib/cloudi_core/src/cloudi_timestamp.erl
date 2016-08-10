@@ -53,8 +53,11 @@
 %% external interface
 -export([timestamp/0,
          seconds/0,
+         seconds_os/0,
          milliseconds/0,
+         milliseconds_os/0,
          microseconds/0,
+         microseconds_os/0,
          seconds_filter/3]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -99,6 +102,21 @@ seconds() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Seconds since an undefined point in time, from the hardware.===
+%% @end
+%%-------------------------------------------------------------------------
+
+%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+%seconds_os() ->
+%    os:perf_counter(seconds).
+%-else.
+seconds_os() ->
+    {MegaSeconds, Seconds, _} = os:timestamp(),
+    MegaSeconds * 1000000 + Seconds.
+%-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Milliseconds since the UNIX epoch.===
 %% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
@@ -115,6 +133,21 @@ milliseconds() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Milliseconds since an undefined point in time, from the hardware.===
+%% @end
+%%-------------------------------------------------------------------------
+
+%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+%milliseconds_os() ->
+%    os:perf_counter(milli_seconds).
+%-else.
+milliseconds_os() ->
+    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
+    MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
+%-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Microseconds since the UNIX epoch.===
 %% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
@@ -128,6 +161,21 @@ microseconds() ->
     {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
     MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Microseconds since an undefined point in time, from the hardware.===
+%% @end
+%%-------------------------------------------------------------------------
+
+%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
+%microseconds_os() ->
+%    os:perf_counter(micro_seconds).
+%-else.
+microseconds_os() ->
+    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
+    MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
+%-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

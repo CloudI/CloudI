@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_timestamp functions seconds_os/0,
+      milliseconds_os/0, microseconds_os/0
+    * Use new cloudi_timestamp:milliseconds_os/0 function to reduce latency
+
 2016-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add Java 8 method reference support to the Java CloudI API

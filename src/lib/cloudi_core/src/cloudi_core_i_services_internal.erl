@@ -2359,12 +2359,10 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                               AspectsAfter} = ConfigOptions) ->
     RequestTimeoutF = if
         RequestTimeoutAdjustment ->
-            RequestTimeStart = os:timestamp(),
+            RequestTimeStart = cloudi_timestamp:milliseconds_os(),
             fun(T) ->
-                erlang:max(0,
-                           T - erlang:trunc(timer:now_diff(os:timestamp(),
-                                                           RequestTimeStart) /
-                                            1000.0))
+                erlang:max(0, T - (cloudi_timestamp:milliseconds_os() -
+                                   RequestTimeStart))
             end;
         true ->
             fun(T) -> T end
