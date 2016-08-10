@@ -7,6 +7,7 @@
       milliseconds_os/0, microseconds_os/0
     * Use new cloudi_timestamp:milliseconds_os/0 function to reduce latency
     * Improve request_timeout_adjustment logic
+    * Improve quickstart markdown format
 
 2016-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

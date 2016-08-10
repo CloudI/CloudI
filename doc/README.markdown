@@ -2,6 +2,15 @@
 
 * [Install](#install)
 * [C](#c)
+* [C++](#c-1)
+* [Elixir](#elixir)
+* [Erlang](#erlang)
+* [Java](#java)
+* [JavaScript](#javascript)
+* [Perl](#perl)
+* [PHP](#php)
+* [Python](#python)
+* [Ruby](#ruby)
 
 ### Install
 
