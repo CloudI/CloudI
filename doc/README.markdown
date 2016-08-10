@@ -1,5 +1,8 @@
 ## CloudI Quick Start
 
+* [Install](#install)
+* [C](#c)
+
 ### Install
 
 1.  Get wget and curl if you don't already have them
