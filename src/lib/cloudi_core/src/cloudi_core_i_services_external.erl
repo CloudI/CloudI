@@ -2429,16 +2429,7 @@ aspects_request_before([], _, _, _, _, _,
 aspects_request_before([_ | _] = L, Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
                        ServiceState, RequestTimeoutAdjustment) ->
-    RequestTimeoutF = if
-        RequestTimeoutAdjustment ->
-            RequestTimeStart = cloudi_timestamp:milliseconds_os(),
-            fun(T) ->
-                erlang:max(0, T - (cloudi_timestamp:milliseconds_os() -
-                                   RequestTimeStart))
-            end;
-        true ->
-            fun(T) -> T end
-    end,
+    RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
     aspects_request_before_f(L, Type,
                              Name, Pattern, RequestInfo, Request,
                              Timeout, Priority, TransId, Source,
@@ -2484,16 +2475,7 @@ aspects_request_after([], _, _, _, _, _,
 aspects_request_after([_ | _] = L, Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
                       Result, ServiceState, RequestTimeoutAdjustment) ->
-    RequestTimeoutF = if
-        RequestTimeoutAdjustment ->
-            RequestTimeStart = cloudi_timestamp:milliseconds_os(),
-            fun(T) ->
-                erlang:max(0, T - (cloudi_timestamp:milliseconds_os() -
-                                   RequestTimeStart))
-            end;
-        true ->
-            fun(T) -> T end
-    end,
+    RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
     aspects_request_after_f(L, Type,
                             Name, Pattern, RequestInfo, Request,
                             Timeout, Priority, TransId, Source,

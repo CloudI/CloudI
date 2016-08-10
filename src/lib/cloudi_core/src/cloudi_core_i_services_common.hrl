@@ -53,7 +53,8 @@
           [{recv_async_select_random, 1},
            {recv_async_select_oldest, 1}]}).
 -compile({inline,
-          [{cancel_timer_async, 1}]}).
+          [{cancel_timer_async, 1},
+           {request_timeout_adjustment_f, 1}]}).
 
 destination_allowed([], _, _) ->
     false;
@@ -484,6 +485,22 @@ check_incoming(ServiceRequest,
         monkey_latency = NewMonkeyLatency,
         monkey_chaos = NewMonkeyChaos,
         hibernate = NewHibernate}.
+
+request_timeout_adjustment_f(true) ->
+    RequestTimeStart = cloudi_timestamp:milliseconds_os(),
+    fun(T) ->
+        Delta = cloudi_timestamp:milliseconds_os() - RequestTimeStart,
+        if
+            Delta =< 0 ->
+                T;
+            Delta >= T ->
+                0;
+            true ->
+                T - Delta
+        end
+    end;
+request_timeout_adjustment_f(false) ->
+    fun(T) -> T end.
 
 aspects_terminate([], _, _, ServiceState) ->
     {ok, ServiceState};

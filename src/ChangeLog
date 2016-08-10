@@ -6,6 +6,7 @@
     * Add cloudi_timestamp functions seconds_os/0,
       milliseconds_os/0, microseconds_os/0
     * Use new cloudi_timestamp:milliseconds_os/0 function to reduce latency
+    * Improve request_timeout_adjustment logic
 
 2016-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

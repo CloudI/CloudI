@@ -2357,16 +2357,7 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                               AspectsBefore,
                           aspects_request_after =
                               AspectsAfter} = ConfigOptions) ->
-    RequestTimeoutF = if
-        RequestTimeoutAdjustment ->
-            RequestTimeStart = cloudi_timestamp:milliseconds_os(),
-            fun(T) ->
-                erlang:max(0, T - (cloudi_timestamp:milliseconds_os() -
-                                   RequestTimeStart))
-            end;
-        true ->
-            fun(T) -> T end
-    end,
+    RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
     try aspects_request_before(AspectsBefore, Type,
                                Name, Pattern, RequestInfo, Request,
                                Timeout, Priority, TransId, Source,
