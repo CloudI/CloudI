@@ -68,10 +68,10 @@ public class FunctionObject9 implements FunctionInterface9
                                       OtpErlangPid>(instance, methodName);
     }
 
-    public final Object invoke(Integer command, String name, String pattern,
-                               byte[] request_info, byte[] request,
-                               Integer timeout, Byte priority,
-                               byte[] trans_id, OtpErlangPid pid)
+    public Object invoke(Integer command, String name, String pattern,
+                         byte[] request_info, byte[] request,
+                         Integer timeout, Byte priority,
+                         byte[] trans_id, OtpErlangPid pid)
         throws Throwable
     {
         return this.function.invoke(command, name, pattern,
