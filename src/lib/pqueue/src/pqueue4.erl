@@ -11634,13 +11634,17 @@ queue_remove_unique(Fun, Q) ->
 % Call Fun in front to back order
 queue_remove_unique_f(_, [] = F) ->
     {false, F};
-queue_remove_unique_f(Fun, [X | F0]) ->
+queue_remove_unique_f(Fun, F) ->
+    queue_remove_unique_f(F, [], F, Fun).
+
+queue_remove_unique_f([], _, F, _) ->
+    {false, F};
+queue_remove_unique_f([X | F0], F1, F, Fun) ->
     case Fun(X) of
         true ->
-            {true, F0};
+            {true, lists:reverse(F1, F0)};
         false ->
-            {Found, F} = queue_remove_unique_f(Fun, F0),
-            {Found, [X | F]}
+            queue_remove_unique_f(F0, [X | F1], F, Fun)
     end.
 
 -compile({inline, [{queue_r2f,1},{queue_f2r,1}]}).
