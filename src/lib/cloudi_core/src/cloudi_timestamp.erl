@@ -106,14 +106,9 @@ seconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
-%seconds_os() ->
-%    os:perf_counter(seconds).
-%-else.
 seconds_os() ->
     {MegaSeconds, Seconds, _} = os:timestamp(),
     MegaSeconds * 1000000 + Seconds.
-%-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -137,14 +132,9 @@ milliseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
-%milliseconds_os() ->
-%    os:perf_counter(milli_seconds).
-%-else.
 milliseconds_os() ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
-%-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -168,14 +158,9 @@ microseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-%-ifdef(ERLANG_OTP_VERSION_19_FEATURES).
-%microseconds_os() ->
-%    os:perf_counter(micro_seconds).
-%-else.
 microseconds_os() ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
-%-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

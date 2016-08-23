@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change Java CloudI API List return types to not be abstract
+
 2016-08-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix final keyword usage in Java CloudI API

@@ -436,8 +436,8 @@ public class API
      * @param request       the request data
      * @return              transaction IDs
      */
-    public List<TransId> mcast_async(final String name,
-                                     final byte[] request)
+    public ArrayList<TransId> mcast_async(final String name,
+                                          final byte[] request)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -458,11 +458,11 @@ public class API
      * @return              transaction IDs
      */
     @SuppressWarnings("unchecked")
-    public List<TransId> mcast_async(final String name,
-                                     final byte[] request_info,
-                                     final byte[] request,
-                                     final Integer timeout,
-                                     final Byte priority)
+    public ArrayList<TransId> mcast_async(final String name,
+                                          final byte[] request_info,
+                                          final byte[] request,
+                                          final Integer timeout,
+                                          final Byte priority)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -479,7 +479,7 @@ public class API
                                              new OtpErlangInt(priority)};
             mcast_async.write_any(new OtpErlangTuple(tuple));
             send(mcast_async);
-            return (List<TransId>) poll_request(null, false);
+            return (ArrayList<TransId>) poll_request(null, false);
         }
         catch (OtpErlangRangeException e)
         {
@@ -548,7 +548,7 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int) java.lang.Math.max(0,
+                final int elapsed = (int) Math.max(0,
                     ((System.nanoTime() - this.request_timer) * 1e-6));
                 if (elapsed > timeout)
                 {
@@ -608,7 +608,7 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int) java.lang.Math.max(0,
+                final int elapsed = (int) Math.max(0,
                     ((System.nanoTime() - this.request_timer) * 1e-6));
                 if (elapsed > timeout)
                 {
@@ -701,7 +701,7 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int) java.lang.Math.max(0,
+                final int elapsed = (int) Math.max(0,
                     ((System.nanoTime() - this.request_timer) * 1e-6));
                 if (elapsed > timeout)
                 {
@@ -762,7 +762,7 @@ public class API
         {
             if (timeout == this.request_timeout)
             {
-                final int elapsed = (int) java.lang.Math.max(0,
+                final int elapsed = (int) Math.max(0,
                     ((System.nanoTime() - this.request_timer) * 1e-6));
                 if (elapsed > timeout)
                 {
@@ -1241,7 +1241,7 @@ public class API
         else if (timeout >= 0)
         {
             poll_timer = System.nanoTime();
-            timeout_value = java.lang.Math.max(timeout_min, timeout);
+            timeout_value = Math.max(timeout_min, timeout);
         }
 
         try
@@ -1337,7 +1337,7 @@ public class API
                     case MESSAGE_RETURNS_ASYNC:
                     {
                         int trans_id_count = buffer.getInt();
-                        List<TransId> trans_ids = new ArrayList<TransId>();
+                        ArrayList<TransId> trans_ids = new ArrayList<TransId>();
                         for (int i = 0; i < trans_id_count; ++i)
                         {
                             byte[] trans_id = API.getBytes(buffer, 16);
@@ -1390,7 +1390,7 @@ public class API
                 if (poll_timer != null)
                 {
                     long poll_timer_new = System.nanoTime();
-                    final int elapsed = (int) java.lang.Math.max(0,
+                    final int elapsed = (int) Math.max(0,
                         ((poll_timer_new - poll_timer) * 1e-6));
                     poll_timer = poll_timer_new;
                     if (elapsed >= timeout)
@@ -1403,8 +1403,7 @@ public class API
                     if (timeout == 0)
                         return Boolean.TRUE;
                     else if (timeout > 0)
-                        timeout_value = java.lang.Math.max(timeout_min,
-                                                           timeout);
+                        timeout_value = Math.max(timeout_min, timeout);
                 }
                 buffer = recv(buffer, timeout_value);
                 if (buffer == null)
@@ -1438,10 +1437,11 @@ public class API
         return poll_request(timeout, true);
     }
 
-    private HashMap<String, List<String>> binary_key_value_parse(final byte[] b)
+    private HashMap<String,
+                    ArrayList<String>> binary_key_value_parse(final byte[] b)
     {
-        HashMap<String, List<String> > result =
-            new HashMap<String, List<String> >();
+        HashMap<String, ArrayList<String> > result =
+            new HashMap<String, ArrayList<String> >();
         String key = null;
         int binary_i = 0;
         for (int binary_j = 0; binary_j < b.length; ++binary_j)
@@ -1454,7 +1454,7 @@ public class API
                 }
                 else
                 {
-                    List<String> value = result.get(key);
+                    ArrayList<String> value = result.get(key);
                     final String element = new String(b, binary_i,
                                                       binary_j - binary_i);
                     if (value == null)
@@ -1475,12 +1475,14 @@ public class API
         return result;
     }
 
-    public HashMap<String, List<String>> request_http_qs_parse(final byte[] r)
+    public HashMap<String,
+                   ArrayList<String>> request_http_qs_parse(final byte[] r)
     {
         return binary_key_value_parse(r);
     }
 
-    public HashMap<String, List<String>> info_key_value_parse(final byte[] info)
+    public HashMap<String,
+                   ArrayList<String>> info_key_value_parse(final byte[] info)
     {
         return binary_key_value_parse(info);
     }

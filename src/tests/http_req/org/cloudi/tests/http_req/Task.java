@@ -41,7 +41,7 @@
 package org.cloudi.tests.http_req;
 
 import java.util.HashMap;
-import java.util.List;
+import java.util.ArrayList;
 import com.ericsson.otp.erlang.OtpErlangPid;
 import org.cloudi.API;
 
@@ -80,9 +80,9 @@ public class Task implements Runnable
                API.ReturnSyncException,
                API.InvalidInputException
     {
-        HashMap<String, List<String> > http_qs =
+        HashMap<String, ArrayList<String>> http_qs =
             this.api.request_http_qs_parse(request);
-        final List<String> value = http_qs.remove("value");
+        final ArrayList<String> value = http_qs.remove("value");
         String response = null;
         if (value != null)
         {
