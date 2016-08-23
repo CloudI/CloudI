@@ -171,8 +171,8 @@ find_match_node([H | T] = Match, Key, {I0, I1, Data} = Node)
                         true ->
                             case wildcard_match_lists(ChildNode, T) of
                                 true ->
-                                    {ok, lists:reverse([H | Key]) ++
-                                     ChildNode, Value};
+                                    {ok, lists:reverse([H | Key],
+                                                       ChildNode), Value};
                                 false ->
                                     error
                             end
@@ -198,7 +198,7 @@ find_match_element_1([_ | T] = Match, Key, {I0, I1, Data})
             Suffix = [$* | ChildNode],
             case wildcard_match_lists(Suffix, Match) of
                 true ->
-                    {ok, lists:reverse(Key) ++ Suffix, Value};
+                    {ok, lists:reverse(Key, Suffix), Value};
                 false ->
                     error
             end
@@ -235,7 +235,7 @@ find_match_element_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
         true ->
             case wildcard_match_lists(ChildNode, T) of
                 true ->
-                    {ok, lists:reverse([H | Key]) ++ ChildNode, Value};
+                    {ok, lists:reverse([H | Key], ChildNode), Value};
                 false ->
                     find_match_element_N(T, Key, WildValue, Node)
             end
@@ -364,7 +364,7 @@ fold_match_node_1([H | T], F, A, Prefix, {I0, _, Data})
         Value =/= error ->
             case wildcard_match_lists(T, ChildNode) of
                 true ->
-                    F(lists:reverse(NewPrefix) ++ ChildNode, Value, A);
+                    F(lists:reverse(NewPrefix, ChildNode), Value, A);
                 false ->
                     A
             end;
@@ -404,10 +404,10 @@ fold_match_element_1([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
         _ ->
             NewA = if
                 Value =/= error ->
-                    Suffix = lists:reverse([(Offset + I) | Mid]) ++ Node,
+                    Suffix = lists:reverse([(Offset + I) | Mid], Node),
                     case wildcard_match_lists(Match, Suffix) of
                         true ->
-                            F(lists:reverse(Prefix) ++ Suffix, Value, A);
+                            F(lists:reverse(Prefix, Suffix), Value, A);
                         false ->
                             A
                     end;
@@ -451,7 +451,7 @@ fold_match_element_N([$*] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
         _ ->
             NewA = if
                 Value =/= error ->
-                    F(lists:reverse([(Offset + I) | Mid] ++ Prefix) ++ Node,
+                    F(lists:reverse([(Offset + I) | Mid] ++ Prefix, Node),
                       Value, A);
                 true ->
                     A
@@ -473,7 +473,7 @@ fold_match_element_N([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
                         Value =/= error ->
                             case wildcard_match_lists(NewMatch, Node) of
                                 true ->
-                                    F(lists:reverse(NewPrefix) ++ Node,
+                                    F(lists:reverse(NewPrefix, Node),
                                       Value, A);
                                 false ->
                                     A
@@ -503,11 +503,10 @@ fold_match_element_N([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
                 _ ->
                     NewA = if
                         Value =/= error ->
-                            Suffix = lists:reverse([(Offset + I) | Mid]) ++
-                                Node,
+                            Suffix = lists:reverse([(Offset + I) | Mid], Node),
                             case wildcard_match_lists(Match, Suffix) of
                                 true ->
-                                    F(lists:reverse(Prefix) ++ Suffix,
+                                    F(lists:reverse(Prefix, Suffix),
                                       Value, A);
                                 false ->
                                     A
