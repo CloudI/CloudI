@@ -64,7 +64,6 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
 * `Javascript >= 0.8.0 (nodejs/Ubuntu)`
-  * (node.js [package](https://github.com/joyent/node/wiki/installing-node.js-via-package-manager))
 * `Perl >= 5.10 (perl/Ubuntu)`
   * `Compress::Zlib (cpan)`
 * `PHP >= 5.3.6 (php5/Ubuntu)`
