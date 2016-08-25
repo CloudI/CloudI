@@ -60,7 +60,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= 17.5 (erlang/Ubuntu, erlang/macports)`
+* `Erlang >= 18.0 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
 * `Javascript >= 0.8.0 (nodejs/Ubuntu)`
@@ -104,9 +104,12 @@ See the [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#rea
 
 Integration points:
 
-* CloudI API (See [`src/api/README`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
+* CloudI API (See [`src/api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
 * HTTP with [`cloudi_service_http_cowboy`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
 * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.erl)
+* OAuth v1 with [`cloudi_service_oauth1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.erl)
+* TCP with [`cloudi_service_tcp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_tcp/src/cloudi_service_tcp.erl)
+* UDP with [`cloudi_service_udp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_udp/src/cloudi_service_udp.erl)
 * Supported databases (included)
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
   * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
@@ -118,11 +121,33 @@ Integration points:
   * Riak with [`cloudi_service_db_riak`](https://github.com/CloudI/cloudi_service_db_riak)
   * TokyoTyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/cloudi_service_db_tokyotyrant)
 
-Dynamic configuration uses the CloudI Service API (See [`src/service_api/README`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
+Dynamic Configuration and Monitoring:
 
-The default CloudI configuration runs many tests that can be used as
-examples of CloudI integration
-(see [`src/cloudi.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)).
+* CloudI Service API (See [`src/service_api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
+* Monitoring to Graphite, OpenTSDB, SNMP, or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
+
+Routing:
+
+* Caching Static File Data with [`cloudi_service_filesystem`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl)
+* HTTP Client Requests with [`cloudi_service_http_client`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_client/src/cloudi_service_http_client.erl)
+* HTTP REST Handlers with [`cloudi_service_http_rest`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_rest/src/cloudi_service_http_rest.erl)
+* Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl))
+* Durable Service Requests with [`cloudi_service_queue`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl)
+* Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
+* Altering Request Destinations with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
+* Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)
+
+The default CloudI configuration can run the included integration tests
+if all the supported programming languages are enabled at configure time
+(they are by default) and the `--with-integration-tests-ran` configuration
+argument is used (to choose the [`src/cloudi_tests.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in) file).
+
+If the `--with-integration-tests-ran` configuration argument is not used,
+the more minimal CloudI configuration will be used instead
+(in the [`src/cloudi_minimal.conf.in`](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in) file) to support basic things like the
+[Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#readme),
+the [Dashboard](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme)
+and any tutorials or examples.
 
 ## CONTACT
 

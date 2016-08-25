@@ -55,7 +55,7 @@ expects HTTP requests to port 6464 with the proper service path and format
 
 The CloudI dashboard provides a web UI with all the CloudI Service API
 functionality available to the user visually.  The installed configuration
-provides the web UI on port 6464 (i.e., http://localhost:6464/cloudi/).
+provides the web UI on port 6464 (i.e., [http://localhost:6464/cloudi/](http://localhost:6464/cloudi/)).
 
 ### EXAMPLES
 
