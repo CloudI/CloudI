@@ -2002,20 +2002,20 @@ process_update(UpdatePlan,
     #config_service_update{update_now = UpdateNow,
                            spawn_os_process = SpawnOsProcess,
                            queue_requests = false} = UpdatePlan,
-    NewState = case update(State, UpdatePlan) of
+    {NewOsProcess, NewState} = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
             false = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
-            NextState;
+            {false, NextState};
         {ok, {error, _} = Error} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
-            State;
+            {false, State};
         {ok, #state_socket{port = Port} = StateSocket, NextState} ->
             true = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, {ok, Port}},
             receive
                 {'cloudi_service_update_after', ok} ->
-                    update_after(StateSocket, NextState);
+                    {true, update_after(StateSocket, NextState)};
                 {'cloudi_service_update_after', error} ->
                     ok = socket_close(StateSocket),
                     erlang:exit(update_failed)
@@ -2026,11 +2026,11 @@ process_update(UpdatePlan,
             erlang:exit(update_failed)
     end,
     if
-        SpawnOsProcess =:= true ->
+        NewOsProcess =:= true ->
             % wait to receive 'polling' to make sure initialization is complete
             % with the newly created OS process
             NewState#state{update_plan = undefined};
-        SpawnOsProcess =:= false ->
+        NewOsProcess =:= false ->
             process_queues(NewState#state{update_plan = undefined})
     end.
 
