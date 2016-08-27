@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix CloudI Service API services_update for external services
+      so that unsubscribe automatically occurs on all subscriptions
+      immediately before the initialization of a new OS process,
+      if a new OS process is spawned due to the update
+    * Update cpg
+
 2016-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update trie

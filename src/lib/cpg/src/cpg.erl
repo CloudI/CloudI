@@ -33,8 +33,8 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -61,6 +61,10 @@
          leave/2,
          leave/3,
          leave/4,
+         leave_counts/1,
+         leave_counts/2,
+         leave_counts/3,
+         leave_counts/4,
          join_count/1,
          join_count/2,
          join_count/3,
@@ -85,6 +89,9 @@
          which_groups/1,
          which_groups/2,
          which_groups/3,
+         which_groups_counts/1,
+         which_groups_counts/2,
+         which_groups_counts/3,
          get_closest_pid/1,
          get_closest_pid/2,
          get_closest_pid/3,
@@ -527,6 +534,72 @@ leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts)
+    when is_list(Counts) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()}) | scope(),
+                   pid() | list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts, Pid)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Scope, Counts)
+    when is_atom(Scope), is_list(Counts) ->
+    leave_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope() | list({name(), pos_integer()}),
+                   list({name(), pos_integer()}) | pid(),
+                   pid() | pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Counts, Pid, Timeout)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope(),
+                   list({name(), pos_integer()}),
+                   pid(),
+                   pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid, Timeout)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, Timeout).
+
 leave_impl(Scope, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, Pid},
@@ -541,6 +614,17 @@ leave_impl(Scope, Pid, Timeout)
 leave_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {leave, GroupName, Pid},
+    case gen_server:call(Scope, Request, Timeout) of
+        ok ->
+            gen_server:abcast(nodes(), Scope, Request),
+            ok;
+        error ->
+            error
+    end.
+
+leave_counts_impl(Scope, Counts, Pid, Timeout)
+    when node(Pid) =:= node() ->
+    Request = {leave_counts, Counts, Pid},
     case gen_server:call(Scope, Request, Timeout) of
         ok ->
             gen_server:abcast(nodes(), Scope, Request),
@@ -841,6 +925,72 @@ leave(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     leave_impl(Scope, GroupName, Pid, Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts)
+    when is_list(Counts) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(list({name(), pos_integer()}) | scope(),
+                   pid() | list({name(), pos_integer()})) ->
+    ok | error.
+
+leave_counts(Counts, Pid)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Scope, Counts)
+    when is_atom(Scope), is_list(Counts) ->
+    leave_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope() | list({name(), pos_integer()}),
+                   list({name(), pos_integer()}) | pid(),
+                   pid() | pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+leave_counts(Counts, Pid, Timeout)
+    when is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Leave specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec leave_counts(scope(),
+                   list({name(), pos_integer()}),
+                   pid(),
+                   pos_integer() | infinity) ->
+    ok | error.
+
+leave_counts(Scope, Counts, Pid, Timeout)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    leave_counts_impl(Scope, Counts, Pid, Timeout).
+
 leave_impl(Scope, Pid, Timeout) ->
     case global:trans({Scope, self()},
                       fun() ->
@@ -861,6 +1011,20 @@ leave_impl(Scope, GroupName, Pid, Timeout) ->
                           gen_server:multi_call([node() | nodes()],
                                                 Scope,
                                                 {leave, GroupName, Pid},
+                                                Timeout)
+                      end) of
+        {[_ | _] = Replies, _} ->
+            check_multi_call_replies(Replies);
+        _ ->
+            error
+    end.
+
+leave_counts_impl(Scope, Counts, Pid, Timeout) ->
+    case global:trans({{Scope, Counts}, self()},
+                      fun() ->
+                          gen_server:multi_call([node() | nodes()],
+                                                Scope,
+                                                {leave_counts, Counts, Pid},
                                                 Timeout)
                       end) of
         {[_ | _] = Replies, _} ->
@@ -925,7 +1089,7 @@ join_count(Scope, GroupName)
 join_count(Scope, GroupName, Pid)
     when is_atom(Scope), is_pid(Pid) ->
     gen_server:call(Scope,
-                    {join_count, GroupName, self()});
+                    {join_count, GroupName, Pid});
 
 join_count(GroupName, Pid, Timeout)
     when is_pid(Pid) ->
@@ -1601,6 +1765,58 @@ which_groups(Scope, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     gen_server:call(Scope,
                     {which_groups, Pid},
+                    Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(pid()) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Pid)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups_counts, Pid}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(scope() | pid(),
+                          pid() | pos_integer() | infinity) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Scope, Pid)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups_counts, Pid});
+
+which_groups_counts(Pid, Timeout)
+    when is_pid(Pid) ->
+    gen_server:call(?DEFAULT_SCOPE,
+                    {which_groups_counts, Pid},
+                    Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the join_count of each group a process has joined.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec which_groups_counts(scope(),
+                          pid(),
+                          pos_integer() | infinity) ->
+    list({name(), pos_integer()}).
+
+which_groups_counts(Scope, Pid, Timeout)
+    when is_atom(Scope), is_pid(Pid) ->
+    gen_server:call(Scope,
+                    {which_groups_counts, Pid},
                     Timeout).
 
 %%-------------------------------------------------------------------------
@@ -2783,26 +2999,33 @@ handle_call({leave, Pid} = Request, _,
     case dict:find(Pid, Pids) of
         {ok, GroupNameList} ->
             abcast_hidden_nodes(Request, State),
-            NewState = lists:foldl(fun(GroupName, S) ->
-                leave_group_completely(GroupName, Pid, leave_local, S)
-            end, State, GroupNameList),
-            {reply, ok, NewState};
+            {reply, ok,
+             leave_pid_completely(GroupNameList, Pid, leave_local, State)};
         error ->
             {reply, error, State}
     end;
 
 handle_call({leave, GroupName, Pid} = Request, _,
             #state{pids = Pids} = State) ->
-    Found = case dict:find(Pid, Pids) of
-        error ->
-            false;
-        {ok, GroupNameList} ->
-            lists:member(GroupName, GroupNameList)
-    end,
+    Valid = leave_valid(GroupName, Pid, Pids),
     if
-        Found ->
+        Valid ->
             abcast_hidden_nodes(Request, State),
             {reply, ok, leave_group(GroupName, Pid, leave_local, State)};
+        true ->
+            {reply, error, State}
+    end;
+
+handle_call({leave_counts, Counts, Pid} = Request, _,
+            #state{pids = Pids} = State) ->
+    Valid = leave_counts_valid(Counts, Pid, Pids),
+    if
+        Valid ->
+            abcast_hidden_nodes(Request, State),
+            NewState = lists:foldl(fun({GroupName, Count}, S) ->
+                leave_group_count(Count, GroupName, Pid, leave_local, S)
+            end, State, Counts),
+            {reply, ok, NewState};
         true ->
             {reply, error, State}
     end;
@@ -2857,6 +3080,32 @@ handle_call({which_groups, Pid}, _,
     case dict:find(Pid, Pids) of
         {ok, L} ->
             {reply, L, State};
+        error ->
+            {reply, [], State}
+    end;
+
+handle_call({which_groups_counts, Pid}, _,
+            #state{groups = {DictI, GroupsData},
+                   pids = Pids} = State) ->
+    case dict:find(Pid, Pids) of
+        {ok, L} ->
+            CountsN = lists:foldr(fun(GroupName, Counts0) ->
+                case DictI:find(GroupName, GroupsData) of
+                    error ->
+                        Counts0;
+                    {ok, #cpg_data{local_count = 0,
+                                   remote_count = 0}} ->
+                        Counts0;
+                    {ok, #cpg_data{history = History}} ->
+                        case count(Pid, History) of
+                            0 ->
+                                Counts0;
+                            Count ->
+                                [{GroupName, Count} | Counts0]
+                        end
+                end
+            end, [], L),
+            {reply, CountsN, State};
         error ->
             {reply, [], State}
     end;
@@ -2969,25 +3218,31 @@ handle_cast({leave, Pid},
             #state{pids = Pids} = State) ->
     case dict:find(Pid, Pids) of
         {ok, GroupNameList} ->
-            NewState = lists:foldl(fun(GroupName, S) ->
-                leave_group_completely(GroupName, Pid, leave_remote, S)
-            end, State, GroupNameList),
-            {noreply, NewState};
+            {noreply,
+             leave_pid_completely(GroupNameList, Pid, leave_remote, State)};
         error ->
             {noreply, State}
     end;
 
 handle_cast({leave, GroupName, Pid},
             #state{pids = Pids} = State) ->
-    Found = case dict:find(Pid, Pids) of
-        error ->
-            false;
-        {ok, GroupNameList} ->
-            lists:member(GroupName, GroupNameList)
-    end,
+    Valid = leave_valid(GroupName, Pid, Pids),
     if
-        Found ->
+        Valid ->
             {noreply, leave_group(GroupName, Pid, leave_remote, State)};
+        true ->
+            {noreply, State}
+    end;
+
+handle_cast({leave_counts, Counts, Pid},
+            #state{pids = Pids} = State) ->
+    Valid = leave_counts_valid(Counts, Pid, Pids),
+    if
+        Valid ->
+            NewState = lists:foldl(fun({GroupName, Count}, S) ->
+                leave_group_count(Count, GroupName, Pid, leave_remote, S)
+            end, State, Counts),
+            {noreply, NewState};
         true ->
             {noreply, State}
     end;
@@ -3095,7 +3350,7 @@ abcast_hidden_nodes(Request, #state{scope = Scope,
 create_group(GroupName,
              #state{groups = {DictI, GroupsData}} = State) ->
     NewGroupsData = DictI:update(GroupName,
-        fun(OldValue) -> OldValue end, #cpg_data{}, GroupsData),
+        fun(OldGroupData) -> OldGroupData end, #cpg_data{}, GroupsData),
     State#state{groups = {DictI, NewGroupsData}}.
 
 delete_group(GroupName,
@@ -3112,14 +3367,14 @@ delete_group(GroupName,
         {ok, #cpg_data{local = Local,
                        remote = Remote}} ->
             NewPids = lists:foldl(fun(#cpg_data_pid{pid = Pid,
-                                                    monitor = Ref}, P) ->
+                                                    monitor = Ref}, NextPids) ->
                 true = erlang:demonitor(Ref, [flush]),
                 cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
                                            leave_local),
                 dict:update(Pid,
-                            fun(OldValue) ->
-                                lists:delete(GroupName, OldValue)
-                            end, P)
+                            fun(OldGroupNameList) ->
+                                lists:delete(GroupName, OldGroupNameList)
+                            end, NextPids)
             end, Pids, Local ++ Remote),
             NewGroupsData = DictI:erase(GroupName, GroupsData),
             State#state{groups = {DictI, NewGroupsData},
@@ -3137,10 +3392,10 @@ join_group(GroupName, Pid, Reason,
             DictI:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
                               local = Local,
-                              history = History} = OldValue) ->
-                    OldValue#cpg_data{local_count = LocalI + 1,
-                                      local = [Entry | Local],
-                                      history = [Pid | History]}
+                              history = History} = OldGroupData) ->
+                    OldGroupData#cpg_data{local_count = LocalI + 1,
+                                          local = [Entry | Local],
+                                          history = [Pid | History]}
                 end,
                 #cpg_data{local_count = 1,
                           local = [Entry],
@@ -3150,10 +3405,10 @@ join_group(GroupName, Pid, Reason,
             DictI:update(GroupName,
                 fun(#cpg_data{remote_count = RemoteI,
                               remote = Remote,
-                              history = History} = OldValue) ->
-                    OldValue#cpg_data{remote_count = RemoteI + 1,
-                                      remote = [Entry | Remote],
-                                      history = [Pid | History]}
+                              history = History} = OldGroupData) ->
+                    OldGroupData#cpg_data{remote_count = RemoteI + 1,
+                                          remote = [Entry | Remote],
+                                          history = [Pid | History]}
                 end,
                 #cpg_data{remote_count = 1,
                           remote = [Entry],
@@ -3162,87 +3417,16 @@ join_group(GroupName, Pid, Reason,
     end,
     GroupNameList = [GroupName],
     NewPids = dict:update(Pid,
-                          fun(OldValue) ->
-                              lists:umerge(OldValue, GroupNameList)
+                          fun(OldGroupNameList) ->
+                              lists:umerge(OldGroupNameList, GroupNameList)
                           end,
                           GroupNameList, Pids),
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, Reason),
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
-leave_group(GroupName, Pid, Reason,
-            #state{groups = {DictI, GroupsData},
-                   pids = Pids,
-                   callbacks = Callbacks} = State) ->
-    Fselect = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
-        if 
-            P == Pid ->
-                true = erlang:demonitor(Ref, [flush]),
-                true;
-            true ->
-                false
-        end
-    end,
-    NextGroupsData = if
-        node() =:= node(Pid) ->
-            DictI:update(GroupName,
-                fun(#cpg_data{local_count = LocalI,
-                              local = Local,
-                              history = History} = OldValue) ->
-                    {OldLocalEntry,
-                     NewLocal} = select(Fselect, Local),
-                    I = if
-                        OldLocalEntry =:= undefined ->
-                            0;
-                        true ->
-                            1
-                    end,
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, Reason, I),
-                    NewHistory = lists:reverse(lists:delete(Pid,
-                        lists:reverse(History))),
-                    OldValue#cpg_data{local_count = LocalI - I,
-                                      local = NewLocal,
-                                      history = NewHistory}
-                end, GroupsData);
-        true ->
-            DictI:update(GroupName,
-                fun(#cpg_data{remote_count = RemoteI,
-                              remote = Remote,
-                              history = History} = OldValue) ->
-                    {OldRemoteEntry,
-                     NewRemote} = select(Fselect, Remote),
-                    I = if
-                        OldRemoteEntry =:= undefined ->
-                            0;
-                        true ->
-                            1
-                    end,
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, Reason, I),
-                    NewHistory = lists:reverse(lists:delete(Pid,
-                        lists:reverse(History))),
-                    OldValue#cpg_data{remote_count = RemoteI - I,
-                                      remote = NewRemote,
-                                      history = NewHistory}
-                end, GroupsData)
-    end,
-    {NewGroupsData, NewPids} = case DictI:find(GroupName, NextGroupsData) of
-        error ->
-            {NextGroupsData, Pids};
-        {ok, #cpg_data{local_count = 0,
-                       remote_count = 0}} ->
-            {DictI:erase(GroupName, NextGroupsData),
-             dict:update(Pid,
-                         fun(OldValue) ->
-                             lists:delete(GroupName, OldValue)
-                         end,
-                         Pids)};
-        {ok, #cpg_data{}} ->
-            {NextGroupsData, Pids}
-    end,
-    State#state{groups = {DictI, NewGroupsData},
-                pids = NewPids}.
+leave_group(GroupName, Pid, Reason, State) ->
+    leave_group_count(1, GroupName, Pid, Reason, State).
 
 leave_group_completely(GroupName, Pid, Reason,
                        #state{groups = {DictI, GroupsData},
@@ -3257,54 +3441,138 @@ leave_group_completely(GroupName, Pid, Reason,
                 false
         end
     end,
-    NextGroupsData = if
+    Fupdate = if
         node() =:= node(Pid) ->
-            DictI:update(GroupName,
-                fun(#cpg_data{local_count = LocalI,
-                              local = Local,
-                              history = History} = OldValue) ->
-                    {OldLocal,
-                     NewLocal} = lists:partition(Fpartition, Local),
-                    I = erlang:length(OldLocal),
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, Reason, I),
-                    OldValue#cpg_data{local_count = LocalI - I,
+            fun(#cpg_data{local_count = LocalI,
+                          local = Local,
+                          history = History} = OldGroupData) ->
+                {OldLocal,
+                 NewLocal} = lists:partition(Fpartition, Local),
+                I = erlang:length(OldLocal),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{local_count = LocalI - I,
                                       local = NewLocal,
                                       history = delete_all(Pid, History)}
-                end, GroupsData);
+            end;
         true ->
-            DictI:update(GroupName,
-                fun(#cpg_data{remote_count = RemoteI,
-                              remote = Remote,
-                              history = History} = OldValue) ->
-                    {OldRemote,
-                     NewRemote} = lists:partition(Fpartition, Remote),
-                    I = erlang:length(OldRemote),
-                    cpg_callbacks:notify_leave(Callbacks,
-                                               GroupName, Pid, Reason, I),
-                    OldValue#cpg_data{remote_count = RemoteI - I,
+            fun(#cpg_data{remote_count = RemoteI,
+                          remote = Remote,
+                          history = History} = OldGroupData) ->
+                {OldRemote,
+                 NewRemote} = lists:partition(Fpartition, Remote),
+                I = erlang:length(OldRemote),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{remote_count = RemoteI - I,
                                       remote = NewRemote,
                                       history = delete_all(Pid, History)}
-                end, GroupsData)
+            end
     end,
-    NewPids = dict:update(Pid,
-                          fun(OldValue) ->
-                              lists:delete(GroupName, OldValue)
-                          end,
-                          Pids),
-    NewGroupsData = case DictI:find(GroupName, NextGroupsData) of
-        error ->
-            NextGroupsData;
-        {ok, #cpg_data{local_count = 0,
-                       remote_count = 0}} ->
-            % necessary so that pattern matching entries are not shadowed
-            % by empty entries that provide exact matches
-            DictI:erase(GroupName, NextGroupsData);
-        {ok, #cpg_data{}} ->
-            NextGroupsData
+    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
+    NewGroupsData = case Fupdate(GroupData) of
+        #cpg_data{local_count = 0,
+                  remote_count = 0} ->
+            DictI:erase(GroupName, GroupsData);
+        #cpg_data{} = NewGroupData ->
+            DictI:store(GroupName, NewGroupData, GroupsData)
+    end,
+    NewPids = dict:update(Pid, fun(OldGroupNameList) ->
+        lists:delete(GroupName, OldGroupNameList)
+    end, Pids),
+    State#state{groups = {DictI, NewGroupsData},
+                pids = NewPids}.
+
+leave_group_count(Count, GroupName, Pid, Reason,
+                  #state{groups = {DictI, GroupsData},
+                         pids = Pids,
+                         callbacks = Callbacks} = State) ->
+    Fselect = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
+        if 
+            P == Pid ->
+                true = erlang:demonitor(Ref, [flush]),
+                true;
+            true ->
+                false
+        end
+    end,
+    Fupdate = if
+        node() =:= node(Pid) ->
+            fun(#cpg_data{local_count = LocalI,
+                          local = Local,
+                          history = History} = OldGroupData) ->
+                {I, NewLocal} = select(Fselect, Count, Local),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                NextHistory = delete_count_reverse(Pid, I,
+                    lists:reverse(History)),
+                OldGroupData#cpg_data{local_count = LocalI - I,
+                                      local = NewLocal,
+                                      history = NextHistory}
+            end;
+        true ->
+            fun(#cpg_data{remote_count = RemoteI,
+                          remote = Remote,
+                          history = History} = OldGroupData) ->
+                {I, NewRemote} = select(Fselect, Count, Remote),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                NextHistory = delete_count_reverse(Pid, I,
+                    lists:reverse(History)),
+                OldGroupData#cpg_data{remote_count = RemoteI - I,
+                                      remote = NewRemote,
+                                      history = NextHistory}
+            end
+    end,
+    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
+    {NewGroupsData,
+     Member} = case Fupdate(GroupData) of
+        #cpg_data{local_count = 0,
+                  remote_count = 0} ->
+            {DictI:erase(GroupName, GroupsData), false};
+        #cpg_data{history = NewHistory} = NewGroupData ->
+            {DictI:store(GroupName, NewGroupData, GroupsData),
+             lists:member(Pid, NewHistory)}
+    end,
+    NewPids = if
+        Member =:= true ->
+            Pids;
+        Member =:= false ->
+            dict:update(Pid, fun(OldGroupNameList) ->
+                lists:delete(GroupName, OldGroupNameList)
+            end, Pids)
     end,
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
+
+leave_pid_completely([], Pid, _, #state{pids = NewPids} = State) ->
+    State#state{pids = dict:erase(Pid, NewPids)};
+leave_pid_completely([GroupName | GroupNameList], Pid, Reason, State) ->
+    NewState = leave_group_completely(GroupName, Pid, Reason, State),
+    leave_pid_completely(GroupNameList, Pid, Reason, NewState).
+
+leave_valid(GroupName, Pid, Pids) ->
+    case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:member(GroupName, GroupNameList)
+    end.
+
+leave_counts_valid(Counts, Pid, Pids) ->
+    case dict:find(Pid, Pids) of
+        error ->
+            false;
+        {ok, GroupNameList} ->
+            lists:all(fun(GroupNameCount) ->
+                case GroupNameCount of
+                    {GroupName, Count} when is_integer(Count), Count > 0 ->
+                        lists:member(GroupName, GroupNameList);
+                    _ ->
+                        false
+                end
+            end, Counts)
+    end.
 
 store_conflict_add_entries(0, Entries, _) ->
     Entries;
@@ -3496,11 +3764,8 @@ member_died(Pid, Reason, #state{pids = Pids} = State) ->
         error ->
             % monitor message latency
             State;
-        {ok, GroupNames} ->
-            #state{pids = NewPids} = NewState = lists:foldl(fun(GroupName, S) ->
-                leave_group_completely(GroupName, Pid, Reason, S)
-            end, State, GroupNames),
-            NewState#state{pids = dict:erase(Pid, NewPids)}
+        {ok, GroupNameList} ->
+            leave_pid_completely(GroupNameList, Pid, Reason, State)
     end.
 
 whereis_name_random(1, [Pid]) ->
@@ -3508,7 +3773,7 @@ whereis_name_random(1, [Pid]) ->
 whereis_name_random(N, L) ->
     lists:nth(random(N), L).
 
-delete_all(Elem, List) when is_list(List) ->
+delete_all(Elem, List) ->
     delete_all(Elem, [], List).
 delete_all(Elem, L, [Elem | T]) ->
     delete_all(Elem, L, T);
@@ -3517,7 +3782,20 @@ delete_all(Elem, L, [H | T]) ->
 delete_all(_, L, []) ->
     lists:reverse(L).
 
-count(Elem, List) when is_list(List) ->
+delete_count_reverse(_, 0, List) ->
+    lists:reverse(List);
+delete_count_reverse(Elem, I, List) ->
+    delete_count_reverse(Elem, [], I, List).
+delete_count_reverse(Elem, L, 1, [Elem | T]) ->
+    lists:reverse(T, L);
+delete_count_reverse(Elem, L, I, [Elem | T]) ->
+    delete_count_reverse(Elem, L, I - 1, T);
+delete_count_reverse(Elem, L, I, [H | T]) ->
+    delete_count_reverse(Elem, [H | L], I, T);
+delete_count_reverse(_, _, _, []) ->
+    erlang:exit(badarg).
+
+count(Elem, List) ->
     count(List, 0, Elem).
 count([], I, _) ->
     I;
@@ -3526,16 +3804,18 @@ count([Elem | T], I, Elem) ->
 count([_ | T], I, Elem) ->
     count(T, I, Elem).
 
-select(F, List) when is_function(F, 1), is_list(List) ->
-    select(List, [], F).
-select([], Output, _) ->
-    {undefined, lists:reverse(Output)};
-select([H | T], Output, F) ->
+select(F, Count, List) ->
+    select(List, 0, [], Count, F).
+select(T, I, Output, 0, _) ->
+    {I, lists:reverse(Output, T)};
+select([], I, Output, _, _) ->
+    {I, lists:reverse(Output)};
+select([H | T], I, Output, Count, F) ->
     case F(H) of
         true ->
-            {H, lists:reverse(Output) ++ T};
+            select(T, I + 1, Output, Count - 1, F);
         false ->
-            select(T, [H | Output], F)
+            select(T, I, [H | Output], Count, F)
     end.
 
 -compile({inline, [{random,1}]}).

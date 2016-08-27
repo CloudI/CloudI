@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2014 Michael Truog
-%%% @version 1.3.3 {@date} {@time}
+%%% @copyright 2013-2016 Michael Truog
+%%% @version 1.5.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_test).
@@ -96,7 +96,19 @@ via3_test() ->
     true = is_integer(I4),
     I5 = index(cpg_test_server:pid(ViaName), Pids),
     true = is_integer(I5),
-    true = ((I1 /= I2) orelse (I2 /= I3) orelse (I3 /= I4) orelse (I4 /= I5)),
+    I6 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I6),
+    I7 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I7),
+    I8 = index(cpg_test_server:pid(ViaName), Pids),
+    true = is_integer(I8),
+    true = ((I1 /= I2) orelse
+            (I2 /= I3) orelse
+            (I3 /= I4) orelse
+            (I4 /= I5) orelse
+            (I5 /= I6) orelse
+            (I6 /= I7) orelse
+            (I7 /= I8)),
     erlang:unlink(Pid1),
     erlang:unlink(Pid2),
     erlang:unlink(Pid3),
@@ -315,6 +327,32 @@ callbacks_test() ->
     ok = cpg:remove_leave_callback("GroupA", Callback4),
     ok = cpg:remove_leave_callback("GroupB", Callback5),
     ok = cpg:remove_leave_callback("GroupC", Callback6),
+    ok.
+
+pid_counts_test() ->
+    Pid1 = erlang:spawn(fun busy_pid/0),
+    Pid2 = erlang:spawn(fun busy_pid/0),
+    Pid3 = erlang:spawn(fun busy_pid/0),
+    ok = cpg:join("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid1),
+    ok = cpg:join("GroupA", Pid1),
+    ok = cpg:join("GroupB", Pid1),
+    ok = cpg:join("GroupB", Pid1),
+    ok = cpg:join("GroupC", Pid1),
+    ok = cpg:join("GroupB", Pid2),
+    ok = cpg:join("GroupB", Pid2),
+    ok = cpg:join("GroupB", Pid3),
+    ok = cpg:join("GroupC", Pid3),
+    [{"GroupA", 3},
+     {"GroupB", 2},
+     {"GroupC", 1}] = Pid1Counts = cpg:which_groups_counts(Pid1),
+    [{"GroupB", 2}] = Pid2Counts = cpg:which_groups_counts(Pid2),
+    [{"GroupB", 1},
+     {"GroupC", 1}] = Pid3Counts = cpg:which_groups_counts(Pid3),
+    ok = cpg:leave_counts(Pid1Counts, Pid1),
+    ok = cpg:leave_counts(Pid2Counts, Pid2),
+    ok = cpg:leave_counts(Pid3Counts, Pid3),
+    ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
 
 cpg_stop_test_() ->

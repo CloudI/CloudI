@@ -2000,33 +2000,37 @@ process_queue(#state{dispatcher = Dispatcher,
 process_update(UpdatePlan,
                #state{dispatcher = Dispatcher} = State) ->
     #config_service_update{update_now = UpdateNow,
+                           spawn_os_process = SpawnOsProcess,
                            queue_requests = false} = UpdatePlan,
-    {NewOsProcess, NewState} = case update(State, UpdatePlan) of
+    NewState = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
+            false = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
-            {false, NextState};
+            NextState;
+        {ok, {error, _} = Error} ->
+            UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
+            State;
         {ok, #state_socket{port = Port} = StateSocket, NextState} ->
+            true = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, {ok, Port}},
             receive
                 {'cloudi_service_update_after', ok} ->
-                    {true, update_after(StateSocket, NextState)};
+                    update_after(StateSocket, NextState);
                 {'cloudi_service_update_after', error} ->
                     ok = socket_close(StateSocket),
                     erlang:exit(update_failed)
             end;
-        {ok, {error, _} = Error} ->
-            UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
-            {false, State};
         {error, _} = Error ->
+            true = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             erlang:exit(update_failed)
     end,
     if
-        NewOsProcess =:= true ->
+        SpawnOsProcess =:= true ->
             % wait to receive 'polling' to make sure initialization is complete
             % with the newly created OS process
             NewState#state{update_plan = undefined};
-        NewOsProcess =:= false ->
+        SpawnOsProcess =:= false ->
             process_queues(NewState#state{update_plan = undefined})
     end.
 
@@ -2658,13 +2662,22 @@ update_state(#state{dispatcher = Dispatcher,
                 dest_allow = DestAllow,
                 options = ConfigOptionsN}.
 
-update_after(StateSocket, State) ->
+update_after(StateSocket,
+             #state{dispatcher = Dispatcher,
+                    timeout_init = Timeout,
+                    options = #config_service_options{
+                        scope = Scope}} = State) ->
     case socket_recv_term(StateSocket) of
         {ok, {'pid', OsPid}, NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
             update_after(NewStateSocket, os_pid_set(OsPid, NewState));
         {ok, 'init', NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
+            % before initialization begins, remove all old subscriptions
+            % (not necessary for internal services,
+            %  external services do their initialization on every update that
+            %  restarts the OS process)
+            cloudi_x_cpg:leave(Scope, Dispatcher, Timeout),
             ok = os_init(NewState),
             NewState;
         {error, Reason} ->
