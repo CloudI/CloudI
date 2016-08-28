@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -193,6 +193,28 @@ namespace
                     cloudi_instance_t * m_p;
                     cloudi_callback_t m_f;
             };
+            class callback_null_response :
+                public CloudI::API::callback_function_generic
+            {
+                public:
+                    callback_null_response() {}
+                    virtual ~callback_null_response() throw() {}
+
+                    virtual void operator () (int const,
+                                              char const * const,
+                                              char const * const,
+                                              void const * const,
+                                              uint32_t const,
+                                              void const * const,
+                                              uint32_t const,
+                                              uint32_t,
+                                              int8_t,
+                                              char const * const,
+                                              char const * const,
+                                              uint32_t const)
+                    {
+                    }
+            };
 
         public:
             callback_function(CloudI::API::callback_function_generic * p) :
@@ -201,6 +223,12 @@ namespace
             callback_function(cloudi_instance_t * p,
                               cloudi_callback_t f) :
                 m_function(new callback_function_c(p, f)) {}
+
+            static callback_function null_response()
+            {
+                callback_function null_response(new callback_null_response());
+                return null_response;
+            }
 
             void operator () (int const command,
                               char const * const name,
@@ -314,14 +342,18 @@ namespace
             callback_function find(std::string const & pattern)
             {
                 lookup_queue_t::iterator itr = m_lookup.find(pattern);
-                assert(itr != m_lookup.end());
+                if (itr == m_lookup.end())
+                    return m_null_response;
                 return itr->second.cycle();
             }
 
         private:
+            static callback_function const m_null_response;
             lookup_queue_t m_lookup;
             
     };
+    callback_function const callback_function_lookup::m_null_response =
+        callback_function::null_response();
     typedef callback_function_lookup lookup_t;
     typedef realloc_ptr<char> buffer_t;
 

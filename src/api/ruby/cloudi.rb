@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -301,6 +301,11 @@ module CloudI
             return poll_request(nil, false)
         end
 
+        def null_response(command, name, pattern, request_info, request,
+                          timeout, priority, trans_id, pid)
+            return ''
+        end
+
         def callback(command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid)
             request_time_start = nil
@@ -309,9 +314,12 @@ module CloudI
                 @request_timeout = timeout
             end
             function_queue = @callbacks.fetch(pattern, nil)
-            API.assert{function_queue != nil}
-            function = function_queue.shift
-            function_queue.push(function)
+            if function_queue.nil?
+                function = method(:null_response)
+            else
+                function = function_queue.shift
+                function_queue.push(function)
+            end
             case command
             when MESSAGE_SEND_ASYNC
                 begin
@@ -695,6 +703,7 @@ module CloudI
             raise 'Assertion failed !' unless yield # if $DEBUG
         end
 
+        private :null_response
         private :callback
         private :handle_events
         private :poll_request

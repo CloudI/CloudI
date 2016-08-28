@@ -108,7 +108,6 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   char const * const pid,
                                   uint32_t const pid_size);
 
-
 #define cloudi_get_response(p)               ((p)->response)
 #define cloudi_get_response_size(p)          ((p)->response_size)
 #define cloudi_get_response_info(p)          ((p)->response_info)

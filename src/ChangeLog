@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix CloudI Service API services_update timeout bug
+    * Change CloudI Service API services_update to use a gradual
+      transition between service name pattern subscriptions for
+      external service updates so that the new OS process initialization
+      occurs before the old OS process subscriptions are removed
+    * Change the CloudI API implementations to provide a null response
+      when a service name pattern doesn't exist as a subscription, so
+      that old service requests that have been queued before an
+      external service update automatically get a null response after the
+      update is done
+
 2016-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix CloudI Service API services_update for external services

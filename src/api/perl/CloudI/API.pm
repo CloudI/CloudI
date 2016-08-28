@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -544,6 +544,14 @@ sub timeout_terminate
     return $self->{_timeout_terminate};
 }
 
+sub _null_response
+{
+    my $self = shift;
+    my ($command, $name, $pattern, $request_info, $request,
+        $timeout, $priority, $trans_id, $pid) = @_;
+    return '';
+}
+
 sub _callback
 {
     my $self = shift;
@@ -554,10 +562,17 @@ sub _callback
         $self->{_request_timer} = _milliseconds();
         $self->{_request_timeout} = $timeout;
     }
-    my @function_queue = $self->{_callbacks}{$pattern};
-    assert(scalar(@function_queue) > 0);
-    my $function = shift(@function_queue);
-    push(@function_queue, $function);
+    my $function;
+    if (! defined($self->{_callbacks}{$pattern}))
+    {
+        $function = sub { return $self->_null_response(@_); };
+    }
+    else
+    {
+        my @function_queue = $self->{_callbacks}{$pattern};
+        $function = shift(@function_queue);
+        push(@function_queue, $function);
+    }
     if ($command == MESSAGE_SEND_ASYNC)
     {
         my $response_info;

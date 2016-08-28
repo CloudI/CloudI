@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -412,6 +412,13 @@ class API
         return $this->timeout_terminate;
     }
 
+    private function null_response($command, $name, $pattern,
+                                   $request_info, $request,
+                                   $timeout, $priority, $trans_id, $pid)
+    {
+        return '';
+    }
+
     private function callback($command, $name, $pattern,
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
@@ -421,10 +428,16 @@ class API
             $this->request_timer = microtime(true);
             $this->request_timeout = $timeout;
         }
-        assert(isset($this->callbacks[$pattern]));
-        $function_queue =& $this->callbacks[$pattern];
-        $function = array_shift($function_queue);
-        $function_queue[] = $function;
+        if (! isset($this->callbacks[$pattern]))
+        {
+            $function = array($this, 'null_response');
+        }
+        else
+        {
+            $function_queue =& $this->callbacks[$pattern];
+            $function = array_shift($function_queue);
+            $function_queue[] = $function;
+        }
         switch ($command)
         {
             case MESSAGE_SEND_ASYNC:

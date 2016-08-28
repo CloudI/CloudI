@@ -95,6 +95,16 @@ public class API
             return new PrintStream(stream, true);
         }
     }
+    private static class NullResponse implements FunctionInterface9
+    {
+        public Object invoke(Integer command, String name, String pattern,
+                             byte[] request_info, byte[] request,
+                             Integer timeout, Byte priority,
+                             byte[] trans_id, OtpErlangPid pid)
+        {
+            return ("").getBytes();
+        }
+    }
     public static final PrintStream out = unbuffered(System.out);
     public static final PrintStream err = unbuffered(System.err);
 
@@ -122,6 +132,7 @@ public class API
     private boolean initialization_complete;
     private boolean terminate;
     private final HashMap<String, LinkedList<FunctionInterface9>> callbacks;
+    private final FunctionInterface9 null_response;
     private final int buffer_size;
     private long request_timer;
     private Integer request_timeout;
@@ -176,6 +187,7 @@ public class API
         this.initialization_complete = false;
         this.terminate = false;
         this.callbacks = new HashMap<String, LinkedList<FunctionInterface9>>();
+        this.null_response = new NullResponse();
         this.buffer_size = Integer.parseInt(buffer_size_str);
         this.process_index = 0;
         this.process_count = 0;
@@ -1011,8 +1023,16 @@ public class API
         }
         LinkedList<FunctionInterface9> callback_list =
             this.callbacks.get(pattern);
-        callback_list.addLast(callback_list.removeFirst());
-        FunctionInterface9 callback = callback_list.peekLast();
+        FunctionInterface9 callback = null;
+        if (callback_list == null)
+        {
+            callback = this.null_response;
+        }
+        else
+        {
+            callback_list.addLast(callback_list.removeFirst());
+            callback = callback_list.peekLast();
+        }
         if (command == MESSAGE_SEND_ASYNC)
         {
             try

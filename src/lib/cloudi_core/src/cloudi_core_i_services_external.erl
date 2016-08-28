@@ -189,6 +189,9 @@
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
+        % old subscriptions to remove after an update's initialization
+        subscribed = []
+            :: list({cloudi:service_name_pattern(), pos_integer()}),
         % ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
@@ -399,7 +402,9 @@ init([Protocol, SocketPath,
                            prefix = Prefix,
                            timeout_init = Timeout,
                            init_timer = InitTimer,
+                           subscribed = Subscriptions,
                            options = #config_service_options{
+                               scope = Scope,
                                aspects_init_after = Aspects}} = State) ->
     % initialization is now complete because the CloudI API poll function
     % has been called for the first time (i.e., by the service code)
@@ -409,9 +414,15 @@ init([Protocol, SocketPath,
         {ok, NewServiceState} ->
             ok = cloudi_core_i_configurator:
                  service_initialized_process(Dispatcher),
+            % if this is a new OS process after an update,
+            % the old subscriptions are removed so that only the
+            % subscriptions from the new initialization remain
+            cloudi_x_cpg:leave_counts(Scope, Subscriptions,
+                                      Dispatcher, infinity),
             {next_state, 'HANDLE',
              process_queues(State#state{service_state = NewServiceState,
-                                        init_timer = undefined})};
+                                        init_timer = undefined,
+                                        subscribed = []})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
@@ -2526,19 +2537,29 @@ update(_, #config_service_update{update_start = false}) ->
     {ok, {error, update_start_failed}};
 update(State, #config_service_update{spawn_os_process = false} = UpdatePlan) ->
     {ok, undefined, update_state(State, UpdatePlan)};
-update(#state{dispatcher = Dispatcher} = State,
-       #config_service_update{spawn_os_process = true} = UpdatePlan) ->
+update(State, #config_service_update{spawn_os_process = true} = UpdatePlan) ->
     ok = socket_close(update, socket_data_from_state(State)),
     NewState = update_state(State, UpdatePlan),
     case socket_new(NewState) of
         {ok, StateSocket} ->
-            #state{timeout_init = Timeout} = NewState,
+            #state{dispatcher = Dispatcher,
+                   timeout_init = Timeout,
+                   options = #config_service_options{
+                       scope = Scope}} = NewState,
             InitTimer = erlang:send_after(Timeout, Dispatcher,
                                           'cloudi_service_init_timeout'),
+            % all old subscriptions are stored but not removed until after
+            % the new OS process is initialized
+            % (if old service requests are queued for service name patterns
+            %  that are no longer valid for the new OS process, the CloudI API
+            %  implementation will make sure a null response is returned)
+            Subscriptions = cloudi_x_cpg:which_groups_counts(Scope, Dispatcher,
+                                                             Timeout),
             {ok, StateSocket,
              socket_data_to_state(StateSocket,
                                   NewState#state{os_pid = undefined,
-                                                 init_timer = InitTimer})};
+                                                 init_timer = InitTimer,
+                                                 subscribed = Subscriptions})};
         {error, _} = Error ->
             Error
     end.
@@ -2662,22 +2683,13 @@ update_state(#state{dispatcher = Dispatcher,
                 dest_allow = DestAllow,
                 options = ConfigOptionsN}.
 
-update_after(StateSocket,
-             #state{dispatcher = Dispatcher,
-                    timeout_init = Timeout,
-                    options = #config_service_options{
-                        scope = Scope}} = State) ->
+update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of
         {ok, {'pid', OsPid}, NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
             update_after(NewStateSocket, os_pid_set(OsPid, NewState));
         {ok, 'init', NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
-            % before initialization begins, remove all old subscriptions
-            % (not necessary for internal services,
-            %  external services do their initialization on every update that
-            %  restarts the OS process)
-            cloudi_x_cpg:leave(Scope, Dispatcher, Timeout),
             ok = os_init(NewState),
             NewState;
         {error, Reason} ->

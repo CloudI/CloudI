@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -319,15 +319,21 @@ class API(object):
     def timeout_terminate(self):
         return self.__timeout_terminate
 
+    def __null_response(self, command, name, pattern, request_info, request,
+                        timeout, priority, trans_id, pid):
+        return b''
+
     def __callback(self, command, name, pattern, request_info, request,
                    timeout, priority, trans_id, pid):
         if self.__request_timeout_adjustment:
             self.__request_timer = default_timer()
             self.__request_timeout = timeout
         function_queue = self.__callbacks.get(pattern, None)
-        assert function_queue is not None
-        function = function_queue.popleft()
-        function_queue.append(function)
+        if function_queue is None:
+            function = self.__null_response
+        else:
+            function = function_queue.popleft()
+            function_queue.append(function)
         if command == _MESSAGE_SEND_ASYNC:
             try:
                 response = function(API.ASYNC, name, pattern,

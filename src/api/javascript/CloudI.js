@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -591,6 +591,13 @@ CloudI.API.prototype.timeout_terminate = function () {
     return this._timeout_terminate;
 };
 
+CloudI.API.prototype._null_response = function (command, name, pattern,
+                                                request_info, request,
+                                                timeout, priority,
+                                                trans_id, pid) {
+    return '';
+};
+
 CloudI.API.prototype._callback = function (command, name, pattern,
                                            request_info, request,
                                            timeout, priority, trans_id, pid) {
@@ -600,9 +607,14 @@ CloudI.API.prototype._callback = function (command, name, pattern,
         API._request_timeout = timeout;
     }
     var function_queue = API._callbacks[pattern];
-    assert(function_queue !== undefined);
-    var f = function_queue.shift();
-    function_queue.push(f);
+    var f;
+    if (function_queue === undefined) {
+        f = {obj: API, obj_f: API._null_response};
+    }
+    else {
+        f = function_queue.shift();
+        function_queue.push(f);
+    }
     switch (command) {
         case MESSAGE_SEND_ASYNC:
             var domain_async = domain.create();
