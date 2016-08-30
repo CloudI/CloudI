@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix autoconf Erlang version check to work with github versions, like
+      "18.3.4.1" (with 2 or more separate patch numbers instead of 1)
+
 2016-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix CloudI Service API services_update timeout bug
