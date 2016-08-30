@@ -195,20 +195,22 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                             end
                     end,
                     [[_, Minor | RCString]] = string:tokens(Package, ".-"),
-                    {Patch, RC} = case RCString of
+                    {Patch1, Patch2} = case RCString of
                         [["rc" ++ RCStr | _]] ->
                             {"0", RCStr};
-                        [[PatchStr, "rc" ++ RCStr | _]] ->
-                            {PatchStr, RCStr};
-                        [[PatchStr | _]] ->
-                            {PatchStr, "0"};
+                        [[PatchStr1, "rc" ++ RCStr | _]] ->
+                            {PatchStr1, RCStr};
+                        [[PatchStr1, PatchStr2 | _]] ->
+                            {PatchStr1, PatchStr2};
+                        [[PatchStr1]] ->
+                            {PatchStr1, "0"};
                         [[]] ->
                             {"0", "0"}
                     end,
                     list_to_integer(Major) * 1000000 +
                     list_to_integer(Minor) * 1000 +
-                    list_to_integer(Patch) * 10 +
-                    list_to_integer(RC)
+                    list_to_integer(Patch1) * 10 +
+                    list_to_integer(Patch2)
             end,
             file:write_file("conftest.out", integer_to_list(Version)),
             ReturnValue = 0,
