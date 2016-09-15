@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 # DAMAGE.
 #
 
-import sys, struct, string, math, zlib
+import sys, struct, string, math, zlib, copy
 if int(sys.version[0]) >= 3:
     long = int
     unicode = str
@@ -265,6 +265,47 @@ class OtpErlangPid(object):
     def __eq__(self, other):
         return self.binary() == other.binary()
 
+# frozendict is under the PSF (Python Software Foundation) License
+# (from http://code.activestate.com/recipes/414283-frozen-dictionaries/)
+class frozendict(dict):
+    def _blocked_attribute(obj):
+        raise AttributeError('A frozendict cannot be modified.')
+    _blocked_attribute = property(_blocked_attribute)
+    __delitem__ = __setitem__ = clear = _blocked_attribute
+    pop = popitem = setdefault = update = _blocked_attribute
+    def __new__(cls, *args, **kw):
+        new = dict.__new__(cls)
+        args_ = []
+        for arg in args:
+            if isinstance(arg, dict):
+                arg = copy.copy(arg)
+                for k, v in arg.items():
+                    if isinstance(v, dict):
+                        arg[k] = frozendict(v)
+                    elif isinstance(v, list):
+                        v_ = list()
+                        for elm in v:
+                            if isinstance(elm, dict):
+                                v_.append( frozendict(elm) )
+                            else:
+                                v_.append( elm )
+                        arg[k] = tuple(v_)
+                args_.append( arg )
+            else:
+                args_.append( arg )
+        dict.__init__(new, *args_, **kw)
+        return new
+    def __init__(self, *args, **kw):
+        pass
+    def __hash__(self):
+        try:
+            return self._cached_hash
+        except AttributeError:
+            h = self._cached_hash = hash(frozenset(self.items()))
+            return h
+    def __repr__(self):
+        return "frozendict(%s)" % dict.__repr__(self)
+
 def binary_to_term(data):
     if type(data) != bytes:
         raise ParseException('not bytes input')
@@ -424,7 +465,12 @@ def _binary_to_term(i, data):
         for arity_index in range(arity):
             i, key = _binary_to_term(i, data)
             i, value = _binary_to_term(i, data)
-            pairs[key] = value
+            if type(key) == dict:
+                pairs[frozendict(key)] = value
+            elif type(key) == list:
+                pairs[OtpErlangList(key)] = value
+            else:
+                pairs[key] = value
         return (i, pairs)
     elif tag == _TAG_FUN_EXT:
         old_i = i
