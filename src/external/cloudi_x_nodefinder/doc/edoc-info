@@ -1,5 +1,6 @@
 %% encoding: UTF-8
 {application,nodefinder}.
-{packages,[]}.
-{modules,[nodefinder,nodefinder_app,nodefinder_ec2,nodefinder_multicast,
-          nodefinder_sup]}.
+{modules,[nodefinder,nodefinder_app,nodefinder_ec2,nodefinder_ec2_api,
+          nodefinder_ec2_api_aws,nodefinder_ec2_api_http,
+          nodefinder_ec2_api_httpc,nodefinder_ec2_api_xml,
+          nodefinder_multicast,nodefinder_sup]}.

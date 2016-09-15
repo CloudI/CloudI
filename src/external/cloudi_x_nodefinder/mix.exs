@@ -3,15 +3,31 @@ defmodule Nodefinder.Mixfile do
 
   def project do
     [app: :nodefinder,
-     version: "1.4.0",
+     version: "1.5.3",
      language: :erlang,
      description: description,
      package: package,
      deps: deps]
   end
 
+  def application do
+    [applications: [
+       :inets,
+       :xmerl,
+       :crypto,
+       :public_key,
+       :ssl],
+     mod: {:nodefinder_app, []},
+     registered: [
+       :nodefinder_ec2,
+       :nodefinder_multicast,
+       :nodefinder_sup],
+     env: [
+       node_type: :visible]]
+  end
+
   defp deps do
-    [{:erlcloud, "~> 0.9.2-rc.1"}]
+    []
   end
 
   defp description do
@@ -20,7 +36,7 @@ defmodule Nodefinder.Mixfile do
 
   defp package do
     [files: ~w(src doc rebar.config AUTHORS LICENSE ChangeLog README.markdown),
-     contributors: ["Michael Truog", "Paul Mineiro"],
+     maintainers: ["Michael Truog", "Paul Mineiro"],
      licenses: ["BSD"],
      links: %{"GitHub" => "https://github.com/okeuday/nodefinder"}]
    end

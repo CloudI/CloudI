@@ -63,15 +63,27 @@ main(_) ->
     exit_code(0).
 
 shell(Command, Arguments) ->
-    CommandSuffix = " && printf 0 || printf 1",
-    case lists:reverse(os:cmd(lists:flatten(
-        io_lib:format(Command ++ CommandSuffix, Arguments)))) of
-        [$0 | _] ->
+    Shell = erlang:open_port({spawn_executable, "/bin/sh"},
+                             [{args, ["-"]},
+                              stream, binary, stderr_to_stdout, exit_status]),
+    Exec = io_lib:format(Command, Arguments),
+    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
+    case shell_output(Shell, []) of
+        {0, _} ->
             ok;
-        [$1 | _] ->
-            io:format("\"~s\" failed!~n", [io_lib:format(Command, Arguments)]),
+        {Status, Output} ->
+            io:format("~s\"~s\" failed! exit ~w~n", [Output, Exec, Status]),
             error
+    end.
+
+shell_output(Shell, Output) ->
+    receive
+        {Shell, {data, Data}} ->
+            shell_output(Shell, [Data | Output]);
+        {Shell, {exit_status, Status}} ->
+            {Status, lists:reverse(Output)}
     end.
 
 exit_code(ExitCode) ->
     erlang:halt(ExitCode, [{flush, true}]).
+

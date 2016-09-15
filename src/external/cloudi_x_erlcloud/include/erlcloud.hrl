@@ -1,2 +1,0 @@
--type proplist() :: proplists:proplist().
--type datetime() :: {{pos_integer(), 1..12, 1..31}, {0..23, 0..59, 0..60}}.

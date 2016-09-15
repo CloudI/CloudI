@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Next release will be 1.5.3 instead of 1.5.2 due to dependency updates
+    * Update nodefinder and remove dependencies that are no longer necessary
+      (erlcloud, eini, lhttpc)
+    * Update msgpack
+    * Update reltool_util
+
 2016-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix autoconf Erlang version check to work with github versions, like

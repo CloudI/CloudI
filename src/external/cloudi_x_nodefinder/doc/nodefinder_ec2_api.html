@@ -2,45 +2,32 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Module nodefinder_sup</title>
+<title>Module nodefinder_ec2_api</title>
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
 <body bgcolor="white">
 <div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
 <hr>
 
-<h1>Module nodefinder_sup</h1>
+<h1>Module nodefinder_ec2_api</h1>
 <ul class="index"><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
 
-<p><b>Behaviours:</b> <a href="supervisor.html"><tt>supervisor</tt></a>.</p>
 
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#start_child-2">start_child/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td></td></tr>
-<tr><td valign="top"><a href="#stop_child-1">stop_child/1</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#describe_instances-1">describe_instances/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#new-3">new/3</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="init-1">init/1</a></h3>
+<h3 class="function"><a name="describe_instances-1">describe_instances/1</a></h3>
 <div class="spec">
-<p><tt>init(X1) -&gt; any()</tt></p>
+<p><tt>describe_instances(Config::<a href="#type-aws_config">aws_config()</a>) -&gt; {ok, <a href="#type-proplist">proplist()</a>} | {error, any()}</tt><br></p>
 </div>
 
-<h3 class="function"><a name="start_child-2">start_child/2</a></h3>
+<h3 class="function"><a name="new-3">new/3</a></h3>
 <div class="spec">
-<p><tt>start_child(Name::module(), Args::list()) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
-</div>
-
-<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
-<div class="spec">
-<p><tt>start_link() -&gt; {ok, pid()} | ignore | {error, any()}</tt><br></p>
-</div>
-
-<h3 class="function"><a name="stop_child-1">stop_child/1</a></h3>
-<div class="spec">
-<p><tt>stop_child(Name::module()) -&gt; ok | {error, restarting | not_running | not_found | simple_one_for_one}</tt><br></p>
+<p><tt>new(AccessKeyID::string(), SecretAccessKey::string(), Host::string()) -&gt; <a href="#type-aws_config">aws_config()</a></tt><br></p>
 </div>
 <hr>
 

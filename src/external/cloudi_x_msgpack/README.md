@@ -115,9 +115,9 @@ the option would be the best.
 
 - \* Tries to pack as `str` if it is a valid `string()`.
 
-### `{map_format, maps|jiffy|jsx}`
+### `{map_format, map|jiffy|jsx}`
 
-Both at packing and unpacking. Default value is `maps`.
+Both at packing and unpacking. Default value is `map`.
 
 ```erlang
 msgpack:pack(#{ <<"key">> => <<"value">> }, []).
@@ -149,6 +149,10 @@ Opt = [{ext,{Packer,Unpacker}}],
 Apache License 2.0
 
 # Release Notes
+
+## 0.6.0
+
+- Support OTP 19.0
 
 ## 0.5.0
 

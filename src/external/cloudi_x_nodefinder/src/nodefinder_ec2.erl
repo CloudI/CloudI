@@ -18,7 +18,7 @@
          handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--include_lib("erlcloud/include/erlcloud_aws.hrl").
+-include("nodefinder_ec2_api.hrl").
 
 -type group_input() :: string().
 -type tag_input() :: {list(string()) | string(), list(string()) | string()} |
@@ -114,7 +114,7 @@ validate_tags(_) ->
 %%%------------------------------------------------------------------------
 
 init([AccessKeyID, SecretAccessKey, EC2Host, Groups, Tags]) ->
-    Config = erlcloud_ec2:new(AccessKeyID, SecretAccessKey, EC2Host),
+    Config = nodefinder_ec2_api:new(AccessKeyID, SecretAccessKey, EC2Host),
     NewConfig = Config#aws_config{http_client = httpc},
     Connect = nodefinder_app:connect_type(),
     case preprocess(Tags, tag) of
@@ -380,7 +380,7 @@ node_names(Hosts, #state{} = State) ->
 
 ec2_instances_get(#state{ec2_config = Config,
                          ec2_instances = OldResult} = State) ->
-    case erlcloud_ec2:describe_instances(Config) of
+    case nodefinder_ec2_api:describe_instances(Config) of
         {ok, OldResult} ->
             {ok, false, State};
         {ok, NewResult} ->

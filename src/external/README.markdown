@@ -52,15 +52,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Mon Aug 11 10:57:20 PDT 2014`
 - `MIT`
 
-`eini`
-------
- `An Erlang INI parser`
- 
-- `https://github.com/accense/eini`
-- `commit 27f384d85d83d394d03828d78d5cb9afe3308749 (1.2.1)`
-- `Tue May 17 11:17:32 PDT 2016`
-- `Apache License 2.0`
-
 `elli`
 ------
 `Erlang HTTP Server`
@@ -96,15 +87,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `commit b74e913679a450ff754d8a3cb022948e308d0509 (1.5.0)`
 - `Mon May  5 12:36:52 PDT 2014`
 - `BSD`
-
-`erlcloud`
-----------
-`Cloud Service Integration APIs`
-
-- `https://github.com/erlcloud/erlcloud`
-- `commit ea39146ccbd98feaffa1832c5dec190bbc89a752 (0.13.5)`
-- `Thu Jul 21 16:23:20 PDT 2016`
-- `MIT`
 
 `exometer`
 ----------
@@ -179,15 +161,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Fri Dec 11 15:51:53 PST 2015`
 - `Apache License 2.0`
 
-`lhttpc`
---------
-`A lightweight Erlang HTTP/1.1 client`
-
-- `https://github.com/talko/lhttpc`
-- `commit 2d01a5f9c7543b77bdd57f44c92e72801f46e423 (1.4.0)`
-- `Tue May 17 11:17:32 PDT 2016`
-- `BSD`
-
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 -------------------------------------------------------------------
 `autoconf m4 macros for boost detection`
@@ -241,9 +214,9 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 ---------
 `MessagePack in Erlang`
 
-- `https://github.com/okeuday/msgpack-erlang`
-- `commit 3fcb204e41683bf68afba602177a34fbc05fbf3b`
-- `Wed May 18 19:39:55 PDT 2016`
+- `https://github.com/msgpack/msgpack-erlang`
+- `commit f4639fb968a0dc011c8e3ed16558624997b80cf2 (0.6.0)`
+- `Wed Sep 14 16:35:57 PDT 2016`
 - `Apache License 2.0`
 
 `nodefinder`
@@ -251,8 +224,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit 82766e3790b8235eaedf045cbd6ebfc4e332d40c (v1.5.1)`
-- `Wed Dec 23 18:41:56 PST 2015`
+- `commit eae14b74e376f90286db7a21bd21083ad7b7dd72 (v1.5.3)`
+- `Wed Sep 14 16:35:57 PDT 2016`
 - `BSD`
 
 `parse_trans`

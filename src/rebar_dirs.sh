@@ -30,18 +30,15 @@ REBAR_DIRS="\
     external/cloudi_x_bear \
     external/cloudi_x_cowboy \
     external/cloudi_x_cowlib \
-    external/cloudi_x_eini \
     external/cloudi_x_elli \
     external/cloudi_x_emysql \
     external/cloudi_x_epgsql \
     external/cloudi_x_epgsql_wg \
-    external/cloudi_x_erlcloud \
     external/cloudi_x_exometer \
     external/cloudi_x_exometer_core \
     external/cloudi_x_folsom \
     external/cloudi_x_goldrush \
     external/cloudi_x_jsx \
-    external/cloudi_x_lhttpc \
     external/cloudi_x_msgpack \
     external/cloudi_x_nodefinder \
     external/cloudi_x_pgsql \

@@ -86,8 +86,8 @@ Functionality details:
 
 Add security group TCP rules for:
 
-* port 4369 (`epmd`) 10.0.0.0/8
-* ports 4374-4474 (`inet_dist_listen`) 10.0.0.0/8
+* port 4369 (`epmd`) [10.0.0.0/8](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html)
+* ports 4374-4474 (`inet_dist_listen`) [10.0.0.0/8](http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/VPC_Subnets.html)
 
 Example:
 

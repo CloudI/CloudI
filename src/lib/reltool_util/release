@@ -1,12 +1,12 @@
 #!/usr/bin/env escript
 %%!
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
 %%%
 %%%------------------------------------------------------------------------
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -63,14 +63,25 @@ main(_) ->
     exit_code(0).
 
 shell(Command, Arguments) ->
-    CommandSuffix = " && printf 0 || printf 1",
-    case lists:reverse(os:cmd(lists:flatten(
-        io_lib:format(Command ++ CommandSuffix, Arguments)))) of
-        [$0 | _] ->
+    Shell = erlang:open_port({spawn_executable, "/bin/sh"},
+                             [{args, ["-"]},
+                              stream, binary, stderr_to_stdout, exit_status]),
+    Exec = io_lib:format(Command, Arguments),
+    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
+    case shell_output(Shell, []) of
+        {0, _} ->
             ok;
-        [$1 | _] ->
-            io:format("\"~s\" failed!~n", [io_lib:format(Command, Arguments)]),
+        {Status, Output} ->
+            io:format("~s\"~s\" failed! exit ~w~n", [Output, Exec, Status]),
             error
+    end.
+
+shell_output(Shell, Output) ->
+    receive
+        {Shell, {data, Data}} ->
+            shell_output(Shell, [Data | Output]);
+        {Shell, {exit_status, Status}} ->
+            {Status, lists:reverse(Output)}
     end.
 
 boot_rel_vsn({sys, Config} = _RelToolConfig) ->
@@ -108,13 +119,13 @@ execute_overlay([], _Vars, _BaseDir, _TargetDir) ->
     ok;
 execute_overlay([{mkdir, Out} | Rest], Vars, BaseDir, TargetDir) ->
     OutDir = mustache(filename:join(TargetDir, Out), Vars),
-    ok = shell("mkdir -p ~s", [OutDir]),
+    ok = shell("mkdir -p \"~s\"", [OutDir]),
     execute_overlay(Rest, Vars, BaseDir, TargetDir);
 execute_overlay([{copy, In, Out} | Rest], Vars, BaseDir, TargetDir) ->
     InFile = mustache(filename:join(BaseDir, In), Vars),
     OutFile = mustache(filename:join(TargetDir, Out), Vars),
     true = filelib:is_file(InFile),
-    ok = shell("cp -R ~s ~s", [InFile, OutFile]),
+    ok = shell("cp -R \"~s\" \"~s\"", [InFile, OutFile]),
     execute_overlay(Rest, Vars, BaseDir, TargetDir).
 
 exit_code(ExitCode) ->
