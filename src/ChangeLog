@@ -10,6 +10,7 @@
     * Update reltool_util
     * Update jinterface to 1.6.1 (from Erlang/OTP 18.3)
       to match the last maven package version
+    * Fix Java CloudI API javadoc comments
 
 2016-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 

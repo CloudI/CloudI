@@ -209,6 +209,7 @@ public class API
 
     /**
      * @return the number of threads to create per operating system process
+     * @throws InvalidInputException service execution failure
      */
     public static int thread_count()
         throws InvalidInputException
@@ -226,6 +227,8 @@ public class API
      * @param  pattern     the service name pattern
      * @param  instance    the object instance
      * @param  methodName  the object method to handle matching requests
+     *
+     * @throws NoSuchMethodException instance method arity is invalid
      */ 
     public void subscribe(final String pattern,
                           final Object instance,
@@ -268,10 +271,13 @@ public class API
      * Determine how may service name pattern subscriptions have occurred.
      *
      * @param  pattern     the service name pattern
+     *
+     * @return count of active subscriptions
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws TerminateException service execution must terminate
      */ 
     public int subscribe_count(final String pattern)
         throws InvalidInputException,
-               MessageDecodingException,
                TerminateException
     {
         OtpOutputStream subscribe_count = new OtpOutputStream();
@@ -295,6 +301,8 @@ public class API
      * Unsubscribes from a service name pattern. 
      *
      * @param pattern  the service name pattern
+     *
+     * @throws InvalidInputException not subscribed to service name pattern
      */
     public void unsubscribe(final String pattern)
         throws InvalidInputException
@@ -327,7 +335,11 @@ public class API
      *
      * @param name     the destination service name
      * @param request  the request data
+     *
      * @return         a transaction ID
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public TransId send_async(final String name,
                               final byte[] request)
@@ -348,7 +360,11 @@ public class API
      * @param request       the request data
      * @param timeout       the request timeout in milliseconds
      * @param priority      the request priority
+     *
      * @return              a transaction ID
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public TransId send_async(final String name,
                               final byte[] request_info,
@@ -386,7 +402,11 @@ public class API
      *
      * @param name          the destination service name
      * @param request       the request data
+     *
      * @return              the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response send_sync(final String name,
                               final byte[] request)
@@ -407,7 +427,11 @@ public class API
      * @param request       the request data
      * @param timeout       the request timeout in milliseconds
      * @param priority      the request priority
+     *
      * @return              the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response send_sync(final String name,
                               final byte[] request_info,
@@ -445,7 +469,11 @@ public class API
      *
      * @param name          the destination service name
      * @param request       the request data
+     *
      * @return              transaction IDs
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public ArrayList<TransId> mcast_async(final String name,
                                           final byte[] request)
@@ -466,7 +494,11 @@ public class API
      * @param request       the request data
      * @param timeout       the request timeout in milliseconds
      * @param priority      the priority of this request
+     *
      * @return              transaction IDs
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     @SuppressWarnings("unchecked")
     public ArrayList<TransId> mcast_async(final String name,
@@ -511,6 +543,10 @@ public class API
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
+     *
+     * @throws ForwardAsyncException async service request was forwarded
+     * @throws ForwardSyncException sync service request was forwarded
+     * @throws InvalidInputException invalid service request type
      */
     public void forward_(final Integer command,
                          final String name,
@@ -545,6 +581,8 @@ public class API
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
+     *
+     * @throws ForwardAsyncException async service request was forwarded
      */
     public void forward_async(final String name,
                               final byte[] request_info,
@@ -605,6 +643,8 @@ public class API
      * @param priority      the priority of this request
      * @param trans_id      the transaction ID
      * @param pid           the request's source process ID
+     *
+     * @throws ForwardSyncException sync service request was forwarded
      */
     public void forward_sync(final String name,
                              final byte[] request_info,
@@ -665,6 +705,10 @@ public class API
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
+     *
+     * @throws ReturnAsyncException async service request returned
+     * @throws ReturnSyncException sync service request returned
+     * @throws InvalidInputException invalid service request type
      */
     public void return_(final Integer command,
                         final String name,
@@ -698,6 +742,8 @@ public class API
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
+     *
+     * @throws ReturnAsyncException async service request returned
      */
     public void return_async(final String name,
                              final String pattern,
@@ -759,6 +805,8 @@ public class API
      * @param timeout        the request timeout in milliseconds
      * @param trans_id       the transaction ID
      * @param pid            the request's source process ID
+     *
+     * @throws ReturnSyncException sync service request returned
      */
     public void return_sync(final String name,
                             final String pattern,
@@ -814,6 +862,9 @@ public class API
      * Asynchronously receive a response.
      *
      * @return the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async()
         throws InvalidInputException,
@@ -827,7 +878,11 @@ public class API
      * Asynchronously receive a response.
      *
      * @param timeout  the receive timeout in milliseconds
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final Integer timeout)
         throws InvalidInputException,
@@ -841,7 +896,11 @@ public class API
      * Asynchronously receive a response.
      *
      * @param trans_id the transaction ID to receive
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final byte[] trans_id)
         throws InvalidInputException,
@@ -857,7 +916,11 @@ public class API
      * @param consume  if <code>true</code>, will consume the service request
      *                 so it is not accessible with the same function call in
      *                 the future
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final boolean consume)
         throws InvalidInputException,
@@ -872,7 +935,11 @@ public class API
      *
      * @param timeout  the receive timeout in milliseconds
      * @param trans_id the transaction ID to receive
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final Integer timeout,
                                final byte[] trans_id)
@@ -890,7 +957,11 @@ public class API
      * @param consume  if <code>true</code>, will consume the service request
      *                 so it is not accessible with the same function call in
      *                 the future
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final Integer timeout,
                                final boolean consume)
@@ -908,7 +979,11 @@ public class API
      * @param consume  if <code>true</code>, will consume the service request
      *                 so it is not accessible with the same function call in
      *                 the future
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final byte[] trans_id,
                                final boolean consume)
@@ -927,7 +1002,11 @@ public class API
      * @param consume  if <code>true</code>, will consume the service request
      *                 so it is not accessible with the same function call in
      *                 the future
+     *
      * @return         the response
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
      */
     public Response recv_async(final Integer timeout,
                                final byte[] trans_id,
