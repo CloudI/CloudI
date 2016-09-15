@@ -8,6 +8,7 @@
       (erlcloud, eini, lhttpc)
     * Update msgpack
     * Update reltool_util
+    * Update jinterface
 
 2016-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -128,9 +128,9 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 ------------
 `Binary Erlang Term Encoding Java Source Code`
 
-- `http://www.erlang.org/download/otp_src_18.0.tar.gz (jinterface-1.6)`
-- `(in otp_src_18.0/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
-- `Sat Aug  1 19:56:12 PDT 2015`
+- `http://erlang.org/download/otp_src_19.0.tar.gz (jinterface-1.7)`
+- `(in otp_src_19.0/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `Wed Sep 14 16:35:57 PDT 2016`
 - `Apache License 2.0`
 
 `jsonrpclib`
