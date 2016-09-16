@@ -19,8 +19,7 @@
 +P 65536
 
 ## Increase number of concurrent ports/sockets
--env ERL_MAX_PORTS 32768
-#+Q 32768 # change for 17.0
++Q 32768
 
 ## Distributed Erlang buffer size
 #+zdbbl 1024 # kB (valid values are 1 - 2097151)

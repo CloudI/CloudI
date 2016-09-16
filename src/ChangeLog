@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix old configuration entries
+
 2016-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.5.3 released
