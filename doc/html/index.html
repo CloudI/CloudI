@@ -3,12 +3,10 @@
   <title>CloudI: A Cloud at the lowest level</title>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing" name="description" />
-  <meta content="cloud, private cloud, framework, erlang, c++, distributed, fault tolerant, distributed systems, fault-tolerant, embarrassingly parallel, divide and conquer, work pool, cloudi" name="keywords" />
+  <meta content="cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi" name="keywords" />
   <meta content="global" name="distribution" />
+  <script type="text/javascript" src="style.js"></script>
   <link rel="stylesheet" type="text/css" href="style.css" />
-  <link rel="stylesheet" type="text/css" title="print"
-        href="print.css" />
-  <meta http-equiv="Default-Style" content="print" />
   <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
 </head>
 <body>
@@ -24,6 +22,8 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
     <li><a href="index.html" class="active">QUICKSTART</a></li>
     <li><a href="api.html">API</a></li>
     <li><a href="faq.html">FAQ</a></li>
+    <li><a href="tutorials.html">Tutorials</a>
+        (<a href="tutorial_java.html">Java</a>)</li>
     <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
   </ul>
@@ -62,8 +62,7 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
   </p>
 
   <h2>Quick Start</h2>
-  <div class="tabs">
-
+  <div class="tabs" style="min-height: 32em;">
   <div id="C">
   <a href="#C">C</a>
   <div class="tab_contents">
@@ -74,7 +73,7 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example C service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.c
 #include "cloudi.h"
 #include &lt;string.h&gt;
@@ -120,9 +119,9 @@ EOF
       </li>
       <li>
         Compile the CloudI service executable:
-<pre>
-gcc -I/usr/local/lib/cloudi-1.5.1/api/c \
-    -L/usr/local/lib/cloudi-1.5.1/api/c \
+<pre onclick="element_select(this);">
+gcc -I/usr/local/lib/cloudi-1.5.3/api/c \
+    -L/usr/local/lib/cloudi-1.5.3/api/c \
     -g -O0 -fexceptions hello_world.c -o hello_world_c -lcloudi
 </pre>
       </li>
@@ -131,15 +130,15 @@ gcc -I/usr/local/lib/cloudi-1.5.1/api/c \
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/c/"},
   {file_path, "$PWD/hello_world_c"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.1/api/c/"},
+          "/usr/local/lib/cloudi-1.5.3/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.1/api/c/"}]},
+          "/usr/local/lib/cloudi-1.5.3/api/c/"}]},
   {protocol, tcp}]]
 EOF
 </pre>
@@ -147,7 +146,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -158,7 +157,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/c/hello_world
 </pre>
       </li>
@@ -187,7 +186,7 @@ curl http://localhost:6464/quickstart/c/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example C++ service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.cpp
 #include "cloudi.hpp"
 #include &lt;string&gt;
@@ -242,9 +241,9 @@ EOF
       </li>
       <li>
         Compile the CloudI service executable:
-<pre>
-g++ -I/usr/local/lib/cloudi-1.5.1/api/c \
-    -L/usr/local/lib/cloudi-1.5.1/api/c \
+<pre onclick="element_select(this);">
+g++ -I/usr/local/lib/cloudi-1.5.3/api/c \
+    -L/usr/local/lib/cloudi-1.5.3/api/c \
     -g -O0 hello_world.cpp -o hello_world_cxx -lcloudi
 </pre>
       </li>
@@ -253,15 +252,15 @@ g++ -I/usr/local/lib/cloudi-1.5.1/api/c \
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/cxx/"},
   {file_path, "$PWD/hello_world_cxx"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.1/api/c/"},
+          "/usr/local/lib/cloudi-1.5.3/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.5.1/api/c/"}]},
+          "/usr/local/lib/cloudi-1.5.3/api/c/"}]},
   {protocol, tcp}]]
 EOF
 </pre>
@@ -269,7 +268,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -280,7 +279,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/cxx/hello_world
 </pre>
       </li>
@@ -309,7 +308,7 @@ curl http://localhost:6464/quickstart/cxx/hello_world
         because the service is ran inside the Erlang VM.
         The example Elixir service can be created by executing the following
         inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 mkdir lib
 cat &lt;&lt; EOF &gt; lib/HelloWorld.ex
 defmodule HelloWorld do
@@ -346,10 +345,10 @@ defmodule HelloWorld.Mixfile do
 
     def project do
         [app: :'Elixir.HelloWorld',
-         version: "1.5.1",
+         version: "1.5.3",
          elixirc_paths: ["lib/",
-                         "/usr/local/lib/cloudi-1.5.1/" &lt;&gt;
-                         "lib/cloudi_core-1.5.1/include/"],
+                         "/usr/local/lib/cloudi-1.5.3/" &lt;&gt;
+                         "lib/cloudi_core-1.5.3/include/"],
          deps: []]
     end
 
@@ -364,7 +363,7 @@ EOF
         Now compile the CloudI service module.  If the CloudI
         service needed to utilize other Elixir dependencies they would
         be added to the mix.exs file.
-<pre>
+<pre onclick="element_select(this);">
 mix compile
 </pre>
       </li>
@@ -376,7 +375,7 @@ mix compile
         To allow the Erlang VM to find the CloudI service Elixir module that has
         been compiled, it is necessary to add the current directory to the
         code path:
-<pre>
+<pre onclick="element_select(this);">
 export PWD=`pwd`
 curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld/ebin"' \
     http://localhost:6464/cloudi/api/rpc/code_path_add.erl
@@ -384,7 +383,7 @@ curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld/ebin"' \
       </li>
       <li>
         If Elixir isn't already in the Erlang VM code search path, add it:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d '"/usr/local/lib/elixir/lib/elixir/ebin"' \
     http://localhost:6464/cloudi/api/rpc/code_path_add.erl
 </pre>
@@ -394,7 +393,7 @@ curl -X POST -d '"/usr/local/lib/elixir/lib/elixir/ebin"' \
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/elixir/"},
   {module, 'Elixir.HelloWorld'}]]
@@ -404,7 +403,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -415,7 +414,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/elixir/hello_world
 </pre>
       </li>
@@ -443,7 +442,7 @@ curl http://localhost:6464/quickstart/elixir/hello_world
         because the service is ran inside the Erlang VM.
         The example Erlang service can be created by executing the following
         inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.erl
 -module(hello_world).
 -behaviour(cloudi_service).
@@ -485,9 +484,9 @@ EOF
         service needed to utilize other Erlang dependencies an Erlang/OTP .app
         file would be added with the same filename
         (see the examples <a href="https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme">for more details</a>).
-<pre>
-erlc -pz /usr/local/lib/cloudi-1.5.1/lib/cloudi_core-1.5.1 \
-    -pz /usr/local/lib/cloudi-1.5.1/lib/cloudi_core-1.5.1/ebin \
+<pre onclick="element_select(this);">
+erlc -pz /usr/local/lib/cloudi-1.5.3/lib/cloudi_core-1.5.3 \
+    -pz /usr/local/lib/cloudi-1.5.3/lib/cloudi_core-1.5.3/ebin \
     hello_world.erl
 </pre>
       </li>
@@ -499,7 +498,7 @@ erlc -pz /usr/local/lib/cloudi-1.5.1/lib/cloudi_core-1.5.1 \
         To allow the Erlang VM to find the CloudI service Erlang module that has
         been compiled, it is necessary to add the current directory to the
         code path:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d '"'`pwd`'"' \
     http://localhost:6464/cloudi/api/rpc/code_path_add.erl
 </pre>
@@ -509,7 +508,7 @@ curl -X POST -d '"'`pwd`'"' \
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/erlang/"},
   {module, hello_world}]]
@@ -519,7 +518,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -530,7 +529,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/erlang/hello_world
 </pre>
       </li>
@@ -560,7 +559,7 @@ curl http://localhost:6464/quickstart/erlang/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example Java service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 mkdir -p org/cloudi/tests/hello_world/
 cat &lt;&lt; EOF &gt; org/cloudi/tests/hello_world/Main.java
 package org.cloudi.tests.hello_world;
@@ -648,16 +647,16 @@ public class Task
 EOF
 cat &lt;&lt; EOF &gt; manifest.txt
 Main-Class: org.cloudi.tests.hello_world.Main
-Class-Path: /usr/local/lib/cloudi-1.5.1/api/java/cloudi.jar
+Class-Path: /usr/local/lib/cloudi-1.5.3/api/java/cloudi.jar
 
 EOF
 </pre>
       </li>
       <li>
         Compile the CloudI service jar:
-<pre>
+<pre onclick="element_select(this);">
 cd org/cloudi/tests/hello_world/
-CLASSPATH=/usr/local/lib/cloudi-1.5.1\
+CLASSPATH=/usr/local/lib/cloudi-1.5.3\
 /api/java/cloudi.jar:${CLASSPATH} javac Task.java Main.java
 cd ../../../../
 jar cvfm hello_world.jar manifest.txt org
@@ -668,13 +667,13 @@ jar cvfm hello_world.jar manifest.txt org
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export JAVA=`which java`
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/java/"},
   {file_path, "$JAVA"},
-  {args, "-cp /usr/local/lib/cloudi-1.5.1/api/java/ "
+  {args, "-cp /usr/local/lib/cloudi-1.5.3/api/java/ "
          "-ea:org.cloudi... -jar $PWD/hello_world.jar"},
   {protocol, tcp}]]
 EOF
@@ -683,7 +682,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -694,7 +693,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/java/hello_world
 </pre>
       </li>
@@ -723,9 +722,9 @@ curl http://localhost:6464/quickstart/java/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example JavaScript service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.js
-var CloudI = require('/usr/local/lib/cloudi-1.5.1/' +
+var CloudI = require('/usr/local/lib/cloudi-1.5.3/' +
                      'api/javascript/CloudI.js').CloudI;
 var assert = require('assert');
 
@@ -772,7 +771,7 @@ EOF
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export NODE=`which node`
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
@@ -786,7 +785,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -797,7 +796,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/javascript/hello_world
 </pre>
       </li>
@@ -826,7 +825,7 @@ curl http://localhost:6464/quickstart/javascript/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example Perl service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.pl
 use strict;
 use warnings;
@@ -874,14 +873,14 @@ EOF
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export PERL=`which perl`
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/perl/"},
   {file_path, "$PERL"},
   {args, "$PWD/hello_world.pl"},
-  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.5.1/api/perl"}]},
+  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.5.3/api/perl"}]},
   {protocol, tcp}]]
 EOF
 </pre>
@@ -889,7 +888,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -900,7 +899,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/perl/hello_world
 </pre>
       </li>
@@ -929,11 +928,11 @@ curl http://localhost:6464/quickstart/perl/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example PHP service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.php
 &lt;?php 
 
-require '/usr/local/lib/cloudi-1.5.1/api/php/CloudI.php';
+require '/usr/local/lib/cloudi-1.5.3/api/php/CloudI.php';
 
 class Task
 {
@@ -984,7 +983,7 @@ EOF
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export PHP=`which php`
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
@@ -998,7 +997,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -1009,7 +1008,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/php/hello_world
 </pre>
       </li>
@@ -1038,10 +1037,10 @@ curl http://localhost:6464/quickstart/php/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example Python service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.5.1/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.5.3/api/python/')
 import traceback
 from cloudi import API, terminate_exception
 
@@ -1076,7 +1075,7 @@ EOF
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export PYTHON=`which python`
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
@@ -1090,7 +1089,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -1101,7 +1100,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/python/hello_world
 </pre>
       </li>
@@ -1130,9 +1129,9 @@ curl http://localhost:6464/quickstart/python/hello_world
         because the service is ran inside an Operating System process
         (external to the Erlang VM).  The example Ruby service can be
         created by executing the following inside your shell:
-<pre>
+<pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.rb
-\$:.unshift '/usr/local/lib/cloudi-1.5.1/api/ruby'
+\$:.unshift '/usr/local/lib/cloudi-1.5.3/api/ruby'
 
 \$DEBUG = false
 
@@ -1185,7 +1184,7 @@ EOF
         specifies both the initialization and fault-tolerance constraints
         the CloudI service should be executed with
         (with the proplist format to rely on defaults):
-<pre>
+<pre onclick="element_select(this);">
 export RUBY=`which ruby` # must be &ge; 1.9
 export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
@@ -1199,7 +1198,7 @@ EOF
       <li>
         To dynamically add the CloudI service configuration that
         starts the service's execution use:
-<pre>
+<pre onclick="element_select(this);">
 curl -X POST -d @hello_world.conf \
     http://localhost:6464/cloudi/api/rpc/services_add.erl
 </pre>
@@ -1210,7 +1209,7 @@ curl -X POST -d @hello_world.conf \
         CloudI Service API to be used over HTTP.  The same HTTP server can
         be used to make a CloudI service request to the hello_world service
         with:
-<pre>
+<pre onclick="element_select(this);">
 curl http://localhost:6464/quickstart/ruby/hello_world
 </pre>
       </li>
@@ -1249,15 +1248,29 @@ curl http://localhost:6464/quickstart/ruby/hello_world
       <li>
         Get CloudI running (need
         <a href="faq.html#3_Options" target="_blank">./configure help?</a>):
-<pre>
+<pre onclick="element_select(this);">
 wget --content-disposition \
     http://sourceforge.net/projects/cloudi/files/latest/download
-tar zxvf cloudi-1.5.1.tar.gz
-cd cloudi-1.5.1/src
+</pre>
+<pre onclick="element_select(this);">
+tar zxvf cloudi-1.5.3.tar.gz
+</pre>
+<pre onclick="element_select(this);">
+cd cloudi-1.5.3/src
+</pre>
+<pre onclick="element_select(this);">
 ./configure
+</pre>
+<pre onclick="element_select(this);">
 make
+</pre>
+<pre onclick="element_select(this);">
 sudo make install
+</pre>
+<pre onclick="element_select(this);">
 cd ../..
+</pre>
+<pre onclick="element_select(this);">
 sudo cloudi start
 </pre>
       </li>
@@ -1273,15 +1286,6 @@ sudo cloudi start
   </div> <!-- Install -->
 
   </div> <!-- Quick Start tabs -->
-</div>
-
-<br />
-<br />
-<br />
-<br />
-<br />
-<div id="footer">
-<a href="config.html"><img style="position: absolute; right: 10; bottom: 0;" src="images/powered_by_cloudi.png" /></a>
 </div>
 
 </body>

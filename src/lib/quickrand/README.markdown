@@ -6,6 +6,9 @@ Quick Random Number Generation
 Provides a simple interface to call efficient random number generation
 functions based on the context.  Proper random number seeding is enforced.
 
+`random_wh82` is provided as an alternative to the `random` module
+which is scheduled to be removed in Erlang/OTP 20.
+
 Build
 -----
 
@@ -19,5 +22,5 @@ Michael Truog (mjtruog [at] gmail (dot) com)
 License
 -------
 
-BSD (`random_wh06_int.erl` is under the Erlang Public License)
+BSD
 

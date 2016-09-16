@@ -1,3 +1,38 @@
+September 15, 2016
+  Version 1.5.3 released.
+  * services_update is a new addition to the CloudI Service API for
+    updating any service without downtime, i.e., module hot-code reloading
+    with internal services and OS process restarts with external services
+    while CloudI ensures service requests are not lost and service request
+    handlers are not interrupted in any of the service processes or threads
+    (see http://cloudi.org/api.html#2_services_update for more information)
+  * A Java user tutorial has been added based on the work of Bruce Kissinger
+    (http://cloudi.org/tutorial_java.html)
+  * The Java CloudI API can now use method references with Java 8
+  * New service configuration options were added or improved:
+    'directory', 'dispatcher_pid_options', 'init_pid_options',
+    'request_pid_options', 'info_pid_options'
+    (http://cloudi.org/api.html#2_services_add has more information)
+  * Many of the database services were removed with their dependencies,
+    from the main repository due to service development demonstrating that
+    failures remain isolated when using a database client locally within a
+    service (database services can help scale usage and make sure it is
+    fault-tolerant, but only after the service business logic is in a stable
+    state and excluding these services will help guide developers)
+  * cloudi_service_monitoring was improved:
+    * Any Erlang process can create or update metrics now
+    * cloudi.log output can be monitored with
+      aspects_log_before or aspects_log_after
+    * All CloudI service related metrics now have a static metric name,
+      identified with TYPE.FILENAME.INDEX instead of the service ID
+      as described in the ChangeLog file
+  * Erlang internal services now have two optional behaviour functions
+    (some services choose to use only one of the functions):
+    * cloudi_service_handle_request/11
+    * cloudi_service_handle_info/3
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 December 23, 2015
   Version 1.5.1 released.
   * cloudi_service_monitoring is a new CloudI service that provides

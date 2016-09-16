@@ -12,9 +12,9 @@
 <h1>Module varpool</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Local_Variable_Pool">Local Variable Pool</a></h3>.
-<p>Copyright © 2015 Michael Truog</p>
+<p>Copyright © 2015-2016 Michael Truog</p>
 
-<p><b>Version:</b> 0.1.0 Dec 23 2015 13:21:21
+<p><b>Version:</b> 0.2.0 Sep 9 2016 15:12:12
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -43,31 +43,31 @@
 
 <h3 class="function"><a name="destroy-1">destroy/1</a></h3>
 <div class="spec">
-<p><tt>destroy(Varpool::#varpool{}) -&gt; ok</tt><br></p>
+<p><tt>destroy(Varpool::#varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}) -&gt; ok</tt><br></p>
 </div>
 
 <h3 class="function"><a name="get-2">get/2</a></h3>
 <div class="spec">
-<p><tt>get(Group::any(), Varpool::#varpool{}) -&gt; pid() | undefined</tt><br></p>
+<p><tt>get(Group::any(), Varpool::#varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}) -&gt; pid() | undefined</tt><br></p>
 </div>
 
 <h3 class="function"><a name="get-3">get/3</a></h3>
 <div class="spec">
-<p><tt>get(Group::any(), Key::any(), Varpool::#varpool{}) -&gt; pid() | undefined</tt><br></p>
+<p><tt>get(Group::any(), Key::any(), Varpool::#varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}) -&gt; pid() | undefined</tt><br></p>
 </div>
 
 <h3 class="function"><a name="new-1">new/1</a></h3>
 <div class="spec">
-<p><tt>new(Options::<a href="#type-options">options()</a>) -&gt; #varpool{}</tt><br></p>
+<p><tt>new(Options::<a href="#type-options">options()</a>) -&gt; #varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}</tt><br></p>
 </div>
 
 <h3 class="function"><a name="update-2">update/2</a></h3>
 <div class="spec">
-<p><tt>update(X1::any(), Varpool::#varpool{}) -&gt; {updated, #varpool{}} | {ignored, #varpool{}}</tt><br></p>
+<p><tt>update(X1::any(), Varpool::#varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}) -&gt; {updated, #varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}} | {ignored, #varpool{owner = pid(), supervisor = pid(), max_r = non_neg_integer(), max_t = pos_integer(), groups = <a href="dict.html#type-dict">dict:dict</a>(any(), #group{count_hash = pos_integer(), count_random = pos_integer(), count_total = pos_integer(), hash = fun((any(), pos_integer()) -&gt; non_neg_integer()), random = fun((pos_integer()) -&gt; non_neg_integer()), processes = <a href="array.html#type-array">array:array</a>(pid())}), processes = <a href="dict.html#type-dict">dict:dict</a>(pid(), {any(), non_neg_integer()}), monitors = [reference()]}}</tt><br></p>
 </div>
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Dec 23 2015, 13:21:21.</i></p>
+<p><i>Generated by EDoc, Sep 9 2016, 15:12:12.</i></p>
 </body>
 </html>

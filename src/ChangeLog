@@ -3,6 +3,7 @@
 
 2016-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 1.5.3 released
     * Update Python Erlang Binary Term Format source code to
       handle Erlang maps nested as keys in a map
 

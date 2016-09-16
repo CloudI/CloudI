@@ -14,9 +14,9 @@
    <h3><a name="reltool_Utility_Functions">reltool Utility Functions</a></h3>
    All the functions here are probably considered unorthodox, but
    are useful for runtime usage of applications and releases.
-<p>Copyright © 2013-2015 Michael Truog</p>
+<p>Copyright © 2013-2016 Michael Truog</p>
 
-<p><b>Version:</b> 1.5.1 Jul 8 2015 13:16:02
+<p><b>Version:</b> 1.5.2 Sep 9 2016 14:47:25
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -99,13 +99,21 @@
   <h4><a name="Make_sure_an_application_is_started.">Make sure an application is started.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#ensure_application_stopped-1">ensure_application_stopped/1</a></td><td>
   <h4><a name="Make_sure_an_application_is_stopped.">Make sure an application is stopped.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#is_deprecated-3">is_deprecated/3</a></td><td>
+  <h4><a name="Check_if_a_module_function_is_marked_as_deprecated.">Check if a module function is marked as deprecated.</a></h4>
+  The value false will always be returned if the beam file was stripped.</td></tr>
 <tr><td valign="top"><a href="#is_module_loaded-1">is_module_loaded/1</a></td><td>
   <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_module_loaded-2">is_module_loaded/2</a></td><td>
   <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
   Return a new timeout value with the elapsed time subtracted.</td></tr>
+<tr><td valign="top"><a href="#module_behaviours-1">module_behaviours/1</a></td><td>
+  <h4><a name="List_the_behaviours_used_by_a_module.">List the behaviours used by a module.</a></h4>
+  The information will not be present if the beam file was stripped.</td></tr>
 <tr><td valign="top"><a href="#module_exports-1">module_exports/1</a></td><td>
   <h4><a name="List_the_exported_functions_of_a_module.">List the exported functions of a module.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#module_load-1">module_load/1</a></td><td>
+  <h4><a name="Load_a_module.">Load a module.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#module_loaded-1">module_loaded/1</a></td><td>
   <h4><a name="Make_sure_a_module_is_loaded.">Make sure a module is loaded.</a></h4>
   If the module is not loaded, attempt to load it.</td></tr>
@@ -115,6 +123,15 @@
 <tr><td valign="top"><a href="#module_purged-2">module_purged/2</a></td><td>
   <h4><a name="Make_sure_a_module_is_purged_with_a_timeout.">Make sure a module is purged with a timeout.</a></h4>
   If the module is not loaded, ignore it.</td></tr>
+<tr><td valign="top"><a href="#module_reload-1">module_reload/1</a></td><td>
+  <h4><a name="Reload_a_module.">Reload a module.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#module_unload-1">module_unload/1</a></td><td>
+  <h4><a name="Unload_a_module.">Unload a module.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#module_version-1">module_version/1</a></td><td>
+  <h4><a name="Provide_the_current_version_of_the_module.">Provide the current version of the module.</a></h4>
+  A list is returned with an entry for each use of the -vsn attribute
+  in the order within the module file for the currently loaded version
+  (the result is consistent with beam_lib:version/1).</td></tr>
 <tr><td valign="top"><a href="#script_remove-1">script_remove/1</a></td><td>
   <h4><a name="Stop_everything_specified_within_a_script_file.">Stop everything specified within a script file.</a></h4>
   A script file is the input used when creating a boot file, which is the
@@ -353,6 +370,13 @@
   <h4><a name="Make_sure_an_application_is_stopped.">Make sure an application is stopped.</a></h4>
 </p>
 
+<h3 class="function"><a name="is_deprecated-3">is_deprecated/3</a></h3>
+<div class="spec">
+<p><tt>is_deprecated(Module::module(), Function::atom(), Arity::non_neg_integer()) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Check_if_a_module_function_is_marked_as_deprecated.">Check if a module function is marked as deprecated.</a></h4>
+  The value false will always be returned if the beam file was stripped.</p>
+
 <h3 class="function"><a name="is_module_loaded-1">is_module_loaded/1</a></h3>
 <div class="spec">
 <p><tt>is_module_loaded(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
@@ -367,11 +391,25 @@
   <h4><a name="Wait_to_check_if_a_module_is_loaded.">Wait to check if a module is loaded.</a></h4>
   Return a new timeout value with the elapsed time subtracted.</p>
 
+<h3 class="function"><a name="module_behaviours-1">module_behaviours/1</a></h3>
+<div class="spec">
+<p><tt>module_behaviours(Module::module()) -&gt; [module()]</tt><br></p>
+</div><p>
+  <h4><a name="List_the_behaviours_used_by_a_module.">List the behaviours used by a module.</a></h4>
+  The information will not be present if the beam file was stripped.</p>
+
 <h3 class="function"><a name="module_exports-1">module_exports/1</a></h3>
 <div class="spec">
 <p><tt>module_exports(Module::atom()) -&gt; [{atom(), pos_integer()}]</tt><br></p>
 </div><p>
   <h4><a name="List_the_exported_functions_of_a_module.">List the exported functions of a module.</a></h4>
+</p>
+
+<h3 class="function"><a name="module_load-1">module_load/1</a></h3>
+<div class="spec">
+<p><tt>module_load(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Load_a_module.">Load a module.</a></h4>
 </p>
 
 <h3 class="function"><a name="module_loaded-1">module_loaded/1</a></h3>
@@ -394,6 +432,30 @@
 </div><p>
   <h4><a name="Make_sure_a_module_is_purged_with_a_timeout.">Make sure a module is purged with a timeout.</a></h4>
   If the module is not loaded, ignore it.</p>
+
+<h3 class="function"><a name="module_reload-1">module_reload/1</a></h3>
+<div class="spec">
+<p><tt>module_reload(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Reload_a_module.">Reload a module.</a></h4>
+</p>
+
+<h3 class="function"><a name="module_unload-1">module_unload/1</a></h3>
+<div class="spec">
+<p><tt>module_unload(Module::atom()) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Unload_a_module.">Unload a module.</a></h4>
+</p>
+
+<h3 class="function"><a name="module_version-1">module_version/1</a></h3>
+<div class="spec">
+<p><tt>module_version(Module::atom()) -&gt; [any()]</tt><br></p>
+</div><p>
+  <h4><a name="Provide_the_current_version_of_the_module.">Provide the current version of the module.</a></h4>
+  A list is returned with an entry for each use of the -vsn attribute
+  in the order within the module file for the currently loaded version
+  (the result is consistent with beam_lib:version/1).
+  The information will not be present if the beam file was stripped.</p>
 
 <h3 class="function"><a name="script_remove-1">script_remove/1</a></h3>
 <div class="spec">
@@ -461,6 +523,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Jul 8 2015, 13:16:02.</i></p>
+<p><i>Generated by EDoc, Sep 9 2016, 14:47:25.</i></p>
 </body>
 </html>

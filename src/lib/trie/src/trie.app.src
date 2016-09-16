@@ -1,6 +1,9 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
 {application, trie,
   [{description, "Trie Data Structure"},
-   {vsn, "1.5.1"},
+   {vsn, "1.5.3"},
    {modules, [btrie, trie]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.

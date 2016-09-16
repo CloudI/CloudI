@@ -1,4 +1,3 @@
 %% encoding: UTF-8
 {application,reltool_util}.
-{packages,[]}.
 {modules,[reltool_util]}.

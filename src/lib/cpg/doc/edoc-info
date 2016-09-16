@@ -1,4 +1,4 @@
 %% encoding: UTF-8
 {application,cpg}.
-{modules,[cpg_app,cpg_callbacks,cpg_data,cpg_sup,supervisor_cpg,
+{modules,[cpg,cpg_app,cpg_callbacks,cpg_data,cpg_sup,supervisor_cpg,
           supervisor_cpg_spawn,supervisor_cpg_sup]}.

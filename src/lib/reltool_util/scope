@@ -966,12 +966,12 @@ progress_bar_pid_increment(Pid, I)
     Pid ! {progress_bar_increment, I},
     ok.
 
+progress_bar(#progress_bar{refresh = true} = ProgressBar) ->
+    progress_bar(progress_bar_display(ProgressBar));
 progress_bar(#progress_bar{count_i = CountI,
                            count_x = CountX} = ProgressBar)
     when CountI >= CountX ->
     progress_bar_destroy(ProgressBar);
-progress_bar(#progress_bar{refresh = true} = ProgressBar) ->
-    progress_bar(progress_bar_display(ProgressBar));
 progress_bar(#progress_bar{} = ProgressBar) ->
     receive
         {progress_bar_increment, I} ->

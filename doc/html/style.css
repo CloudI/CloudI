@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009-2013 Michael Truog
+ * Copyright (c) 2009-2016 Michael Truog
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,12 +26,13 @@
  */
 
 body { 
+    background: black;
+    color: white;
     font-family: sans-serif;
     font-size: 14pt;
+    margin: 8px;
 }
-table tr th {
-    font-size: 14pt;
-}
+table tr th,
 table tr td {
     font-size: 14pt;
 }
@@ -39,24 +40,38 @@ table {
     border-collapse: separate;
     border-spacing: 0px 10px;
 }
-
 a {
     background-color: transparent;
     text-decoration: none;
 }
-
+a:link,
+a:visited {
+    color: #80d4ff;
+}
+a:hover {
+    color: #fffd77;
+}
+p {
+    margin-block-start: 1em;
+    margin-block-end: 1em;
+}
 hr {
+    background: #e19832;
+    margin-block-start: 0.5em;
+    margin-block-end: 0.5em;
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+    box-sizing: border-box;
     margin: 3em 0 3em 0;
     border: 0;
-    border-top: 1px solid #ffffff;
+    border-top: 1px solid white;
     height: 0;
 }
-
 img {
     vertical-align: middle;
 }
-
 pre {
+    border-left-color: #2a2a2a;
     font-family: monospace;
     font-size: 12pt;
     padding-left: 1em;
@@ -66,22 +81,26 @@ pre {
 }
 
 #header {
+    color: #80d4ff;
     font-size: 6em;
     display: inline-block;
     font-weight: bolder; 
 }
 #header a {
+    color: #80d4ff;
     text-decoration: none;
 }
 #header img {
     border: none;
 }
 #sub-header {
+    color: white;
     font-size: 2em;
     display: inline-block;
     font-weight: bolder; 
 }
 #sub-header a {
+    color: white;
     text-decoration: none;
 }
 
@@ -92,6 +111,7 @@ pre {
     margin: 0 0 1em 0;
 }
 #navigation li {
+    border-left-color: #424242;
     list-style-type: none;
     float: left;
     margin-left: 10px;
@@ -106,8 +126,18 @@ pre {
     padding-left: 0;
 }
 #navigation li a {
+    color: #52ff52;
     text-decoration: none;
     font-weight: normal;
+}
+#navigation li a:hover {
+    color: #fffd77;
+}
+#navigation li a.active {
+    color: #fec83a;
+}
+#navigation li.noprint {
+    display: none;
 }
 #navigation li a img {
     border: none;
@@ -133,6 +163,7 @@ pre {
     margin-left: 1em;
 }
 #content p.code {
+    border-left-color: #2a2a2a;
     text-indent: -3em;
     font-family: monospace;
     padding-left: 4em;
@@ -151,19 +182,37 @@ pre {
 #content div.tabs {
     z-index: 0;
     position: relative;
-    min-height: 30em; /* quickstart height */
 }
 #content div.tabs > div {
     display: inline;
 }
 #content div.tabs > div > a {
+    /* inactive tab colors */
+    border: 1px solid #989898;
+    background: #989898;
+    color: black;
     text-decoration: none;
     padding: 0.2em;
+}
+#content div.tabs > div > a:hover,
+#content div.tabs > div > a:focus {
+    color: black;
+    background: white;
+}
+#content div.tabs > div:target > a,
+:target #quick_start > a {
+    /* active tab colors */
+    border-bottom: 1px solid black;
+    background: black;
+    color: white;
 }
 #content div.tabs > div:not(:target) > a {
     border-bottom: none;
 }
 #content div.tabs > div > div.tab_contents {
+    /* hidden tab contents */
+    background: black;
+    border: 1px solid #989898;
     z-index: -2;
     left: 0; top: 1.3em;
     bottom: 0; right: 0;
@@ -173,8 +222,7 @@ pre {
 #content div.tabs > div:not(:target) > div.tab_contents {
     position: absolute;
 }
-#content div.tabs > div:target > div.tab_contents,
-:target #quick_start > div.tab_contents {
+#content div.tabs > div:target > div.tab_contents {
     z-index: -1;
     position: absolute;
 }
@@ -189,3 +237,77 @@ pre {
     bottom: 0px;
 }
 
+@media print{
+body {
+    background: white;
+    color: black;
+}
+a:link,
+a:visited,
+a:hover {
+    color: blue;
+}
+hr {
+    background: white;
+}
+pre {
+    border-left-color: black;
+}
+#header,
+#header a {
+    color: black;
+}
+#sub-header,
+#sub-header a {
+    color: black;
+}
+#navigation li {
+    border-left-color: black;
+}
+#navigation li a,
+#navigation li a:hover,
+#navigation li a.active {
+    color: blue;
+}
+#navigation li.print {
+    display: none;
+}
+#content p.code {
+    border-left-color: black;
+}
+#content div.tabs > div > a {
+    /* inactive tab colors */
+    border: 1px solid #676767;
+    background: white;
+    color: black;
+}
+#content div.tabs > div > a:hover,
+#content div.tabs > div > a:focus {
+    color: white;
+    background: black;
+}
+#content div.tabs > div:target > a,
+:target #quick_start > a {
+    /* active tab colors */
+    border-bottom: 1px solid #333333;
+    background: white;
+    color: black;
+}
+#content div.tabs > div > div.tab_contents {
+    /* hidden tab contents */
+    background: white;
+    border: 1px solid #676767;
+    z-index: auto;
+    overflow: auto;
+}
+#content div.tabs > div:not(:target) > div.tab_contents {
+    position: static;
+}
+#content div.tabs > div:target > div.tab_contents {
+    z-index: auto;
+    position: static;
+}
+#footer {
+    display: none;
+}
+}

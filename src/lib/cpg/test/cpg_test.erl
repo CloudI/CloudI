@@ -1,5 +1,5 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et:
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
@@ -352,6 +352,12 @@ pid_counts_test() ->
     ok = cpg:leave_counts(Pid1Counts, Pid1),
     ok = cpg:leave_counts(Pid2Counts, Pid2),
     ok = cpg:leave_counts(Pid3Counts, Pid3),
+    [] = cpg:which_groups_counts(Pid1),
+    [] = cpg:which_groups_counts(Pid2),
+    [] = cpg:which_groups_counts(Pid2),
+    [] = cpg:which_groups(Pid1),
+    [] = cpg:which_groups(Pid2),
+    [] = cpg:which_groups(Pid2),
     ok = kill_pids([Pid1, Pid2, Pid3]),
     ok.
 

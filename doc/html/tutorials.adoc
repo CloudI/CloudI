@@ -1,0 +1,137 @@
+// process with "asciidoctor tutorials.adoc"
+= CloudI User Tutorials
+:description: Cloud Framework for fault-tolerant distributed processing with dynamic load balancing
+:keywords: tutorial, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi
+:stylesheet: asciidoctor_minimal.css
+:stylesdir: .
+:linkcss:
+:disable-javascript:
+:idprefix:
+:linkattrs:
+:revnumber: 1.5.3
+:revdate: 2016-09-14
+:lang: en
+:encoding: UTF-8
+:toc:
+:toc-title:
+:toc-placement: header
+:toclevels: 1
+:nofooter:
+
+== Why Use CloudI?
+
+CloudI enforces fault-tolerance constraints on source code while allowing source code to be efficient and scalable.
+With CloudI, you can create a system with Microservices that doesn't require virtualization or vendor lock-in.
+
+CloudI Frequently Asked Questions (FAQ) information that can provide more depth related to these concepts are:
+
+* link:faq.html#1_Microservices[Does CloudI provide a Microservice Architecture?]
+* link:faq.html#1_Messaging[How does CloudI compare to other open source messaging?]
+* link:faq.html#1_Clouds[How does CloudI compare to other "Clouds"?]
+
+== Programming Language CloudI API Tutorials
+
+The tutorials below focus on a single programming language to show that service development with CloudI only requires the use of a single programming language.
+If a supported programming language doesn't yet have a tutorial written yet, it is best to refer to the <<CloudI Examples>>.
+
+=== link:tutorial_java.html[Java Tutorial]
+
+== CloudI Examples
+
+All Supported Programming Languages::
+  * link:https://github.com/CloudI/CloudI/tree/master/doc#readme[Quick Start]
+  * Basic HTTP Request Integration Test
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c[C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java[Java]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl[Perl]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php[PHP]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req_c.py[Python/C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb[Ruby]
+  * Basic Message Size (Forwarding) Integration Test
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx_src/main.cpp[C++]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/src/cloudi_service_msg_size.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/org/cloudi/tests/msg_size/Task.java[Java]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.pl[Perl]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.php[PHP]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size_c.py[Python/C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.rb[Ruby]
+  * Basic Messaging Integration Test
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx_src/main.cpp[C++]
+  ** Erlang (link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence1.erl[Sequence 1] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence2.erl[Sequence 2] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence3.erl[Sequence 3] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence4.erl[Sequence 4])
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/org/cloudi/tests/messaging/Task.java[Java]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/MessagingTask.pm[Perl]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php[PHP]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging_c.py[Python/C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.rb[Ruby]
+C::
+  * link:https://github.com/okeuday/sillymud[MUD Game Server Using CloudI]
+  * link:https://github.com/okeuday/odroid_display[LCD Display Service]
+Erlang::
+  * link:https://github.com/CloudI/CloudI/tree/master/examples#examples[Embedding CloudI Into An Erlang Project]
+  * link:https://github.com/CloudI/CloudI#integration[Services Included With CloudI]
+Java::
+  * link:https://github.com/CloudI/cloudi_tutorial_java[Java Tutorial]
+Python::
+  * link:https://github.com/okeuday/odroid_fish[UTF8 Fish Swimming]
+
+== Guidelines For Creating A CloudI Service
+
+The information below can help guide your development of custom services with any supported programming language:
+
+=== How To Design A Service
+
+Service creation requires splitting functionality based on capabilities so that functionality and its associated development risk is isolated.
+However, the latency associated with the functionality should also be isolated within the programming language best suited to the task.
+Part of the decision to isolate service latency is minimizing the amount of data that must be exchanged in service requests.
+
+A common reason for creating a service is to isolate the risk associated with an external component that is sufficiently complex and is likely to require a variable amount of latency which needs to be managed as a unique entity to provide dependable processing (e.g., a large source code library, a database, a messaging bus, a filesystem, a third-party API, etc.).
+It is also common to create separate services due to source code libraries existing in a separate programming language.
+
+The simplest approach to service development, when creating a new service, is to develop the business logic that is necessary using as many services as required based on design requirements, basic testing, and benchmarking (if required), without isolating the use of external components.
+Then, as risks are identified during development, functionality can be moved into separate services to manage source code that needs fault tolerance guarantees.
+With this approach, the business logic will always have fault tolerance guarantees to keep all source code changes (which may include changing the external components used) isolated from other development during the lifetime of the business logic source code service(s).
+
+The main data throughput to the business logic should utilize CloudI service requests for reliable timeouts and service redundancy.
+Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
+The incoming HTTP requests are automatically load-balanced among the available services, based on the incoming URL path matching a service name pattern for a pool of service processes.
+
+CloudI services provide process pooling automatically when their configuration has a link:api.html#2_services_add[count_process or count_thread (of an external service)^] greater than 1.
+A CloudI service's process pooling can be adjusted dynamically based on the incoming service request rate by using the link:api.html#2_services_add_config_opts_count_process_dynamic[count_process_dynamic^] service configuration option.
+When a service request is sent it will automatically select a service execution process (which represents an external service thread within an OS process or an internal service Erlang process within the Erlang VM) randomly from those available, due to link:api.html#1_subscribe[subscribing^] with the same service name pattern.
+
+Relying on this process pooling keeps services dependable and helps to reduce their potential complexity, since a service developer only needs to focus on developing serial source code.
+The main exception to the pursuit of serial source code is due to the use of global state, which may require locking for consistency.
+Ideally, the use of global state can be avoided in the service source code because global state usage naturally increases latency unless low-level atomic operations are used to avoid locking.
+
+=== What Programming Language Should Be Used For Service Development?
+
+The decision of what programming language to use is generally based on the knowledge of the developer.
+The libraries that already exist and are known to be dependable will often determine which programming language to use.
+
+If the system (the combination of services during development) will be sending service requests from many separate services or will be receiving service requests within many separate services, usage of separate programming languages for each separate service can increase the computational requirements for the system, or at least will be a service configuration task to determine based on the computing resources available.
+External CloudI service instances (any CloudI service written in a programming language that doesn't execute on the Erlang VM) can create more than one OS process, but must create at least one OS process, so that service memory is isolated and the service processing is fault-tolerant.
+If the service request messaging is able to keep many separate external CloudI services busy the processing will be at the mercy of the OS kernel scheduler, which may make it easy to exhaust the computational resources available.
+
+Controlling the potential service request latency with the selection of the programming languages can avoid prematurely exhausting computational resources.
+A good approach is using as few programming languages that can reasonably be used for the business logic design.
+Based on CloudI link:faq.html#5_LoadTesting[loadtesting^] (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, Java, Python/C (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds) just due to inefficiencies within the programming language runtimes.
+By considering the latency requirements of the system early during development it will be easier to scale the deployment and avoid wasted development effort.
+
+If a programming language that runs on the Erlang VM is used, it is possible to develop with finer-grained fault tolerance in an internal CloudI service due to the usage of Erlang processes (similar to user-level threads with isolated memory) by CloudI.
+External CloudI services require that the memory used for execution of the service is isolated within an OS process and it is possible to hide an extreme amount of risk to reliability within a single external service instance, making this approach coarser-grained fault tolerance.
+
+=== What Data Format Should Be Used For Service Development?
+
+CloudI's service request and response data (i.e., request_info, request, response_info, response) is protocol agnostic, so any data format can be used for CloudI service communication.
+External services can only receive data that is sent as a binary type in the programming language used for the service request send.
+However, internal services can receive data of any type, though it is common to use binary types to allow the processing of service requests sent from external services.
+
+If you require a "universal protocol" (i.e., a protocol that can encode types from any programming language and handle them transparently in other programming languages), you may be disappointed to find out that no complete solution exists.
+If you approach the concept of a "universal protocol" as only handling the most minimal and common types available in programming languages, msgpack is a popular choice.
+The data format should be based on the requirements and it may require a human readable format, with JSON as a popular choice.
+
+There is nothing that prevents the usage of multiple data formats by a single CloudI service and typically a file extension suffix is used in the service name pattern to distinguish between different data formats.

@@ -43,7 +43,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$CloudI::API::VERSION = '1.51';
+$CloudI::API::VERSION = '1.53';
 
 use POSIX qw(getenv);
 use IO::Handle;
