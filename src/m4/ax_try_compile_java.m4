@@ -29,7 +29,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 6
+#serial 8
 
 AU_ALIAS([AC_TRY_COMPILE_JAVA], [AX_TRY_COMPILE_JAVA])
 AC_DEFUN([AX_TRY_COMPILE_JAVA],[
@@ -46,11 +46,10 @@ then
 dnl Don't remove the temporary files here, so they can be examined.
   ifelse([$3], , :, [$3])
 else
-  echo "configure: failed program was:" >&AC_FD_CC
-  cat Test.java >&AC_FD_CC
-ifelse([$4], , , [  rm -fr Test*
+  echo "configure: failed program was:" >&AS_MESSAGE_LOG_FD
+  cat Test.java >&AS_MESSAGE_LOG_FD
+ifelse([$4], , , [  rm -fr Test.java Test.class
   $4
 ])dnl
 fi
-rm -fr Test*])
-
+rm -fr Test.java Test.class])

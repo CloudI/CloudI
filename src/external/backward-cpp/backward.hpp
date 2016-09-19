@@ -186,6 +186,15 @@ extern "C" uintptr_t _Unwind_GetIPInfo(_Unwind_Context*, int*);
 #	include <signal.h>
 
 #	if BACKWARD_HAS_BFD == 1
+//              NOTE: defining PACKAGE{,_VERSION} is required before including
+//                    bfd.h on some platforms, see also:
+//                    https://sourceware.org/bugzilla/show_bug.cgi?id=14243
+#               ifndef PACKAGE
+#                       define PACKAGE
+#               endif
+#               ifndef PACKAGE_VERSION
+#                       define PACKAGE_VERSION
+#               endif
 #		include <bfd.h>
 #		ifndef _GNU_SOURCE
 #			define _GNU_SOURCE
@@ -1853,7 +1862,7 @@ private:
 class SignalHandling {
 public:
    static std::vector<int> make_default_signals() {
-       const int signals[] = {
+       const int posix_signals[] = {
 		// default action: Core
 		SIGILL,
 		SIGABRT,
@@ -1882,10 +1891,10 @@ public:
 		SIGXCPU,
 		SIGXFSZ
 	};
-        return std::vector<int>(signals, signals + sizeof signals / sizeof signals[0] );
+        return std::vector<int>(posix_signals, posix_signals + sizeof posix_signals / sizeof posix_signals[0] );
    }
 
-  SignalHandling(const std::vector<int>& signals = make_default_signals()):
+  SignalHandling(const std::vector<int>& posix_signals = make_default_signals()):
 	  _loaded(false) {
 		bool success = true;
 
@@ -1903,16 +1912,16 @@ public:
 			success = false;
 		}
 
-		for (size_t i = 0; i < signals.size(); ++i) {
+		for (size_t i = 0; i < posix_signals.size(); ++i) {
 			struct sigaction action;
 			memset(&action, 0, sizeof action);
 			action.sa_flags = (SA_SIGINFO | SA_ONSTACK | SA_NODEFER |
 					SA_RESETHAND);
 			sigfillset(&action.sa_mask);
-			sigdelset(&action.sa_mask, signals[i]);
+			sigdelset(&action.sa_mask, posix_signals[i]);
 			action.sa_sigaction = &sig_handler;
 
-			int r = sigaction(signals[i], &action, 0);
+			int r = sigaction(posix_signals[i], &action, 0);
 			if (r < 0) success = false;
 		}
 
@@ -1934,6 +1943,8 @@ private:
 		error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_RIP]);
 #elif defined(REG_EIP) // x86_32
 		error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.gregs[REG_EIP]);
+#elif defined(__arm__)
+		error_addr = reinterpret_cast<void*>(uctx->uc_mcontext.arm_pc);
 #else
 #	warning ":/ sorry, ain't know no nothing none not of your architecture!"
 #endif

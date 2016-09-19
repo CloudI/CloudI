@@ -37,17 +37,13 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 6
+#serial 7
 
 AU_ALIAS([AC_PROG_JAR], [AX_PROG_JAR])
 AC_DEFUN([AX_PROG_JAR],[
-AC_REQUIRE([AC_EXEEXT])dnl
-if test "x$JAVAPREFIX" = x; then
-        test "x$JAR" = x && AC_CHECK_PROGS(JAR, jar$EXEEXT)
-else
-        test "x$JAR" = x && AC_CHECK_PROGS(JAR, jar, $JAVAPREFIX)
-fi
+AS_IF([test "x$JAVAPREFIX" = x],
+      [test "x$JAR" = x && AC_CHECK_PROGS([JAR], [jar])],
+      [test "x$JAR" = x && AC_CHECK_PROGS([JAR], [jar], [], [$JAVAPREFIX/bin])])
 test "x$JAR" = x && AC_MSG_ERROR([no acceptable jar program found in \$PATH])
 AC_PROVIDE([$0])dnl
 ])
-

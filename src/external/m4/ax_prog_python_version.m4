@@ -50,13 +50,13 @@ AC_DEFUN([AX_PROG_PYTHON_VERSION],[
         changequote([,])
         AC_MSG_RESULT($python_version)
 
-    AC_SUBST([PYTHON_VERSION],[$python_version])
+	AC_SUBST([PYTHON_VERSION],[$python_version])
 
         AX_COMPARE_VERSION([$ax_python_version],[le],[$python_version],[
-        :
+	    :
             $2
         ],[
-        :
+	    :
             $3
         ])
     ],[
@@ -64,4 +64,3 @@ AC_DEFUN([AX_PROG_PYTHON_VERSION],[
         $3
     ])
 ])
-

@@ -33,18 +33,20 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 25
-# required modifications below
+#serial 27
 
 AC_DEFUN([AX_BOOST_BASE],
 [
 AC_ARG_WITH([boost],
   [AS_HELP_STRING([--with-boost@<:@=ARG@:>@],
-    [use Boost library from a standard location (ARG=yes) or
-     from the specified location (ARG=<path>)
+    [use Boost library from a standard location (ARG=yes),
+     from the specified location (ARG=<path>),
+     or disable it (ARG=no)
      @<:@ARG=yes@:>@ ])],
     [
-    if test "$withval" = "yes"; then
+    if test "$withval" = "no"; then
+        want_boost="no"
+    elif test "$withval" = "yes"; then
         want_boost="yes"
         ac_boost_path=""
     else
@@ -94,7 +96,7 @@ if test "x$want_boost" = "xyes"; then
         libsubdirs="lib64 libx32 lib lib64"
         ;;
       ppc64|s390x|sparc64|aarch64|ppc64le)
-        libsubdirs="lib64 lib lib64 ppc64le"
+        libsubdirs="lib64 lib lib64"
         ;;
     esac
 
@@ -171,6 +173,10 @@ if test "x$want_boost" = "xyes"; then
     dnl if we found no boost with system layout we search for boost libraries
     dnl built and installed without the --layout=system option or for a staged(not installed) version
     if test "x$succeeded" != "xyes"; then
+        CPPFLAGS="$CPPFLAGS_SAVED"
+        LDFLAGS="$LDFLAGS_SAVED"
+        BOOST_CPPFLAGS=
+        BOOST_LDFLAGS=
         _version=0
         if test "$ac_boost_path" != ""; then
             if test -d "$ac_boost_path" && test -r "$ac_boost_path"; then
@@ -183,6 +189,12 @@ if test "x$want_boost" = "xyes"; then
                     VERSION_UNDERSCORE=`echo $_version | sed 's/\./_/'`
                     BOOST_CPPFLAGS="-I$ac_boost_path/include/boost-$VERSION_UNDERSCORE"
                 done
+                dnl if nothing found search for layout used in Windows distributions
+                if test -z "$BOOST_CPPFLAGS"; then
+                    if test -d "$ac_boost_path/boost" && test -r "$ac_boost_path/boost"; then
+                        BOOST_CPPFLAGS="-I$ac_boost_path"
+                    fi
+                fi
             fi
         else
             if test "$cross_compiling" != yes; then

@@ -51,7 +51,7 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 5
+#serial 7
 
 AU_ALIAS([AC_CHECK_CLASS], [AX_CHECK_CLASS])
 AC_DEFUN([AX_CHECK_CLASS],[
@@ -61,8 +61,73 @@ dnl Normaly I'd use a AC_CACHE_CHECK here but since the variable name is
 dnl dynamic I need an extra level of extraction
 AC_MSG_CHECKING([for $1 class])
 AC_CACHE_VAL(ax_cv_class_$ac_var_name, [
-AX_TRY_COMPILE_JAVA([$1], , [eval "ac_cv_class_$ac_var_name=yes"],
-        [eval "ac_cv_class_$ac_var_name=no"])
+if test x$ac_cv_prog_uudecode_base64 = xyes; then
+dnl /**
+dnl  * Test.java: used to test dynamicaly if a class exists.
+dnl  */
+dnl public class Test
+dnl {
+dnl
+dnl public static void
+dnl main( String[] argv )
+dnl {
+dnl     Class lib;
+dnl     if (argv.length < 1)
+dnl      {
+dnl             System.err.println ("Missing argument");
+dnl             System.exit (77);
+dnl      }
+dnl     try
+dnl      {
+dnl             lib = Class.forName (argv[0]);
+dnl      }
+dnl     catch (ClassNotFoundException e)
+dnl      {
+dnl             System.exit (1);
+dnl      }
+dnl     lib = null;
+dnl     System.exit (0);
+dnl }
+dnl
+dnl }
+cat << \EOF > Test.uue
+begin-base64 644 Test.class
+yv66vgADAC0AKQcAAgEABFRlc3QHAAQBABBqYXZhL2xhbmcvT2JqZWN0AQAE
+bWFpbgEAFihbTGphdmEvbGFuZy9TdHJpbmc7KVYBAARDb2RlAQAPTGluZU51
+bWJlclRhYmxlDAAKAAsBAANlcnIBABVMamF2YS9pby9QcmludFN0cmVhbTsJ
+AA0ACQcADgEAEGphdmEvbGFuZy9TeXN0ZW0IABABABBNaXNzaW5nIGFyZ3Vt
+ZW50DAASABMBAAdwcmludGxuAQAVKExqYXZhL2xhbmcvU3RyaW5nOylWCgAV
+ABEHABYBABNqYXZhL2lvL1ByaW50U3RyZWFtDAAYABkBAARleGl0AQAEKEkp
+VgoADQAXDAAcAB0BAAdmb3JOYW1lAQAlKExqYXZhL2xhbmcvU3RyaW5nOylM
+amF2YS9sYW5nL0NsYXNzOwoAHwAbBwAgAQAPamF2YS9sYW5nL0NsYXNzBwAi
+AQAgamF2YS9sYW5nL0NsYXNzTm90Rm91bmRFeGNlcHRpb24BAAY8aW5pdD4B
+AAMoKVYMACMAJAoAAwAlAQAKU291cmNlRmlsZQEACVRlc3QuamF2YQAhAAEA
+AwAAAAAAAgAJAAUABgABAAcAAABtAAMAAwAAACkqvgSiABCyAAwSD7YAFBBN
+uAAaKgMyuAAeTKcACE0EuAAaAUwDuAAasQABABMAGgAdACEAAQAIAAAAKgAK
+AAAACgAAAAsABgANAA4ADgATABAAEwASAB4AFgAiABgAJAAZACgAGgABACMA
+JAABAAcAAAAhAAEAAQAAAAUqtwAmsQAAAAEACAAAAAoAAgAAAAQABAAEAAEA
+JwAAAAIAKA==
+====
+EOF
+                if $UUDECODE Test.uue; then
+                        :
+                else
+                        echo "configure: __oline__: uudecode had trouble decoding base 64 file 'Test.uue'" >&AS_MESSAGE_LOG_FD
+                        echo "configure: failed file was:" >&AS_MESSAGE_LOG_FD
+                        cat Test.uue >&AS_MESSAGE_LOG_FD
+                        ac_cv_prog_uudecode_base64=no
+                fi
+        rm -f Test.uue
+        if AC_TRY_COMMAND($JAVA $JAVAFLAGS Test $1) >/dev/null 2>&1; then
+                eval "ac_cv_class_$ac_var_name=yes"
+        else
+                eval "ac_cv_class_$ac_var_name=no"
+        fi
+        rm -f Test.class
+else
+        AX_TRY_COMPILE_JAVA([$1], , [eval "ac_cv_class_$ac_var_name=yes"],
+                [eval "ac_cv_class_$ac_var_name=no"])
+fi
 eval "ac_var_val=$`eval echo ac_cv_class_$ac_var_name`"
 eval "HAVE_$ac_var_name=$`echo ac_cv_class_$ac_var_val`"
 HAVE_LAST_CLASS=$ac_var_val
@@ -77,4 +142,3 @@ dnl do scripts have variable scoping?
 eval "ac_var_val=$`eval echo ac_cv_class_$ac_var_name`"
 AC_MSG_RESULT($ac_var_val)
 ])
-

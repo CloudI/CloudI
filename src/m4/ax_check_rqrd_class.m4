@@ -60,4 +60,3 @@ if test "$HAVE_LAST_CLASS" = "no"; then
         AC_MSG_ERROR([Required class $1 missing, exiting.])
 fi
 ])
-

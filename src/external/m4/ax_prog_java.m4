@@ -21,9 +21,9 @@
 #
 #   AX_TRY_COMPILE_JAVA: attempt to compile user given source.
 #
-#   AC_TRY_RUN_JAVA: attempt to compile and run user given source.
+#   AX_TRY_RUN_JAVA: attempt to compile and run user given source.
 #
-#   AC_JAVA_OPTIONS: adds Java configure options.
+#   AX_JAVA_OPTIONS: adds Java configure options.
 #
 #   AX_PROG_JAVA tests an existing Java virtual machine. It uses the
 #   environment variable JAVA then tests in sequence various common Java
@@ -100,17 +100,16 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 7
+#serial 9
 
 AU_ALIAS([AC_PROG_JAVA], [AX_PROG_JAVA])
 AC_DEFUN([AX_PROG_JAVA],[
-if test x$JAVAPREFIX = x; then
-        test x$JAVA = x && AC_CHECK_PROGS(JAVA, kaffe java)
-else
-        test x$JAVA = x && AC_CHECK_PROGS(JAVA, kaffe java, $JAVAPREFIX)
-fi
+m4_define([m4_ax_prog_java_list], [kaffe java])dnl
+AS_IF([test "x$JAVAPREFIX" = x],
+      [test x$JAVA = x && AC_CHECK_PROGS([JAVA], [m4_ax_prog_java_list])],
+      [test x$JAVA = x && AC_CHECK_PROGS([JAVA], [m4_ax_prog_java_list], [], [$JAVAPREFIX/bin])])
 test x$JAVA = x && AC_MSG_ERROR([no acceptable Java virtual machine found in \$PATH])
+m4_undefine([m4_ax_prog_java_list])dnl
 AX_PROG_JAVA_WORKS
 AC_PROVIDE([$0])dnl
 ])
-

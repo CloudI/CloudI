@@ -22,9 +22,9 @@
 #   version 1.6.0.
 #
 #   NOTE: This macro uses the $RUBY variable to perform the check.
-#   AX_WITH_RUBY can be used to set that variable prior to running this
-#   macro. The $RUBY_VERSION variable will be valorized with the detected
-#   version.
+#   AX_WITH_PROG([RUBY],[ruby],[VALUE-IF-NOT-FOUND],[PATH]) can be used to
+#   set that variable prior to running this macro. The $RUBY_VERSION
+#   variable will be valorized with the detected version.
 #
 # LICENSE
 #
@@ -35,7 +35,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 10
+#serial 11
 
 AC_DEFUN([AX_PROG_RUBY_VERSION],[
     AC_REQUIRE([AC_PROG_SED])
@@ -50,13 +50,13 @@ AC_DEFUN([AX_PROG_RUBY_VERSION],[
         changequote([,])
         AC_MSG_RESULT($ruby_version)
 
-    AC_SUBST([RUBY_VERSION],[$ruby_version])
+	AC_SUBST([RUBY_VERSION],[$ruby_version])
 
         AX_COMPARE_VERSION([$ax_ruby_version],[le],[$ruby_version],[
-        :
+	    :
             $2
         ],[
-        :
+	    :
             $3
         ])
     ],[
@@ -64,4 +64,3 @@ AC_DEFUN([AX_PROG_RUBY_VERSION],[
         $3
     ])
 ])
-

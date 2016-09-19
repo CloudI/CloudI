@@ -11,8 +11,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `for creating a backtrace in C++`
 
 - `https://github.com/bombela/backward-cpp`
-- `commit 77fc8d9fe4f2521558199206670fc3611dc75291`
-- `Sat Oct 24 11:03:12 PDT 2015`
+- `commit 56cd35f97b604f18a28505e6573c2bddf3031a9e`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT`
 
 `bear`
@@ -168,7 +168,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_base.m4`
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_thread.m4`
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_system.m4`
-- `Tue Oct  7 09:34:37 PDT 2014`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4`
@@ -183,14 +183,14 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html`
-- `Fri Mar  4 00:01:29 PST 2011`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `GPL` (build-time dependency only)
 
 `m4/ax_lib_socket_nsl.m4`
 -------------------------
 
 - `http://www.gnu.org/software/autoconf-archive/ax_lib_socket_nsl.html`
-- `Fri Oct 31 20:36:10 PDT 2014`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
 `m4/ax_prog_python_version.m4`
@@ -198,7 +198,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `autoconf m4 macros for python detection`
 
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html`
-- `Sun Mar  6 13:31:11 PST 2011`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
 `m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4`
@@ -207,7 +207,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_compare_version.html`
-- `Fri Mar  4 00:19:03 PST 2011`
+- `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
 `msgpack`
