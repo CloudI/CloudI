@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
-
-// GENERIC ERLANG PORT VERSION 0.7
-// automatically create Erlang bindings to C++/C that requires an OS process
-
 //////////////////////////////////////////////////////////////////////////////
+//
+// GENERIC ERLANG PORT [DRIVER]
+// automatically create Erlang bindings to C++/C that requires an OS process
+//
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@
 
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
@@ -55,15 +56,23 @@
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/elem.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
-#include <boost/preprocessor/tuple/to_seq.hpp>
+//#include <boost/preprocessor/tuple/to_seq.hpp> // broken with boost >= 1.5?
+#include <boost/preprocessor/tuple/to_list.hpp>
 #include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/list/for_each.hpp>
 #include <boost/preprocessor/punctuation/paren.hpp>
 #include <boost/preprocessor/arithmetic/dec.hpp>
 #include <boost/preprocessor/facilities/empty.hpp>
 #include <boost/preprocessor/control/if.hpp>
 
+// work-around instead of BOOST_PP_TUPLE_TO_SEQ to correctly handle arity 0
+#define TUPLE_TO_SEQ_E(r, data, elem) (elem)
+#define TUPLE_TO_SEQ(I, T) \
+    BOOST_PP_LIST_FOR_EACH(TUPLE_TO_SEQ_E, _, BOOST_PP_TUPLE_TO_LIST(I, T))
+
 #include "port.hpp"
 #include "realloc_ptr.hpp"
+#include "pchar_len_t.h"
 
 // erlang:open_port/2 option nouse_stdio
 #define PORT_READ_FILE_DESCRIPTOR 3
@@ -80,6 +89,7 @@
 #endif
 #if ! defined(PORT_FUNCTIONS)
 #if defined(PORT_DRIVER_FUNCTIONS)
+// Using PORT_DRIVER_FUNCTIONS to determine PORT_FUNCTIONS
 
 #define CREATE_PORT_FUNCTIONS_DEFINITION(S, DATA, ELEMENT) (\
     BOOST_PP_TUPLE_ELEM(5, 0, ELEMENT),\
@@ -90,7 +100,6 @@
 #define PORT_FUNCTIONS \
     BOOST_PP_SEQ_TRANSFORM(CREATE_PORT_FUNCTIONS_DEFINITION, _, \
                            PORT_DRIVER_FUNCTIONS)
-#warning Using PORT_DRIVER_FUNCTIONS to determine PORT_FUNCTIONS
 #else
 #error Define PORT_FUNCTIONS within the functions header file to specify \
        the functions and their types
@@ -393,9 +402,33 @@ extern "C"
 #define GET_FUNCTION_ARGUMENT_FROM_TYPE_pchar_len(OFFSET)                     \
     ((char *) &(buffer[(OFFSET + sizeof(uint32_t))])),                        \
     *((uint32_t *) &(buffer[(OFFSET)]))
-#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_nofree            \
+    pchar_len_t returnValue =
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t_nofree(CMD)                       \
+    if (ei_encode_version(buffer.get<char>(), &index))                        \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (ei_encode_ulong(buffer.get<char>(), &index, CMD))                     \
+        return GEPD::ExitStatus::ei_encode_error;                             \
+    if (buffer.reserve(index + returnValue.length) == false)                  \
+        return GEPD::ExitStatus::write_overflow;                              \
+    if (ei_encode_binary(buffer.get<char>(), &index,                          \
+                         returnValue.pchar, returnValue.length))              \
+        return GEPD::ExitStatus::ei_encode_error;
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_free              \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t_free(CMD)                         \
+    STORE_RETURN_VALUE_TYPE_pchar_len_t_nofree(CMD)                           \
+    free(returnValue.pchar);
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t                   \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_len_t_free
+#define STORE_RETURN_VALUE_TYPE_pchar_len_t(CMD)                              \
+    STORE_RETURN_VALUE_TYPE_pchar_len_t_free(CMD)
+
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree                  \
     char const * returnValue =
-#define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
+#define STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)                             \
     if (ei_encode_version(buffer.get<char>(), &index))                        \
         return GEPD::ExitStatus::ei_encode_error;                             \
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))                \
@@ -406,6 +439,15 @@ extern "C"
         return GEPD::ExitStatus::write_overflow;                              \
     if (ei_encode_string(buffer.get<char>(), &index, returnValue))            \
         return GEPD::ExitStatus::ei_encode_error;
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_free                    \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar_free(CMD)                               \
+    STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)                                 \
+    free(returnValue);
+#define CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar                         \
+    CREATE_FUNCTION_RETURN_VALUE_STORE_TYPE_pchar_nofree
+#define STORE_RETURN_VALUE_TYPE_pchar(CMD)                                    \
+    STORE_RETURN_VALUE_TYPE_pchar_nofree(CMD)
     
 #define GET_TYPE_SIZE_FROM_TYPE_puint32_len(N)                                \
     sizeof(uint32_t) + *((uint32_t *) &(buffer[(                              \
@@ -675,7 +717,7 @@ case BOOST_PP_DEC(I):\
         0, \
         BOOST_PP_DEC(GET_ARGC(FUNCTION)), \
         STORE_FUNCTION_ARGUMENTS, \
-        (BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)))\
+        (TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)))\
         (BOOST_PP_SEQ_ELEM(0, OFFSETS)) \
     ) \
     CREATE_FUNCTION_RETURN_VALUE_STORE(GET_RETURN(FUNCTION)) \
@@ -684,7 +726,7 @@ case BOOST_PP_DEC(I):\
     BOOST_PP_ENUM( \
         GET_ARGC(FUNCTION), \
         CREATE_FUNCTION_ARGUMENTS, \
-        (BOOST_PP_TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)))\
+        (TUPLE_TO_SEQ(GET_ARGC(FUNCTION), GET_ARGV(FUNCTION)))\
         (BOOST_PP_SEQ_ELEM(0, OFFSETS)) \
     ) \
     BOOST_PP_RPAREN() \

@@ -115,6 +115,19 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `Fri Dec 11 15:51:53 PST 2015`
 - `Apache License 2.0`
 
+`GEPD`
+------
+`Generic Erlang Port [Driver]`
+
+- `https://github.com/okeuday/GEPD`
+- `(src/lib/cloudi_core/cxx_src/cloudi_os_spawn_hrl.h) (erlang_functions_hrl.h)`
+- `(src/lib/cloudi_core/cxx_src/port.cpp)`
+- `(src/lib/cloudi_core/cxx_src/port.hpp)`
+- `(src/lib/cloudi_core/cxx_src/pchar_len_t.h)`
+- `commit a6e7ad6a1b7dca05cd0f8dda11fc89ff22e069bd (v0.9.7)`
+- `Wed Sep 21 02:08:55 UTC 2016`
+- `BSD`
+
 `goldrush`
 ----------
 `Small, Fast Event Processing for Erlang`

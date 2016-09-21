@@ -1,13 +1,13 @@
 // -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*-
 // ex: set softtabstop=4 tabstop=4 shiftwidth=4 expandtab:
-
-// GENERIC ERLANG PORT VERSION 0.7
-// automatically create Erlang bindings to C++/C that requires an OS process
-
 //////////////////////////////////////////////////////////////////////////////
+//
+// GENERIC ERLANG PORT [DRIVER]
+// automatically create Erlang bindings to C++/C that requires an OS process
+//
 // BSD LICENSE
 // 
-// Copyright (c) 2009-2011, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,8 @@
 // DAMAGE.
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef PORT_HPP
-#define PORT_HPP
+#ifndef GEPD_PORT_HPP
+#define GEPD_PORT_HPP
 
 #include <poll.h>
 #include "realloc_ptr.hpp"
@@ -130,5 +130,5 @@ namespace GEPD
              realloc_ptr<unsigned char> & stream2);
 }
 
-#endif // PORT_HPP
+#endif // GEPD_PORT_HPP
 
