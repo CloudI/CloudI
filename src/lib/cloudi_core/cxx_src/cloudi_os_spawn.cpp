@@ -778,6 +778,7 @@ int32_t spawn(char protocol,
               char * user_str, uint32_t user_str_len,
               uint64_t group_i,
               char * group_str, uint32_t group_str_len,
+              int32_t nice,
               char * directory, uint32_t directory_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
@@ -987,6 +988,11 @@ int32_t spawn(char protocol,
             ::_exit(spawn_status::invalid_input);
         if (rlimit(rlimits, rlimits_len))
             ::_exit(spawn_status::invalid_input);
+        if (nice != 0)
+        {
+            if (::nice(nice) == -1)
+                ::_exit(spawn_status::invalid_input);
+        }
         if (directory_len > 1)
         {
             if (::chdir(directory))

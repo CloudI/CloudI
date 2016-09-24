@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -158,17 +158,20 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                Protocol, BufferSize, Timeout, Prefix,
                TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
                DestListDeny, DestListAllow, ConfigOptions, ID) ->
-    case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
-                               Filename, Arguments, Environment,
-                               Protocol, BufferSize, Timeout, Prefix,
-                               TimeoutAsync, TimeoutSync, TimeoutTerm,
-                               DestRefresh, DestListDeny, DestListAllow,
-                               ConfigOptions, ID) of
+    case start_external_spawn_params(ProcessIndex, ProcessCount,
+                                     ThreadsPerProcess,
+                                     Filename, Arguments, Environment,
+                                     Protocol, BufferSize, Timeout, Prefix,
+                                     TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                     DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Directory,
-         CommandLine, NewFilename, NewArguments,
-         EnvironmentLookup, DestDeny, DestAllow} ->
+         Rlimits, Owner, Nice, CGroup, Directory,
+         CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
+            {ok, DestDeny, DestAllow} =
+                start_external_threads_params(DestListDeny, DestListAllow),
+            NewConfigOptions = ConfigOptions#config_service_options{
+                                   cgroup = CGroup},
             case start_external_threads(ThreadsPerProcess,
                                         ProcessIndex,
                                         ProcessCount,
@@ -181,13 +184,14 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                         TimeoutTerm,
                                         DestRefresh,
                                         DestDeny, DestAllow,
-                                        ConfigOptions, ID) of
+                                        NewConfigOptions, ID) of
                 {ok, Pids, Ports} ->
                     start_external_spawn(SpawnProcess,
                                          SpawnProtocol,
                                          SocketPath,
                                          Pids, Ports,
-                                         Rlimits, Owner, Directory,
+                                         Rlimits, Owner,
+                                         Nice, CGroup, Directory,
                                          ThreadsPerProcess,
                                          CommandLine,
                                          NewFilename,
@@ -207,20 +211,21 @@ update_external(Pids, Ports,
                  Filename, Arguments, Environment,
                  Protocol, BufferSize, Timeout, Prefix,
                  TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                 DestListDeny, DestListAllow, ConfigOptions, ID]) ->
-    case start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
-                               Filename, Arguments, Environment,
-                               Protocol, BufferSize, Timeout, Prefix,
-                               TimeoutAsync, TimeoutSync, TimeoutTerm,
-                               DestRefresh, DestListDeny, DestListAllow,
-                               ConfigOptions, ID) of
+                 _DestListDeny, _DestListAllow, ConfigOptions, ID]) ->
+    case start_external_spawn_params(ProcessIndex, ProcessCount,
+                                     ThreadsPerProcess,
+                                     Filename, Arguments, Environment,
+                                     Protocol, BufferSize, Timeout, Prefix,
+                                     TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                     DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Directory,
-         CommandLine, NewFilename, NewArguments,
-         EnvironmentLookup, _, _} ->
+         Rlimits, Owner, Nice, CGroup, Directory,
+         CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                                      Pids, Ports, Rlimits, Owner, Directory,
+                                      Pids, Ports,
+                                      Rlimits, Owner,
+                                      Nice, CGroup, Directory,
                                       ThreadsPerProcess,
                                       CommandLine, NewFilename, NewArguments,
                                       Environment, EnvironmentLookup,
@@ -374,6 +379,12 @@ rlimits(#config_service_options{limit = L}) ->
 owner(#config_service_options{owner = L}, EnvironmentLookup) ->
     cloudi_core_i_os_process:owner_format(L, EnvironmentLookup).
 
+nice(#config_service_options{nice = Nice}) ->
+    Nice.
+
+cgroup(#config_service_options{cgroup = L}, EnvironmentLookup) ->
+    cloudi_core_i_os_process:cgroup_format(L, EnvironmentLookup).
+
 directory(#config_service_options{directory = Directory}, EnvironmentLookup) ->
     cloudi_core_i_os_process:directory_format(Directory, EnvironmentLookup).
 
@@ -385,11 +396,11 @@ create_socket_path(TemporaryDirectory, ID)
     false = filelib:is_file(Path),
     Path.
 
-start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
-                      Filename, Arguments, Environment,
-                      Protocol, BufferSize, Timeout, Prefix,
-                      TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
-                      DestListDeny, DestListAllow, ConfigOptions, ID)
+start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
+                            Filename, Arguments, Environment,
+                            Protocol, BufferSize, Timeout, Prefix,
+                            TimeoutAsync, TimeoutSync, TimeoutTerm, DestRefresh,
+                            ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ThreadsPerProcess), ThreadsPerProcess > 0,
          is_list(Filename), is_list(Arguments), is_list(Environment),
@@ -416,6 +427,44 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
            (DestRefresh =:= immediate_oldest) orelse
            (DestRefresh =:= lazy_oldest) orelse
            (DestRefresh =:= none),
+    TemporaryDirectory = case os:getenv("TMPDIR") of
+        false ->
+            "/tmp";
+        L ->
+            L
+    end,
+    SocketPath = create_socket_path(TemporaryDirectory, ID),
+    EnvironmentLookup = environment_lookup(),
+    case start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
+                                           EnvironmentLookup) of
+        {ok, CommandLine, NewFilename, NewArguments, Directory} ->
+            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
+                SpawnProcess when is_pid(SpawnProcess) ->
+                    SpawnProtocol = if
+                        Protocol =:= tcp ->
+                            $t; % inet
+                        Protocol =:= udp ->
+                            $u; % inet
+                        Protocol =:= local ->
+                            $l  % tcp local (unix domain socket)
+                    end,
+                    Rlimits = rlimits(ConfigOptions),
+                    Owner = owner(ConfigOptions, EnvironmentLookup),
+                    Nice = nice(ConfigOptions),
+                    CGroup = cgroup(ConfigOptions, EnvironmentLookup),
+                    {ok,
+                     SpawnProcess, SpawnProtocol, SocketPath,
+                     Rlimits, Owner, Nice, CGroup, Directory,
+                     CommandLine, NewFilename, NewArguments,
+                     EnvironmentLookup};
+                undefined ->
+                    {error, noproc}
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+start_external_threads_params(DestListDeny, DestListAllow) ->
     DestDeny = if
         DestListDeny =:= undefined ->
             undefined;
@@ -428,43 +477,10 @@ start_external_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
         is_list(DestListAllow) ->
             cloudi_x_trie:new(DestListAllow)
     end,
-    TemporaryDirectory = case os:getenv("TMPDIR") of
-        false ->
-            "/tmp";
-        L ->
-            L
-    end,
-    SocketPath = create_socket_path(TemporaryDirectory, ID),
-    EnvironmentLookup = environment_lookup(),
-    case start_external_params_parse(Filename, Arguments, ConfigOptions,
-                                     EnvironmentLookup) of
-        {ok, CommandLine, NewFilename, NewArguments, Directory} ->
-            Rlimits = rlimits(ConfigOptions),
-            Owner = owner(ConfigOptions, EnvironmentLookup),
-            case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
-                SpawnProcess when is_pid(SpawnProcess) ->
-                    SpawnProtocol = if
-                        Protocol =:= tcp ->
-                            $t; % inet
-                        Protocol =:= udp ->
-                            $u; % inet
-                        Protocol =:= local ->
-                            $l  % tcp local (unix domain socket)
-                    end,
-                    {ok,
-                     SpawnProcess, SpawnProtocol, SocketPath,
-                     Rlimits, Owner, Directory,
-                     CommandLine, NewFilename, NewArguments,
-                     EnvironmentLookup, DestDeny, DestAllow};
-                undefined ->
-                    {error, noproc}
-            end;
-        {error, _} = Error ->
-            Error
-    end.
+    {ok, DestDeny, DestAllow}.
 
-start_external_params_parse(Filename, Arguments, ConfigOptions,
-                            EnvironmentLookup) ->
+start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
+                                  EnvironmentLookup) ->
     case filename_parse(Filename, EnvironmentLookup) of
         {ok, NewFilename} ->
             case arguments_parse(Arguments, EnvironmentLookup) of
@@ -533,7 +549,7 @@ start_external_threads(ThreadsPerProcess,
                           ConfigOptions, ID).
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                     Pids, Ports, Rlimits, Owner, Directory,
+                     Pids, Ports, Rlimits, Owner, Nice, CGroup, Directory,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
@@ -550,14 +566,20 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       string_terminate(UserStr),
                                       GroupI,
                                       string_terminate(GroupStr),
+                                      Nice,
                                       string_terminate(Directory),
                                       string_terminate(Filename),
                                       string_terminate(Arguments),
                                       SpawnEnvironment) of
-        {ok, OsPid} ->
+        {ok, OSPid} ->
             ?LOG_INFO("OS pid ~p spawned ~p~n  ~p",
-                      [OsPid, Pids, CommandLine]),
-            {ok, Pids};
+                      [OSPid, Pids, CommandLine]),
+            case cloudi_core_i_os_process:cgroup_set(OSPid, CGroup) of
+                ok ->
+                    {ok, Pids};
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end.

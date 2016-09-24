@@ -26,6 +26,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
      -d $(top_srcdir)/lib/cloudi_service_validate/src \
      -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
+     -d $(top_srcdir)/lib/cgroups/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
      -d $(top_srcdir)/lib/erlang_term/src \
@@ -218,6 +219,7 @@ dialyze: all \
               lib/cloudi_service_udp/ebin/ \
               lib/cloudi_service_validate/ebin/ \
               lib/cloudi_service_zeromq/ebin/ \
+              lib/cgroups/ebin/ \
               lib/cpg/ebin/ \
               lib/erlang_term/ebin/ \
               lib/key2value/ebin/ \

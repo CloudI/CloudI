@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -57,6 +57,10 @@
          limit_format/1,
          owner_validate/1,
          owner_format/2,
+         cgroup_validate/1,
+         cgroup_format/2,
+         cgroup_set/2,
+         cgroup_unset/2,
          directory_format/2]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -65,6 +69,7 @@
 -else.
 -include("cloudi_core_i_os_rlimit.hrl").
 -endif.
+-define(CGROUP_UPDATE_OR_CREATE_DEFAULT, true).
 
 -spec limit_validate(cloudi_service_api:limit_external()) ->
     {ok, list({cloudi_service_api:limit_external_key(),
@@ -317,6 +322,119 @@ owner_format(Values, EnvironmentLookup) ->
             {0, ""}
     end,
     {UserI, UserStr, GroupI, GroupStr}.
+
+-spec cgroup_validate(cloudi_service_api:cgroup_external()) ->
+    {ok, cloudi_service_api:cgroup_external()} |
+    {error, {service_options_cgroup_invalid, any()}}.
+
+cgroup_validate(undefined) ->
+    {ok, undefined};
+cgroup_validate(Values)
+    when is_list(Values) ->
+    Defaults = [
+        {name, undefined},
+        {parameters, []},
+        {update_or_create, ?CGROUP_UPDATE_OR_CREATE_DEFAULT}],
+    case cloudi_proplists:take_values(Defaults, Values) of
+        [Name, _, _]
+            when not (is_list(Name) andalso is_integer(hd(Name))) ->
+            {error, {service_options_cgroup_invalid,
+                     [{name, Name}]}};
+        [_, Parameters, _]
+            when not is_list(Parameters) ->
+            {error, {service_options_cgroup_invalid,
+                     [{parameters, Parameters}]}};
+        [_, _, UpdateOrCreate]
+            when not is_boolean(UpdateOrCreate) ->
+            {error, {service_options_cgroup_invalid,
+                     [{update_or_create, UpdateOrCreate}]}};
+        [_, _, _] ->
+            {ok, Values};
+        [_, _, _ | Extra] ->
+            {error, {service_options_cgroup_invalid, Extra}}
+    end;
+cgroup_validate(Invalid) ->
+    {error, {service_options_cgroup_invalid, Invalid}}.
+
+-spec cgroup_format(Values0 :: cloudi_service_api:cgroup_external(),
+                    EnvironmentLookup :: cloudi_environment:lookup()) ->
+    cloudi_service_api:cgroup_external().
+
+cgroup_format(undefined, _) ->
+    undefined;
+cgroup_format(Values0, EnvironmentLookup)
+    when is_list(Values0) ->
+    {value, {name, NameValue}, Values1} = lists:keytake(name, 1, Values0),
+    Name = cloudi_environment:transform(NameValue, EnvironmentLookup),
+    {Parameters, Values3} = case lists:keytake(parameters, 1, Values1) of
+        {value, {parameters, ParametersL}, Values2} ->
+            {[{cloudi_environment:transform(ParameterKey, EnvironmentLookup),
+               cloudi_environment:transform(ParameterValue, EnvironmentLookup)}
+              || {ParameterKey, ParameterValue} <- ParametersL], Values2};
+        false ->
+            {[], Values1}
+    end,
+    {UpdateOrCreate, []} = case lists:keytake(update_or_create, 1, Values3) of
+        {value, {update_or_create, UpdateOrCreateValue}, Values4} ->
+            {UpdateOrCreateValue, Values4};
+        false ->
+            {?CGROUP_UPDATE_OR_CREATE_DEFAULT, Values3}
+    end,
+    [{name, Name},
+     {parameters, Parameters},
+     {update_or_create, UpdateOrCreate}].
+
+-spec cgroup_set(OSPid :: pos_integer() | undefined,
+                 Values :: cloudi_service_api:cgroup_external()) ->
+    ok |
+    {error, any()}.
+
+cgroup_set(undefined, _) ->
+    ok;
+cgroup_set(_, undefined) ->
+    ok;
+cgroup_set(OSPid, Values)
+    when is_integer(OSPid), is_list(Values) ->
+    {_, Name} = lists:keyfind(name, 1, Values),
+    {_, Parameters} = lists:keyfind(parameters, 1, Values),
+    {_, UpdateOrCreate} = lists:keyfind(update_or_create, 1, Values),
+    {ok, CGroups} = cloudi_x_cgroups:new(),
+    F = if
+        UpdateOrCreate =:= true ->
+            update_or_create;
+        UpdateOrCreate =:= false ->
+            update
+    end,
+    Result = cloudi_x_cgroups:F(Name, [OSPid], Parameters, CGroups),
+    ok = cloudi_x_cgroups:destroy(CGroups),
+    Result.
+
+-spec cgroup_unset(OSPid :: pos_integer() | undefined,
+                   Values :: cloudi_service_api:cgroup_external()) ->
+    ok |
+    {error, any()}.
+
+cgroup_unset(undefined, _) ->
+    ok;
+cgroup_unset(_, undefined) ->
+    ok;
+cgroup_unset(OSPid, Values)
+    when is_integer(OSPid), is_list(Values) ->
+    {_, Name} = lists:keyfind(name, 1, Values),
+    {_, UpdateOrCreate} = lists:keyfind(update_or_create, 1, Values),
+    {ok, CGroups} = cloudi_x_cgroups:new(),
+    if
+        UpdateOrCreate =:= true ->
+            % OSPid should have been sent SIGKILL already and may not exist
+            _ = cloudi_x_cgroups:update("", [OSPid], [], CGroups),
+            % may not be the last process to die
+            _ = cloudi_x_cgroups:delete_recursive(Name, CGroups),
+            ok;
+        UpdateOrCreate =:= false ->
+            ok
+    end,
+    ok = cloudi_x_cgroups:destroy(CGroups),
+    ok.
 
 -spec directory_format(Directory :: cloudi_service_api:directory_external(),
                        EnvironmentLookup :: cloudi_environment:lookup()) ->

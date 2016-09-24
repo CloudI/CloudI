@@ -1,3 +1,6 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
 [{kernel, [
     % epmd needs port 4369
     {inet_dist_listen_min, 4374},
@@ -7,8 +10,7 @@
     {net_ticktime, 60}
   ]},
  {sasl, [
-    {sasl_error_logger,
-     {file, "logs/sasl.log"}},
+    {sasl_error_logger, {file, "logs/sasl.log"}},
     {error_logger_mf_dir, "logs"},
     {error_logger_mf_maxbytes, 536870912}, % 512 MB
     {error_logger_mf_maxfiles, 128},
@@ -39,17 +41,23 @@
     {error_logger_redirect, false}
   ]},
  {cloudi_x_exometer, [
-   {defaults,
-    [
-     {['_'], function  , [{module, cloudi_x_exometer_function}]},
-     {['_'], counter   , [{module, cloudi_x_exometer}]},
-     {['_'], histogram , [{module, cloudi_x_exometer_histogram}]},
-     {['_'], spiral    , [{module, cloudi_x_exometer_spiral}]},
-     {['_'], duration  , [{module, cloudi_x_exometer_folsom}]},
-     {['_'], meter     , [{module, cloudi_x_exometer_folsom}]},
-     {['_'], gauge     , [{module, cloudi_x_exometer_folsom}]}
-    ]},
-   {report, []}
+    {defaults, [
+        {['_'], function  , [{module, cloudi_x_exometer_function}]},
+        {['_'], counter   , [{module, cloudi_x_exometer}]},
+        {['_'], histogram , [{module, cloudi_x_exometer_histogram}]},
+        {['_'], spiral    , [{module, cloudi_x_exometer_spiral}]},
+        {['_'], duration  , [{module, cloudi_x_exometer_folsom}]},
+        {['_'], meter     , [{module, cloudi_x_exometer_folsom}]},
+        {['_'], gauge     , [{module, cloudi_x_exometer_folsom}]}
+     ]},
+    {report, []}
+  ]},
+ {cloudi_x_cgroups, [
+    {version_default, 2},
+    {version_default_required, false},
+    {path_v1, "/sys/fs/cgroup/"},
+    {path_v2, "/sys/fs/cgroup2/"},
+    {path_mounts, "/proc/mounts"}
   ]},
  {cloudi_x_cpg, [
     {scope, []}

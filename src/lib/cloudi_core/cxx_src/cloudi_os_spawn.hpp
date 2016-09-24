@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,7 @@ int32_t spawn(char protocol,
               char * user_str, uint32_t user_str_len,
               uint64_t group_i,
               char * group_str, uint32_t group_str_len,
+              int32_t nice,
               char * directory, uint32_t directory_len,
               char * filename, uint32_t filename_len,
               char * argv, uint32_t argv_len,

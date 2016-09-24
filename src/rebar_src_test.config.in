@@ -26,6 +26,7 @@
   "lib/cloudi_service_udp",
   "lib/cloudi_service_validate",
   "lib/cloudi_service_zeromq",
+  "lib/cgroups",
   "lib/cpg",
   "lib/erlang_term",
   "lib/key2value",

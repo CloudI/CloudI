@@ -1,0 +1,130 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cgroups</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cgroups</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="cgroups_Manipulation_Functions">cgroups Manipulation Functions</a></h3>.
+<p>Copyright © 2016 Michael Truog</p>
+
+<p><b>Version:</b> 1.5.4 Sep 22 2016 18:00:33
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="cgroups_Manipulation_Functions">cgroups Manipulation Functions</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [{version_default, pos_integer()} | {version_default_required, boolean()} | {path_v1, string()} | {path_v2, string()} | {path_mounts, string() | undefined}]</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#create-4">create/4</a></td><td>
+  <h4><a name="Create_a_specific_cgroup.">Create a specific cgroup.</a></h4>
+  Files cpuset.cpus and cpuset.mems are set if they are not initialized
+  due to cgroup.clone_children (using the root values).</td></tr>
+<tr><td valign="top"><a href="#delete-2">delete/2</a></td><td>
+  <h4><a name="Delete_a_specific_cgroup.">Delete a specific cgroup.</a></h4>
+  The cgroup must not contain any OS processes for this
+  function to succeed.</td></tr>
+<tr><td valign="top"><a href="#delete_recursive-2">delete_recursive/2</a></td><td>
+  <h4><a name="Delete_a_specific_cgroup_and_as_many_non-leaf_cgroups_as_possible.">Delete a specific cgroup and as many non-leaf cgroups as possible.</a></h4>
+  The cgroup must not contain any OS processes for this
+  function to succeed.</td></tr>
+<tr><td valign="top"><a href="#destroy-1">destroy/1</a></td><td>
+  <h4><a name="Destroy_cgroups_state_data.">Destroy cgroups state data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Create_new_cgroups_state_data.">Create new cgroups state data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Create_new_cgroups_state_data_with_local_options.">Create new cgroups state data with local options.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#shell-2">shell/2</a></td><td>
+  <h4><a name="Execute_a_command_with_the_default_shell.">Execute a command with the default shell.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#update-4">update/4</a></td><td>
+  <h4><a name="Update_a_cgroup_path.">Update a cgroup path.</a></h4>
+  May be used on the cgroup root path.</td></tr>
+<tr><td valign="top"><a href="#update_or_create-4">update_or_create/4</a></td><td>
+  <h4><a name="Update_or_create_a_specific_cgroup.">Update or create a specific cgroup.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="create-4">create/4</a></h3>
+<div class="spec">
+<p><tt>create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Create_a_specific_cgroup.">Create a specific cgroup.</a></h4>
+  Files cpuset.cpus and cpuset.mems are set if they are not initialized
+  due to cgroup.clone_children (using the root values).</p>
+
+<h3 class="function"><a name="delete-2">delete/2</a></h3>
+<div class="spec">
+<p><tt>delete(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_specific_cgroup.">Delete a specific cgroup.</a></h4>
+  The cgroup must not contain any OS processes for this
+  function to succeed.</p>
+
+<h3 class="function"><a name="delete_recursive-2">delete_recursive/2</a></h3>
+<div class="spec">
+<p><tt>delete_recursive(CGroupPath::nonempty_string(), State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Delete_a_specific_cgroup_and_as_many_non-leaf_cgroups_as_possible.">Delete a specific cgroup and as many non-leaf cgroups as possible.</a></h4>
+  The cgroup must not contain any OS processes for this
+  function to succeed.</p>
+
+<h3 class="function"><a name="destroy-1">destroy/1</a></h3>
+<div class="spec">
+<p><tt>destroy(Cgroups::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Destroy_cgroups_state_data.">Destroy cgroups state data.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean()}} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Create_new_cgroups_state_data.">Create new cgroups state data.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Options0::<a href="#type-options">options()</a>) -&gt; {ok, #cgroups{version = pos_integer(), path = string(), mounted = boolean()}} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Create_new_cgroups_state_data_with_local_options.">Create new cgroups state data with local options.</a></h4>
+</p>
+
+<h3 class="function"><a name="shell-2">shell/2</a></h3>
+<div class="spec">
+<p><tt>shell(Command::string(), Arguments::list()) -&gt; {non_neg_integer(), [binary()]}</tt><br></p>
+</div><p>
+  <h4><a name="Execute_a_command_with_the_default_shell.">Execute a command with the default shell.</a></h4>
+</p>
+
+<h3 class="function"><a name="update-4">update/4</a></h3>
+<div class="spec">
+<p><tt>update(CGroupPath::string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Update_a_cgroup_path.">Update a cgroup path.</a></h4>
+  May be used on the cgroup root path.</p>
+
+<h3 class="function"><a name="update_or_create-4">update_or_create/4</a></h3>
+<div class="spec">
+<p><tt>update_or_create(CGroupPath::nonempty_string(), OSPids::[pos_integer()], CGroupParameters::[{string(), string()}], State::#cgroups{version = pos_integer(), path = string(), mounted = boolean()}) -&gt; ok | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Update_or_create_a_specific_cgroup.">Update or create a specific cgroup.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Sep 22 2016, 18:00:34.</i></p>
+</body>
+</html>

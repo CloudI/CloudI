@@ -301,14 +301,18 @@
         % set resource limits for each OS process spawned
         limit = []
             :: cloudi_service_api:limit_external(),
-
         % use a specific user and/or group for spawning the OS processes
         owner = []
             :: cloudi_service_api:owner_external(),
-
+        % set a nice value for each OS process spawned
+        nice = 0
+            :: cloudi_service_api:nice_external(),
+        % put each OS process spawned into a specific cgroup
+        cgroup = undefined
+            :: cloudi_service_api:cgroup_external(),
         % set the current directory for spawning the OS process
         directory = undefined
-            :: file:filename() | undefined,
+            :: cloudi_service_api:directory_external(),
 
         % Only Relevant for Internal Services:
 

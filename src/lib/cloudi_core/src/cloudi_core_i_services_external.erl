@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -220,7 +220,8 @@
         % read-only fields
         timeout_term = undefined :: undefined |
                                     cloudi_service_api:timeout_milliseconds(),
-        os_pid = undefined :: undefined | pos_integer()
+        os_pid = undefined :: undefined | pos_integer(),
+        cgroup = undefined :: cloudi_service_api:cgroup_external()
     }).
 
 -include("cloudi_core_i_services_common.hrl").
@@ -282,15 +283,15 @@ port(Dispatcher, Timeout)
     gen_fsm:sync_send_all_state_event(Dispatcher, port,
                                       Timeout + ?TIMEOUT_DELTA).
 
-stdout(OsPid, Output) ->
+stdout(OSPid, Output) ->
     % uses a fake module name and a fake line number
-    cloudi_core_i_logger_interface:info('STDOUT', OsPid,
+    cloudi_core_i_logger_interface:info('STDOUT', OSPid,
                                         undefined, undefined,
                                         filter_stream(Output), undefined).
 
-stderr(OsPid, Output) ->
+stderr(OSPid, Output) ->
     % uses a fake module name and a fake line number
-    cloudi_core_i_logger_interface:error('STDERR', OsPid,
+    cloudi_core_i_logger_interface:error('STDERR', OSPid,
                                          undefined, undefined,
                                          filter_stream(Output), undefined).
 
@@ -363,8 +364,8 @@ init([Protocol, SocketPath,
 
 % incoming messages (from the port socket)
 
-'CONNECT'({'pid', OsPid}, State) ->
-    {next_state, 'CONNECT', os_pid_set(OsPid, State)};
+'CONNECT'({'pid', OSPid}, State) ->
+    {next_state, 'CONNECT', os_pid_set(OSPid, State)};
 
 'CONNECT'('init', #state{initialize = Ready} = State) ->
     if
@@ -1500,20 +1501,26 @@ filter_stream(Output0) ->
             Output0
     end.
 
-os_pid_set(OsPid, State) ->
+os_pid_set(OSPid, State) ->
     % forked process has connected before CloudI API initialization
     % (only the thread_index == 0 Erlang process gets this message,
     %  since the OS process only needs to be killed once, if at all)
-    ?LOG_INFO("OS pid ~w connected", [OsPid]),
-    State#state{os_pid = OsPid}.
+    ?LOG_INFO("OS pid ~w connected", [OSPid]),
+    State#state{os_pid = OSPid}.
 
-os_pid_kill(undefined) ->
-    ok;
-os_pid_kill(OsPid) ->
-    % if the OsPid exists at this point, it is probably stuck.
+os_pid_kill(#state_socket{os_pid = OSPid,
+                          cgroup = CGroup}) ->
+    % if the OSPid exists at this point, it is probably stuck.
     % without this kill, the process could just stay around, while
     % being unresponsive and without its Erlang socket pids.
-    _ = os:cmd(cloudi_string:format("kill -9 ~w", [OsPid])),
+    if
+        OSPid =:= undefined ->
+            ok;
+        true ->
+            _ = os:cmd(cloudi_string:format("kill -9 ~w", [OSPid])),
+            _ = cloudi_core_i_os_process:cgroup_unset(OSPid, CGroup),
+            ok
+    end,
     ok.
 
 os_init(#state{initialize = true,
@@ -2308,8 +2315,7 @@ socket_close(socket_closed = Reason,
 socket_close(_Reason,
              #state_socket{protocol = Protocol,
                            socket = Socket,
-                           timeout_term = TimeoutTerm,
-                           os_pid = OsPid} = StateSocket)
+                           timeout_term = TimeoutTerm} = StateSocket)
     when Protocol =:= tcp; Protocol =:= local ->
     if
         Socket =:= undefined ->
@@ -2331,13 +2337,11 @@ socket_close(_Reason,
             end
     end,
     ok = socket_close(StateSocket),
-    ok = os_pid_kill(OsPid),
     ok;
 socket_close(_Reason,
              #state_socket{protocol = udp,
                            socket = Socket,
-                           timeout_term = TimeoutTerm,
-                           os_pid = OsPid} = StateSocket) ->
+                           timeout_term = TimeoutTerm} = StateSocket) ->
     if
         Socket =:= undefined ->
             ok;
@@ -2351,13 +2355,12 @@ socket_close(_Reason,
             end
     end,
     ok = socket_close(StateSocket),
-    ok = os_pid_kill(OsPid),
     ok.
 
 socket_close(#state_socket{protocol = Protocol,
                            listener = Listener,
                            socket_path = SocketPath,
-                           socket = Socket})
+                           socket = Socket} = StateSocket)
     when Protocol =:= tcp; Protocol =:= local ->
     if
         Socket =:= undefined ->
@@ -2372,15 +2375,17 @@ socket_close(#state_socket{protocol = Protocol,
         true ->
             ok
     end,
+    ok = os_pid_kill(StateSocket),
     ok;
 socket_close(#state_socket{protocol = udp,
-                           socket = Socket}) ->
+                           socket = Socket} = StateSocket) ->
     if
         Socket =:= undefined ->
             ok;
         is_port(Socket) ->
             catch gen_udp:close(Socket)
     end,
+    ok = os_pid_kill(StateSocket),
     ok.
 
 socket_data_to_state(#state_socket{protocol = Protocol,
@@ -2409,7 +2414,9 @@ socket_data_from_state(#state{protocol = Protocol,
                               socket_options = SocketOptions,
                               socket = Socket,
                               timeout_term = TimeoutTerm,
-                              os_pid = OsPid}) ->
+                              os_pid = OSPid,
+                              options = #config_service_options{
+                                  cgroup = CGroup}}) ->
     #state_socket{protocol = Protocol,
                   port = Port,
                   incoming_port = IncomingPort,
@@ -2419,7 +2426,8 @@ socket_data_from_state(#state{protocol = Protocol,
                   socket_options = SocketOptions,
                   socket = Socket,
                   timeout_term = TimeoutTerm,
-                  os_pid = OsPid}.
+                  os_pid = OSPid,
+                  cgroup = CGroup}.
 
 aspects_init([], _, _, _, ServiceState) ->
     {ok, ServiceState};
@@ -2685,9 +2693,9 @@ update_state(#state{dispatcher = Dispatcher,
 
 update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of
-        {ok, {'pid', OsPid}, NewStateSocket} ->
+        {ok, {'pid', OSPid}, NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
-            update_after(NewStateSocket, os_pid_set(OsPid, NewState));
+            update_after(NewStateSocket, os_pid_set(OSPid, NewState));
         {ok, 'init', NewStateSocket} ->
             NewState = socket_data_to_state(NewStateSocket, State),
             ok = os_init(NewState),

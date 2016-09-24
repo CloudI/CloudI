@@ -1,0 +1,17 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+{application, cgroups,
+  [{description, "cgroups Manipulation Functions"},
+   {vsn, "1.5.3"},
+   {modules, [cgroups]},
+   {registered, []},
+   {applications, [stdlib, kernel]},
+   {env, [
+        {version_default, 2},
+        {version_default_required, false},
+        {path_v1, "/sys/fs/cgroup/"},
+        {path_v2, "/sys/fs/cgroup2/"},
+        {path_mounts, "/proc/mounts"}
+        ]}]}.
+

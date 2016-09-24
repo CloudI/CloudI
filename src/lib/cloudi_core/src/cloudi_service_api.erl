@@ -309,12 +309,21 @@
 -type owner_external() ::
     list({user, pos_integer() | string()} |
          {group, pos_integer() | string()}).
+-type nice_external() ::
+    -20..20.
+-type cgroup_external() ::
+    undefined |
+    list({name, nonempty_string()} |
+         {parameters, list({nonempty_string(), string()})} |
+         {update_or_create, boolean()}).
 -type directory_external() ::
     file:filename() | undefined.
 -export_type([limit_external_key/0,
               limit_external_value/0,
               limit_external/0,
               owner_external/0,
+              nice_external/0,
+              cgroup_external/0,
               directory_external/0]).
 
 -type service_options_internal() ::

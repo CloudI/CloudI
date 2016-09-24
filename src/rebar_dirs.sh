@@ -46,6 +46,7 @@ REBAR_DIRS="\
     external/cloudi_x_setup \
     external/cloudi_x_syslog \
     external/proper \
+    lib/cgroups \
     lib/cpg \
     lib/erlang_term \
     lib/key2value \
