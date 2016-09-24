@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 {application, cgroups,
-  [{description, "cgroups Manipulation Functions"},
+  [{description, "Erlang native cgroups interface"},
    {vsn, "1.5.3"},
    {modules, [cgroups]},
    {registered, []},
