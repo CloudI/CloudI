@@ -188,11 +188,12 @@
         % (see config_service_options in
         %  lib/cloudi_core/src/cloudi_configuration.hrl)
         [{request_timeout_adjustment, true},
-         {nice, 15},
-         {cgroup,
-          [{name, "cloudi/integration_tests/hexpi"},
-           {parameters,
-            [{"memory.limit_in_bytes", "64m"}]}]}]},
+         {nice, 15}%,
+         %{cgroup,
+         % [{name, "cloudi/integration_tests/hexpi"},
+         %  {parameters,
+         %   [{"memory.limit_in_bytes", "64m"}]}]}
+        ]},
     % (using the proplist method of specifying the configuration data...
     %  it provides defaults automatically)
     [%{type, internal}, % gets inferred
