@@ -990,7 +990,9 @@ int32_t spawn(char protocol,
             ::_exit(spawn_status::invalid_input);
         if (nice != 0)
         {
-            if (::nice(nice) == -1)
+            errno = 0;
+            ::nice(nice);
+            if (errno != 0)
                 ::_exit(spawn_status::invalid_input);
         }
         if (directory_len > 1)
