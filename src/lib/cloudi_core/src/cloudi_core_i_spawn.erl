@@ -77,7 +77,9 @@
 -else.
 -ifdef(ERLANG_OTP_VERSION_17).
 -else.
--dialyzer({no_match, start_external_spawn/18}).
+-dialyzer({no_match,
+           [start_external_spawn/18,
+            update_external/3]}).
 -endif.
 -endif.
 -endif.

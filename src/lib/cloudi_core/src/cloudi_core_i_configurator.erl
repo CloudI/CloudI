@@ -132,6 +132,17 @@
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
 
+-ifdef(CLOUDI_CORE_STANDALONE).
+-ifdef(ERLANG_OTP_VERSION_16).
+-else.
+-ifdef(ERLANG_OTP_VERSION_17).
+-else.
+-dialyzer({no_match,
+           [service_update_external/6]}).
+-endif.
+-endif.
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
