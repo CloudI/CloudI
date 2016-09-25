@@ -3,13 +3,14 @@
 
 {application, varpool, 
   [{description, "Local Variable Pool"},
-   {vsn, "1.5.3"},
+   {vsn, "1.5.4-rc1"},
    {modules, [
         varpool,
         varpool_sup
         ]},
    {registered, []},
    {applications, [
+        reltool_util,
         stdlib,
         kernel
         ]}]}.

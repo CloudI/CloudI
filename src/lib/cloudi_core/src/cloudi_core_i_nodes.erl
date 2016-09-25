@@ -243,11 +243,11 @@ handle_cast({logging_redirect_set, NodeLogger},
         NewNodeLogger /= OldNodeLogger ->
             if
                 NewNodeLogger =:= undefined ->
-                    cloudi_core_i_logger:redirect_set(undefined);
+                    cloudi_core_i_logger:redirect_update(undefined);
                 true ->
                     case lists:member(NewNodeLogger, NodesAlive) of
                         true ->
-                            cloudi_core_i_logger:redirect_set(NewNodeLogger);
+                            cloudi_core_i_logger:redirect_update(NewNodeLogger);
                         false ->
                             case lists:member(NewNodeLogger, NodesDead) of
                                 true ->
@@ -276,7 +276,7 @@ handle_info({nodeup, Node, InfoList},
                    logging_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_core_i_logger:redirect_set(NodeLogger);
+            cloudi_core_i_logger:redirect_update(NodeLogger);
         true ->
             ok
     end,
@@ -292,7 +292,7 @@ handle_info({nodedown, Node, InfoList},
                    logging_redirect = NodeLogger} = State) ->
     if
         Node == NodeLogger ->
-            cloudi_core_i_logger:redirect_set(undefined);
+            cloudi_core_i_logger:redirect_update(undefined);
         true ->
             ok
     end,

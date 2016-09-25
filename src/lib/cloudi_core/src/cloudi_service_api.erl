@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -69,6 +69,7 @@
          nodes_alive/1,
          nodes_dead/1,
          nodes/1,
+         logging_set/2,
          logging_file_set/2,
          logging_level_set/2,
          logging_syslog_set/2,
@@ -1156,6 +1157,23 @@ nodes(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:nodes(Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Set CloudI logging configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_set(L :: logging_proplist(),
+                  Timeout :: api_timeout_milliseconds()) ->
+    ok | {error, file:posix() | badarg | system_limit}.
+
+logging_set([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:logging_set(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

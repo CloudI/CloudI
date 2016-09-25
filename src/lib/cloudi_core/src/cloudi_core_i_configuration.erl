@@ -70,6 +70,7 @@
          nodes_add/2,
          nodes_remove/2,
          logging_level_highest/1,
+         logging_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
          logging/1]).
@@ -243,6 +244,14 @@
      node_discovery_ec2_tags_selection_null |
      node_discovery_ec2_groups_invalid |
      node_discovery_ec2_tags_invalid, any()}.
+-type error_reason_logging_set_configuration() ::
+    {node_invalid |
+     logging_invalid |
+     logging_redirect_invalid |
+     logging_file_invalid |
+     logging_level_invalid, any()} |
+    error_reason_logging_syslog_set_configuration() |
+    error_reason_logging_formatters_set_configuration().
 -type error_reason_logging_syslog_set_configuration() ::
     {logging_syslog_invalid |
      logging_syslog_identity_invalid |
@@ -280,6 +289,8 @@
     error_reason_nodes_remove_configuration().
 -type error_reason_nodes_set() ::
     error_reason_nodes_set_configuration().
+-type error_reason_logging_set() ::
+    error_reason_logging_set_configuration().
 -type error_reason_logging_syslog_set() ::
     error_reason_logging_syslog_set_configuration().
 -type error_reason_logging_formatters_set() ::
@@ -293,20 +304,15 @@
               error_reason_nodes_add/0,
               error_reason_nodes_remove/0,
               error_reason_nodes_set/0,
+              error_reason_logging_set/0,
               error_reason_logging_syslog_set/0,
               error_reason_logging_formatters_set/0]).
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |
     error_reason_nodes_set_configuration() |
-    error_reason_logging_syslog_set_configuration() |
-    error_reason_logging_formatters_set_configuration() |
-    {invalid |
-     node_invalid |
-     logging_invalid |
-     logging_redirect_invalid |
-     logging_file_invalid |
-     logging_level_invalid, any()}.
+    error_reason_logging_set_configuration() |
+    {invalid, any()}.
 
 % cloudi_service_api.hrl records without defaults or types set so
 % dialyzer doesn't get confused
@@ -1348,6 +1354,25 @@ logging_level_highest([_ | _] = Levels) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Set CloudI logging configuration.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_set(Value :: cloudi_service_api:logging_proplist(),
+                  Config :: #config{}) ->
+    {ok, #config{}} |
+    {error, error_reason_logging_set()}.
+
+logging_set([_ | _] = Value, #config{} = Config) ->
+    case logging_proplist(Value) of
+        {ok, LoggingConfig} ->
+            {ok, Config#config{logging = LoggingConfig}};
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Set CloudI syslog configuration.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -1623,68 +1648,13 @@ new([{'nodes', [_ | _] = Value} | Terms], Config) ->
     end;
 new([{'logging', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'logging', [T | _] = Value} | Terms],
-    #config{logging = Logging} = Config)
+new([{'logging', [T | _] = Value} | Terms], Config)
     when is_atom(element(1, T)) ->
-    Defaults = [
-        {level, Logging#config_logging.level},
-        {file, Logging#config_logging.file},
-        {redirect, Logging#config_logging.redirect},
-        {syslog, Logging#config_logging.syslog},
-        {formatters, Logging#config_logging.formatters},
-        {aspects_log_before, Logging#config_logging.aspects_log_before},
-        {aspects_log_after, Logging#config_logging.aspects_log_after}],
-    case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _, _, _, _]
-            when not ((Level =:= fatal) orelse (Level =:= error) orelse
-                      (Level =:= warn) orelse (Level =:= info) orelse
-                      (Level =:= debug) orelse (Level =:= trace) orelse
-                      (Level =:= off) orelse (Level =:= undefined)) ->
-            {error, {logging_level_invalid, Level}};
-        [_, File, _, _, _, _, _]
-            when not ((is_list(File) andalso
-                       is_integer(hd(File))) orelse
-                      (File =:= undefined))->
-            {error, {logging_file_invalid, File}};
-        [_, _, Redirect, _, _, _, _]
-            when not is_atom(Redirect) ->
-            {error, {logging_redirect_invalid, Redirect}};
-        [_, _, _, Syslog, _, _, _]
-            when not ((Syslog =:= undefined) orelse
-                      is_list(Syslog)) ->
-            {error, {logging_syslog_invalid, Syslog}};
-        [Level, File, Redirect, Syslog, Formatters,
-         AspectsLogBefore, AspectsLogAfter] ->
-            NewFile = if
-                Level =:= undefined ->
-                    undefined;
-                true ->
-                    File
-            end,
-            NewLevel = if
-                File =:= undefined ->
-                    undefined;
-                true ->
-                    Level
-            end,
-            case logging_validate(Redirect, Syslog, Formatters,
-                                  AspectsLogBefore, AspectsLogAfter) of
-                {ok, SyslogConfig, FormattersConfig,
-                     NewAspectsLogBefore, NewAspectsLogAfter} ->
-                    NewLogging = Logging#config_logging{
-                                     level = NewLevel,
-                                     file = NewFile,
-                                     redirect = Redirect,
-                                     syslog = SyslogConfig,
-                                     formatters = FormattersConfig,
-                                     aspects_log_before = NewAspectsLogBefore,
-                                     aspects_log_after = NewAspectsLogAfter},
-                    new(Terms, Config#config{logging = NewLogging});
-                {error, _} = Error ->
-                    Error
-            end;
-        [_, _, _, _, _, _, _ | Extra] ->
-            {error, {logging_invalid, Extra}}
+    case logging_proplist(Value) of
+        {ok, LoggingConfig} ->
+            new(Terms, Config#config{logging = LoggingConfig});
+        {error, _} = Error ->
+            Error
     end;
 new([Term | _], _) ->
     {error, {invalid, Term}}.
@@ -4708,6 +4678,69 @@ nodes_proplist(Value) ->
             nodes_options(Nodes, Options);
         {error, _} = Error ->
             Error
+    end.
+
+logging_proplist(Value) ->
+    Logging = #config_logging{},
+    Defaults = [
+        {level, Logging#config_logging.level},
+        {file, Logging#config_logging.file},
+        {redirect, Logging#config_logging.redirect},
+        {syslog, Logging#config_logging.syslog},
+        {formatters, Logging#config_logging.formatters},
+        {aspects_log_before, Logging#config_logging.aspects_log_before},
+        {aspects_log_after, Logging#config_logging.aspects_log_after}],
+    case cloudi_proplists:take_values(Defaults, Value) of
+        [Level, _, _, _, _, _, _]
+            when not ((Level =:= fatal) orelse (Level =:= error) orelse
+                      (Level =:= warn) orelse (Level =:= info) orelse
+                      (Level =:= debug) orelse (Level =:= trace) orelse
+                      (Level =:= off) orelse (Level =:= undefined)) ->
+            {error, {logging_level_invalid, Level}};
+        [_, File, _, _, _, _, _]
+            when not ((is_list(File) andalso
+                       is_integer(hd(File))) orelse
+                      (File =:= undefined))->
+            {error, {logging_file_invalid, File}};
+        [_, _, Redirect, _, _, _, _]
+            when not is_atom(Redirect) ->
+            {error, {logging_redirect_invalid, Redirect}};
+        [_, _, _, Syslog, _, _, _]
+            when not ((Syslog =:= undefined) orelse
+                      is_list(Syslog)) ->
+            {error, {logging_syslog_invalid, Syslog}};
+        [Level, File, Redirect, Syslog, Formatters,
+         AspectsLogBefore, AspectsLogAfter] ->
+            NewFile = if
+                Level =:= undefined ->
+                    undefined;
+                true ->
+                    File
+            end,
+            NewLevel = if
+                File =:= undefined ->
+                    undefined;
+                true ->
+                    Level
+            end,
+            case logging_validate(Redirect, Syslog, Formatters,
+                                  AspectsLogBefore, AspectsLogAfter) of
+                {ok, SyslogConfig, FormattersConfig,
+                     NewAspectsLogBefore, NewAspectsLogAfter} ->
+                    NewLogging = Logging#config_logging{
+                                     level = NewLevel,
+                                     file = NewFile,
+                                     redirect = Redirect,
+                                     syslog = SyslogConfig,
+                                     formatters = FormattersConfig,
+                                     aspects_log_before = NewAspectsLogBefore,
+                                     aspects_log_after = NewAspectsLogAfter},
+                    {ok, NewLogging};
+                {error, _} = Error ->
+                    Error
+            end;
+        [_, _, _, _, _, _, _ | Extra] ->
+            {error, {logging_invalid, Extra}}
     end.
 
 logging_validate(Redirect, Syslog, Formatters,

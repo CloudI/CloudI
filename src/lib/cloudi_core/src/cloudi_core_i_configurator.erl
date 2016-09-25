@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -70,6 +70,7 @@
          nodes_get/1,
          nodes_add/2,
          nodes_remove/2,
+         logging_set/2,
          logging_file_set/2,
          logging_level_set/2,
          logging_syslog_set/2,
@@ -208,6 +209,11 @@ nodes_add(L, Timeout) ->
 nodes_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {nodes_remove, L, local,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging_set(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging_set, L,
                                  timeout_decr(Timeout)}, Timeout)).
 
 logging_file_set(FilePath, Timeout) ->
@@ -462,6 +468,20 @@ handle_call({nodes_add, _, _, _} = Request, _, State) ->
 handle_call({nodes_remove, _, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
+handle_call({logging_set, L, _}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:logging_set(L, Config) of
+        {ok, #config{logging = LoggingConfig} = NewConfig} ->
+            case cloudi_core_i_logger:set(LoggingConfig) of
+                ok ->
+                    {reply, ok, State#state{configuration = NewConfig}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
 handle_call({logging_file_set, FilePath, _}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
@@ -495,13 +515,12 @@ handle_call({logging_syslog_set, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({logging_formatters_set, L, Timeout}, _,
+handle_call({logging_formatters_set, L, _}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_formatters_set(L, Config) of
         {ok, #config{logging = #config_logging{
                          formatters = FormattersConfig}} = NewConfig} ->
-            ok = cloudi_core_i_logger:formatters_set(FormattersConfig,
-                                                     Timeout),
+            ok = cloudi_core_i_logger:formatters_set(FormattersConfig),
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
@@ -510,7 +529,7 @@ handle_call({logging_formatters_set, L, Timeout}, _,
 handle_call({logging_redirect_set, Node, _}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
-    ok = cloudi_core_i_nodes:logging_redirect_set(Node),
+    ok = cloudi_core_i_logger:redirect_set(Node),
     NewConfig = Config#config{
                     logging = LoggingConfig#config_logging{
                         redirect = Node}},

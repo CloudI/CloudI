@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add logging_set CloudI Service API function
+    * Update varpool
+
 2016-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cgroup and nice service configuration options
