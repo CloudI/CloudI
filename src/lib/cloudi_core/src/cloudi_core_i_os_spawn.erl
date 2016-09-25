@@ -64,11 +64,12 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--export([spawn/12]).
+-export([spawn/14]).
 -define(ERL_PORT_NAME, "/dev/null").
 -compile({nowarn_unused_function, [{call_port_sync, 3}]}).
 spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
+      _SpawnNice, _SpawnDirectory,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
     {error, badarg}.
 -else.

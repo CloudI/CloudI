@@ -5,6 +5,7 @@
 
     * Add logging_set CloudI Service API function
     * Update varpool
+    * Fixes for dialyzer in cloudi_core repo
 
 2016-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
