@@ -21,23 +21,19 @@ when providing a string for the internal service module name.
 
 Make sure elixir is in the Erlang VM's code path:
 
-    $ curl -X POST -d '"/usr/local/lib/elixir/lib/elixir/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_add.erl
+    $ curl -X POST -d '"/usr/local/lib/elixir/lib/elixir/ebin"' http://localhost:6464/cloudi/api/rpc/code_path_add.erl
 
 To use an Elixir/OTP application or module for an internal service in the code path (if the application name is different from the `cloudi_service` module, use the `application_name` service configuration option):
 
     $ make
-    $ curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld1/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_add.erl
+    $ curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld1/ebin"' http://localhost:6464/cloudi/api/rpc/code_path_add.erl
     $ cat << EOF > Elixir.HelloWorld1_module.conf
-    [{internal,
-      "/examples/",
-      'Elixir.HelloWorld1',
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, 'Elixir.HelloWorld1'}]]
     EOF
-    $ curl -X POST -d @Elixir.HelloWorld1_module.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld1/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_remove.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @Elixir.HelloWorld1_module.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl -X POST -d '"'$PWD'/_build/dev/lib/Elixir.HelloWorld1/ebin"' http://localhost:6464/cloudi/api/rpc/code_path_remove.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Elixir/OTP application file for an internal service with the same
@@ -45,30 +41,22 @@ module name:
 
     $ make
     $ cat << EOF > Elixir.HelloWorld1_app.conf
-    [{internal,
-      "/examples/",
-      "$PWD/_build/dev/lib/Elixir.HelloWorld1/ebin/Elixir.HelloWorld1.app",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/_build/dev/lib/Elixir.HelloWorld1/ebin/Elixir.HelloWorld1.app"}]]
     EOF
-    $ curl -X POST -d @Elixir.HelloWorld1_app.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @Elixir.HelloWorld1_app.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use a compiled Elixir BEAM file path with an internal service implementation:
 
     $ make
     $ cat << EOF > Elixir.HelloWorld1_beam.conf
-    [{internal,
-      "/examples/",
-      "$PWD/_build/dev/lib/Elixir.HelloWorld1/ebin/Elixir.HelloWorld1.beam",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/_build/dev/lib/Elixir.HelloWorld1/ebin/Elixir.HelloWorld1.beam"}]]
     EOF
-    $ curl -X POST -d @Elixir.HelloWorld1_beam.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @Elixir.HelloWorld1_beam.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Elixir/OTP script release file for an internal service with the
@@ -76,14 +64,22 @@ same module name as the top-level application:
 
     $ make release
     $ cat << EOF > Elixir.HelloWorld1_script.conf
-    [{internal,
-      "/examples/",
-      "$PWD/release/releases/1/Elixir.HelloWorld1.script",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/release/releases/1/Elixir.HelloWorld1.script"}]]
     EOF
-    $ curl -X POST -d @Elixir.HelloWorld1_script.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @Elixir.HelloWorld1_script.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
+    Hello World!
+
+To use an Elixir/OTP boot release file for an internal service with the
+same module name as the top-level application:
+
+    $ make release
+    $ cat << EOF > Elixir.HelloWorld1_boot.conf
+    [[{prefix, "/examples/"},
+      {module, "$PWD/release/releases/1/Elixir.HelloWorld1.boot"}]]
+    EOF
+    $ curl -X POST -d @Elixir.HelloWorld1_boot.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 

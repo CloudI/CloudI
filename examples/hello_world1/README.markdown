@@ -22,18 +22,14 @@ when providing a string for the internal service module name.
 To use an Erlang/OTP application or module for an internal service in the code path (if the application name is different from the CloudI service module name implementing the `cloudi_service` behaviour, use the `application_name` service configuration option):
 
     $ make
-    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_add.erl
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6464/cloudi/api/rpc/code_path_add.erl
     $ cat << EOF > hello_world1_module.conf
-    [{internal,
-      "/examples/",
-      hello_world1,
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, hello_world1}]]
     EOF
-    $ curl -X POST -d @hello_world1_module.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6467/cloudi/api/rpc/code_path_remove.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_module.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl -X POST -d '"'$PWD'/ebin"' http://localhost:6464/cloudi/api/rpc/code_path_remove.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Erlang/OTP application file for an internal service with the same
@@ -41,45 +37,33 @@ module name:
 
     $ make
     $ cat << EOF > hello_world1_app.conf
-    [{internal,
-      "/examples/",
-      "$PWD/ebin/hello_world1.app",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/ebin/hello_world1.app"}]]
     EOF
-    $ curl -X POST -d @hello_world1_app.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_app.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Erlang source file path with an internal service implementation:
 
     $ make
     $ cat << EOF > hello_world1_erl.conf
-    [{internal,
-      "/examples/",
-      "$PWD/src/hello_world1.erl",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/src/hello_world1.erl"}]]
     EOF
-    $ curl -X POST -d @hello_world1_erl.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_erl.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use a compiled Erlang BEAM file path with an internal service implementation:
 
     $ make
     $ cat << EOF > hello_world1_beam.conf
-    [{internal,
-      "/examples/",
-      "$PWD/ebin/hello_world1.beam",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/ebin/hello_world1.beam"}]]
     EOF
-    $ curl -X POST -d @hello_world1_beam.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_beam.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Erlang/OTP script release file for an internal service with the
@@ -87,15 +71,11 @@ same module name as the top-level application:
 
     $ make release
     $ cat << EOF > hello_world1_script.conf
-    [{internal,
-      "/examples/",
-      "$PWD/release/releases/1/hello_world1.script",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/release/releases/1/hello_world1.script"}]]
     EOF
-    $ curl -X POST -d @hello_world1_script.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_script.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
 To use an Erlang/OTP boot release file for an internal service with the
@@ -103,14 +83,10 @@ same module name as the top-level application:
 
     $ make release
     $ cat << EOF > hello_world1_boot.conf
-    [{internal,
-      "/examples/",
-      "$PWD/release/releases/1/hello_world1.boot",
-      [],
-      lazy_closest,
-      5000, 5000, 5000, [api], undefined, 1, 5, 300, []}]
+    [[{prefix, "/examples/"},
+      {module, "$PWD/release/releases/1/hello_world1.boot"}]]
     EOF
-    $ curl -X POST -d @hello_world1_boot.conf http://localhost:6467/cloudi/api/rpc/services_add.erl
-    $ curl http://localhost:6467/examples/hello_world1
+    $ curl -X POST -d @hello_world1_boot.conf http://localhost:6464/cloudi/api/rpc/services_add.erl
+    $ curl http://localhost:6464/examples/hello_world1
     Hello World!
 
