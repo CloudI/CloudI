@@ -46,7 +46,7 @@ module name:
     $ rebar get-deps compile generate
     $ cd release
     $ bin/cloudi_hello_world3 start
-    $ curl http://localhost:6467/examples/hello_world3
+    $ curl http://localhost:6464/examples/hello_world3
     Hello World!
     $ bin/cloudi_hello_world3 stop
 

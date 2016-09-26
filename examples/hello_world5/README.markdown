@@ -60,7 +60,7 @@ To use CloudI services with CloudI as a remote dependency:
     $ rebar get-deps compile generate
     $ cd release
     $ bin/cloudi_hello_world5 start
-    $ curl http://localhost:6467/examples/hello_world5
+    $ curl http://localhost:6464/examples/hello_world5
     Hello World!
     $ bin/cloudi_hello_world5 stop
 
@@ -71,7 +71,7 @@ To use CloudI services with CloudI as a local installation:
     $ rebar compile generate
     $ cd release
     $ bin/cloudi_hello_world5 start
-    $ curl http://localhost:6467/examples/hello_world5
+    $ curl http://localhost:6464/examples/hello_world5
     Hello World!
     $ bin/cloudi_hello_world5 stop
 

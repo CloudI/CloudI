@@ -33,34 +33,32 @@
 start(_StartType, _StartArgs) ->
     {ok, Application} = application:get_application(),
     Services = [
+        % All services have automatic_loading = false
+        % to rely on the hello_world5 release loading modules
+
         % CloudI Service API usage through service requests
-        {internal,
-            "/cloudi/api/",
-            cloudi_service_api_requests,
-            [],
-            none,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [{automatic_loading, false}]},
+        [{prefix, "/cloudi/api/"},
+         {module, cloudi_service_api_requests},
+         {options, [{automatic_loading, false}]}],
 
         % hello_world5 example
-        {internal,
-            "/examples/",
-            hello_world5,
-            [],
-            none,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [% automatic_loading should be set to false due to the
-             % hello_world5 Erlang application handling the loading of
-             % Erlang modules for the hello_world5 CloudI service
-             {automatic_loading, false},
-             % it is not necessary to set the application_name unless the
-             % CloudI service name is different from the Erlang application
-             % name (in this example, both are named hello_world5,
-             % but Erlang applications with more than 1 CloudI service will
-             % want to set the application_name here)
-             {application_name, Application}]},
-        % can also use the proplist configuration format for the
+        [{prefix, "/examples/"},
+         {module, hello_world5},
+         {dest_refresh, none},
+         {options,
+          [% automatic_loading should be set to false due to the
+           % hello_world5 Erlang application handling the loading of
+           % Erlang modules for the hello_world5 CloudI service
+           {automatic_loading, false},
+           % it is not necessary to set the application_name unless the
+           % CloudI service name is different from the Erlang application
+           % name (in this example, both are named hello_world5,
+           % but Erlang applications with more than 1 CloudI service will
+           % want to set the application_name here)
+           {application_name, Application}]}],
+
         % hello_world5 example
+        % proplist configuration format defaults shown below:
         [%{type, internal}, % gets inferred from having module entry
          {prefix, "/examples/"},
          {module, hello_world5},
@@ -81,14 +79,10 @@ start(_StartType, _StartArgs) ->
         % cloudi_service_http_cowboy gets listed last so that
         % if the destination refresh method changes to lazy,
         % all service name pattern subscriptions are present at initialization
-        {internal,
-            "/tests/http/",
-            cloudi_service_http_cowboy,
-            [{port, 6467}, {output, internal}],
-            immediate_closest,
-            5000, 5000, 5000, undefined, undefined, 1, 5, 300,
-            [{duo_mode, true},
-             {automatic_loading, false}]}],
+        [{prefix, "/tests/http/"},
+         {module, cloudi_service_http_cowboy},
+         {args, [{port, 6464}]},
+         {options, [{automatic_loading, false}]}]],
     case hello_world5_sup:start_link() of
         {ok, Pid} ->
             case cloudi_service_api:services_add(Services, infinity) of

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix starting a CloudI service with a script or boot file
+        * reltool fix in 19.0 changed application load order
+        * Needed file read errors returned
+    * Improve the Erlang usage examples
+    * Update reltool_util
+
 2016-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add logging_set CloudI Service API function

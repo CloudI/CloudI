@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(reltool_util).
@@ -880,12 +880,13 @@ module_version(Module)
 script_start(FilePath)
     when is_list(FilePath) ->
     true = lists:suffix(".script", FilePath),
-    {ok,
-     [{script,
-       {_Name, _Vsn},
-       _Instructions} = Script]} = file:consult(FilePath),
-    Dir = filename:dirname(FilePath),
-    script_start_data(Script, Dir).
+    case file:consult(FilePath) of
+        {ok, [{script, {_Name, _Vsn}, _Instructions} = Script]} ->
+            Dir = filename:dirname(FilePath),
+            script_start_data(Script, Dir);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -961,12 +962,13 @@ script_remove(FilePath, Timeout, Ignore)
          ((is_integer(Timeout) andalso (Timeout > 0)) orelse
           (Timeout =:= infinity)), is_list(Ignore) ->
     true = lists:suffix(".script", FilePath),
-    {ok,
-     [{script,
-       {_Name, _Vsn},
-       _Instructions} = Script]} = file:consult(FilePath),
-    Dir = filename:dirname(FilePath),
-    script_remove_data(Script, Dir, Timeout, Ignore).
+    case file:consult(FilePath) of
+        {ok, [{script, {_Name, _Vsn}, _Instructions} = Script]} ->
+            Dir = filename:dirname(FilePath),
+            script_remove_data(Script, Dir, Timeout, Ignore);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -989,9 +991,13 @@ script_remove(FilePath, Timeout, Ignore)
 boot_start(FilePath)
     when is_list(FilePath) ->
     true = lists:suffix(".boot", FilePath),
-    {ok, ScriptData} = file:read_file(FilePath),
-    Dir = filename:dirname(FilePath),
-    script_start_data(erlang:binary_to_term(ScriptData), Dir).
+    case file:read_file(FilePath) of
+        {ok, ScriptData} ->
+            Dir = filename:dirname(FilePath),
+            script_start_data(erlang:binary_to_term(ScriptData), Dir);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1061,10 +1067,14 @@ boot_remove(FilePath, Timeout, Ignore)
          ((is_integer(Timeout) andalso (Timeout > 0)) orelse
           (Timeout =:= infinity)), is_list(Ignore) ->
     true = lists:suffix(".boot", FilePath),
-    {ok, ScriptData} = file:read_file(FilePath),
-    Dir = filename:dirname(FilePath),
-    script_remove_data(erlang:binary_to_term(ScriptData),
-                       Dir, Timeout, Ignore).
+    case file:read_file(FilePath) of
+        {ok, ScriptData} ->
+            Dir = filename:dirname(FilePath),
+            script_remove_data(erlang:binary_to_term(ScriptData),
+                               Dir, Timeout, Ignore);
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -1466,8 +1476,10 @@ script_start_instructions([{apply,
                           applications_loaded, Applications, Root, Apps) ->
     case ensure_application_started(A) of
         ok ->
+            % order loaded applications based on the start order
             script_start_instructions(L, applications_loaded,
-                                      Applications, Root, Apps);
+                                      [A | lists:delete(A, Applications)],
+                                      Root, Apps);
         {error, _} = Error ->
             Error
     end;
@@ -1545,9 +1557,12 @@ script_remove_instructions([{apply, {application, load, [AppDescr]}} | L],
                            init_kernel_started, Applications) ->
     {application, A, [_ | _]} = AppDescr,
     script_remove_instructions(L, init_kernel_started, [A | Applications]);
-script_remove_instructions([{apply, {application, start_boot, _}} | L],
+script_remove_instructions([{apply,
+                             {application, start_boot, [A | _]}} | L],
                            applications_loaded, Applications) ->
-    script_remove_instructions(L, applications_loaded, Applications);
+    % order loaded applications based on the start order
+    script_remove_instructions(L, applications_loaded,
+                               [A | lists:delete(A, Applications)]);
 script_remove_instructions([{apply, {c, erlangrc, _}} | L],
                            applications_loaded, Applications) ->
     script_remove_instructions(L, applications_loaded, Applications).

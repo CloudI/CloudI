@@ -41,7 +41,7 @@ module name (the directions assume you don't have relx installed):
     $ relx/relx
     $ cd release
     $ bin/cloudi start
-    $ curl http://localhost:6467/examples/hello_world4
+    $ curl http://localhost:6464/examples/hello_world4
     Hello World!
     $ bin/cloudi stop
 
