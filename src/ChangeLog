@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make significant improvements to cloudi_service_queue
+        * Prevent any incomplete write from creating corrupt data
+        * retry service argument functions now works as expected
+        * Added retry_delay service argument for destinations that
+          are infrequently available
+
 2016-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix starting a CloudI service with a script or boot file

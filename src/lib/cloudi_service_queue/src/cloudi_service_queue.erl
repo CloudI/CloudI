@@ -14,13 +14,13 @@
 %%% file path, so the process index is used within the file path.
 %%%
 %%% The fault_isolation service argument determines the fault-tolerance
-%%% guarantee for the request/response exchange.  When fault_tolerance is
+%%% guarantee for the request/response exchange.  When fault_isolation is
 %%% set to 'destination' (the default), the sender is isolated from
 %%% destination instability only.  So, this means persistence to the
 %%% filesystem begins and ends within this service and the source could
 %%% fail to receive the response due to its own instability.
 %%%
-%%% When fault_tolerance is set to 'both', both the sender and the
+%%% When fault_isolation is set to 'both', both the sender and the
 %%% destination are isolated from instability.  Persistence of the request
 %%% begins when this service receives the incoming service request, but
 %%% persistence ends after the source receives a service request that contains
@@ -38,11 +38,37 @@
 %%% lifetime of this service's instance.  So, this means that after an
 %%% Erlang VM restart, the retry counter will start from 0
 %%% after the initial retry that occurs when the WAL is read upon startup.
+%%%
+%%% The amount of time the service request is persisted is always limited by
+%%% the timeout of the service request.  Tracking the time taken by a
+%%% service request depends on the Erlang VM time-keeping being dependable
+%%% which depends on the OS time-keeping not varying wildly
+%%% (otherwise service requests may timeout quicker due to the system time
+%%%  moving into the future).  If the fault_isolation service argument is
+%%% set to 'both', the original service request timeout value will be used
+%%% for the service request send to the destination and the service request
+%%% send containing the response.
+%%%
+%%% If the retry service argument is set higher than 0, any retry attempts
+%%% will occur during the time period defined by the timeout of the
+%%% service request (i.e., a service request is only retried if its
+%%% timeout has not expired).  Any usage of the retry_delay service argument
+%%% will contribute to time elapsed during the time period defined by the
+%%% timeout of the service request.
+%%%
+%%% To make sure cloudi_service_queue gets a service request timeout quickly
+%%% (i.e., without depending on the timeout elapsing locally, despite the
+%%%  timeout being a small value), it is common to set the service
+%%% configuration options request_timeout_immediate_max and
+%%% response_timeout_immediate_max to 0.  If the retry_delay service argument
+%%% is used, setting the request_name_lookup service configuration option to
+%%% async is best if the service request destinations are expected to rarely
+%%% be present (i.e., only appear when anticipating the receive of data).
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -77,8 +103,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2014-2016 Michael Truog
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -101,6 +127,7 @@
         % so unique files are created when the configuration count_process > 1
 -define(DEFAULT_COMPRESSION,                    0). % zlib compression 0..9
 -define(DEFAULT_RETRY,                          0).
+-define(DEFAULT_RETRY_DELAY,                    0). % milliseconds
 -define(DEFAULT_FAULT_ISOLATION,      destination). % | both
 
 % fault_isolation: destination
@@ -146,9 +173,11 @@
 
 -record(state,
     {
+        service :: pid(),
         logging :: cloudi_write_ahead_logging:state(),
         mode :: destination | both,
         retry :: non_neg_integer(),
+        retry_delay :: non_neg_integer(),
         retry_f :: fun((request()) ->
                        {ok, cloudi_service:trans_id()} |
                        {error, any()})
@@ -167,34 +196,42 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {file,                         ?DEFAULT_FILE},
         {compression,           ?DEFAULT_COMPRESSION},
         {retry,                       ?DEFAULT_RETRY},
+        {retry_delay,           ?DEFAULT_RETRY_DELAY},
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
-    [FilePath, Compression, Retry,
+    [FilePath, Compression, Retry, RetryDelay,
      Mode] = cloudi_proplists:take_values(Defaults, Args),
+    false = cloudi_x_trie:is_pattern(Prefix),
     true = is_list(FilePath) andalso is_integer(hd(FilePath)),
     true = is_integer(Compression) andalso
            (Compression >= 0) andalso (Compression =< 9),
     true = is_integer(Retry) andalso (Retry >= 0),
+    true = is_integer(RetryDelay) andalso
+           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
+    true = ((Retry == 0) andalso (RetryDelay == 0)) orelse
+           ((Retry > 0) andalso (RetryDelay >= 0)),
     true = ((Mode =:= destination) orelse (Mode =:= both)),
     I = erlang:integer_to_list(cloudi_service:process_index(Dispatcher)),
     Environment = cloudi_x_trie:store("I", I,
                                       cloudi_environment:lookup()),
     QueueFilePath = cloudi_environment:transform(FilePath, Environment),
+    Service = cloudi_service:self(Dispatcher),
+    DispatcherPid = cloudi_service:dispatcher(Dispatcher),
+    RetryF = fun(T) -> retry(Mode, T, DispatcherPid, Service) end,
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
                                              Compression,
-                                             fun(T) ->
-                                                retry(Mode, Dispatcher, T)
-                                             end),
-    false = cloudi_x_trie:is_pattern(Prefix),
+                                             RetryF),
     cloudi_service:subscribe(Dispatcher, "*"),
-    DispatcherPid = cloudi_service:dispatcher(Dispatcher),
-    {ok, #state{logging = Logging,
+    {ok, #state{service = Service,
+                logging = Logging,
                 mode = Mode,
                 retry = Retry,
-                retry_f = fun(T) -> retry(Mode, DispatcherPid, T) end}}.
+                retry_delay = RetryDelay,
+                retry_f = RetryF}}.
 
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
-                              #state{logging = Logging,
+                              #state{service = Service,
+                                     logging = Logging,
                                      mode = destination} = State,
                               Dispatcher) ->
     [QueueName] = cloudi_service_name:parse(Name, Pattern),
@@ -212,21 +249,17 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
     % PERSISTENCE START:
     % at this point the service request has been persisted and
     % can be restarted
-    case cloudi_service:send_async_active(Dispatcher, QueueName,
-                                          RequestInfo, Request,
-                                          Timeout, Priority) of
-        {ok, QueueTransId} ->
-            NewLogging = cloudi_write_ahead_logging:
-                         store_end(QueueTransId, Chunk, NextLogging),
-            {noreply, State#state{logging = NewLogging}};
-        {error, timeout} ->
-            NewLogging = cloudi_write_ahead_logging:
-                         store_fail(Chunk, NextLogging),
-            {reply, <<>>, State#state{logging = NewLogging}}
-    end;
+    {ok, QueueTransId} = send_async_active(QueueName,
+                                           RequestInfo, Request,
+                                           Timeout, Priority,
+                                           Dispatcher, Service),
+    NewLogging = cloudi_write_ahead_logging:
+                 store_end(QueueTransId, Chunk, NextLogging),
+    {noreply, State#state{logging = NewLogging}};
 cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
-                              #state{logging = Logging,
+                              #state{service = Service,
+                                     logging = Logging,
                                      mode = both} = State,
                               Dispatcher) ->
     RequestMetaData = cloudi_request_info:key_value_parse(RequestInfo),
@@ -253,21 +286,16 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             % PERSISTENCE START:
             % at this point the service request has been persisted and
             % can be restarted
-            case cloudi_service:send_async_active(Dispatcher, QueueName,
-                                                  RequestInfo, Request,
-                                                  Timeout, Priority) of
-                {ok, QueueTransId} ->
-                    NewLogging = cloudi_write_ahead_logging:
-                                 store_end(QueueTransId, Chunk, NextLogging),
-                    {reply, NextTransId, State#state{logging = NewLogging}};
-                {error, timeout} ->
-                    NewLogging = cloudi_write_ahead_logging:
-                                 store_fail(Chunk, NextLogging),
-                    {reply, <<>>, State#state{logging = NewLogging}}
-            end;
+            {ok, QueueTransId} = send_async_active(QueueName,
+                                                   RequestInfo, Request,
+                                                   Timeout, Priority,
+                                                   Dispatcher, Service),
+            NewLogging = cloudi_write_ahead_logging:
+                         store_end(QueueTransId, Chunk, NextLogging),
+            {reply, NextTransId, State#state{logging = NewLogging}};
         error ->
             ?LOG_ERROR("service_name not found in RequestInfo for ~s",
-                       [cloudi_x_uuid:uuid_to_string(TransId, nodash)]),
+                       [cloudi_trans_id:to_string(TransId, nodash)]),
             {reply, <<>>, State}
     end.
 
@@ -295,7 +323,8 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
                                                 trans_id = QueueTransId},
-                           #state{logging = Logging,
+                           #state{service = Service,
+                                  logging = Logging,
                                   mode = both} = State,
                            Dispatcher) ->
     UpdateF = fun
@@ -329,20 +358,34 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                        priority = NextPriority,
                        trans_id = NextTransId} ->
             % deliver the response as a service request
-            case cloudi_service:get_pid(Dispatcher, NextName, NextTimeout) of
-                {ok, PatternPid} ->
-                    cloudi_service:send_async_active(Dispatcher, NextName,
-                                                     ResponseInfo, Response,
-                                                     NextTimeout, NextPriority,
-                                                     NextTransId, PatternPid);
-                {error, _} ->
-                    Self = cloudi_service:self(Dispatcher),
-                    Self ! #timeout_async_active{trans_id = NextTransId}
-            end,
+            {ok, _} = send_async_active(NextName, ResponseInfo, Response,
+                                        NextTimeout, NextPriority, NextTransId,
+                                        Dispatcher, Service),
             {noreply, State#state{logging = NewLogging}}
     end;
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
+                           #state{logging = Logging,
+                                  retry = Retry,
+                                  retry_delay = 0,
+                                  retry_f = RetryF} = State,
+                           _Dispatcher) ->
+    NewLogging = cloudi_write_ahead_logging:
+                 erase_retry(QueueTransId, Retry, RetryF, Logging),
+    % PERSISTENCE END (if a retry didn't occur):
+    % at this point the service request/response is no longer persisted
+    % due to its timeout value
+    {noreply, State#state{logging = NewLogging}};
+
+cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
+                           #state{service = Service,
+                                  retry_delay = RetryDelay} = State,
+                           _Dispatcher)
+    when RetryDelay > 0 ->
+    erlang:send_after(RetryDelay, Service, {retry_delay, QueueTransId}),
+    {noreply, State};
+
+cloudi_service_handle_info({retry_delay, QueueTransId},
                            #state{logging = Logging,
                                   retry = Retry,
                                   retry_f = RetryF} = State,
@@ -366,13 +409,14 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 
 -spec retry(Mode :: destination | both,
+            request(),
             Dispatcher :: cloudi_service:dispatcher(),
-            request()) ->
+            Service :: cloudi_service:source()) ->
     {ok, cloudi_service:trans_id()} |
     {error, any()}.
--compile({inline, [{retry, 3}]}).
+-compile({inline, [{retry, 4}]}).
 
-retry(destination, Dispatcher,
+retry(destination,
       #destination_request{name = Name,
                            pattern = Pattern,
                            request_info = RequestInfo,
@@ -380,9 +424,10 @@ retry(destination, Dispatcher,
                            timeout = Timeout,
                            priority = Priority,
                            trans_id = TransId,
-                           pid = Pid}) ->
+                           pid = Pid},
+      Dispatcher, Service) ->
     Age = (cloudi_x_uuid:get_v1_time(erlang) -
-           cloudi_x_uuid:get_v1_time(TransId)) div 1000 + 100, % milliseconds
+           cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
     case erlang:is_process_alive(Pid) of
         false ->
             {error, timeout};
@@ -391,11 +436,11 @@ retry(destination, Dispatcher,
         true ->
             [QueueName] = cloudi_service_name:parse(Name, Pattern),
             NewTimeout = Timeout - Age,
-            cloudi_service:send_async_active(Dispatcher, QueueName,
-                                             RequestInfo, Request,
-                                             NewTimeout, Priority)
+            send_async_active(QueueName, RequestInfo, Request,
+                              NewTimeout, Priority,
+                              Dispatcher, Service)
     end;
-retry(both, Dispatcher,
+retry(both,
       #both_request{name = QueueName,
                     request_info = RequestInfo,
                     request = Request,
@@ -403,41 +448,63 @@ retry(both, Dispatcher,
                     priority = Priority,
                     trans_id = TransId,
                     next_name = NextName,
-                    next_trans_id = NextTransId}) ->
+                    next_trans_id = NextTransId},
+      Dispatcher, Service) ->
     Age = (cloudi_x_uuid:get_v1_time(erlang) -
-           cloudi_x_uuid:get_v1_time(TransId)) div 1000 + 100, % milliseconds
+           cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
     if
         Age >= Timeout ->
-            case cloudi_service:get_pid(Dispatcher, NextName, Timeout) of
-                {ok, PatternPid} ->
-                    cloudi_service:send_async_active(Dispatcher, NextName,
-                                                     <<>>, <<>>,
-                                                     Timeout, Priority,
-                                                     NextTransId,
-                                                     PatternPid);
-                {error, _} = Error ->
-                    Error
-            end;
+            % an empty response is sent with the TransId
+            % provided in the initial response
+            send_async_active(NextName, <<>>, <<>>,
+                              Timeout, Priority, NextTransId,
+                              Dispatcher, Service);
         true ->
             NewTimeout = Timeout - Age,
-            cloudi_service:send_async_active(Dispatcher, QueueName,
-                                             RequestInfo, Request,
-                                             NewTimeout, Priority)
+            send_async_active(QueueName, RequestInfo, Request,
+                              NewTimeout, Priority,
+                              Dispatcher, Service)
     end;
-retry(both, Dispatcher,
+retry(both,
       #both_response{name = NextName,
                      response_info = ResponseInfo,
                      response = Response,
                      timeout = NextTimeout,
                      priority = NextPriority,
-                     trans_id = NextTransId}) ->
-    case cloudi_service:get_pid(Dispatcher, NextName, NextTimeout) of
+                     trans_id = NextTransId},
+      Dispatcher, Service) ->
+    send_async_active(NextName, ResponseInfo, Response,
+                      NextTimeout, NextPriority, NextTransId,
+                      Dispatcher, Service).
+
+send_async_active(Name, ResponseInfo, Response, Timeout, Priority, TransId,
+                  Dispatcher, Service) ->
+    Result = case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
         {ok, PatternPid} ->
-            cloudi_service:send_async_active(Dispatcher, NextName,
+            cloudi_service:send_async_active(Dispatcher, Name,
                                              ResponseInfo, Response,
-                                             NextTimeout, NextPriority,
-                                             NextTransId, PatternPid);
+                                             Timeout, Priority,
+                                             TransId, PatternPid);
         {error, _} = Error ->
             Error
+    end,
+    case Result of
+        {ok, _} = Success ->
+            Success;
+        {error, timeout} ->
+            Service ! #timeout_async_active{trans_id = TransId},
+            {ok, TransId}
     end.
 
+send_async_active(Name, RequestInfo, Request, Timeout, Priority,
+                  Dispatcher, Service) ->
+    case cloudi_service:send_async_active(Dispatcher, Name,
+                                          RequestInfo, Request,
+                                          Timeout, Priority) of
+        {ok, _} = Success ->
+            Success;
+        {error, timeout} ->
+            TransId = cloudi_service:trans_id(Dispatcher),
+            Service ! #timeout_async_active{trans_id = TransId},
+            {ok, TransId}
+    end.

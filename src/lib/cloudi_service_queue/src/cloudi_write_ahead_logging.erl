@@ -86,7 +86,7 @@
 -endif.
 -record(state,
     {
-        file = undefined :: undefined | binary() | string(),
+        file = undefined :: undefined | string(),
         compression = undefined :: undefined | 0..9, % zlib compression level
         position = undefined :: undefined | non_neg_integer(),
         chunks = dict:new() :: dict_proxy(cloudi_service:trans_id(), #chunk{}),
@@ -95,6 +95,8 @@
 
 -type state() :: #state{}.
 -export_type([state/0]).
+
+-define(FILE_EXTENSION_TMP, ".tmp").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -109,10 +111,9 @@ erase(ChunkId,
              chunks = Chunks} = State) ->
     Chunk = dict:fetch(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
-    {ok, Fd} = file_open(FilePath),
+    {ok, Fd} = file_open_tmp(FilePath),
     NewState = erase_chunk(Chunk, Fd, State),
-    ok = file:datasync(Fd),
-    ok = file:close(Fd),
+    ok = file_close_tmp(FilePath, Fd),
     {ChunkRequest, NewState#state{chunks = dict:erase(ChunkId, Chunks)}}.
 
 -spec erase_retry(ChunkId :: cloudi_service:trans_id(),
@@ -142,10 +143,9 @@ erase_retry(ChunkId, RetryMax, RetryF,
     end,
     if
         NewChunkId =:= undefined ->
-            {ok, Fd} = file_open(FilePath),
+            {ok, Fd} = file_open_tmp(FilePath),
             NewState = erase_chunk(Chunk, Fd, State),
-            ok = file:datasync(Fd),
-            ok = file:close(Fd),
+            ok = file_close_tmp(FilePath, Fd),
             NewState#state{chunks = dict:erase(ChunkId, Chunks)};
         true ->
             NewChunk = Chunk#chunk{retries = Retries + 1},
@@ -185,10 +185,9 @@ store_end(ChunkId, Chunk,
     #state{}.
 
 store_fail(Chunk, #state{file = FilePath} = State) ->
-    {ok, Fd} = file_open(FilePath),
+    {ok, Fd} = file_open_tmp(FilePath),
     NewState = erase_chunk(Chunk, Fd, State),
-    ok = file:datasync(Fd),
-    ok = file:close(Fd),
+    ok = file_close_tmp(FilePath, Fd),
     NewState.
 
 -spec store_start(ChunkRequest :: cloudi_service_queue:request(),
@@ -200,7 +199,7 @@ store_start(ChunkRequest,
                    compression = Compression,
                    position = Position,
                    chunks_free = ChunksFree} = State) ->
-    {ok, Fd} = file_open(FilePath),
+    {ok, Fd} = file_open_tmp(FilePath),
     ChunkData = erlang:term_to_binary(ChunkRequest,
                                       [{compressed, Compression}]),
     ChunkSizeUsed = erlang:byte_size(ChunkData),
@@ -209,8 +208,7 @@ store_start(ChunkRequest,
             ChunkSize = ChunkSizeUsed,
             NewPosition = chunk_write(ChunkSize, ChunkSizeUsed,
                                       ChunkData, Position, Fd),
-            ok = file:datasync(Fd),
-            ok = file:close(Fd),
+            ok = file_close_tmp(FilePath, Fd),
             NewChunk = #chunk{size = ChunkSize,
                               position = Position,
                               request = ChunkRequest},
@@ -219,13 +217,12 @@ store_start(ChunkRequest,
                 position = ChunkPosition} = ChunkFree, NewChunksFree} ->
             chunk_write(ChunkSize, ChunkSizeUsed,
                         ChunkData, ChunkPosition, Fd),
-            ok = file:datasync(Fd),
-            ok = file:close(Fd),
+            ok = file_close_tmp(FilePath, Fd),
             NewChunk = ChunkFree#chunk{request = ChunkRequest},
             {NewChunk, State#state{chunks_free = NewChunksFree}}
     end.
 
--spec new(FilePath :: string() | binary(),
+-spec new(FilePath :: string(),
           Compression :: 0..9,
           RetryF :: fun((cloudi_service_queue:request()) ->
                         {ok, cloudi_service:trans_id()} |
@@ -238,13 +235,12 @@ new(FilePath, Compression, RetryF)
     State = #state{},
     #state{chunks = Chunks,
            chunks_free = ChunksFree} = State,
-    {ok, Fd} = file_open(FilePath),
+    {ok, Fd} = file_open_copy(FilePath),
     {ok,
      Position,
      NewChunks,
      NewChunksFree} = chunks_recover(Chunks, ChunksFree, Fd, RetryF),
-    ok = file:datasync(Fd),
-    ok = file:close(Fd),
+    ok = file_close_tmp(FilePath, Fd),
     State#state{file = FilePath,
                 compression = Compression,
                 position = Position,
@@ -271,7 +267,7 @@ update(ChunkId, UpdateF,
             {_, NewState} = erase(ChunkId, State),
             {undefined, NewState};
         {NewChunkId, NewChunkRequest} ->
-            {ok, Fd} = file_open(FilePath),
+            {ok, Fd} = file_open_tmp(FilePath),
             % store update
             NewChunkData = erlang:term_to_binary(NewChunkRequest,
                                                  [{compressed, Compression}]),
@@ -298,8 +294,7 @@ update(ChunkId, UpdateF,
             end,
             % erase previous entry
             NewState = erase_chunk(Chunk, Fd, NextState),
-            ok = file:datasync(Fd),
-            ok = file:close(Fd),
+            ok = file_close_tmp(FilePath, Fd),
             {NewChunkRequest, NewState}
     end.
 
@@ -307,8 +302,30 @@ update(ChunkId, UpdateF,
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-file_open(FilePath) ->
-    file:open(FilePath, [raw, write, read, binary]).
+file_open_copy(FilePath) ->
+    case file:copy({FilePath, [raw]},
+                   {FilePath ++ ?FILE_EXTENSION_TMP, [raw]}) of
+        {ok, _} ->
+            ok;
+        {error, enoent} ->
+            case file:delete(FilePath ++ ?FILE_EXTENSION_TMP) of
+                ok ->
+                    ok;
+                {error, enoent} ->
+                    ok
+            end
+    end,
+    file:open(FilePath ++ ?FILE_EXTENSION_TMP, [raw, write, read, binary]).
+
+file_open_tmp(FilePath) ->
+    file:open(FilePath ++ ?FILE_EXTENSION_TMP, [raw, write, read, binary]).
+
+file_close_tmp(FilePath, Fd) ->
+    ok = file:close(Fd),
+    ok = file:rename(FilePath ++ ?FILE_EXTENSION_TMP, FilePath),
+    {ok, _} = file:copy({FilePath, [raw]},
+                        {FilePath ++ ?FILE_EXTENSION_TMP, [raw]}),
+    ok.
 
 chunk_write(ChunkSize, ChunkSizeUsed, ChunkData, Position, Fd) ->
     ChunkSizeZero = (ChunkSize - ChunkSizeUsed),
@@ -376,9 +393,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
             ChunkRequest = erlang:binary_to_term(ChunkData),
             case RetryF(ChunkRequest) of
                 {error, _} ->
-                    {ok, _} = file:position(Fd, Position + 8),
-                    ok = file:write(Fd, <<0:64,
-                                          0:(ChunkSize * 8)>>),
+                    ok = chunk_free(ChunkSize, Position, Fd),
                     chunk_recover_free(Position, ChunkSize,
                                        Chunks, ChunksFree, Fd, RetryF);
                 {ok, ChunkId} when ChunkSize == ChunkSizeUsed ->
