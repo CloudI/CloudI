@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_trans_id).
@@ -59,6 +59,7 @@
          datetime/2,
          from_string/1,
          increment/1,
+         microseconds/0,
          microseconds/1,
          to_string/1,
          to_string/2]).
@@ -117,6 +118,24 @@ from_string(String) ->
 
 increment(TransId) ->
     cloudi_x_uuid:increment(TransId).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Microseconds since the UNIX epoch.===
+%% The integer value returned uses the same time source used for creating
+%% TransId v1 UUIDs, though the return values are not strictly
+%% monotonically increasing on Erlang >= 18.0 if the OS time is changed
+%% (TransId v1 UUID time values are strictly monotonically increasing
+%%  when comparing TransId values created by the same service Erlang process).
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds() ->
+    non_neg_integer().
+
+microseconds() ->
+    cloudi_x_uuid:get_v1_time(erlang).
 
 %%-------------------------------------------------------------------------
 %% @doc

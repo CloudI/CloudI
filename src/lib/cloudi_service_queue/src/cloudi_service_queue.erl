@@ -319,7 +319,6 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   ResponseInfo, Response,
                                   Timeout, TransId, Pid),
     {noreply, State#state{logging = NewLogging}};
-
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
                                                 trans_id = QueueTransId},
@@ -363,7 +362,6 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                         Dispatcher, Service),
             {noreply, State#state{logging = NewLogging}}
     end;
-
 cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
                            #state{logging = Logging,
                                   retry = Retry,
@@ -376,7 +374,6 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
     % at this point the service request/response is no longer persisted
     % due to its timeout value
     {noreply, State#state{logging = NewLogging}};
-
 cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
                            #state{service = Service,
                                   retry_delay = RetryDelay} = State,
@@ -384,7 +381,6 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QueueTransId},
     when RetryDelay > 0 ->
     erlang:send_after(RetryDelay, Service, {retry_delay, QueueTransId}),
     {noreply, State};
-
 cloudi_service_handle_info({retry_delay, QueueTransId},
                            #state{logging = Logging,
                                   retry = Retry,
@@ -396,7 +392,6 @@ cloudi_service_handle_info({retry_delay, QueueTransId},
     % at this point the service request/response is no longer persisted
     % due to its timeout value
     {noreply, State#state{logging = NewLogging}};
-
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -408,13 +403,13 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+-compile({inline, [{retry, 4}]}).
 -spec retry(Mode :: destination | both,
             request(),
             Dispatcher :: cloudi_service:dispatcher(),
             Service :: cloudi_service:source()) ->
     {ok, cloudi_service:trans_id()} |
     {error, any()}.
--compile({inline, [{retry, 4}]}).
 
 retry(destination,
       #destination_request{name = Name,
@@ -426,7 +421,7 @@ retry(destination,
                            trans_id = TransId,
                            pid = Pid},
       Dispatcher, Service) ->
-    Age = (cloudi_x_uuid:get_v1_time(erlang) -
+    Age = (cloudi_trans_id:microseconds() -
            cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
     case erlang:is_process_alive(Pid) of
         false ->
@@ -446,19 +441,20 @@ retry(both,
                     request = Request,
                     timeout = Timeout,
                     priority = Priority,
-                    trans_id = TransId,
-                    next_name = NextName,
-                    next_trans_id = NextTransId},
+                    trans_id = TransId},
       Dispatcher, Service) ->
-    Age = (cloudi_x_uuid:get_v1_time(erlang) -
+    Age = (cloudi_trans_id:microseconds() -
            cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
     if
         Age >= Timeout ->
-            % an empty response is sent with the TransId
-            % provided in the initial response
-            send_async_active(NextName, <<>>, <<>>,
-                              Timeout, Priority, NextTransId,
-                              Dispatcher, Service);
+            % an empty response will be handled due to the request timeout
+            Service ! #return_async_active{name = QueueName,
+                                           pattern = QueueName,
+                                           response_info = <<>>,
+                                           response = <<>>,
+                                           timeout = Timeout,
+                                           trans_id = TransId},
+            {ok, TransId};
         true ->
             NewTimeout = Timeout - Age,
             send_async_active(QueueName, RequestInfo, Request,
@@ -508,3 +504,4 @@ send_async_active(Name, RequestInfo, Request, Timeout, Priority,
             Service ! #timeout_async_active{trans_id = TransId},
             {ok, TransId}
     end.
+

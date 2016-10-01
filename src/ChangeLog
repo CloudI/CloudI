@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-10-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve handling of a request timeout in cloudi_service_queue
+      when using both mode after a retry
+    * Add cloudi_trans_id:microseconds/0 function
+
 2016-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Make significant improvements to cloudi_service_queue
