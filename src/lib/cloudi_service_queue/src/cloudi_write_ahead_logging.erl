@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
