@@ -66,10 +66,10 @@ end_per_testcase(_TestCase, Config) ->
 
 t_wal_sequence0(Config) ->
     UUID0 = cloudi_x_uuid:new(self()),
-    SendF0 = fun({_, _, _, _, _, _, _, _, _, _}) ->
+    RetryF0 = fun({_, _, _, _, _, _, _, _, _, _}, true) ->
         erlang:exit(queue_file_not_empty)
     end,
-    State0 = cloudi_write_ahead_logging:new(?config(file, Config), 0, SendF0),
+    State0 = cloudi_write_ahead_logging:new(?config(file, Config), 0, RetryF0),
     {TransId0, UUID1} = cloudi_x_uuid:get_v1(UUID0),
     % request0
     ChunkRequest0 = {"request0",
@@ -148,8 +148,8 @@ t_wal_sequence0(Config) ->
     % request2, request3, request5, request6
 
     % restart1:
-    SendF1 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
-                  Timeout, _Priority, TransId, _Pid} = T) ->
+    RetryF1 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
+                   Timeout, _Priority, TransId, _Pid} = T, true) ->
         Age = (cloudi_x_uuid:get_v1_time(erlang) -
                cloudi_x_uuid:get_v1_time(TransId)) div 1000, % milliseconds
         if
@@ -163,11 +163,11 @@ t_wal_sequence0(Config) ->
                 {ok, NewTransId}
         end
     end,
-    _State17 = cloudi_write_ahead_logging:new(?config(file, Config), 0, SendF1),
+    _State17 = cloudi_write_ahead_logging:new(?config(file, Config), 0, RetryF1),
 
     % restart2:
-    SendF2 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
-                  Timeout, _Priority, TransId, _Pid} = T) ->
+    RetryF2 = fun({_QueueName, _Type, _Name, _Pattern, _RequestInfo, _Request,
+                  Timeout, _Priority, TransId, _Pid} = T, true) ->
         Age = (cloudi_x_uuid:get_v1_time(erlang) -
                cloudi_x_uuid:get_v1_time(TransId)) div 1000, % milliseconds
         if
@@ -181,7 +181,7 @@ t_wal_sequence0(Config) ->
                 {ok, NewTransId}
         end
     end,
-    State18 = cloudi_write_ahead_logging:new(?config(file, Config), 0, SendF2),
+    State18 = cloudi_write_ahead_logging:new(?config(file, Config), 0, RetryF2),
     % request7
     {TransId7, UUID14} = cloudi_x_uuid:get_v1(UUID13),
     ChunkRequest7 = {"request7",
@@ -225,10 +225,10 @@ t_wal_sequence0(Config) ->
     true = (cloudi_write_ahead_logging:size_free(State25) == 3),
 
     % restart3
-    SendF3 = fun({_, _, _, _, _, _, _, _, _, _}) ->
+    RetryF3 = fun({_, _, _, _, _, _, _, _, _, _}, true) ->
         erlang:exit(queue_file_not_empty)
     end,
-    State26 = cloudi_write_ahead_logging:new(?config(file, Config), 0, SendF3),
+    State26 = cloudi_write_ahead_logging:new(?config(file, Config), 0, RetryF3),
     true = (cloudi_write_ahead_logging:fetch_keys(State26) == []),
     true = (cloudi_write_ahead_logging:size_free(State26) == 3),
 

@@ -178,9 +178,7 @@
         mode :: destination | both,
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
-        retry_f :: fun((request()) ->
-                       {ok, cloudi_service:trans_id()} |
-                       {error, any()})
+        retry_f :: cloudi_write_ahead_logging:retry_function()
     }).
 
 %%%------------------------------------------------------------------------
@@ -216,7 +214,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     QueueFilePath = cloudi_environment:transform(FilePath, Environment),
     Service = cloudi_service:self(Dispatcher),
     DispatcherPid = cloudi_service:dispatcher(Dispatcher),
-    RetryF = fun(T) -> retry(Mode, T, DispatcherPid, Service) end,
+    RetryF = fun(T, RetryT) ->
+        retry(T, RetryT, Mode, DispatcherPid, Service)
+    end,
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
                                              Compression,
                                              RetryF),
@@ -403,23 +403,23 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
--compile({inline, [{retry, 4}]}).
--spec retry(Mode :: destination | both,
-            request(),
+-compile({inline, [{retry, 5}]}).
+-spec retry(request(),
+            Retry :: boolean(),
+            Mode :: destination | both,
             Dispatcher :: cloudi_service:dispatcher(),
             Service :: cloudi_service:source()) ->
     {ok, cloudi_service:trans_id()} |
-    {error, any()}.
+    {error, timeout}.
 
-retry(destination,
-      #destination_request{name = Name,
+retry(#destination_request{name = Name,
                            pattern = Pattern,
                            request_info = RequestInfo,
                            request = Request,
                            timeout = Timeout,
                            priority = Priority,
                            trans_id = TransId,
-                           pid = Pid},
+                           pid = Pid}, true, destination,
       Dispatcher, Service) ->
     Age = (cloudi_trans_id:microseconds() -
            cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
@@ -435,19 +435,19 @@ retry(destination,
                               NewTimeout, Priority,
                               Dispatcher, Service)
     end;
-retry(both,
-      #both_request{name = QueueName,
+retry(#both_request{name = QueueName,
                     request_info = RequestInfo,
                     request = Request,
                     timeout = Timeout,
                     priority = Priority,
-                    trans_id = TransId},
+                    trans_id = TransId}, Retry, both,
       Dispatcher, Service) ->
     Age = (cloudi_trans_id:microseconds() -
            cloudi_trans_id:microseconds(TransId)) div 1000 + 100, % milliseconds
     if
         Age >= Timeout ->
             % an empty response will be handled due to the request timeout
+            % (always occurs, even without using retries)
             Service ! #return_async_active{name = QueueName,
                                            pattern = QueueName,
                                            response_info = <<>>,
@@ -455,23 +455,26 @@ retry(both,
                                            timeout = Timeout,
                                            trans_id = TransId},
             {ok, TransId};
-        true ->
+        Retry =:= true ->
             NewTimeout = Timeout - Age,
             send_async_active(QueueName, RequestInfo, Request,
                               NewTimeout, Priority,
-                              Dispatcher, Service)
+                              Dispatcher, Service);
+        Retry =:= false ->
+            {error, timeout}
     end;
-retry(both,
-      #both_response{name = NextName,
+retry(#both_response{name = NextName,
                      response_info = ResponseInfo,
                      response = Response,
                      timeout = NextTimeout,
                      priority = NextPriority,
-                     trans_id = NextTransId},
+                     trans_id = NextTransId}, true, both,
       Dispatcher, Service) ->
     send_async_active(NextName, ResponseInfo, Response,
                       NextTimeout, NextPriority, NextTransId,
-                      Dispatcher, Service).
+                      Dispatcher, Service);
+retry(_, false, _, _, _) ->
+    {error, timeout}.
 
 send_async_active(Name, ResponseInfo, Response, Timeout, Priority, TransId,
                   Dispatcher, Service) ->

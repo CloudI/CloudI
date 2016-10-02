@@ -94,7 +94,18 @@
     }).
 
 -type state() :: #state{}.
--export_type([state/0]).
+-type retry_function() ::
+    fun((Chunk :: cloudi_service_queue:request(),
+         Retry :: boolean()) ->
+        {ok, cloudi_service:trans_id()} |
+        {error, timeout}).
+-type update_function() ::
+    fun((cloudi_service_queue:request()) ->
+        {cloudi_service:trans_id(),
+         cloudi_service_queue:request()} | undefined).
+-export_type([state/0,
+              retry_function/0,
+              update_function/0]).
 
 -define(FILE_EXTENSION_TMP, ".tmp").
 
@@ -118,9 +129,7 @@ erase(ChunkId,
 
 -spec erase_retry(ChunkId :: cloudi_service:trans_id(),
                   RetryMax :: non_neg_integer(),
-                  RetryF :: fun((cloudi_service_queue:request()) ->
-                               {ok, cloudi_service:trans_id()} |
-                               {error, any()}),
+                  RetryF :: retry_function(),
                   State :: #state{}) ->
     #state{}.
 
@@ -130,16 +139,11 @@ erase_retry(ChunkId, RetryMax, RetryF,
     Chunk = dict:fetch(ChunkId, Chunks),
     #chunk{request = ChunkRequest,
            retries = Retries} = Chunk,
-    NewChunkId = if
-        Retries < RetryMax ->
-            case RetryF(ChunkRequest) of
-                {error, _} ->
-                    undefined;
-                {ok, TransId} ->
-                    TransId
-            end;
-        true ->
-            undefined
+    NewChunkId = case RetryF(ChunkRequest, Retries < RetryMax) of
+        {error, timeout} ->
+            undefined;
+        {ok, TransId} ->
+            TransId
     end,
     if
         NewChunkId =:= undefined ->
@@ -224,14 +228,12 @@ store_start(ChunkRequest,
 
 -spec new(FilePath :: string(),
           Compression :: 0..9,
-          RetryF :: fun((cloudi_service_queue:request()) ->
-                        {ok, cloudi_service:trans_id()} |
-                        {error, any()})) ->
+          RetryF :: retry_function()) ->
     #state{}.
 
 new(FilePath, Compression, RetryF)
     when is_integer(Compression), Compression >= 0, Compression =< 9,
-         is_function(RetryF, 1) ->
+         is_function(RetryF, 2) ->
     State = #state{},
     #state{chunks = Chunks,
            chunks_free = ChunksFree} = State,
@@ -248,9 +250,7 @@ new(FilePath, Compression, RetryF)
                 chunks_free = NewChunksFree}.
 
 -spec update(ChunkId :: cloudi_service:trans_id(),
-             UpdateF :: fun((cloudi_service_queue:request()) ->
-                            {cloudi_service:trans_id(),
-                             cloudi_service_queue:request()} | undefined),
+             UpdateF :: update_function(),
              State :: #state{}) ->
     {cloudi_service_queue:request() | undefined, #state{}}.
 
@@ -391,8 +391,8 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
     case file:read(Fd, ChunkSizeUsed) of
         {ok, ChunkData} ->
             ChunkRequest = erlang:binary_to_term(ChunkData),
-            case RetryF(ChunkRequest) of
-                {error, _} ->
+            case RetryF(ChunkRequest, true) of
+                {error, timeout} ->
                     ok = chunk_free(ChunkSize, Position, Fd),
                     chunk_recover_free(Position, ChunkSize,
                                        Chunks, ChunksFree, Fd, RetryF);

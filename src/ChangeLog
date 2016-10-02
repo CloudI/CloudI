@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve handling of a request timeout in cloudi_service_queue
+      when using both mode by always having an empty response sent after
+      the timeout of the request expires (including when retries are not used)
+
 2016-10-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve handling of a request timeout in cloudi_service_queue
