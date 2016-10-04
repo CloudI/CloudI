@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix internal CloudI service bug storing service state when
+      both service requests and info messages are queued
+      (only observed when duo_mode was true with a high request rate)
+
 2016-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve handling of a request timeout in cloudi_service_queue

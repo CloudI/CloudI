@@ -65,6 +65,12 @@ in `tests/http_req/loadtest/results_v*/*_tsung_output.tar.bz2`
     L2:4x256KB L3:8MB RAM:16GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (LGA1155)
 
+#####Disk
+
+    WDC WD10EZEX (1TB)
+    max UDMA/133 (133 MB/s), SATA rev 2 (3.0 Gbps, 300 MB/s)
+    4096 byte physical blocks, 512 byte logical blocks
+
 ####Network
 
     Gigabit ethernet (Netgear JGS516)

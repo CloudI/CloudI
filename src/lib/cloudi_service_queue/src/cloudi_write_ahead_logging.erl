@@ -151,7 +151,7 @@ erase_retry(ChunkId, RetryMax, RetryF,
             NewState = erase_chunk(Chunk, Fd, State),
             ok = file_close_tmp(FilePath, Fd),
             NewState#state{chunks = dict:erase(ChunkId, Chunks)};
-        true ->
+        is_binary(NewChunkId) ->
             NewChunk = Chunk#chunk{retries = Retries + 1},
             NewChunks = dict:erase(ChunkId, Chunks),
             State#state{chunks = dict:store(NewChunkId, NewChunk, NewChunks)}
