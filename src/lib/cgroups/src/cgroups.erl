@@ -97,13 +97,18 @@
 
 create([_ | _] = CGroupPath, OSPids, CGroupParameters,
        #cgroups{path = Path} = State) ->
-    true = cgroup_path_valid(CGroupPath),
-    CGroupPathFull = Path ++ CGroupPath,
-    case filelib:is_dir(CGroupPathFull) of
+    CGroupPathValid = cgroup_path_valid(CGroupPath),
+    if
+        CGroupPathValid =:= false ->
+            {error, {invalid_cgroup_path, CGroupPath}};
         true ->
-            {error, {exists, CGroupPathFull}};
-        false ->
-            create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
+            CGroupPathFull = Path ++ CGroupPath,
+            case filelib:is_dir(CGroupPathFull) of
+                true ->
+                    {error, {exists, CGroupPathFull}};
+                false ->
+                    create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -121,13 +126,18 @@ create([_ | _] = CGroupPath, OSPids, CGroupParameters,
 
 delete([_ | _] = CGroupPath,
        #cgroups{path = Path}) ->
-    true = cgroup_path_valid(CGroupPath),
-    CGroupPathFull = Path ++ CGroupPath,
-    case shell("rmdir \"~s\"", [CGroupPathFull]) of
-        {0, _} ->
-            ok;
-        {Status, Output} ->
-            {error, {rmdir, Status, Output}}
+    CGroupPathValid = cgroup_path_valid(CGroupPath),
+    if
+        CGroupPathValid =:= false ->
+            {error, {invalid_cgroup_path, CGroupPath}};
+        true ->
+            CGroupPathFull = Path ++ CGroupPath,
+            case shell("rmdir \"~s\"", [CGroupPathFull]) of
+                {0, _} ->
+                    ok;
+                {Status, Output} ->
+                    {error, {rmdir, Status, Output}}
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -145,14 +155,20 @@ delete([_ | _] = CGroupPath,
 
 delete_recursive([_ | _] = CGroupPath,
                  #cgroups{path = Path}) ->
-    true = cgroup_path_valid(CGroupPath),
-    CGroupPathFull = Path ++ CGroupPath,
-    case shell("rmdir \"~s\"", [CGroupPathFull]) of
-        {0, _} ->
-            _ = delete_recursive_subpath(subdirectory(CGroupPathFull), Path),
-            ok;
-        {Status, Output} ->
-            {error, {rmdir, Status, Output}}
+    CGroupPathValid = cgroup_path_valid(CGroupPath),
+    if
+        CGroupPathValid =:= false ->
+            {error, {invalid_cgroup_path, CGroupPath}};
+        true ->
+            CGroupPathFull = Path ++ CGroupPath,
+            case shell("rmdir \"~s\"", [CGroupPathFull]) of
+                {0, _} ->
+                    _ = delete_recursive_subpath(subdirectory(CGroupPathFull),
+                                                 Path),
+                    ok;
+                {Status, Output} ->
+                    {error, {rmdir, Status, Output}}
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -252,11 +268,11 @@ shell(Command, Arguments) ->
 update(CGroupPath, OSPids, CGroupParameters,
        #cgroups{version = Version,
                 path = Path}) ->
-    true = cgroup_path_valid(CGroupPath),
-    true = lists:all(fun(OSPid) ->
+    CGroupPathValid = cgroup_path_valid(CGroupPath),
+    OSPidsValid = lists:all(fun(OSPid) ->
         is_integer(OSPid) andalso (OSPid > 0)
     end, OSPids),
-    true = lists:all(fun(CGroupParameter) ->
+    CGroupParametersValid = lists:all(fun(CGroupParameter) ->
         case CGroupParameter of
             {[_ | _] = SubsystemParameter, Value} when is_list(Value) ->
                 quoteless(SubsystemParameter) andalso quoteless(Value);
@@ -264,12 +280,22 @@ update(CGroupPath, OSPids, CGroupParameters,
                 false
         end
     end, CGroupParameters),
-    CGroupPathFull = Path ++ CGroupPath,
-    case update_parameters(CGroupParameters, Version, CGroupPathFull, Path) of
-        ok ->
-            update_pids(OSPids, Version, CGroupPathFull);
-        {error, _} = Error ->
-            Error
+    if
+        CGroupPathValid =:= false ->
+            {error, {invalid_cgroup_path, CGroupPath}};
+        OSPidsValid =:= false ->
+            {error, {invalid_os_pids, OSPids}};
+        CGroupParametersValid =:= false ->
+            {error, {invalid_cgroup_parameters, CGroupParameters}};
+        true ->
+            CGroupPathFull = Path ++ CGroupPath,
+            case update_parameters(CGroupParameters, Version,
+                                   CGroupPathFull, Path) of
+                ok ->
+                    update_pids(OSPids, Version, CGroupPathFull);
+                {error, _} = Error ->
+                    Error
+            end
     end.
 
 %%-------------------------------------------------------------------------
@@ -287,13 +313,18 @@ update(CGroupPath, OSPids, CGroupParameters,
 
 update_or_create([_ | _] = CGroupPath, OSPids, CGroupParameters,
                  #cgroups{path = Path} = State) ->
-    true = cgroup_path_valid(CGroupPath),
-    CGroupPathFull = Path ++ CGroupPath,
-    case filelib:is_dir(CGroupPathFull) of
+    CGroupPathValid = cgroup_path_valid(CGroupPath),
+    if
+        CGroupPathValid =:= false ->
+            {error, {invalid_cgroup_path, CGroupPath}};
         true ->
-            update(CGroupPath, OSPids, CGroupParameters, State);
-        false ->
-            create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
+            CGroupPathFull = Path ++ CGroupPath,
+            case filelib:is_dir(CGroupPathFull) of
+                true ->
+                    update(CGroupPath, OSPids, CGroupParameters, State);
+                false ->
+                    create_cgroup(CGroupPath, OSPids, CGroupParameters, State)
+            end
     end.
 
 %%%------------------------------------------------------------------------
