@@ -1399,13 +1399,12 @@ handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart}, StateName,
     NewUpdatePlan = UpdatePlan#config_service_update{
                         update_now = UpdateNow,
                         update_start = UpdateStart},
+    NewState = State#state{update_plan = NewUpdatePlan},
     if
         QueueRequests =:= true ->
-            {next_state, StateName,
-             State#state{update_plan = NewUpdatePlan}};
+            {next_state, StateName, NewState};
         QueueRequests =:= false ->
-            {next_state, StateName,
-             process_update(NewUpdatePlan, State)}
+            {next_state, StateName, process_update(NewState)}
     end;
 
 handle_info({'cloudi_service_update_state', CommandLine}, StateName, State) ->
@@ -2015,8 +2014,8 @@ process_queue(#state{dispatcher = Dispatcher,
             end
     end.
 
-process_update(UpdatePlan,
-               #state{dispatcher = Dispatcher} = State) ->
+process_update(#state{dispatcher = Dispatcher,
+                      update_plan = UpdatePlan} = State) ->
     #config_service_update{update_now = UpdateNow,
                            spawn_os_process = SpawnOsProcess,
                            queue_requests = false} = UpdatePlan,
@@ -2043,13 +2042,14 @@ process_update(UpdatePlan,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             erlang:exit(update_failed)
     end,
+    FinalState = NewState#state{update_plan = undefined},
     if
         NewOsProcess =:= true ->
             % wait to receive 'polling' to make sure initialization is complete
             % with the newly created OS process
-            NewState#state{update_plan = undefined};
+            FinalState;
         NewOsProcess =:= false ->
-            process_queues(NewState#state{update_plan = undefined})
+            process_queues(FinalState)
     end.
 
 process_queues(#state{dispatcher = Dispatcher,
@@ -2065,11 +2065,12 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdatePending =:= undefined ->
             UpdatePlan#config_service_update{queue_requests = false}
     end,
+    NewState = State#state{update_plan = NewUpdatePlan},
     if
         is_pid(UpdateNow) ->
-            process_update(NewUpdatePlan, State);
+            process_update(NewState);
         UpdateNow =:= undefined ->
-            State#state{update_plan = NewUpdatePlan}
+            NewState
     end;
 process_queues(State) ->
     process_queue(State).

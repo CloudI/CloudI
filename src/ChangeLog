@@ -6,6 +6,8 @@
     * Fix internal CloudI service bug storing service state when
       both service requests and info messages are queued
       (only observed when duo_mode was true with a high request rate)
+    * Refactor CloudI service source code to avoid duplicating
+      state record field data as separate function arguments
 
 2016-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
