@@ -58,8 +58,8 @@ Max Stable (Total) Request Rate (requests/second): Erlang
        52196     2259           immediate     true      4     4        4
        61657     2193                lazy     true      4     4        4
  
-Max Stable (Total) Request Rate: C (without threads)
-----------------------------------------------------
+Max Stable (Total) Request Rate (requests/second): C (without threads)
+----------------------------------------------------------------------
 
     wo/queue  w/queue dest_refresh_method duo_mode sender queue receiver
        1510       890           immediate    false      1     1        1
@@ -74,8 +74,8 @@ Max Stable (Total) Request Rate: C (without threads)
       23260      2128           immediate     true      4     4        4
       25673      2283                lazy     true      4     4        4
  
-Max Stable (Total) Request Rate: Java (with threads)
-----------------------------------------------------
+Max Stable (Total) Request Rate (requests/second): Java (with threads)
+----------------------------------------------------------------------
 
     wo/queue  w/queue dest_refresh_method duo_mode sender queue receiver
        1526       899           immediate    false      1     1        1
