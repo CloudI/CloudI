@@ -1,3 +1,21 @@
+October 7, 2016
+  Version 1.5.4 released.
+  * An important bugfix was added for internal services that use
+    both CloudI service requests and info messages at high request
+    rates with the duo_mode service configuration option set to true
+    (service state returned from the info message handling wasn't
+     always saved previously under these conditions)
+  * Request rate testing was done both with and without the persistence
+    of service request data (using cloudi_service_queue in destination mode)
+    as described at http://cloudi.org/faq.html#5_LoadTesting
+  * The 'nice' and 'cgroup' service configuration options were added for
+    external services
+  * The logging_set CloudI Service API function was added to allow
+    multiple logging modifications to occur dynamically
+    (similar to nodes_set for CloudI nodes configuration)
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 September 15, 2016
   Version 1.5.3 released.
   * services_update is a new addition to the CloudI Service API for

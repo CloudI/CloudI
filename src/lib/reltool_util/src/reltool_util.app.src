@@ -3,7 +3,7 @@
 
 {application, reltool_util,
   [{description, "Reltool Utility Functions"},
-   {vsn, "1.5.3"},
+   {vsn, "1.5.4"},
    {modules, [reltool_util]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.

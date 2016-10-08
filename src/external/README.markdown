@@ -237,8 +237,8 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit eae14b74e376f90286db7a21bd21083ad7b7dd72 (v1.5.3)`
-- `Wed Sep 14 16:35:57 PDT 2016`
+- `commit d682c9d25e71c5c5bac1960fc5e35d8439ffb21e (v1.5.4)`
+- `Fri Oct  7 22:13:59 UTC 2016`
 - `BSD`
 
 `parse_trans`

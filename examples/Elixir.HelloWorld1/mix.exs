@@ -3,9 +3,9 @@ defmodule HelloWorld1.Mixfile do
 
     def project do
         [app: :'Elixir.HelloWorld1',
-         version: "1.5.3",
+         version: "1.5.4",
          elixirc_paths: ["lib/",
-                         "/usr/local/lib/cloudi-1.5.3/lib/cloudi_core-1.5.3/include/"],
+                         "/usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4/include/"],
          deps: deps]
     end
 

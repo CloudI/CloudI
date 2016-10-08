@@ -1,4 +1,4 @@
-#[CloudI 1.5.3](http://cloudi.org)
+#[CloudI 1.5.4](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI)
 

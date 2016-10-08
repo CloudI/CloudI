@@ -26,13 +26,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
         (<a href="tutorial_java.html">Java</a>)</li>
     <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="support.html">Support</a></li>
   </ul>
 </div>
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.5.3<br />
-              last updated on September 15<sup>th</sup> 2016</h3></center>
+  <center><h3>version 1.5.4<br />
+              last updated on October 7<sup>th</sup> 2016</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -689,6 +690,36 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     requirement of <a href="http://en.wikipedia.org/wiki/Representational_state_transfer#Stateless" target="_blank">being stateless</a>
     for service requests to provide event-driven, scalable, resilient and
     responsive CloudI services.
+  </p>
+  <p class="paragraph">
+    To be specific, CloudI is an example of <a href="https://en.wikipedia.org/wiki/Functional_reactive_programming" target="_blank">Functional Reactive Programming (FRP)</a>,
+    with CloudI service requests referred to as "signals" and each
+    service request handling function execution referred to as "events".
+    CloudI service request sends occur with a FRP "push-based" system
+    implementation.
+  </p>
+  <p class="paragraph">
+    To keep functional semantics in any programming language
+    that utilizes the CloudI API, separate function arguments are used
+    for each datum within the data of a service request when the
+    service request handling function is called
+    (with the function arity as 9 in Java, Perl, PHP, Ruby, 10 in Python,
+     11 in Erlang/Elixir and 13 in C/C++, where arities higher than 9 are due
+     to data handling details specific to the programming languages).
+    Using a relatively high arity count does initially make developers
+    feel uncomfortable due to common Object-Oriented design considering it
+    a bad code-smell
+    (e.g., "Refactoring: Improving the Design of Existing Code"
+     by Martin Fowler et al. (Reading, MA: Addison-Wesley, 1999. Print)
+     mentions long parameter lists on page 78-79) though it does
+    help the developer naturally avoid side-effects as is commonly done
+    in functional programming with immutable data.
+    The use of a high arity count for CloudI service requests is
+    part of a consistent interface that the CloudI API provides in each
+    programming language (functions are common to all well-utilized
+    programming languages while objects are not).
+  </p>
+  <p class="paragraph">
     For more details please refer to <a href="#1_WhatIs">"1.5 - What is CloudI?"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
@@ -1137,7 +1168,7 @@ sudo cloudi stop
     ...
 ] % or 'automatic' for multicast (LAN) node discovery </a>
 }.
-{logging, <a href="api.html#2_logging_level_set">[
+{logging, <a href="api.html#2_logging_set">[
     {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     {redirect, undefined or (Node)}
 ]</a>}.
@@ -1656,13 +1687,14 @@ sudo cloudi stop
     integration.  However, CloudI provides many additional features for
     services that are normally not present:
     <ul>
-      <li>A service container abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development.</li>
+      <li>A Microservice abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development (Erlang processes are considered "Nanoservices").</li>
+      <li>Any service can <a href="http://cloudi.org/api.html#2_services_update" target="_blank">easily be updated</a> without downtime (<a href="http://erlang.org/doc/design_principles/appup_cookbook.html" target="_blank">Erlang/OTP upgrades</a> require large amounts of ad-hoc development for upgrades).</li>
       <li>Protocol agnostic transactional communication with a small consistent API (i.e., the <a href="api.html#Service" target="_blank">CloudI API</a>).</li>
       <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM which avoids any contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
-      <li>All external services are managed with fault tolerance constraints, in the same way as Erlang/OTP supervisors.</li>
+      <li>All services are managed with fault tolerance constraints, in the same way as Erlang/OTP supervisors.</li>
       <li>All services are both started and stopped with an explicit order but Erlang/OTP application order is provided by release creation which creates ambiguity due to the top-level application's dependencies.</li>
       <li>A service can use service configuration options to easily adjust efficiency and memory consumption (e.g., <a href="api.html#2_services_add_config_opts" target="_blank">queue_limit, hibernate, request_pid_options, etc.</a>).</li>
-      <li>Erlang source code within a service can automatically handle more throughput than Erlang/OTP behaviors with <a href="api.html#2_services_add_config_opts" target="_blank">duo_mode</a> set within the service configuration options.</li>
+      <li>Internal services can automatically handle more throughput than Erlang/OTP behaviors with <a href="api.html#2_services_add_config_opts" target="_blank">duo_mode</a> set within the service configuration options.</li>
       <li>Every service request receives a unique UUID (Universally Unique IDentifier).</li>
       <li>A service request timeout is decreased by any queuing or processing delays to provide better soft-realtime timeout enforcement than what Erlang/OTP provides.</li>
       <li>Service name grouping with <a href="#4_URLregex">pattern matching</a>.</li>
@@ -1670,8 +1702,8 @@ sudo cloudi stop
       <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF)).</li>
       <li>stdout and stderr output is logged automatically to the single CloudI log.</li>
       <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology).</li>
-      <li>UNIX domain socket integration is provided for external CloudI services with the "local" protocol (the default) service configuration option despite the fact Core Erlang/OTP does not provide UNIX domain socket integration.</a>
-      <li>A long-running CloudI service can be contrary to the Erlang VM scheduling and garbage collection, when under heavy load, if implemented without CloudI.  This is especially true when attempting to integrate with C or C++ which can cause the schedulers to lock-up if a NIF or port driver is used for longer operations (&ge; 1 ms), causing poor Erlang VM performance.</li>
+      <li>A long-running CloudI internal service is much more dependable when compared to a single Erlang process due to CloudI providing specific hints to the Erlang VM's garbage collection that avoids excessive memory consumption.</li>
+      <li>Any transactions are more dependable in a CloudI external service when compared to NIFs or port drivers due to the potential for unexpected latency that can cause the Erlang VM scheduler to "lock-up" when NIF or port driver latency exceeds 1 millisecond (a failure that requires manual recovery efforts).</li>
       <li>Core Erlang/OTP source code does not handle node-splits (global name registration, global transactions and mnesia are common examples), but CloudI provides master-less fault tolerance for a cluster of any number of CloudI nodes on an unreliable network.</li>
     </ul>
   </p>
@@ -1899,6 +1931,7 @@ sudo cloudi stop
     (to determine the maximum throughput for a service request during the
      service request timeout period without any errors or timeouts):
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_5_4#readme" target="_blank">1.5.4 results (including cloudi_service_queue)</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_5_1/results.txt" target="_blank">1.5.1 results</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_4_0/results.txt" target="_blank">1.4.0 results</a></li>
     </ul>

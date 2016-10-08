@@ -3,7 +3,7 @@
 
 {application, key2value,
   [{description, "2-way Map Data Structure"},
-   {vsn, "1.5.3"},
+   {vsn, "1.5.4"},
    {modules, [key2value]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.

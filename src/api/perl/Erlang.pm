@@ -44,7 +44,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$Erlang::VERSION = '1.53';
+$Erlang::VERSION = '1.54';
 
 require Compress::Zlib;
 # bigint/bignum caused slowness without enough features to be useful

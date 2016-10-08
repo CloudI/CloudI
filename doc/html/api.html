@@ -26,13 +26,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
         (<a href="tutorial_java.html">Java</a>)</li>
     <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="support.html">Support</a></li>
   </ul>
 </div>
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.5.3<br />
-              last updated on September 15<sup>th</sup> 2016</h3></center>
+  <center><h3>version 1.5.4<br />
+              last updated on October 7<sup>th</sup> 2016</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -83,15 +84,16 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_nodes_alive"           >2.15 - nodes_alive</a></li>
     <li><a href="#2_nodes_dead"            >2.16 - nodes_dead</a></li>
     <li><a href="#2_nodes"                 >2.17 - nodes</a></li>
-    <li><a href="#2_logging_file_set"      >2.18 - logging_file_set</a></li>
-    <li><a href="#2_logging_level_set"     >2.19 - logging_level_set</a></li>
-    <li><a href="#2_logging_syslog_set"    >2.20 - logging_syslog_set</a></li>
-    <li><a href="#2_logging_formatters_set">2.21 - logging_formatters_set</a></li>
-    <li><a href="#2_logging_redirect_set"  >2.22 - logging_redirect_set</a></li>
-    <li><a href="#2_logging"               >2.23 - logging</a></li>
-    <li><a href="#2_code_path_add"         >2.24 - code_path_add</a></li>
-    <li><a href="#2_code_path_remove"      >2.25 - code_path_remove</a></li>
-    <li><a href="#2_code_path"             >2.26 - code_path</a></li>
+    <li><a href="#2_logging_set"           >2.18 - logging_set</a></li>
+    <li><a href="#2_logging_file_set"      >2.19 - logging_file_set</a></li>
+    <li><a href="#2_logging_level_set"     >2.20 - logging_level_set</a></li>
+    <li><a href="#2_logging_syslog_set"    >2.21 - logging_syslog_set</a></li>
+    <li><a href="#2_logging_formatters_set">2.22 - logging_formatters_set</a></li>
+    <li><a href="#2_logging_redirect_set"  >2.23 - logging_redirect_set</a></li>
+    <li><a href="#2_logging"               >2.24 - logging</a></li>
+    <li><a href="#2_code_path_add"         >2.25 - code_path_add</a></li>
+    <li><a href="#2_code_path_remove"      >2.26 - code_path_remove</a></li>
+    <li><a href="#2_code_path"             >2.27 - code_path</a></li>
   </ul>
 
   <hr \>
@@ -377,13 +379,13 @@ CloudI::API.thread_count()
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.5.3/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.5.4/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.5.3/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.5.4/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1574,7 +1576,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.3/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -1933,7 +1935,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.3/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.5.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2375,7 +2377,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.3/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.5.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2530,7 +2532,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.3/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.5.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2654,7 +2656,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.5.3/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.5.4/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -2751,16 +2753,16 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
  {env, list({string(), string()})},         % default is []
  {dest_refresh, <a href="#1_Intro_dest">dest_refresh()</a>},            % default is immediate_closest
  {protocol, default | local | tcp | udp},   % default is local
- {buffer_size, default | pos_integer()},    % default is 16384
- {timeout_init, timeout_milliseconds()},    % default is 5000
- {timeout_async, timeout_milliseconds()},   % default is 5000
- {timeout_sync, timeout_milliseconds()},    % default is 5000
+ {buffer_size, default | pos_integer()},    % default is 16384 bytes
+ {timeout_init, timeout_milliseconds()},    % default is 5000 milliseconds
+ {timeout_async, timeout_milliseconds()},   % default is 5000 milliseconds
+ {timeout_sync, timeout_milliseconds()},    % default is 5000 milliseconds
  {dest_list_deny, dest_list()},             % default is undefined
  {dest_list_allow, dest_list()},            % default is undefined
  {count_process, pos_integer() | float()},  % default is 1
  {count_thread, pos_integer() | float()},   % default is 1
  {max_r, non_neg_integer()},                % default is 5
- {max_t, seconds()},                        % default is 300
+ {max_t, seconds()},                        % default is 300 seconds
  {options, <a href="#2_services_add_config_opts">service_options_internal()</a> |     % default is []
            <a href="#2_services_add_config_opts">service_options_external()</a>}]
 
@@ -2978,6 +2980,21 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     (external services only) Set the owner of any OS processes an
     external service creates.
+  </td></tr><tr><td>
+    nice
+  </td><td>
+    0
+  </td><td>
+    (external services only) Set the nice value of any
+    OS processes an external service creates.
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_cgroup">
+    cgroup</a>
+  </td><td>
+    undefined
+  </td><td>
+    (external services only) Set the cgroup membership of any
+    OS processes an external service creates.
   </td></tr><tr><td>
     directory
   </td><td>
@@ -3383,6 +3400,37 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td><td>
     Set the group as either a positive integer group id or a string group name.
   </td></tr></table>
+  <a name="2_services_add_config_opts_cgroup"></a>
+  <h4>cgroup:</h4>
+  <p class="paragraph">
+    Set the cgroup membership of an external service's OS processes.
+  </p>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    name
+  </td><td>
+    undefined
+  </td><td>
+    Set the cgroup name as a relative path (e.g., "group1/nested1").
+  </td></tr><tr><td>
+    parameters
+  </td><td>
+    []
+  </td><td>
+    Set any parameters that should be set on the cgroup before OS processes
+    are added (e.g., [{"memory.limit_in_bytes", "64m"}]).
+  </td></tr><tr><td>
+    update_or_create
+  </td><td>
+    true
+  </td><td>
+    Specify whether a cgroup should be created if it doesn't already exist.
+  </td></tr></table>
   <a name="2_services_add_config_opts_aspects_init_after"></a>
   <h4>aspects_init_after:</h4>
   <p class="paragraph">
@@ -3688,7 +3736,7 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
     {UUID, Options} pair with the Options being described below:
   </p>
 <pre>
-% internal service update Options
+% internal service update options
 [{type, internal},
  {module, atom()},                            % only required field
  {module_state, module_state_internal()},     % update service state
@@ -3716,7 +3764,7 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
     can be provided in the module_state field.
   </p>
 <pre>
-% external service update Options
+% external service update options
 [{type, external},
  {file_path, string()},                       % restarts OS process
  {args, string()},                            % restarts OS process
@@ -3884,8 +3932,8 @@ curl http://localhost:6464/cloudi/api/rpc/services.erl
 curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/nodes_set.erl
 </p>
   <p class="paragraph">
-    Set the distributed Erlang node configuration for a CloudI node
-    and any CloudI nodes it is currently connected to.
+    Set the node configuration to specify how CloudI node
+    connections are handled (using distributed Erlang).
   </p>
   <a name="2_nodes_set_config"></a>
   <table><tr><th>
@@ -4163,8 +4211,73 @@ curl http://localhost:6464/cloudi/api/rpc/nodes.erl
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
+  <a name="2_logging_set"></a>
+  <h3>2.18 - logging_set</h3>
+<p class="code" onclick="element_select(this);">
+curl -X POST -d '[{file, undefined}, {syslog, []}]' http://localhost:6464/cloudi/api/rpc/logging_set.erl
+</p>
+  <p class="paragraph">
+    Set the logging configuration for a CloudI node.
+  </p>
+<pre>
+% logging configuration options
+[<a href="#2_logging_file_set">{file, undefined | string()}</a>,                % defaults to "logs/cloudi.log"
+ <a href="#2_logging_level_set">{level, off | fatal | error |
+         warn | info | debug | trace}</a>,        % defaults to trace
+ <a href="#2_logging_redirect_set">{redirect, undefined | node()}</a>,              % defaults to undefined
+ <a href="#2_logging_syslog_set">{syslog, undefined | list()}</a>,                % defaults to undefined
+ <a href="#2_logging_formatters_set">{formatters, undefined | list()}</a>,            % defaults to undefined
+ <a href="#2_logging_set_config_opts_aspects_log_before">{aspects_log_before,
+  list(aspects_log_before())}</a>,                % defaults to []
+ <a href="#2_logging_set_config_opts_aspects_log_after">{aspects_log_after,
+  list(aspects_log_after())}</a>]                 % defaults to []
+</pre>
+  <a name="2_logging_set_config_opts_aspects_log_before"></a>
+  <h4>aspects_log_before:</h4>
+  <p class="paragraph">
+    Provide a list of functions with the type signature shown below,
+    with each function as either an anonymous Erlang function or
+    an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
+    Each function will be called before the log data is stored to disk.
+  </p>
+<pre onclick="element_select(this);">
+fun((Level :: fatal | error | warn | info | debug | trace,
+     Timestamp :: erlang:timestamp(),
+     Node :: node(),
+     Pid :: pid(),
+     Module :: module(),
+     Line :: pos_integer(),
+     Function :: atom() | undefined,
+     Arity :: non_neg_integer() | undefined,
+     MetaData :: list({atom(), any()}),
+     LogMessage :: string()) -&gt;
+    ok.
+</pre>
+  <a name="2_logging_set_config_opts_aspects_log_after"></a>
+  <h4>aspects_log_after:</h4>
+  <p class="paragraph">
+    Provide a list of functions with the type signature shown below,
+    with each function as either an anonymous Erlang function or
+    an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
+    Each function will be called after the log data is stored to disk.
+  </p>
+<pre onclick="element_select(this);">
+fun((Level :: fatal | error | warn | info | debug | trace,
+     Timestamp :: erlang:timestamp(),
+     Node :: node(),
+     Pid :: pid(),
+     Module :: module(),
+     Line :: pos_integer(),
+     Function :: atom() | undefined,
+     Arity :: non_neg_integer() | undefined,
+     MetaData :: list({atom(), any()}),
+     LogMessage :: string()) -&gt;
+    ok.
+</pre>
+  <div class="top"><a href="#CloudI">Top</a></div>
+
   <a name="2_logging_file_set"></a>
-  <h3>2.18 - logging_file_set</h3>
+  <h3>2.19 - logging_file_set</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '"logs/cloudi_rotated.log"' http://localhost:6464/cloudi/api/rpc/logging_file_set.erl
 </p>
@@ -4175,7 +4288,7 @@ curl -X POST -d '"logs/cloudi_rotated.log"' http://localhost:6464/cloudi/api/rpc
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging_level_set"></a>
-  <h3>2.19 - logging_level_set</h3>
+  <h3>2.20 - logging_level_set</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d 'warn' http://localhost:6464/cloudi/api/rpc/logging_level_set.erl
 </p>
@@ -4190,7 +4303,7 @@ curl -X POST -d 'warn' http://localhost:6464/cloudi/api/rpc/logging_level_set.er
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging_syslog_set"></a>
-  <h3>2.20 - logging_syslog_set</h3>
+  <h3>2.21 - logging_syslog_set</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '[{identity, "CloudI"}, {facility, local0}, {level, trace}]' http://localhost:6464/cloudi/api/rpc/logging_syslog_set.erl
 </p>
@@ -4237,7 +4350,7 @@ curl -X POST -d '[{identity, "CloudI"}, {facility, local0}, {level, trace}]' htt
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging_formatters_set"></a>
-  <h3>2.21 - logging_formatters_set</h3>
+  <h3>2.22 - logging_formatters_set</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '[{any, [{output, lager_file_backend}, {output_args, [{file, "logs/lager.log"}]}, {formatter, lager_default_formatter}, {level, trace}]}]' http://localhost:6464/cloudi/api/rpc/logging_formatters_set.erl
 </p>
@@ -4328,7 +4441,7 @@ curl -X POST -d '[{any, [{output, lager_file_backend}, {output_args, [{file, "lo
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging_redirect_set"></a>
-  <h3>2.22 - logging_redirect_set</h3>
+  <h3>2.23 - logging_redirect_set</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d 'cloudi@host' http://localhost:6464/cloudi/api/rpc/logging_redirect_set.erl
 </p>
@@ -4339,7 +4452,7 @@ curl -X POST -d 'cloudi@host' http://localhost:6464/cloudi/api/rpc/logging_redir
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging"></a>
-  <h3>2.23 - logging</h3>
+  <h3>2.24 - logging</h3>
 <p class="code" onclick="element_select(this);">
 curl http://localhost:6464/cloudi/api/rpc/logging.erl
 </p>
@@ -4351,7 +4464,7 @@ curl http://localhost:6464/cloudi/api/rpc/logging.erl
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_add"></a>
-  <h3>2.24 - code_path_add</h3>
+  <h3>2.25 - code_path_add</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rpc/code_path_add.erl
 </p>
@@ -4363,7 +4476,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rp
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path_remove"></a>
-  <h3>2.25 - code_path_remove</h3>
+  <h3>2.26 - code_path_remove</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rpc/code_path_remove.erl
 </p>
@@ -4375,7 +4488,7 @@ curl -X POST -d '"/home/user/code/services"' http://localhost:6464/cloudi/api/rp
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_code_path"></a>
-  <h3>2.26 - code_path</h3>
+  <h3>2.27 - code_path</h3>
 <p class="code" onclick="element_select(this);">
 curl http://localhost:6464/cloudi/api/rpc/code_path.erl
 </p>
