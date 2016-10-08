@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * m4/ax_check_class.m4 and m4/ax_prog_java_works.m4
+      had uuencoded java class files which were removed
+      (the uuencoded java class files were decompiled to confirm
+       they match the commented code, but the reliance on
+       binary data isn't necessary or helpful for future use)
+
 2016-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.5.4 released

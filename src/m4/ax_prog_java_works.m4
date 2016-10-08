@@ -48,56 +48,16 @@
 #   exception to the GPL to apply to your modified version as well.
 
 #serial 9
+# required modifications below
 
 AU_ALIAS([AC_PROG_JAVA_WORKS], [AX_PROG_JAVA_WORKS])
 AC_DEFUN([AX_PROG_JAVA_WORKS], [
-AC_PATH_PROG(UUDECODE, uudecode, [no])
-if test x$UUDECODE != xno; then
-AC_CACHE_CHECK([if uudecode can decode base 64 file], ac_cv_prog_uudecode_base64, [
-dnl /**
-dnl  * Test.java: used to test if java compiler works.
-dnl  */
-dnl public class Test
-dnl {
-dnl
-dnl public static void
-dnl main( String[] argv )
-dnl {
-dnl     System.exit (0);
-dnl }
-dnl
-dnl }
-cat << \EOF > Test.uue
-begin-base64 644 Test.class
-yv66vgADAC0AFQcAAgEABFRlc3QHAAQBABBqYXZhL2xhbmcvT2JqZWN0AQAE
-bWFpbgEAFihbTGphdmEvbGFuZy9TdHJpbmc7KVYBAARDb2RlAQAPTGluZU51
-bWJlclRhYmxlDAAKAAsBAARleGl0AQAEKEkpVgoADQAJBwAOAQAQamF2YS9s
-YW5nL1N5c3RlbQEABjxpbml0PgEAAygpVgwADwAQCgADABEBAApTb3VyY2VG
-aWxlAQAJVGVzdC5qYXZhACEAAQADAAAAAAACAAkABQAGAAEABwAAACEAAQAB
-AAAABQO4AAyxAAAAAQAIAAAACgACAAAACgAEAAsAAQAPABAAAQAHAAAAIQAB
-AAEAAAAFKrcAErEAAAABAAgAAAAKAAIAAAAEAAQABAABABMAAAACABQ=
-====
-EOF
-if $UUDECODE Test.uue; then
-        ac_cv_prog_uudecode_base64=yes
-else
-        echo "configure: __oline__: uudecode had trouble decoding base 64 file 'Test.uue'" >&AS_MESSAGE_LOG_FD
-        echo "configure: failed file was:" >&AS_MESSAGE_LOG_FD
-        cat Test.uue >&AS_MESSAGE_LOG_FD
-        ac_cv_prog_uudecode_base64=no
-fi
-rm -f Test.uue])
-fi
-if test x$ac_cv_prog_uudecode_base64 != xyes; then
-        rm -f Test.class
-        AC_MSG_WARN([I have to compile Test.class from scratch])
         if test x$ac_cv_prog_javac_works = xno; then
                 AC_MSG_ERROR([Cannot compile java source. $JAVAC does not work properly])
         fi
         if test x$ac_cv_prog_javac_works = x; then
                 AX_PROG_JAVAC
         fi
-fi
 AC_CACHE_CHECK(if $JAVA works, ac_cv_prog_java_works, [
 JAVA_TEST=Test.java
 CLASS_TEST=Test.class
@@ -111,7 +71,6 @@ public static void main (String args[]) {
 } }
 EOF
 changequote([, ])dnl
-if test x$ac_cv_prog_uudecode_base64 != xyes; then
         if AC_TRY_COMMAND($JAVAC $JAVACFLAGS $JAVA_TEST) && test -s $CLASS_TEST; then
                 :
         else
@@ -119,7 +78,6 @@ if test x$ac_cv_prog_uudecode_base64 != xyes; then
           cat $JAVA_TEST >&AS_MESSAGE_LOG_FD
           AC_MSG_ERROR(The Java compiler $JAVAC failed (see config.log, check the CLASSPATH?))
         fi
-fi
 if AC_TRY_COMMAND($JAVA -classpath . $JAVAFLAGS $TEST) >/dev/null 2>&1; then
   ac_cv_prog_java_works=yes
 else
@@ -127,7 +85,7 @@ else
   cat $JAVA_TEST >&AS_MESSAGE_LOG_FD
   AC_MSG_ERROR(The Java VM $JAVA failed (see config.log, check the CLASSPATH?))
 fi
-rm -fr $JAVA_TEST $CLASS_TEST Test.uue
+rm -f $JAVA_TEST $CLASS_TEST
 ])
 AC_PROVIDE([$0])dnl
 ]

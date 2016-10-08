@@ -179,7 +179,7 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 `autoconf m4 macros for boost detection`
 
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_base.m4`
-- `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_thread.m4`
+- `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_thread.m4` (required local modification!)
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_system.m4`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
@@ -188,13 +188,13 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 --------------------------------------------------------------------------------
 `autoconf m4 macros for java detection`
 
-- `http://www.gnu.org/software/autoconf-archive/ax_check_class.html`
+- `http://www.gnu.org/software/autoconf-archive/ax_check_class.html` (required local modification!)
 - `http://www.gnu.org/software/autoconf-archive/ax_check_rqrd_class.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_jar.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_javac.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_javac_works.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html`
+- `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html` (required local modification!)
 - `http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `GPL` (build-time dependency only)
