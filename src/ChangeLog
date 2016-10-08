@@ -3,12 +3,9 @@
 
 2016-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * CloudI version 1.5.4 released
     * Revert ax_boost_thread.m4 update due to it requiring local changes
       in the past and breaking integration test compilation on some platforms
-
-2016-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
-
-    * CloudI version 1.5.4 released
 
 2016-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
