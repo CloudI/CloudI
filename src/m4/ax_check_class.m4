@@ -52,7 +52,6 @@
 #   exception to the GPL to apply to your modified version as well.
 
 #serial 7
-# required modifications below
 
 AU_ALIAS([AC_CHECK_CLASS], [AX_CHECK_CLASS])
 AC_DEFUN([AX_CHECK_CLASS],[

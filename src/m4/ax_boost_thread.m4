@@ -31,7 +31,6 @@
 #   warranty.
 
 #serial 27
-# required modifications below
 
 AC_DEFUN([AX_BOOST_THREAD],
 [

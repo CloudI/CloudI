@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update locally modified m4 macros after submitting the changes to
+      the GNU Autoconf Archive
+
 2016-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * m4/ax_check_class.m4 and m4/ax_prog_java_works.m4

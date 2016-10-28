@@ -48,7 +48,6 @@
 #   exception to the GPL to apply to your modified version as well.
 
 #serial 9
-# required modifications below
 
 AU_ALIAS([AC_PROG_JAVA_WORKS], [AX_PROG_JAVA_WORKS])
 AC_DEFUN([AX_PROG_JAVA_WORKS], [
