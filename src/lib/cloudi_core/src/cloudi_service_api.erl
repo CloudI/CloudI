@@ -296,6 +296,13 @@
               aspect_terminate_before_internal/0,
               aspect_terminate_before_external/0]).
 
+-type max_heap_size_options() ::
+    non_neg_integer() |
+    #{size => non_neg_integer(),
+      kill => boolean(),
+      error_logger => boolean()}.
+-export_type([max_heap_size_options/0]).
+
 -type limit_external_key() ::
     as | core | cpu | data | fsize | memlock | msgqueue | nice | nofile |
     nproc | rss | rtprio | rttime | sigpending | stack | vmem.
@@ -367,7 +374,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
@@ -382,7 +389,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {request_pid_uses, infinity | pos_integer()} |
@@ -391,7 +398,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {info_pid_uses, infinity | pos_integer()} |
@@ -400,7 +407,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {duo_mode, boolean()} |
@@ -448,7 +455,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_external())} |
@@ -566,7 +573,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_internal())} |
@@ -580,7 +587,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {request_pid_uses, infinity | pos_integer()} |
@@ -589,7 +596,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {info_pid_uses, infinity | pos_integer()} |
@@ -598,7 +605,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {hibernate,
@@ -635,7 +642,7 @@
                {fullsweep_after, non_neg_integer()} |
                {min_heap_size, non_neg_integer()} |
                {min_bin_vheap_size, non_neg_integer()} |
-               {max_heap_size, non_neg_integer() | #{}} |
+               {max_heap_size, max_heap_size_options()} |
                {sensitive, boolean()} |
                {message_queue_data, off_heap | on_heap | mixed})} |
          {aspects_init_after, list(aspect_init_after_external())} |

@@ -271,7 +271,8 @@
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |
-                    {max_heap_size, non_neg_integer() | #{}} |
+                    {max_heap_size,
+                     cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
                     {message_queue_data, off_heap | on_heap | mixed}),
 
@@ -328,7 +329,8 @@
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |
-                    {max_heap_size, non_neg_integer() | #{}} |
+                    {max_heap_size,
+                     cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
                     {message_queue_data, off_heap | on_heap | mixed}),
         % how many service requests should restart the Erlang process used for
@@ -344,7 +346,8 @@
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |
-                    {max_heap_size, non_neg_integer() | #{}} |
+                    {max_heap_size,
+                     cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
                     {message_queue_data, off_heap | on_heap | mixed}),
         % how many info messages should restart the Erlang process used for
@@ -360,7 +363,8 @@
                     {fullsweep_after, non_neg_integer()} |
                     {min_heap_size, non_neg_integer()} |
                     {min_bin_vheap_size, non_neg_integer()} |
-                    {max_heap_size, non_neg_integer() | #{}} |
+                    {max_heap_size,
+                     cloudi_service_api:max_heap_size_options()} |
                     {sensitive, boolean()} |
                     {message_queue_data, off_heap | on_heap | mixed}),
         % use two Erlang processes instead of one for an internal service to
