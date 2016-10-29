@@ -682,7 +682,7 @@
          Module :: module(),
          Line :: pos_integer(),
          Function :: atom() | undefined,
-         Arity :: non_neg_integer() | undefined,
+         Arity :: arity() | undefined,
          MetaData :: list({atom(), any()}),
          LogMessage :: string()) ->
         ok).
