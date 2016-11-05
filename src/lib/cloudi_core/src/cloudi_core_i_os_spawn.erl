@@ -347,7 +347,7 @@ load_local_port(Name) when is_list(Name) ->
     erlang:open_port({spawn, Path ++ "/" ++ Name},
                      [{packet, 4}, binary, exit_status, nouse_stdio]).
 transform_data(D) ->
-    erlang:binary_to_term(D).
+    erlang:binary_to_term(D, [safe]).
 %call_port_async(Process, Command, Msg) ->
 %    call_port_sync(Process, Command, Msg).
 -endif.
