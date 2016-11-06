@@ -250,7 +250,7 @@ dialyzer: dialyze
 $(top_srcdir)/dialyzer.plt:
 	$(DIALYZER) --build_plt --output_plt $(top_srcdir)/dialyzer.plt \
                 --apps erts kernel stdlib mnesia crypto inets xmerl sasl \
-                       compiler debugger ssl tools
+                       compiler debugger ssl tools syntax_tools
 
 doc: all
 	(cd $(top_srcdir) && \

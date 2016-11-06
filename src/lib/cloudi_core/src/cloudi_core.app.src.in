@@ -81,6 +81,7 @@
         cloudi_x_cpg,
         cloudi_x_msgpack,
         sasl,
+        syntax_tools,
         stdlib,
         kernel
         ]},
