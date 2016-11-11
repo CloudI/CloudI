@@ -34,7 +34,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -1428,6 +1428,8 @@ send(ViaName, Msg) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1441,6 +1443,8 @@ get_members(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group while excluding a specific pid or within a specific scope.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1467,6 +1471,8 @@ get_members(GroupName, Timeout) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1496,6 +1502,8 @@ get_members(Scope, GroupName, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1515,6 +1523,8 @@ get_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1528,6 +1538,8 @@ get_local_members(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group while excluding a specific pid or within a specific scope.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1554,6 +1566,8 @@ get_local_members(GroupName, Timeout) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1583,6 +1597,8 @@ get_local_members(Scope, GroupName, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1602,6 +1618,8 @@ get_local_members(Scope, GroupName, Exclude, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -1615,6 +1633,8 @@ get_remote_members(GroupName) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group while excluding a specific pid or within a specific scope.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1641,6 +1661,8 @@ get_remote_members(GroupName, Timeout) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1670,6 +1692,8 @@ get_remote_members(Scope, GroupName, Timeout)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group within a specific scope while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -3501,11 +3525,12 @@ leave_group_count(Count, GroupName, Pid, Reason,
             fun(#cpg_data{local_count = LocalI,
                           local = Local,
                           history = History} = OldGroupData) ->
-                {I, NewLocal} = select(Fselect, Count, Local),
+                {I, NewLocal} = select_reverse(Fselect, Count,
+                                               lists:reverse(Local)),
                 cpg_callbacks:notify_leave(Callbacks,
                                            GroupName, Pid, Reason, I),
                 NextHistory = delete_count_reverse(Pid, I,
-                    lists:reverse(History)),
+                                                   lists:reverse(History)),
                 OldGroupData#cpg_data{local_count = LocalI - I,
                                       local = NewLocal,
                                       history = NextHistory}
@@ -3514,11 +3539,12 @@ leave_group_count(Count, GroupName, Pid, Reason,
             fun(#cpg_data{remote_count = RemoteI,
                           remote = Remote,
                           history = History} = OldGroupData) ->
-                {I, NewRemote} = select(Fselect, Count, Remote),
+                {I, NewRemote} = select_reverse(Fselect, Count,
+                                                lists:reverse(Remote)),
                 cpg_callbacks:notify_leave(Callbacks,
                                            GroupName, Pid, Reason, I),
                 NextHistory = delete_count_reverse(Pid, I,
-                    lists:reverse(History)),
+                                                   lists:reverse(History)),
                 OldGroupData#cpg_data{remote_count = RemoteI - I,
                                       remote = NewRemote,
                                       history = NextHistory}
@@ -3804,18 +3830,18 @@ count([Elem | T], I, Elem) ->
 count([_ | T], I, Elem) ->
     count(T, I, Elem).
 
-select(F, Count, List) ->
-    select(List, 0, [], Count, F).
-select(T, I, Output, 0, _) ->
-    {I, lists:reverse(Output, T)};
-select([], I, Output, _, _) ->
-    {I, lists:reverse(Output)};
-select([H | T], I, Output, Count, F) ->
+select_reverse(F, Count, List) ->
+    select_reverse(List, 0, [], Count, F).
+select_reverse(T, I, Output, 0, _) ->
+    {I, lists:reverse(T, Output)};
+select_reverse([], I, Output, _, _) ->
+    {I, Output};
+select_reverse([H | T], I, Output, Count, F) ->
     case F(H) of
         true ->
-            select(T, I + 1, Output, Count - 1, F);
+            select_reverse(T, I + 1, Output, Count - 1, F);
         false ->
-            select(T, I, [H | Output], Count, F)
+            select_reverse(T, I, [H | Output], Count, F)
     end.
 
 -compile({inline, [{random,1}]}).

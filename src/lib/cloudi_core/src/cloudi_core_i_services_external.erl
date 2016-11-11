@@ -418,8 +418,8 @@ init([Protocol, SocketPath,
             % if this is a new OS process after an update,
             % the old subscriptions are removed so that only the
             % subscriptions from the new initialization remain
-            cloudi_x_cpg:leave_counts(Scope, Subscriptions,
-                                      Dispatcher, infinity),
+            ok = cloudi_x_cpg:leave_counts(Scope, Subscriptions,
+                                           Dispatcher, infinity),
             {next_state, 'HANDLE',
              process_queues(State#state{service_state = NewServiceState,
                                         init_timer = undefined,

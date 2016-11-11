@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="CPG_Groups_Handling.">CPG Groups Handling.</a></h3>
    Method of using cpg instead of pg2.
-<p>Copyright © 2011-2015 Michael Truog</p>
+<p>Copyright © 2011-2016 Michael Truog</p>
 
-<p><b>Version:</b> 1.5.1 Sep 9 2016 14:52:11
+<p><b>Version:</b> 1.5.5 Nov 11 2016 12:51:27
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
 
@@ -74,10 +74,13 @@
   requests will not be blocked by the single process managing the scope
   of the process groups.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-2">get_local_members/2</a></td><td>
-  <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>.</td></tr>
+  <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
+  All members are ordered from newest to oldest, based on the
+  join order, not pid creation time.</td></tr>
 <tr><td valign="top"><a href="#get_local_members-3">get_local_members/3</a></td><td>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the local members of a specific group while excluding a specific pid.</a></h4>
-  Usually the self() pid is excluded with this function call.</td></tr>
+  All members are ordered from newest to oldest, based on the
+  join order, not pid creation time.</td></tr>
 <tr><td valign="top"><a href="#get_local_newest_pid-2">get_local_newest_pid/2</a></td><td>
   <h4><a name="Get_the_newest_local_group_member.">Get the newest local group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_local_newest_pid-3">get_local_newest_pid/3</a></td><td>
@@ -94,10 +97,13 @@
   <h4><a name="Get_a_local_group_member_while_excluding_a_specific_pid.">Get a local group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_members-2">get_members/2</a></td><td>
-  <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>.</td></tr>
+  <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</td></tr>
 <tr><td valign="top"><a href="#get_members-3">get_members/3</a></td><td>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
-  Usually the self() pid is excluded with this function call.</td></tr>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</td></tr>
 <tr><td valign="top"><a href="#get_newest_pid-2">get_newest_pid/2</a></td><td>
   <h4><a name="Get_the_newest_group_member.">Get the newest group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_newest_pid-3">get_newest_pid/3</a></td><td>
@@ -114,10 +120,13 @@
   <h4><a name="Get_a_group_member_while_excluding_a_specific_pid.">Get a group member while excluding a specific pid.</a></h4>
   Usually the self() pid is excluded with this function call.</td></tr>
 <tr><td valign="top"><a href="#get_remote_members-2">get_remote_members/2</a></td><td>
-  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>.</td></tr>
+  <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</td></tr>
 <tr><td valign="top"><a href="#get_remote_members-3">get_remote_members/3</a></td><td>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the remote members of a specific group while excluding a specific pid.</a></h4>
-  Usually the self() pid is excluded with this function call.</td></tr>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</td></tr>
 <tr><td valign="top"><a href="#get_remote_newest_pid-2">get_remote_newest_pid/2</a></td><td>
   <h4><a name="Get_the_newest_remote_group_member.">Get the newest remote group member.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#get_remote_newest_pid-3">get_remote_newest_pid/3</a></td><td>
@@ -215,13 +224,16 @@
 <p><tt>get_local_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group.">Get only the local members of a specific group.</a></h4>
-</p>
+  All members are ordered from newest to oldest, based on the
+  join order, not pid creation time.</p>
 
 <h3 class="function"><a name="get_local_members-3">get_local_members/3</a></h3>
 <div class="spec">
 <p><tt>get_local_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_local_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the local members of a specific group while excluding a specific pid.</a></h4>
+  All members are ordered from newest to oldest, based on the
+  join order, not pid creation time.
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_local_newest_pid-2">get_local_newest_pid/2</a></h3>
@@ -271,13 +283,16 @@
 <p><tt>get_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group.">Get the members of a specific group.</a></h4>
-</p>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</p>
 
 <h3 class="function"><a name="get_members-3">get_members/3</a></h3>
 <div class="spec">
 <p><tt>get_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_the_members_of_a_specific_group_while_excluding_a_specific_pid.">Get the members of a specific group while excluding a specific pid.</a></h4>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_newest_pid-2">get_newest_pid/2</a></h3>
@@ -327,13 +342,16 @@
 <p><tt>get_remote_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group.">Get only the remote members of a specific group.</a></h4>
-</p>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).</p>
 
 <h3 class="function"><a name="get_remote_members-3">get_remote_members/3</a></h3>
 <div class="spec">
 <p><tt>get_remote_members(GroupName::<a href="cpg.html#type-name">cpg:name()</a>, Exclude::pid(), Groups::<a href="#type-state">state()</a>) -&gt; <a href="#type-get_members_return">get_members_return()</a></tt><br></p>
 </div><p>
   <h4><a name="Get_only_the_remote_members_of_a_specific_group_while_excluding_a_specific_pid.">Get only the remote members of a specific group while excluding a specific pid.</a></h4>
+  All members are ordered from newest to oldest, based on the group
+  membership surviving netsplits (join order, not pid creation time).
   Usually the self() pid is excluded with this function call.</p>
 
 <h3 class="function"><a name="get_remote_newest_pid-2">get_remote_newest_pid/2</a></h3>
@@ -387,6 +405,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Sep 9 2016, 14:52:12.</i></p>
+<p><i>Generated by EDoc, Nov 11 2016, 12:51:27.</i></p>
 </body>
 </html>

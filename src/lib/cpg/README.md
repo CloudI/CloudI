@@ -102,9 +102,7 @@ Example
 -------
 
     $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
-    Erlang R16B03-1 (erts-5.10.4) [source] [64-bit] [smp:8:8] [async-threads:10] [kernel-poll:false]
     
-    Eshell V5.10.4  (abort with ^G)
     (cpg@localhost)1> reltool_util:application_start(cpg).
     ok
     (cpg@localhost)2> cpg:join(groups_scope1, "Hello", self()).

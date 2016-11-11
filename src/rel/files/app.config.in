@@ -60,6 +60,7 @@
     {path_mounts, "/proc/mounts"}
   ]},
  {cloudi_x_cpg, [
+    {group_storage, cloudi_x_trie},
     {scope, []}
   ]},
  {cloudi_core, [

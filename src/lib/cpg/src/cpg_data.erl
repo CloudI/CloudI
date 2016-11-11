@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -195,6 +195,8 @@ get_empty_groups() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -206,20 +208,18 @@ get_members(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #cpg_data{local = Local,
-                                remote = Remote}} ->
-            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                [Pid | L]
-            end, [], Remote ++ Local)}
+        {ok, Pattern, #cpg_data{history = History}} ->
+            {ok, Pattern, History}
     end.
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get the members of a specific group while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -234,20 +234,12 @@ get_members(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
-        {ok, Pattern, #cpg_data{local = Local,
-                                remote = Remote}} ->
-            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                if
-                    Pid =/= Exclude ->
-                        [Pid | L];
-                    true ->
-                        L
-                end
-            end, [], Remote ++ Local),
+        {ok, Pattern, #cpg_data{history = History}} ->
+            Members = [Pid || Pid <- History,
+                       Pid =/= Exclude],
             if
                 Members == [] ->
                     % to keep return values consistent with pg2
@@ -260,6 +252,8 @@ get_members(GroupName, Exclude, Groups)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -275,14 +269,14 @@ get_local_members(GroupName, Groups) ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
-            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                [Pid | L]
-            end, [], Local)}
+            {ok, Pattern, [Pid || #cpg_data_pid{pid = Pid} <- Local]}
     end.
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the local members of a specific group while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the 
+%% join order, not pid creation time.
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -301,14 +295,8 @@ get_local_members(GroupName, Exclude, Groups)
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
-            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                if
-                    Pid =/= Exclude ->
-                        [Pid | L];
-                    true ->
-                        L
-                end
-            end, [], Local),
+            Members = [Pid || #cpg_data_pid{pid = Pid} <- Local,
+                       Pid =/= Exclude],
             if
                 Members == [] ->
                     % to keep return values consistent with pg2
@@ -321,6 +309,8 @@ get_local_members(GroupName, Exclude, Groups)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -336,14 +326,14 @@ get_remote_members(GroupName, Groups) ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
-            {ok, Pattern, lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                [Pid | L]
-            end, [], Remote)}
+            {ok, Pattern, [Pid || #cpg_data_pid{pid = Pid} <- Remote]}
     end.
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get only the remote members of a specific group while excluding a specific pid.===
+%% All members are ordered from newest to oldest, based on the group
+%% membership surviving netsplits (join order, not pid creation time).
 %% Usually the self() pid is excluded with this function call.
 %% @end
 %%-------------------------------------------------------------------------
@@ -362,14 +352,8 @@ get_remote_members(GroupName, Exclude, Groups)
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
-            Members = lists:foldl(fun(#cpg_data_pid{pid = Pid}, L) ->
-                if
-                    Pid =/= Exclude ->
-                        [Pid | L];
-                    true ->
-                        L
-                end
-            end, [], Remote),
+            Members = [Pid || #cpg_data_pid{pid = Pid} <- Remote,
+                       Pid =/= Exclude],
             if
                 Members == [] ->
                     % to keep return values consistent with pg2
@@ -675,8 +659,7 @@ get_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             {ok, Pattern, history_oldest(History)}
@@ -700,8 +683,7 @@ get_oldest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_oldest(History, Exclude) of
@@ -727,8 +709,7 @@ get_local_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_oldest(History) of
@@ -757,8 +738,7 @@ get_local_oldest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_oldest(History, Exclude) of
@@ -784,8 +764,7 @@ get_remote_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_oldest(History) of
@@ -814,8 +793,7 @@ get_remote_oldest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_oldest(History, Exclude) of
@@ -841,8 +819,7 @@ get_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             {ok, Pattern, history_newest(History)}
@@ -866,8 +843,7 @@ get_newest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_newest(History, Exclude) of
@@ -893,8 +869,7 @@ get_local_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_newest(History) of
@@ -923,8 +898,7 @@ get_local_newest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_newest(History, Exclude) of
@@ -950,8 +924,7 @@ get_remote_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_newest(History) of
@@ -980,8 +953,7 @@ get_remote_newest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_newest(History, Exclude) of
@@ -1084,49 +1056,49 @@ history_oldest_pid([Pid | _], _) ->
 history_oldest([_ | _] = History, Exclude) ->
     history_oldest_pid(lists:reverse(History), Exclude).
 
-history_local_oldest_pid([]) ->
-    undefined;
-history_local_oldest_pid([Pid | _])
-    when node(Pid) == node() ->
-    Pid;
-history_local_oldest_pid([_ | History]) ->
-    history_local_oldest_pid(History).
-history_local_oldest([_ | _] = History) ->
-    history_local_oldest_pid(lists:reverse(History)).
-
 history_local_oldest_pid([], _) ->
     undefined;
-history_local_oldest_pid([Exclude | History], Exclude) ->
-    history_local_oldest_pid(History, Exclude);
-history_local_oldest_pid([Pid | _], _)
-    when node(Pid) == node() ->
+history_local_oldest_pid([Pid | _], Node)
+    when node(Pid) == Node ->
     Pid;
-history_local_oldest_pid([_ | History], Exclude) ->
-    history_local_oldest_pid(History, Exclude).
-history_local_oldest([_ | _] = History, Exclude) ->
-    history_local_oldest_pid(lists:reverse(History), Exclude).
+history_local_oldest_pid([_ | History], Node) ->
+    history_local_oldest_pid(History, Node).
+history_local_oldest([_ | _] = History) ->
+    history_local_oldest_pid(lists:reverse(History), node()).
 
-history_remote_oldest_pid([]) ->
+history_local_oldest_pid([], _, _) ->
     undefined;
-history_remote_oldest_pid([Pid | _])
-    when node(Pid) /= node() ->
+history_local_oldest_pid([Exclude | History], Exclude, Node) ->
+    history_local_oldest_pid(History, Exclude, Node);
+history_local_oldest_pid([Pid | _], _, Node)
+    when node(Pid) == Node ->
     Pid;
-history_remote_oldest_pid([_ | History]) ->
-    history_remote_oldest_pid(History).
-history_remote_oldest([_ | _] = History) ->
-    history_remote_oldest_pid(lists:reverse(History)).
+history_local_oldest_pid([_ | History], Exclude, Node) ->
+    history_local_oldest_pid(History, Exclude, Node).
+history_local_oldest([_ | _] = History, Exclude) ->
+    history_local_oldest_pid(lists:reverse(History), Exclude, node()).
 
 history_remote_oldest_pid([], _) ->
     undefined;
-history_remote_oldest_pid([Exclude | History], Exclude) ->
-    history_remote_oldest_pid(History, Exclude);
-history_remote_oldest_pid([Pid | _], _)
-    when node(Pid) /= node() ->
+history_remote_oldest_pid([Pid | _], Node)
+    when node(Pid) /= Node ->
     Pid;
-history_remote_oldest_pid([_ | History], Exclude) ->
-    history_remote_oldest_pid(History, Exclude).
+history_remote_oldest_pid([_ | History], Node) ->
+    history_remote_oldest_pid(History, Node).
+history_remote_oldest([_ | _] = History) ->
+    history_remote_oldest_pid(lists:reverse(History), node()).
+
+history_remote_oldest_pid([], _, _) ->
+    undefined;
+history_remote_oldest_pid([Exclude | History], Exclude, Node) ->
+    history_remote_oldest_pid(History, Exclude, Node);
+history_remote_oldest_pid([Pid | _], _, Node)
+    when node(Pid) /= Node ->
+    Pid;
+history_remote_oldest_pid([_ | History], Exclude, Node) ->
+    history_remote_oldest_pid(History, Exclude, Node).
 history_remote_oldest([_ | _] = History, Exclude) ->
-    history_remote_oldest_pid(lists:reverse(History), Exclude).
+    history_remote_oldest_pid(lists:reverse(History), Exclude, node()).
 
 history_newest([Pid | _]) ->
     Pid.
@@ -1140,47 +1112,47 @@ history_newest_pid([Pid | _], _) ->
 history_newest([_ | _] = History, Exclude) ->
     history_newest_pid(History, Exclude).
 
-history_local_newest_pid([]) ->
-    undefined;
-history_local_newest_pid([Pid | _])
-    when node(Pid) == node() ->
-    Pid;
-history_local_newest_pid([_ | History]) ->
-    history_local_newest_pid(History).
-history_local_newest([_ | _] = History) ->
-    history_local_newest_pid(History).
-
 history_local_newest_pid([], _) ->
     undefined;
-history_local_newest_pid([Exclude | History], Exclude) ->
-    history_local_newest_pid(History, Exclude);
-history_local_newest_pid([Pid | _], _)
-    when node(Pid) == node() ->
+history_local_newest_pid([Pid | _], Node)
+    when node(Pid) == Node ->
     Pid;
-history_local_newest_pid([_ | History], Exclude) ->
-    history_local_newest_pid(History, Exclude).
-history_local_newest([_ | _] = History, Exclude) ->
-    history_local_newest_pid(History, Exclude).
+history_local_newest_pid([_ | History], Node) ->
+    history_local_newest_pid(History, Node).
+history_local_newest([_ | _] = History) ->
+    history_local_newest_pid(History, node()).
 
-history_remote_newest_pid([]) ->
+history_local_newest_pid([], _, _) ->
     undefined;
-history_remote_newest_pid([Pid | _])
-    when node(Pid) /= node() ->
+history_local_newest_pid([Exclude | History], Exclude, Node) ->
+    history_local_newest_pid(History, Exclude, Node);
+history_local_newest_pid([Pid | _], _, Node)
+    when node(Pid) == Node ->
     Pid;
-history_remote_newest_pid([_ | History]) ->
-    history_remote_newest_pid(History).
-history_remote_newest([_ | _] = History) ->
-    history_remote_newest_pid(History).
+history_local_newest_pid([_ | History], Exclude, Node) ->
+    history_local_newest_pid(History, Exclude, Node).
+history_local_newest([_ | _] = History, Exclude) ->
+    history_local_newest_pid(History, Exclude, node()).
 
 history_remote_newest_pid([], _) ->
     undefined;
-history_remote_newest_pid([Exclude | History], Exclude) ->
-    history_remote_newest_pid(History, Exclude);
-history_remote_newest_pid([Pid | _], _)
-    when node(Pid) /= node() ->
+history_remote_newest_pid([Pid | _], Node)
+    when node(Pid) /= Node ->
     Pid;
-history_remote_newest_pid([_ | History], Exclude) ->
-    history_remote_newest_pid(History, Exclude).
+history_remote_newest_pid([_ | History], Node) ->
+    history_remote_newest_pid(History, Node).
+history_remote_newest([_ | _] = History) ->
+    history_remote_newest_pid(History, node()).
+
+history_remote_newest_pid([], _, _) ->
+    undefined;
+history_remote_newest_pid([Exclude | History], Exclude, Node) ->
+    history_remote_newest_pid(History, Exclude, Node);
+history_remote_newest_pid([Pid | _], _, Node)
+    when node(Pid) /= Node ->
+    Pid;
+history_remote_newest_pid([_ | History], Exclude, Node) ->
+    history_remote_newest_pid(History, Exclude, Node).
 history_remote_newest([_ | _] = History, Exclude) ->
-    history_remote_newest_pid(History, Exclude).
+    history_remote_newest_pid(History, Exclude, node()).
 
