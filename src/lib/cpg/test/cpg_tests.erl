@@ -44,10 +44,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cpg_test).
+-module(cpg_tests).
 
 -author('mjtruog [at] gmail (dot) com').
 
@@ -198,14 +198,33 @@ pid_age_1_test() ->
     ok = cpg:join("GroupA", Pid1),
     ok = cpg:join("GroupA", Pid2),
     {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_local_newest_pid("GroupA"),
     {ok, "GroupA", Pid1} = cpg:get_newest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid1} = cpg:get_local_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid1} = cpg:get_oldest_pid("GroupA"),
+    {ok, "GroupA", Pid1} = cpg:get_local_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA", Pid1),
+    {ok, "GroupA", Pid2} = cpg:get_local_oldest_pid("GroupA", Pid1),
+    History0 = [Pid2, Pid1, Pid3, Pid2, Pid1],
+    {ok, "GroupA", History0} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History0} = cpg:get_local_members("GroupA"),
+    {error, {no_such_group, "GroupA"}} = cpg:get_remote_members("GroupA"),
+    ok = cpg:leave("GroupA", Pid1),
+    History1 = [Pid2, Pid1, Pid3, Pid2],
+    {ok, "GroupA", History1} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History1} = cpg:get_local_members("GroupA"),
     ok = kill_pid(Pid1),
+    History2 = [Pid2, Pid3, Pid2],
+    {ok, "GroupA", History2} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History2} = cpg:get_local_members("GroupA"),
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid3} = cpg:get_local_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
+    {ok, "GroupA", Pid3} = cpg:get_local_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_local_oldest_pid("GroupA"),
     {ok, "GroupA", Pid2} = cpg:get_newest_pid("GroupA"),
+    {ok, "GroupA", Pid2} = cpg:get_local_newest_pid("GroupA"),
     ok = kill_pids([Pid2, Pid3]),
     ok.
 
@@ -226,12 +245,19 @@ pid_age_2_test() ->
     2 = cpg:join_count("GroupA", Pid1),
     ok = cpg:join("GroupA", Pid2),
     2 = cpg:join_count("GroupA", Pid2),
+    History0 = [Pid2, Pid1, Pid3, Pid2, Pid1],
+    {ok, "GroupA", History0} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History0} = cpg:get_local_members("GroupA"),
     ok = cpg:leave("GroupA", Pid1),
     1 = cpg:join_count("GroupA", Pid1),
+    History1 = [Pid2, Pid1, Pid3, Pid2],
+    {ok, "GroupA", History1} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History1} = cpg:get_local_members("GroupA"),
     ok = cpg:leave("GroupA", Pid1),
     0 = cpg:join_count("GroupA", Pid1),
-    % joins GroupA: Pid1 Pid2 Pid3 Pid1 Pid2
-    % leave GroupA: Pid2 Pid3 Pid2
+    History2 = [Pid2, Pid3, Pid2],
+    {ok, "GroupA", History2} = cpg:get_members("GroupA"),
+    {ok, "GroupA", History2} = cpg:get_local_members("GroupA"),
     {ok, "GroupA", Pid3} = cpg:get_oldest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid3} = cpg:get_newest_pid("GroupA", Pid2),
     {ok, "GroupA", Pid2} = cpg:get_oldest_pid("GroupA"),
