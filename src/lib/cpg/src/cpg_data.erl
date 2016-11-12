@@ -390,8 +390,7 @@ get_closest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = 0,
                                 remote_count = RemoteCount,
@@ -420,8 +419,7 @@ get_closest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = 0,
                                 remote_count = RemoteCount,
@@ -451,8 +449,7 @@ get_furthest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{remote_count = 0,
-                          local_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{remote_count = 0,
                                 local_count = LocalCount,
@@ -481,8 +478,7 @@ get_furthest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{remote_count = 0,
-                          local_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{remote_count = 0,
                                 local_count = LocalCount,
@@ -511,8 +507,7 @@ get_random_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = LocalCount,
                                 local = Local,
@@ -539,8 +534,7 @@ get_random_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{local_count = 0,
-                          remote_count = 0}} ->
+        {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{local_count = LocalCount,
                                 local = Local,
@@ -709,7 +703,7 @@ get_local_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_oldest(History) of
@@ -738,7 +732,7 @@ get_local_oldest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_oldest(History, Exclude) of
@@ -764,7 +758,7 @@ get_remote_oldest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_oldest(History) of
@@ -793,7 +787,7 @@ get_remote_oldest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_oldest(History, Exclude) of
@@ -869,7 +863,7 @@ get_local_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_newest(History) of
@@ -898,7 +892,7 @@ get_local_newest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_local_newest(History, Exclude) of
@@ -924,7 +918,7 @@ get_remote_newest_pid(GroupName, Groups) ->
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_newest(History) of
@@ -953,7 +947,7 @@ get_remote_newest_pid(GroupName, Exclude, Groups)
     case group_find(GroupName, Groups) of
         error ->
             {error, {'no_such_group', GroupName}};
-        {ok, _, #cpg_data{history = []}} ->
+        {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
             case history_remote_newest(History, Exclude) of
@@ -1059,7 +1053,7 @@ history_oldest([_ | _] = History, Exclude) ->
 history_local_oldest_pid([], _) ->
     undefined;
 history_local_oldest_pid([Pid | _], Node)
-    when node(Pid) == Node ->
+    when node(Pid) =:= Node ->
     Pid;
 history_local_oldest_pid([_ | History], Node) ->
     history_local_oldest_pid(History, Node).
@@ -1071,7 +1065,7 @@ history_local_oldest_pid([], _, _) ->
 history_local_oldest_pid([Exclude | History], Exclude, Node) ->
     history_local_oldest_pid(History, Exclude, Node);
 history_local_oldest_pid([Pid | _], _, Node)
-    when node(Pid) == Node ->
+    when node(Pid) =:= Node ->
     Pid;
 history_local_oldest_pid([_ | History], Exclude, Node) ->
     history_local_oldest_pid(History, Exclude, Node).
@@ -1081,7 +1075,7 @@ history_local_oldest([_ | _] = History, Exclude) ->
 history_remote_oldest_pid([], _) ->
     undefined;
 history_remote_oldest_pid([Pid | _], Node)
-    when node(Pid) /= Node ->
+    when node(Pid) =/= Node ->
     Pid;
 history_remote_oldest_pid([_ | History], Node) ->
     history_remote_oldest_pid(History, Node).
@@ -1093,7 +1087,7 @@ history_remote_oldest_pid([], _, _) ->
 history_remote_oldest_pid([Exclude | History], Exclude, Node) ->
     history_remote_oldest_pid(History, Exclude, Node);
 history_remote_oldest_pid([Pid | _], _, Node)
-    when node(Pid) /= Node ->
+    when node(Pid) =/= Node ->
     Pid;
 history_remote_oldest_pid([_ | History], Exclude, Node) ->
     history_remote_oldest_pid(History, Exclude, Node).
@@ -1115,7 +1109,7 @@ history_newest([_ | _] = History, Exclude) ->
 history_local_newest_pid([], _) ->
     undefined;
 history_local_newest_pid([Pid | _], Node)
-    when node(Pid) == Node ->
+    when node(Pid) =:= Node ->
     Pid;
 history_local_newest_pid([_ | History], Node) ->
     history_local_newest_pid(History, Node).
@@ -1127,7 +1121,7 @@ history_local_newest_pid([], _, _) ->
 history_local_newest_pid([Exclude | History], Exclude, Node) ->
     history_local_newest_pid(History, Exclude, Node);
 history_local_newest_pid([Pid | _], _, Node)
-    when node(Pid) == Node ->
+    when node(Pid) =:= Node ->
     Pid;
 history_local_newest_pid([_ | History], Exclude, Node) ->
     history_local_newest_pid(History, Exclude, Node).
@@ -1137,7 +1131,7 @@ history_local_newest([_ | _] = History, Exclude) ->
 history_remote_newest_pid([], _) ->
     undefined;
 history_remote_newest_pid([Pid | _], Node)
-    when node(Pid) /= Node ->
+    when node(Pid) =/= Node ->
     Pid;
 history_remote_newest_pid([_ | History], Node) ->
     history_remote_newest_pid(History, Node).
@@ -1149,7 +1143,7 @@ history_remote_newest_pid([], _, _) ->
 history_remote_newest_pid([Exclude | History], Exclude, Node) ->
     history_remote_newest_pid(History, Exclude, Node);
 history_remote_newest_pid([Pid | _], _, Node)
-    when node(Pid) /= Node ->
+    when node(Pid) =/= Node ->
     Pid;
 history_remote_newest_pid([_ | History], Exclude, Node) ->
     history_remote_newest_pid(History, Exclude, Node).

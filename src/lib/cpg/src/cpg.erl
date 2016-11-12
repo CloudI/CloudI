@@ -3384,8 +3384,7 @@ delete_group(GroupName,
     case DictI:find(GroupName, GroupsData) of
         error ->
             State;
-        {ok, #cpg_data{local_count = 0,
-                       remote_count = 0}} ->
+        {ok, #cpg_data{history = []}} ->
             NewGroupsData = DictI:erase(GroupName, GroupsData),
             State#state{groups = {DictI, NewGroupsData}};
         {ok, #cpg_data{local = Local,
@@ -3412,7 +3411,7 @@ join_group(GroupName, Pid, Reason,
     Entry = #cpg_data_pid{pid = Pid,
                           monitor = erlang:monitor(process, Pid)},
     NewGroupsData = if
-        node() =:= node(Pid) ->
+        node(Pid) =:= node() ->
             DictI:update(GroupName,
                 fun(#cpg_data{local_count = LocalI,
                               local = Local,
@@ -3449,134 +3448,6 @@ join_group(GroupName, Pid, Reason,
     State#state{groups = {DictI, NewGroupsData},
                 pids = NewPids}.
 
-leave_group(GroupName, Pid, Reason, State) ->
-    leave_group_count(1, GroupName, Pid, Reason, State).
-
-leave_group_completely(GroupName, Pid, Reason,
-                       #state{groups = {DictI, GroupsData},
-                              pids = Pids,
-                              callbacks = Callbacks} = State) ->
-    Fpartition = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
-        if 
-            P == Pid ->
-                true = erlang:demonitor(Ref, [flush]),
-                true;
-            true ->
-                false
-        end
-    end,
-    Fupdate = if
-        node() =:= node(Pid) ->
-            fun(#cpg_data{local_count = LocalI,
-                          local = Local,
-                          history = History} = OldGroupData) ->
-                {OldLocal,
-                 NewLocal} = lists:partition(Fpartition, Local),
-                I = erlang:length(OldLocal),
-                cpg_callbacks:notify_leave(Callbacks,
-                                           GroupName, Pid, Reason, I),
-                OldGroupData#cpg_data{local_count = LocalI - I,
-                                      local = NewLocal,
-                                      history = delete_all(Pid, History)}
-            end;
-        true ->
-            fun(#cpg_data{remote_count = RemoteI,
-                          remote = Remote,
-                          history = History} = OldGroupData) ->
-                {OldRemote,
-                 NewRemote} = lists:partition(Fpartition, Remote),
-                I = erlang:length(OldRemote),
-                cpg_callbacks:notify_leave(Callbacks,
-                                           GroupName, Pid, Reason, I),
-                OldGroupData#cpg_data{remote_count = RemoteI - I,
-                                      remote = NewRemote,
-                                      history = delete_all(Pid, History)}
-            end
-    end,
-    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
-    NewGroupsData = case Fupdate(GroupData) of
-        #cpg_data{local_count = 0,
-                  remote_count = 0} ->
-            DictI:erase(GroupName, GroupsData);
-        #cpg_data{} = NewGroupData ->
-            DictI:store(GroupName, NewGroupData, GroupsData)
-    end,
-    NewPids = dict:update(Pid, fun(OldGroupNameList) ->
-        lists:delete(GroupName, OldGroupNameList)
-    end, Pids),
-    State#state{groups = {DictI, NewGroupsData},
-                pids = NewPids}.
-
-leave_group_count(Count, GroupName, Pid, Reason,
-                  #state{groups = {DictI, GroupsData},
-                         pids = Pids,
-                         callbacks = Callbacks} = State) ->
-    Fselect = fun(#cpg_data_pid{pid = P, monitor = Ref}) ->
-        if 
-            P == Pid ->
-                true = erlang:demonitor(Ref, [flush]),
-                true;
-            true ->
-                false
-        end
-    end,
-    Fupdate = if
-        node() =:= node(Pid) ->
-            fun(#cpg_data{local_count = LocalI,
-                          local = Local,
-                          history = History} = OldGroupData) ->
-                {I, NewLocal} = select_reverse(Fselect, Count,
-                                               lists:reverse(Local)),
-                cpg_callbacks:notify_leave(Callbacks,
-                                           GroupName, Pid, Reason, I),
-                NextHistory = delete_count_reverse(Pid, I,
-                                                   lists:reverse(History)),
-                OldGroupData#cpg_data{local_count = LocalI - I,
-                                      local = NewLocal,
-                                      history = NextHistory}
-            end;
-        true ->
-            fun(#cpg_data{remote_count = RemoteI,
-                          remote = Remote,
-                          history = History} = OldGroupData) ->
-                {I, NewRemote} = select_reverse(Fselect, Count,
-                                                lists:reverse(Remote)),
-                cpg_callbacks:notify_leave(Callbacks,
-                                           GroupName, Pid, Reason, I),
-                NextHistory = delete_count_reverse(Pid, I,
-                                                   lists:reverse(History)),
-                OldGroupData#cpg_data{remote_count = RemoteI - I,
-                                      remote = NewRemote,
-                                      history = NextHistory}
-            end
-    end,
-    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
-    {NewGroupsData,
-     Member} = case Fupdate(GroupData) of
-        #cpg_data{local_count = 0,
-                  remote_count = 0} ->
-            {DictI:erase(GroupName, GroupsData), false};
-        #cpg_data{history = NewHistory} = NewGroupData ->
-            {DictI:store(GroupName, NewGroupData, GroupsData),
-             lists:member(Pid, NewHistory)}
-    end,
-    NewPids = if
-        Member =:= true ->
-            Pids;
-        Member =:= false ->
-            dict:update(Pid, fun(OldGroupNameList) ->
-                lists:delete(GroupName, OldGroupNameList)
-            end, Pids)
-    end,
-    State#state{groups = {DictI, NewGroupsData},
-                pids = NewPids}.
-
-leave_pid_completely([], Pid, _, #state{pids = NewPids} = State) ->
-    State#state{pids = dict:erase(Pid, NewPids)};
-leave_pid_completely([GroupName | GroupNameList], Pid, Reason, State) ->
-    NewState = leave_group_completely(GroupName, Pid, Reason, State),
-    leave_pid_completely(GroupNameList, Pid, Reason, NewState).
-
 leave_valid(GroupName, Pid, Pids) ->
     case dict:find(Pid, Pids) of
         error ->
@@ -3600,63 +3471,192 @@ leave_counts_valid(Counts, Pid, Pids) ->
             end, Counts)
     end.
 
+leave_group_completely_entries([], I, Output, _) ->
+    {I, lists:reverse(Output)};
+leave_group_completely_entries([#cpg_data_pid{pid = Pid,
+                                              monitor = Ref} | Entries],
+                               I, Output, Pid) ->
+    true = erlang:demonitor(Ref, [flush]),
+    leave_group_completely_entries(Entries, I + 1, Output, Pid);
+leave_group_completely_entries([H | Entries], I, Output, Pid) ->
+    leave_group_completely_entries(Entries, I, [H | Output], Pid).
+
+leave_group_completely_entries(Entries, Pid) ->
+    leave_group_completely_entries(Entries, 0, [], Pid).
+
+leave_group_completely(GroupName, Pid, Reason,
+                       #state{groups = {DictI, GroupsData},
+                              pids = Pids,
+                              callbacks = Callbacks} = State) ->
+    Fupdate = if
+        node(Pid) =:= node() ->
+            fun(#cpg_data{local_count = LocalI,
+                          local = Local,
+                          history = History} = OldGroupData) ->
+                {I, NewLocal} = leave_group_completely_entries(Local, Pid),
+                NewHistory = [P || P <- History, P /= Pid],
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{local_count = LocalI - I,
+                                      local = NewLocal,
+                                      history = NewHistory}
+            end;
+        true ->
+            fun(#cpg_data{remote_count = RemoteI,
+                          remote = Remote,
+                          history = History} = OldGroupData) ->
+                {I, NewRemote} = leave_group_completely_entries(Remote, Pid),
+                NewHistory = [P || P <- History, P /= Pid],
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{remote_count = RemoteI - I,
+                                      remote = NewRemote,
+                                      history = NewHistory}
+            end
+    end,
+    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
+    NewGroupsData = case Fupdate(GroupData) of
+        #cpg_data{history = []} ->
+            DictI:erase(GroupName, GroupsData);
+        #cpg_data{} = NewGroupData ->
+            DictI:store(GroupName, NewGroupData, GroupsData)
+    end,
+    NewPids = dict:update(Pid, fun(OldGroupNameList) ->
+        lists:delete(GroupName, OldGroupNameList)
+    end, Pids),
+    State#state{groups = {DictI, NewGroupsData},
+                pids = NewPids}.
+
+leave_group_count_entries(0, Entries, I, Output, _) ->
+    {I, lists:reverse(Entries, Output)};
+leave_group_count_entries(_, [], I, Output, _) ->
+    {I, Output};
+leave_group_count_entries(Count, [#cpg_data_pid{pid = Pid,
+                                                monitor = Ref} | Entries],
+                          I, Output, Pid) ->
+    true = erlang:demonitor(Ref, [flush]),
+    leave_group_count_entries(Count - 1, Entries, I + 1, Output, Pid);
+leave_group_count_entries(Count, [H | Entries], I, Output, Pid) ->
+    leave_group_count_entries(Count, Entries, I, [H | Output], Pid).
+
+leave_group_count_entries(Count, Entries, Pid) ->
+    leave_group_count_entries(Count, lists:reverse(Entries), 0, [], Pid).
+
+leave_group_count_history(0, History, Output, _) ->
+    lists:reverse(History, Output);
+leave_group_count_history(Count, [Pid | History], Output, Pid) ->
+    leave_group_count_history(Count - 1, History, Output, Pid);
+leave_group_count_history(Count, [H | History], Output, Pid) ->
+    leave_group_count_history(Count, History, [H | Output], Pid).
+
+leave_group_count_history(Count, History, Pid) ->
+    leave_group_count_history(Count, lists:reverse(History), [], Pid).
+
+leave_group_count(Count, GroupName, Pid, Reason,
+                  #state{groups = {DictI, GroupsData},
+                         pids = Pids,
+                         callbacks = Callbacks} = State) ->
+    Fupdate = if
+        node(Pid) =:= node() ->
+            fun(#cpg_data{local_count = LocalI,
+                          local = Local,
+                          history = History} = OldGroupData) ->
+                {I, NewLocal} = leave_group_count_entries(Count, Local, Pid),
+                NextHistory = leave_group_count_history(I, History, Pid),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{local_count = LocalI - I,
+                                      local = NewLocal,
+                                      history = NextHistory}
+            end;
+        true ->
+            fun(#cpg_data{remote_count = RemoteI,
+                          remote = Remote,
+                          history = History} = OldGroupData) ->
+                {I, NewRemote} = leave_group_count_entries(Count, Remote, Pid),
+                NextHistory = leave_group_count_history(I, History, Pid),
+                cpg_callbacks:notify_leave(Callbacks,
+                                           GroupName, Pid, Reason, I),
+                OldGroupData#cpg_data{remote_count = RemoteI - I,
+                                      remote = NewRemote,
+                                      history = NextHistory}
+            end
+    end,
+    GroupData = #cpg_data{} = DictI:fetch(GroupName, GroupsData),
+    {NewGroupsData,
+     Member} = case Fupdate(GroupData) of
+        #cpg_data{history = []} ->
+            {DictI:erase(GroupName, GroupsData), false};
+        #cpg_data{history = NewHistory} = NewGroupData ->
+            {DictI:store(GroupName, NewGroupData, GroupsData),
+             lists:member(Pid, NewHistory)}
+    end,
+    NewPids = if
+        Member =:= true ->
+            Pids;
+        Member =:= false ->
+            dict:update(Pid, fun(OldGroupNameList) ->
+                lists:delete(GroupName, OldGroupNameList)
+            end, Pids)
+    end,
+    State#state{groups = {DictI, NewGroupsData},
+                pids = NewPids}.
+
+leave_group(GroupName, Pid, Reason, State) ->
+    leave_group_count(1, GroupName, Pid, Reason, State).
+
+leave_pid_completely([], Pid, _, #state{pids = NewPids} = State) ->
+    State#state{pids = dict:erase(Pid, NewPids)};
+leave_pid_completely([GroupName | GroupNameList], Pid, Reason, State) ->
+    NewState = leave_group_completely(GroupName, Pid, Reason, State),
+    leave_pid_completely(GroupNameList, Pid, Reason, NewState).
+
 store_conflict_add_entries(0, Entries, _) ->
     Entries;
 store_conflict_add_entries(I, Entries, Pid) ->
     Ref = erlang:monitor(process, Pid),
     store_conflict_add_entries(I - 1,
                                [#cpg_data_pid{pid = Pid,
-                                              monitor = Ref} |
-                                Entries], Pid).
+                                              monitor = Ref} | Entries], Pid).
 
 store_conflict_add_history(0, History, _) ->
     History;
 store_conflict_add_history(I, History, Pid) ->
     store_conflict_add_history(I - 1, [Pid | History], Pid).
 
-store_conflict_remove_entries_monitors([]) ->
-    ok;
-store_conflict_remove_entries_monitors([#cpg_data_pid{monitor = M} |
-                                        OldEntries]) ->
-    true = erlang:demonitor(M, [flush]),
-    store_conflict_remove_entries_monitors(OldEntries).
-
-store_conflict_remove_entries(I, Entries) ->
-    {Remove, NewEntries} = lists:split(I * -1, Entries),
-    store_conflict_remove_entries_monitors(Remove),
-    NewEntries.
+store_conflict_remove_entries(0, Entries, _) ->
+    Entries;
+store_conflict_remove_entries(I,
+                              [#cpg_data_pid{pid = Pid,
+                                             monitor = Ref} | Entries], Pid) ->
+    true = erlang:demonitor(Ref, [flush]),
+    store_conflict_remove_entries(I + 1, Entries, Pid);
+store_conflict_remove_entries(I, [H | Entries], Pid) ->
+    [H | store_conflict_remove_entries(I, Entries, Pid)].
 
 store_conflict_remove_history(0, History, _) ->
     History;
-store_conflict_remove_history(I, History, Pid) ->
-    store_conflict_remove_history(I + 1, lists:delete(Pid, History), Pid).
+store_conflict_remove_history(I, [Pid | History], Pid) ->
+    store_conflict_remove_history(I + 1, History, Pid);
+store_conflict_remove_history(I, [H | History], Pid) ->
+    [H | store_conflict_remove_history(I, History, Pid)].
 
-store_conflict_f([], V2, _, _, _) ->
+store_conflict([], V2, _, _, _, _) ->
     V2;
-store_conflict_f([Pid | V1AllPids],
-                 #cpg_data{local_count = LocalI,
-                           local = Local,
-                           remote_count = RemoteI,
-                           remote = Remote,
-                           history = History} = V2,
-                 V1All, GroupName,
-                 #state{callbacks = Callbacks} = State) ->
+store_conflict([Pid | V1Pids],
+               #cpg_data{local_count = LocalI,
+                         local = Local,
+                         remote_count = RemoteI,
+                         remote = Remote,
+                         history = History} = V2,
+               V1AllPids, GroupName, Node,
+               #state{callbacks = Callbacks} = State) ->
     % for each external Pid, check the internal Pids within the same group
-    Fpartition = fun(#cpg_data_pid{pid = P}) ->
-        if 
-            P == Pid ->
-                true;
-            true ->
-                false
-        end
-    end,
     if
-        node() =:= node(Pid) ->
+        node(Pid) =:= Node ->
             % make sure there are equal counts of a local pid
             % based on the external group pids
-            {V1Pids, _} = lists:partition(Fpartition, V1All),
-            {V2Pids, LocalRest} = lists:partition(Fpartition, Local),
-            I = erlang:length(V1Pids) - erlang:length(V2Pids),
+            I = count(Pid, V1AllPids) - count_pid(Pid, Local),
             if
                 I > 0 ->
                     % add
@@ -3664,32 +3664,30 @@ store_conflict_f([Pid | V1AllPids],
                                               join_remote, I),
                     NewLocal = store_conflict_add_entries(I, Local, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
-                    store_conflict_f(V1AllPids,
-                                     V2#cpg_data{local_count = LocalI + I,
-                                                 local = NewLocal,
-                                                 history = NewHistory},
-                                     V1All, GroupName, State);
+                    store_conflict(V1Pids,
+                                   V2#cpg_data{local_count = LocalI + I,
+                                               local = NewLocal,
+                                               history = NewHistory},
+                                   V1AllPids, GroupName, Node, State);
                 I < 0 ->
                     % remove
                     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
                                                leave_remote, I * -1),
-                    NewV2Pids = store_conflict_remove_entries(I, V2Pids),
+                    NewLocal = store_conflict_remove_entries(I, Local, Pid),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
-                    store_conflict_f(V1AllPids,
-                                     V2#cpg_data{local_count = LocalI + I,
-                                                 local = NewV2Pids ++
-                                                         LocalRest,
-                                                 history = NewHistory},
-                                     V1All, GroupName, State);
+                    store_conflict(V1Pids,
+                                   V2#cpg_data{local_count = LocalI + I,
+                                               local = NewLocal,
+                                               history = NewHistory},
+                                   V1AllPids, GroupName, Node, State);
                 true ->
-                    store_conflict_f(V1AllPids, V2, V1All, GroupName, State)
+                    store_conflict(V1Pids, V2,
+                                   V1AllPids, GroupName, Node, State)
             end;
         true ->
             % make sure there are equal counts of a remote pid
             % based on the external group pids
-            {V1Pids, _} = lists:partition(Fpartition, V1All),
-            {V2Pids, RemoteRest} = lists:partition(Fpartition, Remote),
-            I = erlang:length(V1Pids) - erlang:length(V2Pids),
+            I = count(Pid, V1AllPids) - count_pid(Pid, Remote),
             if
                 I > 0 ->
                     % add
@@ -3697,61 +3695,52 @@ store_conflict_f([Pid | V1AllPids],
                                               join_remote, I),
                     NewRemote = store_conflict_add_entries(I, Remote, Pid),
                     NewHistory = store_conflict_add_history(I, History, Pid),
-                    store_conflict_f(V1AllPids,
-                                     V2#cpg_data{remote_count = RemoteI + I,
-                                                 remote = NewRemote,
-                                                 history = NewHistory},
-                                     V1All, GroupName, State);
+                    store_conflict(V1Pids,
+                                   V2#cpg_data{remote_count = RemoteI + I,
+                                               remote = NewRemote,
+                                               history = NewHistory},
+                                   V1AllPids, GroupName, Node, State);
                 I < 0 ->
                     % remove
                     cpg_callbacks:notify_leave(Callbacks, GroupName, Pid,
                                                leave_remote, I * -1),
-                    NewV2Pids = store_conflict_remove_entries(I, V2Pids),
+                    NewRemote = store_conflict_remove_entries(I, Remote, Pid),
                     NewHistory = store_conflict_remove_history(I, History, Pid),
-                    store_conflict_f(V1AllPids,
-                                     V2#cpg_data{remote_count = RemoteI + I,
-                                                 remote = NewV2Pids ++
-                                                          RemoteRest,
-                                                 history = NewHistory},
-                                     V1All, GroupName, State);
+                    store_conflict(V1Pids,
+                                   V2#cpg_data{remote_count = RemoteI + I,
+                                               remote = NewRemote,
+                                               history = NewHistory},
+                                   V1AllPids, GroupName, Node, State);
                 true ->
-                    store_conflict_f(V1AllPids, V2, V1All, GroupName, State)
+                    store_conflict(V1Pids, V2,
+                                   V1AllPids, GroupName, Node, State)
             end
     end.
 
-store_conflict(GroupName,
-               #cpg_data{local = V1Local,
-                         remote = V1Remote}, V2, State) ->
-    % V1 is external
-    % V2 is internal
-    V1All = V1Local ++ V1Remote,
-    store_conflict_f(lists:usort(lists:map(fun(#cpg_data_pid{pid = Pid}) ->
-                         Pid
-                     end, V1All)),
-                     V2, V1All, GroupName, State).
-
-store_new_group([], V2, _, _) ->
+store_new_group([], V2, _, _, _) ->
     V2;
-store_new_group([#cpg_data_pid{pid = Pid} = E | OldEntries],
-                 #cpg_data{local_count = LocalI,
-                           local = Local,
-                           remote_count = RemoteI,
-                           remote = Remote} = V2,
-                GroupName,
+store_new_group([Pid | V1AllPids],
+                #cpg_data{% history already set from remote data
+                          local_count = LocalI,
+                          local = Local,
+                          remote_count = RemoteI,
+                          remote = Remote} = V2,
+                GroupName, Node,
                 #state{callbacks = Callbacks} = State) ->
-    NewE = E#cpg_data_pid{monitor = erlang:monitor(process, Pid)},
+    Entry = #cpg_data_pid{pid = Pid,
+                          monitor = erlang:monitor(process, Pid)},
     cpg_callbacks:notify_join(Callbacks, GroupName, Pid, join_remote),
     if
-        node() =:= node(Pid) ->
-            store_new_group(OldEntries,
+        node(Pid) =:= Node ->
+            store_new_group(V1AllPids,
                             V2#cpg_data{local_count = LocalI + 1,
-                                        local = [NewE | Local]},
-                            GroupName, State);
+                                        local = [Entry | Local]},
+                            GroupName, Node, State);
         true ->
-            store_new_group(OldEntries,
+            store_new_group(V1AllPids,
                             V2#cpg_data{remote_count = RemoteI + 1,
-                                        remote = [NewE | Remote]},
-                            GroupName, State)
+                                        remote = [Entry | Remote]},
+                            GroupName, Node, State)
     end.
 
 store(#state{groups = {DictI, ExternalGroupsData},
@@ -3760,23 +3749,24 @@ store(#state{groups = {DictI, ExternalGroupsData},
              pids = Pids} = State) ->
     % V1 is external
     % V2 is internal
+    Node = node(),
     NewGroupsData = DictI:fold(fun(GroupName,
-                                   #cpg_data{local = V1Local,
-                                             remote = V1Remote,
-                                             history = V1History} = V1, T) ->
+                                   #cpg_data{history = V1History}, T) ->
         case DictI:is_key(GroupName, T) of
             true ->
                 % merge the external group in
                 DictI:update(GroupName,
                              fun(V2) ->
-                                 store_conflict(GroupName, V1, V2, State)
+                                 store_conflict(lists:usort(V1History),
+                                                V2, V1History,
+                                                GroupName, Node, State)
                              end, T);
             false ->
                 % create the new external group as an internal group
                 DictI:store(GroupName,
-                            store_new_group(V1Local ++ V1Remote,
+                            store_new_group(lists:reverse(V1History),
                                             #cpg_data{history = V1History},
-                                            GroupName, State), T)
+                                            GroupName, Node, State), T)
         end
     end, GroupsData, ExternalGroupsData),
     NewPids = dict:merge(fun(_, V1, V2) ->
@@ -3799,27 +3789,14 @@ whereis_name_random(1, [Pid]) ->
 whereis_name_random(N, L) ->
     lists:nth(random(N), L).
 
-delete_all(Elem, List) ->
-    delete_all(Elem, [], List).
-delete_all(Elem, L, [Elem | T]) ->
-    delete_all(Elem, L, T);
-delete_all(Elem, L, [H | T]) ->
-    delete_all(Elem, [H | L], T);
-delete_all(_, L, []) ->
-    lists:reverse(L).
-
-delete_count_reverse(_, 0, List) ->
-    lists:reverse(List);
-delete_count_reverse(Elem, I, List) ->
-    delete_count_reverse(Elem, [], I, List).
-delete_count_reverse(Elem, L, 1, [Elem | T]) ->
-    lists:reverse(T, L);
-delete_count_reverse(Elem, L, I, [Elem | T]) ->
-    delete_count_reverse(Elem, L, I - 1, T);
-delete_count_reverse(Elem, L, I, [H | T]) ->
-    delete_count_reverse(Elem, [H | L], I, T);
-delete_count_reverse(_, _, _, []) ->
-    erlang:exit(badarg).
+count_pid(Pid, List) ->
+    count_pid(List, 0, Pid).
+count_pid([], I, _) ->
+    I;
+count_pid([#cpg_data_pid{pid = Pid} | T], I, Pid) ->
+    count_pid(T, I + 1, Pid);
+count_pid([#cpg_data_pid{} | T], I, Pid) ->
+    count_pid(T, I, Pid).
 
 count(Elem, List) ->
     count(List, 0, Elem).
@@ -3829,20 +3806,6 @@ count([Elem | T], I, Elem) ->
     count(T, I + 1, Elem);
 count([_ | T], I, Elem) ->
     count(T, I, Elem).
-
-select_reverse(F, Count, List) ->
-    select_reverse(List, 0, [], Count, F).
-select_reverse(T, I, Output, 0, _) ->
-    {I, lists:reverse(T, Output)};
-select_reverse([], I, Output, _, _) ->
-    {I, Output};
-select_reverse([H | T], I, Output, Count, F) ->
-    case F(H) of
-        true ->
-            select_reverse(T, I + 1, Output, Count - 1, F);
-        false ->
-            select_reverse(T, I, [H | Output], Count, F)
-    end.
 
 -compile({inline, [{random,1}]}).
 
