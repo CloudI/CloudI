@@ -106,9 +106,14 @@ seconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+seconds_os() ->
+    os:system_time(seconds).
+-else.
 seconds_os() ->
     {MegaSeconds, Seconds, _} = os:timestamp(),
     MegaSeconds * 1000000 + Seconds.
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -132,9 +137,14 @@ milliseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+milliseconds_os() ->
+    os:system_time(milli_seconds).
+-else.
 milliseconds_os() ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -158,9 +168,14 @@ microseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+microseconds_os() ->
+    os:system_time(micro_seconds).
+-else.
 microseconds_os() ->
     {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
     MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
