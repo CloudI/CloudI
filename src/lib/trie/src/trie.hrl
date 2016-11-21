@@ -374,11 +374,11 @@ find_node(H, T, {I0, _, Data})
 -spec find_prefix(?TYPE_NAME(), trie()) -> {ok, any()} | 'prefix' | 'error'.
 
 find_prefix(?TYPE_H0_, {I0, I1, _})
-  when H < I0; H > I1 ->
+    when H < I0; H > I1 ->
     error;
 
 find_prefix(?TYPE_H0, {I0, _, Data})
-  when is_integer(H) ->
+    when is_integer(H) ->
     case erlang:element(H - I0 + 1, Data) of
         {{_, _, _}, error} ->
             prefix;
@@ -393,7 +393,7 @@ find_prefix(?TYPE_H0, {I0, _, Data})
     end;
 
 find_prefix(?TYPE_H0T0, {I0, _, Data})
-  when is_integer(H) ->
+    when is_integer(H) ->
     case erlang:element(H - I0 + 1, Data) of
         {{_, _, _} = Node, _} ->
             find_prefix(T, Node);

@@ -656,7 +656,7 @@ get_oldest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            {ok, Pattern, history_oldest(History)}
+            history_oldest(History, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -680,12 +680,7 @@ get_oldest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_oldest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_oldest(History, Exclude, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -706,12 +701,7 @@ get_local_oldest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_local_oldest(History) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_local_oldest(History, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -735,12 +725,7 @@ get_local_oldest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_local_oldest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_local_oldest(History, Exclude, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -761,12 +746,7 @@ get_remote_oldest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_remote_oldest(History) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_remote_oldest(History, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -790,12 +770,7 @@ get_remote_oldest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_remote_oldest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_remote_oldest(History, Exclude, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -816,7 +791,7 @@ get_newest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            {ok, Pattern, history_newest(History)}
+            history_newest(History, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -840,12 +815,7 @@ get_newest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{history = []}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_newest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_newest(History, Exclude, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -866,12 +836,7 @@ get_local_newest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_local_newest(History) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_local_newest(History, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -895,12 +860,7 @@ get_local_newest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{local_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_local_newest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_local_newest(History, Exclude, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -921,12 +881,7 @@ get_remote_newest_pid(GroupName, Groups) ->
         {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_remote_newest(History) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_remote_newest(History, GroupName, Pattern)
     end.
 
 %%-------------------------------------------------------------------------
@@ -950,12 +905,7 @@ get_remote_newest_pid(GroupName, Exclude, Groups)
         {ok, _, #cpg_data{remote_count = 0}} ->
             {error, {'no_process', GroupName}};
         {ok, Pattern, #cpg_data{history = History}} ->
-            case history_remote_newest(History, Exclude) of
-                undefined ->
-                    {error, {'no_process', GroupName}};
-                Pid ->
-                    {ok, Pattern, Pid}
-            end
+            history_remote_newest(History, Exclude, GroupName, Pattern)
     end.
 
 %%%------------------------------------------------------------------------
@@ -1032,121 +982,129 @@ pick(N1, L1, N2, L2, Exclude, GroupName, Pattern) ->
             Success
     end.
 
+history_oldest([_ | _] = History, Pattern) ->
+    [Pid | _] = lists:reverse(History),
+    {ok, Pattern, Pid}.
+
+history_oldest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_oldest_pid([Exclude | History], Exclude, GroupName, Pattern) ->
+    history_oldest_pid(History, Exclude, GroupName, Pattern);
+history_oldest_pid([Pid | _], _, _, Pattern) ->
+    {ok, Pattern, Pid}.
+history_oldest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_oldest_pid(lists:reverse(History), Exclude, GroupName, Pattern).
+
+history_local_oldest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_local_oldest_pid([Pid | _], Node, _, Pattern)
+    when node(Pid) =:= Node ->
+    {ok, Pattern, Pid};
+history_local_oldest_pid([_ | History], Node, GroupName, Pattern) ->
+    history_local_oldest_pid(History, Node, GroupName, Pattern).
+history_local_oldest([_ | _] = History, GroupName, Pattern) ->
+    history_local_oldest_pid(lists:reverse(History), node(),
+                             GroupName, Pattern).
+
+history_local_oldest_pid([], _, _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_local_oldest_pid([Exclude | History], Exclude, Node,
+                         GroupName, Pattern) ->
+    history_local_oldest_pid(History, Exclude, Node, GroupName, Pattern);
+history_local_oldest_pid([Pid | _], _, Node, _, Pattern)
+    when node(Pid) =:= Node ->
+    {ok, Pattern, Pid};
+history_local_oldest_pid([_ | History], Exclude, Node, GroupName, Pattern) ->
+    history_local_oldest_pid(History, Exclude, Node, GroupName, Pattern).
+history_local_oldest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_local_oldest_pid(lists:reverse(History), Exclude, node(),
+                             GroupName, Pattern).
+
+history_remote_oldest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_remote_oldest_pid([Pid | _], Node, _, Pattern)
+    when node(Pid) =/= Node ->
+    {ok, Pattern, Pid};
+history_remote_oldest_pid([_ | History], Node, GroupName, Pattern) ->
+    history_remote_oldest_pid(History, Node, GroupName, Pattern).
+history_remote_oldest([_ | _] = History, GroupName, Pattern) ->
+    history_remote_oldest_pid(lists:reverse(History), node(),
+                              GroupName, Pattern).
+
+history_remote_oldest_pid([], _, _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_remote_oldest_pid([Exclude | History], Exclude, Node,
+                          GroupName, Pattern) ->
+    history_remote_oldest_pid(History, Exclude, Node, GroupName, Pattern);
+history_remote_oldest_pid([Pid | _], _, Node, _, Pattern)
+    when node(Pid) =/= Node ->
+    {ok, Pattern, Pid};
+history_remote_oldest_pid([_ | History], Exclude, Node, GroupName, Pattern) ->
+    history_remote_oldest_pid(History, Exclude, Node, GroupName, Pattern).
+history_remote_oldest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_remote_oldest_pid(lists:reverse(History), Exclude, node(),
+                              GroupName, Pattern).
+
+history_newest([Pid | _], Pattern) ->
+    {ok, Pattern, Pid}.
+
+history_newest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_newest_pid([Exclude | History], Exclude, GroupName, Pattern) ->
+    history_newest_pid(History, Exclude, GroupName, Pattern);
+history_newest_pid([Pid | _], _, _, Pattern) ->
+    {ok, Pattern, Pid}.
+history_newest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_newest_pid(History, Exclude, GroupName, Pattern).
+
+history_local_newest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_local_newest_pid([Pid | _], Node, _, Pattern)
+    when node(Pid) =:= Node ->
+    {ok, Pattern, Pid};
+history_local_newest_pid([_ | History], Node, GroupName, Pattern) ->
+    history_local_newest_pid(History, Node, GroupName, Pattern).
+history_local_newest([_ | _] = History, GroupName, Pattern) ->
+    history_local_newest_pid(History, node(), GroupName, Pattern).
+
+history_local_newest_pid([], _, _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_local_newest_pid([Exclude | History], Exclude, Node,
+                         GroupName, Pattern) ->
+    history_local_newest_pid(History, Exclude, Node, GroupName, Pattern);
+history_local_newest_pid([Pid | _], _, Node, _, Pattern)
+    when node(Pid) =:= Node ->
+    {ok, Pattern, Pid};
+history_local_newest_pid([_ | History], Exclude, Node, GroupName, Pattern) ->
+    history_local_newest_pid(History, Exclude, Node, GroupName, Pattern).
+history_local_newest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_local_newest_pid(History, Exclude, node(), GroupName, Pattern).
+
+history_remote_newest_pid([], _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_remote_newest_pid([Pid | _], Node, _, Pattern)
+    when node(Pid) =/= Node ->
+    {ok, Pattern, Pid};
+history_remote_newest_pid([_ | History], Node, GroupName, Pattern) ->
+    history_remote_newest_pid(History, Node, GroupName, Pattern).
+history_remote_newest([_ | _] = History, GroupName, Pattern) ->
+    history_remote_newest_pid(History, node(), GroupName, Pattern).
+
+history_remote_newest_pid([], _, _, GroupName, _) ->
+    {error, {'no_process', GroupName}};
+history_remote_newest_pid([Exclude | History], Exclude, Node,
+                          GroupName, Pattern) ->
+    history_remote_newest_pid(History, Exclude, Node, GroupName, Pattern);
+history_remote_newest_pid([Pid | _], _, Node, _, Pattern)
+    when node(Pid) =/= Node ->
+    {ok, Pattern, Pid};
+history_remote_newest_pid([_ | History], Exclude, Node, GroupName, Pattern) ->
+    history_remote_newest_pid(History, Exclude, Node, GroupName, Pattern).
+history_remote_newest([_ | _] = History, Exclude, GroupName, Pattern) ->
+    history_remote_newest_pid(History, Exclude, node(), GroupName, Pattern).
+
 -compile({inline, [{random,1}]}).
 
 random(N) ->
     quickrand:uniform(N).
-
-history_oldest([_ | _] = History) ->
-    [Pid | _] = lists:reverse(History),
-    Pid.
-
-history_oldest_pid([], _) ->
-    undefined;
-history_oldest_pid([Exclude | History], Exclude) ->
-    history_oldest_pid(History, Exclude);
-history_oldest_pid([Pid | _], _) ->
-    Pid.
-history_oldest([_ | _] = History, Exclude) ->
-    history_oldest_pid(lists:reverse(History), Exclude).
-
-history_local_oldest_pid([], _) ->
-    undefined;
-history_local_oldest_pid([Pid | _], Node)
-    when node(Pid) =:= Node ->
-    Pid;
-history_local_oldest_pid([_ | History], Node) ->
-    history_local_oldest_pid(History, Node).
-history_local_oldest([_ | _] = History) ->
-    history_local_oldest_pid(lists:reverse(History), node()).
-
-history_local_oldest_pid([], _, _) ->
-    undefined;
-history_local_oldest_pid([Exclude | History], Exclude, Node) ->
-    history_local_oldest_pid(History, Exclude, Node);
-history_local_oldest_pid([Pid | _], _, Node)
-    when node(Pid) =:= Node ->
-    Pid;
-history_local_oldest_pid([_ | History], Exclude, Node) ->
-    history_local_oldest_pid(History, Exclude, Node).
-history_local_oldest([_ | _] = History, Exclude) ->
-    history_local_oldest_pid(lists:reverse(History), Exclude, node()).
-
-history_remote_oldest_pid([], _) ->
-    undefined;
-history_remote_oldest_pid([Pid | _], Node)
-    when node(Pid) =/= Node ->
-    Pid;
-history_remote_oldest_pid([_ | History], Node) ->
-    history_remote_oldest_pid(History, Node).
-history_remote_oldest([_ | _] = History) ->
-    history_remote_oldest_pid(lists:reverse(History), node()).
-
-history_remote_oldest_pid([], _, _) ->
-    undefined;
-history_remote_oldest_pid([Exclude | History], Exclude, Node) ->
-    history_remote_oldest_pid(History, Exclude, Node);
-history_remote_oldest_pid([Pid | _], _, Node)
-    when node(Pid) =/= Node ->
-    Pid;
-history_remote_oldest_pid([_ | History], Exclude, Node) ->
-    history_remote_oldest_pid(History, Exclude, Node).
-history_remote_oldest([_ | _] = History, Exclude) ->
-    history_remote_oldest_pid(lists:reverse(History), Exclude, node()).
-
-history_newest([Pid | _]) ->
-    Pid.
-
-history_newest_pid([], _) ->
-    undefined;
-history_newest_pid([Exclude | History], Exclude) ->
-    history_newest_pid(History, Exclude);
-history_newest_pid([Pid | _], _) ->
-    Pid.
-history_newest([_ | _] = History, Exclude) ->
-    history_newest_pid(History, Exclude).
-
-history_local_newest_pid([], _) ->
-    undefined;
-history_local_newest_pid([Pid | _], Node)
-    when node(Pid) =:= Node ->
-    Pid;
-history_local_newest_pid([_ | History], Node) ->
-    history_local_newest_pid(History, Node).
-history_local_newest([_ | _] = History) ->
-    history_local_newest_pid(History, node()).
-
-history_local_newest_pid([], _, _) ->
-    undefined;
-history_local_newest_pid([Exclude | History], Exclude, Node) ->
-    history_local_newest_pid(History, Exclude, Node);
-history_local_newest_pid([Pid | _], _, Node)
-    when node(Pid) =:= Node ->
-    Pid;
-history_local_newest_pid([_ | History], Exclude, Node) ->
-    history_local_newest_pid(History, Exclude, Node).
-history_local_newest([_ | _] = History, Exclude) ->
-    history_local_newest_pid(History, Exclude, node()).
-
-history_remote_newest_pid([], _) ->
-    undefined;
-history_remote_newest_pid([Pid | _], Node)
-    when node(Pid) =/= Node ->
-    Pid;
-history_remote_newest_pid([_ | History], Node) ->
-    history_remote_newest_pid(History, Node).
-history_remote_newest([_ | _] = History) ->
-    history_remote_newest_pid(History, node()).
-
-history_remote_newest_pid([], _, _) ->
-    undefined;
-history_remote_newest_pid([Exclude | History], Exclude, Node) ->
-    history_remote_newest_pid(History, Exclude, Node);
-history_remote_newest_pid([Pid | _], _, Node)
-    when node(Pid) =/= Node ->
-    Pid;
-history_remote_newest_pid([_ | History], Exclude, Node) ->
-    history_remote_newest_pid(History, Exclude, Node).
-history_remote_newest([_ | _] = History, Exclude) ->
-    history_remote_newest_pid(History, Exclude, node()).
 
