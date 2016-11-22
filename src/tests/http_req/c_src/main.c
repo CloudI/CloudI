@@ -111,7 +111,7 @@ void process_requests(void * p)
     if (result != cloudi_success &&
         result != cloudi_terminate)
         fprintf(stderr, "error %d\n", result);
-    fprintf(stdout, "terminate http_req c\n", result);
+    printf("terminate http_req c\n");
 
     cloudi_destroy(&api);
 }
