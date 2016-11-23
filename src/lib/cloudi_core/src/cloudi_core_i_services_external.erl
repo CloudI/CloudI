@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -415,11 +415,16 @@ init([Protocol, SocketPath,
         {ok, NewServiceState} ->
             ok = cloudi_core_i_configurator:
                  service_initialized_process(Dispatcher),
-            % if this is a new OS process after an update,
-            % the old subscriptions are removed so that only the
-            % subscriptions from the new initialization remain
-            ok = cloudi_x_cpg:leave_counts(Scope, Subscriptions,
-                                           Dispatcher, infinity),
+            if
+                Subscriptions == [] ->
+                    ok;
+                true ->
+                    % if this is a new OS process after an update,
+                    % the old subscriptions are removed so that only the
+                    % subscriptions from the new initialization remain
+                    ok = cloudi_x_cpg:leave_counts(Scope, Subscriptions,
+                                                   Dispatcher, infinity)
+            end,
             {next_state, 'HANDLE',
              process_queues(State#state{service_state = NewServiceState,
                                         init_timer = undefined,

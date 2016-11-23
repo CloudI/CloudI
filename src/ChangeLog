@@ -3,6 +3,7 @@
 
 2016-11-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Improve external service startup time
     * Minor integration test fix
 
 2016-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
