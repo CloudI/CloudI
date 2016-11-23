@@ -6,6 +6,7 @@
     * Fix to avoid triggering SYN flooding protection in
       newer Linux kernel versions
       (e.g., 4.4.0-47 used with Ubuntu 16.04.1)
+    * Improve error log output
 
 2016-11-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

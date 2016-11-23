@@ -622,11 +622,9 @@ configure_service([Service | Services], Configured, Timeout) ->
         {ok, NewService} ->
             configure_service(Services, [NewService | Configured], Timeout);
         {error, Reason} = Error ->
-            {ID, ServiceConfig} = cloudi_core_i_configuration:
-                                  service_format(Service),
             % wait for logging statements to be logged before crashing
             ?LOG_FATAL_SYNC("configure failed: ~p~n~p",
-                            [Reason, {service_id(ID), ServiceConfig}]),
+                            [Reason, service_format(Service)]),
             Error
     end.
 
@@ -1006,10 +1004,7 @@ service_start_internal(IndexProcess, Pids,
                  IndexProcess, CountProcess, 1, Scope,
                  TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            {ID, ServiceConfig} = cloudi_core_i_configuration:
-                                  service_format(Service),
-            ?LOG_INFO("~p -> ~p", [{service_id(ID),
-                                    ServiceConfig}, P]),
+            ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
             service_start_internal(IndexProcess + 1, [P | Pids], Service,
                                    GroupLeader, CountProcess, Timeout);
         {error, Reason} ->
@@ -1054,10 +1049,7 @@ service_start_external(IndexProcess, Pids,
                  IndexProcess, CountProcess, CountThread, Scope,
                  TimeoutTerm, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            {ID, ServiceConfig} = cloudi_core_i_configuration:
-                                  service_format(Service),
-            ?LOG_INFO("~p -> ~p", [{service_id(ID),
-                                    ServiceConfig}, P]),
+            ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
             service_start_external(IndexProcess + 1, [P | Pids], Service,
                                    CountThread, CountProcess, Timeout);
         {error, Reason} ->
@@ -1225,6 +1217,10 @@ timeout_decr(infinity) ->
 timeout_decr(Timeout)
     when is_integer(Timeout), Timeout >= ?TIMEOUT_DELTA ->
     Timeout - ?TIMEOUT_DELTA.
+
+service_format(Service) ->
+    {ID, ServiceConfig} = cloudi_core_i_configuration:service_format(Service),
+    {service_id(ID), ServiceConfig}.
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
