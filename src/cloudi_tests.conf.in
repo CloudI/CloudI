@@ -144,7 +144,7 @@
         % buffer size used for each socket
         default, % bytes
         % timeout for receiving an initialization message from a socket
-        5000,
+        20000,
         % default timeout for asynchronous calls
         5000,
         % default timeout for synchronous calls
