@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -622,11 +622,11 @@ configure_service([Service | Services], Configured, Timeout) ->
         {ok, NewService} ->
             configure_service(Services, [NewService | Configured], Timeout);
         {error, Reason} = Error ->
-            ServiceDescription = cloudi_core_i_configuration:
-                                 service_format(Service),
+            {ID, ServiceConfig} = cloudi_core_i_configuration:
+                                  service_format(Service),
             % wait for logging statements to be logged before crashing
             ?LOG_FATAL_SYNC("configure failed: ~p~n~p",
-                            [Reason, ServiceDescription]),
+                            [Reason, {service_id(ID), ServiceConfig}]),
             Error
     end.
 
