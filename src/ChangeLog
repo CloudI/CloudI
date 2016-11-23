@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix to avoid triggering SYN flooding protection in
+      newer Linux kernel versions
+      (e.g., 4.4.0-47 used with Ubuntu 16.04.1)
+
 2016-11-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve external service startup time

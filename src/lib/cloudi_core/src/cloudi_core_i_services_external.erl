@@ -2177,7 +2177,7 @@ socket_open(local, SocketPath, ThreadIndex, BufferSize) ->
 socket_open_tcp(SocketOptions) ->
     try
         case gen_tcp:listen(0, [binary, inet, {ip, {127,0,0,1}},
-                                {packet, 4}, {backlog, 0},
+                                {packet, 4}, {backlog, 1},
                                 {active, false} | SocketOptions]) of
             {ok, Listener} ->
                 {ok, Port} = inet:port(Listener),
@@ -2224,7 +2224,7 @@ socket_open_local(SocketOptions, Port, SocketPath) ->
 socket_open_local(SocketOptions, Port, SocketPath) ->
     try
         case gen_tcp:listen(0, [binary, local, {ifaddr, {local, SocketPath}},
-                                {packet, 4}, {backlog, 0},
+                                {packet, 4}, {backlog, 1},
                                 {active, false} | SocketOptions]) of
             {ok, Listener} ->
                 {ok, Acceptor} = prim_inet:async_accept(Listener, -1),
@@ -2278,7 +2278,7 @@ cloudi_socket_set(FileDescriptor, SocketOptions) ->
     % setup an inet socket within Erlang whose file descriptor can be used
     % for an unsupported socket type
     InetOptions = [binary, inet, {ip, {127,0,0,1}}, {packet, 4},
-                   {backlog, 0}, {active, false} | SocketOptions],
+                   {backlog, 1}, {active, false} | SocketOptions],
     {ok, ListenerInet} = gen_tcp:listen(0, InetOptions),
     {ok, Port} = inet:port(ListenerInet),
     {ok, Client} = gen_tcp:connect({127,0,0,1}, Port, [{active, false}]),
