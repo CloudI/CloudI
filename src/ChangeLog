@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Avoid deprecated std::auto_ptr
+
 2016-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix to avoid triggering SYN flooding protection in

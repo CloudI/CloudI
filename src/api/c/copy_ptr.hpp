@@ -1,9 +1,9 @@
 //-*-Mode:C++;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-// ex: set ft=cpp fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+// ex: set ft=cpp fenc=utf-8 sts=4 ts=4 sw=4 et:
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2009, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -61,6 +61,11 @@
 // (in the context of random code), so be aware that copy_ptr usage
 // implies safe usage of the copy constructor.
 //
+#if __cplusplus >= 201103L
+// C++11 deprecated std::auto_ptr
+// C++11 added std::unique_ptr
+#define CXX11
+#endif
 template <typename T>
 class copy_ptr
 {
@@ -72,30 +77,14 @@ class copy_ptr
 
         // handle const & conversion
 
-        copy_ptr(std::auto_ptr<T> const & o) throw() :
-            m_p(const_cast<std::auto_ptr<T> &>(o).release()) {}
         copy_ptr(copy_ptr const & o) throw() :
             m_p(const_cast<copy_ptr &>(o).release()) {}
         template <typename RELATED>
-        copy_ptr(std::auto_ptr<RELATED> const & o) throw() :
-            m_p(const_cast<std::auto_ptr<RELATED> &>(o).release()) {}
-        template <typename RELATED>
         copy_ptr(copy_ptr<RELATED> const & o) throw() :
             m_p(const_cast<copy_ptr<RELATED> &>(o).release()) {}
-        copy_ptr & operator =(std::auto_ptr<T> const & o) throw()
-        {
-            reset(const_cast<std::auto_ptr<T> &>(o).release());
-            return *this;
-        }
         copy_ptr & operator =(copy_ptr const & o) throw()
         {
             reset(const_cast<copy_ptr &>(o).release());
-            return *this;
-        }
-        template <typename RELATED>
-        copy_ptr & operator =(std::auto_ptr<RELATED> const & o) throw()
-        {
-            reset(const_cast<std::auto_ptr<RELATED> &>(o).release());
             return *this;
         }
         template <typename RELATED>
@@ -104,31 +93,50 @@ class copy_ptr
             reset(const_cast<copy_ptr<RELATED> &>(o).release());
             return *this;
         }
+#ifdef CXX11
+        copy_ptr(std::unique_ptr<T> const & o) throw() :
+            m_p(const_cast<std::unique_ptr<T> &>(o).release()) {}
+        template <typename RELATED>
+        copy_ptr(std::unique_ptr<RELATED> const & o) throw() :
+            m_p(const_cast<std::unique_ptr<RELATED> &>(o).release()) {}
+        copy_ptr & operator =(std::unique_ptr<T> const & o) throw()
+        {
+            reset(const_cast<std::unique_ptr<T> &>(o).release());
+            return *this;
+        }
+        template <typename RELATED>
+        copy_ptr & operator =(std::unique_ptr<RELATED> const & o) throw()
+        {
+            reset(const_cast<std::unique_ptr<RELATED> &>(o).release());
+            return *this;
+        }
+#else
+        copy_ptr(std::auto_ptr<T> const & o) throw() :
+            m_p(const_cast<std::auto_ptr<T> &>(o).release()) {}
+        template <typename RELATED>
+        copy_ptr(std::auto_ptr<RELATED> const & o) throw() :
+            m_p(const_cast<std::auto_ptr<RELATED> &>(o).release()) {}
+        copy_ptr & operator =(std::auto_ptr<T> const & o) throw()
+        {
+            reset(const_cast<std::auto_ptr<T> &>(o).release());
+            return *this;
+        }
+        template <typename RELATED>
+        copy_ptr & operator =(std::auto_ptr<RELATED> const & o) throw()
+        {
+            reset(const_cast<std::auto_ptr<RELATED> &>(o).release());
+            return *this;
+        }
+#endif
 
         // handle non-const & conversion
         
-        copy_ptr(std::auto_ptr<T> & o) throw() :
-            m_p(o.release()) {}
         copy_ptr(copy_ptr & o) throw() :
-            m_p(o.release()) {}
-        template <typename RELATED>
-        copy_ptr(std::auto_ptr<RELATED> & o) throw() :
             m_p(o.release()) {}
         template <typename RELATED>
         copy_ptr(copy_ptr<RELATED> & o) throw() :
             m_p(o.release()) {}
-        copy_ptr & operator =(std::auto_ptr<T> & o) throw()
-        {
-            reset(o.release());
-            return *this;
-        }
         copy_ptr & operator =(copy_ptr & o) throw()
-        {
-            reset(o.release());
-            return *this;
-        }
-        template <typename RELATED>
-        copy_ptr & operator =(std::auto_ptr<RELATED> & o) throw()
         {
             reset(o.release());
             return *this;
@@ -139,6 +147,41 @@ class copy_ptr
             reset(o.release());
             return *this;
         }
+#ifdef CXX11
+        copy_ptr(std::unique_ptr<T> & o) throw() :
+            m_p(o.release()) {}
+        template <typename RELATED>
+        copy_ptr(std::unique_ptr<RELATED> & o) throw() :
+            m_p(o.release()) {}
+        copy_ptr & operator =(std::unique_ptr<T> & o) throw()
+        {
+            reset(o.release());
+            return *this;
+        }
+        template <typename RELATED>
+        copy_ptr & operator =(std::unique_ptr<RELATED> & o) throw()
+        {
+            reset(o.release());
+            return *this;
+        }
+#else
+        copy_ptr(std::auto_ptr<T> & o) throw() :
+            m_p(o.release()) {}
+        template <typename RELATED>
+        copy_ptr(std::auto_ptr<RELATED> & o) throw() :
+            m_p(o.release()) {}
+        copy_ptr & operator =(std::auto_ptr<T> & o) throw()
+        {
+            reset(o.release());
+            return *this;
+        }
+        template <typename RELATED>
+        copy_ptr & operator =(std::auto_ptr<RELATED> & o) throw()
+        {
+            reset(o.release());
+            return *this;
+        }
+#endif
 
         // operations
 
@@ -178,6 +221,9 @@ class copy_ptr
     private:
         T * m_p;
 };
+#ifdef CXX11
+#undef CXX11
+#endif
 
 #endif // COPY_PTR_HPP
 
