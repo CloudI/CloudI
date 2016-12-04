@@ -385,8 +385,7 @@
     file would be added with the same filename
     (see the examples [for more details](https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme)).
 
-        erlc -pz /usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4 \
-            -pz /usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4/ebin \
+        erlc -pz /usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4/ebin \
             hello_world.erl
 
 1.  You now have a CloudI service contained within a single Erlang module
