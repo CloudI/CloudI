@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -329,25 +329,25 @@ file_close_tmp(FilePath, Fd) ->
 
 chunk_write(ChunkSize, ChunkSizeUsed, ChunkData, Position, Fd) ->
     ChunkSizeZero = (ChunkSize - ChunkSizeUsed),
-    {ok, _} = file:position(Fd, Position),
-    ok = file:write(Fd, <<ChunkSize:64/unsigned-integer-big,
-                          ChunkSizeUsed:64/unsigned-integer-big,
-                          ChunkData/binary,
-                          0:(ChunkSizeZero * 8)>>),
+    ok = file:pwrite(Fd, Position,
+                     <<ChunkSize:64/unsigned-integer-big,
+                       ChunkSizeUsed:64/unsigned-integer-big,
+                       ChunkData/binary,
+                       0:(ChunkSizeZero * 8)>>),
     Position + ?CHUNK_OVERHEAD + ChunkSize.
 
 chunk_erase_last(ChunkSize, Position, Fd) ->
-    {ok, _} = file:position(Fd, Position),
-    ok = file:write(Fd, <<0:64,
-                          0:64,
-                          0:(ChunkSize * 8)>>),
+    ok = file:pwrite(Fd, Position,
+                     <<0:64,
+                       0:64,
+                       0:(ChunkSize * 8)>>),
     ok.
 
 chunk_free(ChunkSize, Position, Fd) ->
-    {ok, _} = file:position(Fd, Position),
-    ok = file:write(Fd, <<ChunkSize:64/unsigned-integer-big,
-                          0:64,
-                          0:(ChunkSize * 8)>>),
+    ok = file:pwrite(Fd, Position,
+                     <<ChunkSize:64/unsigned-integer-big,
+                       0:64,
+                       0:(ChunkSize * 8)>>),
     ok.
 
 erase_chunk(#chunk{size = ChunkSize,

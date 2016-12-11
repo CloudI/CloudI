@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -1026,7 +1026,8 @@ request_truncate(#file{size = OldContentsSize,
                     case files_size_check(FilesSize - OldContentsSize,
                                           NewContents, FilesSizeLimit) of
                         {ok, NewContentsSize, NewFilesSize} ->
-                            case file:write_file(FilePath, NewContents) of
+                            case file:write_file(FilePath,
+                                                 NewContents, [raw]) of
                                 ok ->
                                     {ok, FileInfo} = read_file_info(FilePath),
                                     file_notify_send(NotifyL, NewContents,
@@ -1124,7 +1125,7 @@ request_append_file([],
     case files_size_check(FilesSize - OldContentsSize,
                           Contents, FilesSizeLimit) of
         {ok, ContentsSize, NewFilesSize} ->
-            case file:write_file(FilePath, Contents) of
+            case file:write_file(FilePath, Contents, [raw]) of
                 ok ->
                     {ok, FileInfo} = read_file_info(FilePath),
                     file_notify_send(NotifyL, Contents, Dispatcher),
@@ -1640,9 +1641,9 @@ file_read_data(#file_info{access = Access}, FilePath, I, Size)
     when Access =:= read; Access =:= read_write ->
     if
         I =:= undefined, Size =:= undefined ->
-            file:read_file(FilePath);
+            file_read(FilePath);
         true ->
-            case file:open(FilePath, [read, raw, binary]) of
+            case file:open(FilePath, [raw, read, binary]) of
                 {ok, F} ->
                     Result = file_read_data_position(F, I, Size),
                     file:close(F),
@@ -1653,6 +1654,10 @@ file_read_data(#file_info{access = Access}, FilePath, I, Size)
     end;
 file_read_data(_, _, _, _) ->
     {error, enoent}.
+
+file_read(FilePath) ->
+    % related to https://bugs.erlang.org/browse/ERL-315
+    prim_file:read_file(FilePath).
 
 file_header_content_disposition(FilePath, true) ->
     [{<<"content-disposition">>,
@@ -1972,7 +1977,7 @@ fold_files_directory([FileName | FileNames], Directory, F, A) ->
     end.
 
 read_file_info(FilePath) ->
-    file:read_file_info(FilePath, [{time, universal}]).
+    file:read_file_info(FilePath, [raw, {time, universal}]).
 
 cache_status(ETag, KeyValues, {MTime, _}, InvalidTime) ->
     cache_status_0(ETag, KeyValues, MTime, InvalidTime).

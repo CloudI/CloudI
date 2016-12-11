@@ -1,9 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Make Erlang file module use more efficient with additional usage of
+      the raw option and pwrite
+
 2016-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Avoid deprecated std::auto_ptr
+    * Avoid deprecated std::auto_ptr in C++11
 
 2016-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
