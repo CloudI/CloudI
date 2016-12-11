@@ -384,7 +384,8 @@ load_path(File) when is_list(File) ->
                 {error, _} ->
                     {error, enotdir};
                 Path ->
-                    case file:read_file_info(filename:join([Path, File])) of
+                    case file:read_file_info(filename:join([Path, File]),
+                                             [raw]) of
                         {ok, _} ->
                             {ok, Path};
                         _ ->

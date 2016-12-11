@@ -162,7 +162,7 @@ handle_info(reload, #state{services = Services,
     end, Services),
     ReloadStartNew = reload_start(),
     lists:foreach(fun({Module, FilePath}) ->
-        case file:read_file_info(FilePath, [{time, posix}]) of
+        case file:read_file_info(FilePath, [raw, {time, posix}]) of
             {ok, #file_info{mtime = Mtime}}
                 when Mtime >= ReloadStartOld,
                      Mtime < ReloadStartNew ->

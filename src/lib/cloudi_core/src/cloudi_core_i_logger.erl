@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -155,7 +155,7 @@ set(#config_logging{file = FilePath} = LoggingConfig) ->
         FilePath =:= undefined ->
             gen_server:cast(?MODULE, {set, LoggingConfig});
         is_list(FilePath) ->
-            case file:open(FilePath, [append, raw]) of
+            case file:open(FilePath, [raw, append]) of
                 {ok, Fd} ->
                     file:close(Fd),
                     gen_server:cast(?MODULE, {set, LoggingConfig});
@@ -177,7 +177,7 @@ file_set(undefined) ->
     gen_server:cast(?MODULE, {file_set, undefined});
 file_set(FilePath)
     when is_list(FilePath) andalso is_integer(hd(FilePath)) ->
-    case file:open(FilePath, [append, raw]) of
+    case file:open(FilePath, [raw, append]) of
         {ok, Fd} ->
             file:close(Fd),
             gen_server:cast(?MODULE, {file_set, FilePath});
@@ -1190,7 +1190,7 @@ log_file(Message,
          #state{file_path = FilePath,
                 fd = FdOld,
                 inode = InodeOld} = State) ->
-    case file:read_file_info(FilePath) of
+    case file:read_file_info(FilePath, [raw]) of
         {ok, #file_info{inode = CurrentInode}} ->
             if
                 CurrentInode == InodeOld ->
@@ -1228,9 +1228,9 @@ log_file(Message,
 log_file_open(undefined, State) ->
     {ok, State};
 log_file_open(FilePath, State) ->
-    case file:open(FilePath, [append, raw]) of
+    case file:open(FilePath, [raw, append]) of
         {ok, Fd} ->
-            case file:read_file_info(FilePath) of
+            case file:read_file_info(FilePath, [raw]) of
                 {ok, #file_info{inode = Inode}} ->
                     {ok, State#state{file_path = FilePath,
                                      fd = Fd,
@@ -1243,7 +1243,7 @@ log_file_open(FilePath, State) ->
     end.
 
 log_file_reopen(FilePath, Inode, State) ->
-    case file:open(FilePath, [append, raw]) of
+    case file:open(FilePath, [raw, append]) of
         {ok, Fd} ->
             {ok, State#state{file_path = FilePath,
                              fd = Fd,
