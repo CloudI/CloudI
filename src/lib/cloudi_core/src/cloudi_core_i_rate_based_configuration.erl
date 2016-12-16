@@ -4,7 +4,8 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI Rate-Based Configuration==
-%%% Routines for service request rate-based configuration adjustments.
+%%% Routines for service request and termination
+%%% rate-based configuration adjustments.
 %%% @end
 %%%
 %%% BSD LICENSE
@@ -45,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -58,6 +59,9 @@
          hibernate_reinit/1,
          hibernate_request/1,
          hibernate_check/1,
+         terminate_delay_format/1,
+         terminate_delay_validate/1,
+         terminate_delay_value/3,
          count_process_dynamic_format/1,
          count_process_dynamic_validate/2,
          count_process_dynamic_init/1,
@@ -78,6 +82,9 @@
 
 -define(HIBERNATE_PERIOD_DEFAULT, 5). % seconds
 -define(HIBERNATE_RATE_REQUEST_MIN_DEFAULT, 1). % req/sec
+-define(TERMINATE_DELAY_METHOD_DEFAULT, exponential).
+-define(TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT, 1). % milliseconds
+-define(TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT, 500). % milliseconds
 -define(COUNT_PROCESS_DYNAMIC_PERIOD_DEFAULT, 5). % seconds
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MIN_DEFAULT, 100). % req/sec
@@ -94,6 +101,15 @@
         count = 0 :: non_neg_integer(),
         rate_min = undefined :: undefined | number(), % per seconds
         hibernate = false :: boolean()
+    }).
+
+-record(terminate_delay,
+    {
+        method = undefined :: undefined | exponential | absolute,
+        time_min = undefined
+            :: undefined | cloudi_service_api:terminate_delay_milliseconds(),
+        time_max = undefined
+            :: undefined | cloudi_service_api:terminate_delay_milliseconds()
     }).
 
 -record(count_process_dynamic,
@@ -150,28 +166,28 @@ hibernate_validate(Options) ->
 
 %% called by init/1
 
--spec hibernate_init(Hibernate :: #hibernate{}) ->
+-spec hibernate_init(State :: #hibernate{}) ->
     #hibernate{}.
 
 hibernate_init(#hibernate{method = rate_request,
-                          period = Period} = Hibernate) ->
+                          period = Period} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_hibernate_rate'),
-    Hibernate#hibernate{count = 0}.
+    State#hibernate{count = 0}.
 
 %% called by handle_info('cloudi_hibernate_rate', ...)
 
--spec hibernate_reinit(Hibernate :: #hibernate{} | boolean()) ->
+-spec hibernate_reinit(State :: #hibernate{} | boolean()) ->
     {boolean(), #hibernate{} | boolean()}.
 
-hibernate_reinit(Hibernate)
-    when is_boolean(Hibernate) ->
-    {Hibernate, Hibernate};
+hibernate_reinit(State)
+    when is_boolean(State) ->
+    {State, State};
 hibernate_reinit(#hibernate{method = rate_request,
                             period = Period,
                             count = Count,
                             rate_min = RateMin,
-                            hibernate = OldValue} = Hibernate) ->
+                            hibernate = OldValue} = State) ->
     RateCurrent = Count / Period,
     erlang:send_after(Period * 1000, self(),
                       'cloudi_hibernate_rate'),
@@ -192,17 +208,17 @@ hibernate_reinit(#hibernate{method = rate_request,
         true ->
             ok
     end,
-    {Value, Hibernate#hibernate{count = 0,
-                                hibernate = Value}}.
+    {Value, State#hibernate{count = 0,
+                            hibernate = Value}}.
 
 %% called when a service request is handled
 
--spec hibernate_request(Hibernate :: #hibernate{}) ->
+-spec hibernate_request(State :: #hibernate{}) ->
     #hibernate{}.
 
 hibernate_request(#hibernate{method = rate_request,
-                             count = Count} = Hibernate) ->
-    Hibernate#hibernate{count = Count + 1}.
+                             count = Count} = State) ->
+    State#hibernate{count = Count + 1}.
 
 %% called to check if the service pid needs to hibernate
 
@@ -215,6 +231,55 @@ hibernate_check(Value)
 hibernate_check(#hibernate{method = rate_request,
                            hibernate = Value}) ->
     Value.
+
+%% convert internal state to the configuration format
+
+-spec terminate_delay_format(#terminate_delay{} | false) ->
+    list({atom(), any()}) | false.
+
+terminate_delay_format(false) ->
+    false;
+terminate_delay_format(#terminate_delay{method = exponential,
+                                        time_min = TimeMin,
+                                        time_max = TimeMax}) ->
+    [{time_exponential_min, TimeMin},
+     {time_exponential_max, TimeMax}];
+terminate_delay_format(#terminate_delay{method = absolute,
+                                        time_min = TimeValue,
+                                        time_max = TimeValue}) ->
+    [{time_absolute, TimeValue}].
+
+%% convert the configuration format to internal state
+
+-spec terminate_delay_validate(list({atom(), any()}) | false) ->
+    {ok, #terminate_delay{} | false} |
+    {error, {service_options_terminate_delay_invalid, any()}}.
+
+terminate_delay_validate(false) ->
+    {ok, false};
+terminate_delay_validate(Options) ->
+    terminate_delay_validate(Options, #terminate_delay{}).
+
+%% provide the value result
+
+-spec terminate_delay_value(RestartTimes :: list(non_neg_integer()),
+                            MaxT :: non_neg_integer(),
+                            State :: #terminate_delay{} | false) ->
+    false |
+    {NewRestartCount :: non_neg_integer(),
+     NewRestartTimes :: list(non_neg_integer()),
+     Value :: 0..?TIMEOUT_MAX_ERLANG}.
+
+terminate_delay_value(_, _, false) ->
+    false;
+terminate_delay_value(RestartTimes, MaxT,
+                      #terminate_delay{} = State) ->
+    SecondsNow = cloudi_timestamp:seconds(),
+    {NewRestartCount,
+     NewRestartTimes} = cloudi_timestamp:seconds_filter(RestartTimes,
+                                                        SecondsNow, MaxT),
+    Value = terminate_delay_value_now(NewRestartCount, State),
+    {NewRestartCount, NewRestartTimes, Value}.
 
 %% convert internal state to the configuration format
 
@@ -256,22 +321,20 @@ count_process_dynamic_validate(Options, CountProcess)
 
 %% called by init/1
 
--spec count_process_dynamic_init(CountProcessDynamic ::
-                                     #count_process_dynamic{}) ->
+-spec count_process_dynamic_init(State :: #count_process_dynamic{}) ->
     #count_process_dynamic{}.
 
 count_process_dynamic_init(#count_process_dynamic{
                                method = rate_request,
-                               period = Period} = CountProcessDynamic) ->
+                               period = Period} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_count_process_dynamic_rate'),
-    CountProcessDynamic#count_process_dynamic{count = 0}.
+    State#count_process_dynamic{count = 0}.
 
 %% called by handle_info('cloudi_count_process_dynamic_rate', ...)
 
 -spec count_process_dynamic_reinit(Dispatcher :: pid(),
-                                   CountProcessDynamic ::
-                                       #count_process_dynamic{}) ->
+                                   State :: #count_process_dynamic{}) ->
     #count_process_dynamic{}.
 
 count_process_dynamic_reinit(Dispatcher,
@@ -282,8 +345,7 @@ count_process_dynamic_reinit(Dispatcher,
                                  rate_max = RateMax,
                                  rate_min = RateMin,
                                  count_process_max = CountProcessMax,
-                                 count_process_min = CountProcessMin} =
-                                     CountProcessDynamic)
+                                 count_process_min = CountProcessMin} = State)
     when is_pid(Dispatcher) ->
     RateCurrent = Count / Period,
     if
@@ -300,18 +362,17 @@ count_process_dynamic_reinit(Dispatcher,
     end,
     erlang:send_after(Period * 1000, self(),
                       'cloudi_count_process_dynamic_rate'),
-    CountProcessDynamic#count_process_dynamic{count = 0}.
+    State#count_process_dynamic{count = 0}.
 
 %% called when a service request is handled
 
--spec count_process_dynamic_request(CountProcessDynamic ::
-                                        #count_process_dynamic{}) ->
+-spec count_process_dynamic_request(State :: #count_process_dynamic{}) ->
     #count_process_dynamic{}.
 
 count_process_dynamic_request(#count_process_dynamic{
                                   method = rate_request,
-                                  count = Count} = CountProcessDynamic) ->
-    CountProcessDynamic#count_process_dynamic{count = Count + 1}.
+                                  count = Count} = State) ->
+    State#count_process_dynamic{count = Count + 1}.
 
 %% update the service pid's count_process
 
@@ -337,25 +398,23 @@ count_process_dynamic_terminate(Pid)
 %% set the service pid termination state
 
 -spec count_process_dynamic_terminate_set(ReceiverPid :: pid(),
-                                          CountProcessDynamic ::
-                                              #count_process_dynamic{}) ->
+                                          State :: #count_process_dynamic{}) ->
     #count_process_dynamic{}.
 
 count_process_dynamic_terminate_set(ReceiverPid,
                                     #count_process_dynamic{
                                         method = rate_request,
-                                        period = Period} =
-                                            CountProcessDynamic)
+                                        period = Period} = State)
     when is_pid(ReceiverPid) ->
     ReceiverPid ! 'cloudi_count_process_dynamic_terminate_check',
     erlang:send_after(Period * 1000, ReceiverPid,
                       'cloudi_count_process_dynamic_terminate_now'),
-    CountProcessDynamic#count_process_dynamic{terminate = true}.
+    State#count_process_dynamic{terminate = true}.
 
 %% check the service pid termination state
 
--spec count_process_dynamic_terminated(CountProcessDynamic ::
-                                           #count_process_dynamic{} | false) ->
+-spec count_process_dynamic_terminated(State :: #count_process_dynamic{} |
+                                                false) ->
     boolean().
 
 count_process_dynamic_terminated(false) ->
@@ -393,25 +452,25 @@ rate_request_validate(Options) ->
 
 %% called by init/1
 
--spec rate_request_init(RateRequest :: #rate_request{}) ->
+-spec rate_request_init(State :: #rate_request{}) ->
     #rate_request{}.
 
-rate_request_init(#rate_request{period = Period} = RateRequest) ->
+rate_request_init(#rate_request{period = Period} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_rate_request_max_rate'),
-    RateRequest#rate_request{count = 0,
-                             blocking = false}.
+    State#rate_request{count = 0,
+                       blocking = false}.
 
 %% called by handle_info('cloudi_rate_request_max_rate', ...)
 
--spec rate_request_reinit(RateRequest :: #rate_request{} | undefined) ->
+-spec rate_request_reinit(State :: #rate_request{} | undefined) ->
     #rate_request{}.
 
 rate_request_reinit(undefined) ->
     undefined;
 rate_request_reinit(#rate_request{period = Period,
                                   count = Count,
-                                  blocking = Blocking} = RateRequest) ->
+                                  blocking = Blocking} = State) ->
     erlang:send_after(Period * 1000, self(),
                       'cloudi_rate_request_max_rate'),
     if
@@ -422,28 +481,28 @@ rate_request_reinit(#rate_request{period = Period,
         Blocking =:= false ->
             ok
     end,
-    RateRequest#rate_request{count = 0,
-                             blocking = false}.
+    State#rate_request{count = 0,
+                       blocking = false}.
 
 %% called when a service request is handled
 
--spec rate_request_request(RateRequest :: #rate_request{}) ->
+-spec rate_request_request(State :: #rate_request{}) ->
     {boolean(), #rate_request{}}.
 
-rate_request_request(#rate_request{blocking = true} = RateRequest) ->
-    {false, RateRequest};
+rate_request_request(#rate_request{blocking = true} = State) ->
+    {false, State};
 rate_request_request(#rate_request{period = Period,
                                    count = Count,
-                                   rate_max = RateMax} = RateRequest) ->
+                                   rate_max = RateMax} = State) ->
     NewCount = Count + 1,
     NewBlocking = (NewCount / Period) > RateMax,
-    NewRateRequest = if
+    NewState = if
         NewBlocking =:= true ->
-            RateRequest#rate_request{blocking = true};
+            State#rate_request{blocking = true};
         NewBlocking =:= false ->
-            RateRequest#rate_request{count = NewCount}
+            State#rate_request{count = NewCount}
     end,
-    {not NewBlocking, NewRateRequest}.
+    {not NewBlocking, NewState}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -452,7 +511,7 @@ rate_request_request(#rate_request{period = Period,
 hibernate_validate([],
                    #hibernate{method = Method,
                               period = Period,
-                              rate_min = RateMin} = Hibernate) ->
+                              rate_min = RateMin} = State) ->
     NewMethod = if
         Method =:= undefined ->
             rate_request;
@@ -471,25 +530,98 @@ hibernate_validate([],
         RateMin =/= undefined ->
             RateMin
     end,
-    {ok, Hibernate#hibernate{method = NewMethod,
-                             period = NewPeriod,
-                             rate_min = NewRateMin}};
+    {ok, State#hibernate{method = NewMethod,
+                         period = NewPeriod,
+                         rate_min = NewRateMin}};
 hibernate_validate([{rate_request_min, RateMin} | Options],
-                   #hibernate{method = Method} = Hibernate)
+                   #hibernate{method = Method} = State)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
          is_number(RateMin), RateMin > 0 ->
     hibernate_validate(Options,
-                       Hibernate#hibernate{method = rate_request,
-                                           rate_min = RateMin});
+                       State#hibernate{method = rate_request,
+                                       rate_min = RateMin});
 hibernate_validate([{period, Period} | Options],
-                   #hibernate{} = Hibernate)
+                   #hibernate{} = State)
     when is_integer(Period), Period > 0,
          Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
     hibernate_validate(Options,
-                       Hibernate#hibernate{period = Period});
+                       State#hibernate{period = Period});
 hibernate_validate([Invalid | _Options],
-                   _Hibernate) ->
+                   _State) ->
     {error, {service_options_hibernate_invalid, Invalid}}.
+
+terminate_delay_validate([],
+                         #terminate_delay{method = Method,
+                                          time_min = TimeMin,
+                                          time_max = TimeMax} = State) ->
+    NewMethod = if
+        Method =:= undefined ->
+            ?TERMINATE_DELAY_METHOD_DEFAULT;
+        Method =/= undefined ->
+            Method
+    end,
+    NewTimeMin = if
+        TimeMin =:= undefined ->
+            ?TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT;
+        TimeMin =/= undefined ->
+            TimeMin
+    end,
+    NewTimeMax = if
+        TimeMax =:= undefined ->
+            ?TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT;
+        TimeMax =/= undefined ->
+            TimeMax
+    end,
+    {ok, State#terminate_delay{method = NewMethod,
+                               time_min = NewTimeMin,
+                               time_max = NewTimeMax}};
+terminate_delay_validate([{time_exponential_min, TimeMin} | Options],
+                         #terminate_delay{method = Method,
+                                          time_max = TimeMax} = State)
+    when ((Method =:= undefined) orelse (Method =:= exponential)),
+         is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG,
+         ((TimeMax =:= undefined) orelse (TimeMin =< TimeMax)) ->
+    terminate_delay_validate(Options,
+                             State#terminate_delay{method = exponential,
+                                                   time_min = TimeMin});
+terminate_delay_validate([{time_exponential_max, TimeMax} | Options],
+                         #terminate_delay{method = Method,
+                                          time_min = TimeMin} = State)
+    when ((Method =:= undefined) orelse (Method =:= exponential)),
+         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG,
+         ((TimeMin =:= undefined) orelse (TimeMin =< TimeMax)) ->
+    terminate_delay_validate(Options,
+                             State#terminate_delay{method = exponential,
+                                                   time_max = TimeMax});
+terminate_delay_validate([{time_absolute, TimeValue} | Options],
+                         #terminate_delay{method = Method} = State)
+    when ((Method =:= undefined) orelse (Method =:= absolute)),
+         is_integer(TimeValue),
+         TimeValue > 0, TimeValue =< ?TIMEOUT_MAX_ERLANG ->
+    terminate_delay_validate(Options,
+                             State#terminate_delay{method = absolute,
+                                                   time_min = TimeValue,
+                                                   time_max = TimeValue});
+terminate_delay_validate([Invalid | _Options],
+                         _State) ->
+    {error, {service_options_terminate_delay_invalid, Invalid}}.
+
+terminate_delay_value_now(RestartCount,
+                          #terminate_delay{method = exponential,
+                                           time_min = TimeMin,
+                                           time_max = TimeMax}) ->
+    TimeValue = (1 bsl RestartCount) * TimeMin,
+    if
+        TimeValue > TimeMax ->
+            TimeMax;
+        true ->
+            TimeValue
+    end;
+terminate_delay_value_now(_,
+                          #terminate_delay{method = absolute,
+                                           time_min = TimeValue,
+                                           time_max = TimeValue}) ->
+    TimeValue.
 
 count_process_dynamic_validate([],
                                #count_process_dynamic{
@@ -498,8 +630,7 @@ count_process_dynamic_validate([],
                                    rate_max = RateMax,
                                    rate_min = RateMin,
                                    count_process_max = CountMax,
-                                   count_process_min = CountMin} =
-                                       CountProcessDynamic,
+                                   count_process_min = CountMin} = State,
                                CountProcess) ->
     NewMethod = if
         Method =:= undefined ->
@@ -541,7 +672,7 @@ count_process_dynamic_validate([],
             CountMin
     end,
     {ok,
-     CountProcessDynamic#count_process_dynamic{
+     State#count_process_dynamic{
          method = NewMethod,
          period = NewPeriod,
          rate_max = NewRateMax,
@@ -551,8 +682,7 @@ count_process_dynamic_validate([],
 count_process_dynamic_validate([{rate_request_max, RateMax} | Options],
                                #count_process_dynamic{
                                    method = Method,
-                                   rate_min = RateMin} =
-                                       CountProcessDynamic,
+                                   rate_min = RateMin} = State,
                                CountProcess)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
          is_number(RateMax), RateMax > 0 ->
@@ -563,15 +693,14 @@ count_process_dynamic_validate([{rate_request_max, RateMax} | Options],
             RateMin
     end,
     count_process_dynamic_validate(Options,
-        CountProcessDynamic#count_process_dynamic{
+        State#count_process_dynamic{
             method = rate_request,
             rate_max = RateMax,
             rate_min = erlang:min(NewRateMin, RateMax)}, CountProcess);
 count_process_dynamic_validate([{rate_request_min, RateMin} | Options],
                                #count_process_dynamic{
                                    method = Method,
-                                   rate_max = RateMax} =
-                                       CountProcessDynamic,
+                                   rate_max = RateMax} = State,
                                CountProcess)
     when ((Method =:= undefined) orelse (Method =:= rate_request)),
          is_number(RateMin), RateMin > 0 ->
@@ -582,14 +711,13 @@ count_process_dynamic_validate([{rate_request_min, RateMin} | Options],
             RateMax
     end,
     count_process_dynamic_validate(Options,
-        CountProcessDynamic#count_process_dynamic{
+        State#count_process_dynamic{
             method = rate_request,
             rate_max = erlang:max(NewRateMax, RateMin),
             rate_min = RateMin}, CountProcess);
 count_process_dynamic_validate([{count_max, CountMax} | Options],
                                #count_process_dynamic{
-                                   count_process_min = CountMin} =
-                                       CountProcessDynamic,
+                                   count_process_min = CountMin} = State,
                                CountProcess)
     when (is_float(CountMax) andalso
           (CountMax >= 1.0));
@@ -608,13 +736,12 @@ count_process_dynamic_validate([{count_max, CountMax} | Options],
             CountMin
     end,
     count_process_dynamic_validate(Options,
-        CountProcessDynamic#count_process_dynamic{
+        State#count_process_dynamic{
             count_process_max = NewCountMax,
             count_process_min = NewCountMin}, CountProcess);
 count_process_dynamic_validate([{count_min, CountMin} | Options],
                                #count_process_dynamic{
-                                   count_process_max = CountMax} =
-                                       CountProcessDynamic,
+                                   count_process_max = CountMax} = State,
                                CountProcess)
     when (is_float(CountMin) andalso
           (CountMin > 0) andalso (CountMin =< 1.0));
@@ -633,25 +760,24 @@ count_process_dynamic_validate([{count_min, CountMin} | Options],
             CountMax
     end,
     count_process_dynamic_validate(Options,
-        CountProcessDynamic#count_process_dynamic{
+        State#count_process_dynamic{
             count_process_max = NewCountMax,
             count_process_min = NewCountMin}, CountProcess);
 count_process_dynamic_validate([{period, Period} | Options],
-                               #count_process_dynamic{} =
-                                   CountProcessDynamic,
+                               #count_process_dynamic{} = State,
                                CountProcess)
     when is_integer(Period), Period > 0,
          Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
     count_process_dynamic_validate(Options,
-        CountProcessDynamic#count_process_dynamic{
+        State#count_process_dynamic{
             period = Period}, CountProcess);
 count_process_dynamic_validate([Invalid | _Options],
-                               _CountProcessDynamic, _CountProcess) ->
+                               _State, _CountProcess) ->
     {error, {service_options_count_process_dynamic_invalid, Invalid}}.
 
 rate_request_validate([],
                       #rate_request{period = Period,
-                                    rate_max = RateMax} = RateRequest) ->
+                                    rate_max = RateMax} = State) ->
     NewPeriod = if
         Period =:= undefined ->
             ?RATE_REQUEST_PERIOD_DEFAULT;
@@ -664,20 +790,20 @@ rate_request_validate([],
         RateMax =/= undefined ->
             RateMax
     end,
-    {ok, RateRequest#rate_request{period = NewPeriod,
-                                  rate_max = NewRateMax}};
+    {ok, State#rate_request{period = NewPeriod,
+                            rate_max = NewRateMax}};
 rate_request_validate([{value, RateMax} | Options],
-                      #rate_request{} = RateRequest)
+                      #rate_request{} = State)
     when is_number(RateMax), RateMax > 0 ->
     rate_request_validate(Options,
-                          RateRequest#rate_request{rate_max = RateMax});
+                          State#rate_request{rate_max = RateMax});
 rate_request_validate([{period, Period} | Options],
-                      #rate_request{} = RateRequest)
+                      #rate_request{} = State)
     when is_integer(Period), Period > 0,
          Period =< (?TIMEOUT_MAX_ERLANG div 1000) ->
     rate_request_validate(Options,
-                          RateRequest#rate_request{period = Period});
+                          State#rate_request{period = Period});
 rate_request_validate([Invalid | _Options],
-                      _RateRequest) ->
+                      _State) ->
     {error, {service_options_rate_request_max_invalid, Invalid}}.
 

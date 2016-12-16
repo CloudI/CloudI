@@ -57,7 +57,7 @@
 
 %% external interface
 -export([start_link/0,
-         monitor/12,
+         monitor/13,
          initialize/1,
          shutdown/2,
          restart/2,
@@ -94,8 +94,9 @@
         pids :: list(pid()),
         monitor :: undefined | reference(),
         restart_count = 0 :: non_neg_integer(),
-        restart_times = [] :: list(integer()),
+        restart_times = [] :: list(non_neg_integer()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
+        terminate_delay :: tuple() | false,
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
         % the supervisor terminates all child processes...
@@ -141,6 +142,7 @@ start_link() ->
               Scope :: atom(),
               TimeoutTerm :: cloudi_service_api:
                              timeout_terminate_milliseconds(),
+              TerminateDelay :: tuple() | false,
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
               ServiceId :: cloudi_x_uuid:cloudi_x_uuid(),
@@ -149,7 +151,7 @@ start_link() ->
     {error, any()}.
 
 monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-        TimeoutTerm, MaxR, MaxT, ServiceId, Timeout)
+        TimeoutTerm, TerminateDelay, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(ProcessIndex), ProcessIndex >= 0,
          is_integer(CountProcess), CountProcess > 0,
@@ -162,7 +164,8 @@ monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {monitor, M, F, A,
                                  ProcessIndex, CountProcess, CountThread, Scope,
-                                 TimeoutTerm, MaxR, MaxT, ServiceId},
+                                 TimeoutTerm, TerminateDelay, MaxR, MaxT,
+                                 ServiceId},
                                 Timeout)).
 
 -spec initialize(Pids :: list(pid())) ->
@@ -232,7 +235,7 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-             TimeoutTerm, MaxR, MaxT, ServiceId}, _,
+             TimeoutTerm, TerminateDelay, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
     case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
@@ -241,7 +244,8 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                 new_service_process(M, F, A,
                                     ProcessIndex, CountProcess, CountThread,
                                     Scope, Pids, erlang:monitor(process, Pid),
-                                    TimeoutTerm, MaxR, MaxT), Services),
+                                    TimeoutTerm, TerminateDelay,
+                                    MaxR, MaxT), Services),
             {reply, {ok, Pids}, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
             NewServices = lists:foldl(fun(P, D) ->
@@ -249,7 +253,8 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                     new_service_process(M, F, A,
                                         ProcessIndex, CountProcess, CountThread,
                                         Scope, Pids, erlang:monitor(process, P),
-                                        TimeoutTerm, MaxR, MaxT), D)
+                                        TimeoutTerm, TerminateDelay,
+                                        MaxR, MaxT), D)
             end, Services, Pids),
             {reply, Success, State#state{services = NewServices}};
         {error, _} = Error ->
@@ -260,7 +265,8 @@ handle_call({shutdown, ServiceId}, _,
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, #service{} = Service}} ->
-            NewServices = terminate_service(ServiceId, Pids, Service, Services),
+            NewServices = terminate_service(ServiceId, Pids, undefined,
+                                            Service, Services, undefined),
             {reply, {ok, Pids}, State#state{services = NewServices}};
         error ->
             {reply, {error, not_found}, State}
@@ -370,7 +376,7 @@ handle_cast({terminate_kill, Pid, Reason},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            terminate_kill_enforce(ServiceId, Pid, Reason, Service),
+            terminate_kill_enforce(self(), Pid, Reason, ServiceId, Service),
             {noreply, State};
         error ->
             {noreply, State}
@@ -416,10 +422,12 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
         {ok, {[ServiceId], #service{pids = Pids} = Service}} ->
             ?LOG_INFO_SYNC("Service pid ~p shutdown~n ~p",
                            [Pid, service_id(ServiceId)]),
-            NewServices = terminate_service(ServiceId, Pids, Service, Services),
+            NewServices = terminate_service(ServiceId, Pids, undefined,
+                                            Service, Services, Pid),
             cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, State#state{services = NewServices}};
         error ->
+            % Service pid has already terminated
             {noreply, State}
     end;
 
@@ -433,6 +441,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid,
             NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
             {noreply, State#state{services = NewServices}};
         error ->
+            % Service pid has already terminated
             {noreply, State}
     end;
 
@@ -443,10 +452,11 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
             ?LOG_INFO_SYNC("Service pid ~p shutdown (~p)~n ~p",
                            [Pid, Reason, service_id(ServiceId)]),
             NewServices = terminate_service(ServiceId, Pids, Reason,
-                                            Service, Services),
+                                            Service, Services, Pid),
             cloudi_core_i_configurator:service_dead(ServiceId),
             {noreply, State#state{services = NewServices}};
         error ->
+            % Service pid has already terminated
             {noreply, State}
     end;
 
@@ -464,9 +474,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
                     {noreply, NewState}
             end;
         error ->
-            % Pids started together as threads for one OS process may
-            % have died together.  The first death triggers the restart and
-            % removes all other pids from the Services data structure.
+            % Service pid has already terminated
             {noreply, State}
     end;
 
@@ -480,16 +488,18 @@ handle_info({restart_stage2, Service, ServiceId, OldPid},
             {noreply, NewState}
     end;
 
-handle_info({kill, TimeoutTerm, Pid, Reason, ServiceId, #service{}}, State) ->
-    case erlang:is_process_alive(Pid) of
-        true ->
-            ?LOG_ERROR_SYNC("Service pid ~p brutal_kill (~p)~n"
-                            " ~p after ~p ms (MaxT/MaxR)",
-                            [Pid, Reason, service_id(ServiceId), TimeoutTerm]),
-            erlang:exit(Pid, kill);
-        false ->
-            ok
-    end,
+handle_info({restart_stage3, Service, ServiceId, OldPid},
+            #state{services = Services} = State) ->
+    case restart_stage3(Service, Services, State, ServiceId, OldPid) of
+        {true, NewState} ->
+            {noreply, NewState};
+        {false, NewState} ->
+            cloudi_core_i_configurator:service_dead(ServiceId),
+            {noreply, NewState}
+    end;
+
+handle_info({kill, Pid, Reason, ServiceId, Service}, State) ->
+    ok = terminate_kill_enforce_now(Pid, Reason, ServiceId, Service),
     {noreply, State};
 
 handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
@@ -516,10 +526,20 @@ restart(Service, Services, State, ServiceId, OldPid) ->
 
 restart_stage1(#service{pids = Pids} = Service, Services,
                State, ServiceId, OldPid) ->
-    NewServices = terminate_service(ServiceId, Pids, Service, Services),
+    NewServices = terminate_service(ServiceId, Pids, undefined,
+                                    Service, Services, OldPid),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
                    NewServices, State, ServiceId, OldPid).
+
+restart_stage2_async(Service, ServiceId, OldPid) ->
+    self() ! {restart_stage2, Service, ServiceId, OldPid},
+    ok.
+
+restart_stage3_async(Delay, Service, ServiceId, OldPid) ->
+    erlang:send_after(Delay, self(),
+                      {restart_stage3, Service, ServiceId, OldPid}),
+    ok.
 
 restart_stage2(#service{restart_count = 0,
                         max_r = 0},
@@ -529,7 +549,32 @@ restart_stage2(#service{restart_count = 0,
                    [OldPid, service_id(ServiceId)]),
     {false, State#state{services = Services}};
 
-restart_stage2(#service{service_m = M,
+restart_stage2(#service{restart_times = RestartTimes,
+                        terminate_delay = TerminateDelay,
+                        max_t = MaxT} = Service, Services,
+               State, ServiceId, OldPid) ->
+    case cloudi_core_i_rate_based_configuration:
+         terminate_delay_value(RestartTimes, MaxT, TerminateDelay) of
+        false ->
+            restart_stage3(Service, Services, State, ServiceId, OldPid);
+        {NewRestartCount,
+         NewRestartTimes,
+         0} ->
+            restart_stage3(Service#service{restart_count = NewRestartCount,
+                                           restart_times = NewRestartTimes},
+                           Services, State, ServiceId, OldPid);
+        {NewRestartCount,
+         NewRestartTimes,
+         Delay} when Delay > 0 andalso Delay =< ?TIMEOUT_MAX_ERLANG ->
+            restart_stage3_async(Delay,
+                                 Service#service{
+                                     restart_count = NewRestartCount,
+                                     restart_times = NewRestartTimes},
+                                 ServiceId, OldPid),
+            {true, State#state{services = Services}}
+    end.
+
+restart_stage3(#service{service_m = M,
                         service_f = F,
                         service_a = A,
                         process_index = ProcessIndex,
@@ -568,16 +613,15 @@ restart_stage2(#service{service_m = M,
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
-            self() ! {restart_stage2,
-                      Service#service{restart_count = 1,
-                                      restart_times = [SecondsNow]},
-                      ServiceId,
-                      OldPid},
+            restart_stage2_async(Service#service{
+                                     restart_count = 1,
+                                     restart_times = [SecondsNow]},
+                                 ServiceId, OldPid),
             Services
     end,
     {true, State#state{services = NewServices}};
     
-restart_stage2(#service{restart_count = RestartCount,
+restart_stage3(#service{restart_count = RestartCount,
                         restart_times = RestartTimes,
                         max_r = MaxR,
                         max_t = MaxT} = Service,
@@ -590,7 +634,7 @@ restart_stage2(#service{restart_count = RestartCount,
                                                         SecondsNow, MaxT),
     if
         NewRestartCount < RestartCount ->
-            restart_stage2(Service#service{restart_count = NewRestartCount,
+            restart_stage3(Service#service{restart_count = NewRestartCount,
                                            restart_times = NewRestartTimes},
                            Services, State, ServiceId, OldPid);
         true ->
@@ -599,7 +643,7 @@ restart_stage2(#service{restart_count = RestartCount,
             {false, State#state{services = Services}}
     end;
 
-restart_stage2(#service{service_m = M,
+restart_stage3(#service{service_m = M,
                         service_f = F,
                         service_a = A,
                         process_index = ProcessIndex,
@@ -647,12 +691,12 @@ restart_stage2(#service{service_m = M,
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
-            self() ! {restart_stage2,
-                      Service#service{restart_count = R,
-                                      restart_times = [SecondsNow |
-                                                       RestartTimes]},
-                      ServiceId,
-                      OldPid},
+            restart_stage2_async(Service#service{
+                                     restart_count = R,
+                                     restart_times = [SecondsNow |
+                                                      RestartTimes]},
+                                 ServiceId,
+                                 OldPid),
             Services
     end,
     {true, State#state{services = NewServices}}.
@@ -771,6 +815,7 @@ pids_increase_loop(Count, ProcessIndex,
                             count_thread = CountThread,
                             scope = Scope,
                             timeout_term = TimeoutTerm,
+                            terminate_delay = TerminateDelay,
                             max_r = MaxR,
                             max_t = MaxT} = Service, ServiceId, Services) ->
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
@@ -782,7 +827,8 @@ pids_increase_loop(Count, ProcessIndex,
                 new_service_process(M, F, A,
                                     ProcessIndex, CountProcess, CountThread,
                                     Scope, Pids, erlang:monitor(process, Pid),
-                                    TimeoutTerm, MaxR, MaxT), Services),
+                                    TimeoutTerm, TerminateDelay,
+                                    MaxR, MaxT), Services),
             ok = initialize(Pids),
             NextServices;
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
@@ -793,7 +839,8 @@ pids_increase_loop(Count, ProcessIndex,
                     new_service_process(M, F, A,
                                         ProcessIndex, CountProcess, CountThread,
                                         Scope, Pids, erlang:monitor(process, P),
-                                        TimeoutTerm, MaxR, MaxT), D)
+                                        TimeoutTerm, TerminateDelay,
+                                        MaxR, MaxT), D)
             end, Services, Pids),
             ok = initialize(Pids),
             NextServices;
@@ -843,18 +890,26 @@ pids_decrease(Count, OldPids, CountProcessCurrent, Rate,
      NewServices} = pids_update(NewServiceL, CountProcess, ServiceId, Services),
     NewServices.
 
-terminate_kill_enforce(ServiceId, Pid, Reason,
+terminate_kill_enforce(Self, Pid, Reason, ServiceId,
                        #service{timeout_term = TimeoutTerm} = Service) ->
-    erlang:send_after(TimeoutTerm, self(),
-                      {kill, TimeoutTerm, Pid, Reason,
-                       ServiceId, Service}),
+    erlang:send_after(TimeoutTerm, Self,
+                      {kill, Pid, Reason, ServiceId, Service}),
     ok.
 
-terminate_service(ServiceId, Pids, Service, Services) ->
-    terminate_service(ServiceId, Pids, undefined, Service, Services).
+terminate_kill_enforce_now(Pid, Reason, ServiceId,
+                           #service{timeout_term = TimeoutTerm}) ->
+    case erlang:is_process_alive(Pid) of
+        true ->
+            ?LOG_ERROR_SYNC("Service pid ~p brutal_kill (~p)~n"
+                            " ~p after ~p ms (MaxT/MaxR)",
+                            [Pid, Reason, service_id(ServiceId), TimeoutTerm]),
+            erlang:exit(Pid, kill);
+        false ->
+            ok
+    end,
+    ok.
 
-terminate_service(ServiceId, Pids, Reason,
-                  #service{timeout_term = TimeoutTerm} = Service, Services) ->
+terminate_service(ServiceId, Pids, Reason, Service, Services, OldPid) ->
     Self = self(),
     ShutdownExit = if
         Reason =:= undefined ->
@@ -863,12 +918,30 @@ terminate_service(ServiceId, Pids, Reason,
             {shutdown, Reason}
     end,
     NewServices = lists:foldl(fun(P, D) ->
-        erlang:exit(P, ShutdownExit),
-        erlang:send_after(TimeoutTerm, Self,
-                          {kill, TimeoutTerm, P, ShutdownExit,
-                           ServiceId, Service}),
+        if
+            P /= OldPid ->
+                erlang:exit(P, ShutdownExit),
+                terminate_kill_enforce(Self, P, ShutdownExit,
+                                       ServiceId, Service);
+            true ->
+                ok
+        end,
         cloudi_x_key2value:erase(ServiceId, P, D)
     end, Services, Pids),
+    lists:foreach(fun(P) ->
+        if
+            P /= OldPid ->
+                receive
+                    {'DOWN', _MonitorRef, 'process', P, ShutdownExit} ->
+                        ok;
+                    {kill, P, ShutdownExit, ServiceId, Service} ->
+                        terminate_kill_enforce_now(P, ShutdownExit,
+                                                   ServiceId, Service)
+                end;
+            true ->
+                ok
+        end
+    end, Pids),
     NewServices.
 
 service_ids_pids(ServiceIdList, Services) ->
@@ -1147,7 +1220,8 @@ service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
-                    Scope, Pids, MonitorRef, TimeoutTerm, MaxR, MaxT) ->
+                    Scope, Pids, MonitorRef, TimeoutTerm, TerminateDelay,
+                    MaxR, MaxT) ->
     #service{service_m = M,
              service_f = F,
              service_a = A,
@@ -1158,6 +1232,7 @@ new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
              pids = Pids,
              monitor = MonitorRef,
              timeout_term = TimeoutTerm,
+             terminate_delay = TerminateDelay,
              max_r = MaxR,
              max_t = MaxT}.
 

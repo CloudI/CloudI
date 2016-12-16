@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add terminate_delay service configuration option to allow a
+      service instance to delay a restart
+      (attempting to avoid spurious failures when the failure cause
+       requires a short amount of time to be resolved)
+      based on the suggestions of Richard Carlsson in
+      https://github.com/erlang/otp/pull/1287
+    * Fix service restarts to ensure all terminate functions have completed
+      (or a kill exit has been sent) before restarting the service instance
+    * Fix service configuration option timeout_terminate value output
+      in log output of the service configuration
+
 2016-12-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add count result to cloudi_timestamp:seconds_filter/3 return value
