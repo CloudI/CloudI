@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate).
@@ -404,10 +404,10 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
             {true, Failures}
     end.
 
-failure_store(FailureList, MaxCount, Pid, Failures) ->
+failure_store(FailureList, FailureCount, MaxCount, Pid, Failures) ->
     NewFailures = dict:store(Pid, FailureList, Failures),
     if
-        erlang:length(FailureList) == MaxCount ->
+        FailureCount == MaxCount ->
             failure_kill(Pid),
             {true, NewFailures};
         true ->
@@ -415,11 +415,15 @@ failure_store(FailureList, MaxCount, Pid, Failures) ->
     end.
 
 failure_check(SecondsNow, FailureList, MaxCount, infinity, Pid, Failures) ->
-    failure_store([SecondsNow | FailureList], MaxCount, Pid, Failures);
+    NewFailureCount = erlang:length(FailureList),
+    failure_store([SecondsNow | FailureList], NewFailureCount + 1,
+                  MaxCount, Pid, Failures);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
-    NewFailureList = cloudi_timestamp:seconds_filter(FailureList,
-                                                     SecondsNow, MaxPeriod),
-    failure_store([SecondsNow | NewFailureList], MaxCount, Pid, Failures).
+    {NewFailureCount,
+     NewFailureList} = cloudi_timestamp:seconds_filter(FailureList,
+                                                       SecondsNow, MaxPeriod),
+    failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
+                  MaxCount, Pid, Failures).
 
 failure_kill(Pid) ->
     erlang:exit(Pid, cloudi_service_validate).

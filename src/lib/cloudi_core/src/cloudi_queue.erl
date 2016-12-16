@@ -62,7 +62,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -479,9 +479,9 @@ failure(false, _, _, FailureList) ->
 failure(true, MaxCount, MaxPeriod, FailureList) ->
     failure_check(cloudi_timestamp:seconds(), FailureList, MaxCount, MaxPeriod).
 
-failure_store(FailureList, MaxCount) ->
+failure_store(FailureList, FailureCount, MaxCount) ->
     if
-        erlang:length(FailureList) == MaxCount ->
+        FailureCount == MaxCount ->
             failure_kill();
         true ->
             ok
@@ -489,11 +489,15 @@ failure_store(FailureList, MaxCount) ->
     FailureList.
 
 failure_check(SecondsNow, FailureList, MaxCount, infinity) ->
-    failure_store([SecondsNow | FailureList], MaxCount);
+    NewFailureCount = erlang:length(FailureList),
+    failure_store([SecondsNow | FailureList], NewFailureCount + 1,
+                  MaxCount);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod) ->
-    NewFailureList = cloudi_timestamp:seconds_filter(FailureList,
-                                                     SecondsNow, MaxPeriod),
-    failure_store([SecondsNow | NewFailureList], MaxCount).
+    {NewFailureCount,
+     NewFailureList} = cloudi_timestamp:seconds_filter(FailureList,
+                                                       SecondsNow, MaxPeriod),
+    failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
+                  MaxCount).
 
 failure_kill() ->
     erlang:exit(cloudi_queue).

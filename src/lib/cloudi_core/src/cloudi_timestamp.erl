@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -91,6 +91,8 @@ timestamp() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec seconds() -> non_neg_integer().
+
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seconds() ->
     erlang:system_time(seconds).
@@ -105,6 +107,8 @@ seconds() ->
 %% ===Seconds since an undefined point in time, from the hardware.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec seconds_os() -> non_neg_integer().
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seconds_os() ->
@@ -122,6 +126,8 @@ seconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec milliseconds() -> non_neg_integer().
+
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 milliseconds() ->
     erlang:system_time(milli_seconds).
@@ -136,6 +142,8 @@ milliseconds() ->
 %% ===Milliseconds since an undefined point in time, from the hardware.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec milliseconds_os() -> non_neg_integer().
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 milliseconds_os() ->
@@ -153,6 +161,8 @@ milliseconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
+-spec microseconds() -> non_neg_integer().
+
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 microseconds() ->
     erlang:system_time(micro_seconds).
@@ -167,6 +177,8 @@ microseconds() ->
 %% ===Microseconds since an undefined point in time, from the hardware.===
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec microseconds_os() -> non_neg_integer().
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 microseconds_os() ->
@@ -184,18 +196,26 @@ microseconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-seconds_filter(L, SecondsNow, MaxPeriod) ->
-    seconds_filter(L, [], SecondsNow, MaxPeriod).
+-spec seconds_filter(L :: list(non_neg_integer()),
+                     SecondsNow :: non_neg_integer(),
+                     MaxPeriod :: pos_integer()) ->
+    {Count :: non_neg_integer(),
+     NewL :: list(non_neg_integer())}.
 
-seconds_filter([], Output, _, _) ->
-    Output;
-seconds_filter([Seconds | L], Output, SecondsNow, MaxPeriod) ->
+seconds_filter(L, SecondsNow, MaxPeriod) ->
+    seconds_filter(L, [], 0, SecondsNow, MaxPeriod).
+
+seconds_filter([], Output, Count, _, _) ->
+    {Count, Output};
+seconds_filter([Seconds | L], Output, Count, SecondsNow, MaxPeriod) ->
     if
         (SecondsNow < Seconds) orelse
         ((SecondsNow - Seconds) > MaxPeriod) ->
-            seconds_filter(L, Output, SecondsNow, MaxPeriod);
+            seconds_filter(L, Output, Count,
+                           SecondsNow, MaxPeriod);
         true ->
-            seconds_filter(L, [Seconds | Output], SecondsNow, MaxPeriod)
+            seconds_filter(L, [Seconds | Output], Count + 1,
+                           SecondsNow, MaxPeriod)
     end.
 
 %%%------------------------------------------------------------------------

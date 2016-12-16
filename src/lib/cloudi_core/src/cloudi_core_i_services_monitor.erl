@@ -47,7 +47,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -585,9 +585,9 @@ restart_stage2(#service{restart_count = RestartCount,
     when MaxR == RestartCount ->
     % last restart?
     SecondsNow = cloudi_timestamp:seconds(),
-    NewRestartTimes = cloudi_timestamp:seconds_filter(RestartTimes,
-                                                      SecondsNow, MaxT),
-    NewRestartCount = erlang:length(NewRestartTimes),
+    {NewRestartCount,
+     NewRestartTimes} = cloudi_timestamp:seconds_filter(RestartTimes,
+                                                        SecondsNow, MaxT),
     if
         NewRestartCount < RestartCount ->
             restart_stage2(Service#service{restart_count = NewRestartCount,
