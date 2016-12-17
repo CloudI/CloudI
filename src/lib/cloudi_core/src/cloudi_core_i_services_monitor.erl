@@ -376,7 +376,8 @@ handle_cast({terminate_kill, Pid, Reason},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            terminate_kill_enforce(self(), Pid, Reason, ServiceId, Service),
+            ok = terminate_kill_enforce(self(), Pid, Reason,
+                                        ServiceId, Service),
             {noreply, State};
         error ->
             {noreply, State}
@@ -910,39 +911,50 @@ terminate_kill_enforce_now(Pid, Reason, ServiceId,
     ok.
 
 terminate_service(ServiceId, Pids, Reason, Service, Services, OldPid) ->
-    Self = self(),
     ShutdownExit = if
         Reason =:= undefined ->
             shutdown;
         true ->
             {shutdown, Reason}
     end,
-    NewServices = lists:foldl(fun(P, D) ->
-        if
-            P /= OldPid ->
-                erlang:exit(P, ShutdownExit),
-                terminate_kill_enforce(Self, P, ShutdownExit,
-                                       ServiceId, Service);
-            true ->
-                ok
-        end,
-        cloudi_x_key2value:erase(ServiceId, P, D)
-    end, Services, Pids),
-    lists:foreach(fun(P) ->
-        if
-            P /= OldPid ->
-                receive
-                    {'DOWN', _MonitorRef, 'process', P, ShutdownExit} ->
-                        ok;
-                    {kill, P, ShutdownExit, ServiceId, Service} ->
-                        terminate_kill_enforce_now(P, ShutdownExit,
-                                                   ServiceId, Service)
-                end;
-            true ->
-                ok
-        end
-    end, Pids),
+    NewServices = terminate_service_pids(Pids, Services, self(), ShutdownExit,
+                                         ServiceId, Service, OldPid),
+    ok = terminate_service_wait(Pids, OldPid),
     NewServices.
+
+terminate_service_pids([], Services, _, _, _, _, _) ->
+    Services;
+terminate_service_pids([OldPid | Pids], Services, Self, ShutdownExit,
+                       ServiceId, Service, OldPid) ->
+    NewServices = cloudi_x_key2value:erase(ServiceId, OldPid, Services),
+    terminate_service_pids(Pids, NewServices, Self, ShutdownExit,
+                           ServiceId, Service, OldPid);
+terminate_service_pids([Pid | Pids], Services, Self, ShutdownExit,
+                       ServiceId, Service, OldPid) ->
+    erlang:exit(Pid, ShutdownExit),
+    ok = terminate_kill_enforce(Self, Pid, ShutdownExit, ServiceId, Service),
+    NewServices = cloudi_x_key2value:erase(ServiceId, Pid, Services),
+    terminate_service_pids(Pids, NewServices, Self, ShutdownExit,
+                           ServiceId, Service, OldPid).
+
+terminate_service_wait([], _) ->
+    ok;
+terminate_service_wait([OldPid | Pids], OldPid) ->
+    terminate_service_wait(Pids, OldPid);
+terminate_service_wait([Pid | Pids], OldPid) ->
+    % ensure each service process has executed its termination source code
+    % (or has died due to a termination timeout)
+    receive
+        {'DOWN', _MonitorRef, 'process', Pid, _} ->
+            terminate_service_wait(Pids, OldPid);
+        {kill, Pid, ShutdownExit, ServiceId, Service} ->
+            ok = terminate_kill_enforce_now(Pid, ShutdownExit,
+                                            ServiceId, Service),
+            receive
+                {'DOWN', _MonitorRef, 'process', Pid, _} ->
+                    terminate_service_wait(Pids, OldPid)
+            end
+    end.
 
 service_ids_pids(ServiceIdList, Services) ->
     service_ids_pids(ServiceIdList, [], Services).

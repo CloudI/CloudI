@@ -10,7 +10,8 @@
       based on the suggestions of Richard Carlsson in
       https://github.com/erlang/otp/pull/1287
     * Fix service restarts to ensure all terminate functions have completed
-      (or a kill exit has been sent) before restarting the service instance
+      (or service thread(s) had a termination timeout complete)
+      before restarting the service instance
     * Fix service configuration option timeout_terminate value output
       in log output of the service configuration
 
