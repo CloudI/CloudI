@@ -80,11 +80,13 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 
+-define(HIBERNATE_METHOD_DEFAULT, rate_request).
 -define(HIBERNATE_PERIOD_DEFAULT, 5). % seconds
 -define(HIBERNATE_RATE_REQUEST_MIN_DEFAULT, 1). % req/sec
 -define(TERMINATE_DELAY_METHOD_DEFAULT, exponential).
 -define(TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT, 1). % milliseconds
 -define(TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT, 500). % milliseconds
+-define(COUNT_PROCESS_DYNAMIC_METHOD_DEFAULT, rate_request).
 -define(COUNT_PROCESS_DYNAMIC_PERIOD_DEFAULT, 5). % seconds
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MIN_DEFAULT, 100). % req/sec
@@ -514,7 +516,7 @@ hibernate_validate([],
                               rate_min = RateMin} = State) ->
     NewMethod = if
         Method =:= undefined ->
-            rate_request;
+            ?HIBERNATE_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
@@ -572,27 +574,57 @@ terminate_delay_validate([],
         TimeMax =/= undefined ->
             TimeMax
     end,
-    {ok, State#terminate_delay{method = NewMethod,
-                               time_min = NewTimeMin,
-                               time_max = NewTimeMax}};
-terminate_delay_validate([{time_exponential_min, TimeMin} | Options],
+    if
+        (NewMethod =:= exponential) andalso (NewTimeMin == NewTimeMax) ->
+            {error, {service_options_terminate_delay_invalid,
+                     time_absolute}};
+        true ->
+            {ok, State#terminate_delay{method = NewMethod,
+                                       time_min = NewTimeMin,
+                                       time_max = NewTimeMax}}
+    end;
+terminate_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
                          #terminate_delay{method = Method,
                                           time_max = TimeMax} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
-         is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG,
-         ((TimeMax =:= undefined) orelse (TimeMin =< TimeMax)) ->
-    terminate_delay_validate(Options,
-                             State#terminate_delay{method = exponential,
-                                                   time_min = TimeMin});
-terminate_delay_validate([{time_exponential_max, TimeMax} | Options],
+         is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
+    NewTimeMax = if
+        TimeMax =:= undefined ->
+            erlang:max(TimeMin, ?TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
+        TimeMax =/= undefined ->
+            TimeMax
+    end,
+    if
+        TimeMin =< NewTimeMax ->
+            terminate_delay_validate(Options,
+                                     State#terminate_delay{
+                                         method = exponential,
+                                         time_min = TimeMin,
+                                         time_max = NewTimeMax});
+        true ->
+            {error, {service_options_terminate_delay_invalid, Option}}
+    end;
+terminate_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
                          #terminate_delay{method = Method,
                                           time_min = TimeMin} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
-         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG,
-         ((TimeMin =:= undefined) orelse (TimeMin =< TimeMax)) ->
-    terminate_delay_validate(Options,
-                             State#terminate_delay{method = exponential,
-                                                   time_max = TimeMax});
+         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
+    NewTimeMin = if
+        TimeMin =:= undefined ->
+            erlang:min(TimeMax, ?TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
+        TimeMin =/= undefined ->
+            TimeMin
+    end,
+    if
+        NewTimeMin =< TimeMax ->
+            terminate_delay_validate(Options,
+                                     State#terminate_delay{
+                                         method = exponential,
+                                         time_max = TimeMax,
+                                         time_min = NewTimeMin});
+        true ->
+            {error, {service_options_terminate_delay_invalid, Option}}
+    end;
 terminate_delay_validate([{time_absolute, TimeValue} | Options],
                          #terminate_delay{method = Method} = State)
     when ((Method =:= undefined) orelse (Method =:= absolute)),
@@ -634,7 +666,7 @@ count_process_dynamic_validate([],
                                CountProcess) ->
     NewMethod = if
         Method =:= undefined ->
-            rate_request;
+            ?COUNT_PROCESS_DYNAMIC_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
@@ -671,15 +703,24 @@ count_process_dynamic_validate([],
         CountMin =/= undefined ->
             CountMin
     end,
-    {ok,
-     State#count_process_dynamic{
-         method = NewMethod,
-         period = NewPeriod,
-         rate_max = NewRateMax,
-         rate_min = NewRateMin,
-         count_process_max = NewCountMax,
-         count_process_min = NewCountMin}};
-count_process_dynamic_validate([{rate_request_max, RateMax} | Options],
+    if
+        (NewMethod =:= rate_request) andalso (NewRateMin == NewRateMax) ->
+            {error, {service_options_count_process_dynamic_invalid,
+                     rate_request_max}};
+        (NewMethod =:= rate_request) andalso (NewCountMin == NewCountMax) ->
+            {error, {service_options_count_process_dynamic_invalid,
+                     count_max}};
+        true ->
+            {ok,
+             State#count_process_dynamic{
+                 method = NewMethod,
+                 period = NewPeriod,
+                 rate_max = NewRateMax,
+                 rate_min = NewRateMin,
+                 count_process_max = NewCountMax,
+                 count_process_min = NewCountMin}}
+    end;
+count_process_dynamic_validate([{rate_request_max, RateMax} = Option | Options],
                                #count_process_dynamic{
                                    method = Method,
                                    rate_min = RateMin} = State,
@@ -692,12 +733,17 @@ count_process_dynamic_validate([{rate_request_max, RateMax} | Options],
         RateMin =/= undefined ->
             RateMin
     end,
-    count_process_dynamic_validate(Options,
-        State#count_process_dynamic{
-            method = rate_request,
-            rate_max = RateMax,
-            rate_min = erlang:min(NewRateMin, RateMax)}, CountProcess);
-count_process_dynamic_validate([{rate_request_min, RateMin} | Options],
+    if
+        NewRateMin =< RateMax ->
+            count_process_dynamic_validate(Options,
+                State#count_process_dynamic{
+                    method = rate_request,
+                    rate_max = RateMax,
+                    rate_min = NewRateMin}, CountProcess);
+        true ->
+            {error, {service_options_count_process_dynamic_invalid, Option}}
+    end;
+count_process_dynamic_validate([{rate_request_min, RateMin} = Option | Options],
                                #count_process_dynamic{
                                    method = Method,
                                    rate_max = RateMax} = State,
@@ -710,12 +756,17 @@ count_process_dynamic_validate([{rate_request_min, RateMin} | Options],
         RateMax =/= undefined ->
             RateMax
     end,
-    count_process_dynamic_validate(Options,
-        State#count_process_dynamic{
-            method = rate_request,
-            rate_max = erlang:max(NewRateMax, RateMin),
-            rate_min = RateMin}, CountProcess);
-count_process_dynamic_validate([{count_max, CountMax} | Options],
+    if
+        RateMin =< NewRateMax ->
+            count_process_dynamic_validate(Options,
+                State#count_process_dynamic{
+                    method = rate_request,
+                    rate_max = NewRateMax,
+                    rate_min = RateMin}, CountProcess);
+        true ->
+            {error, {service_options_count_process_dynamic_invalid, Option}}
+    end;
+count_process_dynamic_validate([{count_max, CountMax} = Option | Options],
                                #count_process_dynamic{
                                    count_process_min = CountMin} = State,
                                CountProcess)
@@ -735,11 +786,16 @@ count_process_dynamic_validate([{count_max, CountMax} | Options],
         CountMin =/= undefined ->
             CountMin
     end,
-    count_process_dynamic_validate(Options,
-        State#count_process_dynamic{
-            count_process_max = NewCountMax,
-            count_process_min = NewCountMin}, CountProcess);
-count_process_dynamic_validate([{count_min, CountMin} | Options],
+    if
+        NewCountMin =< NewCountMax ->
+            count_process_dynamic_validate(Options,
+                State#count_process_dynamic{
+                    count_process_max = NewCountMax,
+                    count_process_min = NewCountMin}, CountProcess);
+        true ->
+            {error, {service_options_count_process_dynamic_invalid, Option}}
+    end;
+count_process_dynamic_validate([{count_min, CountMin} = Option | Options],
                                #count_process_dynamic{
                                    count_process_max = CountMax} = State,
                                CountProcess)
@@ -759,10 +815,15 @@ count_process_dynamic_validate([{count_min, CountMin} | Options],
         CountMax =/= undefined ->
             CountMax
     end,
-    count_process_dynamic_validate(Options,
-        State#count_process_dynamic{
-            count_process_max = NewCountMax,
-            count_process_min = NewCountMin}, CountProcess);
+    if
+        NewCountMin =< NewCountMax ->
+            count_process_dynamic_validate(Options,
+                State#count_process_dynamic{
+                    count_process_max = NewCountMax,
+                    count_process_min = NewCountMin}, CountProcess);
+        true ->
+            {error, {service_options_count_process_dynamic_invalid, Option}}
+    end;
 count_process_dynamic_validate([{period, Period} | Options],
                                #count_process_dynamic{} = State,
                                CountProcess)

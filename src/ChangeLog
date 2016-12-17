@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve validation of the service configuration options
+      terminate_delay, count_process_dynamic and monkey_latency
+
 2016-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add terminate_delay service configuration option to allow a

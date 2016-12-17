@@ -66,7 +66,8 @@
 -include("cloudi_core_i_constants.hrl").
 
 -define(DAY_MILLISECONDS, (24 * 60 * 60 * 1000)).
--define(MONKEY_LATENCY_DEFAULT, 5000). % milliseconds
+-define(MONKEY_LATENCY_METHOD_DEFAULT, time_absolute).
+-define(MONKEY_LATENCY_MEAN_DEFAULT, 5000). % milliseconds
 -define(MONKEY_LATENCY_LOG, 5000). % milliseconds
 
 -record(monkey_latency,
@@ -255,17 +256,22 @@ monkey_chaos_destroy(#monkey_chaos{method = probability_day,
 %%%------------------------------------------------------------------------
 
 monkey_latency_validate([],
-                        #monkey_latency{method = Method} = MonkeyLatency) ->
+                        #monkey_latency{method = Method,
+                                        value1 = Value1,
+                                        value2 = Value2} = MonkeyLatency) ->
     if
+        (Method =:= time_uniform) andalso (Value1 == Value2) ->
+            {error, {service_options_monkey_latency_invalid,
+                     time_absolute}};
         Method =:= undefined ->
             {ok,
              MonkeyLatency#monkey_latency{
-                method = time_absolute,
-                value1 = ?MONKEY_LATENCY_DEFAULT}};
+                method = ?MONKEY_LATENCY_METHOD_DEFAULT,
+                value1 = ?MONKEY_LATENCY_MEAN_DEFAULT}};
         Method =/= undefined ->
             {ok, MonkeyLatency}
     end;
-monkey_latency_validate([{time_uniform_min, Min} | Options],
+monkey_latency_validate([{time_uniform_min, Min} = Option | Options],
                         #monkey_latency{method = Method,
                                         value2 = Max} = MonkeyLatency)
     when ((Method =:= undefined) orelse (Method =:= time_uniform)),
@@ -276,12 +282,17 @@ monkey_latency_validate([{time_uniform_min, Min} | Options],
         Max =/= undefined ->
             Max
     end,
-    monkey_latency_validate(Options,
-                            MonkeyLatency#monkey_latency{
-                                method = time_uniform,
-                                value1 = Min,
-                                value2 = erlang:max(NewMax, Min)});
-monkey_latency_validate([{time_uniform_max, Max} | Options],
+    if
+        Min =< NewMax ->
+            monkey_latency_validate(Options,
+                                    MonkeyLatency#monkey_latency{
+                                        method = time_uniform,
+                                        value1 = Min,
+                                        value2 = NewMax});
+        true ->
+            {error, {service_options_monkey_latency_invalid, Option}}
+    end;
+monkey_latency_validate([{time_uniform_max, Max} = Option | Options],
                         #monkey_latency{method = Method,
                                         value1 = Min} = MonkeyLatency)
     when ((Method =:= undefined) orelse (Method =:= time_uniform)),
@@ -292,11 +303,16 @@ monkey_latency_validate([{time_uniform_max, Max} | Options],
         Min =/= undefined ->
             Min
     end,
-    monkey_latency_validate(Options,
-                            MonkeyLatency#monkey_latency{
-                                method = time_uniform,
-                                value1 = erlang:min(NewMin, Max),
-                                value2 = Max});
+    if
+        NewMin =< Max ->
+            monkey_latency_validate(Options,
+                                    MonkeyLatency#monkey_latency{
+                                        method = time_uniform,
+                                        value1 = NewMin,
+                                        value2 = Max});
+        true ->
+            {error, {service_options_monkey_latency_invalid, Option}}
+    end;
 monkey_latency_validate([{time_gaussian_mean, Mean} | Options],
                         #monkey_latency{
                             method = Method,
@@ -323,7 +339,7 @@ monkey_latency_validate([{time_gaussian_stddev, StdDev} | Options],
          is_number(StdDev), StdDev > 0.0 ->
     NewMean = if
         Mean =:= undefined ->
-            ?MONKEY_LATENCY_DEFAULT;
+            ?MONKEY_LATENCY_MEAN_DEFAULT;
         Mean =/= undefined ->
             Mean
     end,
