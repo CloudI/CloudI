@@ -525,8 +525,8 @@ code_change(_, State, _) ->
 restart(Service, Services, State, ServiceId, OldPid) ->
     restart_stage1(Service, Services, State, ServiceId, OldPid).
 
-restart_stage1(#service{pids = Pids} = Service, Services,
-               State, ServiceId, OldPid) ->
+restart_stage1(#service{pids = Pids} = Service,
+               Services, State, ServiceId, OldPid) ->
     NewServices = terminate_service(ServiceId, Pids, undefined,
                                     Service, Services, OldPid),
     restart_stage2(Service#service{pids = [],
@@ -552,8 +552,8 @@ restart_stage2(#service{restart_count = 0,
 
 restart_stage2(#service{restart_times = RestartTimes,
                         terminate_delay = TerminateDelay,
-                        max_t = MaxT} = Service, Services,
-               State, ServiceId, OldPid) ->
+                        max_t = MaxT} = Service,
+               Services, State, ServiceId, OldPid) ->
     case cloudi_core_i_rate_based_configuration:
          terminate_delay_value(RestartTimes, MaxT, TerminateDelay) of
         false ->
