@@ -59,9 +59,9 @@
          hibernate_reinit/1,
          hibernate_request/1,
          hibernate_check/1,
-         terminate_delay_format/1,
-         terminate_delay_validate/1,
-         terminate_delay_value/3,
+         restart_delay_format/1,
+         restart_delay_validate/1,
+         restart_delay_value/3,
          count_process_dynamic_format/1,
          count_process_dynamic_validate/2,
          count_process_dynamic_init/1,
@@ -105,13 +105,13 @@
         hibernate = false :: boolean()
     }).
 
--record(terminate_delay,
+-record(restart_delay,
     {
         method = undefined :: undefined | exponential | absolute,
         time_min = undefined
-            :: undefined | cloudi_service_api:terminate_delay_milliseconds(),
+            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
         time_max = undefined
-            :: undefined | cloudi_service_api:terminate_delay_milliseconds()
+            :: undefined | cloudi_service_api:restart_delay_milliseconds()
     }).
 
 -record(count_process_dynamic,
@@ -236,51 +236,51 @@ hibernate_check(#hibernate{method = rate_request,
 
 %% convert internal state to the configuration format
 
--spec terminate_delay_format(#terminate_delay{} | false) ->
+-spec restart_delay_format(#restart_delay{} | false) ->
     list({atom(), any()}) | false.
 
-terminate_delay_format(false) ->
+restart_delay_format(false) ->
     false;
-terminate_delay_format(#terminate_delay{method = exponential,
-                                        time_min = TimeMin,
-                                        time_max = TimeMax}) ->
+restart_delay_format(#restart_delay{method = exponential,
+                                    time_min = TimeMin,
+                                    time_max = TimeMax}) ->
     [{time_exponential_min, TimeMin},
      {time_exponential_max, TimeMax}];
-terminate_delay_format(#terminate_delay{method = absolute,
-                                        time_min = TimeValue,
-                                        time_max = TimeValue}) ->
+restart_delay_format(#restart_delay{method = absolute,
+                                    time_min = TimeValue,
+                                    time_max = TimeValue}) ->
     [{time_absolute, TimeValue}].
 
 %% convert the configuration format to internal state
 
--spec terminate_delay_validate(list({atom(), any()}) | false) ->
-    {ok, #terminate_delay{} | false} |
-    {error, {service_options_terminate_delay_invalid, any()}}.
+-spec restart_delay_validate(list({atom(), any()}) | false) ->
+    {ok, #restart_delay{} | false} |
+    {error, {service_options_restart_delay_invalid, any()}}.
 
-terminate_delay_validate(false) ->
+restart_delay_validate(false) ->
     {ok, false};
-terminate_delay_validate(Options) ->
-    terminate_delay_validate(Options, #terminate_delay{}).
+restart_delay_validate(Options) ->
+    restart_delay_validate(Options, #restart_delay{}).
 
 %% provide the value result
 
--spec terminate_delay_value(RestartTimes :: list(non_neg_integer()),
-                            MaxT :: non_neg_integer(),
-                            State :: #terminate_delay{} | false) ->
+-spec restart_delay_value(RestartTimes :: list(non_neg_integer()),
+                          MaxT :: non_neg_integer(),
+                          State :: #restart_delay{} | false) ->
     false |
     {NewRestartCount :: non_neg_integer(),
      NewRestartTimes :: list(non_neg_integer()),
      Value :: 0..?TIMEOUT_MAX_ERLANG}.
 
-terminate_delay_value(_, _, false) ->
+restart_delay_value(_, _, false) ->
     false;
-terminate_delay_value(RestartTimes, MaxT,
-                      #terminate_delay{} = State) ->
+restart_delay_value(RestartTimes, MaxT,
+                    #restart_delay{} = State) ->
     SecondsNow = cloudi_timestamp:seconds(),
     {NewRestartCount,
      NewRestartTimes} = cloudi_timestamp:seconds_filter(RestartTimes,
                                                         SecondsNow, MaxT),
-    Value = terminate_delay_value_now(NewRestartCount, State),
+    Value = restart_delay_value_now(NewRestartCount, State),
     {NewRestartCount, NewRestartTimes, Value}.
 
 %% convert internal state to the configuration format
@@ -552,10 +552,10 @@ hibernate_validate([Invalid | _Options],
                    _State) ->
     {error, {service_options_hibernate_invalid, Invalid}}.
 
-terminate_delay_validate([],
-                         #terminate_delay{method = Method,
-                                          time_min = TimeMin,
-                                          time_max = TimeMax} = State) ->
+restart_delay_validate([],
+                       #restart_delay{method = Method,
+                                      time_min = TimeMin,
+                                      time_max = TimeMax} = State) ->
     NewMethod = if
         Method =:= undefined ->
             ?TERMINATE_DELAY_METHOD_DEFAULT;
@@ -576,16 +576,16 @@ terminate_delay_validate([],
     end,
     if
         (NewMethod =:= exponential) andalso (NewTimeMin == NewTimeMax) ->
-            {error, {service_options_terminate_delay_invalid,
+            {error, {service_options_restart_delay_invalid,
                      time_absolute}};
         true ->
-            {ok, State#terminate_delay{method = NewMethod,
-                                       time_min = NewTimeMin,
-                                       time_max = NewTimeMax}}
+            {ok, State#restart_delay{method = NewMethod,
+                                     time_min = NewTimeMin,
+                                     time_max = NewTimeMax}}
     end;
-terminate_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
-                         #terminate_delay{method = Method,
-                                          time_max = TimeMax} = State)
+restart_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
+                       #restart_delay{method = Method,
+                                      time_max = TimeMax} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
          is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
     NewTimeMax = if
@@ -596,17 +596,17 @@ terminate_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
     end,
     if
         TimeMin =< NewTimeMax ->
-            terminate_delay_validate(Options,
-                                     State#terminate_delay{
-                                         method = exponential,
-                                         time_min = TimeMin,
-                                         time_max = NewTimeMax});
+            restart_delay_validate(Options,
+                                   State#restart_delay{
+                                       method = exponential,
+                                       time_min = TimeMin,
+                                       time_max = NewTimeMax});
         true ->
-            {error, {service_options_terminate_delay_invalid, Option}}
+            {error, {service_options_restart_delay_invalid, Option}}
     end;
-terminate_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
-                         #terminate_delay{method = Method,
-                                          time_min = TimeMin} = State)
+restart_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
+                       #restart_delay{method = Method,
+                                      time_min = TimeMin} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
          is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
     NewTimeMin = if
@@ -617,31 +617,31 @@ terminate_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
     end,
     if
         NewTimeMin =< TimeMax ->
-            terminate_delay_validate(Options,
-                                     State#terminate_delay{
-                                         method = exponential,
-                                         time_max = TimeMax,
-                                         time_min = NewTimeMin});
+            restart_delay_validate(Options,
+                                   State#restart_delay{
+                                       method = exponential,
+                                       time_max = TimeMax,
+                                       time_min = NewTimeMin});
         true ->
-            {error, {service_options_terminate_delay_invalid, Option}}
+            {error, {service_options_restart_delay_invalid, Option}}
     end;
-terminate_delay_validate([{time_absolute, TimeValue} | Options],
-                         #terminate_delay{method = Method} = State)
+restart_delay_validate([{time_absolute, TimeValue} | Options],
+                       #restart_delay{method = Method} = State)
     when ((Method =:= undefined) orelse (Method =:= absolute)),
          is_integer(TimeValue),
          TimeValue > 0, TimeValue =< ?TIMEOUT_MAX_ERLANG ->
-    terminate_delay_validate(Options,
-                             State#terminate_delay{method = absolute,
-                                                   time_min = TimeValue,
-                                                   time_max = TimeValue});
-terminate_delay_validate([Invalid | _Options],
-                         _State) ->
-    {error, {service_options_terminate_delay_invalid, Invalid}}.
+    restart_delay_validate(Options,
+                           State#restart_delay{method = absolute,
+                                               time_min = TimeValue,
+                                               time_max = TimeValue});
+restart_delay_validate([Invalid | _Options],
+                       _State) ->
+    {error, {service_options_restart_delay_invalid, Invalid}}.
 
-terminate_delay_value_now(RestartCount,
-                          #terminate_delay{method = exponential,
-                                           time_min = TimeMin,
-                                           time_max = TimeMax}) ->
+restart_delay_value_now(RestartCount,
+                        #restart_delay{method = exponential,
+                                       time_min = TimeMin,
+                                       time_max = TimeMax}) ->
     TimeValue = (1 bsl RestartCount) * TimeMin,
     if
         TimeValue > TimeMax ->
@@ -649,10 +649,10 @@ terminate_delay_value_now(RestartCount,
         true ->
             TimeValue
     end;
-terminate_delay_value_now(_,
-                          #terminate_delay{method = absolute,
-                                           time_min = TimeValue,
-                                           time_max = TimeValue}) ->
+restart_delay_value_now(_,
+                        #restart_delay{method = absolute,
+                                       time_min = TimeValue,
+                                       time_max = TimeValue}) ->
     TimeValue.
 
 count_process_dynamic_validate([],

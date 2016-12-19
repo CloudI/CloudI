@@ -137,7 +137,7 @@
      service_options_count_process_dynamic_invalid |
      service_options_timeout_terminate_invalid |
      service_options_timeout_terminate_decrease |
-     service_options_terminate_delay_invalid |
+     service_options_restart_delay_invalid |
      service_options_scope_invalid |
      service_options_monkey_latency_invalid |
      service_options_monkey_chaos_invalid |
@@ -947,12 +947,12 @@ services_format_options_external(Options) ->
             OptionsList12
     end,
     OptionsList14 = if
-        Options#config_service_options.terminate_delay /=
-        Defaults#config_service_options.terminate_delay ->
-            [{terminate_delay,
+        Options#config_service_options.restart_delay /=
+        Defaults#config_service_options.restart_delay ->
+            [{restart_delay,
               cloudi_core_i_rate_based_configuration:
-              terminate_delay_format(
-                  Options#config_service_options.terminate_delay)} |
+              restart_delay_format(
+                  Options#config_service_options.restart_delay)} |
              OptionsList13];
         true ->
             OptionsList13
@@ -1650,7 +1650,7 @@ services_add_service([Service | Services], Added, Timeout) ->
       service_options_count_process_dynamic_invalid |
       service_options_timeout_terminate_invalid |
       service_options_timeout_terminate_decrease |
-      service_options_terminate_delay_invalid |
+      service_options_restart_delay_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -2150,7 +2150,7 @@ timeout_terminate(TimeoutTerminate, MaxR, MaxT)
       service_options_count_process_dynamic_invalid |
       service_options_timeout_terminate_invalid |
       service_options_timeout_terminate_decrease |
-      service_options_terminate_delay_invalid |
+      service_options_restart_delay_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -2201,8 +2201,8 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
          Options#config_service_options.count_process_dynamic},
         {timeout_terminate,
          Options#config_service_options.timeout_terminate},
-        {terminate_delay,
-         Options#config_service_options.terminate_delay},
+        {restart_delay,
+         Options#config_service_options.restart_delay},
         {scope,
          Options#config_service_options.scope},
         {monkey_latency,
@@ -2342,13 +2342,13 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                    (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX))) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
-        [_, _, _, _, _, _, _, _, _, _, _, _, _, TerminateDelay, _,
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, RestartDelay, _,
          _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _]
-        when not ((TerminateDelay =:= false) orelse
-                  is_list(TerminateDelay)) ->
-            {error, {service_options_terminate_delay_invalid,
-                     TerminateDelay}};
+        when not ((RestartDelay =:= false) orelse
+                  is_list(RestartDelay)) ->
+            {error, {service_options_restart_delay_invalid,
+                     RestartDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, Scope,
          _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _]
@@ -2446,7 +2446,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
          DestRefreshStart, DestRefreshDelay, RequestNameLookup,
          RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
          ResponseTimeoutAdjustment, ResponseTimeoutImmediateMax,
-         CountProcessDynamic, TimeoutTerminate, TerminateDelay, Scope,
+         CountProcessDynamic, TimeoutTerminate, RestartDelay, Scope,
          MonkeyLatency, MonkeyChaos, AutomaticLoading, DispatcherPidOptions,
          AspectsInitAfter, AspectsRequestBefore, AspectsRequestAfter,
          AspectsInfoBefore, AspectsInfoAfter, AspectsTerminateBefore,
@@ -2465,7 +2465,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                 RateRequestMax,
                 CountProcessDynamic,
                 TimeoutTerminate,
-                TerminateDelay,
+                RestartDelay,
                 MonkeyLatency,
                 MonkeyChaos,
                 DispatcherPidOptions,
@@ -2487,7 +2487,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                  NewRateRequestMax,
                  NewCountProcessDynamic,
                  NewTimeoutTerminate,
-                 NewTerminateDelay,
+                 NewRestartDelay,
                  NewMonkeyLatency,
                  NewMonkeyChaos,
                  NewDispatcherPidOptions,
@@ -2530,8 +2530,8 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                              NewCountProcessDynamic,
                          timeout_terminate =
                              TimeoutTerminate,
-                         terminate_delay =
-                             NewTerminateDelay,
+                         restart_delay =
+                             NewRestartDelay,
                          scope =
                              ?SCOPE_ASSIGN(Scope),
                          monkey_latency =
@@ -2588,7 +2588,7 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
 services_validate_options_internal_checks(RateRequestMax,
                                           CountProcessDynamic,
                                           TimeoutTerminate,
-                                          TerminateDelay,
+                                          RestartDelay,
                                           MonkeyLatency,
                                           MonkeyChaos,
                                           DispatcherPidOptions,
@@ -2609,7 +2609,7 @@ services_validate_options_internal_checks(RateRequestMax,
     case services_validate_options_common_checks(RateRequestMax,
                                                  CountProcessDynamic,
                                                  TimeoutTerminate,
-                                                 TerminateDelay,
+                                                 RestartDelay,
                                                  MonkeyLatency,
                                                  MonkeyChaos,
                                                  CountProcess,
@@ -2619,7 +2619,7 @@ services_validate_options_internal_checks(RateRequestMax,
          NewRateRequestMax,
          NewCountProcessDynamic,
          NewTimeoutTerminate,
-         NewTerminateDelay,
+         NewRestartDelay,
          NewMonkeyLatency,
          NewMonkeyChaos} ->
             case services_validate_option_pid_options(DispatcherPidOptions,
@@ -2652,7 +2652,7 @@ services_validate_options_internal_checks(RateRequestMax,
                                      NewRateRequestMax,
                                      NewCountProcessDynamic,
                                      NewTimeoutTerminate,
-                                     NewTerminateDelay,
+                                     NewRestartDelay,
                                      NewMonkeyLatency,
                                      NewMonkeyChaos,
                                      NewDispatcherPidOptions,
@@ -2705,7 +2705,7 @@ services_validate_options_internal_checks(RateRequestMax,
       service_options_count_process_dynamic_invalid |
       service_options_timeout_terminate_invalid |
       service_options_timeout_terminate_decrease |
-      service_options_terminate_delay_invalid |
+      service_options_restart_delay_invalid |
       service_options_scope_invalid |
       service_options_monkey_latency_invalid |
       service_options_monkey_chaos_invalid |
@@ -2751,8 +2751,8 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
          Options#config_service_options.count_process_dynamic},
         {timeout_terminate,
          Options#config_service_options.timeout_terminate},
-        {terminate_delay,
-         Options#config_service_options.terminate_delay},
+        {restart_delay,
+         Options#config_service_options.restart_delay},
         {scope,
          Options#config_service_options.scope},
         {monkey_latency,
@@ -2867,12 +2867,12 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                    (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX))) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
-        [_, _, _, _, _, _, _, _, _, _, _, _, _, TerminateDelay, _,
+        [_, _, _, _, _, _, _, _, _, _, _, _, _, RestartDelay, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
-        when not ((TerminateDelay =:= false) orelse
-                  is_list(TerminateDelay)) ->
-            {error, {service_options_terminate_delay_invalid,
-                     TerminateDelay}};
+        when not ((RestartDelay =:= false) orelse
+                  is_list(RestartDelay)) ->
+            {error, {service_options_restart_delay_invalid,
+                     RestartDelay}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, _, Scope,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
         when not is_atom(Scope) ->
@@ -2919,7 +2919,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
          DestRefreshStart, DestRefreshDelay, RequestNameLookup,
          RequestTimeoutAdjustment, RequestTimeoutImmediateMax,
          ResponseTimeoutAdjustment, ResponseTimeoutImmediateMax,
-         CountProcessDynamic, TimeoutTerminate, TerminateDelay, Scope,
+         CountProcessDynamic, TimeoutTerminate, RestartDelay, Scope,
          MonkeyLatency, MonkeyChaos,
          AutomaticLoading, DispatcherPidOptions,
          AspectsInitAfter, AspectsRequestBefore,
@@ -2934,7 +2934,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
             case services_validate_options_external_checks(RateRequestMax,
                                                            CountProcessDynamic,
                                                            TimeoutTerminate,
-                                                           TerminateDelay,
+                                                           RestartDelay,
                                                            MonkeyLatency,
                                                            MonkeyChaos,
                                                            DispatcherPidOptions,
@@ -2948,7 +2948,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                  NewRateRequestMax,
                  NewCountProcessDynamic,
                  NewTimeoutTerminate,
-                 NewTerminateDelay,
+                 NewRestartDelay,
                  NewMonkeyLatency,
                  NewMonkeyChaos,
                  NewDispatcherPidOptions,
@@ -2995,8 +2995,8 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                      NewCountProcessDynamic,
                                  timeout_terminate =
                                      TimeoutTerminate,
-                                 terminate_delay =
-                                     NewTerminateDelay,
+                                 restart_delay =
+                                     NewRestartDelay,
                                  scope =
                                      ?SCOPE_ASSIGN(Scope),
                                  monkey_latency =
@@ -3039,7 +3039,7 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
 services_validate_options_external_checks(RateRequestMax,
                                           CountProcessDynamic,
                                           TimeoutTerminate,
-                                          TerminateDelay,
+                                          RestartDelay,
                                           MonkeyLatency,
                                           MonkeyChaos,
                                           DispatcherPidOptions,
@@ -3052,7 +3052,7 @@ services_validate_options_external_checks(RateRequestMax,
     case services_validate_options_common_checks(RateRequestMax,
                                                  CountProcessDynamic,
                                                  TimeoutTerminate,
-                                                 TerminateDelay,
+                                                 RestartDelay,
                                                  MonkeyLatency,
                                                  MonkeyChaos,
                                                  CountProcess,
@@ -3062,7 +3062,7 @@ services_validate_options_external_checks(RateRequestMax,
          NewRateRequestMax,
          NewCountProcessDynamic,
          NewTimeoutTerminate,
-         NewTerminateDelay,
+         NewRestartDelay,
          NewMonkeyLatency,
          NewMonkeyChaos} ->
             case eval([{DispatcherPidOptions,
@@ -3082,7 +3082,7 @@ services_validate_options_external_checks(RateRequestMax,
                      NewRateRequestMax,
                      NewCountProcessDynamic,
                      NewTimeoutTerminate,
-                     NewTerminateDelay,
+                     NewRestartDelay,
                      NewMonkeyLatency,
                      NewMonkeyChaos,
                      NewDispatcherPidOptions,
@@ -3099,7 +3099,7 @@ services_validate_options_external_checks(RateRequestMax,
 services_validate_options_common_checks(RateRequestMax,
                                         CountProcessDynamic,
                                         TimeoutTerminate,
-                                        TerminateDelay,
+                                        RestartDelay,
                                         MonkeyLatency,
                                         MonkeyChaos,
                                         CountProcess,
@@ -3117,9 +3117,9 @@ services_validate_options_common_checks(RateRequestMax,
            fun(Value) ->
                timeout_terminate(Value, MaxR, MaxT)
            end},
-          {TerminateDelay,
+          {RestartDelay,
            fun cloudi_core_i_rate_based_configuration:
-               terminate_delay_validate/1},
+               restart_delay_validate/1},
           {MonkeyLatency,
            fun cloudi_core_i_runtime_testing:
                monkey_latency_validate/1},

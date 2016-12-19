@@ -96,7 +96,7 @@
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(non_neg_integer()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
-        terminate_delay :: tuple() | false,
+        restart_delay :: tuple() | false,
         % from the supervisor behavior documentation:
         % If more than MaxR restarts occur within MaxT seconds,
         % the supervisor terminates all child processes...
@@ -142,7 +142,7 @@ start_link() ->
               Scope :: atom(),
               TimeoutTerm :: cloudi_service_api:
                              timeout_terminate_milliseconds(),
-              TerminateDelay :: tuple() | false,
+              RestartDelay :: tuple() | false,
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
               ServiceId :: cloudi_x_uuid:cloudi_x_uuid(),
@@ -151,7 +151,7 @@ start_link() ->
     {error, any()}.
 
 monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-        TimeoutTerm, TerminateDelay, MaxR, MaxT, ServiceId, Timeout)
+        TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId, Timeout)
     when is_atom(M), is_atom(F), is_list(A),
          is_integer(ProcessIndex), ProcessIndex >= 0,
          is_integer(CountProcess), CountProcess > 0,
@@ -164,7 +164,7 @@ monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {monitor, M, F, A,
                                  ProcessIndex, CountProcess, CountThread, Scope,
-                                 TimeoutTerm, TerminateDelay, MaxR, MaxT,
+                                 TimeoutTerm, RestartDelay, MaxR, MaxT,
                                  ServiceId},
                                 Timeout)).
 
@@ -235,7 +235,7 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
-             TimeoutTerm, TerminateDelay, MaxR, MaxT, ServiceId}, _,
+             TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
     case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
@@ -244,7 +244,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                 new_service_process(M, F, A,
                                     ProcessIndex, CountProcess, CountThread,
                                     Scope, Pids, erlang:monitor(process, Pid),
-                                    TimeoutTerm, TerminateDelay,
+                                    TimeoutTerm, RestartDelay,
                                     MaxR, MaxT), Services),
             {reply, {ok, Pids}, State#state{services = NewServices}};
         {ok, [Pid | _] = Pids} = Success when is_pid(Pid) ->
@@ -253,7 +253,7 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
                     new_service_process(M, F, A,
                                         ProcessIndex, CountProcess, CountThread,
                                         Scope, Pids, erlang:monitor(process, P),
-                                        TimeoutTerm, TerminateDelay,
+                                        TimeoutTerm, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
             {reply, Success, State#state{services = NewServices}};
@@ -551,11 +551,11 @@ restart_stage2(#service{restart_count = 0,
     {false, State#state{services = Services}};
 
 restart_stage2(#service{restart_times = RestartTimes,
-                        terminate_delay = TerminateDelay,
+                        restart_delay = RestartDelay,
                         max_t = MaxT} = Service,
                Services, State, ServiceId, OldPid) ->
     case cloudi_core_i_rate_based_configuration:
-         terminate_delay_value(RestartTimes, MaxT, TerminateDelay) of
+         restart_delay_value(RestartTimes, MaxT, RestartDelay) of
         false ->
             restart_stage3(Service, Services, State, ServiceId, OldPid);
         {NewRestartCount,
@@ -816,7 +816,7 @@ pids_increase_loop(Count, ProcessIndex,
                             count_thread = CountThread,
                             scope = Scope,
                             timeout_term = TimeoutTerm,
-                            terminate_delay = TerminateDelay,
+                            restart_delay = RestartDelay,
                             max_r = MaxR,
                             max_t = MaxT} = Service, ServiceId, Services) ->
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
@@ -828,7 +828,7 @@ pids_increase_loop(Count, ProcessIndex,
                 new_service_process(M, F, A,
                                     ProcessIndex, CountProcess, CountThread,
                                     Scope, Pids, erlang:monitor(process, Pid),
-                                    TimeoutTerm, TerminateDelay,
+                                    TimeoutTerm, RestartDelay,
                                     MaxR, MaxT), Services),
             ok = initialize(Pids),
             NextServices;
@@ -840,7 +840,7 @@ pids_increase_loop(Count, ProcessIndex,
                     new_service_process(M, F, A,
                                         ProcessIndex, CountProcess, CountThread,
                                         Scope, Pids, erlang:monitor(process, P),
-                                        TimeoutTerm, TerminateDelay,
+                                        TimeoutTerm, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
             ok = initialize(Pids),
@@ -1232,7 +1232,7 @@ service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
-                    Scope, Pids, MonitorRef, TimeoutTerm, TerminateDelay,
+                    Scope, Pids, MonitorRef, TimeoutTerm, RestartDelay,
                     MaxR, MaxT) ->
     #service{service_m = M,
              service_f = F,
@@ -1244,7 +1244,7 @@ new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
              pids = Pids,
              monitor = MonitorRef,
              timeout_term = TimeoutTerm,
-             terminate_delay = TerminateDelay,
+             restart_delay = RestartDelay,
              max_r = MaxR,
              max_t = MaxT}.
 

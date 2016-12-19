@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change the name of the service configuration option
+      terminate_delay to restart_delay, to avoid being misleading
+
 2016-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve validation of the service configuration options

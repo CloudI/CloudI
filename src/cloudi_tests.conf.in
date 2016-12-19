@@ -830,7 +830,7 @@
           [{cloudi_service_msg_size, aspect_request}]},
          {aspects_terminate_before,
           [{cloudi_service_msg_size, aspect_terminate}]},
-         {terminate_delay, []},
+         {restart_delay, []},
          {scope, cloudi_service_msg_size}]},
     {external,
         "/tests/msg_size/",

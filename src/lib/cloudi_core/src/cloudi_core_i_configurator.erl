@@ -989,7 +989,7 @@ service_start_internal(IndexProcess, Pids,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
                            options = #config_service_options{
-                               terminate_delay = TerminateDelay,
+                               restart_delay = RestartDelay,
                                scope = Scope} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
@@ -1003,7 +1003,7 @@ service_start_internal(IndexProcess, Pids,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, 1, Scope,
-                 TimeoutTerm, TerminateDelay, MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
             service_start_internal(IndexProcess + 1, [P | Pids], Service,
@@ -1034,7 +1034,7 @@ service_start_external(IndexProcess, Pids,
                            dest_list_deny = DestListDeny,
                            dest_list_allow = DestListAllow,
                            options = #config_service_options{
-                               terminate_delay = TerminateDelay,
+                               restart_delay = RestartDelay,
                                scope = Scope} = Options,
                            max_r = MaxR,
                            max_t = MaxT,
@@ -1049,7 +1049,7 @@ service_start_external(IndexProcess, Pids,
                   DestRefresh, DestListDeny,
                   DestListAllow, Options, ID],
                  IndexProcess, CountProcess, CountThread, Scope,
-                 TimeoutTerm, TerminateDelay, MaxR, MaxT, ID, Timeout) of
+                 TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
             ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
             service_start_external(IndexProcess + 1, [P | Pids], Service,

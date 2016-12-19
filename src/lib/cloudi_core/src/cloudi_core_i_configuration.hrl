@@ -225,14 +225,14 @@
             :: undefined |
                cloudi_service_api:timeout_terminate_milliseconds(),
         % delay to wait after a service terminate but before the service
-        % initialization of the new service instance
-        terminate_delay = false
+        % initialization of the new service instance, during a service restart
+        restart_delay = false
             :: list({time_exponential_min,
-                     cloudi_service_api:terminate_delay_time_milliseconds()} |
+                     cloudi_service_api:restart_delay_time_milliseconds()} |
                     {time_exponential_max,
-                     cloudi_service_api:terminate_delay_time_milliseconds()} |
+                     cloudi_service_api:restart_delay_time_milliseconds()} |
                     {time_absolute,
-                     cloudi_service_api:terminate_delay_time_milliseconds()}) |
+                     cloudi_service_api:restart_delay_time_milliseconds()}) |
                false |
                tuple(),
         % provide a scope for all subscribe/unsubscribe and messaging
