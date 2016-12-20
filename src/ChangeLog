@@ -5,6 +5,10 @@
 
     * Change the name of the service configuration option
       terminate_delay to restart_delay, to avoid being misleading
+    * Update cloudi_service_monitoring to handle changes to cloudi_core
+      for the restart_delay service configuration option
+    * Add request_pid and info_pid metrics for internal services to
+      cloudi_service_monitoring
 
 2016-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 

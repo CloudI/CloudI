@@ -12,10 +12,11 @@
         count_thread :: pos_integer(),
         scope :: atom(),
         pids :: list(pid()),
-        monitor :: reference(),
+        monitor :: undefined | reference(),
         restart_count :: non_neg_integer(),
-        restart_times :: list(integer()),
+        restart_times :: list(non_neg_integer()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
+        restart_delay :: tuple() | false,
         max_r :: non_neg_integer(),
         max_t :: non_neg_integer()
     }).

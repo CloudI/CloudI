@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -285,58 +285,58 @@ services_update(undefined, ServicesNew, ProcessInfo0, QueuedEmptySize,
                          #service_data{process_info = ProcessInfo1,
                                        ets_insert = Inserts0,
                                        metrics = Metrics0} = Changes1) ->
-            ServiceMetricId = service_metric_id_from_service(Service,
-                                                             EnvironmentLookup),
-            {Inserts3,
-             ProcessInfo3} = lists:foldl(fun(PidNew, {Inserts1, ProcessInfo2}) ->
-                Inserts2 = if
-                    UseAspectsOnly =:= true ->
-                        Inserts1;
-                    UseAspectsOnly =:= false ->
-                        [{PidNew, MetricPrefix ++ ServiceMetricId, Driver} |
-                         Inserts1]
-                end,
-                {Inserts2, process_info_store(PidNew, ProcessInfo2)}
-            end, {Inserts0, ProcessInfo1}, PidsNew),
-            {Metrics1,
-             ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
-                                             QueuedEmptySize,
-                                             ServicesNew, ServiceMetricId),
-            services_accumulate(Service,
-                                Changes1#service_data{process_info = ProcessInfo4,
-                                                      ets_insert = Inserts3,
-                                                      metrics = Metrics1 ++
-                                                                Metrics0})
-        end, #service_data{process_info = ProcessInfo0}, ServicesNew),
-        #service_data{process_info = ProcessInfoN,
-                      ets_insert = InsertsN,
-                      count_internal = CountInternal,
-                      count_external = CountExternal,
-                      concurrency_internal = ConcurrencyInternal,
-                      concurrency_external = ConcurrencyExternal,
-                      scopes = Scopes,
-                      metrics = MetricsN} = ChangesN,
-        if
-            UseAspectsOnly =:= true ->
-                ok;
-            UseAspectsOnly =:= false ->
-                true = ets:delete_all_objects(?ETS_PID2METRIC),
-                true = ets:insert(?ETS_PID2METRIC, InsertsN)
-        end,
-        {services_metrics(CountInternal, CountExternal,
-                          ConcurrencyInternal, ConcurrencyExternal,
-                          Scopes) ++ MetricsN,
-         ProcessInfoN};
-    services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
-                    MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
-        ChangesN = cloudi_x_key2value:
-                   fold1(fun(ID, PidsNew,
-                             #service{} = Service,
-                             #service_data{process_info = ProcessInfo1,
-                                           ets_insert = Inserts0,
-                                           ets_delete = Deletes0,
-                                           metrics = Metrics0} = Changes1) ->
-            ServiceMetricId = service_metric_id_from_service(Service,
+        ServiceMetricId = service_metric_id_from_service(Service,
+                                                         EnvironmentLookup),
+        {Inserts3,
+         ProcessInfo3} = lists:foldl(fun(PidNew, {Inserts1, ProcessInfo2}) ->
+            Inserts2 = if
+                UseAspectsOnly =:= true ->
+                    Inserts1;
+                UseAspectsOnly =:= false ->
+                    [{PidNew, MetricPrefix ++ ServiceMetricId, Driver} |
+                     Inserts1]
+            end,
+            {Inserts2, process_info_store(PidNew, ProcessInfo2)}
+        end, {Inserts0, ProcessInfo1}, PidsNew),
+        {Metrics1,
+         ProcessInfo4} = service_metrics(PidsNew, ProcessInfo3, Service,
+                                         QueuedEmptySize,
+                                         ServicesNew, ServiceMetricId),
+        services_accumulate(Service,
+                            Changes1#service_data{process_info = ProcessInfo4,
+                                                  ets_insert = Inserts3,
+                                                  metrics = Metrics1 ++
+                                                            Metrics0})
+    end, #service_data{process_info = ProcessInfo0}, ServicesNew),
+    #service_data{process_info = ProcessInfoN,
+                  ets_insert = InsertsN,
+                  count_internal = CountInternal,
+                  count_external = CountExternal,
+                  concurrency_internal = ConcurrencyInternal,
+                  concurrency_external = ConcurrencyExternal,
+                  scopes = Scopes,
+                  metrics = MetricsN} = ChangesN,
+    if
+        UseAspectsOnly =:= true ->
+            ok;
+        UseAspectsOnly =:= false ->
+            true = ets:delete_all_objects(?ETS_PID2METRIC),
+            true = ets:insert(?ETS_PID2METRIC, InsertsN)
+    end,
+    {services_metrics(CountInternal, CountExternal,
+                      ConcurrencyInternal, ConcurrencyExternal,
+                      Scopes) ++ MetricsN,
+     ProcessInfoN};
+services_update(ServicesOld, ServicesNew, ProcessInfo0, QueuedEmptySize,
+                MetricPrefix, UseAspectsOnly, Driver, EnvironmentLookup) ->
+    ChangesN = cloudi_x_key2value:
+               fold1(fun(ID, PidsNew,
+                         #service{} = Service,
+                         #service_data{process_info = ProcessInfo1,
+                                       ets_insert = Inserts0,
+                                       ets_delete = Deletes0,
+                                       metrics = Metrics0} = Changes1) ->
+        ServiceMetricId = service_metric_id_from_service(Service,
                                                          EnvironmentLookup),
         Changes2 = case cloudi_x_key2value:find1(ID, ServicesOld) of
             {ok, {PidsNew, #service{}}} ->
@@ -498,9 +498,29 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
              Memory,
              Messages,
              ReductionsNow,
+             RequestPidInfo,
+             InfoPidInfo,
              ProcessInfoN} = case erlang:tuple_size(State) of
                 30 -> % duo_mode == false
                     state = erlang:element(1, State),
+                    RequestPid = erlang:element(23, State),
+                    InfoPid = erlang:element(24, State),
+                    {RequestPidInfoValue,
+                     ProcessInfo1} = if
+                        RequestPid =:= undefined ->
+                            {{undefined, undefined, undefined},
+                             ProcessInfo0};
+                        is_pid(RequestPid) ->
+                            process_info_update(RequestPid, ProcessInfo0)
+                    end,
+                    {InfoPidInfoValue,
+                     ProcessInfo2} = if
+                        InfoPid =:= undefined ->
+                            {{undefined, undefined, undefined},
+                             ProcessInfo1};
+                        is_pid(InfoPid) ->
+                            process_info_update(InfoPid, ProcessInfo1)
+                    end,
                     {?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
                      erlang:element(9, State),             % queued
                      erlang:element(10, State),            % queued_size
@@ -509,10 +529,24 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                      ServiceMemory,
                      ServiceMessages,
                      ServiceReductionsNow,
-                     ProcessInfo0};
+                     RequestPidInfoValue,
+                     InfoPidInfoValue,
+                     ProcessInfo2};
                 15 -> % duo_mode == true
                     state_duo = erlang:element(1, State),
                     Dispatcher =  erlang:element(13, State),
+                    RequestPid = erlang:element(14, State),
+                    {RequestPidInfoValue,
+                     ProcessInfo1} = if
+                        RequestPid =:= undefined ->
+                            {{undefined, undefined, undefined},
+                             ProcessInfo0};
+                        is_pid(RequestPid) ->
+                            process_info_update(RequestPid, ProcessInfo0)
+                    end,
+                    InfoPidInfoValue = {ServiceMemory,
+                                        ServiceMessages,
+                                        ServiceReductionsNow},
                     DispatcherOutgoing = case service_state(Dispatcher) of
                         {ok, DispatcherState} -> % gen_server/proc_lib
                             30 = erlang:tuple_size(DispatcherState),
@@ -524,29 +558,29 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                     {MemoryValue,
                      MessagesValue,
                      ReductionsNowValue,
-                     ProcessInfo2} = case process_info_update(Dispatcher,
-                                                              ProcessInfo0) of
-                        {{undefined, _, _}, ProcessInfo1} ->
+                     ProcessInfo3} = case process_info_update(Dispatcher,
+                                                              ProcessInfo1) of
+                        {{undefined, _, _}, ProcessInfo2} ->
                             {ServiceMemory,
                              ServiceMessages,
                              ServiceReductionsNow,
-                             ProcessInfo1};
+                             ProcessInfo2};
                         {{DispatcherMemory,
                           DispatcherMessages,
-                          DispatcherReductionsNow}, ProcessInfo1}
+                          DispatcherReductionsNow}, ProcessInfo2}
                         when ServiceReductionsNow =:= undefined;
                              DispatcherReductionsNow =:= undefined ->
                             {ServiceMemory + DispatcherMemory,
                              ServiceMessages + DispatcherMessages,
                              undefined,
-                             ProcessInfo1};
+                             ProcessInfo2};
                         {{DispatcherMemory,
                           DispatcherMessages,
-                          DispatcherReductionsNow}, ProcessInfo1} ->
+                          DispatcherReductionsNow}, ProcessInfo2} ->
                             {ServiceMemory + DispatcherMemory,
                              ServiceMessages + DispatcherMessages,
                              ServiceReductionsNow + DispatcherReductionsNow,
-                             ProcessInfo1}
+                             ProcessInfo2}
                     end,
                     {DispatcherOutgoing,
                      erlang:element(6, State),   % queued
@@ -556,7 +590,9 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                      MemoryValue,
                      MessagesValue,
                      ReductionsNowValue,
-                     ProcessInfo2}
+                     RequestPidInfoValue,
+                     InfoPidInfoValue,
+                     ProcessInfo3}
             end,
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
             QueuedRequestsSizeN = if
@@ -568,19 +604,66 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                     QueuedRequestsSize0
             end,
             QueuedInfoLength = queue:len(QueuedInfo),
-            Metrics0 = if
+            Metrics0 = [],
+            Metrics1 = case RequestPidInfo of
+                {undefined, _, _} ->
+                    Metrics0;
+                {RequestPidMemory,
+                 RequestPidMessages,
+                 RequestPidReductionsNow} ->
+                    % the metrics here will only appear with
+                    % the service configuration option request_pid_uses > 1
+                    % with the metrics update becoming more
+                    % likely with higher values
+                    [metric(gauge, MetricPrefix ++ [request, memory],
+                            RequestPidMemory),
+                     metric(gauge, MetricPrefix ++ [request, message_queue_len],
+                            RequestPidMessages) |
+                     if
+                        RequestPidReductionsNow =:= undefined ->
+                            Metrics0;
+                        is_integer(RequestPidReductionsNow) ->
+                            [metric(spiral,
+                                    MetricPrefix ++ [request, reductions],
+                                    RequestPidReductionsNow) | Metrics0]
+                     end]
+            end,
+            Metrics2 = case InfoPidInfo of
+                {undefined, _, _} ->
+                    Metrics1;
+                {InfoPidMemory,
+                 InfoPidMessages,
+                 InfoPidReductionsNow} ->
+                    % the metrics here will only appear with
+                    % the service configuration option info_pid_uses > 1
+                    % with the metrics update becoming more
+                    % likely with higher values
+                    [metric(gauge, MetricPrefix ++ [info, memory],
+                            InfoPidMemory),
+                     metric(gauge, MetricPrefix ++ [info, message_queue_len],
+                            InfoPidMessages) |
+                     if
+                        InfoPidReductionsNow =:= undefined ->
+                            Metrics1;
+                        is_integer(InfoPidReductionsNow) ->
+                            [metric(spiral,
+                                    MetricPrefix ++ [info, reductions],
+                                    InfoPidReductionsNow) | Metrics1]
+                     end]
+            end,
+            Metrics3 = if
                 Outgoing =:= undefined ->
-                    [];
+                    Metrics2;
                 is_integer(Outgoing) ->
                     [metric(gauge, MetricPrefix ++ [outgoing_requests],
-                            Outgoing)]
+                            Outgoing) | Metrics2]
             end,
             MetricsN = if
                 ReductionsNow =:= undefined ->
-                    Metrics0;
+                    Metrics3;
                 is_integer(ReductionsNow) ->
                     [metric(spiral, MetricPrefix ++ [reductions],
-                            ReductionsNow) | Metrics0]
+                            ReductionsNow) | Metrics3]
             end,
             {[metric(gauge, MetricPrefix ++ [memory],
                      Memory),

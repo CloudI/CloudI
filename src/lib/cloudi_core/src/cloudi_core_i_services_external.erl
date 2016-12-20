@@ -94,36 +94,36 @@
     {
         % state record fields common for cloudi_core_i_services_common.hrl:
 
-        % self() value cached
+        % ( 2) self() value cached
         dispatcher :: pid(),
-        % timeout enforcement for any outgoing service requests
+        % ( 3) timeout enforcement for any outgoing service requests
         send_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(),
                           {passive, pid() | undefined, reference()}) |
                list({cloudi:trans_id(),
                      {passive, pid() | undefined, reference()}}),
-        % if a sent service request timeout is greater than the
+        % ( 4) if a sent service request timeout is greater than the
         % service configuration option request_timeout_immediate_max,
         % monitor the destination process with the sent service request
         % transaction id
         send_timeout_monitors = ?MAP_NEW()
             :: maps_proxy(pid(), {reference(), list(cloudi:trans_id())}) |
                list({pid(), {reference(), list(cloudi:trans_id())}}),
-        % timeout enforcement for any incoming service requests
+        % ( 5) timeout enforcement for any incoming service requests
         recv_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(), reference()) |
                list({cloudi:trans_id(), reference()}),
-        % timeout enforcement for any responses to
+        % ( 6) timeout enforcement for any responses to
         % asynchronous outgoing service requests
         async_responses = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(), {binary(), binary()}) |
                list({cloudi:trans_id(), {binary(), binary()}}),
-        % pending update configuration
+        % ( 7) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % is the external service OS process thread busy?
+        % ( 8) is the external service OS process thread busy?
         queue_requests = true :: boolean(),
-        % queued incoming service requests
+        % ( 9) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request()) |
@@ -131,76 +131,76 @@
 
         % state record fields unique to the external thread Erlang process:
 
-        % queued size in bytes
+        % (10) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % erlang:system_info(wordsize) cached
+        % (11) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
-        % external thread connection protocol
+        % (12) external thread connection protocol
         protocol = undefined :: undefined | tcp | udp | local,
-        % external thread connection port
+        % (13) external thread connection port
         port = undefined :: undefined | non_neg_integer(),
-        % wait for cloudi_core_i_services_monitor to send initialize when
+        % (14) wait for cloudi_core_i_services_monitor to send initialize when
         % all of the service instance processes have been spawned
         initialize = false :: boolean(),
-        % udp incoming data port
+        % (15) udp incoming data port
         incoming_port = undefined :: undefined | inet:port_number(),
-        % tcp listener
+        % (16) tcp listener
         listener = undefined,
-        % tcp acceptor
+        % (17) tcp acceptor
         acceptor = undefined,
-        % local socket filesystem path
+        % (18) local socket filesystem path
         socket_path = undefined :: undefined | string(),
-        % common socket options
+        % (19) common socket options
         socket_options = undefined :: undefined | list(),
-        % data socket
+        % (20) data socket
         socket = undefined,
-        % service state for executing aspect functions
+        % (21) service state for executing aspect functions
         % (as assigned from aspect function execution)
         service_state = undefined,
-        % pending aspects_request_after
+        % (22) pending aspects_request_after
         aspects_request_after_f = undefined,
-        % 0-based index of the Erlang process in all service instance processes
+        % (23) 0-based index of the process in all service instance processes
         process_index :: non_neg_integer(),
-        % current count of all Erlang processes for the service instance
+        % (24) current count of all Erlang processes for the service instance
         process_count :: pos_integer(),
-        % command line of OS execve
+        % (25) command line of OS execve
         command_line :: list(string()),
-        % subscribe/unsubscribe name prefix set in service configuration
+        % (26) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
-        % pre-poll() timeout in the external service thread
+        % (27) pre-poll() timeout in the external service thread
         timeout_init :: cloudi_service_api:timeout_milliseconds(),
-        % default timeout for send_async set in service configuration
+        % (28) default timeout for send_async set in service configuration
         timeout_async :: cloudi_service_api:timeout_milliseconds(),
-        % default timeout for send_sync set in service configuration
+        % (29) default timeout for send_sync set in service configuration
         timeout_sync :: cloudi_service_api:timeout_milliseconds(),
-        % post-poll() timeout in the external service thread
+        % (30) post-poll() timeout in the external service thread
         timeout_term :: cloudi_service_api:timeout_milliseconds(),
-        % OS process pid for SIGKILL
+        % (31) OS process pid for SIGKILL
         os_pid = undefined :: undefined | pos_integer(),
-        % udp keepalive succeeded
+        % (32) udp keepalive succeeded
         keepalive = undefined :: undefined | received,
-        % init timeout handler
+        % (33) init timeout handler
         init_timer :: undefined | reference(),
-        % transaction id (UUIDv1) generator
+        % (34) transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
-        % how service destination lookups occur for a service request send
+        % (35) how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
-        % cached cpg data for lazy destination refresh methods
+        % (36) cached cpg data for lazy destination refresh methods
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
-        % old subscriptions to remove after an update's initialization
+        % (37) old subscriptions to remove after an update's initialization
         subscribed = []
             :: list({cloudi:service_name_pattern(), pos_integer()}),
-        % ACL lookup for denied destinations
+        % (38) ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % ACL lookup for allowed destinations
+        % (39) ACL lookup for allowed destinations
         dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % service configuration options
+        % (40) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_external()

@@ -85,9 +85,9 @@
     {
         % state record fields common for cloudi_core_i_services_common.hrl:
 
-        % self() value cached
+        % ( 2) self() value cached
         dispatcher :: pid(),
-        % timeout enforcement for any outgoing service requests
+        % ( 3) timeout enforcement for any outgoing service requests
         send_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(),
                           {active | passive | {pid(), any()},
@@ -95,32 +95,32 @@
                list({cloudi:trans_id(),
                      {active | passive | {pid(), any()},
                       pid() | undefined, reference()}}),
-        % if a sent service request timeout is greater than the
+        % ( 4) if a sent service request timeout is greater than the
         % service configuration option request_timeout_immediate_max,
         % monitor the destination process with the sent service request
         % transaction id
         send_timeout_monitors = ?MAP_NEW()
             :: maps_proxy(pid(), {reference(), list(cloudi:trans_id())}) |
                list({pid(), {reference(), list(cloudi:trans_id())}}),
-        % timeout enforcement for any incoming service requests
+        % ( 5) timeout enforcement for any incoming service requests
         recv_timeouts = ?MAP_NEW()
             :: undefined |
                maps_proxy(cloudi:trans_id(), reference()) |
                list({cloudi:trans_id(), reference()}),
-        % timeout enforcement for any responses to
+        % ( 6) timeout enforcement for any responses to
         % asynchronous outgoing service requests
         async_responses = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(),
                           {cloudi:response_info(), cloudi:response()}) |
                list({cloudi:trans_id(),
                      {cloudi:response_info(), cloudi:response()}}),
-        % pending update configuration
+        % ( 7) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % is the request/info pid busy?
+        % ( 8) is the request/info pid busy?
         queue_requests = true
             :: undefined | boolean(),
-        % queued incoming service requests
+        % ( 9) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: undefined |
                cloudi_x_pqueue4:cloudi_x_pqueue4(
@@ -129,55 +129,55 @@
 
         % state record fields unique to the dispatcher Erlang process:
 
-        % queued size in bytes
+        % (10) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % erlang:system_info(wordsize) cached
+        % (11) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
-        % queued incoming Erlang process messages
+        % (12) queued incoming Erlang process messages
         queued_info = queue:new()
             :: undefined | queue_proxy(any()) |
                list(any()),
-        % service module
+        % (13) service module
         module :: module(),
-        % state internal to the service module source code
+        % (14) state internal to the service module source code
         service_state = undefined :: any(),
-        % 0-based index of the Erlang process in all service instance processes
+        % (15) 0-based index of the process in all service instance processes
         process_index :: non_neg_integer(),
-        % current count of all Erlang processes for the service instance
+        % (16) current count of all Erlang processes for the service instance
         process_count :: pos_integer(),
-        % subscribe/unsubscribe name prefix set in service configuration
+        % (17) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
-        % default timeout for send_async set in service configuration
+        % (18) default timeout for send_async set in service configuration
         timeout_async :: cloudi_service_api:timeout_milliseconds(),
-        % default timeout for send_sync set in service configuration
+        % (19) default timeout for send_sync set in service configuration
         timeout_sync :: cloudi_service_api:timeout_milliseconds(),
-        % cloudi_service_terminate timeout set by max_r and max_t
+        % (20) cloudi_service_terminate timeout set by max_r and max_t
         timeout_term :: cloudi_service_api:timeout_milliseconds(),
-        % duo_mode_pid if duo_mode == true, else dispatcher pid
+        % (21) duo_mode_pid if duo_mode == true, else dispatcher pid
         receiver_pid :: pid(),
-        % separate Erlang process for incoming throughput
+        % (22) separate Erlang process for incoming throughput
         duo_mode_pid :: undefined | pid(),
-        % separate Erlang process for service request memory usage
+        % (23) separate Erlang process for service request memory usage
         request_pid = undefined :: undefined | pid(),
-        % separate Erlang process for Erlang message memory usage
+        % (24) separate Erlang process for Erlang message memory usage
         info_pid = undefined :: undefined | pid(),
-        % transaction id (UUIDv1) generator
+        % (25) transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
-        % how service destination lookups occur for a service request send
+        % (26) how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
-        % cached cpg data for lazy destination refresh methods
+        % (27) cached cpg data for lazy destination refresh methods
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
-        % ACL lookup for denied destinations
+        % (28) ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % ACL lookup for allowed destinations
+        % (29) ACL lookup for allowed destinations
         dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % service configuration options
+        % (30) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_internal()
@@ -186,41 +186,41 @@
 % used when duo_mode is true (the duo_mode pid is also a permanent info pid)
 -record(state_duo,
     {
-        % self() value cached
+        % ( 2) self() value cached
         duo_mode_pid :: pid(),
-        % timeout enforcement for any incoming service requests
+        % ( 3) timeout enforcement for any incoming service requests
         recv_timeouts = ?MAP_NEW()
             :: maps_proxy(cloudi:trans_id(), reference()) |
                list({cloudi:trans_id(), reference()}),
-        % pending update configuration
+        % ( 4) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % is the request pid busy?
+        % ( 5) is the request pid busy?
         queue_requests = true :: boolean(),
-        % queued incoming service requests
+        % ( 6) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request()) |
                list({cloudi:priority_value(), any()}),
-        % queued size in bytes
+        % ( 7) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % erlang:system_info(wordsize) cached
+        % ( 8) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
-        % queued incoming Erlang process messages
+        % ( 9) queued incoming Erlang process messages
         queued_info = queue:new()
             :: queue_proxy(any()) |
                list(any()),
-        % service module
+        % (10) service module
         module :: module(),
-        % state internal to the service module source code
+        % (11) state internal to the service module source code
         service_state = undefined :: any(),
-        % cloudi_service_terminate timeout set by max_r and max_t
+        % (12) cloudi_service_terminate timeout set by max_r and max_t
         timeout_term :: pos_integer(),
-        % separate Erlang process for outgoing throughput
+        % (13) separate Erlang process for outgoing throughput
         dispatcher :: pid(),
-        % separate Erlang process for service request memory usage
+        % (14) separate Erlang process for service request memory usage
         request_pid = undefined :: undefined | pid(),
-        % service configuration options
+        % (15) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_internal()
