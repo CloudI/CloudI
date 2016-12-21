@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update reltool_util
+    * Fix old rebar2 package compile issue
+
 2016-12-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the name of the service configuration option

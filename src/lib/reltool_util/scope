@@ -42,7 +42,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog [at] gmail (dot) com').
--vsn("1.5.2").
+-vsn("1.5.5").
 
 -mode(compile).
 
@@ -430,7 +430,13 @@ files_find_dir_src([FilePath | FilePaths], Directory,
                     end
             end;
         FileExtension == ".erl" ->
-            case lists:prefix(PrefixIgnore, FileName) of
+            FileNameContents = case lists:prefix("Elixir.", FileName) of
+                true ->
+                    string:to_lower(string:sub_string(FileName, 8));
+                false ->
+                    FileName
+            end,
+            case lists:prefix(PrefixIgnore, FileNameContents) of
                 true ->
                     NewFilesSource = if
                         ReplaceUsage ->
@@ -803,33 +809,6 @@ pforeach_run(OldPids, [Pid | NewPids], [Arg1 | L], F) ->
     pforeach_run([Pid | OldPids], NewPids, L, F).
 -endif.
 
-help() ->
-    Config = #config{},
-    io:format(
-"Usage: ~s [OPTION]~n"
-"~n"
-"    -d DIR           Source directory of an application for input files~n"
-"    -s SCOPE         Scope to apply~n"
-"    -p SCOPE         Scope to ignore~n"
-"    -b SUFFIX        Set the subdirectory name suffix for file backups~n"
-"                     (default=\"~s\")~n"
-"    -c DIR           Add a directory to the include path~n"
-"    -u               Undo the scope operation mode~n"
-"    -r               Replace ignored scope usage of apply scope mode~n"
-"                     (done before the apply scope is first created)~n"
-"    -V               Display the version information~n"
-"    -h               Display command line options (as shown here)~n"
-"~n"
-" Note1: When processed files are moved to the application source directory~n"
-"        with the old suffix (-b option), it is possible an older file will~n"
-"        be silently clobbered~n"
-" Note2: When using the -r mode, files are modified in-place (i.e., all files~n"
-"        matching the ignored scope) and the result may require manual~n"
-"        modification so that data structure names do not look obtuse~n"
-,
-        [escript:script_name(),
-         Config#config.directory_suffix_old]).
-
 parse_command_line(Arguments) ->
     Config0 = parse_command_line(Arguments, #config{}),
     Config1 = if
@@ -980,4 +959,31 @@ progress_bar(#progress_bar{} = ProgressBar) ->
 
 exit_code(ExitCode) ->
     erlang:halt(ExitCode, [{flush, true}]).
+
+help() ->
+    Config = #config{},
+    io:format(
+"Usage: ~s [OPTION]~n"
+"~n"
+"    -d DIR           Source directory of an application for input files~n"
+"    -s SCOPE         Scope to apply~n"
+"    -p SCOPE         Scope to ignore~n"
+"    -b SUFFIX        Set the subdirectory name suffix for file backups~n"
+"                     (default=\"~s\")~n"
+"    -c DIR           Add a directory to the include path~n"
+"    -u               Undo the scope operation mode~n"
+"    -r               Replace ignored scope usage of apply scope mode~n"
+"                     (done before the apply scope is first created)~n"
+"    -V               Display the version information~n"
+"    -h               Display command line options (as shown here)~n"
+"~n"
+" Note1: When processed files are moved to the application source directory~n"
+"        with the old suffix (-b option), it is possible an older file will~n"
+"        be silently clobbered~n"
+" Note2: When using the -r mode, files are modified in-place (i.e., all files~n"
+"        matching the ignored scope) and the result may require manual~n"
+"        modification so that data structure names do not look obtuse~n"
+,
+        [escript:script_name(),
+         Config#config.directory_suffix_old]).
 

@@ -1,0 +1,119 @@
+#!/usr/bin/env escript
+%%!
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+%%%------------------------------------------------------------------------
+%%% @doc
+%%% ==Elixir-to-Erlang converter==
+%%% @end
+%%%
+%%% BSD LICENSE
+%%% 
+%%% Copyright (c) 2016, Michael Truog <mjtruog at gmail dot com>
+%%% All rights reserved.
+%%% 
+%%% Redistribution and use in source and binary forms, with or without
+%%% modification, are permitted provided that the following conditions are met:
+%%% 
+%%%     * Redistributions of source code must retain the above copyright
+%%%       notice, this list of conditions and the following disclaimer.
+%%%     * Redistributions in binary form must reproduce the above copyright
+%%%       notice, this list of conditions and the following disclaimer in
+%%%       the documentation and/or other materials provided with the
+%%%       distribution.
+%%%     * All advertising materials mentioning features or use of this
+%%%       software must display the following acknowledgment:
+%%%         This product includes software developed by Michael Truog
+%%%     * The name of the author may not be used to endorse or promote
+%%%       products derived from this software without specific prior
+%%%       written permission
+%%% 
+%%% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+%%% CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+%%% INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+%%% OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+%%% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+%%% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+%%% SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+%%% BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+%%% SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+%%% INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+%%% WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+%%% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+%%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+%%% DAMAGE.
+%%%
+%%% @version 0.1.0 {@date} {@time}
+%%%------------------------------------------------------------------------
+
+-module(ex2erl).
+-vsn("0.1.0").
+
+-mode(compile).
+
+-export([main/1]).
+
+-record(state,
+        {
+            file_path_elixir = undefined :: undefined | string()
+        }).
+
+-spec main(Arguments :: list(string())) ->
+    no_return().
+
+main(Arguments) ->
+    #state{file_path_elixir = FilePathElixir} = main_arguments(Arguments),
+    ElixirRoot = filename:join(code:root_dir(), "../elixir"),
+    true = code:add_path(filename:join(ElixirRoot,
+                                       "lib/elixir/ebin")),
+    {ok, _} = application:ensure_all_started(elixir),
+
+    FileDirectoryElixir = filename:dirname(FilePathElixir),
+    [Module] = 'Elixir.Kernel.ParallelCompiler':
+               files_to_path([erlang:list_to_binary(FilePathElixir)],
+                             erlang:list_to_binary(FileDirectoryElixir),
+                             []),
+    ModuleName = erlang:atom_to_list(Module),
+    FilePathBeam = filename:join(FileDirectoryElixir,
+                                 ModuleName ++ ".beam"),
+    FilePathErlang = filename:join(FileDirectoryElixir,
+                                   ModuleName ++ ".erl"),
+
+    % as described at http://erlang.org/doc/man/beam_lib.html
+    {ok,
+     {_, [{abstract_code,
+           {_, Forms}}]}} = beam_lib:chunks(FilePathBeam,
+                                            [abstract_code]),
+    ok = file:write_file(FilePathErlang,
+                         erl_prettypr:format(erl_syntax:form_list(Forms))),
+
+    % cleanup
+    ok = file:delete(FilePathBeam),
+    exit_code(0).
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+main_arguments(Arguments) ->
+    main_arguments(Arguments, #state{}).
+
+main_arguments([], State) ->
+    State;
+main_arguments(["-h" | _], _) ->
+    io:format(help(), [filename:basename(?FILE)]),
+    exit_code(0);
+main_arguments(["-" ++ InvalidParameter | _], _) ->
+    erlang:error({invalid_parameter, InvalidParameter});
+main_arguments([FilePathElixir | Arguments], State) ->
+    main_arguments(Arguments, State#state{file_path_elixir = FilePathElixir}).
+
+exit_code(ExitCode) when is_integer(ExitCode) ->
+    erlang:halt(ExitCode, [{flush, true}]).
+
+help() ->
+"Usage ~s FILE.ex
+
+  -h              List available command line flags
+".
+
