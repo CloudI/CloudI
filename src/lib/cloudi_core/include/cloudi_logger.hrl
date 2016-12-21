@@ -51,9 +51,6 @@
 %   TRACE: reports subsystem data that is only for tracing execution
 
 % Convenience macros
-% (due to not using any parse transforms, the current function is unavailable,
-%  but can be retrieved by the macros below with a small amount of runtime 
-%  latency (names are based on EEP45))
 
 -ifdef(ERLANG_OTP_VERSION_16).
 -else.
@@ -82,32 +79,32 @@
 
 -define(LOG_FATAL(Format, Args),
     cloudi_core_i_logger_interface:fatal(?MODULE, ?LINE,
-                                         undefined, undefined,
+                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_ERROR(Format, Args),
     cloudi_core_i_logger_interface:error(?MODULE, ?LINE,
-                                         undefined, undefined,
+                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_WARN(Format, Args),
     cloudi_core_i_logger_interface:warn(?MODULE, ?LINE,
-                                        undefined, undefined,
+                                        ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                         Format, Args)).
 
 -define(LOG_INFO(Format, Args),
     cloudi_core_i_logger_interface:info(?MODULE, ?LINE,
-                                        undefined, undefined,
+                                        ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                         Format, Args)).
 
 -define(LOG_DEBUG(Format, Args),
     cloudi_core_i_logger_interface:debug(?MODULE, ?LINE,
-                                         undefined, undefined,
+                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 -define(LOG_TRACE(Format, Args),
     cloudi_core_i_logger_interface:trace(?MODULE, ?LINE,
-                                         undefined, undefined,
+                                         ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
 % Force the logging to be done synchronously to the local log only
@@ -121,32 +118,32 @@
 
 -define(LOG_FATAL_SYNC(Format, Args),
     cloudi_core_i_logger_interface:fatal_sync(?MODULE, ?LINE,
-                                              undefined, undefined,
+                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_ERROR_SYNC(Format, Args),
     cloudi_core_i_logger_interface:error_sync(?MODULE, ?LINE,
-                                              undefined, undefined,
+                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_WARN_SYNC(Format, Args),
     cloudi_core_i_logger_interface:warn_sync(?MODULE, ?LINE,
-                                             undefined, undefined,
+                                             ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                              Format, Args)).
 
 -define(LOG_INFO_SYNC(Format, Args),
     cloudi_core_i_logger_interface:info_sync(?MODULE, ?LINE,
-                                             undefined, undefined,
+                                             ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                              Format, Args)).
 
 -define(LOG_DEBUG_SYNC(Format, Args),
     cloudi_core_i_logger_interface:debug_sync(?MODULE, ?LINE,
-                                              undefined, undefined,
+                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 -define(LOG_TRACE_SYNC(Format, Args),
     cloudi_core_i_logger_interface:trace_sync(?MODULE, ?LINE,
-                                              undefined, undefined,
+                                              ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
 % Apply an anonymous function if allowed by the current logging level setting

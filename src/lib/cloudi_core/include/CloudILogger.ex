@@ -5,24 +5,24 @@
 ###
 ### BSD LICENSE
 ### 
-### Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+### Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
 ### All rights reserved.
 ### 
 ### Redistribution and use in source and binary forms, with or without
 ### modification, are permitted provided that the following conditions are met:
 ### 
-###     * Redistributions of source code must retain the above copyright
-###       notice, this list of conditions and the following disclaimer.
-###     * Redistributions in binary form must reproduce the above copyright
-###       notice, this list of conditions and the following disclaimer in
-###       the documentation and/or other materials provided with the
-###       distribution.
-###     * All advertising materials mentioning features or use of this
-###       software must display the following acknowledgment:
-###         This product includes software developed by Michael Truog
-###     * The name of the author may not be used to endorse or promote
-###       products derived from this software without specific prior
-###       written permission
+###   * Redistributions of source code must retain the above copyright
+###     notice, this list of conditions and the following disclaimer.
+###   * Redistributions in binary form must reproduce the above copyright
+###     notice, this list of conditions and the following disclaimer in
+###     the documentation and/or other materials provided with the
+###     distribution.
+###   * All advertising materials mentioning features or use of this
+###     software must display the following acknowledgment:
+###     This product includes software developed by Michael Truog
+###   * The name of the author may not be used to endorse or promote
+###     products derived from this software without specific prior
+###     written permission
 ### 
 ### THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 ### CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
@@ -53,97 +53,94 @@
 defmodule CloudILogger do
 
 # Convenience macros
-# (due to not using any parse transforms, the current function is unavailable,
-#  but can be retrieved by the macros below with a small amount of runtime 
-#  latency (names are based on EEP45))
 
-    defmacro function_name() do
-        quote do
-            case __ENV__.function do
-                nil -> :undefined;
-                {function, _} -> function
-            end
-        end
+  defmacro function_name() do
+    quote do
+      case __ENV__.function do
+        nil -> :undefined;
+        {function, _} -> function
+      end
     end
+  end
 
-    defmacro function_arity() do
-        quote do
-            case __ENV__.function do
-                nil -> :undefined;
-                {_, arity} -> arity
-            end
-        end
+  defmacro function_arity() do
+    quote do
+      case __ENV__.function do
+        nil -> :undefined;
+        {_, arity} -> arity
+      end
     end
+  end
 
 # Typical logging output which will log asynchronously until the logger's
 # message queue becomes too large, switching to synchronous logging
 # while the message queue remains large
 
-    defmacro log_fatal(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.fatal(__MODULE__,
-                                                  __ENV__.line,
-                                                  unquote(function_name()),
-                                                  unquote(function_arity()),
-                                                  unquote(format),
-                                                  unquote(args))
-        end
+  defmacro log_fatal(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.fatal(__MODULE__,
+                                            __ENV__.line,
+                                            unquote(function_name()),
+                                            unquote(function_arity()),
+                                            unquote(format),
+                                            unquote(args))
     end
+  end
 
-    defmacro log_error(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.error(__MODULE__,
-                                                  __ENV__.line,
-                                                  unquote(function_name()),
-                                                  unquote(function_arity()),
-                                                  unquote(format),
-                                                  unquote(args))
-        end
+  defmacro log_error(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.error(__MODULE__,
+                                            __ENV__.line,
+                                            unquote(function_name()),
+                                            unquote(function_arity()),
+                                            unquote(format),
+                                            unquote(args))
     end
+  end
 
-    defmacro log_warn(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.warn(__MODULE__,
-                                                 __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
-                                                 unquote(format),
-                                                 unquote(args))
-        end
+  defmacro log_warn(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.warn(__MODULE__,
+                                           __ENV__.line,
+                                           unquote(function_name()),
+                                           unquote(function_arity()),
+                                           unquote(format),
+                                           unquote(args))
     end
+  end
 
-    defmacro log_info(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.info(__MODULE__,
-                                                 __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
-                                                 unquote(format),
-                                                 unquote(args))
-        end
+  defmacro log_info(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.info(__MODULE__,
+                                           __ENV__.line,
+                                           unquote(function_name()),
+                                           unquote(function_arity()),
+                                           unquote(format),
+                                           unquote(args))
     end
+  end
 
-    defmacro log_debug(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.debug(__MODULE__,
-                                                  __ENV__.line,
-                                                  unquote(function_name()),
-                                                  unquote(function_arity()),
-                                                  unquote(format),
-                                                  unquote(args))
-        end
+  defmacro log_debug(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.debug(__MODULE__,
+                                            __ENV__.line,
+                                            unquote(function_name()),
+                                            unquote(function_arity()),
+                                            unquote(format),
+                                            unquote(args))
     end
+  end
 
-    defmacro log_trace(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.trace(__MODULE__,
-                                                  __ENV__.line,
-                                                  unquote(function_name()),
-                                                  unquote(function_arity()),
-                                                  unquote(format),
-                                                  unquote(args))
-        end
+  defmacro log_trace(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.trace(__MODULE__,
+                                            __ENV__.line,
+                                            unquote(function_name()),
+                                            unquote(function_arity()),
+                                            unquote(format),
+                                            unquote(args))
     end
+  end
 
 # Force the logging to be done synchronously to the local log only
 # (if you are concerned about losing a logging message when the logging
@@ -154,178 +151,178 @@ defmodule CloudILogger do
 #  logging level, so it is unlikely it would be necessary to use the macros in
 #  custom source code, if the info logging level is enabled)
 
-    defmacro log_fatal_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
-                                                       __ENV__.line,
-                                                       unquote(function_name()),
-                                                       unquote(function_arity()),
-                                                       unquote(format),
-                                                       unquote(args))
-        end
+  defmacro log_fatal_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
+                                                 __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
+                                                 unquote(format),
+                                                 unquote(args))
     end
+  end
 
-    defmacro log_error_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.error_sync(__MODULE__,
-                                                       __ENV__.line,
-                                                       unquote(function_name()),
-                                                       unquote(function_arity()),
-                                                       unquote(format),
-                                                       unquote(args))
-        end
+  defmacro log_error_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.error_sync(__MODULE__,
+                                                 __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
+                                                 unquote(format),
+                                                 unquote(args))
     end
+  end
 
-    defmacro log_warn_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
-                                                      __ENV__.line,
-                                                      unquote(function_name()),
-                                                      unquote(function_arity()),
-                                                      unquote(format),
-                                                      unquote(args))
-        end
+  defmacro log_warn_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
+                                                __ENV__.line,
+                                                unquote(function_name()),
+                                                unquote(function_arity()),
+                                                unquote(format),
+                                                unquote(args))
     end
+  end
 
-    defmacro log_info_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.info_sync(__MODULE__,
-                                                      __ENV__.line,
-                                                      unquote(function_name()),
-                                                      unquote(function_arity()),
-                                                      unquote(format),
-                                                      unquote(args))
-        end
+  defmacro log_info_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.info_sync(__MODULE__,
+                                                __ENV__.line,
+                                                unquote(function_name()),
+                                                unquote(function_arity()),
+                                                unquote(format),
+                                                unquote(args))
     end
+  end
 
-    defmacro log_debug_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
-                                                       __ENV__.line,
-                                                       unquote(function_name()),
-                                                       unquote(function_arity()),
-                                                       unquote(format),
-                                                       unquote(args))
-        end
+  defmacro log_debug_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
+                                                 __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
+                                                 unquote(format),
+                                                 unquote(args))
     end
+  end
 
-    defmacro log_trace_sync(format, args) do
-        quote do
-            :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
-                                                       __ENV__.line,
-                                                       unquote(function_name()),
-                                                       unquote(function_arity()),
-                                                       unquote(format),
-                                                       unquote(args))
-        end
+  defmacro log_trace_sync(format, args) do
+    quote do
+      :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
+                                                 __ENV__.line,
+                                                 unquote(function_name()),
+                                                 unquote(function_arity()),
+                                                 unquote(format),
+                                                 unquote(args))
     end
+  end
 
 # Apply an anonymous function if allowed by the current logging level setting
 
-    defmacro log_fatal_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.fatal_apply(unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_fatal_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.fatal_apply(unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_error_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.error_apply(unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_error_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.error_apply(unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_warn_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.warn_apply(unquote(f),
-                                                       unquote(a))
-        end
+  defmacro log_warn_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.warn_apply(unquote(f),
+                                                 unquote(a))
     end
+  end
 
-    defmacro log_info_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.info_apply(unquote(f),
-                                                       unquote(a))
-        end
+  defmacro log_info_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.info_apply(unquote(f),
+                                                 unquote(a))
     end
+  end
 
-    defmacro log_debug_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.debug_apply(unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_debug_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.debug_apply(unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_trace_apply(f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.trace_apply(unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_trace_apply(f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.trace_apply(unquote(f),
+                                                  unquote(a))
     end
+  end
 
 # Apply a module function if allowed by the current logging level setting
 
-    defmacro log_fatal_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.fatal_apply(unquote(m),
-                                                        unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_fatal_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.fatal_apply(unquote(m),
+                                                  unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_error_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.error_apply(unquote(m),
-                                                        unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_error_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.error_apply(unquote(m),
+                                                  unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_warn_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.warn_apply(unquote(m),
-                                                       unquote(f),
-                                                       unquote(a))
-        end
+  defmacro log_warn_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.warn_apply(unquote(m),
+                                                 unquote(f),
+                                                 unquote(a))
     end
+  end
 
-    defmacro log_info_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.info_apply(unquote(m),
-                                                       unquote(f),
-                                                       unquote(a))
-        end
+  defmacro log_info_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.info_apply(unquote(m),
+                                                 unquote(f),
+                                                 unquote(a))
     end
+  end
 
-    defmacro log_debug_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.debug_apply(unquote(m),
-                                                        unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_debug_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.debug_apply(unquote(m),
+                                                  unquote(f),
+                                                  unquote(a))
     end
+  end
 
-    defmacro log_trace_apply(m, f, a) do
-        quote do
-            :cloudi_core_i_logger_interface.trace_apply(unquote(m),
-                                                        unquote(f),
-                                                        unquote(a))
-        end
+  defmacro log_trace_apply(m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.trace_apply(unquote(m),
+                                                  unquote(f),
+                                                  unquote(a))
     end
+  end
 
 # Get/Set lager-compatible logging metadata
 
-    defmacro log_metadata_get() do
-        quote do
-            :cloudi_core_i_logger.metadata_get()
-        end
+  defmacro log_metadata_get() do
+    quote do
+      :cloudi_core_i_logger.metadata_get()
     end
+  end
 
-    defmacro log_metadata_set(l) do
-        quote do
-            :cloudi_core_i_logger.metadata_set(unquote(l))
-        end
+  defmacro log_metadata_set(l) do
+    quote do
+      :cloudi_core_i_logger.metadata_set(unquote(l))
     end
+  end
 
 end

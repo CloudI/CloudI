@@ -1207,24 +1207,24 @@
 % (see http://cloudi.org/api.html#2_nodes_set for all the options)
 {logging, [
     %{file, "path/to/logfile"},
-    {level, trace}, % levels: off, fatal, error, warn, info, debug, trace
+    %{level, trace}, % levels: off, fatal, error, warn, info, debug, trace
     %{syslog,
     % [{identity, "CloudI"},
     %  {facility, local0},
     %  {level, trace}]}, % CloudI log levels are mapped to syslog levels
-    {formatters,
-     [{any,
-       [{formatter, cloudi_core_i_logger},
-        {formatter_config,
-         [{mode, legacy}]}]},
-      {['STDOUT'],
-       [{formatter, cloudi_core_i_logger},
-        {formatter_config,
-         [{mode, legacy_stdout}]}]},
-      {['STDERR'],
-       [{formatter, cloudi_core_i_logger},
-        {formatter_config,
-         [{mode, legacy_stderr}]}]}]},
-    {redirect, undefined}
+    %{formatters,
+    % [{any,
+    %   [{formatter, cloudi_core_i_logger},
+    %    {formatter_config,
+    %     [{mode, legacy}]}]},
+    %  {['STDOUT'],
+    %   [{formatter, cloudi_core_i_logger},
+    %    {formatter_config,
+    %     [{mode, legacy_stdout}]}]},
+    %  {['STDERR'],
+    %   [{formatter, cloudi_core_i_logger},
+    %    {formatter_config,
+    %     [{mode, legacy_stderr}]}]}]},
+    %{redirect, undefined}
 ]}.
 

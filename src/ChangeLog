@@ -3,6 +3,8 @@
 
 2016-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Switch to always logging the function name and arity due to EEP45
+      included in Erlang/OTP 19.x
     * Update reltool_util
     * Fix old rebar2 package compile issue
 
