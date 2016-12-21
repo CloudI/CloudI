@@ -6,7 +6,7 @@ defmodule HelloWorld1.Mixfile do
      version: "1.5.4",
      elixirc_paths: ["lib/",
                      "/usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4/include/"],
-     deps: deps]
+     deps: deps()]
   end
 
   # Configuration for the OTP application
