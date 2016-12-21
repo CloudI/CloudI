@@ -43,11 +43,11 @@
 %%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 %%% DAMAGE.
 %%%
-%%% @version 0.1.0 {@date} {@time}
+%%% @version 0.2.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(ex2erl).
--vsn("0.1.0").
+-vsn("0.2.0").
 
 -mode(compile).
 
@@ -56,6 +56,13 @@
 -record(state,
         {
             file_path_elixir = undefined :: undefined | string()
+        }).
+
+% erl_parse tree nodes represented as records
+-record('var',
+        {
+            anno :: erl_anno:anno(),
+            name :: atom()
         }).
 
 -spec main(Arguments :: list(string())) ->
@@ -82,10 +89,18 @@ main(Arguments) ->
     % as described at http://erlang.org/doc/man/beam_lib.html
     {ok,
      {_, [{abstract_code,
-           {_, Forms}}]}} = beam_lib:chunks(FilePathBeam,
+           {_, Forms0}}]}} = beam_lib:chunks(FilePathBeam,
                                             [abstract_code]),
-    ok = file:write_file(FilePathErlang,
-                         erl_prettypr:format(erl_syntax:form_list(Forms))),
+    FormsN = erl_syntax_lib:map(fun(TreeNode) ->
+        case TreeNode of
+            #'var'{name = Name} = Variable ->
+                Variable#'var'{name = erlang:list_to_atom(
+                    string:to_upper(erlang:atom_to_list(Name)))};
+            _ ->
+                TreeNode
+        end
+    end, erl_syntax:form_list(Forms0)),
+    ok = file:write_file(FilePathErlang, erl_prettypr:format(FormsN)),
 
     % cleanup
     ok = file:delete(FilePathBeam),
