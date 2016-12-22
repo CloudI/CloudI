@@ -4,6 +4,9 @@
 2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove CloudI Erlang/OTP version macro checks for before 19.x
+      (cloudi_core now has no internal NIF usage,
+       the only internal port driver usage is through
+       cloudi_x_syslog when syslog usage is enabled)
 
 2016-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
