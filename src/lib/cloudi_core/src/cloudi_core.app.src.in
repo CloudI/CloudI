@@ -49,7 +49,8 @@
         cloudi_service_name,
         cloudi_string,
         cloudi_timestamp,
-        cloudi_trans_id
+        cloudi_trans_id,
+        'Elixir.CloudILogger'
         ]},
    {registered,[
         cloudi_core_i_configurator,

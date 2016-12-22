@@ -4,8 +4,7 @@ defmodule HelloWorld1.Mixfile do
   def project do
     [app: :'Elixir.HelloWorld1',
      version: "1.5.4",
-     elixirc_paths: ["lib/",
-                     "/usr/local/lib/cloudi-1.5.4/lib/cloudi_core-1.5.4/include/"],
+     elixirc_paths: ["lib/"],
      deps: deps()]
   end
 
@@ -13,7 +12,7 @@ defmodule HelloWorld1.Mixfile do
   #
   # Type `mix help compile.app` for more information
   def application do
-    [applications: []]
+    [applications: [:cloudi_core]]
   end
 
   # Dependencies can be hex.pm packages:

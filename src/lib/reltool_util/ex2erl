@@ -43,11 +43,11 @@
 %%% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 %%% DAMAGE.
 %%%
-%%% @version 0.2.0 {@date} {@time}
+%%% @version 0.3.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(ex2erl).
--vsn("0.2.0").
+-vsn("0.3.0").
 
 -mode(compile).
 
@@ -87,20 +87,20 @@ main(Arguments) ->
                                    ModuleName ++ ".erl"),
 
     % as described at http://erlang.org/doc/man/beam_lib.html
+    % with minor modifications to make it valid Erlang source code
     {ok,
      {_, [{abstract_code,
-           {_, Forms0}}]}} = beam_lib:chunks(FilePathBeam,
+           {_, Forms}}]}} = beam_lib:chunks(FilePathBeam,
                                             [abstract_code]),
-    FormsN = erl_syntax_lib:map(fun(TreeNode) ->
+    SyntaxTree = erl_syntax_lib:map(fun(TreeNode) ->
         case TreeNode of
-            #'var'{name = Name} = Variable ->
-                Variable#'var'{name = erlang:list_to_atom(
-                    string:to_upper(erlang:atom_to_list(Name)))};
+            #'var'{} = Variable ->
+                variable_erlang(Variable);
             _ ->
                 TreeNode
         end
-    end, erl_syntax:form_list(Forms0)),
-    ok = file:write_file(FilePathErlang, erl_prettypr:format(FormsN)),
+    end, erl_syntax:form_list(Forms)),
+    ok = file:write_file(FilePathErlang, erl_prettypr:format(SyntaxTree)),
 
     % cleanup
     ok = file:delete(FilePathBeam),
@@ -122,6 +122,15 @@ main_arguments(["-" ++ InvalidParameter | _], _) ->
     erlang:error({invalid_parameter, InvalidParameter});
 main_arguments([FilePathElixir | Arguments], State) ->
     main_arguments(Arguments, State#state{file_path_elixir = FilePathElixir}).
+
+variable_erlang(#'var'{name = Name} = Variable) ->
+    NewName = case erlang:atom_to_list(Name) of
+        [$_ | Suffix] ->
+            erlang:list_to_atom([$_, $E | Suffix]);
+        Suffix ->
+            erlang:list_to_atom([$E | Suffix])
+    end,
+    Variable#'var'{name = NewName}.
 
 exit_code(ExitCode) when is_integer(ExitCode) ->
     erlang:halt(ExitCode, [{flush, true}]).

@@ -78,10 +78,16 @@ defmodule CloudILogger do
 
   defmacro log_fatal(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.fatal(__MODULE__,
                                             __ENV__.line,
-                                            unquote(function_name()),
-                                            unquote(function_arity()),
+                                            function,
+                                            arity,
                                             unquote(format),
                                             unquote(args))
     end
@@ -89,10 +95,16 @@ defmodule CloudILogger do
 
   defmacro log_error(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.error(__MODULE__,
                                             __ENV__.line,
-                                            unquote(function_name()),
-                                            unquote(function_arity()),
+                                            function,
+                                            arity,
                                             unquote(format),
                                             unquote(args))
     end
@@ -100,10 +112,16 @@ defmodule CloudILogger do
 
   defmacro log_warn(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.warn(__MODULE__,
                                            __ENV__.line,
-                                           unquote(function_name()),
-                                           unquote(function_arity()),
+                                           function,
+                                           arity,
                                            unquote(format),
                                            unquote(args))
     end
@@ -111,10 +129,16 @@ defmodule CloudILogger do
 
   defmacro log_info(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.info(__MODULE__,
                                            __ENV__.line,
-                                           unquote(function_name()),
-                                           unquote(function_arity()),
+                                           function,
+                                           arity,
                                            unquote(format),
                                            unquote(args))
     end
@@ -122,10 +146,16 @@ defmodule CloudILogger do
 
   defmacro log_debug(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.debug(__MODULE__,
                                             __ENV__.line,
-                                            unquote(function_name()),
-                                            unquote(function_arity()),
+                                            function,
+                                            arity,
                                             unquote(format),
                                             unquote(args))
     end
@@ -133,10 +163,16 @@ defmodule CloudILogger do
 
   defmacro log_trace(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.trace(__MODULE__,
                                             __ENV__.line,
-                                            unquote(function_name()),
-                                            unquote(function_arity()),
+                                            function,
+                                            arity,
                                             unquote(format),
                                             unquote(args))
     end
@@ -153,10 +189,16 @@ defmodule CloudILogger do
 
   defmacro log_fatal_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
                                                  __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
+                                                 function,
+                                                 arity,
                                                  unquote(format),
                                                  unquote(args))
     end
@@ -164,10 +206,16 @@ defmodule CloudILogger do
 
   defmacro log_error_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.error_sync(__MODULE__,
                                                  __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
+                                                 function,
+                                                 arity,
                                                  unquote(format),
                                                  unquote(args))
     end
@@ -175,10 +223,16 @@ defmodule CloudILogger do
 
   defmacro log_warn_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
                                                 __ENV__.line,
-                                                unquote(function_name()),
-                                                unquote(function_arity()),
+                                                function,
+                                                arity,
                                                 unquote(format),
                                                 unquote(args))
     end
@@ -186,10 +240,16 @@ defmodule CloudILogger do
 
   defmacro log_info_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.info_sync(__MODULE__,
                                                 __ENV__.line,
-                                                unquote(function_name()),
-                                                unquote(function_arity()),
+                                                function,
+                                                arity,
                                                 unquote(format),
                                                 unquote(args))
     end
@@ -197,10 +257,16 @@ defmodule CloudILogger do
 
   defmacro log_debug_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
                                                  __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
+                                                 function,
+                                                 arity,
                                                  unquote(format),
                                                  unquote(args))
     end
@@ -208,10 +274,16 @@ defmodule CloudILogger do
 
   defmacro log_trace_sync(format, args) do
     quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = location ->
+            location
+      end
       :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
                                                  __ENV__.line,
-                                                 unquote(function_name()),
-                                                 unquote(function_arity()),
+                                                 function,
+                                                 arity,
                                                  unquote(format),
                                                  unquote(args))
     end
