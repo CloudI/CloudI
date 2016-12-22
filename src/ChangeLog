@@ -4,6 +4,7 @@
 2016-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudILogger Elixir module to the cloudi_core Erlang application
+    * Fix CloudILogger Elixir usage of function/arity data
     * Update the Elixir.HelloWorld1 example based on the changes
     * Update reltool_util
 
