@@ -99,52 +99,11 @@
 %-define(CLOUDI_CORE_STANDALONE, true).
 
 % handle the dict type change
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
 
 % handle the queue type change
--ifdef(ERLANG_OTP_VERSION_16).
--type queue_proxy(_Value) :: queue().
--else.
 -type queue_proxy(Value) :: queue:queue(Value).
--endif.
 
-% for features specific to Erlang/OTP version 18.x (and later versions)
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else.
--define(ERLANG_OTP_VERSION_18_FEATURES, true).
--ifdef(ERLANG_OTP_VERSION_18).
--else.
--define(ERLANG_OTP_VERSION_19_FEATURES, true).
--endif.
--endif.
--endif.
-
-% The cloudi_core_i_socket library is the only Erlang NIF CloudI has used
-% in the past, to add unix domain socket support by bypassing some
-% validation within the Erlang VM.  In Erlang/OTP 19.0 unix domain socket
-% support was added, making the cloudi_core_i_socket NIF no longer necessary
-% (cloudi_core_i_socket is only used for external services with
-%  Protocol == local or Protocol == default).
-% (The only other custom NIF being used within the cloudi_core source code
-%  is cloudi_x_syslog, when logging syslog support is enabled
-%  (it is not enabled with the default configuration).)
--ifdef(CLOUDI_CORE_STANDALONE).
--else.
--ifdef(ERLANG_OTP_VERSION_19_FEATURES).
--else.
--define(CLOUDI_CORE_SOCKET_NIF, true).
--endif.
--endif.
-
-% provide a simple way of switching from the dict module to the maps module
-% (the maps interface was not regarded as stable until Erlang/OTP 18.0)
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 -type maps_proxy(_Key, _Value) :: any().
 -define(MAP_NEW(),           maps:new()).
 -define(MAP_FIND(K, M),      maps:find(K, M)).
@@ -153,16 +112,6 @@
 -define(MAP_ERASE(K, M),     maps:remove(K, M)).
 -define(MAP_TO_LIST(M),      maps:to_list(M)).
 -define(MSGPACK_MAP, map).
--else.
--type maps_proxy(Key, Value) :: dict_proxy(Key, Value).
--define(MAP_NEW(),           dict:new()).
--define(MAP_FIND(K, M),      dict:find(K, M)).
--define(MAP_FETCH(K, M),     dict:fetch(K, M)).
--define(MAP_STORE(K, V, M),  dict:store(K, V, M)).
--define(MAP_ERASE(K, M),     dict:erase(K, M)).
--define(MAP_TO_LIST(M),      dict:to_list(M)).
--define(MSGPACK_MAP, cloudi_x_jsx).
--endif.
 
 % used to calculate the timeout_terminate based on MaxT / MaxR
 -define(TIMEOUT_TERMINATE_CALC0(MaxT),

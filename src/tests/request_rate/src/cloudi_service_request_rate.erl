@@ -125,11 +125,7 @@
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
 -define(DEFAULT_TICK_STABLE_COUNT,          24). % dynamic attempts for stable
 
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
 
 -record(dynamic,
     {

@@ -73,15 +73,9 @@
 -define(ENVIRONMENT_BUFFER_SIZE,   "CLOUDI_API_INIT_BUFFER_SIZE").
 
 -ifdef(CLOUDI_CORE_STANDALONE).
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else.
 -dialyzer({no_match,
            [start_external_spawn/18,
             update_external/3]}).
--endif.
--endif.
 -endif.
 
 %%%------------------------------------------------------------------------

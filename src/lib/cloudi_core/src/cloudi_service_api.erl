@@ -125,9 +125,9 @@
     ?TIMEOUT_TERMINATE_MIN..?TIMEOUT_TERMINATE_MAX.
 -export_type([timeout_terminate_milliseconds/0]).
 
--type restart_delay_time_milliseconds() ::
+-type restart_delay_milliseconds() ::
     1..?TIMEOUT_MAX_ERLANG.
--export_type([restart_delay_time_milliseconds/0]).
+-export_type([restart_delay_milliseconds/0]).
 
 -type acl() ::
     list(atom() | cloudi:service_name_pattern()).
@@ -363,9 +363,9 @@
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
          {restart_delay,
-          list({time_exponential_min, restart_delay_time_milliseconds()} |
-               {time_exponential_max, restart_delay_time_milliseconds()} |
-               {time_absolute, restart_delay_time_milliseconds()}) | false} |
+          list({time_exponential_min, restart_delay_milliseconds()} |
+               {time_exponential_max, restart_delay_milliseconds()} |
+               {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
           list({time_uniform_min, latency_time_milliseconds()} |
@@ -448,9 +448,9 @@
          {timeout_terminate,
           undefined | timeout_terminate_milliseconds()} |
          {restart_delay,
-          list({time_exponential_min, restart_delay_time_milliseconds()} |
-               {time_exponential_max, restart_delay_time_milliseconds()} |
-               {time_absolute, restart_delay_time_milliseconds()}) | false} |
+          list({time_exponential_min, restart_delay_milliseconds()} |
+               {time_exponential_max, restart_delay_milliseconds()} |
+               {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
           list({time_uniform_min, latency_time_milliseconds()} |

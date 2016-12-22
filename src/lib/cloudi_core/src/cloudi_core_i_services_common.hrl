@@ -338,13 +338,8 @@ send_timeout_dead(Pid,
             {false, State}
     end.
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 cancel_timer_async(Tref) ->
     erlang:cancel_timer(Tref, [{async, true}, {info, false}]).
--else.
-cancel_timer_async(Tref) ->
-    erlang:cancel_timer(Tref).
--endif.
 
 async_response_timeout_start(_, _, 0, _, State) ->
     State;

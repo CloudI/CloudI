@@ -179,15 +179,9 @@ external_format(Request, Format)
 %% @end
 %%-------------------------------------------------------------------------
 
--ifdef(ERLANG_OTP_VERSION_16).
--spec http_qs_parse(Request :: binary() |
-                               cloudi_key_value:key_values()) ->
-    Result :: dict().
--else.
 -spec http_qs_parse(Request :: binary() |
                                cloudi_key_value:key_values()) ->
     Result :: dict:dict(cloudi_key_value:key(), cloudi_key_value:value()).
--endif.
 
 http_qs_parse(Request) ->
     cloudi_request_info:key_value_parse(Request).

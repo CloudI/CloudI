@@ -71,11 +71,7 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
 
 -record(websocket_state,
     {

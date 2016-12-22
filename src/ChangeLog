@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove CloudI Erlang/OTP version macro checks for before 19.x
+
 2016-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add CloudILogger Elixir module to the cloudi_core Erlang application

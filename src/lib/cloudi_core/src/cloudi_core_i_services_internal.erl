@@ -1814,18 +1814,8 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     {ok, DispatcherProxy} = cloudi_core_i_services_internal_init:
                             start_link(Timeout, PidOptions,
                                        ProcessDictionary, State),
-    Result = try
-        begin
-            case erlang:function_exported(Module, cloudi_service_init, 4) of
-                true ->
-                    % Cloud >= 1.4.0
-                    Module:cloudi_service_init(Args, Prefix, Timeout,
-                                               DispatcherProxy);
-                false ->
-                    % Cloud =< 1.3.3
-                    Module:cloudi_service_init(Args, Prefix, DispatcherProxy)
-            end
-        end
+    Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
+                                            DispatcherProxy)
     catch
         ErrorType:Error ->
             Stack = erlang:get_stacktrace(),
@@ -1916,15 +1906,7 @@ terminate(Reason,
     _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher, Reason),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
-    case erlang:function_exported(Module, cloudi_service_terminate, 3) of
-        true ->
-            % Cloud >= 1.4.0
-            Module:cloudi_service_terminate(Reason, TimeoutTerm,
-                                            NewServiceState);
-        false ->
-            % Cloud =< 1.3.3
-            Module:cloudi_service_terminate(Reason, NewServiceState)
-    end,
+    _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, NewServiceState),
     ok;
 
 terminate(_, _) ->
@@ -3363,20 +3345,8 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                                     start_link(Timeout, PidOptions,
                                                DispatcherProcessDictionary,
                                                DispatcherState),
-            Result = try
-                begin
-                    case erlang:function_exported(Module,
-                                                  cloudi_service_init, 4) of
-                        true ->
-                            % Cloud >= 1.4.0
-                            Module:cloudi_service_init(Args, Prefix, Timeout,
-                                                       DispatcherProxy);
-                        false ->
-                            % Cloud =< 1.3.3
-                            Module:cloudi_service_init(Args, Prefix,
-                                                       DispatcherProxy)
-                    end
-                end
+            Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
+                                                    DispatcherProxy)
             catch
                 ErrorType:Error ->
                     Stack = erlang:get_stacktrace(),
@@ -3505,15 +3475,7 @@ duo_mode_loop_terminate(Reason,
     _ = cloudi_core_i_services_monitor:terminate_kill(DuoModePid, Reason),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
-    case erlang:function_exported(Module, cloudi_service_terminate, 3) of
-        true ->
-            % Cloud >= 1.4.0
-            Module:cloudi_service_terminate(Reason, TimeoutTerm,
-                                            NewServiceState);
-        false ->
-            % Cloud =< 1.3.3
-            Module:cloudi_service_terminate(Reason, NewServiceState)
-    end,
+    _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, NewServiceState),
     erlang:process_flag(trap_exit, false),
     erlang:exit(DuoModePid, Reason).
 

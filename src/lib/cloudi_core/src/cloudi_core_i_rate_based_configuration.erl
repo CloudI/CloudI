@@ -109,9 +109,9 @@
     {
         method = undefined :: undefined | exponential | absolute,
         time_min = undefined
-            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
+            :: undefined | 0 | cloudi_service_api:restart_delay_milliseconds(),
         time_max = undefined
-            :: undefined | cloudi_service_api:restart_delay_milliseconds()
+            :: undefined | 0 | cloudi_service_api:restart_delay_milliseconds()
     }).
 
 -record(count_process_dynamic,

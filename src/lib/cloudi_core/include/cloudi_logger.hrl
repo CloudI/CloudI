@@ -50,29 +50,6 @@
 %   DEBUG: reports subsystem data that should be useful for debugging
 %   TRACE: reports subsystem data that is only for tracing execution
 
-% Convenience macros
-
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else.
--ifdef(ERLANG_OTP_VERSION_18).
--else.
--define(ERLANG_OTP_VERSION_19_EEP45, true).
--endif.
--endif.
--endif.
--ifndef(ERLANG_OTP_VERSION_19_EEP45).
--define(FUNCTION_NAME,
-    erlang:element(2,
-        erlang:element(2,
-            erlang:process_info(self(), current_function)))).
--define(FUNCTION_ARITY,
-    erlang:element(3,
-        erlang:element(2,
-            erlang:process_info(self(), current_function)))).
--endif.
-
 % Typical logging output which will log asynchronously until the logger's
 % message queue becomes too large, switching to synchronous logging
 % while the message queue remains large

@@ -7,7 +7,6 @@ CURRENT_VERSION = vsn_1
 
 instdir = "$(cloudi_prefix)/lib/cloudi_core-$(VERSION)/priv"
 inst_PROGRAMS = cloudi_os_spawn_vsn_1
-inst_LTLIBRARIES = libcloudi_socket_drv.la
 
 BUILT_SOURCES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
 CLEANFILES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
@@ -38,14 +37,4 @@ cloudi_os_spawn_vsn_1_CPPFLAGS = \
  -include $(srcdir)/cloudi_os_spawn_api.h $(CXXFLAGS)
 cloudi_os_spawn_vsn_1_LDADD = -lei
 cloudi_os_spawn_vsn_1_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/
-
-# no symbols need to be linked, since the Erlang VM already has the
-# necessary functions
-libcloudi_socket_drv_la_SOURCES = cloudi_socket_drv.cpp \
-                                  assert.cpp
-libcloudi_socket_drv_la_CPPFLAGS = \
- -fPIC -I$(ERLANG_ROOT_DIR)/erts-$(ERLANG_ERTS_VER)/include/ \
- $(BOOST_CPPFLAGS) $(CXXFLAGS)
-libcloudi_socket_drv_la_LDFLAGS = -module -avoid-version \
- -export-symbols-regex '(libcloudi_socket_drv|nif_init|on_load|on_unload)'
 

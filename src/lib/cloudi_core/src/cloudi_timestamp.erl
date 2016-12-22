@@ -60,8 +60,6 @@
          microseconds_os/0,
          seconds_filter/3]).
 
--include("cloudi_core_i_constants.hrl").
-
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -76,13 +74,8 @@
 
 -spec timestamp() -> erlang:timestamp().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 timestamp() ->
     erlang:timestamp().
--else.
-timestamp() ->
-    erlang:now().
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -93,14 +86,8 @@ timestamp() ->
 
 -spec seconds() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seconds() ->
     erlang:system_time(seconds).
--else.
-seconds() ->
-    {MegaSeconds, Seconds, _} = erlang:now(),
-    MegaSeconds * 1000000 + Seconds.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -110,14 +97,8 @@ seconds() ->
 
 -spec seconds_os() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seconds_os() ->
     os:system_time(seconds).
--else.
-seconds_os() ->
-    {MegaSeconds, Seconds, _} = os:timestamp(),
-    MegaSeconds * 1000000 + Seconds.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -128,14 +109,8 @@ seconds_os() ->
 
 -spec milliseconds() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 milliseconds() ->
     erlang:system_time(milli_seconds).
--else.
-milliseconds() ->
-    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -145,14 +120,8 @@ milliseconds() ->
 
 -spec milliseconds_os() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 milliseconds_os() ->
     os:system_time(milli_seconds).
--else.
-milliseconds_os() ->
-    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
-    MegaSeconds * 1000000000 + Seconds * 1000 + MicroSeconds div 1000.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -163,14 +132,8 @@ milliseconds_os() ->
 
 -spec microseconds() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 microseconds() ->
     erlang:system_time(micro_seconds).
--else.
-microseconds() ->
-    {MegaSeconds, Seconds, MicroSeconds} = erlang:now(),
-    MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -180,14 +143,8 @@ microseconds() ->
 
 -spec microseconds_os() -> non_neg_integer().
 
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 microseconds_os() ->
     os:system_time(micro_seconds).
--else.
-microseconds_os() ->
-    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
-    MegaSeconds * 1000000000000 + Seconds * 1000000 + MicroSeconds.
--endif.
 
 %%-------------------------------------------------------------------------
 %% @doc

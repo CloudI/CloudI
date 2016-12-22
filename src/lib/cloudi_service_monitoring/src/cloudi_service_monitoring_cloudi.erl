@@ -113,18 +113,7 @@
 
 % cloudi_core_i_service_internal and cloudi_core_i_service_external
 % use maps when available/stable
--ifdef(ERLANG_OTP_VERSION_16).
--else.
--ifdef(ERLANG_OTP_VERSION_17).
--else.
--define(ERLANG_OTP_VERSION_18_FEATURES, true).
--endif.
--endif.
--ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 -define(MAP_SIZE(M),         maps:size(M)).
--else.
--define(MAP_SIZE(M),         dict:size(M)).
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

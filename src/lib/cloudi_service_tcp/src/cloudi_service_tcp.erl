@@ -125,11 +125,7 @@
 -define(DEFAULT_DEBUG,                       false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                 trace).
 
--ifdef(ERLANG_OTP_VERSION_16).
--type dict_proxy(_Key, _Value) :: dict().
--else.
 -type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--endif.
 
 -record(state,
     {

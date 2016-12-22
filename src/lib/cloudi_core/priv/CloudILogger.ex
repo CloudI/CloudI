@@ -81,8 +81,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.fatal(__MODULE__,
                                             __ENV__.line,
@@ -98,8 +98,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.error(__MODULE__,
                                             __ENV__.line,
@@ -115,8 +115,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.warn(__MODULE__,
                                            __ENV__.line,
@@ -132,8 +132,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.info(__MODULE__,
                                            __ENV__.line,
@@ -149,8 +149,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.debug(__MODULE__,
                                             __ENV__.line,
@@ -166,8 +166,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.trace(__MODULE__,
                                             __ENV__.line,
@@ -192,8 +192,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.fatal_sync(__MODULE__,
                                                  __ENV__.line,
@@ -209,8 +209,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.error_sync(__MODULE__,
                                                  __ENV__.line,
@@ -226,8 +226,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.warn_sync(__MODULE__,
                                                 __ENV__.line,
@@ -243,8 +243,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.info_sync(__MODULE__,
                                                 __ENV__.line,
@@ -260,8 +260,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.debug_sync(__MODULE__,
                                                  __ENV__.line,
@@ -277,8 +277,8 @@ defmodule CloudILogger do
       {function, arity} = case __ENV__.function do
         nil ->
             {:undefined, :undefined};
-        {_, _} = location ->
-            location
+        {_, _} = function_arity ->
+            function_arity
       end
       :cloudi_core_i_logger_interface.trace_sync(__MODULE__,
                                                  __ENV__.line,
