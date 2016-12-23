@@ -83,9 +83,12 @@
 -define(HIBERNATE_METHOD_DEFAULT, rate_request).
 -define(HIBERNATE_PERIOD_DEFAULT, 5). % seconds
 -define(HIBERNATE_RATE_REQUEST_MIN_DEFAULT, 1). % req/sec
--define(TERMINATE_DELAY_METHOD_DEFAULT, exponential).
--define(TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT, 1). % milliseconds
--define(TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT, 500). % milliseconds
+-define(RESTART_DELAY_METHOD_DEFAULT, exponential).
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT, 1). % milliseconds
+-define(RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT, 500). % milliseconds
+-define(RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT, 0). % milliseconds
+-define(RESTART_DELAY_LINEAR_TIME_SLOPE_DEFAULT, 50). % milliseconds
+-define(RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT, 250). % milliseconds
 -define(COUNT_PROCESS_DYNAMIC_METHOD_DEFAULT, rate_request).
 -define(COUNT_PROCESS_DYNAMIC_PERIOD_DEFAULT, 5). % seconds
 -define(COUNT_PROCESS_DYNAMIC_RATE_REQUEST_MAX_DEFAULT, 1000). % req/sec
@@ -107,11 +110,13 @@
 
 -record(restart_delay,
     {
-        method = undefined :: undefined | exponential | absolute,
+        method = undefined :: undefined | exponential | linear | absolute,
         time_min = undefined
-            :: undefined | 0 | cloudi_service_api:restart_delay_milliseconds(),
+            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
         time_max = undefined
-            :: undefined | 0 | cloudi_service_api:restart_delay_milliseconds()
+            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
+        time_slope = undefined
+            :: undefined | cloudi_service_api:restart_delay_milliseconds()
     }).
 
 -record(count_process_dynamic,
@@ -246,6 +251,13 @@ restart_delay_format(#restart_delay{method = exponential,
                                     time_max = TimeMax}) ->
     [{time_exponential_min, TimeMin},
      {time_exponential_max, TimeMax}];
+restart_delay_format(#restart_delay{method = linear,
+                                    time_min = TimeMin,
+                                    time_max = TimeMax,
+                                    time_slope = TimeSlope}) ->
+    [{time_linear_min, TimeMin},
+     {time_linear_slope, TimeSlope},
+     {time_linear_max, TimeMax}];
 restart_delay_format(#restart_delay{method = absolute,
                                     time_min = TimeValue,
                                     time_max = TimeValue}) ->
@@ -555,33 +567,52 @@ hibernate_validate([Invalid | _Options],
 restart_delay_validate([],
                        #restart_delay{method = Method,
                                       time_min = TimeMin,
-                                      time_max = TimeMax} = State) ->
+                                      time_max = TimeMax,
+                                      time_slope = TimeSlope} = State) ->
     NewMethod = if
         Method =:= undefined ->
-            ?TERMINATE_DELAY_METHOD_DEFAULT;
+            ?RESTART_DELAY_METHOD_DEFAULT;
         Method =/= undefined ->
             Method
     end,
     NewTimeMin = if
         TimeMin =:= undefined ->
-            ?TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT;
+            if
+                NewMethod =:= exponential ->
+                    ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT;
+                NewMethod =:= linear ->
+                    ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT
+            end;
         TimeMin =/= undefined ->
             TimeMin
     end,
     NewTimeMax = if
         TimeMax =:= undefined ->
-            ?TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT;
+            if
+                NewMethod =:= exponential ->
+                    ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT;
+                NewMethod =:= linear ->
+                    ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT
+            end;
         TimeMax =/= undefined ->
             TimeMax
     end,
+    NewTimeSlope = if
+        TimeSlope =:= undefined, NewMethod =:= linear ->
+            ?RESTART_DELAY_LINEAR_TIME_SLOPE_DEFAULT;
+        true ->
+            TimeSlope
+    end,
     if
-        (NewMethod =:= exponential) andalso (NewTimeMin == NewTimeMax) ->
+        ((NewMethod =:= exponential) orelse (NewMethod =:= linear)) andalso
+        (NewTimeMin == NewTimeMax) ->
             {error, {service_options_restart_delay_invalid,
                      time_absolute}};
         true ->
             {ok, State#restart_delay{method = NewMethod,
                                      time_min = NewTimeMin,
-                                     time_max = NewTimeMax}}
+                                     time_max = NewTimeMax,
+                                     time_slope = NewTimeSlope}}
     end;
 restart_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
                        #restart_delay{method = Method,
@@ -590,7 +621,7 @@ restart_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
          is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
     NewTimeMax = if
         TimeMax =:= undefined ->
-            erlang:max(TimeMin, ?TERMINATE_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
+            erlang:max(TimeMin, ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
         TimeMax =/= undefined ->
             TimeMax
     end,
@@ -611,7 +642,7 @@ restart_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
          is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
     NewTimeMin = if
         TimeMin =:= undefined ->
-            erlang:min(TimeMax, ?TERMINATE_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
+            erlang:min(TimeMax, ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
         TimeMin =/= undefined ->
             TimeMin
     end,
@@ -620,6 +651,56 @@ restart_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = exponential,
+                                       time_max = TimeMax,
+                                       time_min = NewTimeMin});
+        true ->
+            {error, {service_options_restart_delay_invalid, Option}}
+    end;
+restart_delay_validate([{time_linear_slope, TimeSlope} | Options],
+                       #restart_delay{method = Method} = State)
+    when ((Method =:= undefined) orelse (Method =:= linear)),
+         is_integer(TimeSlope), TimeSlope >= 1 ->
+    restart_delay_validate(Options,
+                           State#restart_delay{
+                               method = linear,
+                               time_slope = TimeSlope});
+restart_delay_validate([{time_linear_min, TimeMin} = Option | Options],
+                       #restart_delay{method = Method,
+                                      time_max = TimeMax} = State)
+    when ((Method =:= undefined) orelse (Method =:= linear)),
+         is_integer(TimeMin), TimeMin >= 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
+    NewTimeMax = if
+        TimeMax =:= undefined ->
+            erlang:max(TimeMin, ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT);
+        TimeMax =/= undefined ->
+            TimeMax
+    end,
+    if
+        TimeMin =< NewTimeMax ->
+            restart_delay_validate(Options,
+                                   State#restart_delay{
+                                       method = linear,
+                                       time_min = TimeMin,
+                                       time_max = NewTimeMax});
+        true ->
+            {error, {service_options_restart_delay_invalid, Option}}
+    end;
+restart_delay_validate([{time_linear_max, TimeMax} = Option | Options],
+                       #restart_delay{method = Method,
+                                      time_min = TimeMin} = State)
+    when ((Method =:= undefined) orelse (Method =:= linear)),
+         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
+    NewTimeMin = if
+        TimeMin =:= undefined ->
+            erlang:min(TimeMax, ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT);
+        TimeMin =/= undefined ->
+            TimeMin
+    end,
+    if
+        NewTimeMin =< TimeMax ->
+            restart_delay_validate(Options,
+                                   State#restart_delay{
+                                       method = linear,
                                        time_max = TimeMax,
                                        time_min = NewTimeMin});
         true ->
@@ -643,6 +724,18 @@ restart_delay_value_now(RestartCount,
                                        time_min = TimeMin,
                                        time_max = TimeMax}) ->
     TimeValue = (1 bsl RestartCount) * TimeMin,
+    if
+        TimeValue > TimeMax ->
+            TimeMax;
+        true ->
+            TimeValue
+    end;
+restart_delay_value_now(RestartCount,
+                        #restart_delay{method = linear,
+                                       time_min = TimeMin,
+                                       time_max = TimeMax,
+                                       time_slope = TimeSlope}) ->
+    TimeValue = (TimeSlope * RestartCount) + TimeMin,
     if
         TimeValue > TimeMax ->
             TimeMax;

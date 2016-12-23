@@ -7,6 +7,7 @@
       (cloudi_core now has no internal NIF usage,
        the only internal port driver usage is through
        cloudi_x_syslog when syslog usage is enabled)
+    * Add linear options to the restart_delay service configuration option
 
 2016-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 

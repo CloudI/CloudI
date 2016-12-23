@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -126,7 +126,7 @@
 -export_type([timeout_terminate_milliseconds/0]).
 
 -type restart_delay_milliseconds() ::
-    1..?TIMEOUT_MAX_ERLANG.
+    0..?TIMEOUT_MAX_ERLANG.
 -export_type([restart_delay_milliseconds/0]).
 
 -type acl() ::
@@ -365,6 +365,9 @@
          {restart_delay,
           list({time_exponential_min, restart_delay_milliseconds()} |
                {time_exponential_max, restart_delay_milliseconds()} |
+               {time_linear_min, restart_delay_milliseconds()} |
+               {time_linear_slope, restart_delay_milliseconds()} |
+               {time_linear_max, restart_delay_milliseconds()} |
                {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
@@ -450,6 +453,9 @@
          {restart_delay,
           list({time_exponential_min, restart_delay_milliseconds()} |
                {time_exponential_max, restart_delay_milliseconds()} |
+               {time_linear_min, restart_delay_milliseconds()} |
+               {time_linear_slope, restart_delay_milliseconds()} |
+               {time_linear_max, restart_delay_milliseconds()} |
                {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
