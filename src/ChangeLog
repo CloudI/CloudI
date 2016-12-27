@@ -5,6 +5,9 @@
 
     * Add the syslog_socket pure Erlang syslog interface
     * Remove the cloudi_x_syslog port driver
+    * Fix bug with attempting to use syslog severity 8 with cloudi_x_syslog
+      though this changes the syslog severity level mapping with
+      CloudI log levels
 
 2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
