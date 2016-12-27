@@ -46,16 +46,16 @@
 -record(config_logging_syslog,
     {
         identity = "CloudI"
-            :: string(),
+            :: cloudi_service_api:logging_syslog_identity(),
         facility = local0
-            :: cloudi_x_syslog:facility(),
+            :: cloudi_service_api:logging_syslog_facility(),
         % The mapping for CloudI levels to syslog priorities is:
-        % fatal  -> emerg    (0)
-        % error  -> err      (3)
-        % warn   -> warning  (4)
-        % info   -> info     (6)
-        % debug  -> debug    (7)
-        % trace  -> 8
+        % fatal  -> critical       (2)
+        % error  -> error          (3)
+        % warn   -> warning        (4)
+        % info   -> notice         (5)
+        % debug  -> informational  (6)
+        % trace  -> debug          (7)
         level = trace
             :: cloudi_service_api:loglevel()
     }).

@@ -38,6 +38,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/reltool_util/src \
      -d $(top_srcdir)/lib/supool/src \
      -d $(top_srcdir)/lib/supool/test \
+     -d $(top_srcdir)/lib/syslog_socket/src \
+     -d $(top_srcdir)/lib/syslog_socket/test \
      -d $(top_srcdir)/lib/trie/src \
      -d $(top_srcdir)/lib/uuid/src \
      -d $(top_srcdir)/lib/varpool/src \
@@ -228,6 +230,7 @@ dialyze: all \
               lib/quickrand/ebin/ \
               lib/reltool_util/ebin/ \
               lib/supool/ebin/ \
+              lib/syslog_socket/ebin/ \
               lib/trie/ebin/ \
               lib/uuid/ebin/ \
               lib/varpool/ebin/ \
@@ -241,8 +244,7 @@ dialyze: all \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_epgsql_wg/ebin \
               external/cloudi_x_msgpack/ebin \
-              external/cloudi_x_nodefinder/ebin \
-              external/cloudi_x_syslog/ebin
+              external/cloudi_x_nodefinder/ebin
 	@echo "No Errors or Warnings Found!"
 
 dialyzer: dialyze

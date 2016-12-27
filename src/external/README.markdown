@@ -4,7 +4,7 @@ External Dependencies
 All CloudI Erlang dependencies are now moved to exist with a `"cloudi_x_"`
 prefix to avoid any conflicts when CloudI shares the Erlang VM with other
 applications that may share common dependencies (`erlzmq2` is an
-exception due to its C integration, `cloudi_x_syslog` was manually modified).
+exception due to its C integration).
 
 `backward-cpp`
 --------------
@@ -294,15 +294,6 @@ exception due to its C integration, `cloudi_x_syslog` was manually modified).
 - `commit 51ee7c9f64d2bbe9dcbb58c278e8fbfd4d0ca5e2 (1.4)`
 - `Fri Dec 11 15:51:53 PST 2015`
 - `Mozilla Public License 2.0`
-
-`syslog`
---------
-`Erlang syslog port driver`
-
-- `https://github.com/okeuday/erlang-syslog`
-- `commit e24c9ee8f7bb3f066ec152c210af10c2c712759a (1.0.3)`
-- `Sat Aug  8 12:52:40 PDT 2015`
-- `BSD`
 
 `zeromq/v?/erlzmq`
 ------------------

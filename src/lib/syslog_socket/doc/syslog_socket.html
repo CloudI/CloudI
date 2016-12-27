@@ -1,0 +1,196 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module syslog_socket</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module syslog_socket</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Erlang_syslog_Client_Interface">Erlang syslog Client Interface</a></h3>
+   A minimal syslog client interface that supports both RFC3164 and RFC5424.
+<p>Copyright © 2016 Michael Truog</p>
+
+<p><b>Version:</b> 0.2.0 Dec 26 2016 16:45:24
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Erlang_syslog_Client_Interface">Erlang syslog Client Interface</a></h3>
+   A minimal syslog client interface that supports both RFC3164 and RFC5424.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-app_name">app_name()</a></h3>
+<p><tt>app_name() = nonempty_string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-facility">facility()</a></h3>
+<p><tt>facility() = kernel | user | mail | daemon | auth0 | syslog | print | news | uucp | clock0 | auth1 | ftp | ntp | auth2 | auth3 | clock1 | local0 | local1 | local2 | local3 | local4 | local5 | local6 | local7 | non_neg_integer() | auth | authpriv | cron | kern | lpr | security</tt></p>
+
+
+<h3 class="typedecl"><a name="type-message_id">message_id()</a></h3>
+<p><tt>message_id() = string() | binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [{transport, <a href="#type-transport">transport()</a>} | {transport_options, list()} | {protocol, <a href="#type-protocol">protocol()</a>} | {utf8, boolean()} | {facility, <a href="#type-facility">facility()</a>} | {app_name, <a href="#type-app_name">app_name()</a>} | {path, nonempty_string()} | {host, <a href="inet.html#type-ip_address">inet:ip_address()</a> | <a href="inet.html#type-hostname">inet:hostname()</a>} | {port, undefined | <a href="inet.html#type-port_number">inet:port_number()</a>} | {timeout, <a href="#type-timeout_milliseconds">timeout_milliseconds()</a>}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-protocol">protocol()</a></h3>
+<p><tt>protocol() = rfc3164 | rfc5424</tt></p>
+
+
+<h3 class="typedecl"><a name="type-severity">severity()</a></h3>
+<p><tt>severity() = emergency | alert | critical | error | warning | notice | informational | debug | 0..7 | emerg | panic | crit | err | warn | info</tt></p>
+
+
+<h3 class="typedecl"><a name="type-timeout_milliseconds">timeout_milliseconds()</a></h3>
+<p><tt>timeout_milliseconds() = 1..4294967295</tt></p>
+
+
+<h3 class="typedecl"><a name="type-transport">transport()</a></h3>
+<p><tt>transport() = local | udp | tcp | tls</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#facility-1">facility/1</a></td><td>
+  <h4><a name="Get_the_syslog_facility_numerical_value.">Get the syslog facility numerical value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#facility_valid-1">facility_valid/1</a></td><td>
+  <h4><a name="Test_the_validity_of_a_syslog_facility_value.">Test the validity of a syslog facility value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#send-3">send/3</a></td><td>
+  <h4><a name="Send_data_to_syslog_without_a_timestamp_or_message_id.">Send data to syslog without a timestamp or message_id.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-4">send/4</a></td><td>
+  <h4><a name="Send_data_to_syslog_without_a_message_id.">Send data to syslog without a message_id.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#send-5">send/5</a></td><td>
+  <h4><a name="Send_data_to_syslog.">Send data to syslog.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#severity-1">severity/1</a></td><td>
+  <h4><a name="Get_the_syslog_severity_numerical_value.">Get the syslog severity numerical value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#severity_valid-1">severity_valid/1</a></td><td>
+  <h4><a name="Test_the_validity_of_a_syslog_severity_value.">Test the validity of a syslog severity value.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>
+  <h4><a name="Start_a_syslog_socket.">Start a syslog socket.</a></h4>
+  Connection is immediate within the new Erlang process.</td></tr>
+<tr><td valign="top"><a href="#stop_link-1">stop_link/1</a></td><td>
+  <h4><a name="Stop_an_existing_syslog_socket_asynchronously.">Stop an existing syslog socket asynchronously.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#stop_link-2">stop_link/2</a></td><td>
+  <h4><a name="Stop_an_existing_syslog_socket_synchronously.">Stop an existing syslog socket synchronously.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="facility-1">facility/1</a></h3>
+<div class="spec">
+<p><tt>facility(Facility::<a href="#type-facility">facility()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_syslog_facility_numerical_value.">Get the syslog facility numerical value.</a></h4>
+</p>
+
+<h3 class="function"><a name="facility_valid-1">facility_valid/1</a></h3>
+<div class="spec">
+<p><tt>facility_valid(Facility::<a href="#type-facility">facility()</a>) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Test_the_validity_of_a_syslog_facility_value.">Test the validity of a syslog facility value.</a></h4>
+</p>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Request, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="send-3">send/3</a></h3>
+<div class="spec">
+<p><tt>send(Pid::pid(), Severity::<a href="#type-severity">severity()</a>, Data::iodata()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Send_data_to_syslog_without_a_timestamp_or_message_id.">Send data to syslog without a timestamp or message_id.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-4">send/4</a></h3>
+<div class="spec">
+<p><tt>send(Pid::pid(), Severity::<a href="#type-severity">severity()</a>, Timestamp::undefined | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>, Data::iodata()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Send_data_to_syslog_without_a_message_id.">Send data to syslog without a message_id.</a></h4>
+</p>
+
+<h3 class="function"><a name="send-5">send/5</a></h3>
+<div class="spec">
+<p><tt>send(Pid::pid(), Severity::<a href="#type-severity">severity()</a>, Timestamp::undefined | <a href="erlang.html#type-timestamp">erlang:timestamp()</a>, MessageId::<a href="#type-message_id">message_id()</a>, Data::iodata()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Send_data_to_syslog.">Send data to syslog.</a></h4>
+</p>
+
+<h3 class="function"><a name="severity-1">severity/1</a></h3>
+<div class="spec">
+<p><tt>severity(Severity::<a href="#type-severity">severity()</a>) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Get_the_syslog_severity_numerical_value.">Get the syslog severity numerical value.</a></h4>
+</p>
+
+<h3 class="function"><a name="severity_valid-1">severity_valid/1</a></h3>
+<div class="spec">
+<p><tt>severity_valid(Severity::<a href="#type-severity">severity()</a>) -&gt; boolean()</tt><br></p>
+</div><p>
+  <h4><a name="Test_the_validity_of_a_syslog_severity_value.">Test the validity of a syslog severity value.</a></h4>
+</p>
+
+<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<div class="spec">
+<p><tt>start_link(Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_a_syslog_socket.">Start a syslog socket.</a></h4>
+  Connection is immediate within the new Erlang process.</p>
+
+<h3 class="function"><a name="stop_link-1">stop_link/1</a></h3>
+<div class="spec">
+<p><tt>stop_link(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_existing_syslog_socket_asynchronously.">Stop an existing syslog socket asynchronously.</a></h4>
+</p>
+
+<h3 class="function"><a name="stop_link-2">stop_link/2</a></h3>
+<div class="spec">
+<p><tt>stop_link(Pid::pid(), Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_existing_syslog_socket_synchronously.">Stop an existing syslog socket synchronously.</a></h4>
+</p>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(X1, State) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Dec 26 2016, 16:45:24.</i></p>
+</body>
+</html>

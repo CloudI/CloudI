@@ -724,13 +724,17 @@
               aspect_log_after/0]).
 -type loglevel() :: loglevel_on() | off.
 -type loglevel_on() :: fatal | error | warn | info | debug | trace.
+-type logging_syslog_identity() :: nonempty_string().
+-type logging_syslog_facility() :: 
+    kernel | user | mail | daemon | auth0 | syslog |
+    print | news | uucp | clock0 | auth1 | ftp | ntp |
+    auth2 | auth3 | clock1 | local0 | local1 | local2 |
+    local3 | local4 | local5 | local6 | local7 | non_neg_integer() |
+    % common aliases
+    auth | authpriv | cron | kern | lpr | security.
 -type logging_syslog_set_proplist() ::
-    list({identity, string()} |
-         {facility, kern | user | mail | daemon | auth | syslog | lpr |
-                    news | uucp | cron | authpriv | ftp | netinfo |
-                    remoteauth | install | ras |
-                    local0 | local1 | local2 | local3 | local4 |
-                    local5 | local6 | local7 | non_neg_integer()} |
+    list({identity, logging_syslog_identity()} |
+         {facility, logging_syslog_facility()} |
          {level, loglevel() | undefined}).
 -type logging_formatters_set_proplist() ::
     list({any | nonempty_list(module()),
@@ -754,6 +758,8 @@
                   {aspects_log_after, list(aspect_log_after())}).
 -export_type([loglevel/0,
               loglevel_on/0,
+              logging_syslog_identity/0,
+              logging_syslog_facility/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
               logging_proplist/0]).

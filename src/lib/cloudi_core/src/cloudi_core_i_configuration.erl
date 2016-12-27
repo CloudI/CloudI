@@ -4605,7 +4605,7 @@ logging_proplist(Value) ->
             end,
             case logging_validate(Redirect, Syslog, Formatters,
                                   AspectsLogBefore, AspectsLogAfter) of
-                {ok, SyslogConfig, FormattersConfig,
+                {ok, Redirect, SyslogConfig, FormattersConfig,
                      NewAspectsLogBefore, NewAspectsLogAfter} ->
                     NewLogging = Logging#config_logging{
                                      level = NewLevel,
@@ -4625,41 +4625,25 @@ logging_proplist(Value) ->
 
 logging_validate(Redirect, Syslog, Formatters,
                  AspectsLogBefore, AspectsLogAfter) ->
-    RedirectValid = if
-        Redirect =:= undefined ->
-            ok;
-        true ->
-            case validate_node(Redirect) of
-                ok ->
-                    ok;
-                {error, _} = RedirectError ->
-                    RedirectError
-            end
-    end,
-    if
-        RedirectValid =/= ok ->
-            RedirectValid;
-        true ->
-            case logging_validate_syslog(Syslog) of
-                {ok, SyslogConfig} ->
-                    case logging_validate_formatters(Formatters) of
-                        {ok, FormattersConfig} ->
-                            case logging_validate_aspects(AspectsLogBefore,
-                                                          AspectsLogAfter) of
-                                {ok, NewAspectsLogBefore,
-                                     NewAspectsLogAfter} ->
-                                    {ok, SyslogConfig, FormattersConfig,
-                                         NewAspectsLogBefore,
-                                         NewAspectsLogAfter};
-                                {error, _} = Error ->
-                                    Error
-                            end;
-                        {error, _} = Error ->
-                            Error
-                    end;
-                {error, _} = Error ->
-                    Error
-            end
+    eval([{Redirect,
+           fun logging_validate_redirect/1},
+          {Syslog,
+           fun logging_validate_syslog/1},
+          {Formatters,
+           fun logging_validate_formatters/1},
+          {AspectsLogBefore,
+           fun logging_validate_aspects_log_before/1},
+          {AspectsLogAfter,
+           fun logging_validate_aspects_log_after/1}]).
+
+logging_validate_redirect(undefined) ->
+    {ok, undefined};
+logging_validate_redirect(Redirect) ->
+    case validate_node(Redirect) of
+        ok ->
+            {ok, Redirect};
+        {error, _} = Error ->
+            Error
     end.
 
 logging_validate_syslog(undefined) ->
@@ -4692,17 +4676,16 @@ logging_validate_syslog([_ | _] = Value) ->
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_syslog_level_invalid, Level}};
         [Identity, Facility, Level] ->
-            try cloudi_x_syslog:facility(Facility) of
-                _ when (Level =:= undefined) ->
+            case cloudi_x_syslog_socket:facility_valid(Facility) of
+                true when (Level =:= undefined) ->
                     {ok, undefined};
-                _ ->
+                true ->
                     {ok,
                      SyslogConfig#config_logging_syslog{
                         identity = Identity,
                         facility = Facility,
-                        level = Level}}
-            catch
-                error:badarg ->
+                        level = Level}};
+                false ->
                     {error, {logging_syslog_facility_invalid, Facility}}
             end;
         [_, _, _ | Extra] ->
@@ -4903,20 +4886,6 @@ logging_validate_formatter(Key, Value) ->
             end;
         [_, _, _, _, _, _, _ | Extra] ->
             {error, {logging_formatter_invalid, Extra}}
-    end.
-
-logging_validate_aspects(AspectsLogBefore,
-                         AspectsLogAfter) ->
-    case logging_validate_aspects_log_before(AspectsLogBefore) of
-        {ok, NewAspectsLogBefore} ->
-            case logging_validate_aspects_log_after(AspectsLogAfter) of
-                {ok, NewAspectsLogAfter} ->
-                    {ok, NewAspectsLogBefore, NewAspectsLogAfter};
-                {error, _} = Error ->
-                    Error
-            end;
-        {error, _} = Error ->
-            Error
     end.
 
 logging_validate_aspects_log_before(AspectsLogBefore) ->

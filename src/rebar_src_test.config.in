@@ -35,6 +35,7 @@
   "lib/quickrand",
   "lib/reltool_util",
   "lib/supool",
+  "lib/syslog_socket",
   "lib/trie",
   "lib/uuid",
   "lib/varpool"]}.

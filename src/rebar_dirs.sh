@@ -44,7 +44,6 @@ REBAR_DIRS="\
     external/cloudi_x_pgsql \
     external/cloudi_x_ranch \
     external/cloudi_x_setup \
-    external/cloudi_x_syslog \
     external/proper \
     lib/cgroups \
     lib/cpg \
@@ -55,6 +54,7 @@ REBAR_DIRS="\
     lib/quickrand \
     lib/reltool_util \
     lib/supool \
+    lib/syslog_socket \
     lib/trie \
     lib/uuid \
     lib/varpool \

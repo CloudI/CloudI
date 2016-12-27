@@ -1,0 +1,10 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+{application, syslog_socket,
+  [{description, "syslog Client Interface"},
+   {vsn, "0.2.0"},
+   {modules, [syslog_socket]},
+   {registered, []},
+   {applications, [stdlib, kernel]}]}.
+

@@ -63,9 +63,6 @@
         cloudi_core_i_services_internal_sup,
         cloudi_core_i_services_monitor
         ]},
-   {included_applications, [
-        cloudi_x_syslog
-        ]},
    {applications, [
         cloudi_x_nodefinder,
         cloudi_x_pqueue,
@@ -81,6 +78,7 @@
         cloudi_x_cgroups,
         cloudi_x_cpg,
         cloudi_x_msgpack,
+        cloudi_x_syslog_socket,
         sasl,
         syntax_tools,
         stdlib,

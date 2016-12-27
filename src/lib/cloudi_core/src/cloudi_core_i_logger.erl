@@ -100,7 +100,7 @@
         destination = undefined
             :: undefined | ?MODULE | {?MODULE, node()},
         syslog = undefined
-            :: undefined | port(),
+            :: undefined | pid(),
         syslog_level = undefined
             :: undefined | cloudi_service_api:loglevel(),
         formatters
@@ -509,7 +509,6 @@ init([#config_logging{file = FilePath,
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel0} ->
-            ok = cloudi_x_syslog:load(),
             State#state{syslog = syslog_open(SyslogIdentity, SyslogFacility),
                         syslog_level = SyslogLevel0}
     end,
@@ -664,14 +663,8 @@ handle_info(Request, State) ->
 
 terminate(_, #state{fd = Fd,
                     syslog = Syslog}) ->
-    file:close(Fd),
-    if
-        is_port(Syslog) ->
-            (catch cloudi_x_syslog:close(Syslog)),
-            cloudi_x_syslog:unload();
-        true ->
-            ok
-    end,
+    _ = (catch file:close(Fd)),
+    ok = syslog_close(Syslog),
     ok.
 
 code_change(_, State, _) ->
@@ -776,23 +769,7 @@ log_config_syslog_set(SyslogConfig,
             SyslogLevelNew0
     end,
     SwitchF = fun(StateSwitch) ->
-        if
-            SyslogOld =:= undefined ->
-                if
-                    SyslogConfig =:= undefined ->
-                        ok;
-                    true ->
-                        ok = cloudi_x_syslog:load()
-                end;
-            is_port(SyslogOld) ->
-                ok = cloudi_x_syslog:close(SyslogOld),
-                if
-                    SyslogConfig =:= undefined ->
-                        ok = cloudi_x_syslog:unload();
-                    true ->
-                        ok
-                end
-        end,
+        ok = syslog_close(SyslogOld),
         case SyslogConfig of
             undefined ->
                 StateSwitch#state{syslog = undefined,
@@ -1168,7 +1145,7 @@ log_message_internal(Level, Timestamp, Node, Pid,
     end,
     {SyslogResult, StateN} = case log_level_allowed(SyslogLevel, Level) of
         true ->
-            log_syslog(Level, Message, State1);
+            log_syslog(Level, Timestamp, Message, State1);
         false ->
             {ok, State1}
     end,
@@ -1252,10 +1229,11 @@ log_file_reopen(FilePath, Inode, State) ->
             Error
     end.
 
-log_syslog(Level, Message,
+log_syslog(Level, Timestamp, Message,
            #state{syslog = Syslog} = State) ->
     SyslogPriority = log_level_to_syslog_priority(Level),
-    cloudi_x_syslog:log(Syslog, SyslogPriority, Message),
+    ok = cloudi_x_syslog_socket:send(Syslog, SyslogPriority,
+                                     Timestamp, Message),
     {ok, State}.
 
 log_redirect(_, Destination,
@@ -1328,17 +1306,17 @@ log_level_to_string(trace) ->
     "TRACE".
 
 log_level_to_syslog_priority(fatal) ->
-    emerg;
+    critical;
 log_level_to_syslog_priority(error) ->
-    err;
+    error;
 log_level_to_syslog_priority(warn) ->
     warning;
 log_level_to_syslog_priority(info) ->
-    info;
+    notice;
 log_level_to_syslog_priority(debug) ->
-    debug;
+    informational;
 log_level_to_syslog_priority(trace) ->
-    8.
+    debug.
 
 log_level_allowed(trace, fatal) ->
     true;
@@ -1762,9 +1740,15 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
     end.
 
 syslog_open(SyslogIdentity, SyslogFacility) ->
-    {ok, Syslog} = cloudi_x_syslog:open(SyslogIdentity,
-                                        [ndelay, pid], SyslogFacility),
+    Options = [{app_name, SyslogIdentity},
+               {facility, SyslogFacility}],
+    {ok, Syslog} = cloudi_x_syslog_socket:start_link(Options),
     Syslog.
+
+syslog_close(undefined) ->
+    ok;
+syslog_close(Syslog) when is_pid(Syslog) ->
+    cloudi_x_syslog_socket:stop_link(Syslog). % asynchronous stop
 
 aspects_log([], _, _, _, _, _, _, _, _, _, _) ->
     ok;
