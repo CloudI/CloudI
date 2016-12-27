@@ -8,6 +8,9 @@
     * Fix bug with attempting to use syslog severity 8 with cloudi_x_syslog
       though this changes the syslog severity level mapping with
       CloudI log levels
+    * CloudI now uses standard syslog facility values from syslog_socket
+      (strictly based on RFC3164 and RFC5424) instead of the custom
+      facility values defined by cloudi_x_syslog
 
 2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
