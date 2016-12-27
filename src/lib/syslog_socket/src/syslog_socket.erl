@@ -291,9 +291,11 @@ send(Pid, Severity, Timestamp, Data) ->
 send(Pid, Severity, Timestamp, MessageId, Data) ->
     gen_server:cast(Pid, {send, Severity, Timestamp, MessageId, Data}).
 
-% facility and severity values are based on
-% https://tools.ietf.org/html/rfc3164#section-4.1.1
-% https://tools.ietf.org/html/rfc5424#section-6.2.1
+%%%------------------------------------------------------------------------
+%%% facility and severity values are based on
+%%% https://tools.ietf.org/html/rfc3164#section-4.1.1
+%%% https://tools.ietf.org/html/rfc5424#section-6.2.1
+%%%------------------------------------------------------------------------
 
 %%-------------------------------------------------------------------------
 %% @doc
