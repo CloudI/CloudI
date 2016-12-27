@@ -5,6 +5,8 @@
 
     * Add the syslog_socket pure Erlang syslog interface
     * Remove the cloudi_x_syslog port driver
+      (cloudi_core now has no internal NIF usage or internal port driver usage
+       which helps to ensure reliable operation in any environment)
     * Fix bug with attempting to use syslog severity 8 with cloudi_x_syslog
       though this changes the syslog severity level mapping with
       CloudI log levels
@@ -15,6 +17,7 @@
 2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove CloudI Erlang/OTP version macro checks for before 19.x
+      to remove the cloudi_core_i_socket NIF and accumulated preprocessor checks
       (cloudi_core now has no internal NIF usage,
        the only internal port driver usage is through
        cloudi_x_syslog when syslog usage is enabled)
