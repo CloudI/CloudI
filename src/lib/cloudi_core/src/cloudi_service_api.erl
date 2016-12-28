@@ -732,10 +732,22 @@
     local3 | local4 | local5 | local6 | local7 | non_neg_integer() |
     % common aliases
     auth | authpriv | cron | kern | lpr | security.
+-type logging_syslog_transport() :: local | udp | tcp | tls.
+-type logging_syslog_transport_options() :: list().
+-type logging_syslog_protocol() :: rfc3164 | rfc5424.
+-type logging_syslog_path() :: nonempty_string().
+-type logging_syslog_host() :: inet:ip_address() | inet:hostname().
+-type logging_syslog_port() :: undefined | inet:port_number().
 -type logging_syslog_set_proplist() ::
     list({identity, logging_syslog_identity()} |
          {facility, logging_syslog_facility()} |
-         {level, loglevel() | undefined}).
+         {level, loglevel() | undefined} |
+         {transport, logging_syslog_transport()} |
+         {transport_options, logging_syslog_transport_options()} |
+         {protocol, logging_syslog_protocol()} |
+         {path, logging_syslog_path()} |
+         {host, logging_syslog_host()} |
+         {port, logging_syslog_port()}).
 -type logging_formatters_set_proplist() ::
     list({any | nonempty_list(module()),
           list(fatal | error | warn | info | debug | trace |
@@ -760,6 +772,12 @@
               loglevel_on/0,
               logging_syslog_identity/0,
               logging_syslog_facility/0,
+              logging_syslog_transport/0,
+              logging_syslog_transport_options/0,
+              logging_syslog_protocol/0,
+              logging_syslog_path/0,
+              logging_syslog_host/0,
+              logging_syslog_port/0,
               logging_syslog_set_proplist/0,
               logging_formatters_set_proplist/0,
               logging_proplist/0]).

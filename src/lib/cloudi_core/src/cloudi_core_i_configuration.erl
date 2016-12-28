@@ -258,7 +258,12 @@
      logging_syslog_identity_invalid |
      logging_syslog_facility_invalid |
      logging_syslog_level_invalid |
-     logging_syslog_facility_invalid, any()}.
+     logging_syslog_transport_invalid |
+     logging_syslog_transport_options_invalid |
+     logging_syslog_protocol_invalid |
+     logging_syslog_path_invalid |
+     logging_syslog_host_invalid |
+     logging_syslog_port_invalid, any()}.
 -type error_reason_logging_formatters_set_configuration() ::
     {logging_formatters_invalid |
      logging_formatter_modules_invalid |
@@ -1380,7 +1385,13 @@ logging(#config{logging = #config_logging{
             LoggingList3;
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
-                               level = SyslogLevel} ->
+                               level = SyslogLevel,
+                               transport = SyslogTransport,
+                               transport_options = SyslogTransportOptions,
+                               protocol = SyslogProtocol,
+                               path = SyslogPath,
+                               host = SyslogHost,
+                               port = SyslogPort} ->
             SyslogDefaults = #config_logging_syslog{},
             SyslogList0 = [],
             SyslogList1 = if
@@ -1404,7 +1415,49 @@ logging(#config{logging = #config_logging{
                 true ->
                     [{level, SyslogLevel} | SyslogList2]
             end,
-            [{syslog, lists:reverse(SyslogList3)} | LoggingList3]
+            SyslogList4 = if
+                SyslogTransport =:=
+                SyslogDefaults#config_logging_syslog.transport ->
+                    SyslogList3;
+                true ->
+                    [{transport, SyslogTransport} | SyslogList3]
+            end,
+            SyslogList5 = if
+                SyslogTransportOptions =:=
+                SyslogDefaults#config_logging_syslog.transport_options ->
+                    SyslogList4;
+                true ->
+                    [{transport_options, SyslogTransportOptions} | SyslogList4]
+            end,
+            SyslogList6 = if
+                SyslogProtocol =:=
+                SyslogDefaults#config_logging_syslog.protocol ->
+                    SyslogList5;
+                true ->
+                    [{protocol, SyslogProtocol} | SyslogList5]
+            end,
+            SyslogList7 = if
+                SyslogPath =:=
+                SyslogDefaults#config_logging_syslog.path ->
+                    SyslogList6;
+                true ->
+                    [{path, SyslogPath} | SyslogList6]
+            end,
+            SyslogList8 = if
+                SyslogHost =:=
+                SyslogDefaults#config_logging_syslog.host ->
+                    SyslogList7;
+                true ->
+                    [{host, SyslogHost} | SyslogList7]
+            end,
+            SyslogList9 = if
+                SyslogPort =:=
+                SyslogDefaults#config_logging_syslog.port ->
+                    SyslogList8;
+                true ->
+                    [{port, SyslogPort} | SyslogList8]
+            end,
+            [{syslog, lists:reverse(SyslogList9)} | LoggingList3]
     end,
     undefined = Defaults#config_logging.formatters,
     LoggingList5 = case Formatters of
@@ -4381,15 +4434,19 @@ nodes_discovery_ec2_options(Value, NodesConfig) ->
         [_, _, Host, _, _]
             when not (is_list(Host) orelse
                       is_integer(hd(Host))) ->
-            {error, {node_discovery_ec2_host_invalid, Host}};
+            {error, {node_discovery_ec2_host_invalid,
+                     Host}};
         [_, _, _, [], []] ->
-            {error, {node_discovery_ec2_tags_selection_null, []}};
+            {error, {node_discovery_ec2_tags_selection_null,
+                     []}};
         [_, _, _, Groups, _]
             when not is_list(Groups) ->
-            {error, {node_discovery_ec2_groups_invalid, Groups}};
+            {error, {node_discovery_ec2_groups_invalid,
+                     Groups}};
         [_, _, _, _, Tags]
             when not is_list(Tags) ->
-            {error, {node_discovery_ec2_tags_invalid, Tags}};
+            {error, {node_discovery_ec2_tags_invalid,
+                     Tags}};
         [AccessKeyId, SecretAccessKey, Host, Groups, Tags] ->
             case nodes_discovery_ec2_validate(Groups, Tags) of
                 ok ->
@@ -4421,18 +4478,22 @@ nodes_discovery_multicast_options(Value, NodesConfig) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [Interface, _, _, _]
             when not is_tuple(Interface) ->
-            {error, {node_discovery_multicast_interface_invalid, Interface}};
+            {error, {node_discovery_multicast_interface_invalid,
+                     Interface}};
         [_, Address, _, _]
             when not is_tuple(Address) ->
-            {error, {node_discovery_multicast_address_invalid, Address}};
+            {error, {node_discovery_multicast_address_invalid,
+                     Address}};
         [_, _, Port, _]
             when not (is_integer(Port) andalso
                       (Port > 0)) ->
-            {error, {node_discovery_multicast_port_invalid, Port}};
+            {error, {node_discovery_multicast_port_invalid,
+                     Port}};
         [_, _, _, TTL]
             when not (is_integer(TTL) andalso
                       (TTL >= 0)) ->
-            {error, {node_discovery_multicast_ttl_invalid, TTL}};
+            {error, {node_discovery_multicast_ttl_invalid,
+                     TTL}};
         [Interface, Address, Port, TTL] ->
             Discovery = #config_nodes_discovery{
                 mode = multicast,
@@ -4457,12 +4518,15 @@ nodes_discovery_options(Value, NodesConfig) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [MulticastOptions, _]
             when not is_list(MulticastOptions) ->
-            {error, {node_discovery_multicast_invalid, MulticastOptions}};
+            {error, {node_discovery_multicast_invalid,
+                     MulticastOptions}};
         [_, EC2Options]
             when not is_list(EC2Options) ->
-            {error, {node_discovery_ec2_invalid, EC2Options}};
+            {error, {node_discovery_ec2_invalid,
+                     EC2Options}};
         [[_ | _], [_ | _]] ->
-            {error, {node_discovery_ambiguous, Value}};
+            {error, {node_discovery_ambiguous,
+                     Value}};
         [MulticastOptions, []] ->
             nodes_discovery_multicast_options(MulticastOptions, NodesConfig);
         [[], EC2Options] ->
@@ -4492,40 +4556,49 @@ nodes_options(Nodes0, Value) ->
     case cloudi_proplists:take_values(Defaults, Value) of
         [Nodes1, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
-            {error, {node_invalid, Nodes1}};
+            {error, {node_invalid,
+                     Nodes1}};
         [_, ReconnectStart, _, _, _, _, _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0) andalso
                       (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
-            {error, {node_reconnect_start_invalid, ReconnectStart}};
+            {error, {node_reconnect_start_invalid,
+                     ReconnectStart}};
         [_, ReconnectStart, _, _, _, _, _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
-            {error, {node_reconnect_start_min, ConnectTimeSeconds}};
+            {error, {node_reconnect_start_min,
+                     ConnectTimeSeconds}};
         [_, _, ReconnectDelay, _, _, _, _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0) andalso
                       (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
-            {error, {node_reconnect_delay_invalid, ReconnectDelay}};
+            {error, {node_reconnect_delay_invalid,
+                     ReconnectDelay}};
         [_, _, ReconnectDelay, _, _, _, _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
-            {error, {node_reconnect_delay_min, ConnectTimeSeconds}};
+            {error, {node_reconnect_delay_min,
+                     ConnectTimeSeconds}};
         [_, _, _, Listen, _, _, _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->
-            {error, {node_listen_invalid, Listen}};
+            {error, {node_listen_invalid,
+                     Listen}};
         [_, _, _, _, Connect, _, _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
-            {error, {node_connect_invalid, Connect}};
+            {error, {node_connect_invalid,
+                     Connect}};
         [_, _, _, _, _, TimestampType, _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os) orelse
                       (TimestampType =:= warp)) ->
-            {error, {node_timestamp_type_invalid, TimestampType}};
+            {error, {node_timestamp_type_invalid,
+                     TimestampType}};
         [_, _, _, _, _, _, Discovery]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
-            {error, {node_discovery_invalid, Discovery}};
+            {error, {node_discovery_invalid,
+                     Discovery}};
         [Nodes1, ReconnectStart, ReconnectDelay,
          Listen, Connect, TimestampType, Discovery] ->
             case nodes_elements_add(lists:delete(node(), Nodes1),
@@ -4576,19 +4649,23 @@ logging_proplist(Value) ->
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
-            {error, {logging_level_invalid, Level}};
+            {error, {logging_level_invalid,
+                     Level}};
         [_, File, _, _, _, _, _]
             when not ((is_list(File) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
-            {error, {logging_file_invalid, File}};
+            {error, {logging_file_invalid,
+                     File}};
         [_, _, Redirect, _, _, _, _]
             when not is_atom(Redirect) ->
-            {error, {logging_redirect_invalid, Redirect}};
+            {error, {logging_redirect_invalid,
+                     Redirect}};
         [_, _, _, Syslog, _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
-            {error, {logging_syslog_invalid, Syslog}};
+            {error, {logging_syslog_invalid,
+                     Syslog}};
         [Level, File, Redirect, Syslog, Formatters,
          AspectsLogBefore, AspectsLogAfter] ->
             NewFile = if
@@ -4658,37 +4735,90 @@ logging_validate_syslog([_ | _] = Value) ->
         {facility,
          SyslogConfig#config_logging_syslog.facility},
         {level,
-         SyslogConfig#config_logging_syslog.level}],
+         SyslogConfig#config_logging_syslog.level},
+        {transport,
+         SyslogConfig#config_logging_syslog.transport},
+        {transport_options,
+         SyslogConfig#config_logging_syslog.transport_options},
+        {protocol,
+         SyslogConfig#config_logging_syslog.protocol},
+        {path,
+         SyslogConfig#config_logging_syslog.path},
+        {host,
+         SyslogConfig#config_logging_syslog.host},
+        {port,
+         SyslogConfig#config_logging_syslog.port}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Identity, _, _]
+        [Identity, _, _, _, _, _, _, _, _]
             when not (is_list(Identity) andalso
                       is_integer(hd(Identity))) ->
-            {error, {logging_syslog_identity_invalid, Identity}};
-        [_, Facility, _]
+            {error, {logging_syslog_identity_invalid,
+                     Identity}};
+        [_, Facility, _, _, _, _, _, _, _]
             when not (is_atom(Facility) orelse
                       (is_integer(Facility) andalso
                        (Facility >= 0))) ->
-            {error, {logging_syslog_facility_invalid, Facility}};
-        [_, _, Level]
+            {error, {logging_syslog_facility_invalid,
+                     Facility}};
+        [_, _, Level, _, _, _, _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_syslog_level_invalid, Level}};
-        [Identity, Facility, Level] ->
+        [_, _, Level, _, _, _, _, _, _]
+            when (Level =:= undefined) ->
+            {ok, undefined};
+        [_, _, _, Transport, _, _, _, _, _]
+            when not ((Transport =:= local) orelse (Transport =:= udp) orelse
+                      (Transport =:= tcp) orelse (Transport =:= tls)) ->
+            {error, {logging_syslog_transport_invalid,
+                     Transport}};
+        [_, _, _, _, TransportOptions, _, _, _, _]
+            when not is_list(TransportOptions) ->
+            {error, {logging_syslog_transport_options_invalid,
+                     TransportOptions}};
+        [_, _, _, _, _, Protocol, _, _, _]
+            when not ((Protocol =:= rfc3164) orelse (Protocol =:= rfc5424)) ->
+            {error, {logging_syslog_protocol_invalid,
+                     Protocol}};
+        [_, _, _, _, _, _, Path, _, _]
+            when not (is_list(Path) andalso is_integer(hd(Path))) ->
+            {error, {logging_syslog_path_invalid,
+                     Path}};
+        [_, _, _, _, _, _, _, Host, _]
+            when not ((is_list(Host) andalso is_integer(hd(Host))) orelse
+                      (is_tuple(Host) andalso
+                       ((tuple_size(Host) == 4) orelse
+                        (tuple_size(Host) == 8)))) ->
+            {error, {logging_syslog_host_invalid,
+                     Host}};
+        [_, _, _, _, _, _, _, _, Port]
+            when not ((Port =:= undefined) orelse
+                      (is_integer(Port) andalso
+                       (Port > 0) andalso (Port =< 65535))) ->
+            {error, {logging_syslog_port_invalid,
+                     Port}};
+        [Identity, Facility, Level, Transport, TransportOptions,
+         Protocol, Path, Host, Port] ->
             case cloudi_x_syslog_socket:facility_valid(Facility) of
-                true when (Level =:= undefined) ->
-                    {ok, undefined};
                 true ->
                     {ok,
                      SyslogConfig#config_logging_syslog{
                         identity = Identity,
                         facility = Facility,
-                        level = Level}};
+                        level = Level,
+                        transport = Transport,
+                        transport_options = TransportOptions,
+                        protocol = Protocol,
+                        path = Path,
+                        host = Host,
+                        port = Port}};
                 false ->
-                    {error, {logging_syslog_facility_invalid, Facility}}
+                    {error, {logging_syslog_facility_invalid,
+                             Facility}}
             end;
-        [_, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {logging_syslog_invalid, Extra}}
     end.
 
@@ -4814,27 +4944,34 @@ logging_validate_formatter(Key, Value) ->
     case cloudi_proplists:take_values(Defaults, NewValue) of
         [Level, _, _, _, _, _, _ ]
             when not is_atom(Level) ->
-            {error, {logging_formatter_level_invalid, Level}};
+            {error, {logging_formatter_level_invalid,
+                     Level}};
         [_, Output, _, _, _, _, _]
             when not is_atom(Output) ->
-            {error, {logging_formatter_output_invalid, Output}};
+            {error, {logging_formatter_output_invalid,
+                     Output}};
         [_, _, OutputArgs, _, _, _, _]
             when not is_list(OutputArgs) ->
-            {error, {logging_formatter_output_args_invalid, OutputArgs}};
+            {error, {logging_formatter_output_args_invalid,
+                     OutputArgs}};
         [_, _, _, OutputMaxR, _, _, _]
             when not (is_integer(OutputMaxR) andalso (OutputMaxR >= 0)) ->
-            {error, {logging_formatter_output_max_r_invalid, OutputMaxR}};
+            {error, {logging_formatter_output_max_r_invalid,
+                     OutputMaxR}};
         [_, _, _, _, OutputMaxT, _, _]
             when not (is_integer(OutputMaxT) andalso (OutputMaxT >= 0)) ->
-            {error, {logging_formatter_output_max_t_invalid, OutputMaxT}};
+            {error, {logging_formatter_output_max_t_invalid,
+                     OutputMaxT}};
         [_, Output, _, _, _, Formatter, _]
             when not (is_atom(Formatter) andalso
                       (not ((Output =:= undefined) andalso
                             (Formatter =:= undefined)))) ->
-            {error, {logging_formatter_formatter_invalid, Formatter}};
+            {error, {logging_formatter_formatter_invalid,
+                     Formatter}};
         [_, _, _, _, _, _, Config]
             when not is_list(Config) ->
-            {error, {logging_formatter_formatter_config_invalid, Config}};
+            {error, {logging_formatter_formatter_config_invalid,
+                     Config}};
         [Level, Output, OutputArgs, OutputMaxR, OutputMaxT,
          Formatter, Config] ->
             case logging_formatter_level(Level) of

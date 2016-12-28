@@ -506,10 +506,8 @@ init([#config_logging{file = FilePath,
     #state{syslog_level = SyslogLevel} = StateNext = case SyslogConfig of
         undefined ->
             State;
-        #config_logging_syslog{identity = SyslogIdentity,
-                               facility = SyslogFacility,
-                               level = SyslogLevel0} ->
-            State#state{syslog = syslog_open(SyslogIdentity, SyslogFacility),
+        #config_logging_syslog{level = SyslogLevel0} ->
+            State#state{syslog = syslog_open(SyslogConfig),
                         syslog_level = SyslogLevel0}
     end,
     Level = log_level([FileLevel, SyslogLevel, FormattersLevel]),
@@ -774,10 +772,8 @@ log_config_syslog_set(SyslogConfig,
             undefined ->
                 StateSwitch#state{syslog = undefined,
                                   syslog_level = undefined};
-            #config_logging_syslog{identity = SyslogIdentity,
-                                   facility = SyslogFacility} ->
-                StateSwitch#state{syslog = syslog_open(SyslogIdentity,
-                                                       SyslogFacility),
+            #config_logging_syslog{} ->
+                StateSwitch#state{syslog = syslog_open(SyslogConfig),
                                   syslog_level = SyslogLevelNew}
         end
     end,
@@ -1739,9 +1735,22 @@ load_interface_module(Level, Mode, Process) when is_atom(Level) ->
             Error
     end.
 
-syslog_open(SyslogIdentity, SyslogFacility) ->
+syslog_open(#config_logging_syslog{identity = SyslogIdentity,
+                                   facility = SyslogFacility,
+                                   transport = SyslogTransport,
+                                   transport_options = SyslogTransportOptions,
+                                   protocol = SyslogProtocol,
+                                   path = SyslogPath,
+                                   host = SyslogHost,
+                                   port = SyslogPort}) ->
     Options = [{app_name, SyslogIdentity},
-               {facility, SyslogFacility}],
+               {facility, SyslogFacility},
+               {transport, SyslogTransport},
+               {transport_options, SyslogTransportOptions},
+               {protocol, SyslogProtocol},
+               {path, SyslogPath},
+               {host, SyslogHost},
+               {port, SyslogPort}],
     {ok, Syslog} = cloudi_x_syslog_socket:start_link(Options),
     Syslog.
 

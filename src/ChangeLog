@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2016-12-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add additional syslog logging configuration options
+
 2016-12-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the syslog_socket pure Erlang syslog interface

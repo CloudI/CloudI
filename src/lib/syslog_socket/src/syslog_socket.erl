@@ -152,7 +152,7 @@ start_link(Options) when is_list(Options) ->
                 {utf8, ?UTF8_DEFAULT},
                 {facility, ?FACILITY_DEFAULT},
                 {app_name, undefined},
-                {path, "/dev/l""og"},
+                {path, "/dev/log"},
                 {host, {127,0,0,1}},
                 {port, undefined},
                 {timeout, ?TIMEOUT_DEFAULT}],

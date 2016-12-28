@@ -57,7 +57,19 @@
         % debug  -> informational  (6)
         % trace  -> debug          (7)
         level = trace
-            :: cloudi_service_api:loglevel()
+            :: cloudi_service_api:loglevel(),
+        transport = local
+            :: cloudi_service_api:logging_syslog_transport(),
+        transport_options = []
+            :: cloudi_service_api:logging_syslog_transport_options(),
+        protocol = rfc3164
+            :: cloudi_service_api:logging_syslog_protocol(),
+        path = "/dev/log"
+            :: cloudi_service_api:logging_syslog_path(),
+        host = {127,0,0,1}
+            :: cloudi_service_api:logging_syslog_host(),
+        port = undefined
+            :: cloudi_service_api:logging_syslog_port()
     }).
 
 -record(config_logging_formatter,
