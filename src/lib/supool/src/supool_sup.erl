@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool_sup).
@@ -62,6 +62,10 @@
 
 -define(DEFAULT_MAX_R,                              5). % max restart count
 -define(DEFAULT_MAX_T,                            300). % max time in seconds
+
+% anticipated minimum delay for the supervisor behaviour to
+% restart a child process, used to check the current pool state
+-define(RESTART_DELAY,                            100). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -107,7 +111,7 @@ start_children(Supervisor, ChildSpecs)
 
 which_children(Supervisor)
     when is_pid(Supervisor) ->
-    which_child(supervisor:which_children(Supervisor), []).
+    which_child(supervisor:which_children(Supervisor), [], Supervisor).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from supervisor
@@ -141,28 +145,29 @@ start_child([ChildSpec | ChildSpecs], Pids, Supervisor) ->
             Error
     end.
 
-which_child([], L) ->
+which_child([], L, _) ->
     L;
-which_child([{supool, _, _, _} | Children], L) ->
-    which_child(Children, L);
-which_child([{_, undefined, _, _} | Children], L) ->
-    which_child(Children, L);
-which_child([{_, Pid, _, _} | Children], L) ->
-    which_child(Children, [Pid | L]).
+which_child([{supool, _, _, _} | Children], L, Supervisor) ->
+    which_child(Children, L, Supervisor);
+which_child([{_, undefined, _, _} | Children], L, Supervisor) ->
+    which_child(Children, L, Supervisor);
+which_child([{_, restarting, _, _} | _], _, Supervisor) ->
+    receive after ?RESTART_DELAY -> ok end,
+    which_children(Supervisor);
+which_child([{_, Pid, _, _} | Children], L, Supervisor)
+    when is_pid(Pid) ->
+    which_child(Children, [Pid | L], Supervisor).
 
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
     take_values([], DefaultList, List).
-
-take_values(Result, [], List)
-    when is_list(Result), is_list(List) ->
+take_values(Result, [], List) ->
     lists:reverse(Result) ++ List;
-
-take_values(Result, [{Key, Default} | DefaultList], List)
-    when is_list(Result), is_atom(Key), is_list(List) ->
+take_values(Result, [{Key, Default} | DefaultList], List) ->
     case lists:keytake(Key, 1, List) of
         false ->
             take_values([Default | Result], DefaultList, List);
         {value, {Key, Value}, RemainingList} ->
             take_values([Value | Result], DefaultList, RemainingList)
     end.
+

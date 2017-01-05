@@ -1,6 +1,6 @@
 #[CloudI 1.5.4](http://cloudi.org)
 
-[![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI)
+[![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
 ## LICENSE
 

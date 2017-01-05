@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2011-2016 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supool).
@@ -71,6 +71,7 @@
 -record(state,
     {
         supervisor :: pid(),
+        index = 1 :: pos_integer(),
         pool = undefined :: tuple() | undefined,
         count = undefined :: pos_integer() | undefined
     }).
@@ -158,20 +159,30 @@ pool_worker_start_link(Name, Supervisor)
 %%%------------------------------------------------------------------------
 
 init([Supervisor]) ->
-    erlang:put(current, 1),
     self() ! restart,
     {ok, #state{supervisor = Supervisor}}.
 
-handle_call(get, _, #state{pool = Pool,
+handle_call(get, _, #state{supervisor = Supervisor,
+                           index = I,
+                           pool = Pool,
                            count = Count} = State) ->
-    I = erlang:get(current),
-    erlang:put(current, if I == Count -> 1; true -> I + 1 end),
     Pid = erlang:element(I, Pool),
     case erlang:is_process_alive(Pid) of
         true ->
-            {reply, Pid, State};
+            {reply, Pid, State#state{index = increment(I, Count)}};
         false ->
-            update(I, State)
+            NewPids = supool_sup:which_children(Supervisor),
+            case erlang:length(NewPids) of
+                0 ->
+                    {stop, {error, noproc}, undefined, State};
+                NewCount ->
+                    NewPool = erlang:list_to_tuple(NewPids),
+                    NewI = if I > NewCount -> 1; true -> I end,
+                    {reply, erlang:element(NewI, NewPool),
+                     State#state{index = increment(NewI, NewCount),
+                                 pool = NewPool,
+                                 count = NewCount}}
+            end
     end;
 
 handle_call(Request, _, State) ->
@@ -221,22 +232,8 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-update(I, #state{supervisor = Supervisor} = State) ->
-    Pids = supool_sup:which_children(Supervisor),
-    case erlang:length(Pids) of
-        0 ->
-            {stop, {error, noproc}, undefined, State};
-        Count ->
-            Pool = erlang:list_to_tuple(Pids),
-            NewI = if
-                I > Count ->
-                    erlang:put(current, if 1 == Count -> 1; true -> 2 end),
-                    1;
-                true ->
-                    I
-            end,
-            {reply, erlang:element(NewI, Pool),
-             State#state{pool = Pool,
-                         count = Count}}
-    end.
+increment(Count, Count) ->
+    1;
+increment(I, _) ->
+    I + 1.
 

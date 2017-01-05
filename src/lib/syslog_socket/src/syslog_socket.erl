@@ -689,10 +689,8 @@ truncate(Value, N) when is_binary(Value) ->
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
     take_values([], DefaultList, List).
-
 take_values(Result, [], List) ->
     lists:reverse(Result) ++ List;
-
 take_values(Result, [{Key, Default} | DefaultList], List) ->
     case lists:keytake(Key, 1, List) of
         false ->
