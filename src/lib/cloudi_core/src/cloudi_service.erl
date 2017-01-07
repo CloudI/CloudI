@@ -59,7 +59,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -94,8 +94,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -194,12 +194,7 @@
          % deprecated, moved to the cloudi_key_value module
          key_value_erase/2,
          key_value_find/2,
-         key_value_store/3,
-         % functions to trigger edoc, until -callback works with edoc
-         'Module:cloudi_service_init'/4,
-         'Module:cloudi_service_handle_request'/11,
-         'Module:cloudi_service_handle_info'/3,
-         'Module:cloudi_service_terminate'/3]).
+         key_value_store/3]).
 
 -deprecated([environment_lookup/0,
              environment_transform/1,
@@ -535,7 +530,13 @@ get_pid(Dispatcher, [NameC | _] = Name, undefined)
     gen_server:call(Dispatcher, {'get_pid', Name}, infinity);
 
 get_pid(Dispatcher, Name, immediate) ->
+    get_pid(Dispatcher, Name, limit_min);
+
+get_pid(Dispatcher, Name, limit_min) ->
     get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
+
+get_pid(Dispatcher, Name, limit_max) ->
+    get_pid(Dispatcher, Name, ?TIMEOUT_MAX);
 
 get_pid(Dispatcher, [NameC | _] = Name, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -576,7 +577,13 @@ get_pids(Dispatcher, [NameC | _] = Name, undefined)
     gen_server:call(Dispatcher, {'get_pids', Name}, infinity);
 
 get_pids(Dispatcher, Name, immediate) ->
+    get_pid(Dispatcher, Name, limit_min);
+
+get_pids(Dispatcher, Name, limit_min) ->
     get_pid(Dispatcher, Name, ?SEND_SYNC_INTERVAL - 1);
+
+get_pids(Dispatcher, Name, limit_max) ->
+    get_pid(Dispatcher, Name, ?TIMEOUT_MAX);
 
 get_pids(Dispatcher, [NameC | _] = Name, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -621,7 +628,13 @@ send_async(Dispatcher, [NameC | _] = Name, Request, undefined)
                                  undefined, undefined}, infinity);
 
 send_async(Dispatcher, Name, Request, immediate) ->
+    send_async(Dispatcher, Name, Request, limit_min);
+
+send_async(Dispatcher, Name, Request, limit_min) ->
     send_async(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
+
+send_async(Dispatcher, Name, Request, limit_max) ->
+    send_async(Dispatcher, Name, Request, ?TIMEOUT_MAX);
 
 send_async(Dispatcher, [NameC | _] = Name, Request, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -657,7 +670,15 @@ send_async(Dispatcher, [NameC | _] = Name, Request, undefined, PatternPid)
 
 send_async(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_async(Dispatcher, Name, Request,
+               limit_min, PatternPid);
+
+send_async(Dispatcher, Name, Request, limit_min, PatternPid) ->
+    send_async(Dispatcher, Name, Request,
                ?SEND_ASYNC_INTERVAL - 1, PatternPid);
+
+send_async(Dispatcher, Name, Request, limit_max, PatternPid) ->
+    send_async(Dispatcher, Name, Request,
+               ?TIMEOUT_MAX, PatternPid);
 
 send_async(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -708,7 +729,17 @@ send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_async(Dispatcher, Name, RequestInfo, Request,
            immediate, Priority) ->
     send_async(Dispatcher, Name, RequestInfo, Request,
+               limit_min, Priority);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           limit_min, Priority) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
                ?SEND_ASYNC_INTERVAL - 1, Priority);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           limit_max, Priority) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
+               ?TIMEOUT_MAX, Priority);
 
 send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            Timeout, undefined)
@@ -773,7 +804,17 @@ send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_async(Dispatcher, Name, RequestInfo, Request,
            immediate, Priority, PatternPid) ->
     send_async(Dispatcher, Name, RequestInfo, Request,
+               limit_min, Priority, PatternPid);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           limit_min, Priority, PatternPid) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
                ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           limit_max, Priority, PatternPid) ->
+    send_async(Dispatcher, Name, RequestInfo, Request,
+               ?TIMEOUT_MAX, Priority, PatternPid);
 
 send_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
            undefined, Priority, PatternPid)
@@ -876,7 +917,13 @@ send_async_active(Dispatcher, [NameC | _] = Name, Request, undefined)
                                  undefined, undefined}, infinity);
 
 send_async_active(Dispatcher, Name, Request, immediate) ->
+    send_async_active(Dispatcher, Name, Request, limit_min);
+
+send_async_active(Dispatcher, Name, Request, limit_min) ->
     send_async_active(Dispatcher, Name, Request, ?SEND_ASYNC_INTERVAL - 1);
+
+send_async_active(Dispatcher, Name, Request, limit_max) ->
+    send_async_active(Dispatcher, Name, Request, ?TIMEOUT_MAX);
 
 send_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -919,7 +966,15 @@ send_async_active(Dispatcher, [NameC | _] = Name, Request,
 
 send_async_active(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_async_active(Dispatcher, Name, Request,
+                      limit_min, PatternPid);
+
+send_async_active(Dispatcher, Name, Request, limit_min, PatternPid) ->
+    send_async_active(Dispatcher, Name, Request,
                       ?SEND_ASYNC_INTERVAL - 1, PatternPid);
+
+send_async_active(Dispatcher, Name, Request, limit_max, PatternPid) ->
+    send_async_active(Dispatcher, Name, Request,
+                      ?TIMEOUT_MAX, PatternPid);
 
 send_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -978,7 +1033,17 @@ send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   immediate, Priority) ->
     send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      limit_min, Priority);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_min, Priority) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_max, Priority) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?TIMEOUT_MAX, Priority);
 
 send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined)
@@ -1059,7 +1124,17 @@ send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   immediate, Priority, PatternPid) ->
     send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      limit_min, Priority, PatternPid);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_min, Priority, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_max, Priority, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?TIMEOUT_MAX, Priority, PatternPid);
 
 send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined, undefined)
@@ -1150,7 +1225,17 @@ send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_async_active(Dispatcher, Name, RequestInfo, Request,
                   immediate, Priority, TransId, PatternPid) ->
     send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      limit_min, Priority, TransId, PatternPid);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_min, Priority, TransId, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
                       ?SEND_ASYNC_INTERVAL - 1, Priority, TransId, PatternPid);
+
+send_async_active(Dispatcher, Name, RequestInfo, Request,
+                  limit_max, Priority, TransId, PatternPid) ->
+    send_async_active(Dispatcher, Name, RequestInfo, Request,
+                      ?TIMEOUT_MAX, Priority, TransId, PatternPid);
 
 send_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                   Timeout, undefined, TransId, PatternPid)
@@ -1312,7 +1397,13 @@ send_sync(Dispatcher, [NameC | _] = Name, Request, undefined)
                                  undefined, undefined}, infinity);
 
 send_sync(Dispatcher, Name, Request, immediate) ->
+    send_sync(Dispatcher, Name, Request, limit_min);
+
+send_sync(Dispatcher, Name, Request, limit_min) ->
     send_sync(Dispatcher, Name, Request, ?SEND_SYNC_INTERVAL - 1);
+
+send_sync(Dispatcher, Name, Request, limit_max) ->
+    send_sync(Dispatcher, Name, Request, ?TIMEOUT_MAX);
 
 send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -1349,7 +1440,15 @@ send_sync(Dispatcher, [NameC | _] = Name, Request, undefined, PatternPid)
 
 send_sync(Dispatcher, Name, Request, immediate, PatternPid) ->
     send_sync(Dispatcher, Name, Request,
+              limit_min, PatternPid);
+
+send_sync(Dispatcher, Name, Request, limit_min, PatternPid) ->
+    send_sync(Dispatcher, Name, Request,
               ?SEND_SYNC_INTERVAL - 1, PatternPid);
+
+send_sync(Dispatcher, Name, Request, limit_max, PatternPid) ->
+    send_sync(Dispatcher, Name, Request,
+              ?TIMEOUT_MAX, PatternPid);
 
 send_sync(Dispatcher, [NameC | _] = Name, Request, Timeout, undefined)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -1401,7 +1500,17 @@ send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_sync(Dispatcher, Name, RequestInfo, Request,
           immediate, Priority) ->
     send_sync(Dispatcher, Name, RequestInfo, Request,
+              limit_min, Priority);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          limit_min, Priority) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
               ?SEND_SYNC_INTERVAL - 1, Priority);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          limit_max, Priority) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
+              ?TIMEOUT_MAX, Priority);
 
 send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, undefined)
@@ -1477,7 +1586,17 @@ send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 send_sync(Dispatcher, Name, RequestInfo, Request,
           immediate, Priority, PatternPid) ->
     send_sync(Dispatcher, Name, RequestInfo, Request,
+              limit_min, Priority, PatternPid);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          limit_min, Priority, PatternPid) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
               ?SEND_SYNC_INTERVAL - 1, Priority, PatternPid);
+
+send_sync(Dispatcher, Name, RequestInfo, Request,
+          limit_max, Priority, PatternPid) ->
+    send_sync(Dispatcher, Name, RequestInfo, Request,
+              ?TIMEOUT_MAX, Priority, PatternPid);
 
 send_sync(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
           Timeout, undefined, undefined)
@@ -1562,7 +1681,13 @@ mcast_async(Dispatcher, [NameC | _] = Name, Request, undefined)
                                  undefined, undefined}, infinity);
 
 mcast_async(Dispatcher, Name, Request, immediate) ->
+    mcast_async(Dispatcher, Name, Request, limit_min);
+
+mcast_async(Dispatcher, Name, Request, limit_min) ->
     mcast_async(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
+
+mcast_async(Dispatcher, Name, Request, limit_max) ->
+    mcast_async(Dispatcher, Name, Request, ?TIMEOUT_MAX);
 
 mcast_async(Dispatcher, [NameC | _] = Name, Request, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -1608,7 +1733,15 @@ mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 
 mcast_async(Dispatcher, Name, RequestInfo, Request, immediate, Priority) ->
     mcast_async(Dispatcher, Name, RequestInfo, Request,
+                limit_min, Priority);
+
+mcast_async(Dispatcher, Name, RequestInfo, Request, limit_min, Priority) ->
+    mcast_async(Dispatcher, Name, RequestInfo, Request,
                 ?MCAST_ASYNC_INTERVAL - 1, Priority);
+
+mcast_async(Dispatcher, Name, RequestInfo, Request, limit_max, Priority) ->
+    mcast_async(Dispatcher, Name, RequestInfo, Request,
+                ?TIMEOUT_MAX, Priority);
 
 mcast_async(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
             Timeout, undefined)
@@ -1683,7 +1816,13 @@ mcast_async_active(Dispatcher, [NameC | _] = Name, Request, undefined)
                                  undefined, undefined}, infinity);
 
 mcast_async_active(Dispatcher, Name, Request, immediate) ->
+    mcast_async_active(Dispatcher, Name, Request, limit_min);
+
+mcast_async_active(Dispatcher, Name, Request, limit_min) ->
     mcast_async_active(Dispatcher, Name, Request, ?MCAST_ASYNC_INTERVAL - 1);
+
+mcast_async_active(Dispatcher, Name, Request, limit_max) ->
+    mcast_async_active(Dispatcher, Name, Request, ?TIMEOUT_MAX);
 
 mcast_async_active(Dispatcher, [NameC | _] = Name, Request, Timeout)
     when is_pid(Dispatcher), is_integer(NameC), is_integer(Timeout),
@@ -1736,7 +1875,17 @@ mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
 mcast_async_active(Dispatcher, Name, RequestInfo, Request,
                    immediate, Priority) ->
     mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                       limit_min, Priority);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                   limit_min, Priority) ->
+    mcast_async_active(Dispatcher, Name, RequestInfo, Request,
                        ?MCAST_ASYNC_INTERVAL - 1, Priority);
+
+mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                   limit_max, Priority) ->
+    mcast_async_active(Dispatcher, Name, RequestInfo, Request,
+                       ?TIMEOUT_MAX, Priority);
 
 mcast_async_active(Dispatcher, [NameC | _] = Name, RequestInfo, Request,
                    Timeout, undefined)
@@ -2090,7 +2239,13 @@ recv_async(Dispatcher, undefined)
                     {'recv_async', <<0:128>>, true}, infinity);
 
 recv_async(Dispatcher, immediate) ->
+    recv_async(Dispatcher, limit_min);
+
+recv_async(Dispatcher, limit_min) ->
     recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1);
+
+recv_async(Dispatcher, limit_max) ->
+    recv_async(Dispatcher, ?TIMEOUT_MAX);
 
 recv_async(Dispatcher, Timeout)
     when is_pid(Dispatcher), is_integer(Timeout),
@@ -2120,7 +2275,13 @@ recv_async(Dispatcher, undefined, TransId)
                     {'recv_async', TransId, true}, infinity);
 
 recv_async(Dispatcher, immediate, TransId) ->
+    recv_async(Dispatcher, limit_min, TransId);
+
+recv_async(Dispatcher, limit_min, TransId) ->
     recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransId);
+
+recv_async(Dispatcher, limit_max, TransId) ->
+    recv_async(Dispatcher, ?TIMEOUT_MAX, TransId);
 
 recv_async(Dispatcher, Timeout, TransId)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -2161,7 +2322,13 @@ recv_async(Dispatcher, undefined, TransId, Consume)
                     {'recv_async', TransId, Consume}, infinity);
 
 recv_async(Dispatcher, immediate, TransId, Consume) ->
+    recv_async(Dispatcher, limit_min, TransId, Consume);
+
+recv_async(Dispatcher, limit_min, TransId, Consume) ->
     recv_async(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransId, Consume);
+
+recv_async(Dispatcher, limit_max, TransId, Consume) ->
+    recv_async(Dispatcher, ?TIMEOUT_MAX, TransId, Consume);
 
 recv_async(Dispatcher, Timeout, TransId, Consume)
     when is_pid(Dispatcher), is_integer(Timeout), is_binary(TransId),
@@ -2210,7 +2377,13 @@ recv_asyncs(Dispatcher, undefined, [_ | _] = TransIdList)
                       TransId <- TransIdList], true}, infinity);
 
 recv_asyncs(Dispatcher, immediate, TransIdList) ->
+    recv_asyncs(Dispatcher, limit_min, TransIdList);
+
+recv_asyncs(Dispatcher, limit_min, TransIdList) ->
     recv_asyncs(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransIdList);
+
+recv_asyncs(Dispatcher, limit_max, TransIdList) ->
+    recv_asyncs(Dispatcher, ?TIMEOUT_MAX, TransIdList);
 
 recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
     when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
@@ -2236,7 +2409,13 @@ recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList)
     {error, Reason :: error_reason_sync()}.
 
 recv_asyncs(Dispatcher, immediate, TransIdList, Consume) ->
+    recv_asyncs(Dispatcher, limit_min, TransIdList, Consume);
+
+recv_asyncs(Dispatcher, limit_min, TransIdList, Consume) ->
     recv_asyncs(Dispatcher, ?RECV_ASYNC_INTERVAL - 1, TransIdList, Consume);
+
+recv_asyncs(Dispatcher, limit_max, TransIdList, Consume) ->
+    recv_asyncs(Dispatcher, ?TIMEOUT_MAX, TransIdList, Consume);
 
 recv_asyncs(Dispatcher, Timeout, [_ | _] = TransIdList, Consume)
     when is_pid(Dispatcher), is_integer(Timeout), is_list(TransIdList),
@@ -2580,107 +2759,6 @@ key_value_find(Key, KeyValues) ->
 
 key_value_store(Key, Value, KeyValues) ->
     cloudi_key_value:store(Key, Value, KeyValues).
-
-%%%------------------------------------------------------------------------
-%%% edoc functions
-%%%------------------------------------------------------------------------
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Initialize the internal service.===
-%% Create the internal service state.  Do any initial service subscriptions
-%% necessary.  Send service requests, if required for service initialization.
-%% State implicitly becomes 'undefined' if not provided to 'stop'.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec 'Module:cloudi_service_init'(Args :: list(),
-                                   Prefix :: service_name_pattern(),
-                                   Timeout :: cloudi_service_api:
-                                              timeout_milliseconds(),
-                                   Dispatcher :: dispatcher()) ->
-    {ok, State :: any()} |
-    {stop, Reason :: any()} |
-    {stop, Reason :: any(), State :: any()}.
-
-'Module:cloudi_service_init'(_, _, _, _) ->
-    {ok, state}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Handle an incoming service request.===
-%% The request_pid_uses and request_pid_options service configuration options
-%% control the Erlang process used to call this function.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec 'Module:cloudi_service_handle_request'(Type :: request_type(),
-                                             Name :: service_name(),
-                                             Pattern :: service_name_pattern(),
-                                             RequestInfo :: request_info(),
-                                             Request :: request(),
-                                             Timeout ::
-                                                timeout_value_milliseconds(),
-                                             Priority :: priority(),
-                                             TransId :: trans_id(),
-                                             Source :: source(),
-                                             State :: any(),
-                                             Dispatcher :: dispatcher()) ->
-    {reply, Response :: response(), NewState :: any()} |
-    {reply, ResponseInfo :: response_info(), Response :: response(),
-     NewState :: any()} |
-    {forward, NextName :: service_name(),
-     NextRequestInfo :: request_info(), NextRequest :: request(),
-     NewState :: any()} |
-    {forward, NextName :: service_name(),
-     NextRequestInfo :: request_info(), NextRequest :: request(),
-     NextTimeout :: timeout_value_milliseconds(), NextPriority :: priority(),
-     NewState :: any()} |
-    {noreply, NewState :: any()} |
-    {stop, Reason :: any(), NewState :: any()}.
-
-'Module:cloudi_service_handle_request'(_, _, _, _, _, _, _, _, _, _, _) ->
-    {reply, response, state}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Handle an incoming Erlang message.===
-%% The info_pid_uses and info_pid_options service configuration options
-%% control the Erlang process used to call this function.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec 'Module:cloudi_service_handle_info'(Request :: any(),
-                                          State :: any(),
-                                          Dispatcher :: dispatcher()) ->
-    {noreply, NewState :: any()} |
-    {stop, Reason :: any(), NewState :: any()}.
-
-'Module:cloudi_service_handle_info'(_, _, _) ->
-    {noreply, state}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Handle service termination.===
-%% cloudi_service_terminate/2 is always called, even when cloudi_service_init/3
-%% returns a stop tuple.  When State is unset in the stop tuple, the
-%% cloudi_service_terminate/2 function is called with State equal to
-%% 'undefined'.  Always calling the cloudi_service_terminate/2 function differs
-%% from how Erlang/OTP behaviours handle the init/1 function returning a stop
-%% tuple, but this approach can help prevent problems managing any global
-%% state that might exist that is connected to a service, or simply services
-%% that are only partially initialized.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec 'Module:cloudi_service_terminate'(Reason :: any(),
-                                        Timeout :: cloudi_service_api:
-                                                   timeout_milliseconds(),
-                                        State :: any()) ->
-    ok.
-
-'Module:cloudi_service_terminate'(_, _, _) ->
-    ok.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

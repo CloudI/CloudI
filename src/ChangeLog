@@ -1,6 +1,23 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * The Erlang cloudi_service and cloudi modules now use the atom
+      limit_min instead of immediate for the timeout value, to represent
+      the largest timeout value possible to avoid timer use
+      (499 milliseconds with the current macro definitions) though the minimum
+      timeout value remains 0 for these functions
+      (limit_min/limit_max will later also be used for timeout configuration)
+      * The immediate atom usage is retained to allow removal in a future
+        CloudI release, though dialyzer currently lacks the ability to
+        deprecate an Erlang type specification, so this change requires
+        human attention that doesn't rely on tools to detect
+    * The Erlang cloudi_service and cloudi modules now accept the atom
+      limit_max as the timeout value which is the maximum possible
+      (4294967195 milliseconds with the current macro definitions,
+       i.e., 49.7 days)
+
 2017-01-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Ensure all CloudI API implementations can handle a null object return

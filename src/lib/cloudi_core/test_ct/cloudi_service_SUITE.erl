@@ -7,7 +7,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2014-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -564,13 +564,13 @@ t_service_internal_sync_2(_Config) ->
     {{ok, {_, Service}},
      Context2} = cloudi:get_pid(Context1,
                                 ServiceName,
-                                immediate),
+                                limit_min),
     true = erlang:is_process_alive(Service),
     {{error, timeout},
      _Context3} = cloudi:send_sync(Context2,
                                    ServiceName,
                                    ?REQUEST_INFO7, ?REQUEST7,
-                                   immediate, undefined),
+                                   limit_min, undefined),
     receive after 100 -> ok end,
     false = erlang:is_process_alive(Service),
     ok.
@@ -770,7 +770,7 @@ t_service_internal_aspects_1(_Config) ->
     {{ok, {_, Service}},
      Context3} = cloudi:get_pid(Context2,
                                 ServiceName,
-                                immediate),
+                                limit_min),
     % count == 35 (29 + 6), InfoBefore
     Service ! increment, % count == 37 (35 + 2)
     % count == 43 (37 + 6), InfoAfter
@@ -815,7 +815,7 @@ t_service_internal_terminate_1(_Config) ->
     {{ok, {_, Service}},
      _Context2} = cloudi:get_pid(Context1,
                                  ServiceName,
-                                 immediate),
+                                 limit_min),
     erlang:exit(Service, terminate_sleep_test_1),
     % wait for termination
     receive after 4000 -> ok end,
@@ -837,7 +837,7 @@ t_service_internal_terminate_3(_Config) ->
     {{ok, {_, Service}},
      _Context2} = cloudi:get_pid(Context1,
                                  ServiceName,
-                                 immediate),
+                                 limit_min),
     erlang:exit(Service, terminate_sleep_test_2),
     % wait for termination
     receive after 4000 -> ok end,

@@ -7,7 +7,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015 Michael Truog
-%%% @version 1.5.0 {@date} {@time}
+%%% @copyright 2015-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate_SUITE).
@@ -309,12 +309,12 @@ t_integer_even_success_1(_Config) ->
       {_, SrcPid} = PatternPidSrc},
      Context1} = cloudi:get_pid(Context0,
                                 ServiceNameSrc,
-                                immediate),
+                                limit_min),
     {{ok,
       {_, DstPid}},
      Context2} = cloudi:get_pid(Context1,
                                 ServiceNameDst,
-                                immediate),
+                                limit_min),
     {{ok, 0, 3},
      Context3} = cloudi:send_sync(Context2, ServiceNameSrc, 0, 2,
                                   undefined, undefined, PatternPidSrc),
@@ -336,12 +336,12 @@ t_integer_even_failure_1(_Config) ->
       {_, SrcPid} = PatternPidSrc},
      Context1} = cloudi:get_pid(Context0,
                                 ServiceNameSrc,
-                                immediate),
+                                limit_min),
     {{ok,
       {_, DstPid}},
      Context2} = cloudi:get_pid(Context1,
                                 ServiceNameDst,
-                                immediate),
+                                limit_min),
     MonitorRefSrc = erlang:monitor(process, SrcPid),
     {{ok, 0, 4},
      Context3} = cloudi:send_sync(Context2, ServiceNameSrc, 0, 3,
@@ -373,12 +373,12 @@ t_integer_even_failure_2(_Config) ->
       {_, SrcPid} = PatternPidSrc},
      Context1} = cloudi:get_pid(Context0,
                                 ServiceNameSrc,
-                                immediate),
+                                limit_min),
     {{ok,
       {_, DstPid}},
      Context2} = cloudi:get_pid(Context1,
                                 ServiceNameDst,
-                                immediate),
+                                limit_min),
     MonitorRefSrc = erlang:monitor(process, SrcPid),
     MonitorRefDst = erlang:monitor(process, DstPid),
     {{ok, _},
@@ -404,12 +404,12 @@ t_integer_even_failure_3(_Config) ->
       {_, SrcPid} = PatternPidSrc},
      Context1} = cloudi:get_pid(Context0,
                                 ServiceNameSrc,
-                                immediate),
+                                limit_min),
     {{ok,
       {_, DstPid}},
      Context2} = cloudi:get_pid(Context1,
                                 ServiceNameDst,
-                                immediate),
+                                limit_min),
     MonitorRefSrc = erlang:monitor(process, SrcPid),
     {{ok, -1, -1},
      Context3} = cloudi:send_sync(Context2, ServiceNameSrc, 0, 2,

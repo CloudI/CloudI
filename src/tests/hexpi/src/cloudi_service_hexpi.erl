@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2015 Michael Truog
-%%% @version 1.4.1 {@date} {@time}
+%%% @copyright 2012-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_hexpi).
@@ -220,7 +220,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
     Pgsql = case cloudi_service:get_pid(Dispatcher,
                                         ?NAME_PGSQL,
-                                        immediate) of
+                                        limit_min) of
         {ok, PatternPid1} ->
             PatternPid1;
         {error, _} ->
@@ -228,7 +228,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     Mysql = case cloudi_service:get_pid(Dispatcher,
                                         ?NAME_MYSQL,
-                                        immediate) of
+                                        limit_min) of
         {ok, PatternPid2} ->
             PatternPid2;
         {error, _} ->
@@ -236,7 +236,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     Memcached = case cloudi_service:get_pid(Dispatcher,
                                             ?NAME_MEMCACHED,
-                                            immediate) of
+                                            limit_min) of
         {ok, PatternPid3} ->
             PatternPid3;
         {error, _} ->
@@ -244,7 +244,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     Tokyotyrant = case cloudi_service:get_pid(Dispatcher,
                                               ?NAME_TOKYOTYRANT,
-                                              immediate) of
+                                              limit_min) of
         {ok, PatternPid4} ->
             PatternPid4;
         {error, _} ->
@@ -252,7 +252,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     Couchdb = case cloudi_service:get_pid(Dispatcher,
                                           ?NAME_COUCHDB,
-                                          immediate) of
+                                          limit_min) of
         {ok, PatternPid5} ->
             PatternPid5;
         {error, _} ->
@@ -260,7 +260,7 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
     end,
     Filesystem = case cloudi_service:get_pid(Dispatcher,
                                              ?NAME_FILESYSTEM,
-                                             immediate) of
+                                             limit_min) of
         {ok, PatternPid6} ->
             PatternPid6;
         {error, _} ->

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2013-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi).
@@ -106,7 +106,9 @@
 -type response() :: any().
 -type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX.
 -type timeout_milliseconds() :: timeout_value_milliseconds() |
-                                undefined | immediate.
+                                undefined | limit_min | limit_max |
+                                % deprecated type usage XXX
+                                immediate.
 -type priority_value() :: cloudi_service_api:priority().
 -type priority() :: priority_value() | undefined.
 -type trans_id() :: <<_:128>>. % version 1 UUID
@@ -416,7 +418,13 @@ get_pid(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
     get_pid(Context, Name, DefaultTimeoutSync);
 
 get_pid(#cloudi_context{} = Context, Name, immediate) ->
+    get_pid(Context, Name, limit_min);
+
+get_pid(#cloudi_context{} = Context, Name, limit_min) ->
     get_pid(Context, Name, ?SEND_SYNC_INTERVAL - 1);
+
+get_pid(#cloudi_context{} = Context, Name, limit_max) ->
+    get_pid(Context, Name, ?TIMEOUT_MAX);
 
 get_pid(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
     when is_integer(NameC), is_integer(Timeout),
@@ -484,7 +492,13 @@ get_pids(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
     get_pids(Context, Name, DefaultTimeoutSync);
 
 get_pids(#cloudi_context{} = Context, Name, immediate) ->
+    get_pids(Context, Name, limit_min);
+
+get_pids(#cloudi_context{} = Context, Name, limit_min) ->
     get_pids(Context, Name, ?SEND_SYNC_INTERVAL - 1);
+
+get_pids(#cloudi_context{} = Context, Name, limit_max) ->
+    get_pids(Context, Name, ?TIMEOUT_MAX);
 
 get_pids(#cloudi_context{} = Context, [NameC | _] = Name, Timeout)
     when is_integer(NameC), is_integer(Timeout),
@@ -635,7 +649,19 @@ send_async(#cloudi_context{} = Context,
            Name, RequestInfo, Request,
            immediate, Priority, PatternPid) ->
     send_async(Context, Name, RequestInfo, Request,
+               limit_min, Priority, PatternPid);
+
+send_async(#cloudi_context{} = Context,
+           Name, RequestInfo, Request,
+           limit_min, Priority, PatternPid) ->
+    send_async(Context, Name, RequestInfo, Request,
                ?SEND_ASYNC_INTERVAL - 1, Priority, PatternPid);
+
+send_async(#cloudi_context{} = Context,
+           Name, RequestInfo, Request,
+           limit_max, Priority, PatternPid) ->
+    send_async(Context, Name, RequestInfo, Request,
+               ?TIMEOUT_MAX, Priority, PatternPid);
 
 send_async(#cloudi_context{priority_default = PriorityDefault} = Context,
            Name, RequestInfo, Request,
@@ -915,7 +941,19 @@ send_sync(#cloudi_context{} = Context,
           Name, RequestInfo, Request,
           immediate, Priority, PatternPid) ->
     send_sync(Context, Name, RequestInfo, Request,
+              limit_min, Priority, PatternPid);
+
+send_sync(#cloudi_context{} = Context,
+          Name, RequestInfo, Request,
+          limit_min, Priority, PatternPid) ->
+    send_sync(Context, Name, RequestInfo, Request,
               ?SEND_SYNC_INTERVAL - 1, Priority, PatternPid);
+
+send_sync(#cloudi_context{} = Context,
+          Name, RequestInfo, Request,
+          limit_max, Priority, PatternPid) ->
+    send_sync(Context, Name, RequestInfo, Request,
+              ?TIMEOUT_MAX, Priority, PatternPid);
 
 send_sync(#cloudi_context{priority_default = PriorityDefault} = Context,
           Name, RequestInfo, Request,
@@ -1046,7 +1084,17 @@ mcast_async(#cloudi_context{timeout_async = DefaultTimeoutAsync} = Context,
 mcast_async(#cloudi_context{} = Context,
             Name, RequestInfo, Request, immediate, Priority) ->
     mcast_async(Context, Name, RequestInfo, Request,
+                limit_min, Priority);
+
+mcast_async(#cloudi_context{} = Context,
+            Name, RequestInfo, Request, limit_min, Priority) ->
+    mcast_async(Context, Name, RequestInfo, Request,
                 ?MCAST_ASYNC_INTERVAL - 1, Priority);
+
+mcast_async(#cloudi_context{} = Context,
+            Name, RequestInfo, Request, limit_max, Priority) ->
+    mcast_async(Context, Name, RequestInfo, Request,
+                ?TIMEOUT_MAX, Priority);
 
 mcast_async(#cloudi_context{priority_default = PriorityDefault} = Context,
             Name, RequestInfo, Request, Timeout, undefined) ->
@@ -1188,7 +1236,13 @@ recv_async(Context, undefined) ->
     recv_async(Context, undefined, <<0:128>>);
 
 recv_async(Context, immediate) ->
+    recv_async(Context, limit_min);
+
+recv_async(Context, limit_min) ->
     recv_async(Context, ?RECV_ASYNC_INTERVAL - 1, <<0:128>>);
+
+recv_async(Context, limit_max) ->
+    recv_async(Context, ?TIMEOUT_MAX, <<0:128>>);
 
 recv_async(Context, Timeout)
     when is_integer(Timeout), Timeout >= 0 ->
@@ -1219,7 +1273,13 @@ recv_async(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
     recv_async(Context, DefaultTimeoutSync, TransId);
 
 recv_async(#cloudi_context{} = Context, immediate, TransId) ->
+    recv_async(Context, limit_min, TransId);
+
+recv_async(#cloudi_context{} = Context, limit_min, TransId) ->
     recv_async(Context, ?RECV_ASYNC_INTERVAL - 1, TransId);
+
+recv_async(#cloudi_context{} = Context, limit_max, TransId) ->
+    recv_async(Context, ?TIMEOUT_MAX, TransId);
 
 recv_async(#cloudi_context{receiver = Receiver} = Context,
            Timeout, <<0:128>>)
@@ -1286,7 +1346,13 @@ recv_asyncs(#cloudi_context{timeout_sync = DefaultTimeoutSync} = Context,
     recv_asyncs(Context, DefaultTimeoutSync, TransIdList);
 
 recv_asyncs(#cloudi_context{} = Context, immediate, TransIdList) ->
+    recv_asyncs(Context, limit_min, TransIdList);
+
+recv_asyncs(#cloudi_context{} = Context, limit_min, TransIdList) ->
     recv_asyncs(Context, ?RECV_ASYNC_INTERVAL - 1, TransIdList);
+
+recv_asyncs(#cloudi_context{} = Context, limit_max, TransIdList) ->
+    recv_asyncs(Context, ?TIMEOUT_MAX, TransIdList);
 
 recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
             Timeout, TransIdList)
