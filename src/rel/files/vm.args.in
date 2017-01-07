@@ -32,5 +32,6 @@
 -pz tests/http_req/ebin/
 -pz tests/msg_size/ebin/
 -pz tests/messaging/ebin/
+-pz tests/null/ebin/
 -pz tests/request_rate/ebin/
 

@@ -12,7 +12,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `C`
 * `C++`
 * `Elixir`
-* `Erlang >= 18.0`
+* `Erlang >= 19.0`
 * `Java`
 * `Javascript/node.js >= 0.8.0`
 * `Perl >= 5.10`

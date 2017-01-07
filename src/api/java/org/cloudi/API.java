@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -1120,7 +1120,14 @@ public class API
                                                   request_info, request,
                                                   timeout, priority,
                                                   trans_id, pid);
-                if (response.getClass() == byte[][].class)
+                if (response == null)
+                {
+                    return_async(name, pattern,
+                                 ("").getBytes(),
+                                 ("").getBytes(),
+                                 timeout, trans_id, pid);
+                }
+                else if (response.getClass() == byte[][].class)
                 {
                     byte [][] response_array = (byte[][]) response;
                     assert response_array.length == 2 : "invalid response";
@@ -1190,7 +1197,14 @@ public class API
                                                   request_info, request,
                                                   timeout, priority,
                                                   trans_id, pid);
-                if (response.getClass() == byte[][].class)
+                if (response == null)
+                {
+                    return_sync(name, pattern,
+                                ("").getBytes(),
+                                ("").getBytes(),
+                                timeout, trans_id, pid);
+                }
+                else if (response.getClass() == byte[][].class)
                 {
                     byte [][] response_array = (byte[][]) response;
                     assert response_array.length == 2 : "invalid response";

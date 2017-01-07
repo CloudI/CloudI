@@ -12,8 +12,8 @@ if PYTHON_C_SUPPORT
 endif
 if INTEGRATION_TESTS
     INTEGRATION_TESTS_SUBDIR = \
-           $(CXX_SUBDIR) $(PYTHON_SUBDIR) $(PYTHON_C_SUBDIR) \
-               http http_req messaging msg_size request_rate
+        $(CXX_SUBDIR) $(PYTHON_SUBDIR) $(PYTHON_C_SUBDIR) \
+        http http_req messaging msg_size null request_rate
 endif
 SUBDIRS = $(INTEGRATION_TESTS_SUBDIR)
 

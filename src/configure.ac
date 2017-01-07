@@ -594,6 +594,14 @@ AC_CONFIG_FILES([
     tests/msg_size/org/cloudi/tests/msg_size/Makefile
     tests/msg_size/src/Makefile
     tests/msg_size/cxx_src/Makefile
+    tests/null/Makefile
+    tests/null/c_src/Makefile
+    tests/null/jar/Makefile
+    tests/null/org/Makefile
+    tests/null/org/cloudi/Makefile
+    tests/null/org/cloudi/tests/Makefile
+    tests/null/org/cloudi/tests/null_/Makefile
+    tests/null/src/Makefile
     tests/request_rate/Makefile
     tests/request_rate/src/Makefile
     tests/service_api/Makefile

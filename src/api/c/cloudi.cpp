@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -62,6 +62,7 @@
 #include <string>
 #include <list>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include "assert.hpp"
@@ -602,8 +603,13 @@ int cloudi_initialize(cloudi_instance_t * p,
     //p->prefix = 0;
     p->timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
 
+    // termination handling
     ::atexit(&exit_handler);
     std::set_terminate(exception_unknown);
+
+    // unbuffered stdout (stderr is always unbuffered)
+    ::setbuf(stdout, NULL);
+    std::cout.setf(std::ios::unitbuf);
 
     // attempt initialization
     buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);

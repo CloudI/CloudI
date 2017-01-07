@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -587,8 +587,13 @@ sub _callback
             {
                 $response = $response_info;
                 $response_info = '';
+                if (! defined($response))
+                {
+                    $response = '';
+                }
             }
-            elsif (ref($response_info) ne '')
+            elsif (ref($response_info) ne '' ||
+                   ! defined($response_info))
             {
                 $response_info = '';
             }
@@ -654,8 +659,13 @@ sub _callback
             {
                 $response = $response_info;
                 $response_info = '';
+                if (! defined($response))
+                {
+                    $response = '';
+                }
             }
-            elsif (ref($response_info) ne '')
+            elsif (ref($response_info) ne '' ||
+                   ! defined($response_info))
             {
                 $response_info = '';
             }

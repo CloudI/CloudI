@@ -1,9 +1,23 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-01-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Ensure all CloudI API implementations can handle a null object return
+      value, if the concept of null exists in the programming language
+      (required updating the Java and Perl CloudI APIs,
+       since the rest already handle this)
+    * Add the null integration tests in all the supported programming languages
+    * The C/C++ CloudI API now makes stdout usage unbuffered
+      (to be consistent with the other CloudI API implementations,
+       which have stdout/stderr unbuffered so the output is
+       logged as quickly as possible)
+
 2017-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update supool
+      (Now all process dictionary use (in Erlang source code)
+       within CloudI is minimal, only done when completely necessary)
 
 2016-12-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 

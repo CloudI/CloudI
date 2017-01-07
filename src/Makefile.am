@@ -238,6 +238,7 @@ dialyze: all \
               tests/request_rate/ebin/ \
               tests/messaging/ebin/ \
               tests/msg_size/ebin/ \
+              tests/null/ebin/ \
               tests/http_req/ebin/ \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \
