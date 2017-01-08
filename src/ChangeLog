@@ -1,6 +1,18 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-01-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow limit_min or limit_max to be used for timeout_init,
+      timeout_async, timeout_sync in the service configuration
+      and timeout_terminate in the service configuration options
+    * Changed the minimum default send_async and send_sync timeout value
+      for service configuration from 101 milliseconds to 499 milliseconds
+      (based on current macros) to be consistent with
+      limit_min and limit_max use
+    * Erlang type cloudi_service_api:timeout_milliseconds() was removed and
+      split into more specific types
+
 2017-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * The Erlang cloudi_service and cloudi modules now use the atom

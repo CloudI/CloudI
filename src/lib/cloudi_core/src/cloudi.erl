@@ -165,8 +165,10 @@
             dest_refresh_delay
                 :: cloudi_service_api:dest_refresh_delay_milliseconds(),
             request_name_lookup :: sync | async,
-            timeout_async :: cloudi_service_api:timeout_milliseconds(),
-            timeout_sync :: cloudi_service_api:timeout_milliseconds(),
+            timeout_async
+                :: cloudi_service_api:timeout_send_async_value_milliseconds(),
+            timeout_sync
+                :: cloudi_service_api:timeout_send_sync_value_milliseconds(),
             priority_default :: cloudi_service_api:priority(),
             scope :: atom(),
             receiver :: pid(),
@@ -181,8 +183,10 @@
          {dest_refresh_delay,
           cloudi_service_api:dest_refresh_delay_milliseconds()} |
          {request_name_lookup, sync | async} |
-         {timeout_async, cloudi_service_api:timeout_milliseconds()} |
-         {timeout_sync, cloudi_service_api:timeout_milliseconds()} |
+         {timeout_async,
+          cloudi_service_api:timeout_send_async_value_milliseconds()} |
+         {timeout_sync,
+          cloudi_service_api:timeout_send_sync_value_milliseconds()} |
          {priority_default, priority()} |
          {scope, atom()} |
          % advanced:
@@ -1375,7 +1379,7 @@ recv_asyncs(#cloudi_context{receiver = Receiver} = Context,
 %%-------------------------------------------------------------------------
 
 -spec timeout_async(Context :: agent()) ->
-    TimeoutAsync :: cloudi_service_api:timeout_milliseconds().
+    TimeoutAsync :: cloudi_service_api:timeout_send_async_value_milliseconds().
 
 timeout_async(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -1391,7 +1395,7 @@ timeout_async(#cloudi_context{timeout_async = DefaultTimeoutAsync}) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_sync(Context :: agent()) ->
-    TimeoutSync :: cloudi_service_api:timeout_milliseconds().
+    TimeoutSync :: cloudi_service_api:timeout_send_sync_value_milliseconds().
 
 timeout_sync(Dispatcher)
     when is_pid(Dispatcher) ->
@@ -1407,7 +1411,7 @@ timeout_sync(#cloudi_context{timeout_sync = DefaultTimeoutSync}) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_max(Context :: agent()) ->
-    TimeoutMax :: cloudi_service_api:timeout_milliseconds().
+    TimeoutMax :: pos_integer().
 
 timeout_max(Dispatcher)
     when is_pid(Dispatcher) ->

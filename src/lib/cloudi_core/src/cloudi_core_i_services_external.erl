@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
+%%% @copyright 2011-2017 Michael Truog
 %%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -168,13 +168,17 @@
         % (26) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
         % (27) pre-poll() timeout in the external service thread
-        timeout_init :: cloudi_service_api:timeout_milliseconds(),
+        timeout_init
+            :: cloudi_service_api:timeout_initialize_value_milliseconds(),
         % (28) default timeout for send_async set in service configuration
-        timeout_async :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async
+            :: cloudi_service_api:timeout_send_async_value_milliseconds(),
         % (29) default timeout for send_sync set in service configuration
-        timeout_sync :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync
+            :: cloudi_service_api:timeout_send_sync_value_milliseconds(),
         % (30) post-poll() timeout in the external service thread
-        timeout_term :: cloudi_service_api:timeout_milliseconds(),
+        timeout_term
+            :: cloudi_service_api:timeout_terminate_value_milliseconds(),
         % (31) OS process pid for SIGKILL
         os_pid = undefined :: undefined | pos_integer(),
         % (32) udp keepalive succeeded
@@ -218,8 +222,9 @@
         socket_options :: list(),
         socket = undefined,
         % read-only fields
-        timeout_term = undefined :: undefined |
-                                    cloudi_service_api:timeout_milliseconds(),
+        timeout_term = undefined
+            :: undefined |
+               cloudi_service_api:timeout_terminate_value_milliseconds(),
         os_pid = undefined :: undefined | pos_integer(),
         cgroup = undefined :: cloudi_service_api:cgroup_external()
     }).

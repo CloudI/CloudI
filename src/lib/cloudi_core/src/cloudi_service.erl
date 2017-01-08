@@ -275,8 +275,9 @@
 
 -callback cloudi_service_init(Args :: list(),
                               Prefix :: service_name_pattern(),
-                              Timeout :: cloudi_service_api:
-                                         timeout_milliseconds(),
+                              Timeout ::
+                                  cloudi_service_api:
+                                  timeout_initialize_value_milliseconds(),
                               Dispatcher :: dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
@@ -313,8 +314,9 @@
     {stop, Reason :: any(), NewState :: any()}.
 
 -callback cloudi_service_terminate(Reason :: any(),
-                                   Timeout :: cloudi_service_api:
-                                              timeout_milliseconds(),
+                                   Timeout ::
+                                       cloudi_service_api:
+                                       timeout_terminate_value_milliseconds(),
                                    State :: any()) ->
     ok.
 
@@ -2460,7 +2462,7 @@ suffix(Dispatcher, NameOrPattern) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_async(Dispatcher :: dispatcher()) ->
-    TimeoutAsync :: cloudi_service_api:timeout_milliseconds().
+    TimeoutAsync :: cloudi_service_api:timeout_send_async_value_milliseconds().
 
 timeout_async(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_async, infinity).
@@ -2472,7 +2474,7 @@ timeout_async(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_sync(Dispatcher :: dispatcher()) ->
-    TimeoutSync :: cloudi_service_api:timeout_milliseconds().
+    TimeoutSync :: cloudi_service_api:timeout_send_sync_value_milliseconds().
 
 timeout_sync(Dispatcher) ->
     gen_server:call(Dispatcher, timeout_sync, infinity).
@@ -2484,7 +2486,7 @@ timeout_sync(Dispatcher) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout_max(Dispatcher :: dispatcher()) ->
-    TimeoutMax :: cloudi_service_api:timeout_milliseconds().
+    TimeoutMax :: pos_integer().
 
 timeout_max(Dispatcher)
     when is_pid(Dispatcher) ->

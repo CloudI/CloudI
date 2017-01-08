@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
+%%% @copyright 2011-2017 Michael Truog
 %%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -109,9 +109,33 @@
     (?TIMEOUT_DELTA + 1)..?TIMEOUT_MAX_ERLANG.
 -export_type([dest_refresh_delay_milliseconds/0]).
 
--type timeout_milliseconds() ::
-    (?TIMEOUT_DELTA + 1)..?TIMEOUT_MAX.
--export_type([timeout_milliseconds/0]).
+-type timeout_initialize_value_milliseconds() ::
+    ?TIMEOUT_INITIALIZE_MIN..?TIMEOUT_INITIALIZE_MAX.
+-type timeout_initialize_milliseconds() ::
+    limit_min | limit_max | timeout_initialize_value_milliseconds().
+-export_type([timeout_initialize_value_milliseconds/0,
+              timeout_initialize_milliseconds/0]).
+
+-type timeout_send_async_value_milliseconds() ::
+    ?TIMEOUT_SEND_ASYNC_MIN..?TIMEOUT_SEND_ASYNC_MAX.
+-type timeout_send_async_milliseconds() ::
+    limit_min | limit_max | timeout_send_async_value_milliseconds().
+-export_type([timeout_send_async_value_milliseconds/0,
+              timeout_send_async_milliseconds/0]).
+
+-type timeout_send_sync_value_milliseconds() ::
+    ?TIMEOUT_SEND_SYNC_MIN..?TIMEOUT_SEND_SYNC_MAX.
+-type timeout_send_sync_milliseconds() ::
+    limit_min | limit_max | timeout_send_sync_value_milliseconds().
+-export_type([timeout_send_sync_value_milliseconds/0,
+              timeout_send_sync_milliseconds/0]).
+
+-type timeout_terminate_value_milliseconds() ::
+    ?TIMEOUT_TERMINATE_MIN..?TIMEOUT_TERMINATE_MAX.
+-type timeout_terminate_milliseconds() ::
+    limit_min | limit_max | timeout_terminate_value_milliseconds().
+-export_type([timeout_terminate_value_milliseconds/0,
+              timeout_terminate_milliseconds/0]).
 
 -type request_timeout_immediate_max_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
@@ -120,10 +144,6 @@
 -type response_timeout_immediate_max_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
 -export_type([response_timeout_immediate_max_milliseconds/0]).
-
--type timeout_terminate_milliseconds() ::
-    ?TIMEOUT_TERMINATE_MIN..?TIMEOUT_TERMINATE_MAX.
--export_type([timeout_terminate_milliseconds/0]).
 
 -type restart_delay_milliseconds() ::
     0..?TIMEOUT_MAX_ERLANG.
@@ -152,7 +172,7 @@
 -type aspect_init_after_internal_f() ::
     fun((Args :: list(),
          Prefix :: cloudi_service:service_name_pattern(),
-         Timeout :: timeout_milliseconds(),
+         Timeout :: timeout_initialize_value_milliseconds(),
          State :: any(),
          Dispatcher :: cloudi_service:dispatcher()) ->
         {ok, NewState :: any()} |
@@ -160,7 +180,7 @@
 -type aspect_init_after_external_f() ::
     fun((CommandLine :: list(string()),
          Prefix :: cloudi:service_name_pattern(),
-         Timeout :: timeout_milliseconds(),
+         Timeout :: timeout_initialize_value_milliseconds(),
          State :: any()) ->
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
@@ -280,7 +300,7 @@
               aspect_info_after_internal/0]).
 -type aspect_terminate_f() ::
     fun((Reason :: any(),
-         Timeout :: timeout_milliseconds(),
+         Timeout :: timeout_terminate_value_milliseconds(),
          State :: any()) ->
         {ok, State :: any()}).
 -type aspect_terminate_before_internal_f() ::
@@ -499,9 +519,9 @@
                   {dest_refresh, dest_refresh()} |
                   {protocol, 'default' | 'local' | 'tcp' | 'udp'} |
                   {buffer_size, 'default' | pos_integer()} |
-                  {timeout_init, timeout_milliseconds()} |
-                  {timeout_async, timeout_milliseconds()} |
-                  {timeout_sync, timeout_milliseconds()} |
+                  {timeout_init, timeout_initialize_value_milliseconds()} |
+                  {timeout_async, timeout_send_async_value_milliseconds()} |
+                  {timeout_sync, timeout_send_sync_value_milliseconds()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {count_process, pos_integer() | float()} |
@@ -538,9 +558,9 @@
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
                   {dest_refresh, dest_refresh()} |
-                  {timeout_init, timeout_milliseconds()} |
-                  {timeout_async, timeout_milliseconds()} |
-                  {timeout_sync, timeout_milliseconds()} |
+                  {timeout_init, timeout_initialize_milliseconds()} |
+                  {timeout_async, timeout_send_async_milliseconds()} |
+                  {timeout_sync, timeout_send_sync_milliseconds()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_internal()}).
@@ -555,9 +575,9 @@
                   {code_paths_add, list(string())} |
                   {code_paths_remove, list(string())} |
                   {dest_refresh, dest_refresh()} |
-                  {timeout_init, timeout_milliseconds()} |
-                  {timeout_async, timeout_milliseconds()} |
-                  {timeout_sync, timeout_milliseconds()} |
+                  {timeout_init, timeout_initialize_milliseconds()} |
+                  {timeout_async, timeout_send_async_milliseconds()} |
+                  {timeout_sync, timeout_send_sync_milliseconds()} |
                   {dest_list_deny, dest_list()} |
                   {dest_list_allow, dest_list()} |
                   {options, service_update_plan_options_external()}).

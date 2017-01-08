@@ -393,9 +393,10 @@
         cloudi_service_http_req,
         [],
         none,
-        4294967195, 4294967195, 4294967195, % test limits
+        limit_max, limit_max, limit_max, % test limits
         undefined, undefined, 1.0, 5, 300,
-        [{request_timeout_adjustment, true},
+        [{timeout_terminate, limit_max},
+         {request_timeout_adjustment, true},
          {hibernate,
           [{rate_request_min, 0.9}]},
          {count_process_dynamic,
@@ -408,9 +409,10 @@
         cloudi_service_http_req,
         [],
         none,
-        101, 101, 101, % test limits
+        limit_min, limit_min, limit_min, % test limits
         undefined, undefined, 1.0, 5, 300,
-        [{request_timeout_adjustment, true},
+        [{timeout_terminate, limit_min},
+         {request_timeout_adjustment, true},
          {hibernate,
           [{rate_request_min, 0.9}]},
          {count_process_dynamic,

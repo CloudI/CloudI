@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -148,11 +148,14 @@
         % (17) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
         % (18) default timeout for send_async set in service configuration
-        timeout_async :: cloudi_service_api:timeout_milliseconds(),
+        timeout_async
+            :: cloudi_service_api:timeout_send_async_value_milliseconds(),
         % (19) default timeout for send_sync set in service configuration
-        timeout_sync :: cloudi_service_api:timeout_milliseconds(),
+        timeout_sync
+            :: cloudi_service_api:timeout_send_sync_value_milliseconds(),
         % (20) cloudi_service_terminate timeout set by max_r and max_t
-        timeout_term :: cloudi_service_api:timeout_milliseconds(),
+        timeout_term
+            :: cloudi_service_api:timeout_terminate_value_milliseconds(),
         % (21) duo_mode_pid if duo_mode == true, else dispatcher pid
         receiver_pid :: pid(),
         % (22) separate Erlang process for incoming throughput

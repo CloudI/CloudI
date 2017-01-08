@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,8 @@
 
 -define(SPEC_REST_INITIALIZE(Function),
 -spec Function(Args :: list(),
-               Timeout :: cloudi_service_api:timeout_milliseconds(),
+               Timeout :: cloudi_service_api:
+                          timeout_initialize_value_milliseconds(),
                Dispatcher :: cloudi:dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
@@ -78,7 +79,8 @@
     {stop, Reason :: any(), NewState :: any()}).
 -define(SPEC_REST_TERMINATE(Function),
 -spec Function(Reason :: any(),
-               Timeout :: cloudi:timeout_value_milliseconds(),
+               Timeout :: cloudi_service_api:
+                          timeout_terminate_value_milliseconds(),
                State :: any()) ->
     ok).
 

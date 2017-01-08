@@ -5,7 +5,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2014, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -58,11 +58,11 @@
         dest_refresh = immediate_closest
             :: cloudi_service_api:dest_refresh(),
         timeout_init = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_initialize_milliseconds(),
         timeout_async = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_send_async_milliseconds(),
         timeout_sync = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_send_sync_milliseconds(),
         dest_list_deny = undefined
             :: cloudi_service_api:dest_list(),
         dest_list_allow = undefined
@@ -95,11 +95,11 @@
         buffer_size = default
             :: 'default' | pos_integer(),
         timeout_init = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_initialize_milliseconds(),
         timeout_async = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_send_async_milliseconds(),
         timeout_sync = 5000
-            :: cloudi_service_api:timeout_milliseconds(),
+            :: cloudi_service_api:timeout_send_sync_milliseconds(),
         dest_list_deny = undefined
             :: cloudi_service_api:dest_list(),
         dest_list_allow = undefined

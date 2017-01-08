@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2016 Michael Truog
+%%% @copyright 2009-2017 Michael Truog
 %%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -363,6 +363,11 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+% timeout for the functions below based on
+% cloudi_service_api and the timeout_decr/1 use in cloudi_core_i_configurator
+-type api_timeout_milliseconds() ::
+    1..?TIMEOUT_MAX | infinity.
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Process the CloudI configuration data.===
@@ -480,8 +485,7 @@ acl(#config{acl = ACL}) ->
                                           cloudi_service_api:
                                           service_proplist()),
                    Config :: #config{},
-                   Timeout :: cloudi_service_api:timeout_milliseconds() |
-                              infinity) ->
+                   Timeout :: api_timeout_milliseconds()) ->
     {ok, list(cloudi_service_api:service_id()), #config{}} |
     {error, error_reason_services_add()}.
 
@@ -519,8 +523,7 @@ services_add(Value, _, _) ->
 
 -spec services_remove(Value :: nonempty_list(cloudi_service_api:service_id()),
                       Config :: #config{},
-                      Timeout :: cloudi_service_api:timeout_milliseconds() |
-                                 infinity) ->
+                      Timeout :: api_timeout_milliseconds()) ->
     {ok, #config{}} |
     {error, error_reason_services_remove()}.
 
@@ -544,8 +547,7 @@ services_remove(Value, _, _) ->
 
 -spec services_restart(Value :: nonempty_list(cloudi_service_api:service_id()),
                        Config :: #config{},
-                       Timeout :: cloudi_service_api:timeout_milliseconds() |
-                                  infinity) ->
+                       Timeout :: api_timeout_milliseconds()) ->
     {ok, #config{}} |
     {error, error_reason_services_restart()}.
 
@@ -569,8 +571,7 @@ services_restart(Value, _, _) ->
 
 -spec services_update(Plan :: list(),
                       Config :: #config{},
-                      Timeout :: cloudi_service_api:timeout_milliseconds() |
-                                 infinity) ->
+                      Timeout :: api_timeout_milliseconds()) ->
     {ok,
      {ok, nonempty_list(nonempty_list(cloudi_service_api:service_id()))} |
      {error,
@@ -660,9 +661,9 @@ service_format(#config_service_internal{prefix = Prefix,
                module = ModuleEntry,
                args = Args,
                dest_refresh = DestRefresh,
-               timeout_init = TimeoutInit,
-               timeout_async = TimeoutAsync,
-               timeout_sync = TimeoutSync,
+               timeout_init = ?TIMEOUT_INITIALIZE_FORMAT(TimeoutInit),
+               timeout_async = ?TIMEOUT_SEND_ASYNC_FORMAT(TimeoutAsync),
+               timeout_sync = ?TIMEOUT_SEND_SYNC_FORMAT(TimeoutSync),
                dest_list_deny = DestListDeny,
                dest_list_allow = DestListAllow,
                count_process = CountProcess,
@@ -695,9 +696,9 @@ service_format(#config_service_external{prefix = Prefix,
                dest_refresh = DestRefresh,
                protocol = Protocol,
                buffer_size = BufferSize,
-               timeout_init = TimeoutInit,
-               timeout_async = TimeoutAsync,
-               timeout_sync = TimeoutSync,
+               timeout_init = ?TIMEOUT_INITIALIZE_FORMAT(TimeoutInit),
+               timeout_async = ?TIMEOUT_SEND_ASYNC_FORMAT(TimeoutAsync),
+               timeout_sync = ?TIMEOUT_SEND_SYNC_FORMAT(TimeoutSync),
                dest_list_deny = DestListDeny,
                dest_list_allow = DestListAllow,
                count_process = CountProcess,
@@ -1762,19 +1763,25 @@ services_validate([#internal{dest_refresh = DestRefresh} | _], _, _, _)
                (DestRefresh =:= none))) ->
     {error, {service_internal_dest_refresh_invalid, DestRefresh}};
 services_validate([#internal{timeout_init = TimeoutInit} | _], _, _, _)
-    when not (is_integer(TimeoutInit) andalso
-              (TimeoutInit > ?TIMEOUT_DELTA) andalso
-              (TimeoutInit =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutInit) andalso
+               (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
+               (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
+              (TimeoutInit =:= limit_min) orelse
+              (TimeoutInit =:= limit_max)) ->
     {error, {service_internal_timeout_init_invalid, TimeoutInit}};
 services_validate([#internal{timeout_async = TimeoutAsync} | _], _, _, _)
-    when not (is_integer(TimeoutAsync) andalso
-              (TimeoutAsync > ?TIMEOUT_DELTA) andalso
-              (TimeoutAsync =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutAsync) andalso
+               (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
+               (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
+              (TimeoutAsync =:= limit_min) orelse
+              (TimeoutAsync =:= limit_max)) ->
     {error, {service_internal_timeout_async_invalid, TimeoutAsync}};
 services_validate([#internal{timeout_sync = TimeoutSync} | _], _, _, _)
-    when not (is_integer(TimeoutSync) andalso
-              (TimeoutSync > ?TIMEOUT_DELTA) andalso
-              (TimeoutSync =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutSync) andalso
+               (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
+               (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
+              (TimeoutSync =:= limit_min) orelse
+              (TimeoutSync =:= limit_max)) ->
     {error, {service_internal_timeout_sync_invalid, TimeoutSync}};
 services_validate([#internal{dest_refresh = DestRefresh,
                              dest_list_deny = DestListDeny} | _], _, _, _)
@@ -1829,11 +1836,14 @@ services_validate([#internal{
         is_list(Module) ->
             Module
     end,
+    TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
+    TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
+    TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
     case service_name_valid(Prefix, service_internal_prefix_invalid) of
         ok ->
             case services_validate_options_internal(Options, CountProcess,
                                                     MaxR, MaxT) of
-                {ok, TimeoutTerm, NewOptions} ->
+                {ok, TimeoutTermValue, NewOptions} ->
                     {ID, NewUUID} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
                                       [#config_service_internal{
@@ -1842,10 +1852,10 @@ services_validate([#internal{
                                            file_path = FilePath,
                                            args = Args,
                                            dest_refresh = DestRefresh,
-                                           timeout_init = TimeoutInit,
-                                           timeout_async = TimeoutAsync,
-                                           timeout_sync = TimeoutSync,
-                                           timeout_term = TimeoutTerm,
+                                           timeout_init = TimeoutInitValue,
+                                           timeout_async = TimeoutAsyncValue,
+                                           timeout_sync = TimeoutSyncValue,
+                                           timeout_term = TimeoutTermValue,
                                            dest_list_deny = DestListDeny,
                                            dest_list_allow = DestListAllow,
                                            count_process = CountProcess,
@@ -1919,19 +1929,25 @@ services_validate([#external{buffer_size = BufferSize} | _], _, _, _)
               (is_integer(BufferSize) andalso (BufferSize >= 1024))) ->
     {error, {service_external_buffer_size_invalid, BufferSize}};
 services_validate([#external{timeout_init = TimeoutInit} | _], _, _, _)
-    when not (is_integer(TimeoutInit) andalso
-              (TimeoutInit > ?TIMEOUT_DELTA) andalso
-              (TimeoutInit =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutInit) andalso
+               (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
+               (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
+              (TimeoutInit =:= limit_min) orelse
+              (TimeoutInit =:= limit_max)) ->
     {error, {service_external_timeout_init_invalid, TimeoutInit}};
 services_validate([#external{timeout_async = TimeoutAsync} | _], _, _, _)
-    when not (is_integer(TimeoutAsync) andalso
-              (TimeoutAsync > ?TIMEOUT_DELTA) andalso
-              (TimeoutAsync =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutAsync) andalso
+               (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
+               (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
+              (TimeoutAsync =:= limit_min) orelse
+              (TimeoutAsync =:= limit_max)) ->
     {error, {service_external_timeout_async_invalid, TimeoutAsync}};
 services_validate([#external{timeout_sync = TimeoutSync} | _], _, _, _)
-    when not (is_integer(TimeoutSync) andalso
-              (TimeoutSync > ?TIMEOUT_DELTA) andalso
-              (TimeoutSync =< ?TIMEOUT_MAX)) ->
+    when not ((is_integer(TimeoutSync) andalso
+               (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
+               (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
+              (TimeoutSync =:= limit_min) orelse
+              (TimeoutSync =:= limit_max)) ->
     {error, {service_external_timeout_sync_invalid, TimeoutSync}};
 services_validate([#external{dest_refresh = DestRefresh,
                              dest_list_deny = DestListDeny} | _], _, _, _)
@@ -2006,11 +2022,14 @@ services_validate([#external{
         true ->
             BufferSize
     end,
+    TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
+    TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
+    TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
     case service_name_valid(Prefix, service_external_prefix_invalid) of
         ok ->
             case services_validate_options_external(Options, CountProcess,
                                                     MaxR, MaxT) of
-                {ok, TimeoutTerm, NewOptions} ->
+                {ok, TimeoutTermValue, NewOptions} ->
                     {ID, NewUUID} = cloudi_x_uuid:get_v1(UUID),
                     services_validate(L,
                                       [#config_service_external{
@@ -2021,10 +2040,10 @@ services_validate([#external{
                                            dest_refresh = DestRefresh,
                                            protocol = NewProtocol,
                                            buffer_size = NewBufferSize,
-                                           timeout_init = TimeoutInit,
-                                           timeout_async = TimeoutAsync,
-                                           timeout_sync = TimeoutSync,
-                                           timeout_term = TimeoutTerm,
+                                           timeout_init = TimeoutInitValue,
+                                           timeout_async = TimeoutAsyncValue,
+                                           timeout_sync = TimeoutSyncValue,
+                                           timeout_term = TimeoutTermValue,
                                            dest_list_deny = DestListDeny,
                                            dest_list_allow = DestListAllow,
                                            count_process = CountProcess,
@@ -2146,6 +2165,10 @@ timeout_terminate(TimeoutTerminate, _, 0) ->
     if
         TimeoutTerminate =:= undefined ->
             {ok, Default};
+        TimeoutTerminate =:= limit_min ->
+            {ok, ?TIMEOUT_TERMINATE_MIN};
+        TimeoutTerminate =:= limit_max ->
+            {ok, ?TIMEOUT_TERMINATE_MAX};
         is_integer(TimeoutTerminate) ->
             {ok, TimeoutTerminate}
     end;
@@ -2156,6 +2179,10 @@ timeout_terminate(TimeoutTerminate, 0, MaxT)
     if
         TimeoutTerminate =:= undefined ->
             {ok, Default};
+        TimeoutTerminate =:= limit_min ->
+            {ok, ?TIMEOUT_TERMINATE_MIN};
+        TimeoutTerminate =:= limit_max ->
+            {ok, ?TIMEOUT_TERMINATE_MAX};
         is_integer(TimeoutTerminate) ->
             {ok, TimeoutTerminate}
     end;
@@ -2166,6 +2193,10 @@ timeout_terminate(TimeoutTerminate, MaxR, MaxT)
     if
         TimeoutTerminate =:= undefined ->
             {ok, Default};
+        TimeoutTerminate =:= limit_min ->
+            {ok, ?TIMEOUT_TERMINATE_MIN};
+        TimeoutTerminate =:= limit_max ->
+            {ok, ?TIMEOUT_TERMINATE_MAX};
         is_integer(TimeoutTerminate) ->
             if
                 TimeoutTerminate =< Default ->
@@ -2186,7 +2217,8 @@ timeout_terminate(TimeoutTerminate, MaxR, MaxT)
                                          MaxT :: cloudi_service_api:seconds() |
                                                  undefined) ->
     {ok,
-     NewTimeoutTerminate :: cloudi_service_api:timeout_milliseconds(),
+     NewTimeoutTerminate ::
+         cloudi_service_api:timeout_terminate_value_milliseconds(),
      #config_service_options{}} |
     {error,
      {service_options_priority_default_invalid |
@@ -2392,7 +2424,9 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         when not ((TimeoutTerminate =:= undefined) orelse
                   (is_integer(TimeoutTerminate) andalso
                    (TimeoutTerminate >= ?TIMEOUT_TERMINATE_MIN) andalso
-                   (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX))) ->
+                   (TimeoutTerminate =< ?TIMEOUT_TERMINATE_MAX)) orelse
+                  (TimeoutTerminate =:= limit_min) orelse
+                  (TimeoutTerminate =:= limit_max)) ->
             {error, {service_options_timeout_terminate_invalid,
                      TimeoutTerminate}};
         [_, _, _, _, _, _, _, _, _, _, _, _, _, RestartDelay, _,
@@ -2741,7 +2775,8 @@ services_validate_options_internal_checks(RateRequestMax,
                                          MaxT :: cloudi_service_api:seconds() |
                                                  undefined) ->
     {ok,
-     NewTimeoutTerminate :: cloudi_service_api:timeout_milliseconds(),
+     NewTimeoutTerminate ::
+         cloudi_service_api:timeout_terminate_value_milliseconds(),
      #config_service_options{}} |
     {error,
      {service_options_priority_default_invalid |
@@ -3643,8 +3678,10 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
          _, TimeoutInit, _, _, _, _, _]
         when not ((TimeoutInit =:= undefined) orelse
                   (is_integer(TimeoutInit) andalso
-                   (TimeoutInit > ?TIMEOUT_DELTA) andalso
-                   (TimeoutInit =< ?TIMEOUT_MAX))) ->
+                   (TimeoutInit >= ?TIMEOUT_INITIALIZE_MIN) andalso
+                   (TimeoutInit =< ?TIMEOUT_INITIALIZE_MAX)) orelse
+                  (TimeoutInit =:= limit_min) orelse
+                  (TimeoutInit =:= limit_max)) ->
             {error, {service_update_timeout_init_invalid,
                      TimeoutInit}};
         [_, _, _,
@@ -3653,8 +3690,10 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
          _, _, TimeoutAsync, _, _, _, _]
         when not ((TimeoutAsync =:= undefined) orelse
                   (is_integer(TimeoutAsync) andalso
-                   (TimeoutAsync > ?TIMEOUT_DELTA) andalso
-                   (TimeoutAsync =< ?TIMEOUT_MAX))) ->
+                   (TimeoutAsync >= ?TIMEOUT_SEND_ASYNC_MIN) andalso
+                   (TimeoutAsync =< ?TIMEOUT_SEND_ASYNC_MAX)) orelse
+                  (TimeoutAsync =:= limit_min) orelse
+                  (TimeoutAsync =:= limit_max)) ->
             {error, {service_update_timeout_async_invalid,
                      TimeoutAsync}};
         [_, _, _,
@@ -3663,8 +3702,10 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
          _, _, _, TimeoutSync, _, _, _]
         when not ((TimeoutSync =:= undefined) orelse
                   (is_integer(TimeoutSync) andalso
-                   (TimeoutSync > ?TIMEOUT_DELTA) andalso
-                   (TimeoutSync =< ?TIMEOUT_MAX))) ->
+                   (TimeoutSync >= ?TIMEOUT_SEND_SYNC_MIN) andalso
+                   (TimeoutSync =< ?TIMEOUT_SEND_SYNC_MAX)) orelse
+                  (TimeoutSync =:= limit_min) orelse
+                  (TimeoutSync =:= limit_max)) ->
             {error, {service_update_timeout_sync_invalid,
                      TimeoutSync}};
         [_, _, _,
@@ -3759,6 +3800,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
          DestListDeny, DestListAllow, Options]
         when Module =/= undefined ->
+            TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
+            TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
+            TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
             case services_update_plan_internal(Module, ModuleState,
                                                DestListDeny, DestListAllow,
                                                Options, ID, Services, ACL) of
@@ -3776,9 +3820,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              code_paths_add = CodePathsAdd,
                              code_paths_remove = CodePathsRemove,
                              dest_refresh = DestRefresh,
-                             timeout_init = TimeoutInit,
-                             timeout_async = TimeoutAsync,
-                             timeout_sync = TimeoutSync,
+                             timeout_init = TimeoutInitValue,
+                             timeout_async = TimeoutAsyncValue,
+                             timeout_sync = TimeoutSyncValue,
                              dest_list_deny = NewDestListDeny,
                              dest_list_allow = NewDestListAllow,
                              options_keys = OptionsKeys,
@@ -3801,6 +3845,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
              ((FilePath =/= undefined) orelse
               (Args =/= undefined) orelse
               (Env =/= undefined)) ->
+            TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
+            TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
+            TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
             case services_update_plan_external(FilePath, Args, Env,
                                                DestListDeny, DestListAllow,
                                                Options, ID, Services, ACL) of
@@ -3818,9 +3865,9 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
                              code_paths_add = CodePathsAdd,
                              code_paths_remove = CodePathsRemove,
                              dest_refresh = DestRefresh,
-                             timeout_init = TimeoutInit,
-                             timeout_async = TimeoutAsync,
-                             timeout_sync = TimeoutSync,
+                             timeout_init = TimeoutInitValue,
+                             timeout_async = TimeoutAsyncValue,
+                             timeout_sync = TimeoutSyncValue,
                              dest_list_deny = NewDestListDeny,
                              dest_list_allow = NewDestListAllow,
                              options_keys = OptionsKeys,
