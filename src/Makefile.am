@@ -287,6 +287,15 @@ test: all $(PYTHON_TEST_HOOK) $(RUBY_TEST_HOOK)
 
 tests: test
 
+manual-update:
+	(cd $(top_srcdir) && \
+     $(ESCRIPT) $(top_srcdir)/lib/reltool_util/ex2erl \
+         $(top_srcdir)/lib/cloudi_core/priv/CloudILogger.ex && \
+     mv -f $(top_srcdir)/lib/cloudi_core/priv/Elixir.CloudILogger.erl \
+           $(top_srcdir)/lib/cloudi_core/src/ )
+	(cd $(top_srcdir)/lib/cloudi_core/scripts/ && \
+     $(ESCRIPT) ./mimetypes_update )
+
 uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 

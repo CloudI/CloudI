@@ -12,6 +12,8 @@
       limit_min and limit_max use
     * Erlang type cloudi_service_api:timeout_milliseconds() was removed and
       split into more specific types
+    * Add manual-update makefile target for updating automatically
+      generated files that must be updated manually
 
 2017-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
