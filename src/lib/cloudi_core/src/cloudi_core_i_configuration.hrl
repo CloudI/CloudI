@@ -188,20 +188,20 @@
         %  n.b., doesn't adjust the timeout of a cloudi_service:return_nothrow)
         request_timeout_adjustment = false
             :: boolean(),
-        % max request timeout considered to be "immediate":
+        % defines the max request timeout considered to be "immediate":
         % max timeout value of sent service requests whose destination
         % Erlang pid will not be monitored because the rate at which
         % sent service requests are being sent to unresponsive
         % destination Erlang pids will not cause excessive timer
         % (erlang:send_after/3) memory consumption during the time period
         % specified by this value.  sent service requests with timeouts
-        % that are greater than this value will have their destination
-        % Erlang pid monitored so that timer memory consumption is cleaned up
-        % quicker than the timeout value specified within the service request.
-        % as the rate of sent service requests increases to unresponsive
-        % services, this value will need to decrease, to affect service
-        % requests of shorter duration.
-        request_timeout_immediate_max = 20000 % milliseconds
+        % that are greater than or equal to this value will have their
+        % destination Erlang pid monitored so that timer memory consumption
+        % is cleaned up quicker than the timeout value specified within the
+        % service request.  as the rate of sent service requests increases
+        % to unresponsive services, this value will need to decrease,
+        % to affect service requests of shorter duration.
+        request_timeout_immediate_max = 20001 % milliseconds
             :: cloudi_service_api:request_timeout_immediate_max_milliseconds(),
         % should the service use internal timeout information to provide a
         % more accurate timeout value within the response provided
@@ -209,12 +209,15 @@
         %  send_async request)
         response_timeout_adjustment = false
             :: boolean(),
-        % max response timeout considered to be "immediate":
+        % defines the max response timeout considered to be "immediate":
         % max timeout value of a returned null response which is discarded
         % rather than being returned, so that the associated service request
         % timeout is caused by the sending service's service request timer
-        % instead of a returned null response message
-        response_timeout_immediate_max = 20000 % milliseconds
+        % instead of a returned null response message.  service request
+        % null responses with timeouts that are greater than or equal to this
+        % value will always be sent to help the sending-side avoid excessive
+        % delays during the timeout period.
+        response_timeout_immediate_max = 20001 % milliseconds
             :: cloudi_service_api:response_timeout_immediate_max_milliseconds(),
         % should the process count be varied automatically based on the
         % rate of service processing within a specific time period.

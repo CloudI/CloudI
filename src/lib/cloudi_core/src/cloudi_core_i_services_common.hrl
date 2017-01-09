@@ -6,7 +6,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -202,7 +202,7 @@ send_async_timeout_start(Timeout, TransId, Pid,
                                     request_timeout_immediate_max =
                                         RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
-         Timeout > RequestTimeoutImmediateMax ->
+         Timeout >= RequestTimeoutImmediateMax ->
     NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
             ?MAP_STORE(Pid,
@@ -241,7 +241,7 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
                                    request_timeout_immediate_max =
                                        RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
-         Timeout > RequestTimeoutImmediateMax ->
+         Timeout >= RequestTimeoutImmediateMax ->
     NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
             ?MAP_STORE(Pid,

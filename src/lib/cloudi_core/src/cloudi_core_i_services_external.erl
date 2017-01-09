@@ -712,7 +712,7 @@ init([Protocol, SocketPath,
     true = is_pid(Source),
     Result = if
         ResponseInfo == <<>>, Response == <<>>,
-        Timeout =< ResponseTimeoutImmediateMax ->
+        Timeout < ResponseTimeoutImmediateMax ->
             noreply;
         true ->
             {reply, ResponseInfo, Response}
@@ -908,14 +908,31 @@ handle_info({'cloudi_service_recv_async_retry', Timeout, TransId, Consume},
             StateName, State) ->
     ?MODULE:StateName({'recv_async', Timeout, TransId, Consume}, State);
 
-handle_info({SendType, _, _, RequestInfo, Request,
-             Timeout, _, _, _}, StateName, State)
+handle_info({SendType, Name, Pattern, RequestInfo, Request,
+             Timeout, _, TransId, Source}, StateName,
+            #state{options = #config_service_options{
+                       response_timeout_immediate_max =
+                           ResponseTimeoutImmediateMax}} = State)
     when SendType =:= 'cloudi_service_send_async' orelse
          SendType =:= 'cloudi_service_send_sync',
          is_binary(Request) =:= false orelse
          is_binary(RequestInfo) =:= false orelse
          Timeout =:= 0 ->
-    % since Timeout == 0: not (Timeout > response_timeout_immediate_max)
+    if
+        Timeout >= ResponseTimeoutImmediateMax ->
+            if
+                SendType =:= 'cloudi_service_send_async' ->
+                    Source ! {'cloudi_service_return_async',
+                              Name, Pattern, <<>>, <<>>,
+                              Timeout, TransId, Source};
+                SendType =:= 'cloudi_service_send_sync' ->
+                    Source ! {'cloudi_service_return_sync',
+                              Name, Pattern, <<>>, <<>>,
+                              Timeout, TransId, Source}
+            end;
+        true ->
+            ok
+    end,
     {next_state, StateName, State};
 
 handle_info({SendType, Name, Pattern, RequestInfo, Request,
@@ -998,7 +1015,7 @@ handle_info({SendType, Name, Pattern, RequestInfo, Request,
             end;
         RateRequestOk =:= false ->
             if
-                Timeout > ResponseTimeoutImmediateMax ->
+                Timeout >= ResponseTimeoutImmediateMax ->
                     if
                         SendType =:= 'cloudi_service_send_async' ->
                             Source ! {'cloudi_service_return_async',
@@ -1062,7 +1079,7 @@ handle_info({SendType, Name, Pattern, _, _,
                                 Size, T, NewState)};
         true ->
             if
-                Timeout > ResponseTimeoutImmediateMax ->
+                Timeout >= ResponseTimeoutImmediateMax ->
                     if
                         SendType =:= 'cloudi_service_send_async' ->
                             Source ! {'cloudi_service_return_async',
@@ -1123,7 +1140,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
             when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment;
-                OldTimeout > RequestTimeoutImmediateMax ->
+                OldTimeout >= RequestTimeoutImmediateMax ->
                     cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
@@ -1134,7 +1151,7 @@ handle_info({'cloudi_service_return_async', _Name, _Pattern,
         {ok, {passive, Pid, Tref}} ->
             Timeout = if
                 ResponseTimeoutAdjustment;
-                OldTimeout > RequestTimeoutImmediateMax ->
+                OldTimeout >= RequestTimeoutImmediateMax ->
                     case erlang:cancel_timer(Tref) of
                         false ->
                             0;
@@ -1174,7 +1191,7 @@ handle_info({'cloudi_service_return_sync', _Name, _Pattern,
         {ok, {_, Pid, Tref}} ->
             if
                 ResponseTimeoutAdjustment;
-                OldTimeout > RequestTimeoutImmediateMax ->
+                OldTimeout >= RequestTimeoutImmediateMax ->
                     cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
