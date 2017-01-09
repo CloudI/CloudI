@@ -107,7 +107,7 @@
 
 -type initialize_f() :: fun((Args :: list(),
                              Timeout :: cloudi_service_api:
-                                        timeout_milliseconds(),
+                                        timeout_initialize_value_milliseconds(),
                              Dispatcher :: cloudi:dispatcher()) ->
     {ok, State :: any()} |
     {stop, Reason :: any()} |
@@ -139,7 +139,8 @@
                       {noreply, NewState :: any()} |
                       {stop, Reason :: any(), NewState :: any()}).
 -type terminate_f() :: fun((Reason :: any(),
-                            Timeout :: cloudi:timeout_value_milliseconds(),
+                            Timeout :: cloudi_service_api:
+                                       timeout_terminate_value_milliseconds(),
                             State :: any()) ->
                            ok).
 -export_type([method/0,

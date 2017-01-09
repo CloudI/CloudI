@@ -76,7 +76,7 @@ cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
-    HttpQS = cloudi_service:request_http_qs_parse(Request),
+    HttpQS = cloudi_request:http_qs_parse(Request),
     Response = case dict:find(<<"value">>, HttpQS) of
         {ok, RawValue} ->
             Value = case RawValue of

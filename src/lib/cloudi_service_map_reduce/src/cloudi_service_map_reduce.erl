@@ -86,8 +86,9 @@
 -callback cloudi_service_map_reduce_new(ModuleReduceArgs :: list(),
                                         Count :: pos_integer(),
                                         Prefix :: string(),
-                                        Timeout :: cloudi_service_api:
-                                                   timeout_milliseconds(),
+                                        Timeout ::
+                                        cloudi_service_api:
+                                        timeout_initialize_value_milliseconds(),
                                         Dispatcher :: pid()) ->
     {'ok', ModuleReduceState :: any()} |
     {'error', Reason :: any()}.

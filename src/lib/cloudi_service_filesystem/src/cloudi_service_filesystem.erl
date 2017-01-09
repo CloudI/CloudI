@@ -884,8 +884,8 @@ request_read(MTimeI, Contents, FileHeaders, RequestInfo,
                     use_http_get_suffix = UseHttpGetSuffix} = State) ->
     if
         UseHttpGetSuffix =:= true ->
-            KeyValues = cloudi_service:
-                        request_info_key_value_parse(RequestInfo),
+            KeyValues = cloudi_request_info:
+                        key_value_parse(RequestInfo),
             NowTime = calendar:now_to_universal_time(os:timestamp()),
             ETag = cache_header_etag(MTimeI),
             case contents_ranges_read(ETag, KeyValues, MTimeI) of
@@ -1009,8 +1009,8 @@ request_truncate(#file{size = OldContentsSize,
                         use_http_get_suffix = true} = State, Dispatcher) ->
     case lists:member(truncate, Write) of
         true ->
-            KeyValues = cloudi_service:
-                        request_info_key_value_parse(RequestInfo),
+            KeyValues = cloudi_request_info:
+                        key_value_parse(RequestInfo),
             case cloudi_key_value:find(<<"range">>, KeyValues) of
                 {ok, _} ->
                     {reply,
@@ -1258,8 +1258,8 @@ request_append(#file{contents = Contents,
                       use_http_get_suffix = true} = State, Dispatcher) ->
     case lists:member(append, Write) of
         true ->
-            KeyValues = cloudi_service:
-                        request_info_key_value_parse(RequestInfo),
+            KeyValues = cloudi_request_info:
+                        key_value_parse(RequestInfo),
             ETag = cache_header_etag(MTimeI),
             case contents_ranges_append(ETag, KeyValues, MTimeI) of
                 {Status, {Range, Id, true, Index}} % last range

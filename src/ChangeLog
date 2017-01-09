@@ -9,11 +9,13 @@
     * Changed the minimum default send_async and send_sync timeout value
       for service configuration from 101 milliseconds to 499 milliseconds
       (based on current macros) to be consistent with
-      limit_min and limit_max use
+      limit_min use in the cloudi_service module and the cloudi module
     * Erlang type cloudi_service_api:timeout_milliseconds() was removed and
       split into more specific types
     * Add manual-update makefile target for updating automatically
       generated files that must be updated manually
+    * Remove cloudi_service_api functions deprecated since v1.3.3 release
+    * Remove cloudi_service functions deprecated since v1.3.3 release
 
 2017-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 

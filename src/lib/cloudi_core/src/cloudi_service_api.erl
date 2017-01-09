@@ -78,14 +78,7 @@
          logging/1,
          code_path_add/2,
          code_path_remove/2,
-         code_path/1,
-         % deprecated, renamed to logging_level_set/2
-         loglevel_set/2,
-         % deprecated, renamed to logging_redirect_set/2
-         log_redirect/2]).
-
--deprecated([loglevel_set/2,
-             log_redirect/2]).
+         code_path/1]).
 
 -include("cloudi_service_api.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -149,6 +142,10 @@
     0..?TIMEOUT_MAX_ERLANG.
 -export_type([restart_delay_milliseconds/0]).
 
+-type latency_time_milliseconds() ::
+    1..?TIMEOUT_MAX_ERLANG.
+-export_type([latency_time_milliseconds/0]).
+
 -type acl() ::
     list(atom() | cloudi:service_name_pattern()).
 -export_type([acl/0]).
@@ -164,10 +161,6 @@
 -type period_seconds() ::
     1..(?TIMEOUT_MAX_ERLANG div 1000).
 -export_type([period_seconds/0]).
-
--type latency_time_milliseconds() ::
-    1..?TIMEOUT_MAX_ERLANG.
--export_type([latency_time_milliseconds/0]).
 
 -type aspect_init_after_internal_f() ::
     fun((Args :: list(),
@@ -1436,32 +1429,6 @@ code_path(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     {ok, code:get_path()}.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @deprecated Use {@link logging_level_set/2} instead
-%% @end
-%%-------------------------------------------------------------------------
-
--spec loglevel_set(Level :: loglevel(),
-                   Timeout :: api_timeout_milliseconds()) ->
-    ok.
-
-loglevel_set(Level, Timeout) ->
-    logging_level_set(Level, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% @deprecated Use {@link logging_redirect_set/2} instead
-%% @end
-%%-------------------------------------------------------------------------
-
--spec log_redirect(Node :: undefined | node(),
-                   Timeout :: api_timeout_milliseconds()) ->
-    ok.
-
-log_redirect(Node, Timeout) ->
-    logging_redirect_set(Node, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

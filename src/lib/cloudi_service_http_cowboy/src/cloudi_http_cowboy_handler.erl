@@ -471,9 +471,8 @@ websocket_init(_Transport, Req0,
                         error ->
                             ok;
                         {ok, Pattern, Functions} ->
-                            Parameters = cloudi_service:
-                                         service_name_parse(PathRawStr,
-                                                            Pattern),
+                            Parameters = cloudi_service_name:
+                                         parse(PathRawStr, Pattern),
                             websocket_subscriptions(Functions, Parameters,
                                                     Scope)
                     end

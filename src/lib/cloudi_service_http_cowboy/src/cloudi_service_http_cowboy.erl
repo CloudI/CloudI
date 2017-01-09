@@ -576,11 +576,11 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
             F = if
                 ParametersAllowed =:= true ->
                     fun(Parameters) ->
-                        cloudi_service:
-                        service_name_new(Name,
-                                         Parameters,
-                                         ParametersSelected,
-                                         ParametersStrictMatching)
+                        cloudi_service_name:
+                        new(Name,
+                            Parameters,
+                            ParametersSelected,
+                            ParametersStrictMatching)
                     end;
                 ParametersAllowed =:= false ->
                     fun(Parameters) ->

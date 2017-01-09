@@ -141,7 +141,7 @@ start_link() ->
               CountThread :: pos_integer(),
               Scope :: atom(),
               TimeoutTerm :: cloudi_service_api:
-                             timeout_terminate_milliseconds(),
+                             timeout_terminate_value_milliseconds(),
               RestartDelay :: tuple() | false,
               MaxR :: non_neg_integer(),
               MaxT :: non_neg_integer(),
