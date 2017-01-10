@@ -3,7 +3,7 @@
 
 2017-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Fix bug with xternal services not using the
+    * Fix bug with external services not using the
       response_timeout_immediate_max service configuration option value
       when receiving invalid request and/or request_info
       within a service request
@@ -13,6 +13,9 @@
       with the defaults changed from 20000 milliseconds to 20001 milliseconds
       to provide the same default behavior that was present previously
       (better characteristics when being set to 0, which will be limit_min)
+    * Allow limit_min or limit_max to be used for the service configuration
+      options request_timeout_immediate_max, response_timeout_immediate_max,
+      restart_delay, monkey_latency
 
 2017-01-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

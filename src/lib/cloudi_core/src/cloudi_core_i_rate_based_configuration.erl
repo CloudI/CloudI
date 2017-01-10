@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2016 Michael Truog
+%%% @copyright 2013-2017 Michael Truog
 %%% @version 1.5.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -112,11 +112,14 @@
     {
         method = undefined :: undefined | exponential | linear | absolute,
         time_min = undefined
-            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
+            :: undefined |
+               cloudi_service_api:restart_delay_value_milliseconds(),
         time_max = undefined
-            :: undefined | cloudi_service_api:restart_delay_milliseconds(),
+            :: undefined |
+               cloudi_service_api:restart_delay_value_milliseconds(),
         time_slope = undefined
-            :: undefined | cloudi_service_api:restart_delay_milliseconds()
+            :: undefined |
+               cloudi_service_api:restart_delay_value_milliseconds()
     }).
 
 -record(count_process_dynamic,
@@ -249,19 +252,19 @@ restart_delay_format(false) ->
 restart_delay_format(#restart_delay{method = exponential,
                                     time_min = TimeMin,
                                     time_max = TimeMax}) ->
-    [{time_exponential_min, TimeMin},
-     {time_exponential_max, TimeMax}];
+    [{time_exponential_min, ?LIMIT_FORMAT(TimeMin, 1, ?TIMEOUT_MAX_ERLANG)},
+     {time_exponential_max, ?LIMIT_FORMAT(TimeMax, 1, ?TIMEOUT_MAX_ERLANG)}];
 restart_delay_format(#restart_delay{method = linear,
                                     time_min = TimeMin,
                                     time_max = TimeMax,
                                     time_slope = TimeSlope}) ->
-    [{time_linear_min, TimeMin},
+    [{time_linear_min, ?LIMIT_FORMAT(TimeMin, 0, ?TIMEOUT_MAX_ERLANG)},
      {time_linear_slope, TimeSlope},
-     {time_linear_max, TimeMax}];
+     {time_linear_max, ?LIMIT_FORMAT(TimeMax, 1, ?TIMEOUT_MAX_ERLANG)}];
 restart_delay_format(#restart_delay{method = absolute,
                                     time_min = TimeValue,
                                     time_max = TimeValue}) ->
-    [{time_absolute, TimeValue}].
+    [{time_absolute, ?LIMIT_FORMAT(TimeValue, 1, ?TIMEOUT_MAX_ERLANG)}].
 
 %% convert the configuration format to internal state
 
@@ -618,19 +621,22 @@ restart_delay_validate([{time_exponential_min, TimeMin} = Option | Options],
                        #restart_delay{method = Method,
                                       time_max = TimeMax} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
-         is_integer(TimeMin), TimeMin > 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
+         (is_integer(TimeMin) andalso
+          (TimeMin >= 1) andalso (TimeMin =< ?TIMEOUT_MAX_ERLANG)) orelse
+         (TimeMin =:= limit_min) orelse (TimeMin =:= limit_max) ->
+    NewTimeMin = ?LIMIT_ASSIGN(TimeMin, 1, ?TIMEOUT_MAX_ERLANG),
     NewTimeMax = if
         TimeMax =:= undefined ->
-            erlang:max(TimeMin, ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
+            erlang:max(NewTimeMin, ?RESTART_DELAY_EXPONENTIAL_TIME_MAX_DEFAULT);
         TimeMax =/= undefined ->
             TimeMax
     end,
     if
-        TimeMin =< NewTimeMax ->
+        NewTimeMin =< NewTimeMax ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = exponential,
-                                       time_min = TimeMin,
+                                       time_min = NewTimeMin,
                                        time_max = NewTimeMax});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
@@ -639,19 +645,22 @@ restart_delay_validate([{time_exponential_max, TimeMax} = Option | Options],
                        #restart_delay{method = Method,
                                       time_min = TimeMin} = State)
     when ((Method =:= undefined) orelse (Method =:= exponential)),
-         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
+         (is_integer(TimeMax) andalso
+          (TimeMax >= 1) andalso (TimeMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+         (TimeMax =:= limit_min) orelse (TimeMax =:= limit_max) ->
+    NewTimeMax = ?LIMIT_ASSIGN(TimeMax, 1, ?TIMEOUT_MAX_ERLANG),
     NewTimeMin = if
         TimeMin =:= undefined ->
-            erlang:min(TimeMax, ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
+            erlang:min(NewTimeMax, ?RESTART_DELAY_EXPONENTIAL_TIME_MIN_DEFAULT);
         TimeMin =/= undefined ->
             TimeMin
     end,
     if
-        NewTimeMin =< TimeMax ->
+        NewTimeMin =< NewTimeMax ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = exponential,
-                                       time_max = TimeMax,
+                                       time_max = NewTimeMax,
                                        time_min = NewTimeMin});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
@@ -668,19 +677,22 @@ restart_delay_validate([{time_linear_min, TimeMin} = Option | Options],
                        #restart_delay{method = Method,
                                       time_max = TimeMax} = State)
     when ((Method =:= undefined) orelse (Method =:= linear)),
-         is_integer(TimeMin), TimeMin >= 0, TimeMin =< ?TIMEOUT_MAX_ERLANG ->
+         (is_integer(TimeMin) andalso
+          (TimeMin >= 0) andalso (TimeMin =< ?TIMEOUT_MAX_ERLANG)) orelse
+         (TimeMin =:= limit_min) orelse (TimeMin =:= limit_max) ->
+    NewTimeMin = ?LIMIT_ASSIGN(TimeMin, 0, ?TIMEOUT_MAX_ERLANG),
     NewTimeMax = if
         TimeMax =:= undefined ->
-            erlang:max(TimeMin, ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT);
+            erlang:max(NewTimeMin, ?RESTART_DELAY_LINEAR_TIME_MAX_DEFAULT);
         TimeMax =/= undefined ->
             TimeMax
     end,
     if
-        TimeMin =< NewTimeMax ->
+        NewTimeMin =< NewTimeMax ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = linear,
-                                       time_min = TimeMin,
+                                       time_min = NewTimeMin,
                                        time_max = NewTimeMax});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
@@ -689,19 +701,22 @@ restart_delay_validate([{time_linear_max, TimeMax} = Option | Options],
                        #restart_delay{method = Method,
                                       time_min = TimeMin} = State)
     when ((Method =:= undefined) orelse (Method =:= linear)),
-         is_integer(TimeMax), TimeMax > 0, TimeMax =< ?TIMEOUT_MAX_ERLANG ->
+         (is_integer(TimeMax) andalso
+          (TimeMax >= 1) andalso (TimeMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+         (TimeMax =:= limit_min) orelse (TimeMax =:= limit_max) ->
+    NewTimeMax = ?LIMIT_ASSIGN(TimeMax, 1, ?TIMEOUT_MAX_ERLANG),
     NewTimeMin = if
         TimeMin =:= undefined ->
-            erlang:min(TimeMax, ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT);
+            erlang:min(NewTimeMax, ?RESTART_DELAY_LINEAR_TIME_MIN_DEFAULT);
         TimeMin =/= undefined ->
             TimeMin
     end,
     if
-        NewTimeMin =< TimeMax ->
+        NewTimeMin =< NewTimeMax ->
             restart_delay_validate(Options,
                                    State#restart_delay{
                                        method = linear,
-                                       time_max = TimeMax,
+                                       time_max = NewTimeMax,
                                        time_min = NewTimeMin});
         true ->
             {error, {service_options_restart_delay_invalid, Option}}
@@ -709,12 +724,14 @@ restart_delay_validate([{time_linear_max, TimeMax} = Option | Options],
 restart_delay_validate([{time_absolute, TimeValue} | Options],
                        #restart_delay{method = Method} = State)
     when ((Method =:= undefined) orelse (Method =:= absolute)),
-         is_integer(TimeValue),
-         TimeValue > 0, TimeValue =< ?TIMEOUT_MAX_ERLANG ->
+         (is_integer(TimeValue) andalso
+          (TimeValue >= 1) andalso (TimeValue =< ?TIMEOUT_MAX_ERLANG)) orelse
+         (TimeValue =:= limit_min) orelse (TimeValue =:= limit_max) ->
+    NewTimeValue = ?LIMIT_ASSIGN(TimeValue, 1, ?TIMEOUT_MAX_ERLANG),
     restart_delay_validate(Options,
                            State#restart_delay{method = absolute,
-                                               time_min = TimeValue,
-                                               time_max = TimeValue});
+                                               time_min = NewTimeValue,
+                                               time_max = NewTimeValue});
 restart_delay_validate([Invalid | _Options],
                        _State) ->
     {error, {service_options_restart_delay_invalid, Invalid}}.

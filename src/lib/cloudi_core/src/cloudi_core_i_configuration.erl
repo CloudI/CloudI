@@ -909,7 +909,9 @@ services_format_options_external(Options) ->
         Options#config_service_options.request_timeout_immediate_max /=
         Defaults#config_service_options.request_timeout_immediate_max ->
             [{request_timeout_immediate_max,
-              Options#config_service_options.request_timeout_immediate_max} |
+              ?LIMIT_FORMAT(Options#config_service_options
+                            .request_timeout_immediate_max,
+                            0, ?TIMEOUT_MAX_ERLANG)} |
              OptionsList8];
         true ->
             OptionsList8
@@ -927,7 +929,9 @@ services_format_options_external(Options) ->
         Options#config_service_options.response_timeout_immediate_max /=
         Defaults#config_service_options.response_timeout_immediate_max ->
             [{response_timeout_immediate_max,
-              Options#config_service_options.response_timeout_immediate_max} |
+              ?LIMIT_FORMAT(Options#config_service_options
+                            .response_timeout_immediate_max,
+                            0, ?TIMEOUT_MAX_ERLANG)} |
              OptionsList10];
         true ->
             OptionsList10
@@ -2392,9 +2396,11 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _]
-        when not (is_integer(RequestTimeoutImmediateMax) andalso
-                  (RequestTimeoutImmediateMax >= 0) andalso
-                  (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ((is_integer(RequestTimeoutImmediateMax) andalso
+                   (RequestTimeoutImmediateMax >= 0) andalso
+                   (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+                  (RequestTimeoutImmediateMax =:= limit_min) orelse
+                  (RequestTimeoutImmediateMax =:= limit_max)) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _,
@@ -2406,9 +2412,11 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _]
-        when not (is_integer(ResponseTimeoutImmediateMax) andalso
-                  (ResponseTimeoutImmediateMax >= 0) andalso
-                  (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ((is_integer(ResponseTimeoutImmediateMax) andalso
+                   (ResponseTimeoutImmediateMax >= 0) andalso
+                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+                  (ResponseTimeoutImmediateMax =:= limit_min) orelse
+                  (ResponseTimeoutImmediateMax =:= limit_max)) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _, _, _,
@@ -2608,11 +2616,13 @@ services_validate_options_internal(OptionsList, CountProcess, MaxR, MaxT) ->
                          request_timeout_adjustment =
                              RequestTimeoutAdjustment,
                          request_timeout_immediate_max =
-                             RequestTimeoutImmediateMax,
+                             ?LIMIT_ASSIGN(RequestTimeoutImmediateMax,
+                                           0, ?TIMEOUT_MAX_ERLANG),
                          response_timeout_adjustment =
                              ResponseTimeoutAdjustment,
                          response_timeout_immediate_max =
-                             ResponseTimeoutImmediateMax,
+                             ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
+                                           0, ?TIMEOUT_MAX_ERLANG),
                          count_process_dynamic =
                              NewCountProcessDynamic,
                          timeout_terminate =
@@ -2924,9 +2934,11 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                      RequestTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, RequestTimeoutImmediateMax, _, _, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
-        when not (is_integer(RequestTimeoutImmediateMax) andalso
-                  (RequestTimeoutImmediateMax >= 0) andalso
-                  (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ((is_integer(RequestTimeoutImmediateMax) andalso
+                   (RequestTimeoutImmediateMax >= 0) andalso
+                   (RequestTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+                  (RequestTimeoutImmediateMax =:= limit_min) orelse
+                  (RequestTimeoutImmediateMax =:= limit_max)) ->
             {error, {service_options_request_timeout_immediate_max_invalid,
                      RequestTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, ResponseTimeoutAdjustment, _, _, _, _, _,
@@ -2936,9 +2948,11 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                      ResponseTimeoutAdjustment}};
         [_, _, _, _, _, _, _, _, _, _, ResponseTimeoutImmediateMax, _, _, _, _,
          _, _, _, _, _, _, _, _, _, _, _, _, _]
-        when not (is_integer(ResponseTimeoutImmediateMax) andalso
-                  (ResponseTimeoutImmediateMax >= 0) andalso
-                  (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) ->
+        when not ((is_integer(ResponseTimeoutImmediateMax) andalso
+                   (ResponseTimeoutImmediateMax >= 0) andalso
+                   (ResponseTimeoutImmediateMax =< ?TIMEOUT_MAX_ERLANG)) orelse
+                  (ResponseTimeoutImmediateMax =:= limit_min) orelse
+                  (ResponseTimeoutImmediateMax =:= limit_max)) ->
             {error, {service_options_response_timeout_immediate_max_invalid,
                      ResponseTimeoutImmediateMax}};
         [_, _, _, _, _, _, _, _, _, _, _, CountProcessDynamic, _, _, _,
@@ -3074,11 +3088,13 @@ services_validate_options_external(OptionsList, CountProcess, MaxR, MaxT) ->
                                  request_timeout_adjustment =
                                      RequestTimeoutAdjustment,
                                  request_timeout_immediate_max =
-                                     RequestTimeoutImmediateMax,
+                                     ?LIMIT_ASSIGN(RequestTimeoutImmediateMax,
+                                                   0, ?TIMEOUT_MAX_ERLANG),
                                  response_timeout_adjustment =
                                      ResponseTimeoutAdjustment,
                                  response_timeout_immediate_max =
-                                     ResponseTimeoutImmediateMax,
+                                     ?LIMIT_ASSIGN(ResponseTimeoutImmediateMax,
+                                                   0, ?TIMEOUT_MAX_ERLANG),
                                  count_process_dynamic =
                                      NewCountProcessDynamic,
                                  timeout_terminate =

@@ -130,21 +130,51 @@
 -export_type([timeout_terminate_value_milliseconds/0,
               timeout_terminate_milliseconds/0]).
 
+-type request_timeout_immediate_max_value_milliseconds() ::
+    0..?TIMEOUT_MAX_ERLANG.
 -type request_timeout_immediate_max_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
--export_type([request_timeout_immediate_max_milliseconds/0]).
+    limit_min | limit_max | request_timeout_immediate_max_value_milliseconds().
+-export_type([request_timeout_immediate_max_value_milliseconds/0,
+              request_timeout_immediate_max_milliseconds/0]).
 
+-type response_timeout_immediate_max_value_milliseconds() ::
+    0..?TIMEOUT_MAX_ERLANG.
 -type response_timeout_immediate_max_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
--export_type([response_timeout_immediate_max_milliseconds/0]).
+    limit_min | limit_max | response_timeout_immediate_max_value_milliseconds().
+-export_type([response_timeout_immediate_max_value_milliseconds/0,
+              response_timeout_immediate_max_milliseconds/0]).
 
+-type restart_delay_value_milliseconds() ::
+    0..?TIMEOUT_MAX_ERLANG.
 -type restart_delay_milliseconds() ::
-    0..?TIMEOUT_MAX_ERLANG.
--export_type([restart_delay_milliseconds/0]).
+    limit_min | limit_max | restart_delay_value_milliseconds().
+-export_type([restart_delay_value_milliseconds/0,
+              restart_delay_milliseconds/0]).
 
--type latency_time_milliseconds() ::
+-type latency_mean_time_value_milliseconds() ::
+    0..?TIMEOUT_MAX_ERLANG.
+-type latency_mean_time_milliseconds() ::
+    limit_min | limit_max | latency_mean_time_value_milliseconds().
+-type latency_min_time_value_milliseconds() ::
+    0..?TIMEOUT_MAX_ERLANG.
+-type latency_min_time_milliseconds() ::
+    limit_min | limit_max | latency_min_time_value_milliseconds().
+-type latency_max_time_value_milliseconds() ::
     1..?TIMEOUT_MAX_ERLANG.
--export_type([latency_time_milliseconds/0]).
+-type latency_max_time_milliseconds() ::
+    limit_min | limit_max | latency_max_time_value_milliseconds().
+-type latency_time_value_milliseconds() ::
+    1..?TIMEOUT_MAX_ERLANG.
+-type latency_time_milliseconds() ::
+    limit_min | limit_max | latency_time_value_milliseconds().
+-export_type([latency_mean_time_value_milliseconds/0,
+              latency_mean_time_milliseconds/0,
+              latency_min_time_value_milliseconds/0,
+              latency_min_time_milliseconds/0,
+              latency_max_time_value_milliseconds/0,
+              latency_max_time_milliseconds/0,
+              latency_time_value_milliseconds/0,
+              latency_time_milliseconds/0]).
 
 -type acl() ::
     list(atom() | cloudi:service_name_pattern()).
@@ -384,10 +414,10 @@
                {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, latency_time_milliseconds()} |
-               {time_uniform_max, latency_time_milliseconds()} |
-               {time_gaussian_mean, latency_time_milliseconds()} |
-               {time_gaussian_stddev, float()} |
+          list({time_uniform_min, latency_min_time_milliseconds()} |
+               {time_uniform_max, latency_max_time_milliseconds()} |
+               {time_gaussian_mean, latency_mean_time_milliseconds()} |
+               {time_gaussian_stddev, float() | pos_integer()} |
                {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
@@ -472,10 +502,10 @@
                {time_absolute, restart_delay_milliseconds()}) | false} |
          {scope, atom()} |
          {monkey_latency,
-          list({time_uniform_min, latency_time_milliseconds()} |
-               {time_uniform_max, latency_time_milliseconds()} |
-               {time_gaussian_mean, latency_time_milliseconds()} |
-               {time_gaussian_stddev, float()} |
+          list({time_uniform_min, latency_min_time_milliseconds()} |
+               {time_uniform_max, latency_max_time_milliseconds()} |
+               {time_gaussian_mean, latency_mean_time_milliseconds()} |
+               {time_gaussian_stddev, float() | pos_integer()} |
                {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
@@ -591,10 +621,10 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {monkey_latency,
-          list({time_uniform_min, latency_time_milliseconds()} |
-               {time_uniform_max, latency_time_milliseconds()} |
-               {time_gaussian_mean, latency_time_milliseconds()} |
-               {time_gaussian_stddev, float()} |
+          list({time_uniform_min, latency_min_time_milliseconds()} |
+               {time_uniform_max, latency_max_time_milliseconds()} |
+               {time_gaussian_mean, latency_mean_time_milliseconds()} |
+               {time_gaussian_stddev, float() | pos_integer()} |
                {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |
@@ -660,10 +690,10 @@
          {response_timeout_immediate_max,
           response_timeout_immediate_max_milliseconds()} |
          {monkey_latency,
-          list({time_uniform_min, latency_time_milliseconds()} |
-               {time_uniform_max, latency_time_milliseconds()} |
-               {time_gaussian_mean, latency_time_milliseconds()} |
-               {time_gaussian_stddev, float()} |
+          list({time_uniform_min, latency_min_time_milliseconds()} |
+               {time_uniform_max, latency_max_time_milliseconds()} |
+               {time_gaussian_mean, latency_mean_time_milliseconds()} |
+               {time_gaussian_stddev, float() | pos_integer()} |
                {time_absolute, latency_time_milliseconds()}) | system | false} |
          {monkey_chaos,
           list({probability_request, float()} |

@@ -171,71 +171,61 @@
 % (should be less than all INTERVAL constants)
 -define(TIMEOUT_DELTA, 100). % milliseconds
 
+% helper macros for handling limits
+-define(LIMIT_ASSIGN(Value, Min, Max),
+        if
+            Value =:= limit_min ->
+                Min;
+            Value =:= limit_max ->
+                Max;
+            true ->
+                Value
+        end).
+-define(LIMIT_FORMAT(Value, Min, Max),
+        if
+            Value =:= Min ->
+                limit_min;
+            Value =:= Max ->
+                limit_max;
+            true ->
+                Value
+        end).
+
 % initialization timeout value limits
 -define(TIMEOUT_INITIALIZE_MIN, ?TIMEOUT_DELTA + 1). % milliseconds
 -define(TIMEOUT_INITIALIZE_MAX, ?TIMEOUT_MAX). % milliseconds
 -define(TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
-        if
-            TimeoutInit =:= limit_min ->
-                ?TIMEOUT_INITIALIZE_MIN;
-            TimeoutInit =:= limit_max ->
-                ?TIMEOUT_INITIALIZE_MAX;
-            true ->
-                TimeoutInit
-        end).
+        ?LIMIT_ASSIGN(TimeoutInit,
+                      ?TIMEOUT_INITIALIZE_MIN,
+                      ?TIMEOUT_INITIALIZE_MAX)).
 -define(TIMEOUT_INITIALIZE_FORMAT(TimeoutInit),
-        if
-            TimeoutInit =:= ?TIMEOUT_INITIALIZE_MIN ->
-                limit_min;
-            TimeoutInit =:= ?TIMEOUT_INITIALIZE_MAX ->
-                limit_max;
-            true ->
-                TimeoutInit
-        end).
+        ?LIMIT_FORMAT(TimeoutInit,
+                      ?TIMEOUT_INITIALIZE_MIN,
+                      ?TIMEOUT_INITIALIZE_MAX)).
 
 % asynchronous send timeout value limits
 -define(TIMEOUT_SEND_ASYNC_MIN, ?SEND_ASYNC_INTERVAL - 1). % milliseconds
 -define(TIMEOUT_SEND_ASYNC_MAX, ?TIMEOUT_MAX). % milliseconds
 -define(TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutSendAsync),
-        if
-            TimeoutSendAsync =:= limit_min ->
-                ?TIMEOUT_SEND_ASYNC_MIN;
-            TimeoutSendAsync =:= limit_max ->
-                ?TIMEOUT_SEND_ASYNC_MAX;
-            true ->
-                TimeoutSendAsync
-        end).
+        ?LIMIT_ASSIGN(TimeoutSendAsync,
+                      ?TIMEOUT_SEND_ASYNC_MIN,
+                      ?TIMEOUT_SEND_ASYNC_MAX)).
 -define(TIMEOUT_SEND_ASYNC_FORMAT(TimeoutSendAsync),
-        if
-            TimeoutSendAsync =:= ?TIMEOUT_SEND_ASYNC_MIN ->
-                limit_min;
-            TimeoutSendAsync =:= ?TIMEOUT_SEND_ASYNC_MAX ->
-                limit_max;
-            true ->
-                TimeoutSendAsync
-        end).
+        ?LIMIT_FORMAT(TimeoutSendAsync,
+                      ?TIMEOUT_SEND_ASYNC_MIN,
+                      ?TIMEOUT_SEND_ASYNC_MAX)).
 
 % synchronous send timeout value limits
 -define(TIMEOUT_SEND_SYNC_MIN, ?SEND_SYNC_INTERVAL - 1). % milliseconds
 -define(TIMEOUT_SEND_SYNC_MAX, ?TIMEOUT_MAX). % milliseconds
 -define(TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSendSync),
-        if
-            TimeoutSendSync =:= limit_min ->
-                ?TIMEOUT_SEND_SYNC_MIN;
-            TimeoutSendSync =:= limit_max ->
-                ?TIMEOUT_SEND_SYNC_MAX;
-            true ->
-                TimeoutSendSync
-        end).
+        ?LIMIT_ASSIGN(TimeoutSendSync,
+                      ?TIMEOUT_SEND_SYNC_MIN,
+                      ?TIMEOUT_SEND_SYNC_MAX)).
 -define(TIMEOUT_SEND_SYNC_FORMAT(TimeoutSendSync),
-        if
-            TimeoutSendSync =:= ?TIMEOUT_SEND_SYNC_MIN ->
-                limit_min;
-            TimeoutSendSync =:= ?TIMEOUT_SEND_SYNC_MAX ->
-                limit_max;
-            true ->
-                TimeoutSendSync
-        end).
+        ?LIMIT_FORMAT(TimeoutSendSync,
+                      ?TIMEOUT_SEND_SYNC_MIN,
+                      ?TIMEOUT_SEND_SYNC_MAX)).
 
 % termination timeout when MaxT == 0
 % (if MaxR == 0, take MaxT as a terminate timeout value, i.e., as if MaxR == 1)

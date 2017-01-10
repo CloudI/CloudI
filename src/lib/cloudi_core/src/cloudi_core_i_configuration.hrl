@@ -263,12 +263,12 @@
         % (all time parameters are specified in milliseconds)
         monkey_latency = false
             :: list({time_uniform_min,
-                     cloudi_service_api:latency_time_milliseconds()} |
+                     cloudi_service_api:latency_min_time_milliseconds()} |
                     {time_uniform_max,
-                     cloudi_service_api:latency_time_milliseconds()} |
+                     cloudi_service_api:latency_max_time_milliseconds()} |
                     {time_gaussian_mean,
-                     cloudi_service_api:latency_time_milliseconds()} |
-                    {time_gaussian_stddev, float()} |
+                     cloudi_service_api:latency_mean_time_milliseconds()} |
+                    {time_gaussian_stddev, float() | pos_integer()} |
                     {time_absolute,
                      cloudi_service_api:latency_time_milliseconds()}) |
                system | false |
