@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 1.5.3
-:revdate: 2016-09-14
+:revnumber: 1.6.0
+:revdate: 2017-01-11
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -67,6 +67,15 @@ All Supported Programming Languages::
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging_c.py[Python/C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.rb[Ruby]
+  * Basic Null Response Integration Test
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/c_src/main.c[C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/src/cloudi_service_null.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/org/cloudi/tests/null_/Task.java[Java]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.pl[Perl]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.php[PHP]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null_c.py[Python/C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.rb[Ruby]
 C::
   * link:https://github.com/okeuday/sillymud[MUD Game Server Using CloudI]
   * link:https://github.com/okeuday/odroid_display[LCD Display Service]

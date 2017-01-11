@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI Java Tutorial</h1>
 <div class="details">
-<span id="revnumber">version 1.5.4,</span>
-<span id="revdate">2016-10-07</span>
+<span id="revnumber">version 1.6.0,</span>
+<span id="revdate">2017-01-11</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -176,7 +176,7 @@ To send a service request to all destinations that match a service name requires
 <p>All services are structured for a 3 part sequence: initialization, handling-requests, and termination.
 During CloudI service initialization, data structures are initialized to confirm that the service is ready for a runtime that may last indefinitely (making the  initialization stage the most critical stage for a service&#8217;s reliability).
 Inside the service initialization the <code>subscribe</code> CloudI API function is typically called so that incoming service requests are handled after initialization is done.
-The book recommendation service initialization is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank">Service.java:90-140</a>):</p>
+The book recommendation service initialization is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank">Service.java:90-140</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -264,7 +264,7 @@ The CloudI service that handles the request can make the request asynchronous by
 That means that the <code>send_async</code> CloudI API function call is an asynchronous send due to not waiting for a response to occur, though a response may be sent in the future if the receiving service decides to send a response.</p>
 </div>
 <div class="paragraph">
-<p>An example of a service request handling function is below (using the "itemRefresh" function from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/Service.java#L163-L209" target="_blank">Service.java:163-209</a>):</p>
+<p>An example of a service request handling function is below (using the "itemRefresh" function from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L163-L209" target="_blank">Service.java:163-209</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -355,8 +355,8 @@ Make sure CloudI is installed and running, using the installation and start sequ
 <div class="content">
 <pre class="highlight"><code class="language-shell" data-lang="shell">wget --content-disposition \
     http://sourceforge.net/projects/cloudi/files/latest/download
-tar zxvf cloudi-1.5.4.tar.gz
-cd cloudi-1.5.4/src
+tar zxvf cloudi-1.6.0.tar.gz
+cd cloudi-1.6.0/src
 ./configure
 make
 sudo make install
@@ -404,7 +404,7 @@ cat &lt;&lt; EOF &gt; tutorial.conf
          "-server "
          "-ea:org.cloudi... "
          "-Xms3g -Xmx3g "
-         "-jar $PWD/target/cloudi_tutorial_java-1.5.4-jar-with-dependencies.jar "
+         "-jar $PWD/target/cloudi_tutorial_java-1.6.0-jar-with-dependencies.jar "
          "-pgsql_hostname localhost "
          "-pgsql_port 5432 "
          "-pgsql_database cloudi_tutorial_java "
@@ -573,14 +573,14 @@ The "Rate" button will change to an "Update" button to allow the rating to chang
 </tbody>
 </table>
 <div class="paragraph">
-<p>The table above shows the service subscriptions that occur during service initialization (in <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank">Service.java:90-140</a>).
+<p>The table above shows the service subscriptions that occur during service initialization (in <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank">Service.java:90-140</a>).
 The service configuration used for running <code>Service.java</code> was stored in the <code>tutorial.conf</code> file and it specified a total of 4 threads with <code>count_thread</code> being set to <code>4</code>.
 The service configuration did not provide a <code>count_process</code> setting so the number of OS processes defaulted to <code>1</code> (the thread count is applied to each OS process separately, i.e., <code>count_process</code> == <code>2</code> would have 2 OS processes, each with <code>4</code> threads).
 The service configuration always specifies a service name pattern prefix and that was set to "/tutorial/java/service/" in the <code>tutorial.conf</code> file.</p>
 </div>
 <div class="paragraph">
 <p>When a HTTP request (on port 8080) is made to the REST API through cloudi_service_http_cowboy, a CloudI service request is sent based on the HTTP request URL path using the default timeout that was configured for cloudi_service_http_cowboy service requests (10 minutes).
-The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/html/tutorial/java/index.html#L542-L550" target="_blank">index.html:542-550</a>):</p>
+The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/html/tutorial/java/index.html#L542-L550" target="_blank">index.html:542-550</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -610,7 +610,7 @@ The endpoints can also be used as separate URL paths to receive the same respons
 <div class="paragraph">
 <p>A WebSocket request is sent as a CloudI service request that is randomly load-balanced among the 3 threads that have subscribed with the function named "client" (in <code>Service.java</code> the subscription occurred when <code>thread_index</code> &gt; 0 with 4 threads so 3 threads handle the "client" function).
 If <code>Service.java</code> had <code>count_process</code> set to <code>2</code> in its service configuration, the service request would instead be randomly load-balanced among 6 total threads with each group of 3 in a separate OS process.
-The service request handler function "client" is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/Service.java#L429-L552" target="_blank">Service.java:429-552</a>):</p>
+The service request handler function "client" is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L429-L552" target="_blank">Service.java:429-552</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -775,7 +775,7 @@ However, after the thread is done refreshing the items, the interface would want
 </div>
 <div class="paragraph">
 <p>To utilize the result of the "itemRefresh" function processing thread requires that the <code>poll</code> CloudI API function is interrupted to call a function that is not a service request handler (to allow usage of the <code>mcast_async</code> CloudI API function for sending a notification to all connected WebSockets, similar to what occurs with a successful "recommendation_refresh" <code>message_name</code> in the "client" function).
-For scheduling an interrupt of the <code>poll</code> function the timeout parameter is used as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/Service.java#L141-L146" target="_blank">Service.java:141-146</a>):</p>
+For scheduling an interrupt of the <code>poll</code> function the timeout parameter is used as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L141-L146" target="_blank">Service.java:141-146</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -788,7 +788,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>Each interrupt of the <code>poll</code> function allows execution to check if it can run a chunk of function objects in the <code>ServiceIdle</code> class as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L9-L73" target="_blank">ServiceIdle.java:9-73</a>):</p>
+<p>Each interrupt of the <code>poll</code> function allows execution to check if it can run a chunk of function objects in the <code>ServiceIdle</code> class as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L9-L73" target="_blank">ServiceIdle.java:9-73</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -860,7 +860,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>The result of the "itemRefresh" function processing thread is stored in the <code>ServiceIdle</code> class instance within the <code>GutenbergRefresh</code> class which handles the item refresh process (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L99-L102" target="_blank">GutenbergRefresh.java:99-102</a>):</p>
+<p>The result of the "itemRefresh" function processing thread is stored in the <code>ServiceIdle</code> class instance within the <code>GutenbergRefresh</code> class which handles the item refresh process (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L99-L102" target="_blank">GutenbergRefresh.java:99-102</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -871,7 +871,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>After the <code>poll</code> function is interrupted and the <code>ServiceIdle</code> class has function objects to call, the <code>GutenbergRefreshDone</code> function object is executed to send the "itemRefresh" result notification to all connected WebSockets (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.5.4/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L31-L51" target="_blank">GutenbergRefreshDone.java:31-51</a>):</p>
+<p>After the <code>poll</code> function is interrupted and the <code>ServiceIdle</code> class has function objects to call, the <code>GutenbergRefreshDone</code> function object is executed to send the "itemRefresh" result notification to all connected WebSockets (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.6.0/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L31-L51" target="_blank">GutenbergRefreshDone.java:31-51</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">

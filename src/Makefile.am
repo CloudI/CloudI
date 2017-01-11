@@ -85,10 +85,13 @@ endif
     doc \
     docs \
     xref \
-    test \
-    tests \
     api-python-test \
     api-ruby-test \
+    ct \
+    eunit \
+    test \
+    tests \
+    manual-update \
     run
 
 all-local: rel/files/app.config \

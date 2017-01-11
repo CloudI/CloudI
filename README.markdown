@@ -1,4 +1,4 @@
-#[CloudI 1.5.4](http://cloudi.org)
+#[CloudI 1.6.0](http://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
@@ -36,7 +36,7 @@ of a software system (fully or partially) to the Erlang programming language.
 
 The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
-(currently C/C++, Java, JavaScript, Perl, PHP, Python, Ruby, and Erlang):
+(currently C/C++, Java, JavaScript, Perl, PHP, Python, Ruby, and Erlang/Elixir):
 
 * `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
@@ -44,8 +44,8 @@ Service-Oriented Architecture (SOA) development in any supported language
 * `return`, `forward`
 
 External communication that needs to scale (beyond 10,000 connections)
-can use an existing internal CloudI service (implemented in Erlang) which
-may do processing for one or more external CloudI services
+can use an existing internal CloudI service (implemented in Erlang or Elixir)
+which may do processing for one or more external CloudI services
 (implemented C/C++, Java, JavaScript, Perl, PHP, Python, and/or Ruby)
 
 Even if external communication doesn't need to scale, private cloud

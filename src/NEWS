@@ -1,3 +1,48 @@
+January 11, 2017
+  Version 1.6.0 released.
+  * backwards compatibility difference:
+    * Functions deprecated in the 1.3.3 CloudI release have been removed
+    * Usage of the 'immediate' atom for the timeout value with the
+      cloudi_service Erlang module and the cloudi Erlang module is deprecated,
+      use the 'limit_min' atom instead for the same value
+    * The minimum allowable values for service configuration
+      (both adding a new service and updating an existing service) of
+      timeout_async and timeout_sync has changed from
+      101 milliseconds to 499 milliseconds to be consistent with
+      the value that 'limit_min' represents
+    * The service configuration options
+      request_timeout_immediate_max and response_timeout_immediate_max
+      had their meaning change to rely on a greater than or equal to
+      comparison instead of a greater than comparison, though the same
+      default behavior is preserved with this change
+      (http://cloudi.org/api.html#2_services_add_config_opts)
+  * Now cloudi_core doesn't use any port drivers or NIFs except what is
+    provided within Erlang/OTP, and process dictionary use is minimal
+  * The Elixir module CloudILogger is now included in the cloudi_core
+    Erlang application to simplify usage of CloudI in Elixir source code
+  * Bugs related to CloudI logging syslog integration have been fixed and
+    more options for syslog use have been added
+    (http://cloudi.org/api.html#2_logging_syslog_set has more information)
+  * The restart_delay service configuration option was added
+    (http://cloudi.org/api.html#2_services_add_config_opts_restart_delay)
+  * CloudI service restarts have been made synchronous to ensure all
+    termination has completed before initialization of new processes begins
+    (to improve reliable management of global state during a restart)
+  * All service configuration timeout values that take milliseconds also
+    accept the Erlang atoms 'limit_min' and 'limit_max' where 'limit_max'
+    is a concept similar to the 'infinity' atom in Erlang source code,
+    though it does represent 49.7 days in milliseconds, so be careful about
+    its use (no one wants to wait 49.7 days to see a failure)
+  * All CloudI API implementations now handle a null return value as a response
+    to create a null response, if the programming language has a concept of
+    null (for more information, see the null integration test
+    http://cloudi.org/tutorials.html#cloudi_examples and/or read about
+    a null response at http://cloudi.org/faq.html#4_Null)
+  * All CloudI API implementations now put stdout and stderr into unbuffered
+    mode to ensure CloudI service output is logged as quickly as possible
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 October 7, 2016
   Version 1.5.4 released.
   * An important bugfix was added for internal services that use

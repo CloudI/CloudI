@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.5.4<br />
-              last updated on October 7<sup>th</sup> 2016</h3></center>
+  <center><h3>version 1.6.0<br />
+              last updated on January 11<sup>th</sup> 2017</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -379,13 +379,13 @@ CloudI::API.thread_count()
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.5.4/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.6.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.5.4/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.6.0/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -821,8 +821,8 @@ CloudI::API.unsubscribe(pattern)
 <pre onclick="element_select(this);">
 cloudi_service:get_pid(Dispatcher :: pid(),
                        Name :: string(),
-                       Timeout :: non_neg_integer() |
-                                  'undefined' | 'immediate') -&gt;
+                       Timeout :: non_neg_integer() | 'undefined' |
+                                  'limit_min' | 'limit_max') -&gt;
     {'ok', PatternPid :: {string(), pid()}} |
     {'error', Reason :: atom()}.
 </pre>
@@ -875,8 +875,8 @@ cloudi_service:get_pid(Dispatcher :: pid(),
 <pre onclick="element_select(this);">
 cloudi_service:get_pids(Dispatcher :: pid(),
                         Name :: string(),
-                        Timeout :: non_neg_integer() |
-                                   'undefined' | 'immediate') -&gt;
+                        Timeout :: non_neg_integer() | 'undefined' |
+                                   'limit_min' | 'limit_max') -&gt;
     {'ok', PatternPids :: list({string(), pid()})} |
     {'error', Reason :: atom()}.
 </pre>
@@ -967,8 +967,8 @@ cloudi_service:send_sync(Dispatcher :: pid(),
                          Name :: string(),
                          RequestInfo :: any(),
                          Request :: any(),
-                         Timeout :: non_neg_integer() |
-                                    'undefined' | 'immediate',
+                         Timeout :: non_neg_integer() | 'undefined' |
+                                    'limit_min' | 'limit_max',
                          Priority :: integer() | 'undefined') -&gt;
     {'ok', ResponseInfo :: any(), Response :: any()} |
     {'ok', Response :: any()} |
@@ -977,8 +977,8 @@ cloudi_service:send_sync(Dispatcher :: pid(),
                          Name :: string(),
                          RequestInfo :: any(),
                          Request :: any(),
-                         Timeout :: non_neg_integer() |
-                                    'undefined' | 'immediate',
+                         Timeout :: non_neg_integer() | 'undefined' |
+                                    'limit_min' | 'limit_max',
                          Priority :: integer() | 'undefined',
                          PatternPid :: {string(), pid()}) -&gt;
     {'ok', ResponseInfo :: any(), Response :: any()} |
@@ -1255,8 +1255,8 @@ cloudi_service:send_async(Dispatcher :: pid(),
                           Name :: string(),
                           RequestInfo :: any(),
                           Request :: any(),
-                          Timeout :: non_neg_integer() |
-                                     'undefined' | 'immediate',
+                          Timeout :: non_neg_integer() | 'undefined' |
+                                    'limit_min' | 'limit_max',
                           Priority :: integer() | 'undefined') -&gt;
     {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
     {'error', Reason :: atom()}.
@@ -1264,8 +1264,8 @@ cloudi_service:send_async(Dispatcher :: pid(),
                           Name :: string(),
                           RequestInfo :: any(),
                           Request :: any(),
-                          Timeout :: non_neg_integer() |
-                                     'undefined' | 'immediate',
+                          Timeout :: non_neg_integer() | 'undefined' |
+                                    'limit_min' | 'limit_max',
                           Priority :: integer() | 'undefined',
                           PatternPid :: {string(), pid()}) -&gt;
     {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
@@ -1503,8 +1503,8 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
                                  Name :: string(),
                                  RequestInfo :: any(),
                                  Request :: any(),
-                                 Timeout :: non_neg_integer() |
-                                            'undefined' | 'immediate',
+                                 Timeout :: non_neg_integer() | 'undefined' |
+                                            'limit_min' | 'limit_max',
                                  Priority :: integer() | 'undefined') -&gt;
     {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
     {'error', atom()}.
@@ -1512,8 +1512,8 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
                                  Name :: string(),
                                  RequestInfo :: any(),
                                  Request :: any(),
-                                 Timeout :: non_neg_integer() |
-                                            'undefined' | 'immediate',
+                                 Timeout :: non_neg_integer() | 'undefined' |
+                                            'limit_min' | 'limit_max',
                                  Priority :: integer() | 'undefined',
                                  PatternPid :: {string(), pid()}) -&gt;
     {'ok', TransId :: &lt;&lt;_:128&gt;&gt;} |
@@ -1576,7 +1576,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.6.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -1633,8 +1633,8 @@ cloudi_service:mcast_async(Dispatcher :: pid(),
                            Name :: string(),
                            RequestInfo :: any(),
                            Request :: any(),
-                           Timeout :: non_neg_integer() |
-                                      'undefined' | 'immediate',
+                           Timeout :: non_neg_integer() | 'undefined' |
+                                      'limit_min' | 'limit_max',
                            Priority :: integer() | 'undefined') -&gt;
     {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
     {'error', Reason :: atom()}.
@@ -1869,8 +1869,8 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
                                   Name :: string(),
                                   RequestInfo :: any(),
                                   Request :: any(),
-                                  Timeout :: non_neg_integer() |
-                                             'undefined' | 'immediate',
+                                  Timeout :: non_neg_integer() | 'undefined' |
+                                             'limit_min' | 'limit_max',
                                   Priority :: integer() |
                                               'undefined') -&gt;
     {'ok', TransIdList :: list(&lt;&lt;_:128&gt;&gt;)} |
@@ -1935,7 +1935,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.5.4/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.6.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -1980,8 +1980,8 @@ int CloudI::API::recv_async(uint32_t timeout,
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 cloudi_service:recv_async(Dispatcher :: pid(),
-                          Timeout :: non_neg_integer() |
-                                     'undefined' | 'immediate',
+                          Timeout :: non_neg_integer() | 'undefined' |
+                                     'limit_min' | 'limit_max',
                           TransId :: &lt;&lt;_:128&gt;&gt;,
                           Consume :: boolean()) -&gt;
     {'ok', ResponseInfo :: any(), Response :: any(),
@@ -2210,8 +2210,8 @@ array($response_info, $response, $trans_id)
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 cloudi_service:recv_asyncs(Dispatcher :: pid(),
-                           Timeout :: non_neg_integer() |
-                                      'undefined' | 'immediate',
+                           Timeout :: non_neg_integer() | 'undefined' |
+                                      'limit_min' | 'limit_max',
                            TransIdList :: list(&lt;&lt;_:128&gt;&gt;),
                            Consume :: boolean()) -&gt;
     {'ok', list({ResponseInfo :: any(), Response :: any(),
@@ -2377,7 +2377,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.6.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2532,7 +2532,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.5.4/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.6.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2656,7 +2656,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.5.4/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.6.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -2754,9 +2754,9 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
  {dest_refresh, <a href="#1_Intro_dest">dest_refresh()</a>},            % default is immediate_closest
  {protocol, default | local | tcp | udp},   % default is local
  {buffer_size, default | pos_integer()},    % default is 16384 bytes
- {timeout_init, timeout_milliseconds()},    % default is 5000 milliseconds
- {timeout_async, timeout_milliseconds()},   % default is 5000 milliseconds
- {timeout_sync, timeout_milliseconds()},    % default is 5000 milliseconds
+ {timeout_init, 101..4294967195},           % default is 5000 milliseconds
+ {timeout_async, 499..4294967195},          % default is 5000 milliseconds
+ {timeout_sync, 499..4294967195},           % default is 5000 milliseconds
  {dest_list_deny, dest_list()},             % default is undefined
  {dest_list_allow, dest_list()},            % default is undefined
  {count_process, pos_integer() | float()},  % default is 1
@@ -2812,6 +2812,16 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     restarts allowed within MaxT seconds (same parameters used by Erlang
     supervisors).  The ServiceOptionsPropList provides the configurable
     defaults:
+  </p>
+  <p class="paragraph">
+    Timeout configuration values in milliseconds may be
+    provided as 'limit_min' or 'limit_max' to use the extreme values
+    (be careful, since 'limit_max' is the equivalent of 49.7 days and
+     no one wants to wait 49.7 days to discover a failure).  This is possible
+    with the configuration values timeout_init, timeout_async, timeout_sync
+    and the service configuration options values
+    request_timeout_immediate_max, response_timeout_immediate_max,
+    timeout_terminate, restart_delay, monkey_latency .
   </p>
   <a name="2_services_add_config_opts"></a>
   <table><tr><th>
@@ -2882,10 +2892,11 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td></tr><tr><td>
     request_timeout_immediate_max
   </td><td>
-    20000
+    20001
   </td><td>
-    Maximum timeout (in milliseconds) considered "immediate".  Larger timeouts
-    monitor the service request destination to avoid timer memory consumption
+    Defines the maximum timeout (in milliseconds) considered "immediate".
+    A service request timeout that is greater than or equal to this value
+    causes the destination to be monitored to avoid timer memory consumption
     when a destination dies.
   </td></tr><tr><td>
     response_timeout_adjustment
@@ -2897,11 +2908,13 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   </td></tr><tr><td>
     response_timeout_immediate_max
   </td><td>
-    20000
+    20001
   </td><td>
-    Maximum timeout (in milliseconds) considered "immediate".  Larger timeouts
-    will send a <a href="faq.html#4_Null">null response</a>
-    instead of discarding a <a href="faq.html#4_Null">null response</a>.
+    Defines the maximum timeout (in milliseconds) considered "immediate".
+    A service request response timeout that is greater than or equal to this
+    value will send a <a href="faq.html#4_Null">null response</a>
+    instead of discarding a <a href="faq.html#4_Null">null response</a> and
+    relying on the sending-side's timer expiring.
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_count_process_dynamic">
     count_process_dynamic
@@ -2926,6 +2939,18 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     When MaxR is 0 the default termination timeout (not an upper-bound) is
     (1000 * MaxT) - 100, if MaxT &gt; 0, or 2000, if MaxT = 0.
     All default termination timeout values are clamped to the range [10..60000].
+  </td></tr><tr><td>
+    <a href="#2_services_add_config_opts_restart_delay">
+    restart_delay
+    </a>
+  </td><td>
+    false
+  </td><td>
+    Delay the restart of the service after a failure, to avoid spurious
+    failures when global resources require extra time before they are used
+    with a new service instance.  When set to a list ([])
+    <a href="#2_services_add_config_opts_restart_delay">
+    options can be provided</a>.
   </td></tr><tr><td>
     scope
   </td><td>
@@ -3244,34 +3269,99 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     An integer provides an absolute number while a floating point number is
     used as a CPU multiplier (in the same way as ProcessCount).
   </td></tr></table>
+  <a name="2_services_add_config_opts_restart_delay"></a>
+  <h4>restart_delay:</h4>
+  <table><tr><th>
+    Option
+  </th><th>
+    Default
+  </th><th>
+    Details
+  </th></tr><tr><td>
+    time_exponential_min
+  </td><td>
+    1
+  </td><td>
+    The first delay (in milliseconds) used during a restart with other
+    delays increasing exponentially (using a base of 2 to provide
+    binary exponential backoff).
+  </td></tr><tr><td>
+    time_exponential_max
+  </td><td>
+    500
+  </td><td>
+    A maximum (in milliseconds) for the exponential growth of the delay
+    during a restart.
+  </td></tr><tr><td>
+    time_linear_min
+  </td><td>
+    undefined
+  </td><td>
+    A minimum delay (in milliseconds) used during a restart with other
+    delays increasing linearly (using the time_linear_slope setting).
+  </td></tr><tr><td>
+    time_linear_max
+  </td><td>
+    undefined
+  </td><td>
+    A maximum (in milliseconds) for the linear growth of the delay
+    during a restart.
+  </td></tr><tr><td>
+    time_linear_slope
+  </td><td>
+    undefined
+  </td><td>
+    The delay increase (in milliseconds) to be used for each restart with
+    the 0-based restart count (i.e., the first restart will limited to the
+    time_linear_min setting).
+  </td></tr><tr><td>
+    time_absolute
+  </td><td>
+    undefined
+  </td><td>
+    A single delay (in milliseconds) will be used for each restart and
+    the delay will not change based on the restart count.
+  </td></tr></table>
   <a name="2_services_add_config_opts_monkey_latency"></a>
   <h4>monkey_latency:</h4>
   <table><tr><th>
     Option
   </th><th>
+    Default
+  </th><th>
     Details
   </th></tr><tr><td>
     time_uniform_min
+  </td><td>
+    undefined
   </td><td>
     Minimum amount of latency (in milliseconds) to be applied from a
     uniform distribution of random values.
   </td></tr><tr><td>
     time_uniform_max
   </td><td>
+    undefined
+  </td><td>
     Maximum amount of latency (in milliseconds) to be applied from a
     uniform distribution of random values.
   </td></tr><tr><td>
     time_gaussian_mean
+  </td><td>
+    undefined
   </td><td>
     Average amount of latency (in milliseconds) to be applied from a
     gaussian distribution of random values.
   </td></tr><tr><td>
     time_gaussian_stddev
   </td><td>
+    undefined
+  </td><td>
     Standard deviation of the gaussian distribution
     used for random latency values.
   </td></tr><tr><td>
     time_absolute
+  </td><td>
+    5000
   </td><td>
     Use a single value (in milliseconds) for the amount of latency.
   </td></tr></table>
@@ -3280,14 +3370,20 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   <table><tr><th>
     Option
   </th><th>
+    Default
+  </th><th>
     Details
   </th></tr><tr><td>
     probability_request
   </td><td>
+    1.0
+  </td><td>
     The probability a service request or info message will
-    terminate a service process.
+    terminate a service process (50% == 0.5).
   </td></tr><tr><td>
     probability_day
+  </td><td>
+    undefined
   </td><td>
     The probability that a service process will be terminated at a random
     point during the day.
@@ -3440,7 +3536,6 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     Will not be called if initialization does not occur successfully
     (<a href="#2_services_add_config_opts_aspects_terminate_before">aspects_terminate_before</a>
      will still be called with the State as 'undefined').
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3470,13 +3565,16 @@ fun((CommandLine :: list(string()),
     {stop, Reason :: any(), NewState :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_aspects_request_before"></a>
   <h4>aspects_request_before:</h4>
   <p class="paragraph">
     Provide a list of functions with the type signature shown below,
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3517,13 +3615,16 @@ fun((Type :: cloudi_service:request_type(),
     {stop, Reason :: any(), NewState :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_aspects_request_after"></a>
   <h4>aspects_request_after:</h4>
   <p class="paragraph">
     Provide a list of functions with the type signature shown below,
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3566,13 +3667,16 @@ fun((Type :: cloudi_service:request_type(),
     {stop, Reason :: any(), NewState :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_aspects_info_before"></a>
   <h4>aspects_info_before:</h4>
   <p class="paragraph">
     Provide a list of functions with the type signature shown below,
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3588,13 +3692,16 @@ fun((Request :: any(),
     {stop, Reason :: any(), NewState :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_aspects_info_after"></a>
   <h4>aspects_info_after:</h4>
   <p class="paragraph">
     Provide a list of functions with the type signature shown below,
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3610,6 +3717,10 @@ fun((Request :: any(),
     {stop, Reason :: any(), NewState :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_aspects_terminate_before"></a>
   <h4>aspects_terminate_before:</h4>
   <p class="paragraph">
@@ -3618,7 +3729,6 @@ fun((Request :: any(),
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
     Will still be called if initialization does not occur successfully
     (with State as 'undefined').
-  </p>
   <table><tr><th>
     Service Type
   </th><th>
@@ -3633,6 +3743,10 @@ fun((Reason :: any(),
     {ok, State :: any()}).
 </pre>
   </td></tr></table>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_services_add_config_opts_hibernate"></a>
   <h4>hibernate:</h4>
   <table><tr><th>
@@ -3763,6 +3877,35 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
     If the service state needs to be modified during the update, a function
     can be provided in the module_state field.
   </p>
+  <p class="paragraph">
+    The module_state value for an internal service update can be provided as
+    an anonymous Erlang function or an Erlang tuple
+    "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}" with the types below:
+<pre onclick="element_select(this);">
+fun((OldModuleVersion :: list(any()),
+     NewModuleVersion :: list(any()),
+     OldState :: any()) -&gt;
+    {ok, NewState :: any()} |
+    {error, Reason :: any()}).
+</pre>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+    Providing the module version before and after the module update can
+    help guide any upgrade or downgrade logic to return the appropriate
+    state data.  If the module_state function returns an error (or any
+    other problem occurs during the update), the update does not change
+    any service state, though the module and code_path modifications
+    take effect after the update has been processed
+    (i.e., modules_load, modules_unload, code_paths_add, code_paths_remove,
+     all occur even when an update fails, which may cause the service
+     instance to fail if an update fails).
+  </p>
+  <p class="paragraph">
+    External service updates require either the type be set to external or
+    that the file_path, args, or env field be set (to cause the OS process
+    of the external service to restart during the update).
+  </p>
 <pre>
 % external service update options
 [{type, external},
@@ -3782,11 +3925,6 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
  {dest_list_allow, dest_list()},              % update service configuration
  {options, <a href="#2_services_update_config_opts_external">service_update_plan_options_external()</a>}] % update service configuration options
 </pre>
-  <p class="paragraph">
-    External service updates require either the type be set to external or
-    that the file_path, args, or env field be set (to cause the OS process
-    of the external service to restart during the update).
-  </p>
   <p class="paragraph">
     The sync field is used to determine whether the update occurs while
     no service processes are processing a service request.  If global state
@@ -3829,7 +3967,10 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
        {fullsweep_after, non_neg_integer()} |
        {min_heap_size, non_neg_integer()} |
        {min_bin_vheap_size, non_neg_integer()} |
-       {max_heap_size, non_neg_integer() | #{}} |
+       {max_heap_size, non_neg_integer() |
+                       #{size =&gt; non_neg_integer(),
+                         kill =&gt; boolean(),
+                         error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
        {message_queue_data, off_heap | on_heap | mixed})} |
  {aspects_init_after, list(aspect_init_after_internal())} |
@@ -3843,7 +3984,10 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
        {fullsweep_after, non_neg_integer()} |
        {min_heap_size, non_neg_integer()} |
        {min_bin_vheap_size, non_neg_integer()} |
-       {max_heap_size, non_neg_integer() | #{}} |
+       {max_heap_size, non_neg_integer() |
+                       #{size =&gt; non_neg_integer(),
+                         kill =&gt; boolean(),
+                         error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
        {message_queue_data, off_heap | on_heap | mixed})} |
  {request_pid_uses, infinity | pos_integer()} |
@@ -3852,7 +3996,10 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
        {fullsweep_after, non_neg_integer()} |
        {min_heap_size, non_neg_integer()} |
        {min_bin_vheap_size, non_neg_integer()} |
-       {max_heap_size, non_neg_integer() | #{}} |
+       {max_heap_size, non_neg_integer() |
+                       #{size =&gt; non_neg_integer(),
+                         kill =&gt; boolean(),
+                         error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
        {message_queue_data, off_heap | on_heap | mixed})} |
  {info_pid_uses, infinity | pos_integer()} |
@@ -3861,7 +4008,10 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
        {fullsweep_after, non_neg_integer()} |
        {min_heap_size, non_neg_integer()} |
        {min_bin_vheap_size, non_neg_integer()} |
-       {max_heap_size, non_neg_integer() | #{}} |
+       {max_heap_size, non_neg_integer() |
+                       #{size =&gt; non_neg_integer(),
+                         kill =&gt; boolean(),
+                         error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
        {message_queue_data, off_heap | on_heap | mixed})} |
  {hibernate,
@@ -3901,7 +4051,10 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
        {fullsweep_after, non_neg_integer()} |
        {min_heap_size, non_neg_integer()} |
        {min_bin_vheap_size, non_neg_integer()} |
-       {max_heap_size, non_neg_integer() | #{}} |
+       {max_heap_size, non_neg_integer() |
+                       #{size =&gt; non_neg_integer(),
+                         kill =&gt; boolean(),
+                         error_logger =&gt; boolean()}} |
        {sensitive, boolean()} |
        {message_queue_data, off_heap | on_heap | mixed})} |
  {aspects_init_after, list(aspect_init_after_external())} |
@@ -4239,7 +4392,6 @@ curl -X POST -d '[{file, undefined}, {syslog, []}]' http://localhost:6464/cloudi
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
     Each function will be called before the log data is stored to disk.
-  </p>
 <pre onclick="element_select(this);">
 fun((Level :: fatal | error | warn | info | debug | trace,
      Timestamp :: erlang:timestamp(),
@@ -4248,11 +4400,15 @@ fun((Level :: fatal | error | warn | info | debug | trace,
      Module :: module(),
      Line :: pos_integer(),
      Function :: atom() | undefined,
-     Arity :: non_neg_integer() | undefined,
+     Arity :: arity() | undefined,
      MetaData :: list({atom(), any()}),
      LogMessage :: string()) -&gt;
     ok.
 </pre>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <a name="2_logging_set_config_opts_aspects_log_after"></a>
   <h4>aspects_log_after:</h4>
   <p class="paragraph">
@@ -4260,7 +4416,6 @@ fun((Level :: fatal | error | warn | info | debug | trace,
     with each function as either an anonymous Erlang function or
     an Erlang tuple "{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}".
     Each function will be called after the log data is stored to disk.
-  </p>
 <pre onclick="element_select(this);">
 fun((Level :: fatal | error | warn | info | debug | trace,
      Timestamp :: erlang:timestamp(),
@@ -4269,11 +4424,15 @@ fun((Level :: fatal | error | warn | info | debug | trace,
      Module :: module(),
      Line :: pos_integer(),
      Function :: atom() | undefined,
-     Arity :: non_neg_integer() | undefined,
+     Arity :: arity() | undefined,
      MetaData :: list({atom(), any()}),
      LogMessage :: string()) -&gt;
     ok.
 </pre>
+    It is also possible to use the Erlang tuple
+    "{{module(),&nbsp;FunctionName&nbsp;::&nbsp;atom()}}" to specify an
+    arity 0 function that returns an anonymous function as described above.
+  </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_logging_file_set"></a>
@@ -4322,16 +4481,18 @@ curl -X POST -d '[{identity, "CloudI"}, {facility, local0}, {level, trace}]' htt
   </td><td>
     "CloudI"
   </td><td>
-    String syslog identity.
+    String syslog identity (referred to as the APP-NAME in
+    <a href="https://tools.ietf.org/html/rfc5424#section-6.2.5" target="_blank">RFC5424</a>).
   </td></tr><tr><td>
     facility
   </td><td>
     local0
   </td><td>
-    A syslog facility provided as a name (kern | user | mail | daemon | auth |
-    syslog | lpr | news | uucp | cron | authpriv | ftp | netinfo | remoteauth |
-    install | ras | local0 | local1 | local2 | local3 | local4 | local5 |
-    local6 | local7) or as an integer (&ge; 0).
+    A syslog facility provided as a name
+    (kernel | user | mail | daemon | auth0 | syslog |
+     print | news | uucp | clock0 | auth1 | ftp | ntp |
+     auth2 | auth3 | clock1 | local0 | local1 | local2 |
+     local3 | local4 | local5 | local6 | local7) or as an integer (&ge; 0).
   </td></tr><tr><td>
     level
   </td><td>
@@ -4340,12 +4501,55 @@ curl -X POST -d '[{identity, "CloudI"}, {facility, local0}, {level, trace}]' htt
     The syslog loglevel specified with a CloudI loglevel
     (with the CloudI&nbsp;loglevel&nbsp;-&gt;&nbsp;syslog&nbsp;level
      equivalence below):
-    fatal&nbsp;-&gt;&nbsp;emerg&nbsp;(0),
-    error&nbsp;-&gt;&nbsp;err&nbsp;(3),
+    <br />
+    fatal&nbsp;-&gt;&nbsp;critical&nbsp;(2),
+    <br />
+    error&nbsp;-&gt;&nbsp;error&nbsp;(3),
+    <br />
     warn&nbsp;-&gt;&nbsp;warning&nbsp;(4),
-    info&nbsp;-&gt;&nbsp;info&nbsp;(6),
-    debug&nbsp;-&gt;&nbsp;debug&nbsp;(7),
-    trace&nbsp;-&gt;&nbsp;(8).
+    <br />
+    info&nbsp;-&gt;&nbsp;notice&nbsp;(5),
+    <br />
+    debug&nbsp;-&gt;&nbsp;informational&nbsp;(6),
+    <br />
+    trace&nbsp;-&gt;&nbsp;debug&nbsp;(7).
+  </td></tr><tr><td>
+    transport
+  </td><td>
+    local
+  </td><td>
+    The transport to use for syslog data (local | udp | tcp | tls).
+  </td></tr><tr><td>
+    transport_options
+  </td><td>
+    []
+  </td><td>
+    The transport options to use for the syslog socket.
+  </td></tr><tr><td>
+    protocol
+  </td><td>
+    rfc3164
+  </td><td>
+    The syslog protocol to use (rfc3164 | rfc5424).
+  </td></tr><tr><td>
+    path
+  </td><td>
+    "/dev/log"
+  </td><td>
+    The filesystem path to use for the local transport destination.
+  </td></tr><tr><td>
+    host
+  </td><td>
+    {127,0,0,1}
+  </td><td>
+    The host to use for the udp, tcp or tls transport destination.
+  </td></tr><tr><td>
+    port
+  </td><td>
+    undefined
+  </td><td>
+    The port to use for the transport destination
+    (undefined uses the default port for the transport).
   </td></tr></table>
   <div class="top"><a href="#CloudI">Top</a></div>
 
@@ -4388,14 +4592,23 @@ curl -X POST -d '[{any, [{output, lager_file_backend}, {output_args, [{file, "lo
     The formatter loglevel specified with a CloudI loglevel or a lager loglevel
     (with the lager&nbsp;loglevel&nbsp;-&gt;&nbsp;CloudI&nbsp;loglevel
      equivalence below):
+    <br />
     emergency&nbsp;-&gt;&nbsp;fatal,
+    <br />
     alert&nbsp;(becomes&nbsp;emergency)&nbsp;-&gt;&nbsp;fatal,
+    <br />
     critical&nbsp;(becomes&nbsp;emergency)&nbsp;-&gt;&nbsp;fatal,
+    <br />
     error&nbsp;-&gt;&nbsp;error,
+    <br />
     warning&nbsp;-&gt;&nbsp;warn,
+    <br />
     notice&nbsp;(becomes&nbsp;warning)&nbsp;-&gt;&nbsp;warn,
+    <br />
     info&nbsp;-&gt;&nbsp;info,
+    <br />
     debug&nbsp;-&gt;&nbsp;debug,
+    <br />
     none&nbsp;-&gt;&nbsp;off.
   </td></tr><tr><td>
     output

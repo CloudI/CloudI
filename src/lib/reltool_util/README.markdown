@@ -3,6 +3,10 @@
 
 Erlang reltool utility functionality application
 
+`ex2erl` is an escript that converts Elixir source code to Erlang source code
+which is useful when relying only on Erlang compilation with Erlang source code
+that would like to include Elixir source code.
+
 `release` is an escript which provides the same basic functionality as
 `rebar generate`, with additional error reporting coming from the reltool OTP
 source code which rebar suppresses.

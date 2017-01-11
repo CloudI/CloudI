@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.5.4<br />
-              last updated on October 7<sup>th</sup> 2016</h3></center>
+  <center><h3>version 1.6.0<br />
+              last updated on January 11<sup>th</sup> 2017</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -386,8 +386,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     be sent through
     <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl" target="_blank">cloudi_service_queue</a>
     to handle either a destination failure or both a source failure and
-    destination failure (based on the 'mode' configuration argument being
-    either 'destination' or 'both').
+    destination failure (based on the 'fault_isolation' configuration
+    argument being either 'destination' or 'both').
   </p>
   <p class="paragraph">
     To make CloudI service requests consistent across multiple
@@ -780,7 +780,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Chat Room:
   </td><td>
-  <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">#cloudi (#erlang can offer additional help, if necessary)</a>
+  <a href="https://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">#cloudi (#erlang can offer additional help, if necessary)</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -870,7 +870,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr></table>
   <p class="paragraph">
     If you are unsure whether you have found a bug, please send an email to the
-    mailing list or utilize the <a href="http://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">IRC chat room</a>.
+    mailing list or utilize the <a href="https://webchat.freenode.net?randomnick=1&channels=cloudi" target="_blank">IRC chat room</a>.
     Otherwise, you can easily enter a bug report for the problem by using the
     <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">online form</a>.
     If you are unable to provide information about the problem publicly,
@@ -947,7 +947,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     (with the provided cloudi_tests.conf containing the integration test
      service configurations).
     The dependencies are a C compiler, a C++ compiler,
-    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">18.0</a>),
+    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">19.0</a>),
     Java Development Kit (JDK &ge; 1.5), node.js (&ge; 0.8.0),
     Perl (&ge; 5.10), PHP (&ge; 5.3.6), Python (&ge; 2.7), and
     Ruby (&ge; 1.9).  Use the <a href="#3_Options">--disable-LANGUAGE-support configure argument</a>
@@ -2226,7 +2226,7 @@ sudo cloudi stop
     CloudI API (module "cloudi") and a Python/C CloudI API (module "cloudi_c").
     Just specify the Python library by the module imported, since the same
     interface is provided within both choices.  The "cloudi_c" module has
-    been shown to provide a <a href="https://github.com/CloudI/CloudI/raw/master/src/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">speedup greater than 400%</a>
+    been shown to provide a <a href="https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf" target="_blank">speedup greater than 400%</a>
     when compared with the "cloudi" module, with both under a load of 10,000
     requests/second.  For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
   </p>

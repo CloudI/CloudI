@@ -237,8 +237,8 @@ exception due to its C integration).
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit d682c9d25e71c5c5bac1960fc5e35d8439ffb21e (v1.5.4)`
-- `Fri Oct  7 22:13:59 UTC 2016`
+- `commit f9df0460c6b5eb946e61be81fcabb14a2caec24d (v1.6.0)`
+- `Tue Jan 10 22:26:59 PST 2017`
 - `BSD`
 
 `parse_trans`
