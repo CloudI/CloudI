@@ -1,5 +1,12 @@
 # Hello World 3 Example
 
+*WARNING: This approach will be removed soon.  The approach causes too
+much compilation time during development and is problematic with rebar3.
+Please use a solution based on
+[hello_world2](https://github.com/CloudI/CloudI/tree/develop/examples/hello_world2#readme) or
+[hello_world4](https://github.com/CloudI/CloudI/tree/develop/examples/hello_world4#readme)
+instead*
+
 ## PURPOSE
 
 Provide the simplest example of an Erlang application running within the same

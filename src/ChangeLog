@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Mark hello_world3 example for removal
+      (details at https://github.com/CloudI/CloudI/issues/201)
+
 2017-01-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.6.0 released
