@@ -752,7 +752,7 @@
          Function :: atom() | undefined,
          Arity :: arity() | undefined,
          MetaData :: list({atom(), any()}),
-         LogMessage :: string()) ->
+         LogMessage :: list(byte())) ->
         ok).
 -type aspect_log_before() ::
     aspect_log_f() |

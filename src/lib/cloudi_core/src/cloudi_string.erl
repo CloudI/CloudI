@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2009-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -373,6 +373,9 @@ format(L, A) when is_list(L), is_list(A) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Format a string based on the arguments, stored as a list.===
+%% Output may include unicode characters with a numerical value greater
+%% than 255 (preventing the output from being used directly with
+%% erlang:iolist_to_binary/1)..
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -385,13 +388,14 @@ format_to_list(L, A) when is_list(L), is_list(A) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Format a string based on the arguments, stored as a binary.===
+%% Output is a utf8 encoded binary.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec format_to_binary(L :: string(), A :: list()) -> binary().
 
 format_to_binary(L, A) when is_list(L), is_list(A) ->
-    erlang:iolist_to_binary(io_lib:format(L, A)).
+    unicode:characters_to_binary(io_lib:format(L, A)).
 
 %%-------------------------------------------------------------------------
 %% @doc

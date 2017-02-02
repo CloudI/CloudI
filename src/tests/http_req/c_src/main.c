@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -53,12 +53,12 @@ static void request(cloudi_instance_t * api,
                     int const command,
                     char const * const name,
                     char const * const pattern,
-                    void const * const request_info,
-                    uint32_t const request_info_size,
+                    void const * const /*request_info*/,
+                    uint32_t const /*request_info_size*/,
                     void const * const request,
                     uint32_t const request_size,
                     uint32_t timeout,
-                    int8_t priority,
+                    int8_t /*priority*/,
                     char const * const trans_id,
                     char const * const pid,
                     uint32_t const pid_size)
@@ -116,7 +116,7 @@ void process_requests(void * p)
     cloudi_destroy(&api);
 }
 
-int main(int argc, char ** argv)
+int main(int /*argc*/, char ** /*argv*/)
 {
     unsigned int thread_count;
     int result = cloudi_initialize_thread_count(&thread_count);

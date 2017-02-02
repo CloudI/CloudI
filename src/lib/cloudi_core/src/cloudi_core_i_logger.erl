@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2009-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -265,10 +265,10 @@ redirect_update(Node) ->
 
 -spec fatal(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            Module :: module(),
             Line :: integer(),
             Function :: atom(),
-            Arity :: non_neg_integer() | undefined,
+            Arity :: arity() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
@@ -287,10 +287,10 @@ fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec error(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            Module :: module(),
             Line :: integer(),
             Function :: atom(),
-            Arity :: non_neg_integer() | undefined,
+            Arity :: arity() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
@@ -309,10 +309,10 @@ error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec warn(Mode :: async | sync,
            Process :: atom() | {atom(), node()},
-           Module :: atom(),
+           Module :: module(),
            Line :: integer(),
            Function :: atom(),
-           Arity :: non_neg_integer() | undefined,
+           Arity :: arity() | undefined,
            Format :: string(),
            Args :: list() | undefined) ->
     'ok'.
@@ -331,10 +331,10 @@ warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec info(Mode :: async | sync,
            Process :: atom() | {atom(), node()},
-           Module :: atom(),
+           Module :: module(),
            Line :: integer(),
            Function :: atom(),
-           Arity :: non_neg_integer() | undefined,
+           Arity :: arity() | undefined,
            Format :: string(),
            Args :: list() | undefined) ->
     'ok'.
@@ -353,10 +353,10 @@ info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec debug(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            Module :: module(),
             Line :: integer(),
             Function :: atom(),
-            Arity :: non_neg_integer() | undefined,
+            Arity :: arity() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
@@ -375,10 +375,10 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec trace(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: atom(),
+            Module :: module(),
             Line :: integer(),
             Function :: atom(),
-            Arity :: non_neg_integer() | undefined,
+            Arity :: arity() | undefined,
             Format :: string(),
             Args :: list() | undefined) ->
     'ok'.
@@ -431,6 +431,17 @@ format(Msg, Config) ->
 %% legacy log output with this formatter function.
 %% @end
 %%-------------------------------------------------------------------------
+
+-spec format(Msg :: {lager_msg,
+                     Destinations :: list(),
+                     Metadata :: list({atom(), any()}),
+                     Severity :: debug | emergency | error | info | warning,
+                     Datetime :: {string(), string()},
+                     Timestamp :: erlang:timestamp(),
+                     Message :: list()},
+             Config :: list(),
+             Colors :: any()) ->
+    list(byte()).
 
 format(Msg, Config, _) ->
     Mode = case lists:keyfind(mode, 1, Config) of
@@ -529,7 +540,7 @@ init([#config_logging{file = FilePath,
                     {stop, Reason}
             end;
         {ok, Binary} ->
-            case ?LOG_INFO_T0("redirecting log output to ~p",
+            case ?LOG_INFO_T0("redirecting log output to ~ts",
                               [NodeLogger],
                               StateNext#state{file_path = FilePath,
                                               interface_module = Binary,
@@ -720,7 +731,7 @@ log_config_file_set(FilePathNew,
         FilePathOld =:= undefined ->
             (#config_logging{})#config_logging.level
     end,
-    case ?LOG_INFO_T0("changing file loglevel from ~p to ~p",
+    case ?LOG_INFO_T0("changing file loglevel from ~s to ~s",
                       [FileLevelOld, FileLevelNew], State) of
         {ok, #state{fd = FdOld} = StateNew} ->
             file:close(FdOld),
@@ -733,7 +744,7 @@ log_config_file_set(FilePathNew,
     end;
 log_config_file_set(FilePathNew,
                     #state{file_path = FilePathOld} = State) ->
-    case ?LOG_INFO_T0("changing file path from ~p to ~p",
+    case ?LOG_INFO_T0("changing file path from \"~ts\" to \"~ts\"",
                       [FilePathOld, FilePathNew], State) of
         {ok, #state{fd = FdOld} = StateNew} ->
             file:close(FdOld),
@@ -749,7 +760,7 @@ log_config_level_set(FileLevel,
     {ok, State};
 log_config_level_set(FileLevelNew,
                      #state{file_level = FileLevelOld} = State) ->
-    case ?LOG_INFO_T0("changing file loglevel from ~p to ~p",
+    case ?LOG_INFO_T0("changing file loglevel from ~s to ~s",
                       [FileLevelOld, FileLevelNew], State) of
         {ok, StateNew} ->
             {ok, StateNew#state{file_level = FileLevelNew}};
@@ -779,7 +790,7 @@ log_config_syslog_set(SyslogConfig,
     end,
     if
         SyslogLevelNew /= SyslogLevelOld ->
-            case ?LOG_INFO_T0("changing syslog loglevel from ~p to ~p",
+            case ?LOG_INFO_T0("changing syslog loglevel from ~s to ~s",
                               [SyslogLevelOld, SyslogLevelNew], State) of
                 {ok, StateNew} ->
                     {ok, SwitchF(StateNew)};
@@ -806,7 +817,7 @@ log_config_formatters_set(FormattersConfigNew,
     end,
     if
         FormattersLevelNew /= FormattersLevelOld ->
-            case ?LOG_INFO_T0("changing formatters loglevel from ~p to ~p",
+            case ?LOG_INFO_T0("changing formatters loglevel from ~s to ~s",
                               [FormattersLevelOld, FormattersLevelNew],
                               State) of
                 {ok, StateNew} ->
@@ -833,13 +844,25 @@ log_config_update(#state{file_level = FileLevel,
                     StateNew = State#state{
                         interface_module = Binary,
                         level = LevelNew},
-                    ?LOG_INFO_T1("changed loglevel from ~p to ~p",
+                    ?LOG_INFO_T1("changed loglevel from ~s to ~s",
                                  [LevelOld, LevelNew], StateNew),
                     {ok, StateNew};
                 {error, _} = Error ->
                     {Error, State}
             end
     end.
+
+-spec format_line(Level :: cloudi_service_api:loglevel(),
+                  Timestamp :: erlang:timestamp(),
+                  Node :: node(),
+                  Pid :: pid(),
+                  Module :: module(),
+                  Line :: pos_integer(),
+                  Function :: atom(),
+                  Arity :: arity() | undefined,
+                  MetaData :: any(),
+                  LogMessage :: list(byte())) ->
+    list(byte()). % utf8 encoded string
 
 format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
             Module, Line, Function, Arity, MetaData, LogMessage) ->
@@ -855,19 +878,22 @@ format_line(Level, {_, _, MicroSeconds} = Timestamp, Node, Pid,
         Function =:= undefined ->
             "";
         Arity =:= undefined ->
-            erlang:atom_to_list(Function);
+            erlang:atom_to_binary(Function, utf8);
         true ->
-            erlang:atom_to_list(Function) ++
-            [$/ | erlang:integer_to_list(Arity)]
+            [erlang:atom_to_binary(Function, utf8),
+             [$/ | erlang:integer_to_list(Arity)]]
     end,
     % ISO 8601 for date/time http://www.w3.org/TR/NOTE-datetime
+    % string result includes unicode characters encoded as utf8
     cloudi_string:format("~4..0w-~2..0w-~2..0wT"
                          "~2..0w:~2..0w:~2..0w.~6..0wZ ~s "
-                         "(~w:~w:~s:~w:~w)~n~s~s~n",
+                         "(~s:~w:~s:~w:~s)~n~s~s~n",
                          [DateYYYY, DateMM, DateDD,
                           TimeHH, TimeMM, TimeSS, MicroSeconds,
                           log_level_to_string(Level),
-                          Module, Line, FunctionArity, Pid, Node,
+                          erlang:atom_to_binary(Module, utf8), Line,
+                          FunctionArity, Pid,
+                          erlang:atom_to_binary(Node, utf8),
                           MetaDataStr, LogMessage]).
 
 indent_space_1(Output) ->
@@ -905,7 +931,7 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
     Msg = lager_msg(Level, Timestamp, Node, Pid,
                     Module, Line, Function, Arity,
                     MetaData, LogMessage),
-    try Formatter:format(Msg, FormatterConfig)
+    try log_message_utf8(Formatter:format(Msg, FormatterConfig))
     catch
         ErrorType:Error ->
             ErrorMessage = cloudi_string:format("formatter(~p) ~p ~p~n~p",
@@ -1017,7 +1043,7 @@ log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
                 is_list(Format), Args =:= undefined ->
                     Format;
                 true ->
-                    try cloudi_string:format(Format, Args)
+                    try log_message(Format, Args)
                     catch
                         error:badarg ->
                             cloudi_string:format("INVALID LOG INPUT: ~p ~p",
@@ -1089,7 +1115,7 @@ log_message_internal_t0(LevelCheck, Line, Format, Args,
          LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
     case log_level_allowed(Level, LevelCheck) of
         true ->
-            LogMessage = cloudi_string:format(Format, Args),
+            LogMessage = log_message(Format, Args),
             log_message_internal(LevelCheck,
                                  cloudi_timestamp:timestamp(), node(), self(),
                                  ?MODULE, Line, undefined, undefined,
@@ -1105,7 +1131,7 @@ log_message_internal_t1(LevelCheck, Line, Format, Args,
          LevelCheck =:= info; LevelCheck =:= debug; LevelCheck =:= trace ->
     case log_level_allowed(Level, LevelCheck) of
         true ->
-            LogMessage = cloudi_string:format(Format, Args),
+            LogMessage = log_message(Format, Args),
             gen_server:cast(Destination,
                             {LevelCheck,
                              cloudi_timestamp:timestamp(), node(), self(),
@@ -1155,6 +1181,24 @@ log_message_internal_result(ok, ok, State) ->
     {ok, State};
 log_message_internal_result({error, _} = Error, _, State) ->
     {Error, State}.
+
+-spec log_message(Format :: list(),
+                  Args :: list()) ->
+    list(byte()).
+
+log_message(Format, Args) ->
+    LogMessageUnicode = cloudi_string:format(Format, Args),
+    erlang:binary_to_list(unicode:characters_to_binary(LogMessageUnicode)).
+
+-spec log_message_utf8(LogMessage :: list(byte())) ->
+    list(byte()).
+
+log_message_utf8([]) ->
+    [];
+log_message_utf8([Byte | LogMessage]) when Byte >= 0, Byte =< 255 ->
+    [Byte | log_message_utf8(LogMessage)];
+log_message_utf8(_) ->
+    erlang:exit(not_utf8_list).
 
 log_level([_ | _] = L) ->
     cloudi_core_i_configuration:logging_level_highest([off | L]).
@@ -1244,12 +1288,12 @@ log_redirect(Node, DestinationNew,
         true ->
             Node
     end,
-    case ?LOG_INFO_T0("redirecting log output to ~p",
+    case ?LOG_INFO_T0("redirecting log output to ~ts",
                       [NodeLogger], State) of
         {ok, StateNext} ->
             case load_interface_module(Level, Mode, DestinationNew) of
                 {ok, Binary} ->
-                    ?LOG_INFO_T1("redirected log output from ~p to ~p",
+                    ?LOG_INFO_T1("redirected log output from ~ts to ~ts",
                                  [node(), NodeLogger], StateNext),
                     {ok, StateNext#state{interface_module = Binary,
                                          destination = DestinationNew}};
@@ -1897,7 +1941,7 @@ lager_severity_input(debug) -> debug.
                 Function :: atom(),
                 Arity :: non_neg_integer() | undefined,
                 MetaData :: list({atom(), any()}),
-                LogMessage :: string()) ->
+                LogMessage :: list(byte())) ->
     #lager_msg{}.
 
 % based on lager_msg:new/5

@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes to ensure logging from CloudI in Erlang source code is logging
+      data as UTF8 (now modules, function names, nodes, log file paths and
+      log data from Erlang services as unicode strings ("~ts") is written
+      as utf8 data to the log file and the output is consistent with unicode
+      output in external services)
+    * Fix cloudi_string:format_to_binary/2 so it works properly with
+      unicode formatting arguments
+
 2017-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Mark hello_world3 example for removal
