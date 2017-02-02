@@ -1195,7 +1195,8 @@ log_message(Format, Args) ->
 
 log_message_utf8([]) ->
     [];
-log_message_utf8([Byte | LogMessage]) when Byte >= 0, Byte =< 255 ->
+log_message_utf8([Byte | LogMessage])
+    when is_integer(Byte), Byte >= 0, Byte =< 255 ->
     [Byte | log_message_utf8(LogMessage)];
 log_message_utf8(_) ->
     erlang:exit(not_utf8_list).
