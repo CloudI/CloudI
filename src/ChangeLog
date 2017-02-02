@@ -10,6 +10,7 @@
       output in external services)
     * Fix cloudi_string:format_to_binary/2 so it works properly with
       unicode formatting arguments
+    * cloudi_service_api:aspect_log_f() type changed to use utf8 log message
 
 2017-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
