@@ -41,7 +41,7 @@
 #
 
 path = File.split(File.dirname(__FILE__)); path.pop(1)
-$:.unshift File.join(*path, *%w[lib])
+$:.unshift File.join(*path)
 require 'test/unit'
 require 'erlang'
 
