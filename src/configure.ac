@@ -346,6 +346,7 @@ AC_PATH_PROGS([GO],[go])
 if test "x$GO" = "x"; then
     AC_MSG_ERROR([go not found])
 fi
+AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 

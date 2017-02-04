@@ -318,6 +318,7 @@
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         [{request_timeout_adjustment, true},
          {nice, 10}]},
+@CONFIG_TESTS_GO_HTTP_REQ@
     {external,
         "/tests/http_req/",
         "@JAVA@",
