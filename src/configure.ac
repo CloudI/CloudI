@@ -597,6 +597,7 @@ AC_CONFIG_FILES([
     tests/http/service/org/cloudi/tests/http/Makefile
     tests/http_req/Makefile
     tests/http_req/c_src/Makefile
+    tests/http_req/gopath/Makefile
     tests/http_req/jar/Makefile
     tests/http_req/org/Makefile
     tests/http_req/org/cloudi/Makefile
