@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -96,17 +96,9 @@ var unpackUint32 = function unpackUint32 (i, buffer) { // big endian
            (buffer[i + 2] << 8) |
            buffer[i + 3];
 };
-var ParseException = function ParseException (message) {
-    var error = new Error(message);
-    error.name = 'ParseException';
-    this.message = error.message;
-    if (error.stack) {
-        this.stack = error.stack;
-    }
-}
-ParseException.prototype = Object.create(Error.prototype, {
-    name: { value: 'ParseException' }
-});
+
+// Exception objects listed alphabetically
+
 var InputException = function InputException (message) {
     var error = new Error(message);
     error.name = 'InputException';
@@ -129,14 +121,24 @@ var OutputException = function OutputException (message) {
 OutputException.prototype = Object.create(Error.prototype, {
     name: { value: 'OutputException' }
 });
+var ParseException = function ParseException (message) {
+    var error = new Error(message);
+    error.name = 'ParseException';
+    this.message = error.message;
+    if (error.stack) {
+        this.stack = error.stack;
+    }
+}
+ParseException.prototype = Object.create(Error.prototype, {
+    name: { value: 'ParseException' }
+});
+
 var compress = function(buffer_in, level, callback) {
     var o = zlib.createDeflate({level: level});
     var buffers_out = [];
     o.on('error', function(err) {
         o.removeAllListeners();
-        process.nextTick(function () {
-            callback(new OutputException(err.toString()), undefined);
-        });
+        callback(new OutputException(err.toString()), undefined);
     });
     o.on('data', function(chunk) {
         buffers_out.push(chunk);
@@ -144,9 +146,7 @@ var compress = function(buffer_in, level, callback) {
     o.on('end', function() {
         o.removeAllListeners();
         var buffer_out = Buffer.concat(buffers_out);
-        process.nextTick(function () {
-            callback(undefined, buffer_out);
-        });
+        callback(undefined, buffer_out);
     });
     o.write(buffer_in);
     o.end();
@@ -154,17 +154,15 @@ var compress = function(buffer_in, level, callback) {
 var uncompress = function(buffer_in, callback) {
     zlib.inflate(buffer_in, function(err, buffer_out) {
         if (err) {
-            process.nextTick(function () {
-                callback(new ParseException(err.toString()), undefined);
-            });
+            callback(new ParseException(err.toString()), undefined);
         }
         else {
-            process.nextTick(function () {
-                callback(undefined, buffer_out);
-            });
+            callback(undefined, buffer_out);
         }
     });
 };
+
+//  Erlang term objects listed alphabetically
 
 Erlang.OtpErlangAtom = function OtpErlangAtom (value, utf8) {
     this.value = value;
@@ -178,37 +176,43 @@ Erlang.OtpErlangAtom.prototype.binary = function() {
         return buffer;
     }
     else if (typeof this.value == 'string') {
-        var size = this.value.length;
+        var length = this.value.length;
         if (this.utf8) {
-            if (size < 256) {
-                var buffer = new Buffer(2 + size);
+            if (length <= 255) {
+                var buffer = new Buffer(2 + length);
                 buffer[0] = TAG_SMALL_ATOM_UTF8_EXT;
-                buffer[1] = size;
-                buffer.write(this.value, 2, size, 'binary');
+                buffer[1] = length;
+                buffer.write(this.value, 2, length, 'binary');
+                return buffer;
+            }
+            else if (length <= 65535) {
+                var buffer = new Buffer(3 + length);
+                buffer[0] = TAG_ATOM_UTF8_EXT;
+                packUint16(length, 1, buffer);
+                buffer.write(this.value, 3, length, 'binary');
                 return buffer;
             }
             else {
-                var buffer = new Buffer(3 + size);
-                buffer[0] = TAG_ATOM_UTF8_EXT;
-                packUint16(size, 1, buffer);
-                buffer.write(this.value, 3, size, 'binary');
-                return buffer;
+                throw new OutputException('uint16 overflow');
             }
         }
         else {
-            if (size < 256) {
-                var buffer = new Buffer(2 + size);
+            if (length <= 255) {
+                var buffer = new Buffer(2 + length);
                 buffer[0] = TAG_SMALL_ATOM_EXT;
-                buffer[1] = size;
-                buffer.write(this.value, 2, size, 'binary');
+                buffer[1] = length;
+                buffer.write(this.value, 2, length, 'binary');
+                return buffer;
+            }
+            else if (length <= 65535) {
+                var buffer = new Buffer(3 + length);
+                buffer[0] = TAG_ATOM_EXT;
+                packUint16(length, 1, buffer);
+                buffer.write(this.value, 3, length, 'binary');
                 return buffer;
             }
             else {
-                var buffer = new Buffer(3 + size);
-                buffer[0] = TAG_ATOM_EXT;
-                packUint16(size, 1, buffer);
-                buffer.write(this.value, 3, size, 'binary');
-                return buffer;
+                throw new OutputException('uint16 overflow');
             }
         }
     }
@@ -218,6 +222,72 @@ Erlang.OtpErlangAtom.prototype.binary = function() {
 };
 Erlang.OtpErlangAtom.prototype.toString = function() {
     return 'OtpErlangAtom(' + this.value + ',' + this.utf8 + ')';
+};
+
+Erlang.OtpErlangBinary = function OtpErlangBinary (value, bits) {
+    this.value = value;
+    this.bits = typeof bits !== 'undefined' ? bits : 8;
+};
+Erlang.OtpErlangBinary.prototype.binary = function() {
+    if (typeof this.value == 'string') {
+        var length = this.value.length;
+        if (length > 4294967295) {
+            throw new OutputException('uint32 overflow');
+        }
+        else if (this.bits != 8) {
+            var buffer = new Buffer(6 + length);
+            buffer[0] = TAG_BIT_BINARY_EXT;
+            packUint32(length, 1, buffer);
+            buffer[5] = this.bits;
+            buffer.write(this.value, 6, length, 'binary');
+            return buffer;
+        }
+        else {
+            var buffer = new Buffer(5 + length);
+            buffer[0] = TAG_BINARY_EXT;
+            packUint32(length, 1, buffer);
+            buffer.write(this.value, 5, length, 'binary');
+            return buffer;
+        }
+    }
+    else if (Buffer.isBuffer(this.value)) {
+        var length = this.value.length;
+        if (length > 4294967295) {
+            throw new OutputException('uint32 overflow');
+        }
+        else if (this.bits != 8) {
+            var buffer = new Buffer(6 + length);
+            buffer[0] = TAG_BIT_BINARY_EXT;
+            packUint32(length, 1, buffer);
+            buffer[5] = this.bits;
+            this.value.copy(buffer, 6);
+            return buffer;
+        }
+        else {
+            var buffer = new Buffer(5 + length);
+            buffer[0] = TAG_BINARY_EXT;
+            packUint32(length, 1, buffer);
+            this.value.copy(buffer, 5);
+            return buffer;
+        }
+    }
+    else {
+        throw new OutputException('unknown binary type');
+    }
+};
+Erlang.OtpErlangBinary.prototype.toString = function() {
+    return 'OtpErlangBinary(' + (typeof this.value) + ',' + this.bits + ')';
+};
+
+Erlang.OtpErlangFunction = function OtpErlangFunction (tag, value) {
+    this.tag = tag;
+    this.value = value;
+};
+Erlang.OtpErlangFunction.prototype.binary = function() {
+    return Buffer.concat([new Buffer([this.tag]), this.value]);
+};
+Erlang.OtpErlangFunction.prototype.toString = function() {
+    return 'OtpErlangFunction(' + this.tag + ')';
 };
 
 Erlang.OtpErlangList = function OtpErlangList (value, improper) {
@@ -230,6 +300,9 @@ Erlang.OtpErlangList.prototype.binary = function() {
         var length = this.value.length;
         if (length == 0) {
             return new Buffer([TAG_NIL_EXT]);
+        }
+        if (length > 4294967295) {
+            throw new OutputException('uint32 overflow');
         }
         var header = new Buffer(5);
         header[0] = TAG_LIST_EXT;
@@ -258,111 +331,20 @@ Erlang.OtpErlangList.prototype.toString = function() {
                           this.improper + ')';
 };
 
-Erlang.OtpErlangBinary = function OtpErlangBinary (value, bits) {
-    this.value = value;
-    this.bits = typeof bits !== 'undefined' ? bits : 8;
-};
-Erlang.OtpErlangBinary.prototype.binary = function() {
-    if (typeof this.value == 'string') {
-        var size = this.value.length;
-        if (this.bits != 8) {
-            var buffer = new Buffer(6 + size);
-            buffer[0] = TAG_BIT_BINARY_EXT;
-            packUint32(size, 1, buffer);
-            buffer[5] = this.bits;
-            buffer.write(this.value, 6, size, 'binary');
-            return buffer;
-        }
-        else {
-            var buffer = new Buffer(5 + size);
-            buffer[0] = TAG_BINARY_EXT;
-            packUint32(size, 1, buffer);
-            buffer.write(this.value, 5, size, 'binary');
-            return buffer;
-        }
-    }
-    else if (Buffer.isBuffer(this.value)) {
-        var size = this.value.length;
-        if (this.bits != 8) {
-            var buffer = new Buffer(6 + size);
-            buffer[0] = TAG_BIT_BINARY_EXT;
-            packUint32(size, 1, buffer);
-            buffer[5] = this.bits;
-            this.value.copy(buffer, 6);
-            return buffer;
-        }
-        else {
-            var buffer = new Buffer(5 + size);
-            buffer[0] = TAG_BINARY_EXT;
-            packUint32(size, 1, buffer);
-            this.value.copy(buffer, 5);
-            return buffer;
-        }
-    }
-    else {
-        throw new OutputException('unknown binary type');
-    }
-};
-Erlang.OtpErlangBinary.prototype.toString = function() {
-    return 'OtpErlangBinary(' + (typeof this.value) + ',' + this.bits + ')';
-};
-
-Erlang.OtpErlangFunction = function OtpErlangFunction (tag, value) {
-    this.tag = tag;
+Erlang.OtpErlangMap = function OtpErlangMap (value) {
     this.value = value;
 };
-Erlang.OtpErlangFunction.prototype.binary = function() {
-    return Buffer.concat([new Buffer([this.tag]), this.value]);
-};
-Erlang.OtpErlangFunction.prototype.toString = function() {
-    return 'OtpErlangFunction(' + this.tag + ')';
-};
-
-Erlang.OtpErlangReference = function OtpErlangReference (node, id, creation) {
-    this.node = node;
-    this.id = id;
-    this.creation = creation;
-};
-Erlang.OtpErlangReference.prototype.binary = function() {
-    var size = this.id.length / 4;
-    if (size > 1) {
-        var header = new Buffer(3);
-        header[0] = TAG_NEW_REFERENCE_EXT;
-        packUint16(size, 1, header);
-        return Buffer.concat([header,
-                              this.node.binary(), this.creation, this.id]);
+Erlang.OtpErlangMap.prototype.binary = function() {
+    if (typeof this.value === 'object' &&
+        toNativeString.call(this.value) == '[object Object]') {
+        return Erlang._object_to_binary(this.value);
     }
     else {
-        var header = new Buffer(3);
-        header[0] = TAG_REFERENCE_EXT;
-        packUint16(size, 1, header);
-        return Buffer.concat([header,
-                              this.node.binary(), this.id, this.creation]);
+        throw new OutputException('unknown map type');
     }
 };
-Erlang.OtpErlangReference.prototype.toString = function() {
-    var tag;
-    var size = this.id.length / 4;
-    if (size > 1) {
-        tag = TAG_NEW_REFERENCE_EXT;
-    }
-    else {
-        tag = TAG_REFERENCE_EXT;
-    }
-    return 'OtpErlangReference(' + tag + ')';
-};
-
-Erlang.OtpErlangPort = function OtpErlangPort (node, id, creation) {
-    this.node = node;
-    this.id = id;
-    this.creation = creation;
-};
-Erlang.OtpErlangPort.prototype.binary = function() {
-    return Buffer.concat([new Buffer([TAG_PORT_EXT]),
-                          this.node.binary(), this.id, this.creation]);
-};
-Erlang.OtpErlangPort.prototype.toString = function() {
-    return 'OtpErlangPort()';
+Erlang.OtpErlangMap.prototype.toString = function() {
+    return 'OtpErlangMap()';
 };
 
 Erlang.OtpErlangPid = function OtpErlangPid (node, id, serial, creation) {
@@ -380,21 +362,57 @@ Erlang.OtpErlangPid.prototype.toString = function() {
     return 'OtpErlangPid()';
 };
 
-Erlang.OtpErlangMap = function OtpErlangMap (value) {
-    this.value = value;
+Erlang.OtpErlangPort = function OtpErlangPort (node, id, creation) {
+    this.node = node;
+    this.id = id;
+    this.creation = creation;
 };
-Erlang.OtpErlangMap.prototype.binary = function() {
-    if (typeof this.value === 'object' &&
-        toNativeString.call(this.value) == '[object Object]') {
-        return Erlang._object_to_binary(this.value);
+Erlang.OtpErlangPort.prototype.binary = function() {
+    return Buffer.concat([new Buffer([TAG_PORT_EXT]),
+                          this.node.binary(), this.id, this.creation]);
+};
+Erlang.OtpErlangPort.prototype.toString = function() {
+    return 'OtpErlangPort()';
+};
+
+Erlang.OtpErlangReference = function OtpErlangReference (node, id, creation) {
+    this.node = node;
+    this.id = id;
+    this.creation = creation;
+};
+Erlang.OtpErlangReference.prototype.binary = function() {
+    var length = this.id.length / 4;
+    if (length == 0) {
+        var header = new Buffer(3);
+        header[0] = TAG_REFERENCE_EXT;
+        packUint16(length, 1, header);
+        return Buffer.concat([header,
+                              this.node.binary(), this.id, this.creation]);
+    }
+    else if (length <= 65535) {
+        var header = new Buffer(3);
+        header[0] = TAG_NEW_REFERENCE_EXT;
+        packUint16(length, 1, header);
+        return Buffer.concat([header,
+                              this.node.binary(), this.creation, this.id]);
     }
     else {
-        throw new OutputException('unknown map type');
+        throw new OutputException('uint16 overflow');
     }
 };
-Erlang.OtpErlangMap.prototype.toString = function() {
-    return 'OtpErlangMap()';
+Erlang.OtpErlangReference.prototype.toString = function() {
+    var tag;
+    var length = this.id.length / 4;
+    if (length == 0) {
+        tag = TAG_REFERENCE_EXT;
+    }
+    else {
+        tag = TAG_NEW_REFERENCE_EXT;
+    }
+    return 'OtpErlangReference(' + tag + ')';
 };
+
+// core functionality
 
 Erlang.binary_to_term = function binary_to_term (data, callback) {
     if (typeof callback === 'undefined') {
@@ -442,9 +460,7 @@ Erlang.binary_to_term = function binary_to_term (data, callback) {
                                  undefined);
                         return;
                     }
-                    process.nextTick(function () {
-                        callback(undefined, result[1]);
-                    });
+                    callback(undefined, result[1]);
                 }
             });
         }
@@ -453,9 +469,7 @@ Erlang.binary_to_term = function binary_to_term (data, callback) {
             if (result[0] != size) {
                 throw new ParseException('unparsed data');
             }
-            process.nextTick(function () {
-                callback(undefined, result[1]);
-            });
+            callback(undefined, result[1]);
         }
     }
     catch (err) {
@@ -466,9 +480,7 @@ Erlang.binary_to_term = function binary_to_term (data, callback) {
             }
             err = err_new;
         }
-        process.nextTick(function () {
-            callback(err, undefined);
-        });
+        callback(err, undefined);
     }
 };
 
@@ -480,11 +492,9 @@ Erlang.term_to_binary = function term_to_binary (term, callback, compressed) {
     try {
         var data_uncompressed = Erlang._term_to_binary(term);
         if (compressed === false) {
-            process.nextTick(function () {
-                callback(undefined,
-                         Buffer.concat([new Buffer([TAG_VERSION]),
-                                        data_uncompressed]));
-            });
+            callback(undefined,
+                     Buffer.concat([new Buffer([TAG_VERSION]),
+                                    data_uncompressed]));
         }
         else {
             if (compressed === true) {
@@ -502,14 +512,16 @@ Erlang.term_to_binary = function term_to_binary (term, callback, compressed) {
                     callback(err, undefined);
                 }
                 else {
+                    var size_uncompressed = data_uncompressed.length;
+                    if (size_uncompressed > 4294967295) {
+                        throw new OutputException('uint32 overflow');
+                    }
                     var header = new Buffer(6);
                     header[0] = TAG_VERSION;
                     header[1] = TAG_COMPRESSED_ZLIB;
-                    packUint32(data_uncompressed.length, 2, header);
-                    process.nextTick(function () {
-                        callback(undefined,
-                                 Buffer.concat([header, data_compressed]));
-                    });
+                    packUint32(size_uncompressed, 2, header);
+                    callback(undefined,
+                             Buffer.concat([header, data_compressed]));
                 }
             });
         }
@@ -523,11 +535,11 @@ Erlang.term_to_binary = function term_to_binary (term, callback, compressed) {
             }
             err = err_new;
         }
-        process.nextTick(function () {
-            callback(err, undefined);
-        });
+        callback(err, undefined);
     }
 };
+
+// binary_to_term implementation functions
 
 Erlang._binary_to_term = function _binary_to_term (i, data) {
     var tag = data[i];
@@ -593,16 +605,16 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             return [i, new Erlang.OtpErlangPid(node, id, serial, creation)];
         case TAG_SMALL_TUPLE_EXT:
         case TAG_LARGE_TUPLE_EXT:
-            var arity;
+            var length;
             if (tag == TAG_SMALL_TUPLE_EXT) {
-                arity = data[i];
+                length = data[i];
                 i += 1;
             }
             else if (tag == TAG_LARGE_TUPLE_EXT) {
-                arity = unpackUint32(i, data);
+                length = unpackUint32(i, data);
                 i += 4;
             }
-            return Erlang._binary_to_term_sequence(i, arity, data);
+            return Erlang._binary_to_term_sequence(i, length, data);
         case TAG_NIL_EXT:
             return [i, new Erlang.OtpErlangList([])];
         case TAG_STRING_EXT:
@@ -610,9 +622,9 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             i += 2;
             return [i + j, data.toString('binary', i, i + j)];
         case TAG_LIST_EXT:
-            var arity = unpackUint32(i, data);
+            var length = unpackUint32(i, data);
             i += 4;
-            var result = Erlang._binary_to_term_sequence(i, arity, data);
+            var result = Erlang._binary_to_term_sequence(i, length, data);
             i = result[0];
             var tmp = result[1];
             result = Erlang._binary_to_term(i, data);
@@ -654,10 +666,10 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             i += 1;
             return [i + j, bignum];
         case TAG_NEW_FUN_EXT:
-            var size = unpackUint32(i, data);
-            return [i + size,
+            var length = unpackUint32(i, data);
+            return [i + length,
                     new Erlang.OtpErlangFunction(tag,
-                                                 data.slice(i, i + size))];
+                                                 data.slice(i, i + length))];
         case TAG_EXPORT_EXT:
             var old_i = i;
             var result = Erlang._binary_to_atom(i, data);
@@ -701,10 +713,10 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             }
             return [i + j, tmp];
         case TAG_MAP_EXT:
-            var arity = unpackUint32(i, data);
+            var length = unpackUint32(i, data);
             i += 4;
             var pairs = {};
-            for (var arity_index = 0; arity_index < arity; arity_index++) {
+            for (var length_index = 0; length_index < length; length_index++) {
                 var result = Erlang._binary_to_term(i, data);
                 i = result[0];
                 var key = result[1];
@@ -755,15 +767,17 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
 };
 
 Erlang._binary_to_term_sequence = function _binary_to_term_sequence
-                                           (i, arity, data) {
+                                           (i, length, data) {
     var sequence = [];
-    for (var arity_index = 0; arity_index < arity; arity_index++) {
+    for (var length_index = 0; length_index < length; length_index++) {
         var result = Erlang._binary_to_term(i, data);
         i = result[0];
         sequence.push(result[1]);
     }
     return [i, sequence];
 };
+
+// (binary_to_term Erlang term primitive type functions)
 
 Erlang._binary_to_integer = function _binary_to_integer (i, data) {
     var tag = data[i];
@@ -838,6 +852,8 @@ Erlang._binary_to_atom = function _binary_to_atom (i, data) {
     }
 };
 
+// term_to_binary implementation functions
+
 Erlang._term_to_binary = function _term_to_binary (term) {
     switch (typeof term) {
         case 'string':
@@ -882,51 +898,83 @@ Erlang._term_to_binary = function _term_to_binary (term) {
     }
 };
 
+// (term_to_binary Erlang term composite type functions)
+
 Erlang._string_to_binary = function _string_to_binary (term) {
-    var arity = term.length;
-    if (arity == 0) {
+    var length = term.length;
+    if (length == 0) {
         return new Buffer([TAG_NIL_EXT]);
     }
-    else if (arity < 65536) {
-        var buffer = new Buffer(3 + arity);
+    else if (length <= 65535) {
+        var buffer = new Buffer(3 + length);
         buffer[0] = TAG_STRING_EXT;
-        packUint16(arity, 1, buffer);
-        buffer.write(term, 3, arity, 'binary');
+        packUint16(length, 1, buffer);
+        buffer.write(term, 3, length, 'binary');
         return buffer;
     }
-    else {
-        var buffer = new Buffer(6 + 2 * arity);
+    else if (length <= 4294967295) {
+        var buffer = new Buffer(6 + 2 * length);
         buffer[0] = TAG_LIST_EXT;
-        packUint32(arity, 1, buffer);
-        for (var i = 0; i < arity; i++) {
+        packUint32(length, 1, buffer);
+        for (var i = 0; i < length; i++) {
             var j = 5 + 2 * i;
             buffer[j] = TAG_SMALL_INTEGER_EXT;
             buffer[j + 1] = term.charCodeAt(i);
         } 
-        buffer[5 + 2 * arity] = TAG_NIL_EXT;
+        buffer[5 + 2 * length] = TAG_NIL_EXT;
         return buffer;
+    }
+    else {
+        throw new OutputException('uint32 overflow');
     }
 };
 
 Erlang._tuple_to_binary = function _tuple_to_binary (term) {
-    var arity = term.length;
+    var length = term.length;
     var header;
-    if (arity < 256) {
+    if (length <= 255) {
         header = new Buffer(2);
         header[0] = TAG_SMALL_TUPLE_EXT;
-        header[1] = arity;
+        header[1] = length;
     }
-    else {
+    else if (length <= 4294967295) {
         header = new Buffer(5);
         header[0] = TAG_LARGE_TUPLE_EXT;
-        packUint32(arity, 1, header);
+        packUint32(length, 1, header);
+    }
+    else {
+        throw new OutputException('uint32 overflow');
     }
     var buffers = [header];
-    for (var i = 0; i < arity; i++) {
+    for (var i = 0; i < length; i++) {
         buffers.push(Erlang._term_to_binary(term[i]));
     } 
     return Buffer.concat(buffers);
 };
+
+Erlang._object_to_binary = function _object_to_binary (term) {
+    var length = 0;
+    var buffers = [];
+    for (var key in term) {
+        if (term.hasOwnProperty(key)) {
+            length++;
+            buffers.push(Erlang._term_to_binary(key));
+            buffers.push(Erlang._term_to_binary(term[key]));
+        }
+    }
+    if (length <= 4294967295) {
+        var header = new Buffer(5);
+        header[0] = TAG_MAP_EXT;
+        packUint32(length, 1, header);
+        buffers.unshift(header)
+        return Buffer.concat(buffers);
+    }
+    else {
+        throw new OutputException('uint32 overflow');
+    }
+};
+
+// (term_to_binary Erlang term primitive type functions)
 
 Erlang._integer_to_binary = function _integer_to_binary (term) {
     if (0 <= term && term <= 255) {
@@ -945,37 +993,39 @@ Erlang._integer_to_binary = function _integer_to_binary (term) {
 
 Erlang._bignum_to_binary = function _bignum_to_binary (term) {
     var bignum = Math.abs(term);
-    var size = Math.ceil(Erlang._bignum_bit_length(bignum) / 8.0);
-    var buffer;
-    var i;
-    if (size < 256) {
-        buffer = new Buffer(3 + size);
-        buffer[0] = TAG_SMALL_BIG_EXT;
-        buffer[1] = size;
-        i = 2;
-    }
-    else {
-        buffer = new Buffer(6 + size);
-        buffer[0] = TAG_LARGE_BIG_EXT;
-        packUint32(size, 1, buffer);
-        i = 5;
-    }
     if (term < 0) {
-        buffer[i] = 1;
+        sign = 1;
     }
     else {
-        buffer[i] = 0;
+        sign = 0;
     }
-    i += 1;
-    for (var b = 0; b < size; b++) {
-        buffer[i + b] = bignum & 255;
+    var buffers = [];
+    while (bignum > 0) {
+        var b = new Buffer(1)
+        b[0] = bignum & 255;
+        buffers.push(b);
         bignum >>>= 8;
     }
-    return buffer;
-};
-
-Erlang._bignum_bit_length = function _bignum_bit_length (bignum) {
-    return bignum.toString(2).length;
+    var length = buffers.length;
+    if (length <= 255) {
+        var header = new Buffer(3);
+        header[0] = TAG_SMALL_BIG_EXT;
+        header[1] = length;
+        header[2] = sign;
+        buffers.unshift(header);
+        return Buffer.concat(buffers);
+    }
+    else if (length <= 4294967295) {
+        var header = new Buffer(6);
+        header[0] = TAG_LARGE_BIG_EXT;
+        packUint32(length, 1, header);
+        header[5] = sign;
+        buffers.unshift(header);
+        return Buffer.concat(buffers);
+    }
+    else {
+        throw new OutputException('uint32 overflow');
+    }
 };
 
 Erlang._float_to_binary = function _float_to_binary (term) {
@@ -991,24 +1041,10 @@ Erlang._float_to_binary = function _float_to_binary (term) {
     return buffer_out;
 };
 
-Erlang._object_to_binary = function _object_to_binary (term) {
-    var arity = 0;
-    var header = new Buffer(5);
-    header[0] = TAG_MAP_EXT;
-    packUint32(arity, 1, header);
-    var buffers = [header];
-    for (var key in term) {
-        if (term.hasOwnProperty(key)) {
-            arity++;
-            buffers.push(Erlang._term_to_binary(key));
-            buffers.push(Erlang._term_to_binary(term[key]));
-        }
-    }
-    return Buffer.concat(buffers);
-};
+// Exception objects listed alphabetically
 
-Erlang.ParseException = ParseException;
 Erlang.InputException = InputException;
 Erlang.OutputException = OutputException;
+Erlang.ParseException = ParseException;
 
 };

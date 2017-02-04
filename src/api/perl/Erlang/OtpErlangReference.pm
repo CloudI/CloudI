@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,8 @@ use warnings;
 use constant TAG_REFERENCE_EXT => 101;
 use constant TAG_NEW_REFERENCE_EXT => 114;
 
+require Erlang::OutputException;
+
 use overload
     '""'     => sub { $_[0]->as_string };
 
@@ -63,16 +65,20 @@ sub new
 sub binary
 {
     my $self = shift;
-    my $size = length($self->{id}) / 4;
-    if ($size > 1)
+    my $length = length($self->{id}) / 4;
+    if ($length == 0)
     {
-        return pack('Cn', TAG_NEW_REFERENCE_EXT, $size) .
+        return chr(TAG_REFERENCE_EXT) .
+               $self->{node}->binary() . $self->{id} . $self->{creation};
+    }
+    elsif ($length <= 65535)
+    {
+        return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
                $self->{node}->binary() . $self->{creation} . $self->{id};
     }
     else
     {
-        return chr(TAG_REFERENCE_EXT) .
-               $self->{node}->binary() . $self->{id} . $self->{creation};
+        die Erlang::OutputException->new('uint16 overflow');
     }
 }
 

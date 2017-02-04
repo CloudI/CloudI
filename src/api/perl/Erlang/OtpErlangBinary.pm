@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -71,15 +71,19 @@ sub binary
     my $value = $self->{value};
     if (ref($value) eq '')
     {
-        my $size = length($value);
+        my $length = length($value);
+        if ($length > 4294967295)
+        {
+            die Erlang::OutputException->new('uint32 overflow');
+        }
         my $bits = $self->{bits};
         if ($bits != 8)
         {
-            return pack('CNC', TAG_BIT_BINARY_EXT, $size, $bits) . $value;
+            return pack('CNC', TAG_BIT_BINARY_EXT, $length, $bits) . $value;
         }
         else
         {
-            return pack('CN', TAG_BINARY_EXT, $size) . $value;
+            return pack('CN', TAG_BINARY_EXT, $length) . $value;
         }
     }
     else

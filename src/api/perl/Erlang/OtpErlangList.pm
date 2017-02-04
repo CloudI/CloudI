@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -77,6 +77,10 @@ sub binary
         if ($length == 0)
         {
             return chr(TAG_NIL_EXT);
+        }
+        elsif ($length > 4294967295)
+        {
+            die Erlang::OutputException->new('uint32 overflow');
         }
         elsif ($self->{improper})
         {

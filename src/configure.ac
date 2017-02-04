@@ -91,6 +91,20 @@ if test "x$cxx_support" = "xtrue" ; then
     fi
 fi
 AC_MSG_RESULT([$cxx_support])
+AC_MSG_CHECKING([if the Go         CloudI API is enabled])
+AC_ARG_ENABLE([go-support],
+    [AS_HELP_STRING([--enable-go-support],
+                    [Enable the Go CloudI API])],
+    [
+    if test "x$enableval" = "xyes"; then
+        go_support="true"
+    elif test "x$enableval" = "xno"; then
+        go_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-go-support])
+    fi
+    ], [go_support="false"])
+AC_MSG_RESULT([$go_support])
 AC_MSG_CHECKING([if the Java       CloudI API is enabled])
 AC_ARG_ENABLE([java-support],
     [AS_HELP_STRING([--enable-java-support],
@@ -325,6 +339,16 @@ AM_CONDITIONAL([C_SUPPORT], [false])
 fi
 AM_CONDITIONAL([CXX_SUPPORT], [test "x$cxx_support" = "xtrue"])
 
+# Go CloudI API support
+if test "x$go_support" = "xtrue" ; then
+AC_ARG_VAR([GO],[go gc executable (not gccgo)])
+AC_PATH_PROGS([GO],[go])
+if test "x$GO" = "x"; then
+    AC_MSG_ERROR([go not found])
+fi
+fi
+AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
+
 # Java CloudI API support
 if test "x$java_support" = "xtrue" ; then
 AC_SUBST(javadir, ["$datarootdir/java"])
@@ -537,6 +561,7 @@ AC_CONFIG_FILES([
     api/Makefile
     api/c/Makefile
     api/erlang/Makefile
+    api/go/Makefile
     api/java/Makefile
     api/java/org/Makefile
     api/java/org/cloudi/Makefile

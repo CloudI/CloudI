@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Updates to the Erlang binary term format encoding used in the
+      CloudI API implementations for Javascript, Perl, PHP, Python, Ruby
+        * Bounds checking was added and variable names were improved
+        * Javascript encoding of an object as a map was fixed
+    * The beginnings of a Go CloudI API has been added,
+      but is not yet usable (will allow integration tests to be added)
+
 2017-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fixes to ensure logging from CloudI in Erlang source code is logging

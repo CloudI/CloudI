@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -70,6 +70,8 @@ define(__NAMESPACE__ . '\TAG_FUN_EXT', 117);
 define(__NAMESPACE__ . '\TAG_ATOM_UTF8_EXT', 118);
 define(__NAMESPACE__ . '\TAG_SMALL_ATOM_UTF8_EXT', 119);
 
+// Erlang term classes listed alphabetically
+
 class OtpErlangAtom
 {
     public $value;
@@ -87,31 +89,39 @@ class OtpErlangAtom
         }
         elseif (is_string($this->value))
         {
-            $size = strlen($this->value);
+            $length = strlen($this->value);
             if ($this->utf8)
             {
-                if ($size < 256)
+                if ($length <= 255)
                 {
-                    return pack('CC', TAG_SMALL_ATOM_UTF8_EXT, $size) .
+                    return pack('CC', TAG_SMALL_ATOM_UTF8_EXT, $length) .
+                           $this->value;
+                }
+                elseif ($length <= 65535)
+                {
+                    return pack('Cn', TAG_ATOM_UTF8_EXT, $length) .
                            $this->value;
                 }
                 else
                 {
-                    return pack('Cn', TAG_ATOM_UTF8_EXT, $size) .
-                           $this->value;
+                    throw new OutputException('uint16 overflow');
                 }
             }
             else
             {
-                if ($size < 256)
+                if ($length <= 255)
                 {
-                    return pack('CC', TAG_SMALL_ATOM_EXT, $size) .
+                    return pack('CC', TAG_SMALL_ATOM_EXT, $length) .
+                           $this->value;
+                }
+                elseif ($length <= 65535)
+                {
+                    return pack('Cn', TAG_ATOM_EXT, $length) .
                            $this->value;
                 }
                 else
                 {
-                    return pack('Cn', TAG_ATOM_EXT, $size) .
-                           $this->value;
+                    throw new OutputException('uint16 overflow');
                 }
             }
         }
@@ -124,55 +134,6 @@ class OtpErlangAtom
     {
         return sprintf('%s(%s,utf8=%s)', get_class(),
                        $this->value, $this->utf8 ? 'true' : 'false');
-    }
-}
-
-class OtpErlangList
-{
-    public $value;
-    public $improper;
-    public function __construct($value, $improper = false)
-    {
-        $this->value = $value;
-        $this->improper = $improper;
-    }
-    public function binary()
-    {
-        if (is_array($this->value))
-        {
-            $length = count($this->value);
-            if ($length == 0)
-            {
-                return chr(TAG_NIL_EXT);
-            }
-            elseif ($this->improper)
-            {
-                $contents = '';
-                while (list($tmp, $element) = each($this->value))
-                    $contents .= _term_to_binary($element);
-                reset($this->value);
-                return pack('CN', TAG_LIST_EXT, $length - 1) . $contents;
-            }
-            else
-            {
-                $contents = '';
-                while (list($tmp, $element) = each($this->value))
-                    $contents .= _term_to_binary($element);
-                reset($this->value);
-                return pack('CN', TAG_LIST_EXT, $length) . $contents .
-                       chr(TAG_NIL_EXT);
-            }
-        }
-        else
-        {
-            throw new OutputException('unknown list type');
-        }
-    }
-    public function __toString()
-    {
-        return sprintf('%s(array(%s),improper=%s)', get_class(),
-                       implode(',', $this->value),
-                       $this->improper ? 'true' : 'false');
     }
 }
 
@@ -189,15 +150,19 @@ class OtpErlangBinary
     {
         if (is_string($this->value))
         {
-            $size = strlen($this->value);
-            if ($this->bits != 8)
+            $length = strlen($this->value);
+            if ($length > 4294967295)
             {
-                return pack('CNC', TAG_BIT_BINARY_EXT, $size,
+                throw new OutputException('uint32 overflow');
+            }
+            elseif ($this->bits != 8)
+            {
+                return pack('CNC', TAG_BIT_BINARY_EXT, $length,
                             $this->bits) . $this->value;
             }
             else
             {
-                return pack('CN', TAG_BINARY_EXT, $size) . $this->value;
+                return pack('CN', TAG_BINARY_EXT, $length) . $this->value;
             }
         }
         else
@@ -232,58 +197,90 @@ class OtpErlangFunction
     }
 }
 
-class OtpErlangReference
+class OtpErlangList
 {
-    public $node;
-    public $id;
-    public $creation;
-    public function __construct($node, $id, $creation)
+    public $value;
+    public $improper;
+    public function __construct($value, $improper = false)
     {
-        $this->node = $node;
-        $this->id = $id;
-        $this->creation = $creation;
+        $this->value = $value;
+        $this->improper = $improper;
     }
     public function binary()
     {
-        $size = intval(strlen($this->id) / 4);
-        if ($size > 1)
+        if (is_array($this->value))
         {
-            return pack('Cn', TAG_NEW_REFERENCE_EXT, $size) .
-                   $this->node->binary() . $this->creation . $this->id;
+            $length = count($this->value);
+            if ($length == 0)
+            {
+                return chr(TAG_NIL_EXT);
+            }
+            elseif ($length > 4294967295)
+            {
+                throw new OutputException('uint32 overflow');
+            }
+            elseif ($this->improper)
+            {
+                $contents = '';
+                while (list($tmp, $element) = each($this->value))
+                    $contents .= _term_to_binary($element);
+                reset($this->value);
+                return pack('CN', TAG_LIST_EXT, $length - 1) . $contents;
+            }
+            else
+            {
+                $contents = '';
+                while (list($tmp, $element) = each($this->value))
+                    $contents .= _term_to_binary($element);
+                reset($this->value);
+                return pack('CN', TAG_LIST_EXT, $length) . $contents .
+                       chr(TAG_NIL_EXT);
+            }
         }
         else
         {
-            return chr(TAG_REFERENCE_EXT) .
-                   $this->node->binary() . $this->id . $this->creation;
+            throw new OutputException('unknown list type');
         }
     }
     public function __toString()
     {
-        return sprintf('%s(%s,%s,%s)', get_class(),
-                       $this->node, $this->id, $this->creation);
+        return sprintf('%s(array(%s),improper=%s)', get_class(),
+                       implode(',', $this->value),
+                       $this->improper ? 'true' : 'false');
     }
 }
 
-class OtpErlangPort
+class OtpErlangMap
 {
-    public $node;
-    public $id;
-    public $creation;
-    public function __construct($node, $id, $creation)
+    public $pairs;
+    public function __construct($pairs)
     {
-        $this->node = $node;
-        $this->id = $id;
-        $this->creation = $creation;
+        $this->pairs = $pairs;
     }
     public function binary()
     {
-        return chr(TAG_PORT_EXT) .
-               $this->node->binary() . $this->id . $this->creation;
+        $length = count($this->pairs);
+        if ($length <= 4294967295)
+        {
+            $term_packed = '';
+            foreach ($this->pairs as $pair)
+            {
+                list($key, $value) = $pair;
+                $key_packed = _term_to_binary($key);
+                $value_packed = _term_to_binary($value);
+                $term_packed .= $key_packed . $value_packed;
+            }
+            return pack('CN', TAG_MAP_EXT, $length) . $term_packed;
+        }
+        else
+        {
+            throw new OutputException('uint32 overflow');
+        }
     }
     public function __toString()
     {
-        return sprintf('%s(%s,%s,%s)', get_class(),
-                       $this->node, $this->id, $this->creation);
+        return sprintf('%s(%d)', get_class(),
+                       count($this->pairs));
     }
 }
 
@@ -312,30 +309,62 @@ class OtpErlangPid
     }
 }
 
-class OtpErlangMap
+class OtpErlangPort
 {
-    public $pairs;
-    public function __construct($pairs)
+    public $node;
+    public $id;
+    public $creation;
+    public function __construct($node, $id, $creation)
     {
-        $this->pairs = $pairs;
+        $this->node = $node;
+        $this->id = $id;
+        $this->creation = $creation;
     }
     public function binary()
     {
-        $arity = count($this->pairs);
-        $term_packed = '';
-        foreach ($this->pairs as $pair)
-        {
-            list($key, $value) = $pair;
-            $key_packed = _term_to_binary($key);
-            $value_packed = _term_to_binary($value);
-            $term_packed .= $key_packed . $value_packed;
-        }
-        return pack('CN', TAG_MAP_EXT, $arity) . $term_packed;
+        return chr(TAG_PORT_EXT) .
+               $this->node->binary() . $this->id . $this->creation;
     }
     public function __toString()
     {
-        return sprintf('%s(%d)', get_class(),
-                       count($this->pairs));
+        return sprintf('%s(%s,%s,%s)', get_class(),
+                       $this->node, $this->id, $this->creation);
+    }
+}
+
+class OtpErlangReference
+{
+    public $node;
+    public $id;
+    public $creation;
+    public function __construct($node, $id, $creation)
+    {
+        $this->node = $node;
+        $this->id = $id;
+        $this->creation = $creation;
+    }
+    public function binary()
+    {
+        $length = intval(strlen($this->id) / 4);
+        if ($length == 0)
+        {
+            return chr(TAG_REFERENCE_EXT) .
+                   $this->node->binary() . $this->id . $this->creation;
+        }
+        elseif ($length <= 65535)
+        {
+            return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
+                   $this->node->binary() . $this->creation . $this->id;
+        }
+        else
+        {
+            throw new OutputException('uint16 overflow');
+        }
+    }
+    public function __toString()
+    {
+        return sprintf('%s(%s,%s,%s)', get_class(),
+                       $this->node, $this->id, $this->creation);
     }
 }
 
@@ -347,6 +376,8 @@ function _error_handler($errno = 0, $errstr = null,
         return true; // return true to continue through the others handlers
     throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
 }
+
+// core functionality
 
 function binary_to_term($data)
 {
@@ -388,10 +419,16 @@ function term_to_binary($term, $compressed = false)
             throw new InputException('compressed in [0..9]');
         $data_compressed = gzcompress($data_uncompressed, $compressed);
         $size_uncompressed = strlen($data_uncompressed);
+        if ($size_uncompressed > 4294967295)
+        {
+            throw new OutputException('uint32 overflow');
+        }
         return pack('CCN', TAG_VERSION, TAG_COMPRESSED_ZLIB,
                     $size_uncompressed) . $data_compressed;
     }
 }
+
+// binary_to_term implementation functions
 
 function _binary_to_term($i, $data)
 {
@@ -451,15 +488,15 @@ function _binary_to_term($i, $data)
         case TAG_LARGE_TUPLE_EXT:
             if ($tag == TAG_SMALL_TUPLE_EXT)
             {
-                $arity = ord($data[$i]);
+                $length = ord($data[$i]);
                 $i += 1;
             }
             elseif ($tag == TAG_LARGE_TUPLE_EXT)
             {
-                list(, $arity) = unpack('N', substr($data, $i, 4));
+                list(, $length) = unpack('N', substr($data, $i, 4));
                 $i += 4;
             }
-            return _binary_to_term_sequence($i, $arity, $data);
+            return _binary_to_term_sequence($i, $length, $data);
         case TAG_NIL_EXT:
             return array($i, new OtpErlangList(array()));
         case TAG_STRING_EXT:
@@ -467,9 +504,9 @@ function _binary_to_term($i, $data)
             $i += 2;
             return array($i + $j, substr($data, $i, $j));
         case TAG_LIST_EXT:
-            list(, $arity) = unpack('N', substr($data, $i, 4));
+            list(, $length) = unpack('N', substr($data, $i, 4));
             $i += 4;
-            list($i, $tmp) = _binary_to_term_sequence($i, $arity, $data);
+            list($i, $tmp) = _binary_to_term_sequence($i, $length, $data);
             list($i, $tail) = _binary_to_term($i, $data);
             if (get_class($tail) != 'Erlang\OtpErlangList' or
                 $tail->value != array())
@@ -514,9 +551,10 @@ function _binary_to_term($i, $data)
             $i += 1;
             return array($i + $j, $bignum);
         case TAG_NEW_FUN_EXT:
-            list(, $size) = unpack('N', substr($data, $i, 4));
-            return array($i + $size,
-                         new OtpErlangFunction($tag, substr($data, $i, $size)));
+            list(, $length) = unpack('N', substr($data, $i, 4));
+            return array($i + $length,
+                         new OtpErlangFunction($tag, substr($data, $i,
+                                                            $length)));
         case TAG_EXPORT_EXT:
             $old_i = $i;
             list($i, $module) = _binary_to_atom($i, $data);
@@ -552,12 +590,12 @@ function _binary_to_term($i, $data)
                 $tmp = new OtpErlangAtom($atom_name);
             return array($i + $j, $tmp);
         case TAG_MAP_EXT:
-            list(, $arity) = unpack('N', substr($data, $i, 4));
+            list(, $length) = unpack('N', substr($data, $i, 4));
             $i += 4;
             $pairs = array();
-            if ($arity > 0)
+            if ($length > 0)
             {
-                foreach (range(0, $arity - 1) as $arity_index)
+                foreach (range(0, $length - 1) as $length_index)
                 {
                     list($i, $key) = _binary_to_term($i, $data);
                     list($i, $value) = _binary_to_term($i, $data);
@@ -607,12 +645,12 @@ function _binary_to_term($i, $data)
     }
 }
 
-function _binary_to_term_sequence($i, $arity, $data)
+function _binary_to_term_sequence($i, $length, $data)
 {
     $sequence = array();
-    if ($arity > 0)
+    if ($length > 0)
     {
-        foreach (range(0, $arity - 1) as $arity_index)
+        foreach (range(0, $length - 1) as $length_index)
         {
             list($i, $element) = _binary_to_term($i, $data);
             $sequence[] = $element;
@@ -620,6 +658,8 @@ function _binary_to_term_sequence($i, $arity, $data)
     }
     return array($i, $sequence);
 }
+
+// (binary_to_term Erlang term primitive type functions)
 
 function _binary_to_integer($i, $data)
 {
@@ -694,6 +734,8 @@ function _binary_to_atom($i, $data)
     }
 }
 
+// term_to_binary implementation functions
+
 function _term_to_binary($term)
 {
     if (is_string($term))
@@ -735,42 +777,52 @@ function _term_to_binary($term)
     }
 }
 
+// (term_to_binary Erlang term composite type functions)
+
 function _string_to_binary($term)
 {
-    $arity = strlen($term);
-    if ($arity == 0)
+    $length = strlen($term);
+    if ($length == 0)
     {
         return chr(TAG_NIL_EXT);
     }
-    elseif ($arity < 65536)
+    elseif ($length <= 65535)
     {
-        return pack('Cn', TAG_STRING_EXT, $arity) . $term;
+        return pack('Cn', TAG_STRING_EXT, $length) . $term;
     }
-    else
+    elseif ($length <= 4294967295)
     {
         $term_packed = '';
         foreach (str_split($term) as $c)
         {
             $term_packed .= chr(TAG_SMALL_INTEGER_EXT) . $c;
         }
-        return pack('CN', TAG_LIST_EXT, $arity) . $term_packed .
+        return pack('CN', TAG_LIST_EXT, $length) . $term_packed .
                chr(TAG_NIL_EXT);
+    }
+    else
+    {
+        throw new OutputException('uint32 overflow');
     }
 }
 
 function _tuple_to_binary($term)
 {
-    $arity = count($term);
+    $length = count($term);
     $term_packed = '';
     foreach ($term as $element)
     {
         $term_packed .= _term_to_binary($element);
     }
-    if ($arity < 256)
-        return pack('CC', TAG_SMALL_TUPLE_EXT, $arity) . $term_packed;
+    if ($length <= 255)
+        return pack('CC', TAG_SMALL_TUPLE_EXT, $length) . $term_packed;
+    elseif ($length <= 4294967295)
+        return pack('CN', TAG_LARGE_TUPLE_EXT, $length) . $term_packed;
     else
-        return pack('CN', TAG_LARGE_TUPLE_EXT, $arity) . $term_packed;
+        throw new OutputException('uint32 overflow');
 }
+
+// (term_to_binary Erlang term primitive type functions)
 
 function _integer_to_binary($term)
 {
@@ -786,29 +838,23 @@ function _bignum_to_binary($term)
 {
     // in PHP only for supporting integers > 32 bits (no native bignums)
     $bignum = abs($term);
-    $size = intval(ceil(_bignum_bit_length($bignum) / 8.0));
     if ($term < 0)
-        $sign = chr(1);
+        $sign = 1;
     else
-        $sign = chr(0);
-    $l = $sign;
-    if ($size > 0)
+        $sign = 0;
+    $l = '';
+    while ($bignum > 0)
     {
-        foreach (range(0, $size - 1) as $byte)
-        {
-            $l .= chr($bignum & 255);
-            $bignum >>= 8;
-        }
+        $l .= chr($bignum & 255);
+        $bignum >>= 8;
     }
-    if ($size < 256)
-        return pack('CC', TAG_SMALL_BIG_EXT, $size) . $l;
+    $length = strlen($l);
+    if ($length <= 255)
+        return pack('CCC', TAG_SMALL_BIG_EXT, $length, $sign) . $l;
+    elseif ($length <= 4294967295)
+        return pack('CNC', TAG_LARGE_BIG_EXT, $length, $sign) . $l;
     else
-        return pack('CN', TAG_LARGE_BIG_EXT, $size) . $l;
-}
-
-function _bignum_bit_length($bignum)
-{
-    return strlen(decbin($bignum));
+        throw new OutputException('uint32 overflow');
 }
 
 function _float_to_binary($term)
@@ -819,13 +865,7 @@ function _float_to_binary($term)
         return chr(TAG_NEW_FLOAT_EXT) . pack('d', $term);
 }
 
-class ParseException extends \Exception
-{
-    public function __construct($message, $code = 0, Exception $previous = null)
-    {
-        parent::__construct($message, $code, $previous);
-    }
-}
+// Exception classes listed alphabetically
 
 class InputException extends \Exception
 {
@@ -836,6 +876,14 @@ class InputException extends \Exception
 }
 
 class OutputException extends \Exception
+{
+    public function __construct($message, $code = 0, Exception $previous = null)
+    {
+        parent::__construct($message, $code, $previous);
+    }
+}
+
+class ParseException extends \Exception
 {
     public function __construct($message, $code = 0, Exception $previous = null)
     {

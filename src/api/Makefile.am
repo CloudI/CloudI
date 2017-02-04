@@ -4,6 +4,9 @@
 if C_SUPPORT
     C_SUBDIR = c
 endif
+if GO_SUPPORT
+    GO_SUBDIR = go
+endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = java
 endif
@@ -22,7 +25,8 @@ endif
 if RUBY_SUPPORT
     RUBY_SUBDIR = ruby
 endif
-SUBDIRS = $(C_SUBDIR) erlang $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
+SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) \
+          $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \
           $(PYTHON_SUBDIR) $(RUBY_SUBDIR)
 

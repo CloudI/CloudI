@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -51,17 +51,17 @@ else:
     b_chr = chr
     b_ord = ord
 __all__ = ['OtpErlangAtom',
-           'OtpErlangList',
            'OtpErlangBinary',
            'OtpErlangFunction',
-           'OtpErlangReference',
-           'OtpErlangPort',
+           'OtpErlangList',
            'OtpErlangPid',
+           'OtpErlangPort',
+           'OtpErlangReference',
            'binary_to_term',
            'term_to_binary',
-           'ParseException',
            'InputException',
-           'OutputException']
+           'OutputException',
+           'ParseException']
 
 # tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
 _TAG_VERSION = 131
@@ -93,66 +93,41 @@ _TAG_FUN_EXT = 117
 _TAG_ATOM_UTF8_EXT = 118
 _TAG_SMALL_ATOM_UTF8_EXT = 119
 
+# Erlang term classes listed alphabetically
+
 class OtpErlangAtom(object):
     def __init__(self, value):
         self.value = value
     def binary(self):
         if type(self.value) == int:
             return b_chr(_TAG_ATOM_CACHE_REF) + b_chr(self.value)
-        elif type(self.value) == bytes:
-            size = len(self.value)
-            if size < 256:
-                return b_chr(_TAG_SMALL_ATOM_EXT) + b_chr(size) + self.value
-            else:
-                return (b_chr(_TAG_ATOM_EXT) + struct.pack(b'>H', size) +
-                    self.value
-                )
         elif type(self.value) == unicode:
             value_encoded = self.value.encode('utf-8')
-            size = len(value_encoded)
-            if size < 256:
-                return (b_chr(_TAG_SMALL_ATOM_UTF8_EXT) + b_chr(size) +
-                    value_encoded
+            length = len(value_encoded)
+            if length <= 255:
+                return (b_chr(_TAG_SMALL_ATOM_UTF8_EXT) +
+                    b_chr(length) + value_encoded
+                )
+            elif length <= 65535:
+                return (b_chr(_TAG_ATOM_UTF8_EXT) +
+                    struct.pack(b'>H', length) + value_encoded
                 )
             else:
-                return (b_chr(_TAG_ATOM_UTF8_EXT) + struct.pack(b'>H', size) +
-                    value_encoded
+                raise OutputException('uint16 overflow')
+        elif type(self.value) == bytes:
+            length = len(self.value)
+            if length <= 255:
+                return b_chr(_TAG_SMALL_ATOM_EXT) + b_chr(length) + self.value
+            elif length <= 65535:
+                return (b_chr(_TAG_ATOM_EXT) +
+                    struct.pack(b'>H', length) + self.value
                 )
+            else:
+                raise OutputException('uint16 overflow')
         else:
             raise OutputException('unknown atom type')
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, repr(self.value))
-    def __hash__(self):
-        return hash(self.binary())
-    def __eq__(self, other):
-        return self.binary() == other.binary()
-
-class OtpErlangList(object):
-    def __init__(self, value, improper = False):
-        self.value = value
-        self.improper = improper # no empty list tail?
-    def binary(self):
-        if type(self.value) == list:
-            length = len(self.value)
-            if length == 0:
-                return b_chr(_TAG_NIL_EXT)
-            elif self.improper:
-                return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', length - 1) +
-                    b''.join([_term_to_binary(element)
-                              for element in self.value])
-                )
-            else:
-                return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', length) +
-                    b''.join([_term_to_binary(element)
-                              for element in self.value]) +
-                    b_chr(_TAG_NIL_EXT)
-                )
-        else:
-            raise OutputException('unknown list type')
-    def __repr__(self):
-        return '%s(%s,improper=%s)' % (
-            self.__class__.__name__, repr(self.value), repr(self.improper)
-        )
     def __hash__(self):
         return hash(self.binary())
     def __eq__(self, other):
@@ -164,13 +139,17 @@ class OtpErlangBinary(object):
         self.bits = bits # bits in last byte
     def binary(self):
         if type(self.value) == bytes:
-            size = len(self.value)
-            if self.bits != 8:
-                return (b_chr(_TAG_BIT_BINARY_EXT) + struct.pack(b'>I', size) +
+            length = len(self.value)
+            if length > 4294967295:
+                raise OutputException('uint32 overflow')
+            elif self.bits != 8:
+                return (b_chr(_TAG_BIT_BINARY_EXT) +
+                    struct.pack(b'>I', length) +
                     b_chr(self.bits) + self.value
                 )
             else:
-                return (b_chr(_TAG_BINARY_EXT) + struct.pack(b'>I', size) +
+                return (b_chr(_TAG_BINARY_EXT) +
+                    struct.pack(b'>I', length) +
                     self.value
                 )
         else:
@@ -200,44 +179,35 @@ class OtpErlangFunction(object):
     def __eq__(self, other):
         return self.binary() == other.binary()
 
-class OtpErlangReference(object):
-    def __init__(self, node, id, creation):
-        self.node = node
-        self.id = id
-        self.creation = creation
+class OtpErlangList(object):
+    def __init__(self, value, improper = False):
+        self.value = value
+        self.improper = improper # no empty list tail?
     def binary(self):
-        size = len(self.id) / 4
-        if size > 1:
-            return (b_chr(_TAG_NEW_REFERENCE_EXT) + struct.pack(b'>H', size) +
-                self.node.binary() + self.creation + self.id
-            )
+        if type(self.value) == list:
+            length = len(self.value)
+            if length == 0:
+                return b_chr(_TAG_NIL_EXT)
+            elif length > 4294967295:
+                raise OutputException('uint32 overflow')
+            elif self.improper:
+                return (b_chr(_TAG_LIST_EXT) +
+                    struct.pack(b'>I', length - 1) +
+                    b''.join([_term_to_binary(element)
+                              for element in self.value])
+                )
+            else:
+                return (b_chr(_TAG_LIST_EXT) +
+                    struct.pack(b'>I', length) +
+                    b''.join([_term_to_binary(element)
+                              for element in self.value]) +
+                    b_chr(_TAG_NIL_EXT)
+                )
         else:
-            return (b_chr(_TAG_REFERENCE_EXT) +
-                self.node.binary() + self.id + self.creation
-            )
+            raise OutputException('unknown list type')
     def __repr__(self):
-        return '%s(%s,%s,%s)' % (
-            self.__class__.__name__,
-            repr(self.node), repr(self.id), repr(self.creation)
-        )
-    def __hash__(self):
-        return hash(self.binary())
-    def __eq__(self, other):
-        return self.binary() == other.binary()
-
-class OtpErlangPort(object):
-    def __init__(self, node, id, creation):
-        self.node = node
-        self.id = id
-        self.creation = creation
-    def binary(self):
-        return (b_chr(_TAG_PORT_EXT) +
-            self.node.binary() + self.id + self.creation
-        )
-    def __repr__(self):
-        return '%s(%s,%s,%s)' % (
-            self.__class__.__name__,
-            repr(self.node), repr(self.id), repr(self.creation)
+        return '%s(%s,improper=%s)' % (
+            self.__class__.__name__, repr(self.value), repr(self.improper)
         )
     def __hash__(self):
         return hash(self.binary())
@@ -264,6 +234,55 @@ class OtpErlangPid(object):
         return hash(self.binary())
     def __eq__(self, other):
         return self.binary() == other.binary()
+
+class OtpErlangPort(object):
+    def __init__(self, node, id, creation):
+        self.node = node
+        self.id = id
+        self.creation = creation
+    def binary(self):
+        return (b_chr(_TAG_PORT_EXT) +
+            self.node.binary() + self.id + self.creation
+        )
+    def __repr__(self):
+        return '%s(%s,%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.node), repr(self.id), repr(self.creation)
+        )
+    def __hash__(self):
+        return hash(self.binary())
+    def __eq__(self, other):
+        return self.binary() == other.binary()
+
+class OtpErlangReference(object):
+    def __init__(self, node, id, creation):
+        self.node = node
+        self.id = id
+        self.creation = creation
+    def binary(self):
+        length = len(self.id) / 4
+        if length == 0:
+            return (b_chr(_TAG_REFERENCE_EXT) +
+                self.node.binary() + self.id + self.creation
+            )
+        elif length <= 65535:
+            return (b_chr(_TAG_NEW_REFERENCE_EXT) +
+                struct.pack(b'>H', length) +
+                self.node.binary() + self.creation + self.id
+            )
+        else:
+            raise OutputException('uint16 overflow')
+    def __repr__(self):
+        return '%s(%s,%s,%s)' % (
+            self.__class__.__name__,
+            repr(self.node), repr(self.id), repr(self.creation)
+        )
+    def __hash__(self):
+        return hash(self.binary())
+    def __eq__(self, other):
+        return self.binary() == other.binary()
+
+# dependency to support Erlang maps as map keys in python
 
 # frozendict is under the PSF (Python Software Foundation) License
 # (from http://code.activestate.com/recipes/414283-frozen-dictionaries/)
@@ -306,6 +325,8 @@ class frozendict(dict):
     def __repr__(self):
         return "frozendict(%s)" % dict.__repr__(self)
 
+# core functionality
+
 def binary_to_term(data):
     if type(data) != bytes:
         raise ParseException('not bytes input')
@@ -335,10 +356,14 @@ def term_to_binary(term, compressed=False):
             raise InputException('compressed in [0..9]')
         data_compressed = zlib.compress(data_uncompressed, compressed)
         size_uncompressed = len(data_uncompressed)
+        if size_uncompressed > 4294967295:
+            raise OutputException('uint32 overflow')
         return (
             b_chr(_TAG_VERSION) + b_chr(_TAG_COMPRESSED_ZLIB) +
             struct.pack(b'>I', size_uncompressed) + data_compressed
         )
+
+# binary_to_term implementation functions
 
 def _binary_to_term(i, data):
     tag = b_ord(data[i])
@@ -385,12 +410,12 @@ def _binary_to_term(i, data):
         return (i, OtpErlangPid(node, id, serial, creation))
     elif tag == _TAG_SMALL_TUPLE_EXT or tag == _TAG_LARGE_TUPLE_EXT:
         if tag == _TAG_SMALL_TUPLE_EXT:
-            arity = b_ord(data[i])
+            length = b_ord(data[i])
             i += 1
         elif tag == _TAG_LARGE_TUPLE_EXT:
-            arity = struct.unpack(b'>I', data[i:i + 4])[0]
+            length = struct.unpack(b'>I', data[i:i + 4])[0]
             i += 4
-        i, tmp = _binary_to_term_sequence(i, arity, data)
+        i, tmp = _binary_to_term_sequence(i, length, data)
         return (i, tuple(tmp))
     elif tag == _TAG_NIL_EXT:
         return (i, [])
@@ -399,9 +424,9 @@ def _binary_to_term(i, data):
         i += 2
         return (i + j, data[i:i + j])
     elif tag == _TAG_LIST_EXT:
-        arity = struct.unpack(b'>I', data[i:i + 4])[0]
+        length = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
-        i, tmp = _binary_to_term_sequence(i, arity, data)
+        i, tmp = _binary_to_term_sequence(i, length, data)
         i, tail = _binary_to_term(i, data)
         if type(tail) != list or tail != []: 
             tmp.append(tail)
@@ -428,8 +453,8 @@ def _binary_to_term(i, data):
         i += 1
         return (i + j, bignum)
     elif tag == _TAG_NEW_FUN_EXT:
-        size = struct.unpack(b'>I', data[i:i + 4])[0]
-        return (i + size, OtpErlangFunction(tag, data[i:i + size]))
+        length = struct.unpack(b'>I', data[i:i + 4])[0]
+        return (i + length, OtpErlangFunction(tag, data[i:i + length]))
     elif tag == _TAG_EXPORT_EXT:
         old_i = i
         i, module = _binary_to_atom(i, data)
@@ -459,10 +484,10 @@ def _binary_to_term(i, data):
             tmp = OtpErlangAtom(atom_name)
         return (i + j, tmp)
     elif tag == _TAG_MAP_EXT:
-        arity = struct.unpack(b'>I', data[i:i + 4])[0]
+        length = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
         pairs = {}
-        for arity_index in range(arity):
+        for length_index in range(length):
             i, key = _binary_to_term(i, data)
             i, value = _binary_to_term(i, data)
             if type(key) == dict:
@@ -509,13 +534,15 @@ def _binary_to_term(i, data):
     else:
         raise ParseException('invalid tag')
 
-def _binary_to_term_sequence(i, arity, data):
+def _binary_to_term_sequence(i, length, data):
     sequence = []
-    for arity_index in range(arity):
+    for length_index in range(length):
         i, element = _binary_to_term(i, data)
         sequence.append(element)
     return (i, sequence)
         
+# (binary_to_term Erlang term primitive type functions)
+
 def _binary_to_integer(i, data):
     tag = b_ord(data[i])
     i += 1
@@ -567,6 +594,8 @@ def _binary_to_atom(i, data):
     else:
         raise ParseException('invalid atom tag')
 
+# term_to_binary implementation functions
+
 def _term_to_binary(term):
     if type(term) == bytes:
         return _string_to_binary(term)
@@ -601,29 +630,47 @@ def _term_to_binary(term):
     else:
         raise OutputException('unknown python type')
 
+# (term_to_binary Erlang term composite type functions)
+
 def _string_to_binary(term):
-    arity = len(term)
-    if arity == 0:
+    length = len(term)
+    if length == 0:
         return b_chr(_TAG_NIL_EXT)
-    elif arity < 65536:
-        return b_chr(_TAG_STRING_EXT) + struct.pack(b'>H', arity) + term
-    else:
-        return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', arity) +
+    elif length <= 65535:
+        return b_chr(_TAG_STRING_EXT) + struct.pack(b'>H', length) + term
+    elif length <= 4294967295:
+        return (b_chr(_TAG_LIST_EXT) + struct.pack(b'>I', length) +
             b''.join([b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(b_ord(c))
                       for c in term]) +
             b_chr(_TAG_NIL_EXT)
         )
+    else:
+        raise OutputException('uint32 overflow')
 
 def _tuple_to_binary(term):
-    arity = len(term)
-    if arity < 256:
-        return (b_chr(_TAG_SMALL_TUPLE_EXT) + b_chr(arity) +
+    length = len(term)
+    if length <= 255:
+        return (b_chr(_TAG_SMALL_TUPLE_EXT) + b_chr(length) +
+            b''.join([_term_to_binary(element) for element in term])
+        )
+    elif length <= 4294967295:
+        return (b_chr(_TAG_LARGE_TUPLE_EXT) + struct.pack(b'>I', length) +
             b''.join([_term_to_binary(element) for element in term])
         )
     else:
-        return (b_chr(_TAG_LARGE_TUPLE_EXT) + struct.pack(b'>I', arity) +
-            b''.join([_term_to_binary(element) for element in term])
+        raise OutputException('uint32 overflow')
+
+def _dict_to_binary(term):
+    length = len(term)
+    if length <= 4294967295:
+        return (b_chr(_TAG_MAP_EXT) + struct.pack(b'>I', length) +
+            b''.join([_term_to_binary(key) + _term_to_binary(value)
+                      for key, value in term.items()])
         )
+    else:
+        raise OutputException('uint32 overflow')
+
+# (term_to_binary Erlang term primitive type functions)
 
 def _integer_to_binary(term):
     if 0 <= term <= 255:
@@ -639,44 +686,30 @@ def _long_to_binary(term):
 
 def _bignum_to_binary(term):
     bignum = abs(term)
-    size = int(math.ceil(_bignum_bit_length(bignum) / 8.0))
     if term < 0:
         sign = b_chr(1)
     else:
         sign = b_chr(0)
-    L = [sign]
-    for byte in range(0, size):
+    L = []
+    while bignum > 0:
         L.append(b_chr(bignum & 255))
         bignum >>= 8
-    if size < 256:
+    length = len(L)
+    if length <= 255:
         return (b_chr(_TAG_SMALL_BIG_EXT) +
-            b_chr(size) + b''.join(L)
+            b_chr(length) + sign + b''.join(L)
+        )
+    elif length <= 4294967295:
+        return (b_chr(_TAG_LARGE_BIG_EXT) +
+            struct.pack(b'>I', length) + sign + b''.join(L)
         )
     else:
-        return (b_chr(_TAG_LARGE_BIG_EXT) +
-            struct.pack(b'>I', size) + b''.join(L)
-        )
-
-def _bignum_bit_length(bignum):
-    return len(bin(bignum).lstrip('-0b'))
+        raise OutputException('uint32 overflow')
 
 def _float_to_binary(term):
     return b_chr(_TAG_NEW_FLOAT_EXT) + struct.pack(b'>d', term)
 
-def _dict_to_binary(term):
-    arity = len(term)
-    return (b_chr(_TAG_MAP_EXT) + struct.pack(b'>I', arity) +
-        b''.join([_term_to_binary(key) + _term_to_binary(value)
-                  for key, value in term.items()])
-    )
-
-# exceptions
-
-class ParseException(SyntaxError):
-    def __init__(self, s):
-        self.__s = str(s)
-    def __str__(self):
-        return self.__s
+# Exception classes listed alphabetically
 
 class InputException(ValueError):
     def __init__(self, s):
@@ -685,6 +718,12 @@ class InputException(ValueError):
         return self.__s
 
 class OutputException(TypeError):
+    def __init__(self, s):
+        self.__s = str(s)
+    def __str__(self):
+        return self.__s
+
+class ParseException(SyntaxError):
     def __init__(self, s):
         self.__s = str(s)
     def __str__(self):

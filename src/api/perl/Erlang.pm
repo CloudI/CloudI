@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -92,6 +92,8 @@ require Erlang::ParseException;
 require Erlang::InputException;
 require Erlang::OutputException;
 
+# core functionality
+
 sub binary_to_term
 {
     my ($data) = @_;
@@ -158,10 +160,16 @@ sub term_to_binary
             die Erlang::InputException->new('compression failed');
         }
         my $size_uncompressed = length($data_uncompressed);
+        if ($size_uncompressed > 4294967295)
+        {
+            die Erlang::OutputException->new('uint32 overflow');
+        }
         return pack('CCN', TAG_VERSION, TAG_COMPRESSED_ZLIB,
                     $size_uncompressed) . $data_compressed;
     }
 }
+
+# binary_to_term implementation functions
 
 sub _binary_to_term
 {
@@ -249,18 +257,18 @@ sub _binary_to_term
     }
     elsif ($tag == TAG_SMALL_TUPLE_EXT || $tag == TAG_LARGE_TUPLE_EXT)
     {
-        my $arity;
+        my $length;
         if ($tag == TAG_SMALL_TUPLE_EXT)
         {
-            $arity = ord(substr($data, $i, 1));
+            $length = ord(substr($data, $i, 1));
             $i += 1;
         }
         elsif ($tag == TAG_LARGE_TUPLE_EXT)
         {
-            ($arity) = unpack('N', substr($data, $i, 4));
+            ($length) = unpack('N', substr($data, $i, 4));
             $i += 4;
         }
-        return _binary_to_term_sequence($i, $arity, $data);
+        return _binary_to_term_sequence($i, $length, $data);
     }
     elsif ($tag == TAG_NIL_EXT)
     {
@@ -274,10 +282,10 @@ sub _binary_to_term
     }
     elsif ($tag == TAG_LIST_EXT)
     {
-        my ($arity) = unpack('N', substr($data, $i, 4));
+        my ($length) = unpack('N', substr($data, $i, 4));
         $i += 4;
         my $tmp;
-        ($i, $tmp) = _binary_to_term_sequence($i, $arity, $data);
+        ($i, $tmp) = _binary_to_term_sequence($i, $length, $data);
         my $tail;
         ($i, $tail) = _binary_to_term($i, $data);
         if (ref($tail) ne 'Erlang::OtpErlangList' || $tail->count() != 0)
@@ -330,9 +338,10 @@ sub _binary_to_term
     }
     elsif ($tag == TAG_NEW_FUN_EXT)
     {
-        my ($size) = unpack('N', substr($data, $i, 4));
-        return ($i + $size,
-                Erlang::OtpErlangFunction->new($tag, substr($data, $i, $size)));
+        my ($length) = unpack('N', substr($data, $i, 4));
+        return ($i + $length,
+                Erlang::OtpErlangFunction->new($tag, substr($data, $i,
+                                                            $length)));
     }
     elsif ($tag == TAG_EXPORT_EXT)
     {
@@ -374,14 +383,14 @@ sub _binary_to_term
     }
     elsif ($tag == TAG_MAP_EXT)
     {
-        my ($arity) = unpack('N', substr($data, $i, 4));
+        my ($length) = unpack('N', substr($data, $i, 4));
         $i += 4;
         my %pairs = ();
-        if ($arity > 0)
+        if ($length > 0)
         {
             my $key;
             my $value;
-            for my $arity_index (0 .. ($arity - 1))
+            for my $length_index (0 .. ($length - 1))
             {
                 ($i, $key) = _binary_to_term($i, $data);
                 ($i, $value) = _binary_to_term($i, $data);
@@ -455,12 +464,12 @@ sub _binary_to_term
 sub _binary_to_term_sequence
 {
     no warnings 'all';
-    my ($i, $arity, $data) = @_;
+    my ($i, $length, $data) = @_;
     my @sequence = ();
-    if ($arity > 0)
+    if ($length > 0)
     {
         my $element;
-        for my $arity_index (0 .. ($arity - 1))
+        for my $length_index (0 .. ($length - 1))
         {
             ($i, $element) = _binary_to_term($i, $data);
             push(@sequence, $element);
@@ -468,6 +477,8 @@ sub _binary_to_term_sequence
     }
     return ($i, \@sequence);
 }
+
+# (binary_to_term Erlang term primitive type functions)
 
 sub _binary_to_integer
 {
@@ -558,6 +569,8 @@ sub _binary_to_atom
     }
 }
 
+# term_to_binary implementation functions
+
 sub _term_to_binary
 {
     my ($term) = @_;
@@ -606,27 +619,33 @@ sub _term_to_binary
     }
 }
 
+# (term_to_binary Erlang term composite type functions)
+
 sub _string_to_binary
 {
     my ($term) = @_;
-    my $arity = length($term);
-    if ($arity == 0)
+    my $length = length($term);
+    if ($length == 0)
     {
         return chr(TAG_NIL_EXT);
     }
-    elsif ($arity < 65536)
+    elsif ($length <= 65535)
     {
-        return pack('Cn', TAG_STRING_EXT, $arity) . $term;
+        return pack('Cn', TAG_STRING_EXT, $length) . $term;
     }
-    else
+    elsif ($length <= 4294967295)
     {
         my $term_packed = '';
         for my $c (split(//, $term))
         {
             $term_packed .= chr(TAG_SMALL_INTEGER_EXT) . $c;
         }
-        return pack('CN', TAG_LIST_EXT, $arity) . $term_packed .
+        return pack('CN', TAG_LIST_EXT, $length) . $term_packed .
                chr(TAG_NIL_EXT);
+    }
+    else
+    {
+        die Erlang::OutputException->new('uint32 overflow');
     }
 }
 
@@ -634,21 +653,47 @@ sub _tuple_to_binary
 {
     my ($term_ref) = @_;
     my @term = @$term_ref;
-    my $arity = scalar(@term);
+    my $length = scalar(@term);
     my $term_packed = '';
     for my $element (@term)
     {
         $term_packed .= _term_to_binary($element);
     }
-    if ($arity < 256)
+    if ($length <= 255)
     {
-        return pack('CC', TAG_SMALL_TUPLE_EXT, $arity) . $term_packed;
+        return pack('CC', TAG_SMALL_TUPLE_EXT, $length) . $term_packed;
+    }
+    elsif ($length <= 4294967295)
+    {
+        return pack('CN', TAG_LARGE_TUPLE_EXT, $length) . $term_packed;
     }
     else
     {
-        return pack('CN', TAG_LARGE_TUPLE_EXT, $arity) . $term_packed;
+        die Erlang::OutputException->new('uint32 overflow');
     }
 }
+
+sub _hash_to_binary
+{
+    my (%term) = @_;
+    my $term_packed = '';
+    my $length = 0;
+    while (my ($key, $value) = each(%term))
+    {
+        $term_packed .= _term_to_binary($key) . _term_to_binary($value);
+        $length++;
+    }
+    if ($length <= 4294967295)
+    {
+        return pack('CN', TAG_MAP_EXT, $length) . $term_packed;
+    }
+    else
+    {
+        die Erlang::OutputException->new('uint32 overflow');
+    }
+}
+
+# (term_to_binary Erlang term primitive type functions)
 
 sub _integer_to_binary
 {
@@ -671,45 +716,34 @@ sub _bignum_to_binary
 {
     my ($term) = @_;
     my $bignum = abs($term);
-    my $size = ceil(_bignum_bit_length($bignum) / 8.0);
     my $sign;
     if ($term < 0)
     {
-        $sign = chr(1);
+        $sign = 1;
     }
     else
     {
-        $sign = chr(0);
+        $sign = 0;
     }
-    my $l = $sign;
-    if ($size > 0)
+    my $l = '';
+    while ($bignum > 0)
     {
-        for my $byte (0 .. ($size - 1))
-        {
-            $l .= chr($bignum & 255);
-            $bignum = $bignum >> 8;
-        }
+        $l .= chr($bignum & 255);
+        $bignum = $bignum >> 8;
     }
-    if ($size < 256)
+    my $length = length($l);
+    if ($length <= 255)
     {
-        return pack('CC', TAG_SMALL_BIG_EXT, $size) . $l;
+        return pack('CCC', TAG_SMALL_BIG_EXT, $length, $sign) . $l;
+    }
+    elsif ($length <= 4294967295)
+    {
+        return pack('CNC', TAG_LARGE_BIG_EXT, $length, $sign) . $l;
     }
     else
     {
-        return pack('CN', TAG_LARGE_BIG_EXT, $size) . $l;
+        die Erlang::OutputException->new('uint32 overflow');
     }
-}
-
-sub _bignum_bit_length
-{
-    my ($bignum) = @_;
-    my $count = 0;
-    while ($bignum)
-    {
-        $bignum = $bignum >> 1;
-        $count++;
-    }
-    return $count;
 }
 
 sub _float_to_binary
@@ -723,19 +757,6 @@ sub _float_to_binary
     {
         return chr(TAG_NEW_FLOAT_EXT) . pack('d', $term);
     }
-}
-
-sub _hash_to_binary
-{
-    my (%term) = @_;
-    my $term_packed = '';
-    my $arity = 0;
-    while (my ($key, $value) = each(%term))
-    {
-        $term_packed .= _term_to_binary($key) . _term_to_binary($value);
-        $arity++;
-    }
-    return pack('CN', TAG_MAP_EXT, $arity) . $term_packed;
 }
 
 1;

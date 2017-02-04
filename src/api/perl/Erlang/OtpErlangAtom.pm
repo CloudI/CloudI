@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -78,27 +78,35 @@ sub binary
     }
     elsif (ref($value) eq '')
     {
-        my $size = length($value);
+        my $length = length($value);
         if ($self->{utf8})
         {
-            if ($size < 256)
+            if ($length <= 255)
             {
-                return pack('CC', TAG_SMALL_ATOM_UTF8_EXT, $size) . $value;
+                return pack('CC', TAG_SMALL_ATOM_UTF8_EXT, $length) . $value;
+            }
+            elsif ($length <= 65535)
+            {
+                return pack('Cn', TAG_ATOM_UTF8_EXT, $length) . $value;
             }
             else
             {
-                return pack('Cn', TAG_ATOM_UTF8_EXT, $size) . $value;
+                die Erlang::OutputException->new('uint16 overflow');
             }
         }
         else
         {
-            if ($size < 256)
+            if ($length <= 255)
             {
-                return pack('CC', TAG_SMALL_ATOM_EXT, $size) . $value;
+                return pack('CC', TAG_SMALL_ATOM_EXT, $length) . $value;
+            }
+            elsif ($length <= 65535)
+            {
+                return pack('Cn', TAG_ATOM_EXT, $length) . $value;
             }
             else
             {
-                return pack('Cn', TAG_ATOM_EXT, $size) . $value;
+                die Erlang::OutputException->new('uint16 overflow');
             }
         }
     }
