@@ -62,20 +62,42 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 * `Erlang >= 19.0 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
-* `Java >= 1.5 JDK (default-jdk/Ubuntu, (built-in)/OSX)`
-* `Javascript >= 0.8.0 (nodejs/Ubuntu)`
-* `Perl >= 5.10 (perl/Ubuntu)`
-  * `Compress::Zlib (cpan)`
-* `PHP >= 5.3.6 (php5/Ubuntu)`
-* `Python >= 2.7.0 (python+python-dev/Ubuntu, python27/macports)`
-* `Ruby >= 1.9.0 (ruby1.9.1/Ubuntu, ruby19/macports)`
-* `GNU MP library (libgmp3-dev/Ubuntu, gmp/macports)`
 * `boost >= 1.36.0 (libboost-system-dev+libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
 
-Optional (installed/linked statically, automatically):
+Optional (default="yes"):
 
-* `ZeroMQ >= 3.x.x or 2.x.x (use the "--with-zeromq" configure flag)`
+* `Java >= 1.5 JDK`
+  * `(default-jdk/Ubuntu, (built-in)/OSX)`
+  * Use the "--enable-java-support=no" configure flag to disable
+* `Javascript >= 0.8.0`
+  * `(nodejs/Ubuntu)`
+  * Use the "--enable-javascript-support=no" configure flag to disable
+* `Perl >= 5.10`
+  * `(perl/Ubuntu)`
+  * `Compress::Zlib (cpan)`
+  * Use the "--enable-perl-support=no" configure flag to disable
+* `PHP >= 5.3.6`
+  * `(php5/Ubuntu)`
+  * Use the "--enable-php-support=no" configure flag to disable
+* `Python >= 2.7.0`
+  * `(python+python-dev/Ubuntu, python27/macports)`
+  * Use the "--enable-python-support=no" and "--enable-python-c-support=no" configure flag to disable
+* `Ruby >= 1.9.0`
+  * `(ruby1.9.1/Ubuntu, ruby19/macports)`
+  * Use the "--enable-ruby-support=no" configure flag to disable
+* `GNU MP library`
+  * `(libgmp3-dev/Ubuntu, gmp/macports)`
+  * Used in the hexpi (C++) integration test only
+    ("--with-integration-tests=no" configure flag to disable)
+
+Optional (default="no"):
+
+* `Go >= 1.6`
+  * `(golang/Ubuntu, go/macports)`
+  * Use the "--enable-go-support" configure flag to enable
+* `ZeroMQ >= 3.x.x or 2.x.x`
   * `uuid-dev (uuid-dev/Ubuntu, ossp-uuid/macports)`
+  * Use the "--with-zeromq" configure flag to enable
 
 ### Building
 
