@@ -2049,6 +2049,10 @@ process_update(#state{dispatcher = Dispatcher,
     {NewOsProcess, NewState} = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
             false = SpawnOsProcess,
+            % TODO MESSAGE_REINIT needs to send
+            % new values for priority default,
+            % timeout_async default, timeout_sync default, and
+            % request_timeout_adjustment (with timer set)
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
             {false, NextState};
         {ok, {error, _} = Error} ->

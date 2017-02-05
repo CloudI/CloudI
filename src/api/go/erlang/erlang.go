@@ -886,80 +886,80 @@ func binaryToAtom(i int, reader *bytes.Reader) (int, uint8, []byte, error) {
 
 // TermToBinary implementation functions
 
-func termsToBinary(term interface{}, buffer *bytes.Buffer) (*bytes.Buffer, error) {
-	switch term.(type) {
+func termsToBinary(termI interface{}, buffer *bytes.Buffer) (*bytes.Buffer, error) {
+	switch term := termI.(type) {
 	case uint8:
-		_, err := buffer.Write([]byte{tagSmallIntegerExt, term.(uint8)})
+		_, err := buffer.Write([]byte{tagSmallIntegerExt, term})
 		return buffer, err
 	case uint16:
-		return integerToBinary(int32(term.(uint16)), buffer)
+		return integerToBinary(int32(term), buffer)
 	case uint32:
-		return bignumToBinary(big.NewInt(int64(term.(uint32))), buffer)
+		return bignumToBinary(big.NewInt(int64(term)), buffer)
 	case uint64:
 		var value *big.Int = new(big.Int)
-		value.SetUint64(term.(uint64))
+		value.SetUint64(term)
 		return bignumToBinary(value, buffer)
 	case int8:
-		return integerToBinary(int32(term.(int8)), buffer)
+		return integerToBinary(int32(term), buffer)
 	case int16:
-		return integerToBinary(int32(term.(int16)), buffer)
+		return integerToBinary(int32(term), buffer)
 	case int32:
-		return integerToBinary(term.(int32), buffer)
+		return integerToBinary(term, buffer)
 	case int64:
-		return bignumToBinary(big.NewInt(term.(int64)), buffer)
+		return bignumToBinary(big.NewInt(term), buffer)
 	case int:
-		switch i := term.(int); {
-		case i >= 0 && i <= math.MaxUint8:
-			return termsToBinary(uint8(i), buffer)
-		case i >= math.MinInt32 && i <= math.MaxInt32:
-			return integerToBinary(int32(i), buffer)
-		case i >= math.MinInt64 && i <= math.MaxInt64:
-			return termsToBinary(int64(i), buffer)
+		switch {
+		case term >= 0 && term <= math.MaxUint8:
+			return termsToBinary(uint8(term), buffer)
+		case term >= math.MinInt32 && term <= math.MaxInt32:
+			return integerToBinary(int32(term), buffer)
+		case term >= math.MinInt64 && term <= math.MaxInt64:
+			return termsToBinary(int64(term), buffer)
 		default:
 			return buffer, outputErrorNew("invalid int")
 		}
 	case *big.Int:
-		return bignumToBinary(term.(*big.Int), buffer)
+		return bignumToBinary(term, buffer)
 	case float32:
-		return floatToBinary(float64(term.(float32)), buffer)
+		return floatToBinary(float64(term), buffer)
 	case float64:
-		return floatToBinary(term.(float64), buffer)
+		return floatToBinary(term, buffer)
 	case bool:
-		if term.(bool) {
+		if term {
 			return atomToBinary("true", buffer)
 		}
 		return atomToBinary("false", buffer)
 	case OtpErlangAtom:
-		return atomToBinary(string(term.(OtpErlangAtom)), buffer)
+		return atomToBinary(string(term), buffer)
 	case OtpErlangAtomUTF8:
-		return atomUtf8ToBinary(string(term.(OtpErlangAtomUTF8)), buffer)
+		return atomUtf8ToBinary(string(term), buffer)
 	case OtpErlangAtomCacheRef:
-		_, err := buffer.Write([]byte{tagAtomCacheRef, uint8(term.(OtpErlangAtomCacheRef))})
+		_, err := buffer.Write([]byte{tagAtomCacheRef, uint8(term)})
 		return buffer, err
 	case []byte:
-		return binaryObjectToBinary(OtpErlangBinary{Value: term.([]byte), Bits: 8}, buffer)
+		return binaryObjectToBinary(OtpErlangBinary{Value: term, Bits: 8}, buffer)
 	case OtpErlangBinary:
-		return binaryObjectToBinary(term.(OtpErlangBinary), buffer)
+		return binaryObjectToBinary(term, buffer)
 	case OtpErlangFunction:
-		return functionToBinary(term.(OtpErlangFunction), buffer)
+		return functionToBinary(term, buffer)
 	case OtpErlangPid:
-		return pidToBinary(term.(OtpErlangPid), buffer)
+		return pidToBinary(term, buffer)
 	case OtpErlangPort:
-		return portToBinary(term.(OtpErlangPort), buffer)
+		return portToBinary(term, buffer)
 	case OtpErlangReference:
-		return referenceToBinary(term.(OtpErlangReference), buffer)
+		return referenceToBinary(term, buffer)
 	case string:
-		return stringToBinary(term.(string), buffer)
+		return stringToBinary(term, buffer)
 	case OtpErlangTuple:
-		return tupleToBinary(term.(OtpErlangTuple), buffer)
+		return tupleToBinary(term, buffer)
 	case []interface{}:
-		return tupleToBinary(term.([]interface{}), buffer)
+		return tupleToBinary(term, buffer)
 	case OtpErlangMap:
-		return mapToBinary(term.(OtpErlangMap), buffer)
+		return mapToBinary(term, buffer)
 	case map[interface{}]interface{}:
-		return mapToBinary(term.(map[interface{}]interface{}), buffer)
+		return mapToBinary(term, buffer)
 	case OtpErlangList:
-		return listToBinary(term.(OtpErlangList), buffer)
+		return listToBinary(term, buffer)
 	default:
 		return buffer, outputErrorNew("unknown go type")
 	}

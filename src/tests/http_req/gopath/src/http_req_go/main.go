@@ -42,8 +42,34 @@ package main
 
 import (
 	"cloudi"
+	"erlang"
+	"fmt"
+	"os"
+	"strconv"
 	"sync"
 )
+
+func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+	httpQs := api.RequestHttpQsParse(request)
+	value := httpQs["value"]
+	var valueInt int
+	var err error
+	if value != nil {
+		valueInt, err = strconv.Atoi(value[0])
+		if err != nil {
+			value = nil
+		}
+	}
+	var response []byte
+	if value == nil {
+		response = []byte("<http_test><error>no value specified</error></http_test>")
+	} else {
+		response = []byte(fmt.Sprintf("<http_test><value>%d</value></http_test>", valueInt))
+	}
+	api.Return(requestType, name, pattern, []byte{}, response, timeout, transId, pid)
+	// execution doesn't reach here
+	return nil, nil, nil
+}
 
 func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
@@ -51,11 +77,12 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 	if err != nil {
 		panic(err.Error())
 	}
-	//XXX add more 
+	err = api.Subscribe("go.xml/get", request)
 	_, err = api.Poll(-1)
 	if err != nil {
 		panic(err.Error())
 	}
+	os.Stdout.WriteString("terminate http_req go")
 }
 
 func main() {

@@ -45,6 +45,7 @@ import (
 	"container/list"
 	"encoding/binary"
 	"erlang"
+	"fmt"
 	"math"
 	"net"
 	"os"
@@ -68,9 +69,9 @@ const (
 )
 
 const (
-	// Asynchronous service request
+	// ASYNC is the requestType provided when handling an asynchronous service request
 	ASYNC = 1
-	// Synchronous service request
+	// SYNC is the requestType provided when handling a synchronous service request
 	SYNC = -1
 )
 
@@ -97,10 +98,21 @@ type Instance struct {
 	timeoutTerminate         uint32
 	priorityDefault          int8
 	requestTimeoutAdjustment bool
+	requestTimer             time.Time
+	requestTimeout           uint32
+	responseInfo             []byte
+	response                 []byte
+	transId                  []byte
+	transIds                 [][]byte
+	subscribeCount           uint32
 }
 
 // Callback is a function to handle a service request
-type Callback func(*Instance, int, string, string, []byte, []byte, uint32, int8, []byte, []byte) error
+type Callback func(*Instance, int, string, string, []byte, []byte, uint32, int8, [16]byte, erlang.OtpErlangPid) ([]byte, []byte, error)
+
+func nullResponse(api *Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+	return []byte{}, []byte{}, nil
+}
 
 // API creates an instance of the CloudI API
 func API(threadIndex uint32) (*Instance, error) {
@@ -137,10 +149,11 @@ func API(threadIndex uint32) (*Instance, error) {
 		useHeader = true
 	}
 	fragmentRecv := make([]byte, bufferSize)
+	callbacks := make(map[string]*list.List)
 	bufferRecv := new(bytes.Buffer)
 	bufferRecv.Grow(int(bufferSize))
 	timeoutTerminate := uint32(1000)
-	api := &Instance{socket: socket, useHeader: useHeader, fragmentSize: bufferSize, fragmentRecv: fragmentRecv, bufferRecv: bufferRecv, timeoutTerminate: timeoutTerminate}
+	api := &Instance{socket: socket, useHeader: useHeader, fragmentSize: bufferSize, fragmentRecv: fragmentRecv, callbacks: callbacks, bufferRecv: bufferRecv, timeoutTerminate: timeoutTerminate}
 	var init []byte
 	init, err = erlang.TermToBinary(erlang.OtpErlangAtom("init"), -1)
 	if err != nil {
@@ -157,46 +170,664 @@ func API(threadIndex uint32) (*Instance, error) {
 	return api, nil
 }
 
+// ThreadCount returns the thread count from the service configuration
 func ThreadCount() (uint32, error) {
 	return uintGetenv("CLOUDI_API_INIT_THREAD_COUNT")
 }
 
-//XXX
+// Subscribe subscribes to a service name pattern with a callback
+func (api *Instance) Subscribe(pattern string, function Callback) error {
+	key := api.prefix + pattern
+	functionQueue := api.callbacks[key]
+	if functionQueue == nil {
+		functionQueue = list.New()
+		api.callbacks[key] = functionQueue
+	}
+	_ = functionQueue.PushBack(function)
+	subscribe, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("subscribe"), pattern}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(subscribe)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+// SubscribeCount returns the number of subscriptions for a single service name pattern
+func (api *Instance) SubscribeCount(pattern string) (uint32, error) {
+	subscribeCount, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("subscribe_count"), pattern}, -1)
+	if err != nil {
+		return 0, err
+	}
+	err = api.send(subscribeCount)
+	if err != nil {
+		return 0, err
+	}
+	_, err = api.pollRequest(-1, false)
+	if err != nil {
+		return 0, err
+	}
+	return api.subscribeCount, nil
+}
+
+// Unsubscribe unsubscribes from a service name pattern once
+func (api *Instance) Unsubscribe(pattern string) error {
+	key := api.prefix + pattern
+	functionQueue := api.callbacks[key]
+	_ = functionQueue.Remove(functionQueue.Front())
+	if functionQueue.Len() == 0 {
+		api.callbacks[key] = nil
+	}
+	unsubscribe, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("unsubscribe"), pattern}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(unsubscribe)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendAsync sends an asynchronous service request
+func (api *Instance) SendAsync(name string, requestInfo, request []byte, timeoutPriority ...interface{}) ([]byte, error) {
+	if name == "" {
+		return nil, invalidInputErrorNew()
+	}
+	if requestInfo == nil {
+		requestInfo = []byte{}
+	}
+	if request == nil {
+		request = []byte{}
+	}
+	extraArity := len(timeoutPriority)
+	if extraArity > 2 {
+		return nil, invalidInputErrorNew()
+	}
+	var err error
+	timeout := api.timeoutAsync
+	if extraArity > 0 {
+		timeout, err = timeoutCheck(timeoutPriority[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+	priority := api.priorityDefault
+	if extraArity > 1 {
+		priority, err = priorityCheck(timeoutPriority[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	var sendAsync []byte
+	sendAsync, err = erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("send_async"), name, requestInfo, request, timeout, priority}, -1)
+	if err != nil {
+		return nil, err
+	}
+	err = api.send(sendAsync)
+	if err != nil {
+		return nil, err
+	}
+	_, err = api.pollRequest(-1, false)
+	if err != nil {
+		return nil, err
+	}
+	return api.transId, nil
+}
+
+// SendSync sends a synchronous service request
+func (api *Instance) SendSync(name string, requestInfo, request []byte, timeoutPriority ...interface{}) ([]byte, []byte, []byte, error) {
+	if name == "" {
+		return nil, nil, nil, invalidInputErrorNew()
+	}
+	if requestInfo == nil {
+		requestInfo = []byte{}
+	}
+	if request == nil {
+		request = []byte{}
+	}
+	extraArity := len(timeoutPriority)
+	if extraArity > 2 {
+		return nil, nil, nil, invalidInputErrorNew()
+	}
+	var err error
+	timeout := api.timeoutSync
+	if extraArity > 0 {
+		timeout, err = timeoutCheck(timeoutPriority[0])
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	priority := api.priorityDefault
+	if extraArity > 1 {
+		priority, err = priorityCheck(timeoutPriority[1])
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	var sendSync []byte
+	sendSync, err = erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("send_sync"), name, requestInfo, request, timeout, priority}, -1)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = api.send(sendSync)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	_, err = api.pollRequest(-1, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return api.responseInfo, api.response, api.transId, nil
+}
+
+// McastAsync sends asynchronous service requests to all subscribers of the matching service name pattern
+func (api *Instance) McastAsync(name string, requestInfo, request []byte, timeoutPriority ...interface{}) ([][]byte, error) {
+	if name == "" {
+		return nil, invalidInputErrorNew()
+	}
+	if requestInfo == nil {
+		requestInfo = []byte{}
+	}
+	if request == nil {
+		request = []byte{}
+	}
+	extraArity := len(timeoutPriority)
+	if extraArity > 2 {
+		return nil, invalidInputErrorNew()
+	}
+	var err error
+	timeout := api.timeoutAsync
+	if extraArity > 0 {
+		timeout, err = timeoutCheck(timeoutPriority[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+	priority := api.priorityDefault
+	if extraArity > 1 {
+		priority, err = priorityCheck(timeoutPriority[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	var mcastAsync []byte
+	mcastAsync, err = erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("mcast_async"), name, requestInfo, request, timeout, priority}, -1)
+	if err != nil {
+		return nil, err
+	}
+	err = api.send(mcastAsync)
+	if err != nil {
+		return nil, err
+	}
+	_, err = api.pollRequest(-1, false)
+	if err != nil {
+		return nil, err
+	}
+	return api.transIds, nil
+}
+
+func (api *Instance) forwardAsyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
+		_, timeout = api.timeoutAdjust()
+	}
+	if requestInfo == nil {
+		requestInfo = []byte{}
+	}
+	if request == nil {
+		request = []byte{}
+	}
+	forwardAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_async"), name, requestInfo, request, timeout, priority, transId[:], pid}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(forwardAsync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ForwardAsync forwards an asynchronous service request to a different service name
+func (api *Instance) ForwardAsync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+	err := api.forwardAsyncI(name, requestInfo, request, timeout, priority, transId, pid)
+	if err == nil {
+		err = forwardAsyncErrorNew()
+	}
+	panic(err)
+}
+
+func (api *Instance) forwardSyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
+		_, timeout = api.timeoutAdjust()
+	}
+	if requestInfo == nil {
+		requestInfo = []byte{}
+	}
+	if request == nil {
+		request = []byte{}
+	}
+	forwardSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_sync"), name, requestInfo, request, timeout, priority, transId[:], pid}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(forwardSync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ForwardSync forwards a synchronous service request to a different service name
+func (api *Instance) ForwardSync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+	err := api.forwardSyncI(name, requestInfo, request, timeout, priority, transId, pid)
+	if err == nil {
+		err = forwardSyncErrorNew()
+	}
+	panic(err)
+}
+
+// Forward forwards a service request to a different service name
+func (api *Instance) Forward(requestType int, name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+	switch requestType {
+	case ASYNC:
+		api.ForwardAsync(name, requestInfo, request, timeout, priority, transId, pid)
+	case SYNC:
+		api.ForwardSync(name, requestInfo, request, timeout, priority, transId, pid)
+	default:
+		panic(invalidInputErrorNew())
+	}
+}
+
+func (api *Instance) returnAsyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) error {
+	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
+		var timedOut bool
+		timedOut, timeout = api.timeoutAdjust()
+		if timedOut {
+			responseInfo, response = []byte{}, []byte{}
+		}
+	}
+	if responseInfo == nil {
+		responseInfo = []byte{}
+	}
+	if response == nil {
+		response = []byte{}
+	}
+	returnAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_async"), name, pattern, responseInfo, response, timeout, transId[:], pid}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(returnAsync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReturnAsync provides a response to an asynchronous service request
+func (api *Instance) ReturnAsync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+	err := api.returnAsyncI(name, pattern, responseInfo, response, timeout, transId, pid)
+	if err == nil {
+		err = returnAsyncErrorNew()
+	}
+	panic(err)
+}
+
+func (api *Instance) returnSyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) error {
+	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
+		var timedOut bool
+		timedOut, timeout = api.timeoutAdjust()
+		if timedOut {
+			responseInfo, response = []byte{}, []byte{}
+		}
+	}
+	if responseInfo == nil {
+		responseInfo = []byte{}
+	}
+	if response == nil {
+		response = []byte{}
+	}
+	returnSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_sync"), name, pattern, responseInfo, response, timeout, transId[:], pid}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(returnSync)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReturnSync provides a response to a synchronous service request
+func (api *Instance) ReturnSync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+	err := api.returnSyncI(name, pattern, responseInfo, response, timeout, transId, pid)
+	if err == nil {
+		err = returnSyncErrorNew()
+	}
+	panic(err)
+}
+
+// Return provides a response to a service request
+func (api *Instance) Return(requestType int, name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+	switch requestType {
+	case ASYNC:
+		api.ReturnAsync(name, pattern, responseInfo, response, timeout, transId, pid)
+	case SYNC:
+		api.ReturnSync(name, pattern, responseInfo, response, timeout, transId, pid)
+	default:
+		panic(invalidInputErrorNew())
+	}
+}
+
+// RecvAsync blocks to receive an asynchronous service request response
+func (api *Instance) RecvAsync(extra ...interface{}) ([]byte, []byte, []byte, error) {
+	extraArity := len(extra)
+	if extraArity > 3 {
+		return nil, nil, nil, invalidInputErrorNew()
+	}
+	timeout := api.timeoutSync
+	var transId [16]byte
+	consume := true
+	for argI := 0; argI < extraArity; argI++ {
+		switch arg := extra[argI].(type) {
+		case uint32:
+			timeout = arg
+		case uint8:
+			timeout = uint32(arg)
+		case uint16:
+			timeout = uint32(arg)
+		case uint64:
+			if arg > math.MaxUint32 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case int8:
+			if arg < 0 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case int16:
+			if arg < 0 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case int32:
+			if arg < 0 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case int64:
+			if arg < 0 || arg > math.MaxUint32 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case int:
+			if arg < 0 || arg > math.MaxUint32 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			timeout = uint32(arg)
+		case [16]byte:
+			transId = arg
+		case []byte:
+			if len(arg) != 16 {
+				return nil, nil, nil, invalidInputErrorNew()
+			}
+			copy(transId[:], arg)
+		case bool:
+			consume = arg
+		default:
+			return nil, nil, nil, invalidInputErrorNew()
+		}
+	}
+	recvAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("recv_async"), timeout, transId[:], consume}, -1)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	err = api.send(recvAsync)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	_, err = api.pollRequest(-1, false)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return api.responseInfo, api.response, api.transId, nil
+}
+
+func timeoutCheck(value interface{}) (uint32, error) {
+	switch timeout := value.(type) {
+	case uint32:
+		return timeout, nil
+	case uint8:
+		return uint32(timeout), nil
+	case uint16:
+		return uint32(timeout), nil
+	case uint64:
+		if timeout > math.MaxUint32 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	case int8:
+		if timeout < 0 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	case int16:
+		if timeout < 0 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	case int32:
+		if timeout < 0 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	case int64:
+		if timeout < 0 || timeout > math.MaxUint32 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	case int:
+		if timeout < 0 || timeout > math.MaxUint32 {
+			return 0, invalidInputErrorNew()
+		}
+		return uint32(timeout), nil
+	default:
+		return 0, invalidInputErrorNew()
+	}
+}
+
+func priorityCheck(value interface{}) (int8, error) {
+	switch priority := value.(type) {
+	case int8:
+		return priority, nil
+	case uint8:
+		if priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case uint16:
+		if priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case uint32:
+		if priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case uint64:
+		if priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case int16:
+		if priority < math.MaxInt8 || priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case int32:
+		if priority < math.MaxInt8 || priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case int64:
+		if priority < math.MaxInt8 || priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	case int:
+		if priority < math.MaxInt8 || priority > math.MaxInt8 {
+			return 0, invalidInputErrorNew()
+		}
+		return int8(priority), nil
+	default:
+		return 0, invalidInputErrorNew()
+	}
+}
+
+// ProcessIndex returns the 0-based index of this process in the service instance
 func (api *Instance) ProcessIndex() uint32 {
 	return api.processIndex
 }
 
+// ProcessCount returns the current process count based on the service configuration
 func (api *Instance) ProcessCount() uint32 {
 	return api.processCount
 }
 
+// ProcessCountMax returns the count_process_dynamic maximum count based on the service configuration
 func (api *Instance) ProcessCountMax() uint32 {
 	return api.processCountMax
 }
 
+// ProcessCountMin returns the count_process_dynamic minimum count based on the service configuration
 func (api *Instance) ProcessCountMin() uint32 {
 	return api.processCountMin
 }
 
+// Prefix returns the service name pattern prefix from the service configuration
 func (api *Instance) Prefix() string {
 	return api.prefix
 }
 
+// TimeoutInitialize returns the service initialization timeout from the service configuration
 func (api *Instance) TimeoutInitialize() uint32 {
 	return api.timeoutInitialize
 }
 
+// TimeoutAsync returns the default asynchronous service request send timeout from the service configuration
 func (api *Instance) TimeoutAsync() uint32 {
 	return api.timeoutAsync
 }
 
+// TimeoutSync returns the default synchronous service request send timeout from the service configuration
 func (api *Instance) TimeoutSync() uint32 {
 	return api.timeoutSync
 }
 
+// TimeoutTerminate returns the service termination timeout based on the service configuration
 func (api *Instance) TimeoutTerminate() uint32 {
 	return api.timeoutTerminate
+}
+
+func (api *Instance) timeoutAdjust() (bool, uint32) {
+	elapsed := int64(time.Now().Sub(api.requestTimer) / time.Millisecond)
+	if elapsed < 0 {
+		elapsed = 0
+	} else if elapsed > int64(api.requestTimeout) {
+		return true, 0
+	}
+	return false, api.requestTimeout - uint32(elapsed)
+}
+
+func (api *Instance) callback(command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+	if api.requestTimeoutAdjustment {
+		api.requestTimer = time.Now()
+		api.requestTimeout = timeout
+	}
+	functionQueue := api.callbacks[pattern]
+	var function Callback
+	if functionQueue == nil {
+		function = nullResponse
+	} else {
+		function = functionQueue.Remove(functionQueue.Front()).(Callback)
+		_ = functionQueue.PushBack(function)
+	}
+	switch command {
+	case messageSendAsync:
+		responseInfo, response, err := api.callbackExecute(function, command, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+		if err != nil {
+			switch err.(type) {
+			case *InvalidInputError:
+				return err
+			case *MessageDecodingError:
+				return err
+			case *TerminateError:
+				return err
+			case *ReturnAsyncError:
+				return nil
+			case *ReturnSyncError:
+				return err
+			case *ForwardAsyncError:
+				return nil
+			case *ForwardSyncError:
+				return err
+			default:
+				os.Stderr.WriteString(err.Error())
+				err = nil
+			}
+		}
+		return api.returnAsyncI(name, pattern, responseInfo, response, timeout, transId, pid)
+	case messageSendSync:
+		responseInfo, response, err := api.callbackExecute(function, command, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+		if err != nil {
+			switch err.(type) {
+			case *InvalidInputError:
+				return err
+			case *MessageDecodingError:
+				return err
+			case *TerminateError:
+				return err
+			case *ReturnAsyncError:
+				return err
+			case *ReturnSyncError:
+				return nil
+			case *ForwardAsyncError:
+				return err
+			case *ForwardSyncError:
+				return nil
+			default:
+				os.Stderr.WriteString(err.Error())
+				err = nil
+			}
+		}
+		return api.returnSyncI(name, pattern, responseInfo, response, timeout, transId, pid)
+	default:
+		return messageDecodingErrorNew()
+	}
+}
+
+func (api *Instance) callbackExecute(function Callback, command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) (responseInfo []byte, response []byte, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch errValue := r.(type) {
+			case error:
+				err = errValue
+			default:
+				err = fmt.Errorf("%#v", errValue)
+			}
+		}
+	}()
+	switch command {
+	case messageSendAsync:
+		responseInfo, response, err = function(api, ASYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+	case messageSendSync:
+		responseInfo, response, err = function(api, SYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+	}
+	return
 }
 
 func (api *Instance) handleEvents(external bool, reader *bytes.Reader, command uint32) (bool, error) {
@@ -275,9 +906,9 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 		var data []byte
 		data, err = api.recv()
 		if err != nil {
-			switch err.(type) {
+			switch errNet := err.(type) {
 			case *net.OpError:
-				if err.(*net.OpError).Timeout() {
+				if errNet.Timeout() {
 					return true, nil
 				}
 			default:
@@ -359,28 +990,222 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 		case messageSendAsync:
 			fallthrough
 		case messageSendSync:
-			//XXX
-			return false, messageDecodingErrorNew()
+			var nameSize uint32
+			err = binary.Read(reader, nativeEndian, &nameSize)
+			if err != nil {
+				return false, err
+			}
+			name := make([]byte, nameSize-1)
+			_, err = reader.Read(name)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			var patternSize uint32
+			err = binary.Read(reader, nativeEndian, &patternSize)
+			if err != nil {
+				return false, err
+			}
+			pattern := make([]byte, patternSize-1)
+			_, err = reader.Read(pattern)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			var requestInfoSize uint32
+			err = binary.Read(reader, nativeEndian, &requestInfoSize)
+			if err != nil {
+				return false, err
+			}
+			requestInfo := make([]byte, requestInfoSize)
+			_, err = reader.Read(requestInfo)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			var requestSize uint32
+			err = binary.Read(reader, nativeEndian, &requestSize)
+			if err != nil {
+				return false, err
+			}
+			request := make([]byte, requestSize)
+			_, err = reader.Read(request)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			var requestTimeout uint32
+			err = binary.Read(reader, nativeEndian, &requestTimeout)
+			if err != nil {
+				return false, err
+			}
+			var priority int8
+			err = binary.Read(reader, nativeEndian, &priority)
+			if err != nil {
+				return false, err
+			}
+			var transId [16]byte
+			_, err = reader.Read(transId[:])
+			if err != nil {
+				return false, err
+			}
+			var pidSize uint32
+			err = binary.Read(reader, nativeEndian, &pidSize)
+			if err != nil {
+				return false, err
+			}
+			pidBinary := make([]byte, pidSize)
+			_, err = reader.Read(pidBinary)
+			if err != nil {
+				return false, err
+			}
+			var pid interface{}
+			pid, err = erlang.BinaryToTerm(pidBinary)
+			if err != nil {
+				return false, err
+			}
+			if reader.Len() > 0 {
+				var handled bool
+				handled, err = api.handleEvents(external, reader, 0)
+				if err != nil {
+					return false, err
+				}
+				if !handled {
+					return false, nil
+				}
+			}
+			err = api.callback(command, string(name), string(pattern), requestInfo, request, requestTimeout, priority, transId, pid.(erlang.OtpErlangPid))
+			return false, err
 		case messageRecvAsync:
 			fallthrough
 		case messageReturnSync:
-			//XXX
-			return false, messageDecodingErrorNew()
+			var responseInfoSize uint32
+			err = binary.Read(reader, nativeEndian, &responseInfoSize)
+			if err != nil {
+				return false, err
+			}
+			responseInfo := make([]byte, responseInfoSize-1)
+			_, err = reader.Read(responseInfo)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			var responseSize uint32
+			err = binary.Read(reader, nativeEndian, &responseSize)
+			if err != nil {
+				return false, err
+			}
+			response := make([]byte, responseSize-1)
+			_, err = reader.Read(response)
+			if err != nil {
+				return false, err
+			}
+			_, err = reader.ReadByte() // null terminator
+			if err != nil {
+				return false, err
+			}
+			transId := make([]byte, 16)
+			_, err = reader.Read(transId)
+			if err != nil {
+				return false, err
+			}
+			if reader.Len() > 0 {
+				_, err = api.handleEvents(external, reader, 0)
+				if err != nil {
+					return false, err
+				}
+			}
+			api.responseInfo = responseInfo
+			api.response = response
+			api.transId = transId
+			return false, nil
 		case messageReturnAsync:
-			//XXX
-			return false, messageDecodingErrorNew()
+			transId := make([]byte, 16)
+			_, err = reader.Read(transId)
+			if err != nil {
+				return false, err
+			}
+			if reader.Len() > 0 {
+				_, err = api.handleEvents(external, reader, 0)
+				if err != nil {
+					return false, err
+				}
+			}
+			api.transId = transId
+			return false, nil
 		case messageReturnsAsync:
-			//XXX
-			return false, messageDecodingErrorNew()
+			var transIdCount uint32
+			err = binary.Read(reader, nativeEndian, &transIdCount)
+			if err != nil {
+				return false, err
+			}
+			transIds := make([][]byte, transIdCount)
+			for i := uint32(0); i < transIdCount; i++ {
+				transId := make([]byte, 16)
+				_, err = reader.Read(transId)
+				if err != nil {
+					return false, err
+				}
+				transIds[i] = transId
+			}
+			if reader.Len() > 0 {
+				_, err = api.handleEvents(external, reader, 0)
+				if err != nil {
+					return false, err
+				}
+			}
+			api.transIds = transIds
+			return false, nil
 		case messageSubscribeCount:
-			//XXX
-			return false, messageDecodingErrorNew()
+			var subscribeCount uint32
+			err = binary.Read(reader, nativeEndian, &subscribeCount)
+			if err != nil {
+				return false, err
+			}
+			if reader.Len() > 0 {
+				_, err = api.handleEvents(external, reader, 0)
+				if err != nil {
+					return false, err
+				}
+			}
+			api.subscribeCount = subscribeCount
+			return false, nil
+		case messageTerm:
+			_, err = api.handleEvents(external, reader, command)
+			if err != nil {
+				return false, err
+			}
+			return false, nil
 		case messageReinit:
-			//XXX
-			return false, messageDecodingErrorNew()
+			err = binary.Read(reader, nativeEndian, &(api.processCount))
+			if err != nil {
+				return false, err
+			}
 		case messageKeepalive:
-			//XXX
-			return false, messageDecodingErrorNew()
+			var keepalive []byte
+			keepalive, err = erlang.TermToBinary(erlang.OtpErlangAtom("keepalive"), -1)
+			if err != nil {
+				return false, err
+			}
+			err = api.send(keepalive)
+			if err != nil {
+				return false, err
+			}
 		default:
 			return false, messageDecodingErrorNew()
 		}
@@ -399,6 +1224,32 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 // Poll blocks to process incoming CloudI service requests
 func (api *Instance) Poll(timeout int32) (bool, error) {
 	return api.pollRequest(timeout, true)
+}
+
+func (api *Instance) textKeyValueParse(text []byte) map[string][]string {
+	result := map[string][]string{}
+	data := bytes.Split(text, []byte{0})
+	for i := 0; i < len(data)-1; i += 2 {
+		key := string(data[i])
+		value := string(data[i+1])
+		current := result[key]
+		if current == nil {
+			result[key] = []string{value}
+		} else {
+			result[key] = append(current, value)
+		}
+	}
+	return result
+}
+
+// RequestHttpQsParse parses "text_pairs" from a HTTP GET query string
+func (api *Instance) RequestHttpQsParse(request []byte) map[string][]string {
+	return api.textKeyValueParse(request)
+}
+
+// InfoKeyValueParse parses "text_pairs" in service request info
+func (api *Instance) InfoKeyValueParse(messageInfo []byte) map[string][]string {
+	return api.textKeyValueParse(messageInfo)
 }
 
 func (api *Instance) send(data []byte) error {
@@ -455,9 +1306,9 @@ func (api *Instance) recv() ([]byte, error) {
 		for ready {
 			i, err = api.recvFragment()
 			if err != nil {
-				switch err.(type) {
+				switch errNet := err.(type) {
 				case *net.OpError:
-					if !(err.(*net.OpError).Timeout() && api.bufferRecv.Len() > 0) {
+					if !(errNet.Timeout() && api.bufferRecv.Len() > 0) {
 						return nil, err
 					}
 				default:
@@ -590,6 +1441,8 @@ func terminateErrorNew(timeout uint32) error {
 func (e *TerminateError) Error() string {
 	return "Terminate"
 }
+
+// Timeout provides the termination timeout configured for the service
 func (e *TerminateError) Timeout() uint32 {
 	return e.timeout
 }

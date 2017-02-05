@@ -59,7 +59,8 @@ AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
 AC_MSG_CHECKING([if the C          CloudI API is enabled])
 AC_ARG_ENABLE([c-support],
     [AS_HELP_STRING([--enable-c-support],
-                    [Enable the C CloudI API])],
+                    [Enable the C CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         c_support="true"
@@ -73,7 +74,8 @@ AC_MSG_RESULT([$c_support])
 AC_MSG_CHECKING([if the C++        CloudI API is enabled])
 AC_ARG_ENABLE([cxx-support],
     [AS_HELP_STRING([--enable-cxx-support],
-                    [Enable the C++ CloudI API])],
+                    [Enable the C++ CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         cxx_support="true"
@@ -94,7 +96,8 @@ AC_MSG_RESULT([$cxx_support])
 AC_MSG_CHECKING([if the Go         CloudI API is enabled])
 AC_ARG_ENABLE([go-support],
     [AS_HELP_STRING([--enable-go-support],
-                    [Enable the Go CloudI API])],
+                    [Enable the Go CloudI API
+                     @<:@default=no@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         go_support="true"
@@ -108,7 +111,8 @@ AC_MSG_RESULT([$go_support])
 AC_MSG_CHECKING([if the Java       CloudI API is enabled])
 AC_ARG_ENABLE([java-support],
     [AS_HELP_STRING([--enable-java-support],
-                    [Enable the Java CloudI API])],
+                    [Enable the Java CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         java_support="true"
@@ -122,7 +126,8 @@ AC_MSG_RESULT([$java_support])
 AC_MSG_CHECKING([if the JavaScript CloudI API is enabled])
 AC_ARG_ENABLE([javascript-support],
     [AS_HELP_STRING([--enable-javascript-support],
-                    [Enable the JavaScript/node.js CloudI API])],
+                    [Enable the JavaScript/node.js CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         javascript_support="true"
@@ -136,7 +141,8 @@ AC_MSG_RESULT([$javascript_support])
 AC_MSG_CHECKING([if the Perl       CloudI API is enabled])
 AC_ARG_ENABLE([perl-support],
     [AS_HELP_STRING([--enable-perl-support],
-                    [Enable the Perl CloudI API])],
+                    [Enable the Perl CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         perl_support="true"
@@ -150,7 +156,8 @@ AC_MSG_RESULT([$perl_support])
 AC_MSG_CHECKING([if the PHP        CloudI API is enabled])
 AC_ARG_ENABLE([php-support],
     [AS_HELP_STRING([--enable-php-support],
-                    [Enable the PHP CloudI API])],
+                    [Enable the PHP CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         php_support="true"
@@ -164,7 +171,8 @@ AC_MSG_RESULT([$php_support])
 AC_MSG_CHECKING([if the Python     CloudI API is enabled])
 AC_ARG_ENABLE([python-support],
     [AS_HELP_STRING([--enable-python-support],
-                    [Enable the Python CloudI API])],
+                    [Enable the Python CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         python_support="true"
@@ -178,7 +186,8 @@ AC_MSG_RESULT([$python_support])
 AC_MSG_CHECKING([if the Python/C   CloudI API is enabled])
 AC_ARG_ENABLE([python-c-support],
     [AS_HELP_STRING([--enable-python-c-support],
-                    [Enable the Python CloudI API with C integration])],
+                    [Enable the Python CloudI API with C integration
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         python_c_support="true"
@@ -203,7 +212,8 @@ AC_MSG_RESULT([$python_c_support])
 AC_MSG_CHECKING([if the Ruby       CloudI API is enabled])
 AC_ARG_ENABLE([ruby-support],
     [AS_HELP_STRING([--enable-ruby-support],
-                    [Enable the Ruby CloudI API])],
+                    [Enable the Ruby CloudI API
+                     @<:@default=yes@:>@ ])],
     [
     if test "x$enableval" = "xyes"; then
         ruby_support="true"
