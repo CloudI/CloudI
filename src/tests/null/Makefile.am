@@ -4,6 +4,9 @@
 if C_SUPPORT
     C_SUBDIR = c_src
 endif
+if GO_SUPPORT
+    GO_SUBDIR = gopath
+endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = org jar
 endif
@@ -33,7 +36,7 @@ endif
     python-c-install \
     ruby-install
 
-SUBDIRS = $(C_SUBDIR) $(JAVA_SUBDIR) src
+SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(JAVA_SUBDIR) src
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/null"
 
 javascript-install:

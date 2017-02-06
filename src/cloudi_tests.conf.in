@@ -309,6 +309,7 @@
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
         [{nice, 15}]},
+@CONFIG_TESTS_GO_HTTP_REQ@
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "",
@@ -318,7 +319,6 @@
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
         [{request_timeout_adjustment, true},
          {nice, 10}]},
-@CONFIG_TESTS_GO_HTTP_REQ@
     {external,
         "/tests/http_req/",
         "@JAVA@",
@@ -421,6 +421,7 @@
            {rate_request_min, 0.9},
            {count_max, 2.0},
            {count_min, 0.25}]}]},
+@CONFIG_TESTS_GO_NULL@
     {external,
         "/tests/null/response/",
         "tests/null/priv/null", "",

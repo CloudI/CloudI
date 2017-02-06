@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the null integration test in Go
+
 2017-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Go CloudI API now is working with the http_req integration test

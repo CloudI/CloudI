@@ -357,6 +357,7 @@ if test "x$GO" = "x"; then
     AC_MSG_ERROR([go not found])
 fi
 AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 
@@ -633,6 +634,7 @@ AC_CONFIG_FILES([
     tests/msg_size/cxx_src/Makefile
     tests/null/Makefile
     tests/null/c_src/Makefile
+    tests/null/gopath/Makefile
     tests/null/jar/Makefile
     tests/null/org/Makefile
     tests/null/org/cloudi/Makefile
