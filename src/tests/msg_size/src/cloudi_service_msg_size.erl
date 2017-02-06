@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_msg_size).
@@ -65,9 +65,11 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
+-define(SUFFIXES_OPTIONAL, ["go"]).
+
 -record(state,
     {
-        service,
+        service :: module() | [string()],
         request_count = 0 :: non_neg_integer(),
         elapsed_seconds = undefined :: float() | undefined,
         suffixes = ["cxx", "java", "javascript",
@@ -132,9 +134,18 @@ aspect_terminate(_, _, #state{service = Service,
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
+cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
+    State0 = #state{service = ?MODULE},
+    StateN = lists:foldl(fun(Suffix, #state{suffixes = L} = State1) ->
+        case cloudi_service:get_pid(Dispatcher, Prefix ++ Suffix, limit_min) of
+            {ok, _} ->
+                State1#state{suffixes = L ++ [Suffix]};
+            {error, _} ->
+                State1
+        end
+    end, State0, ?SUFFIXES_OPTIONAL),
     cloudi_service:subscribe(Dispatcher, "erlang"),
-    {ok, #state{service = ?MODULE}}.
+    {ok, StateN}.
 
 cloudi_service_handle_request(_Type, _Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, _TransId, _Pid,

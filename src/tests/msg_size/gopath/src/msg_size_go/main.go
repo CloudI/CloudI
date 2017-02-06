@@ -45,28 +45,29 @@ import (
 	"erlang"
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
+	"unsafe"
+)
+
+const (
+	destination = "/tests/msg_size/erlang"
+	msg_size = 2097152 // 2 MB
 )
 
 func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
-	httpQs := api.RequestHttpQsParse(request)
-	value := httpQs["value"]
-	var valueInt int
-	var err error
-	if value != nil {
-		valueInt, err = strconv.Atoi(value[0])
-		if err != nil {
-			value = nil
-		}
+	if len(request) != msg_size {
+		panic(fmt.Errorf("len(requesst) != %d", msg_size))
 	}
-	var response []byte
-	if value == nil {
-		response = []byte("<http_test><error>no value specified</error></http_test>")
+	iData := [4]byte{request[0], request[1], request[2], request[3]}
+	i := (*uint32)(unsafe.Pointer(&iData))
+	if *i == 4294967295 {
+		*i = 0
 	} else {
-		response = []byte(fmt.Sprintf("<http_test><value>%d</value></http_test>", valueInt))
+		*i += 1
 	}
-	api.Return(requestType, name, pattern, []byte{}, response, timeout, transId, pid)
+	os.Stdout.WriteString(fmt.Sprintf("forward #%d go to %s (with timeout %d ms)\n", *i, destination, timeout))
+	copy(request[:4], iData[:])
+	api.Forward(requestType, destination, requestInfo, request, timeout, priority, transId, pid)
 	// execution doesn't reach here
 	return nil, nil, nil
 }
@@ -78,7 +79,7 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
 	}
-	err = api.Subscribe("go.xml/get", request)
+	err = api.Subscribe("go", request)
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 		return
@@ -87,7 +88,7 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 	if err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
 	}
-	os.Stdout.WriteString("terminate http_req go\n")
+	os.Stdout.WriteString("terminate msg_size go\n")
 }
 
 func main() {

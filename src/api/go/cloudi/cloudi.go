@@ -776,7 +776,7 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *ForwardSyncError:
 				return err
 			default:
-				os.Stderr.WriteString(err.Error())
+				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
 			}
 		}
@@ -800,7 +800,7 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 			case *ForwardSyncError:
 				return nil
 			default:
-				os.Stderr.WriteString(err.Error())
+				os.Stderr.WriteString(err.Error() + "\n")
 				err = nil
 			}
 		}
@@ -1087,7 +1087,9 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 				}
 			}
 			err = api.callback(command, string(name), string(pattern), requestInfo, request, requestTimeout, priority, transId, pid.(erlang.OtpErlangPid))
-			return false, err
+			if err != nil {
+				return false, err
+			}
 		case messageRecvAsync:
 			fallthrough
 		case messageReturnSync:

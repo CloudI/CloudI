@@ -4,6 +4,7 @@
 2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the null integration test in Go
+    * Add the msg_size integration test in Go
 
 2017-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
