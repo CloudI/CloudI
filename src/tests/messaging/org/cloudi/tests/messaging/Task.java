@@ -264,8 +264,6 @@ public class Task implements Runnable
         }
         API.out.println("messaging sequence1 start java");
         assert new String(request).equals("start");
-        // n.b., depends on cloudi_constants.hrl having
-        // SERVICE_NAME_PATTERN_MATCHING defined
         API.TransId test1_id = this.api.send_async(
             this.api.prefix() + "a/b/c/d", ("test1").getBytes());
         API.TransId test2_id = this.api.send_async(

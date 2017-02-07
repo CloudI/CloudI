@@ -200,8 +200,6 @@ Task.prototype.sequence1 = function (command, name, pattern,
         }
         CloudI.stdout_write('messaging sequence1 start javascript\n');
         assert(request == 'start');
-        // n.b., depends on cloudi_constants.hrl having
-        // SERVICE_NAME_PATTERN_MATCHING defined
         Task._api.send_async(Task._api.prefix() + 'a/b/c/d',  'test1',
                              function (test1_id) {
         Task._api.send_async(Task._api.prefix() + 'a/b/c/z',  'test2',

@@ -219,8 +219,6 @@ class Task //extends \Thread
             list(, $old_request, ) = $this->api->recv_async(1000);
         echo "messaging sequence1 start php\n";
         assert($request == 'start');
-        // n.b., depends on cloudi_constants.hrl having
-        // SERVICE_NAME_PATTERN_MATCHING defined
         $test1_id = $this->api->send_async(
             $this->api->prefix() . 'a/b/c/d',  'test1');
         $test2_id = $this->api->send_async(

@@ -170,8 +170,6 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 
 sequence1(Dispatcher, Prefix) ->
-    % n.b., depends on cloudi_constants.hrl having
-    % GROUP_NAME_PATTERN_MATCHING defined
     {ok, Test1Id} = cloudi_service:send_async(Dispatcher, Prefix ++
                                               "a/b/c/d", <<"test1">>),
     {ok, Test2Id} = cloudi_service:send_async(Dispatcher, Prefix ++

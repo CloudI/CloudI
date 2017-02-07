@@ -1145,6 +1145,7 @@
           [{cloudi_service_msg_size, aspect_terminate}]},
          {scope, cloudi_service_msg_size},
          {nice, 15}]},
+@CONFIG_TESTS_GO_MESSAGING@
     {external,
         "/tests/messaging/perl/",
         "@PERL@",

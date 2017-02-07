@@ -184,8 +184,6 @@ class Task(threading.Thread):
             pass
         print('messaging sequence1 start %s' % self.__name)
         assert request == b'start'
-        # n.b., depends on cloudi_constants.hrl having
-        # SERVICE_NAME_PATTERN_MATCHING defined
         test1_id = self.__api.send_async(
             self.__api.prefix() + 'a/b/c/d',  b'test1'
         )

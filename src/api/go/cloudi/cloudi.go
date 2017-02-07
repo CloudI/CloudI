@@ -532,8 +532,8 @@ func (api *Instance) RecvAsync(extra ...interface{}) ([]byte, []byte, []byte, er
 	timeout := api.timeoutSync
 	var transId [16]byte
 	consume := true
-	for argI := 0; argI < extraArity; argI++ {
-		switch arg := extra[argI].(type) {
+	for _, extraArg := range extra {
+		switch arg := extraArg.(type) {
 		case uint32:
 			timeout = arg
 		case uint8:
@@ -816,10 +816,22 @@ func (api *Instance) callbackExecute(function Callback, command uint32, name, pa
 	defer func() {
 		if r := recover(); r != nil {
 			switch errValue := r.(type) {
-			case error:
+			case *InvalidInputError:
+				err = errValue
+			case *MessageDecodingError:
+				err = errValue
+			case *TerminateError:
+				err = errValue
+			case *ReturnAsyncError:
+				err = errValue
+			case *ReturnSyncError:
+				err = errValue
+			case *ForwardAsyncError:
+				err = errValue
+			case *ForwardSyncError:
 				err = errValue
 			default:
-				err = fmt.Errorf("%#v", errValue)
+				err = StackErrorWrapNew(errValue)
 			}
 		}
 	}()
@@ -1100,7 +1112,7 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			responseInfo := make([]byte, responseInfoSize-1)
+			responseInfo := make([]byte, responseInfoSize)
 			_, err = reader.Read(responseInfo)
 			if err != nil {
 				return false, err
@@ -1114,7 +1126,7 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			response := make([]byte, responseSize-1)
+			response := make([]byte, responseSize)
 			_, err = reader.Read(response)
 			if err != nil {
 				return false, err
@@ -1373,6 +1385,43 @@ type StackError interface {
 	Stack() []byte
 }
 
+// StackErrorWrap is used to attach a stacktrace to panic data as an error
+type StackErrorWrap struct {
+	stack []byte
+	Value error
+}
+
+// StackErrorWrapNew creates a new error with a stack trace from any data
+func StackErrorWrapNew(value interface{}) error {
+	stack := debug.Stack()
+	if err, ok := value.(error); ok {
+		return &StackErrorWrap{stack: stack, Value: err}
+	}
+	return &StackErrorWrap{stack: stack, Value: fmt.Errorf("%#v", value)}
+}
+
+func (e *StackErrorWrap) Error() string {
+	output := new(bytes.Buffer)
+	errorFormat(output, e.Value)
+	stackErrorFormat(output, e.stack)
+	return output.String()
+}
+
+// Stack return the stack stored when the error was created
+func (e *StackErrorWrap) Stack() []byte {
+	return e.stack
+}
+func errorFormat(output *bytes.Buffer, err error) {
+	_, _ = output.WriteString(reflect.TypeOf(err).String())
+	_, _ = output.WriteString(": ")
+	_, _ = output.WriteString(err.Error())
+	_, _ = output.WriteString("\n")
+}
+func stackErrorFormat(output *bytes.Buffer, stack []byte) {
+	_, _ = output.WriteString("\t")
+	_, _ = output.Write(bytes.TrimSuffix(bytes.Join(bytes.Split(stack, []byte{'\n'}), []byte{'\n', '\t'}), []byte{'\t'}))
+}
+
 // InvalidInputError indicates that invalid input was provided
 type InvalidInputError struct {
 	stack []byte
@@ -1384,6 +1433,8 @@ func invalidInputErrorNew() error {
 func (e *InvalidInputError) Error() string {
 	return "Invalid Input"
 }
+
+// Stack return the stack stored when the error was created
 func (e *InvalidInputError) Stack() []byte {
 	return e.stack
 }
@@ -1443,6 +1494,8 @@ func messageDecodingErrorNew() error {
 func (e *MessageDecodingError) Error() string {
 	return "Message Decoding Error"
 }
+
+// Stack return the stack stored when the error was created
 func (e *MessageDecodingError) Stack() []byte {
 	return e.stack
 }
@@ -1467,18 +1520,18 @@ func (e *TerminateError) Timeout() uint32 {
 // ErrorWrite outputs error information to the cloudi.log file through stderr
 func ErrorWrite(stream *os.File, err error) {
 	output := new(bytes.Buffer)
-	_, _ = output.WriteString(reflect.TypeOf(err).String())
-	_, _ = output.WriteString(": ")
-	_, _ = output.WriteString(err.Error())
-	_, _ = output.WriteString("\n")
+	if wrap, ok := err.(*StackErrorWrap); ok {
+		errorFormat(output, wrap.Value)
+	} else {
+		errorFormat(output, err)
+	}
 	if serr, ok := err.(StackError); ok {
-		_, _ = output.WriteString("\t")
-		_, _ = output.Write(bytes.Join(bytes.Split(serr.Stack(), []byte{'\n'}), []byte{'\n', '\t'}))
+		stackErrorFormat(output, serr.Stack())
 	}
 	_, _ = stream.Write(output.Bytes())
 }
 
-// ErrorWrite outputs error information and exits
+// ErrorExit outputs error information and exits
 func ErrorExit(stream *os.File, err error) {
 	ErrorWrite(stream, err)
 	os.Exit(1)

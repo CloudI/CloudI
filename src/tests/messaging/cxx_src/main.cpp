@@ -439,8 +439,7 @@ class Input
             std::cout << "messaging sequence1 start c++" << std::endl;
             assert(request_size == 6);
             assert(::memcmp(request, "start", 6) == 0);
-            // n.b., depends on cloudi_constants.hrl having
-            // SERVICE_NAME_PATTERN_MATCHING defined
+
             result = api.send_async(std::string(api.prefix()) + "a/b/c/d",
                                     "test1", 6);
             assert(result == CloudI::API::return_value::success);

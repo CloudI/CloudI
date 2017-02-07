@@ -249,8 +249,6 @@ sub _sequence1
     }
     print "messaging sequence1 start perl\n";
     assert($request eq 'start');
-    # n.b., depends on cloudi_constants.hrl having
-    # SERVICE_NAME_PATTERN_MATCHING defined
     my $test1_id = $self->{api}->send_async(
         $self->{api}->prefix() . 'a/b/c/d',  'test1');
     my $test2_id = $self->{api}->send_async(

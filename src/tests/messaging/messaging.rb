@@ -200,8 +200,6 @@ if __FILE__ == $PROGRAM_NAME
                 end
                 $stdout.puts 'messaging sequence1 start ruby'
                 assert{request == 'start'}
-                # n.b., depends on cloudi_constants.hrl having
-                # SERVICE_NAME_PATTERN_MATCHING defined
                 test1_id = @api.send_async("#{@api.prefix}a/b/c/d", 'test1')
                 test2_id = @api.send_async("#{@api.prefix}a/b/c/z", 'test2')
                 test3_id = @api.send_async("#{@api.prefix}a/b/c/dd", 'test3')
