@@ -49,6 +49,8 @@ import (
 	"math"
 	"net"
 	"os"
+	"reflect"
+	"runtime/debug"
 	"strconv"
 	"time"
 	"unsafe"
@@ -1366,15 +1368,24 @@ func uintGetenv(key string) (uint32, error) {
 	return uint32(i), nil
 }
 
+// StackError provides an interface for error structs that provide a stacktrace
+type StackError interface {
+	Stack() []byte
+}
+
 // InvalidInputError indicates that invalid input was provided
 type InvalidInputError struct {
+	stack []byte
 }
 
 func invalidInputErrorNew() error {
-	return &InvalidInputError{}
+	return &InvalidInputError{stack: debug.Stack()}
 }
 func (e *InvalidInputError) Error() string {
 	return "Invalid Input"
+}
+func (e *InvalidInputError) Stack() []byte {
+	return e.stack
 }
 
 // ReturnSyncError indicates a request was handled with a sync return
@@ -1423,13 +1434,17 @@ func (e *ForwardAsyncError) Error() string {
 
 // MessageDecodingError indicates an error decoding CloudI messages
 type MessageDecodingError struct {
+	stack []byte
 }
 
 func messageDecodingErrorNew() error {
-	return &MessageDecodingError{}
+	return &MessageDecodingError{stack: debug.Stack()}
 }
 func (e *MessageDecodingError) Error() string {
 	return "Message Decoding Error"
+}
+func (e *MessageDecodingError) Stack() []byte {
+	return e.stack
 }
 
 // TerminateError indicates that unavoidable termination is occurring
@@ -1447,4 +1462,24 @@ func (e *TerminateError) Error() string {
 // Timeout provides the termination timeout configured for the service
 func (e *TerminateError) Timeout() uint32 {
 	return e.timeout
+}
+
+// ErrorWrite outputs error information to the cloudi.log file through stderr
+func ErrorWrite(stream *os.File, err error) {
+	output := new(bytes.Buffer)
+	_, _ = output.WriteString(reflect.TypeOf(err).String())
+	_, _ = output.WriteString(": ")
+	_, _ = output.WriteString(err.Error())
+	_, _ = output.WriteString("\n")
+	if serr, ok := err.(StackError); ok {
+		_, _ = output.WriteString("\t")
+		_, _ = output.Write(bytes.Join(bytes.Split(serr.Stack(), []byte{'\n'}), []byte{'\n', '\t'}))
+	}
+	_, _ = stream.Write(output.Bytes())
+}
+
+// ErrorWrite outputs error information and exits
+func ErrorExit(stream *os.File, err error) {
+	ErrorWrite(stream, err)
+	os.Exit(1)
 }

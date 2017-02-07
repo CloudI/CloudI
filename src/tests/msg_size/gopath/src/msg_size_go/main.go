@@ -51,7 +51,7 @@ import (
 
 const (
 	destination = "/tests/msg_size/erlang"
-	msg_size = 2097152 // 2 MB
+	msg_size    = 2097152 // 2 MB
 )
 
 func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
@@ -76,17 +76,17 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
 	api, err := cloudi.API(threadIndex)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
 	err = api.Subscribe("go", request)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
 	_, err = api.Poll(-1)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 	}
 	os.Stdout.WriteString("terminate msg_size go\n")
 }
@@ -94,8 +94,7 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 func main() {
 	threadCount, err := cloudi.ThreadCount()
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		cloudi.ErrorExit(os.Stderr, err)
 	}
 	var execution sync.WaitGroup
 	for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {

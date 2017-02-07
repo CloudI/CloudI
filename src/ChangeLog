@@ -5,6 +5,8 @@
 
     * Add the null integration test in Go
     * Add the msg_size integration test in Go
+    * Now go errors that use cloudi.StackError have a stack trace in output
+      with generic output functions cloudi.ErrorWrite and cloudi.ErrorExit
 
 2017-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

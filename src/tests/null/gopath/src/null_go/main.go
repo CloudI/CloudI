@@ -55,17 +55,17 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
 	api, err := cloudi.API(threadIndex)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
 	err = api.Subscribe("go/get", request)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
 	_, err = api.Poll(-1)
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
+		cloudi.ErrorWrite(os.Stderr, err)
 	}
 	os.Stdout.WriteString("terminate null go\n")
 }
@@ -73,8 +73,7 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 func main() {
 	threadCount, err := cloudi.ThreadCount()
 	if err != nil {
-		os.Stderr.WriteString(err.Error() + "\n")
-		os.Exit(1)
+		cloudi.ErrorExit(os.Stderr, err)
 	}
 	var execution sync.WaitGroup
 	for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {
