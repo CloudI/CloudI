@@ -4,12 +4,14 @@
 2017-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the messaging integration test in Go
+    * Remove extra nextTick calls within the Javascript CloudI API
+    * Fix a possible buffer underrun in the Javascript CloudI API
 
 2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the null integration test in Go
     * Add the msg_size integration test in Go
-    * Now go errors that use cloudi.StackError have a stack trace in output
+    * Now Go errors that use cloudi.StackError have a stack trace in output
       with generic output functions cloudi.ErrorWrite and cloudi.ErrorExit
 
 2017-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>

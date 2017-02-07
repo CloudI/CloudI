@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -259,7 +259,7 @@ CloudI.API = function API (thread_index, callback) {
             else if (data.length < API._poll_data_size) {
                 API._poll_data = data;
             }
-            else if (data.length > API._poll_data_size) {
+            else if (data.length > API._poll_data_size + 4) {
                 var next_data = data.slice(API._poll_data_size);
                 data = data.slice(0, API._poll_data_size);
                 API._poll_data = next_data;
@@ -591,7 +591,7 @@ CloudI.API.prototype.timeout_terminate = function () {
     return this._timeout_terminate;
 };
 
-CloudI.API.prototype._null_response = function (command, name, pattern,
+CloudI.API.prototype._null_response = function (request_type, name, pattern,
                                                 request_info, request,
                                                 timeout, priority,
                                                 trans_id, pid) {
@@ -853,10 +853,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                process.nextTick(function () {
-                    API._poll_callback(API);
-                    API._poll_callback = undefined;
-                });
+                API._poll_callback(API);
+                API._poll_callback = undefined;
                 return;
             case MESSAGE_SEND_ASYNC:
             case MESSAGE_SEND_SYNC:
@@ -902,12 +900,10 @@ CloudI.API.prototype._poll_request = function (data) {
                         process.exit(1);
                     }
                     else {
-                        process.nextTick(function () {
-                            API._callback(command, name, pattern,
-                                          request_info, request,
-                                          request_timeout, priority,
-                                          trans_id, pid_object);
-                        });
+                        API._callback(command, name, pattern,
+                                      request_info, request,
+                                      request_timeout, priority,
+                                      trans_id, pid_object);
                     }
                 });
                 return;
@@ -929,10 +925,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                process.nextTick(function () {
-                    API._poll_callback(response_info, response, trans_id);
-                    API._poll_callback = undefined;
-                });
+                API._poll_callback(response_info, response, trans_id);
+                API._poll_callback = undefined;
                 return;
             case MESSAGE_RETURN_ASYNC:
                 var j = i + 16;
@@ -941,10 +935,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                process.nextTick(function () {
-                    API._poll_callback(trans_id);
-                    API._poll_callback = undefined;
-                });
+                API._poll_callback(trans_id);
+                API._poll_callback = undefined;
                 return;
             case MESSAGE_RETURNS_ASYNC:
                 var trans_id_count = unpackUint32(i, data);
@@ -961,10 +953,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                process.nextTick(function () {
-                    API._poll_callback(trans_ids);
-                    API._poll_callback = undefined;
-                });
+                API._poll_callback(trans_ids);
+                API._poll_callback = undefined;
                 return;
             case MESSAGE_SUBSCRIBE_COUNT:
                 var count = unpackUint32(i, data);
@@ -972,10 +962,8 @@ CloudI.API.prototype._poll_request = function (data) {
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
                 }
-                process.nextTick(function () {
-                    API._poll_callback(count);
-                    API._poll_callback = undefined;
-                });
+                API._poll_callback(count);
+                API._poll_callback = undefined;
                 return;
             case MESSAGE_TERM:
                 API._handle_events(data, data_size, i, command);
@@ -1128,9 +1116,7 @@ CloudI.API.prototype._send = function (terms) {
         if (API._use_header) {
             data = Buffer.concat([packUint32big(data.length), data]);
         }
-        process.nextTick(function () {
-            API._s_out.write(data, 'binary');
-        });
+        API._s_out.write(data, 'binary');
     });
 };
 
