@@ -310,14 +310,14 @@ sub mcast_async
 sub forward_
 {
     my $self = shift;
-    my ($command, $name, $request_info, $request,
+    my ($request_type, $name, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    if ($command == ASYNC)
+    if ($request_type == ASYNC)
     {
         $self->forward_async($name, $request_info, $request,
                              $timeout, $priority, $trans_id, $pid);
     }
-    elsif ($command == SYNC)
+    elsif ($request_type == SYNC)
     {
         $self->forward_sync($name, $request_info, $request,
                             $timeout, $priority, $trans_id, $pid);
@@ -387,14 +387,14 @@ sub forward_sync
 sub return_
 {
     my $self = shift;
-    my ($command, $name, $pattern, $response_info, $response,
+    my ($request_type, $name, $pattern, $response_info, $response,
         $timeout, $trans_id, $pid) = @_;
-    if ($command == ASYNC)
+    if ($request_type == ASYNC)
     {
         $self->return_async($name, $pattern, $response_info, $response,
                             $timeout, $trans_id, $pid);
     }
-    elsif ($command == SYNC)
+    elsif ($request_type == SYNC)
     {
         $self->return_sync($name, $pattern, $response_info, $response,
                            $timeout, $trans_id, $pid);
@@ -547,7 +547,7 @@ sub timeout_terminate
 sub _null_response
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     return '';
 }

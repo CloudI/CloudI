@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -166,7 +166,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -180,7 +180,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     m_object(*m_api,
-                             command,
+                             request_type,
                              std::string(name),
                              std::string(pattern),
                              request_info,
@@ -210,7 +210,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -224,7 +224,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     m_object(*m_api,
-                             command,
+                             request_type,
                              name,
                              pattern,
                              request_info,
@@ -254,7 +254,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -268,7 +268,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (*m_object)(*m_api,
-                                command,
+                                request_type,
                                 std::string(name),
                                 std::string(pattern),
                                 request_info,
@@ -298,7 +298,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -312,7 +312,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (*m_object)(*m_api,
-                                command,
+                                request_type,
                                 name,
                                 pattern,
                                 request_info,
@@ -355,7 +355,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -369,7 +369,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (m_object.*m_f)(*m_api,
-                                    command,
+                                    request_type,
                                     std::string(name),
                                     std::string(pattern),
                                     request_info,
@@ -425,7 +425,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -439,7 +439,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (m_object.*m_f)(*m_api,
-                                    command,
+                                    request_type,
                                     name,
                                     pattern,
                                     request_info,
@@ -493,7 +493,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -507,7 +507,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (*m_f)(*m_api,
-                           command,
+                           request_type,
                            std::string(name),
                            std::string(pattern),
                            request_info,
@@ -560,7 +560,7 @@ class API
                     delete m_api;
                 }
 
-                virtual void operator () (int const command,
+                virtual void operator () (int const request_type,
                                           char const * const name,
                                           char const * const pattern,
                                           void const * const request_info,
@@ -574,7 +574,7 @@ class API
                                           uint32_t const pid_size)
                 {
                     (*m_f)(*m_api,
-                           command,
+                           request_type,
                            name,
                            pattern,
                            request_info,
@@ -605,7 +605,7 @@ class API
         };
 
     public:
-        // command values
+        // request_type values
         static int const ASYNC = 1;
         static int const SYNC = -1;
 
@@ -960,7 +960,7 @@ class API
 
         uint32_t get_subscribe_count() const;
 
-        int forward_(int const command,
+        int forward_(int const request_type,
                      char const * const name,
                      void const * const request_info,
                      uint32_t const request_info_size,
@@ -972,7 +972,7 @@ class API
                      char const * const pid,
                      uint32_t const pid_size) const;
 
-        inline int forward_(int const command,
+        inline int forward_(int const request_type,
                             std::string const & name,
                             void const * const request_info,
                             uint32_t const request_info_size,
@@ -984,7 +984,7 @@ class API
                             char const * const pid,
                             uint32_t const pid_size) const
         {
-            return forward_(command,
+            return forward_(request_type,
                             name.c_str(),
                             request_info,
                             request_info_size,
@@ -1065,7 +1065,7 @@ class API
                                 pid_size);
         }
 
-        int return_(int const command,
+        int return_(int const request_type,
                     char const * const name,
                     char const * const pattern,
                     void const * const response_info,
@@ -1077,7 +1077,7 @@ class API
                     char const * const pid,
                     uint32_t const pid_size) const;
 
-        inline int return_(int const command,
+        inline int return_(int const request_type,
                            std::string const & name,
                            std::string const & pattern,
                            void const * const response_info,
@@ -1089,7 +1089,7 @@ class API
                            char const * const pid,
                            uint32_t const pid_size) const
         {
-            return return_(command,
+            return return_(request_type,
                            name.c_str(),
                            pattern.c_str(),
                            response_info,

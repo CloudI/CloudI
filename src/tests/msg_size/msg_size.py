@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -69,7 +69,7 @@ class _Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate msg_size python')
 
-    def request(self, command, name, pattern, request_info, request,
+    def request(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
         i = struct.unpack('=I', request[:4])[0]
         if i == 4294967295:
@@ -80,7 +80,7 @@ class _Task(threading.Thread):
         print('forward #%d python to %s (with timeout %d ms)' % (
             i, _DESTINATION, timeout,
         ))
-        self.__api.forward_(command, _DESTINATION, request_info, request,
+        self.__api.forward_(request_type, _DESTINATION, request_info, request,
                             timeout, priority, trans_id, pid)
 
 if __name__ == '__main__':

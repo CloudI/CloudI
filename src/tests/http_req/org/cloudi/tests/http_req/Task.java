@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ public class Task implements Runnable
         }
     }
 
-    public Object request(Integer command, String name, String pattern,
+    public Object request(Integer request_type, String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)
@@ -104,7 +104,7 @@ public class Task implements Runnable
             response =
                 "<http_test><error>no value specified</error></http_test>";
         }
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), response.getBytes(),
                          timeout, trans_id, pid);
         return null;

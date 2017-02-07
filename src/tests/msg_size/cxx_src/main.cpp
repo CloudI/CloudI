@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@
 static char buffer[MSG_SIZE];
 
 static void request(cloudi_instance_t * api,
-                    int const command,
+                    int const request_type,
                     char const * const /*name*/,
                     char const * const /*pattern*/,
                     void const * const request_info,
@@ -71,7 +71,7 @@ static void request(cloudi_instance_t * api,
         (*i)++;
     std::cout << "forward #" << *i << " c++ to " DESTINATION
         " (with timeout " << timeout << " ms)" << std::endl;
-    cloudi_forward(api, command, DESTINATION,
+    cloudi_forward(api, request_type, DESTINATION,
                    request_info, request_info_size,
                    buffer, request_size,
                    timeout, priority, trans_id, pid, pid_size);

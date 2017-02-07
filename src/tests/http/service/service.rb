@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -76,11 +76,11 @@ if __FILE__ == $PROGRAM_NAME
                 CloudI::API.assert(&test)
             end
 
-            def text(command, name, pattern, request_info, request,
+            def text(request_type, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid)
                 $stdout.puts "(#{request})"
                 assert{"Test Text" == request}
-                @api.return_(command, name, pattern, "", "Test Response",
+                @api.return_(request_type, name, pattern, "", "Test Response",
                              timeout, trans_id, pid)
             end
         end

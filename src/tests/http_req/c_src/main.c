@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ typedef struct
 } process_requests_t;
 
 static void request(cloudi_instance_t * api,
-                    int const command,
+                    int const request_type,
                     char const * const name,
                     char const * const pattern,
                     void const * const request_info,
@@ -86,7 +86,7 @@ static void request(cloudi_instance_t * api,
         memcpy(response,
                "<http_test><error>no value specified</error></http_test>", 57);
     }
-    cloudi_return(api, command, name, pattern, "", 0,
+    cloudi_return(api, request_type, name, pattern, "", 0,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);
 }

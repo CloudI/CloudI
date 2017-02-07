@@ -50,7 +50,7 @@ typedef struct
 } process_requests_t;
 
 static void request(cloudi_instance_t * api,
-                    int const command,
+                    int const request_type,
                     char const * const name,
                     char const * const pattern,
                     void const * const request_info,

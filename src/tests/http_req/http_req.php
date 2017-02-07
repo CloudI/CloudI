@@ -4,7 +4,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,8 @@ class Task //extends \Thread
         echo "terminate http_req php\n";
     }
 
-    public function request($command, $name, $pattern, $request_info, $request,
+    public function request($request_type, $name, $pattern,
+                            $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
         $http_qs = $this->api->request_http_qs_parse($request);
@@ -88,7 +89,7 @@ class Task //extends \Thread
             $response =
 "<http_test><value>{$value}</value></http_test>";
         }
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $response,
                             $timeout, $trans_id, $pid);
     }

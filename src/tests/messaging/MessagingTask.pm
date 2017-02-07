@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -119,128 +119,128 @@ sub assert
 sub _sequence1_abcd
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/b/c/d'));
     assert($request eq 'test1');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_abc_
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/b/c/*'));
     assert($request eq 'test2' || $request eq 'test3');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_ab_d
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/b/*/d'));
     assert($request eq 'test4' || $request eq 'test5');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_a_cd
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/*/c/d'));
     assert($request eq 'test6' || $request eq 'test7');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1__bcd
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . '*/b/c/d'));
     assert($request eq 'test8' || $request eq 'test9');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_ab__
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/b/*'));
     assert($request eq 'test10');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_a__d
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/*/d'));
     assert($request eq 'test11');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1___cd
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . '*/c/d'));
     assert($request eq 'test12');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_a___
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . 'a/*'));
     assert($request eq 'test13');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1____d
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . '*/d'));
     assert($request eq 'test14');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1_____
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     assert($pattern eq ($self->{api}->prefix() . '*'));
     assert($request eq 'test15');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request, $timeout, $trans_id, $pid);
 }
 
 sub _sequence1
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     my @end = $self->{api}->recv_async(1000);
     while ($end[1] eq 'end')
@@ -375,86 +375,86 @@ sub _sequence1
     print "messaging sequence1 end perl\n";
     # start sequence2
     $self->{api}->send_async($self->{api}->prefix() . 'sequence2', 'start');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e1
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '1', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e2
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '2', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e3
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '3', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e4
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '4', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e5
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '5', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e6
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '6', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e7
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '7', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2_e8
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', '8', $timeout, $trans_id, $pid);
 }
 
 sub _sequence2
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     print "messaging sequence2 start perl\n";
     assert($request eq 'start');
@@ -501,21 +501,21 @@ sub _sequence2
     print "messaging sequence2 end perl\n";
     # start sequence3
     $self->{api}->send_async($self->{api}->prefix() . 'sequence3', 'start');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }
 
 sub _sequence3_f1
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request_i,
+    my ($request_type, $name, $pattern, $request_info, $request_i,
         $timeout, $priority, $trans_id, $pid) = @_;
     if ($request_i == 4)
     {
         return 'done';
     }
     my $request_new = $request_i + 2; # two steps forward
-    $self->{api}->forward_($command, $self->{api}->prefix() . 'f2',
+    $self->{api}->forward_($request_type, $self->{api}->prefix() . 'f2',
                            $request_info, $request_new,
                            $timeout, $priority, $trans_id, $pid);
 }
@@ -523,10 +523,10 @@ sub _sequence3_f1
 sub _sequence3_f2
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request_i,
+    my ($request_type, $name, $pattern, $request_info, $request_i,
         $timeout, $priority, $trans_id, $pid) = @_;
     my $request_new = $request_i - 1; # one step back
-    $self->{api}->forward_($command, $self->{api}->prefix() . 'f1',
+    $self->{api}->forward_($request_type, $self->{api}->prefix() . 'f1',
                            $request_info, $request_new,
                            $timeout, $priority, $trans_id, $pid);
 }
@@ -534,16 +534,16 @@ sub _sequence3_f2
 sub _sequence3_g1
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', $request . 'suffix', $timeout, $trans_id, $pid);
 }
 
 sub _sequence3
 {
     my $self = shift;
-    my ($command, $name, $pattern, $request_info, $request,
+    my ($request_type, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
     print "messaging sequence3 start perl\n";
     assert($request eq 'start');
@@ -564,7 +564,7 @@ sub _sequence3
     print "messaging sequence3 end perl\n";
     # loop to find any infrequent problems, restart sequence1
     $self->{api}->send_async($self->{api}->prefix() . 'sequence1', 'start');
-    $self->{api}->return_($command, $name, $pattern,
+    $self->{api}->return_($request_type, $name, $pattern,
                           '', 'end', $timeout, $trans_id, $pid);
 }
 

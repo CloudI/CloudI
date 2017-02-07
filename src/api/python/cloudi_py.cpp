@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -580,7 +580,7 @@ class callback : public CloudI::API::function_object_c
         }
 
         virtual void operator () (CloudI::API const & api,
-                                  int const command,
+                                  int const request_type,
                                   char const * const name,
                                   char const * const pattern,
                                   void const * const request_info,
@@ -599,7 +599,7 @@ class callback : public CloudI::API::function_object_c
                                             BUILDVALUE_BYTES ",I,i,"
                                             BUILDVALUE_BYTES ","
                                             BUILDVALUE_BYTES ")",
-                                            command, name, pattern,
+                                            request_type, name, pattern,
                                             request_info, request_info_size,
                                             request, request_size, timeout,
                                             static_cast<int>(priority),
@@ -632,22 +632,22 @@ class callback : public CloudI::API::function_object_c
                 bool const forward_async_exception =
                     (::strcmp(exception_name, "forward_async_exception") == 0);
                 bool exception_invalid = false;
-                if (command == CloudI::API::SYNC &&
+                if (request_type == CloudI::API::SYNC &&
                     return_sync_exception)
                 {
                     PyErr_Clear();
                 }
-                else if (command == CloudI::API::SYNC &&
+                else if (request_type == CloudI::API::SYNC &&
                          forward_sync_exception)
                 {
                     PyErr_Clear();
                 }
-                else if (command == CloudI::API::ASYNC &&
+                else if (request_type == CloudI::API::ASYNC &&
                          return_async_exception)
                 {
                     PyErr_Clear();
                 }
-                else if (command == CloudI::API::ASYNC &&
+                else if (request_type == CloudI::API::ASYNC &&
                          forward_async_exception)
                 {
                     PyErr_Clear();
@@ -800,14 +800,14 @@ class callback : public CloudI::API::function_object_c
                 {
                     // allow empty response to automatically be sent
                 }
-                else if (command == CloudI::API::ASYNC)
+                else if (request_type == CloudI::API::ASYNC)
                 {
                     api.return_async(name, pattern,
                                      response_info, response_info_size,
                                      response, response_size,
                                      timeout, trans_id, pid, pid_size);
                 }
-                else if (command == CloudI::API::SYNC)
+                else if (request_type == CloudI::API::SYNC)
                 {
                     api.return_sync(name, pattern,
                                     response_info, response_info_size,

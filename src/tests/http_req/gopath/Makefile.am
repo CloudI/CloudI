@@ -9,7 +9,7 @@ all-local:
 	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/http_req_go/vendor/
 	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/http_req_go/vendor/
 	$(MKDIR_P) $(builddir)/bin
-	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin go install -x http_req_go
+	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x http_req_go
 
 clean-local:
 	rm -rf $(builddir)/src/http_req_go/vendor/

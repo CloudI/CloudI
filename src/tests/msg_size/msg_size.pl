@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ sub task
     {
         my $task_request = sub
         {
-            my ($command, $name, $pattern, $request_info, $request,
+            my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
             my $i = unpack('L', substr($request, 0, 4));
             if ($i == 4294967295)
@@ -70,7 +70,7 @@ sub task
             my $name_next = DESTINATION;
             print "forward #$i perl to $name_next " .
                   "(with timeout $timeout ms)\n";
-            $api->forward_($command, $name_next, $request_info, $request,
+            $api->forward_($request_type, $name_next, $request_info, $request,
                            $timeout, $priority, $trans_id, $pid);
         };
 

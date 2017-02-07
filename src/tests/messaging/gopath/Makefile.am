@@ -9,7 +9,7 @@ all-local:
 	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/messaging_go/vendor/
 	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/messaging_go/vendor/
 	$(MKDIR_P) $(builddir)/bin
-	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin go install -x messaging_go
+	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x messaging_go
 
 clean-local:
 	rm -rf $(builddir)/src/messaging_go/vendor/

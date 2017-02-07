@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -136,12 +136,12 @@ class API(object):
             trans_ids[i:i + 16] for i in range(0, len(trans_ids), 16)
         ])
 
-    def forward_(self, command, name, request_info, request,
+    def forward_(self, request_type, name, request_info, request,
                  timeout, priority, trans_id, pid):
-        if command == API.ASYNC:
+        if request_type == API.ASYNC:
             self.forward_async(name, request_info, request,
                                timeout, priority, trans_id, pid)
-        elif command == API.SYNC:
+        elif request_type == API.SYNC:
             self.forward_sync(name, request_info, request,
                               timeout, priority, trans_id, pid)
         else:
@@ -159,12 +159,12 @@ class API(object):
                                 timeout, priority, trans_id, pid)
         raise forward_sync_exception()
 
-    def return_(self, command, name, pattern, response_info, response,
+    def return_(self, request_type, name, pattern, response_info, response,
                 timeout, trans_id, pid):
-        if command == API.ASYNC:
+        if request_type == API.ASYNC:
             self.return_async(name, pattern, response_info, response,
                               timeout, trans_id, pid)
-        elif command == API.SYNC:
+        elif request_type == API.SYNC:
             self.return_sync(name, pattern, response_info, response,
                              timeout, trans_id, pid)
         else:

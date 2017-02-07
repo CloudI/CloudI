@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2013-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -72,28 +72,28 @@ class Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate websockets python_c')
 
-    def __connect(self, command, name, pattern, request_info, request,
+    def __connect(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
         assert request == 'CONNECT'
         print('connect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
         return 'got connect! yay!'
 
-    def __disconnect(self, command, name, pattern, request_info, request,
+    def __disconnect(self, request_type, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid):
         assert request == 'DISCONNECT'
         print('disconnect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
         return ''
 
-    def __request(self, command, name, pattern, request_info, request,
+    def __request(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
         # send the request to self
         self.__api.send_async(self.__api.prefix() + 'bounce/delay',
                               request)
         return request
 
-    def __delay(self, command, name, pattern, request_info, request,
+    def __delay(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
         time.sleep(1.0)
         assert name[-6:] == '/delay'

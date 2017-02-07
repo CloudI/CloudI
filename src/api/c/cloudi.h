@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2011-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -90,12 +90,12 @@ typedef struct cloudi_instance_t
 
 } cloudi_instance_t;
 
-/* command values */
+/* request_type values */
 #define CLOUDI_ASYNC     1
 #define CLOUDI_SYNC     -1
 
 typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
-                                  int const command,
+                                  int const request_type,
                                   char const * const name,
                                   char const * const pattern,
                                   void const * const request_info,
@@ -186,7 +186,7 @@ int cloudi_mcast_async_(cloudi_instance_t * p,
                         int8_t const priority);
 
 int cloudi_forward(cloudi_instance_t * p,
-                   int const command,
+                   int const request_type,
                    char const * const name,
                    void const * const request_info,
                    uint32_t const request_info_size,
@@ -223,7 +223,7 @@ int cloudi_forward_sync(cloudi_instance_t * p,
                         uint32_t const pid_size);
 
 int cloudi_return(cloudi_instance_t * p,
-                  int const command,
+                  int const request_type,
                   char const * const name,
                   char const * const pattern,
                   void const * const response_info,

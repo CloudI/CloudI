@@ -3,7 +3,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,7 @@ sub task
     {
         my $task_request = sub
         {
-            my ($command, $name, $pattern, $request_info, $request,
+            my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
             my %http_qs = $api->request_http_qs_parse($request);
             my $response;
@@ -72,7 +72,7 @@ sub task
                 $response =
 "<http_test><value>$value</value></http_test>";
             }
-            $api->return_($command, $name, $pattern,
+            $api->return_($request_type, $name, $pattern,
                           '', $response, $timeout, $trans_id, $pid);
         };
 

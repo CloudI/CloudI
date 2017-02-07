@@ -70,7 +70,8 @@ public class Task implements Runnable
         }
     }
 
-    public Object request(Integer command, String name, String pattern,
+    public Object request(Integer request_type,
+                          String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)

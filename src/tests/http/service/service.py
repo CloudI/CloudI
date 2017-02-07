@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -67,11 +67,11 @@ class _Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate http python')
 
-    def text(self, command, name, pattern, request_info, request,
+    def text(self, request_type, name, pattern, request_info, request,
              timeout, priority, trans_id, pid):
         print(b'(' + request + b')')
         assert b'Test Text' == request
-        self.__api.return_(command, name, pattern, b'', b'Test Response',
+        self.__api.return_(request_type, name, pattern, b'', b'Test Response',
                            timeout, trans_id, pid)
 
 if __name__ == '__main__':

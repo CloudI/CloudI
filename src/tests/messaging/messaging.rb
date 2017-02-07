@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -105,95 +105,107 @@ if __FILE__ == $PROGRAM_NAME
                 CloudI::API.assert(&test)
             end
 
-            def sequence1_abcd(command, name, pattern, request_info, request,
+            def sequence1_abcd(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/b/c/d"}
                 assert{request == 'test1'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_abc_(command, name, pattern, request_info, request,
+            def sequence1_abc_(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/b/c/*"}
                 assert{request == 'test2' or request == 'test3'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_ab_d(command, name, pattern, request_info, request,
+            def sequence1_ab_d(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/b/*/d"}
                 assert{request == 'test4' or request == 'test5'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_a_cd(command, name, pattern, request_info, request,
+            def sequence1_a_cd(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/*/c/d"}
                 assert{request == 'test6' or request == 'test7'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1__bcd(command, name, pattern, request_info, request,
+            def sequence1__bcd(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}*/b/c/d"}
                 assert{request == 'test8' or request == 'test9'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_ab__(command, name, pattern, request_info, request,
+            def sequence1_ab__(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/b/*"}
                 assert{request == 'test10'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_a__d(command, name, pattern, request_info, request,
+            def sequence1_a__d(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/*/d"}
                 assert{request == 'test11'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1___cd(command, name, pattern, request_info, request,
+            def sequence1___cd(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}*/c/d"}
                 assert{request == 'test12'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_a___(command, name, pattern, request_info, request,
+            def sequence1_a___(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}a/*"}
                 assert{request == 'test13'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1____d(command, name, pattern, request_info, request,
+            def sequence1____d(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}*/d"}
                 assert{request == 'test14'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1_____(command, name, pattern, request_info, request,
+            def sequence1_____(request_type, name, pattern,
+                               request_info, request,
                                timeout, priority, trans_id, pid)
                 assert{pattern == "#{@api.prefix}*"}
                 assert{request == 'test15'}
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request, timeout, trans_id, pid)
             end
 
-            def sequence1(command, name, pattern, request_info, request,
+            def sequence1(request_type, name, pattern,
+                          request_info, request,
                           timeout, priority, trans_id, pid)
                 while @api.recv_async(1000)[1] == 'end'
                     # consume "end" and sleep
@@ -310,59 +322,68 @@ if __FILE__ == $PROGRAM_NAME
                 $stdout.puts 'messaging sequence1 end ruby'
                 # start sequence2
                 @api.send_async("#{@api.prefix}sequence2", 'start')
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
 
-            def sequence2_e1(command, name, pattern, request_info, request,
+            def sequence2_e1(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '1', timeout, trans_id, pid)
             end
 
-            def sequence2_e2(command, name, pattern, request_info, request,
+            def sequence2_e2(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '2', timeout, trans_id, pid)
             end
 
-            def sequence2_e3(command, name, pattern, request_info, request,
+            def sequence2_e3(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '3', timeout, trans_id, pid)
             end
 
-            def sequence2_e4(command, name, pattern, request_info, request,
+            def sequence2_e4(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '4', timeout, trans_id, pid)
             end
 
-            def sequence2_e5(command, name, pattern, request_info, request,
+            def sequence2_e5(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '5', timeout, trans_id, pid)
             end
 
-            def sequence2_e6(command, name, pattern, request_info, request,
+            def sequence2_e6(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '6', timeout, trans_id, pid)
             end
 
-            def sequence2_e7(command, name, pattern, request_info, request,
+            def sequence2_e7(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '7', timeout, trans_id, pid)
             end
 
-            def sequence2_e8(command, name, pattern, request_info, request,
+            def sequence2_e8(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', '8', timeout, trans_id, pid)
             end
 
-            def sequence2(command, name, pattern, request_info, request,
+            def sequence2(request_type, name, pattern,
+                          request_info, request,
                           timeout, priority, trans_id, pid)
                 $stdout.puts 'messaging sequence2 start ruby'
                 assert{request == 'start'}
@@ -388,38 +409,42 @@ if __FILE__ == $PROGRAM_NAME
                 $stdout.puts 'messaging sequence2 end ruby'
                 # start sequence3
                 @api.send_async("#{@api.prefix}sequence3", 'start')
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
 
-            def sequence3_f1(command, name, pattern, request_info, request,
+            def sequence3_f1(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
                 request_i = request.to_i
                 if request_i == 4
                     return 'done'
                 end
                 request_new = request_i + 2 # two steps forward
-                @api.forward_(command, "#{@api.prefix}f2",
+                @api.forward_(request_type, "#{@api.prefix}f2",
                               '', request_new.to_s,
                               timeout, priority, trans_id, pid)
             end
 
-            def sequence3_f2(command, name, pattern, request_info, request,
+            def sequence3_f2(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
                 request_i = request.to_i
                 request_new = request_i - 1 # one step back
-                @api.forward_(command, "#{@api.prefix}f1",
+                @api.forward_(request_type, "#{@api.prefix}f1",
                               '', request_new.to_s,
                               timeout, priority, trans_id, pid)
             end
 
-            def sequence3_g1(command, name, pattern, request_info, request,
+            def sequence3_g1(request_type, name, pattern,
+                             request_info, request,
                              timeout, priority, trans_id, pid)
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', request + 'suffix', timeout, trans_id, pid)
             end
 
-            def sequence3(command, name, pattern, request_info, request,
+            def sequence3(request_type, name, pattern,
+                          request_info, request,
                           timeout, priority, trans_id, pid)
                 $stdout.puts 'messaging sequence3 start ruby'
                 assert{request == 'start'}
@@ -435,7 +460,7 @@ if __FILE__ == $PROGRAM_NAME
                 $stdout.puts 'messaging sequence3 end ruby'
                 # loop to find any infrequent problems, restart sequence1
                 @api.send_async(@api.prefix + 'sequence1', 'start')
-                @api.return_(command, name, pattern,
+                @api.return_(request_type, name, pattern,
                              '', 'end', timeout, trans_id, pid)
             end
         end

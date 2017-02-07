@@ -97,7 +97,7 @@ public class API
     }
     private static class NullResponse implements FunctionInterface9
     {
-        public Object invoke(Integer command, String name, String pattern,
+        public Object invoke(Integer request_type, String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -535,7 +535,7 @@ public class API
      * Forward a message to another service
      * subscribed that matches the destination service <code>name</code>.
      *
-     * @param command       constant API.SYNC or API.ASYNC
+     * @param request_type  constant API.SYNC or API.ASYNC
      * @param name          the destination service name
      * @param request_info  any request metadata
      * @param request       the request data
@@ -548,7 +548,7 @@ public class API
      * @throws ForwardSyncException sync service request was forwarded
      * @throws InvalidInputException invalid service request type
      */
-    public void forward_(final Integer command,
+    public void forward_(final Integer request_type,
                          final String name,
                          final byte[] request_info,
                          final byte[] request,
@@ -560,10 +560,10 @@ public class API
                ForwardSyncException,
                InvalidInputException
     {
-        if (command == API.ASYNC)
+        if (request_type == API.ASYNC)
             forward_async(name, request_info, request,
                           timeout, priority, trans_id, pid);
-        else if (command == API.SYNC)
+        else if (request_type == API.SYNC)
             forward_sync(name, request_info, request,
                          timeout, priority, trans_id, pid);
         else
@@ -697,7 +697,7 @@ public class API
     /**
      * Returns a response from a service request.
      *
-     * @param command        constant API.SYNC or API.SYNC
+     * @param request_type   constant API.SYNC or API.SYNC
      * @param name           the service name
      * @param pattern        the service name pattern
      * @param response_info  any response metadata
@@ -710,7 +710,7 @@ public class API
      * @throws ReturnSyncException sync service request returned
      * @throws InvalidInputException invalid service request type
      */
-    public void return_(final Integer command,
+    public void return_(final Integer request_type,
                         final String name,
                         final String pattern,
                         final byte[] response_info,
@@ -722,10 +722,10 @@ public class API
                ReturnSyncException,
                InvalidInputException
     {
-        if (command == API.ASYNC)
+        if (request_type == API.ASYNC)
             return_async(name, pattern, response_info, response,
                          timeout, trans_id, pid);
-        else if (command == API.SYNC)
+        else if (request_type == API.SYNC)
             return_sync(name, pattern, response_info, response,
                         timeout, trans_id, pid);
         else

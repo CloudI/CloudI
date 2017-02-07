@@ -53,7 +53,7 @@ sub task
     {
         my $task_request = sub
         {
-            my ($command, $name, $pattern, $request_info, $request,
+            my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
             print "null perl\n";
             return undef;

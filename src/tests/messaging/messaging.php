@@ -4,7 +4,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -98,117 +98,117 @@ class Task //extends \Thread
         echo "terminate messaging php\n";
     }
 
-    public function sequence1_abcd($command, $name, $pattern,
+    public function sequence1_abcd($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/b/c/d');
         assert($request == 'test1');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_abc_($command, $name, $pattern,
+    public function sequence1_abc_($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/b/c/*');
         assert($request == 'test2' || $request == 'test3');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_ab_d($command, $name, $pattern,
+    public function sequence1_ab_d($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/b/*/d');
         assert($request == 'test4' || $request == 'test5');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_a_cd($command, $name, $pattern,
+    public function sequence1_a_cd($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/*/c/d');
         assert($request == 'test6' || $request == 'test7');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1__bcd($command, $name, $pattern,
+    public function sequence1__bcd($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . '*/b/c/d');
         assert($request == 'test8' || $request == 'test9');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_ab__($command, $name, $pattern,
+    public function sequence1_ab__($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/b/*');
         assert($request == 'test10');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_a__d($command, $name, $pattern,
+    public function sequence1_a__d($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/*/d');
         assert($request == 'test11');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1___cd($command, $name, $pattern,
+    public function sequence1___cd($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . '*/c/d');
         assert($request == 'test12');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_a___($command, $name, $pattern,
+    public function sequence1_a___($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . 'a/*');
         assert($request == 'test13');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1____d($command, $name, $pattern,
+    public function sequence1____d($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . '*/d');
         assert($request == 'test14');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1_____($command, $name, $pattern,
+    public function sequence1_____($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {
         assert($pattern == $this->api->prefix() . '*');
         assert($request == 'test15');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request, $timeout, $trans_id, $pid);
     }
 
-    public function sequence1($command, $name, $pattern,
+    public function sequence1($request_type, $name, $pattern,
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
@@ -314,75 +314,75 @@ class Task //extends \Thread
         echo "messaging sequence1 end php\n";
         // start sequence2
         $this->api->send_async($this->api->prefix() . 'sequence2', 'start');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e1($command, $name, $pattern,
+    public function sequence2_e1($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '1', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e2($command, $name, $pattern,
+    public function sequence2_e2($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '2', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e3($command, $name, $pattern,
+    public function sequence2_e3($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '3', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e4($command, $name, $pattern,
+    public function sequence2_e4($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '4', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e5($command, $name, $pattern,
+    public function sequence2_e5($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '5', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e6($command, $name, $pattern,
+    public function sequence2_e6($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '6', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e7($command, $name, $pattern,
+    public function sequence2_e7($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '7', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2_e8($command, $name, $pattern,
+    public function sequence2_e8($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', '8', $timeout, $trans_id, $pid);
     }
 
-    public function sequence2($command, $name, $pattern,
+    public function sequence2($request_type, $name, $pattern,
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
@@ -430,11 +430,11 @@ class Task //extends \Thread
         echo "messaging sequence2 end php\n";
         # start sequence3
         $this->api->send_async($this->api->prefix() . 'sequence3', 'start');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }
 
-    public function sequence3_f1($command, $name, $pattern,
+    public function sequence3_f1($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
@@ -442,33 +442,33 @@ class Task //extends \Thread
         if ($request_i == 4)
             return 'done';
         $request_new = $request_i + 2; // two steps forward
-        $this->api->forward_($command,
+        $this->api->forward_($request_type,
                              $this->api->prefix() . 'f2', $request_info,
                              strval($request_new),
                              $timeout, $priority, $trans_id, $pid);
     }
 
-    public function sequence3_f2($command, $name, $pattern,
+    public function sequence3_f2($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
         $request_i = intval($request);
         $request_new = $request_i - 1; // one step back
-        $this->api->forward_($command,
+        $this->api->forward_($request_type,
                              $this->api->prefix() . 'f1', $request_info,
                              strval($request_new),
                              $timeout, $priority, $trans_id, $pid);
     }
 
-    public function sequence3_g1($command, $name, $pattern,
+    public function sequence3_g1($request_type, $name, $pattern,
                                  $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', $request . 'suffix', $timeout, $trans_id, $pid);
     }
 
-    public function sequence3($command, $name, $pattern,
+    public function sequence3($request_type, $name, $pattern,
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
@@ -486,7 +486,7 @@ class Task //extends \Thread
         assert($test2_check == 'prefix_suffix');
         echo "messaging sequence3 end php\n";
         $this->api->send_async($this->api->prefix() . 'sequence1', 'start');
-        $this->api->return_($command, $name, $pattern,
+        $this->api->return_($request_type, $name, $pattern,
                             '', 'end', $timeout, $trans_id, $pid);
     }
 }

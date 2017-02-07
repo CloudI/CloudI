@@ -68,7 +68,8 @@ class Task //extends \Thread
         echo "terminate null php\n";
     }
 
-    public function request($command, $name, $pattern, $request_info, $request,
+    public function request($request_type, $name, $pattern,
+                            $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
         echo "null php\n";

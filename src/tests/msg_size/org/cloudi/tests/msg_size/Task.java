@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,7 @@ public class Task implements Runnable
         }
     }
 
-    public void request(Integer command, String name, String pattern,
+    public void request(Integer request_type, String name, String pattern,
                         byte[] request_info, byte[] request,
                         Integer timeout, Byte priority,
                         byte[] trans_id, OtpErlangPid pid)
@@ -91,7 +91,7 @@ public class Task implements Runnable
         buffer.putInt(0, i);
         API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
                        i, Task.DESTINATION, timeout);
-        this.api.forward_(command, Task.DESTINATION,
+        this.api.forward_(request_type, Task.DESTINATION,
                           request_info, request,
                           timeout, priority, trans_id, pid);
     }

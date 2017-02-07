@@ -76,7 +76,7 @@ if __FILE__ == $PROGRAM_NAME
                 CloudI::API.assert(&test)
             end
 
-            def request(command, name, pattern, request_info, request,
+            def request(request_type, name, pattern, request_info, request,
                         timeout, priority, trans_id, pid)
                 $stdout.puts 'null ruby'
                 return nil

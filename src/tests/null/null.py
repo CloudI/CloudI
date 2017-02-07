@@ -69,7 +69,7 @@ class Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate null %s' % self.__name)
 
-    def request(self, command, name, pattern, request_info, request,
+    def request(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
         print('null %s' % self.__name)
         return None

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ if __FILE__ == $PROGRAM_NAME
                 CloudI::API.assert(&test)
             end
 
-            def request(command, name, pattern, request_info, request,
+            def request(request_type, name, pattern, request_info, request,
                         timeout, priority, trans_id, pid)
                 i = request[0,4].unpack('L')[0]
                 if i == 4294967295
@@ -83,7 +83,7 @@ if __FILE__ == $PROGRAM_NAME
                 name_next = DESTINATION
                 $stdout.puts "forward ##{i} ruby to #{name_next} " \
                              "(with timeout #{timeout} ms)"
-                @api.forward_(command, name_next, request_info, request,
+                @api.forward_(request_type, name_next, request_info, request,
                               timeout, priority, trans_id, pid)
             end
         end

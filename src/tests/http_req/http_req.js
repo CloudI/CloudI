@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,7 @@ Task.prototype.run = function () {
         }
     }
 };
-Task.prototype.request = function (command, name, pattern,
+Task.prototype.request = function (request_type, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
     var Task = this;
@@ -85,7 +85,7 @@ Task.prototype.request = function (command, name, pattern,
         response =
 '<http_test><value>' + value + '</value></http_test>';
     }
-    Task._api.return_(command, name, pattern,
+    Task._api.return_(request_type, name, pattern,
                       '', response, timeout, trans_id, pid);
 };
 

@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ Task.prototype.run = function () {
         }
     }
 };
-Task.prototype.request = function (command, name, pattern,
+Task.prototype.request = function (request_type, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
     var Task = this;
@@ -89,7 +89,7 @@ Task.prototype.request = function (command, name, pattern,
     request[3] = buffer[3];
     process.stdout.write('forward #' + i + ' javascript to ' + DESTINATION +
                          ' (with timeout ' + timeout + ' ms)\n');
-    Task._api.forward_(command, DESTINATION, request_info, request,
+    Task._api.forward_(request_type, DESTINATION, request_info, request,
                        timeout, priority, trans_id, pid);
 };
 

@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2014, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -71,7 +71,7 @@ class Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate http_req %s' % self.__name)
 
-    def request(self, command, name, pattern, request_info, request,
+    def request(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
         http_qs = self.__api.request_http_qs_parse(request)
         value = http_qs.get(b'value', None)
@@ -83,7 +83,7 @@ class Task(threading.Thread):
                 value = value[0]
             response = """\
 <http_test><value>%d</value></http_test>""" % (int(value),)
-        self.__api.return_(command, name, pattern,
+        self.__api.return_(request_type, name, pattern,
                            b'', response.encode('utf-8'),
                            timeout, trans_id, pid)
 

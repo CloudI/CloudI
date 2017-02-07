@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2013-2015, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -69,7 +69,7 @@ class Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate echo python_c')
 
-    def __request(self, command, name, pattern, request_info, request,
+    def __request(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
         if request == '':
             return 'echo'

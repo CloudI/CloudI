@@ -4,7 +4,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -71,7 +71,8 @@ class Task //extends \Thread
         echo "terminate msg_size php\n";
     }
 
-    public function request($command, $name, $pattern, $request_info, $request,
+    public function request($request_type, $name, $pattern,
+                            $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
         list(, $i) = unpack('L', substr($request, 0, 4));
@@ -82,7 +83,8 @@ class Task //extends \Thread
         $request = pack('L', $i) . substr($request, 4);
         echo "forward #{$i} php to " . DESTINATION .
              " (with timeout {$timeout} ms)\n";
-        $this->api->forward_($command, DESTINATION, $request_info, $request,
+        $this->api->forward_($request_type, DESTINATION,
+                             $request_info, $request,
                              $timeout, $priority, $trans_id, $pid);
     }
 }

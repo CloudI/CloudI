@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -217,10 +217,10 @@ class API
         return $this->poll_request(null, false);
     }
 
-    public function forward_($command, $name, $request_info, $request,
+    public function forward_($request_type, $name, $request_info, $request,
                              $timeout, $priority, $trans_id, $pid)
     {
-        switch ($command)
+        switch ($request_type)
         {
             case API::$ASYNC:
                 $this->forward_async($name, $request_info, $request,
@@ -279,11 +279,11 @@ class API
         throw new ForwardSyncException();
     }
 
-    public function return_($command, $name, $pattern,
+    public function return_($request_type, $name, $pattern,
                             $response_info, $response,
                             $timeout, $trans_id, $pid)
     {
-        switch ($command)
+        switch ($request_type)
         {
             case API::$ASYNC:
                 $this->return_async($name, $pattern, $response_info, $response,
@@ -412,7 +412,7 @@ class API
         return $this->timeout_terminate;
     }
 
-    private function null_response($command, $name, $pattern,
+    private function null_response($request_type, $name, $pattern,
                                    $request_info, $request,
                                    $timeout, $priority, $trans_id, $pid)
     {

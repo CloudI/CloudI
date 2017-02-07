@@ -6,6 +6,12 @@
     * Add the messaging integration test in Go
     * Remove extra nextTick calls within the Javascript CloudI API
     * Fix a possible buffer underrun in the Javascript CloudI API
+    * The "command" variable in service request handlers within the
+      integration tests that are external services has been changed to be
+      "request_type" which is more consistent with other source code and
+      helps to distinguish it from the internal "command" variable
+    * The GO configure variable now works properly
+    * The Go CloudI API is now tested with Go 1.7.5 and all is well
 
 2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 

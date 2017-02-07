@@ -4,7 +4,7 @@
 #
 # BSD LICENSE
 # 
-# Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -176,9 +176,9 @@ module CloudI
             return poll_request(nil, false)
         end
 
-        def forward_(command, name, request_info, request,
+        def forward_(request_type, name, request_info, request,
                      timeout, priority, trans_id, pid)
-            case command
+            case request_type
             when ASYNC
                 forward_async(name, request_info, request,
                               timeout, priority, trans_id, pid)
@@ -230,9 +230,9 @@ module CloudI
             raise ForwardSyncException.new()
         end
 
-        def return_(command, name, pattern, response_info, response,
+        def return_(request_type, name, pattern, response_info, response,
                     timeout, trans_id, pid)
-            case command
+            case request_type
             when ASYNC
                 return_async(name, pattern, response_info, response,
                              timeout, trans_id, pid)
@@ -301,7 +301,7 @@ module CloudI
             return poll_request(nil, false)
         end
 
-        def null_response(command, name, pattern, request_info, request,
+        def null_response(request_type, name, pattern, request_info, request,
                           timeout, priority, trans_id, pid)
             return ''
         end

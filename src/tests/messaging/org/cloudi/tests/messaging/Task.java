@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2012-2014, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -77,7 +77,8 @@ public class Task implements Runnable
         this.thread_index = thread_index;
     }
 
-    public void sequence1_abcd(Integer command, String name, String pattern,
+    public void sequence1_abcd(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -87,12 +88,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "a/b/c/d");
         assert new String(request).equals("test1");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_abc_(Integer command, String name, String pattern,
+    public void sequence1_abc_(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -103,12 +105,13 @@ public class Task implements Runnable
         assert pattern.equals(this.api.prefix() + "a/b/c/*");
         assert (new String(request).equals("test2")) ||
                (new String(request).equals("test3"));
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_ab_d(Integer command, String name, String pattern,
+    public void sequence1_ab_d(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -119,12 +122,13 @@ public class Task implements Runnable
         assert pattern.equals(this.api.prefix() + "a/b/*/d");
         assert (new String(request).equals("test4")) ||
                (new String(request).equals("test5"));
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_a_cd(Integer command, String name, String pattern,
+    public void sequence1_a_cd(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -135,12 +139,13 @@ public class Task implements Runnable
         assert pattern.equals(this.api.prefix() + "a/*/c/d");
         assert (new String(request).equals("test6")) ||
                (new String(request).equals("test7"));
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1__bcd(Integer command, String name, String pattern,
+    public void sequence1__bcd(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -151,12 +156,13 @@ public class Task implements Runnable
         assert pattern.equals(this.api.prefix() + "*/b/c/d");
         assert (new String(request).equals("test8")) ||
                (new String(request).equals("test9"));
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_ab__(Integer command, String name, String pattern,
+    public void sequence1_ab__(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -166,12 +172,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "a/b/*");
         assert new String(request).equals("test10");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_a__d(Integer command, String name, String pattern,
+    public void sequence1_a__d(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -181,12 +188,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "a/*/d");
         assert new String(request).equals("test11");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1___cd(Integer command, String name, String pattern,
+    public void sequence1___cd(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -196,12 +204,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "*/c/d");
         assert new String(request).equals("test12");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_a___(Integer command, String name, String pattern,
+    public void sequence1_a___(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -211,12 +220,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "a/*");
         assert new String(request).equals("test13");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1____d(Integer command, String name, String pattern,
+    public void sequence1____d(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -226,12 +236,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "*/d");
         assert new String(request).equals("test14");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1_____(Integer command, String name, String pattern,
+    public void sequence1_____(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -241,12 +252,13 @@ public class Task implements Runnable
     {
         assert pattern.equals(this.api.prefix() + "*");
         assert new String(request).equals("test15");
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), request,
                          timeout, trans_id, pid);
     }
  
-    public void sequence1(Integer command, String name, String pattern,
+    public void sequence1(Integer request_type,
+                          String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)
@@ -360,12 +372,13 @@ public class Task implements Runnable
         // start sequence2
         this.api.send_async(this.api.prefix() + "sequence2",
                             ("start").getBytes());
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e1(Integer command, String name, String pattern,
+    public void sequence2_e1(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -373,12 +386,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("1").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e2(Integer command, String name, String pattern,
+    public void sequence2_e2(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -386,12 +400,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("2").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e3(Integer command, String name, String pattern,
+    public void sequence2_e3(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -399,12 +414,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("3").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e4(Integer command, String name, String pattern,
+    public void sequence2_e4(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -412,12 +428,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("4").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e5(Integer command, String name, String pattern,
+    public void sequence2_e5(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -425,12 +442,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("5").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e6(Integer command, String name, String pattern,
+    public void sequence2_e6(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -438,12 +456,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("6").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e7(Integer command, String name, String pattern,
+    public void sequence2_e7(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -451,12 +470,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("7").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2_e8(Integer command, String name, String pattern,
+    public void sequence2_e8(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -464,12 +484,13 @@ public class Task implements Runnable
                                     API.ReturnSyncException,
                                     API.InvalidInputException
     {
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("8").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence2(Integer command, String name, String pattern,
+    public void sequence2(Integer request_type,
+                          String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)
@@ -519,12 +540,13 @@ public class Task implements Runnable
         // start sequence3
         this.api.send_async(this.api.prefix() + "sequence3",
                             ("start").getBytes());
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public byte[] sequence3_f1(Integer command, String name, String pattern,
+    public byte[] sequence3_f1(Integer request_type,
+                               String name, String pattern,
                                byte[] request_info, byte[] request,
                                Integer timeout, Byte priority,
                                byte[] trans_id, OtpErlangPid pid)
@@ -539,13 +561,14 @@ public class Task implements Runnable
             return ("done").getBytes();
         }
         byte[] request_new = {(byte) (request_i + 2)}; // two steps forward
-        this.api.forward_(command, this.api.prefix() + "f2",
+        this.api.forward_(request_type, this.api.prefix() + "f2",
                           request_info, request_new,
                           timeout, priority, trans_id, pid);
         return ("").getBytes(); // execution never gets here
     }
 
-    public void sequence3_f2(Integer command, String name, String pattern,
+    public void sequence3_f2(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -555,12 +578,13 @@ public class Task implements Runnable
     {
         int request_i = (int) request[0];
         byte[] request_new = {(byte) (request_i - 1)}; // one step back
-        this.api.forward_(command, this.api.prefix() + "f1",
+        this.api.forward_(request_type, this.api.prefix() + "f1",
                           request_info, request_new,
                           timeout, priority, trans_id, pid);
     }
 
-    public void sequence3_g1(Integer command, String name, String pattern,
+    public void sequence3_g1(Integer request_type,
+                             String name, String pattern,
                              byte[] request_info, byte[] request,
                              Integer timeout, Byte priority,
                              byte[] trans_id, OtpErlangPid pid)
@@ -569,12 +593,13 @@ public class Task implements Runnable
                                     API.InvalidInputException
     {
         String s = new String(request);
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), (s + "suffix").getBytes(),
                          timeout, trans_id, pid);
     }
 
-    public void sequence3(Integer command, String name, String pattern,
+    public void sequence3(Integer request_type,
+                          String name, String pattern,
                           byte[] request_info, byte[] request,
                           Integer timeout, Byte priority,
                           byte[] trans_id, OtpErlangPid pid)
@@ -598,7 +623,7 @@ public class Task implements Runnable
         // loop to find any infrequent problems, restart sequence1
         this.api.send_async(this.api.prefix() + "sequence1",
                             ("start").getBytes());
-        this.api.return_(command, name, pattern,
+        this.api.return_(request_type, name, pattern,
                          ("").getBytes(), ("end").getBytes(),
                          timeout, trans_id, pid);
     }

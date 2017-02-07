@@ -67,7 +67,7 @@ Task.prototype.run = function () {
         }
     }
 };
-Task.prototype.request = function (command, name, pattern,
+Task.prototype.request = function (request_type, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
     process.stdout.write('null javascript\n');

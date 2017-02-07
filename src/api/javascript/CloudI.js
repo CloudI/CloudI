@@ -404,10 +404,11 @@ CloudI.API.prototype.mcast_async = function (name, request, callback,
     });
 };
 
-CloudI.API.prototype.forward_ = function (command, name, request_info, request,
+CloudI.API.prototype.forward_ = function (request_type, name,
+                                          request_info, request,
                                           timeout, priority, trans_id, pid) {
     var API = this;
-    switch (command) {
+    switch (request_type) {
         case API.ASYNC:
             API.forward_async(name, request_info, request,
                               timeout, priority, trans_id, pid);
@@ -471,11 +472,11 @@ CloudI.API.prototype.forward_sync = function (name, request_info, request,
     });
 };
 
-CloudI.API.prototype.return_ = function (command, name, pattern,
+CloudI.API.prototype.return_ = function (request_type, name, pattern,
                                          response_info, response,
                                          timeout, trans_id, pid) {
     var API = this;
-    switch (command) {
+    switch (request_type) {
         case API.ASYNC:
             API.return_async(name, pattern, response_info, response,
                              timeout, trans_id, pid);

@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  * 
- * Copyright (c) 2012-2015, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -179,7 +179,7 @@ class Input
 
     private:
         void sequence1_abcd(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -195,12 +195,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "a/b/c/d"));
             assert(request_size == 6);
             assert(::memcmp(request, "test1", 6) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_abc_(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -217,12 +218,13 @@ class Input
             assert(request_size == 6);
             assert(::memcmp(request, "test2", 6) == 0 ||
                    ::memcmp(request, "test3", 6) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_ab_d(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -239,12 +241,13 @@ class Input
             assert(request_size == 6);
             assert(::memcmp(request, "test4", 6) == 0 ||
                    ::memcmp(request, "test5", 6) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_a_cd(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -261,12 +264,13 @@ class Input
             assert(request_size == 6);
             assert(::memcmp(request, "test6", 6) == 0 ||
                    ::memcmp(request, "test7", 6) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1__bcd(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -283,12 +287,13 @@ class Input
             assert(request_size == 6);
             assert(::memcmp(request, "test8", 6) == 0 ||
                    ::memcmp(request, "test9", 6) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_ab__(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -304,12 +309,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "a/b/*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test10", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_a__d(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -325,12 +331,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "a/*/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test11", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1___cd(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -346,12 +353,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "*/c/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test12", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_a___(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -367,12 +375,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "a/*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test13", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1____d(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -388,12 +397,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "*/d"));
             assert(request_size == 7);
             assert(::memcmp(request, "test14", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1_____(CloudI::API const & api,
-                            int const command,
+                            int const request_type,
                             std::string const & name,
                             std::string const & pattern,
                             void const * const /*request_info*/,
@@ -409,12 +419,13 @@ class Input
             assert(pattern == (std::string(api.prefix()) + "*"));
             assert(request_size == 7);
             assert(::memcmp(request, "test15", 7) == 0);
-            api.return_(command, name, pattern, "", 0, request, request_size,
+            api.return_(request_type, name, pattern,
+                        "", 0, request, request_size,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence1(CloudI::API const & api,
-                       int const command,
+                       int const request_type,
                        std::string const & name,
                        std::string const & pattern,
                        void const * const /*request_info*/,
@@ -688,12 +699,12 @@ class Input
             result = api.send_async(std::string(api.prefix()) + "sequence2",
                                     "start", 6);
             assert(result == CloudI::API::return_value::success);
-            api.return_(command, name, pattern, "", 0, "end", 4,
+            api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e1(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -706,12 +717,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "1", 2,
+            api.return_(request_type, name, pattern, "", 0, "1", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e2(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -724,12 +735,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "2", 2,
+            api.return_(request_type, name, pattern, "", 0, "2", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e3(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -742,12 +753,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "3", 2,
+            api.return_(request_type, name, pattern, "", 0, "3", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e4(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -760,12 +771,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "4", 2,
+            api.return_(request_type, name, pattern, "", 0, "4", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e5(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -778,12 +789,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "5", 2,
+            api.return_(request_type, name, pattern, "", 0, "5", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e6(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -796,12 +807,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "6", 2,
+            api.return_(request_type, name, pattern, "", 0, "6", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e7(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -814,12 +825,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "7", 2,
+            api.return_(request_type, name, pattern, "", 0, "7", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2_e8(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -832,12 +843,12 @@ class Input
                           char const * const pid,
                           uint32_t const pid_size)
         {
-            api.return_(command, name, pattern, "", 0, "8", 2,
+            api.return_(request_type, name, pattern, "", 0, "8", 2,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence2(CloudI::API const & api,
-                       int const command,
+                       int const request_type,
                        std::string const & name,
                        std::string const & pattern,
                        void const * const /*request_info*/,
@@ -892,12 +903,12 @@ class Input
             result = api.send_async(std::string(api.prefix()) + "sequence3",
                                     "start", 6);
             assert(result == CloudI::API::return_value::success);
-            api.return_(command, name, pattern, "", 0, "end", 4,
+            api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence3_f1(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -916,7 +927,7 @@ class Input
             assert(request_i >= 0 && request_i <= 4);
             if (request_i == 4)
             {
-                api.return_(command, name, pattern, "", 0, "done", 5,
+                api.return_(request_type, name, pattern, "", 0, "done", 5,
                             timeout, trans_id, pid, pid_size);
                 assert(false);
                 return;
@@ -924,13 +935,13 @@ class Input
             std::stringstream request_new;
             request_new << (request_i + 2);
             std::string const & s = request_new.str();
-            api.forward_(command, std::string(api.prefix()) + "f2",
+            api.forward_(request_type, std::string(api.prefix()) + "f2",
                          "", 0, s.c_str(), s.size() + 1,
                          timeout, priority, trans_id, pid, pid_size);
         }
 
         void sequence3_f2(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & /*name*/,
                           std::string const & /*pattern*/,
                           void const * const /*request_info*/,
@@ -950,13 +961,13 @@ class Input
             std::stringstream request_new;
             request_new << (request_i + 2);
             std::string const & s = request_new.str();
-            api.forward_(command, std::string(api.prefix()) + "f1",
+            api.forward_(request_type, std::string(api.prefix()) + "f1",
                          "", 0, s.c_str(), s.size() + 1,
                          timeout, priority, trans_id, pid, pid_size);
         }
 
         void sequence3_g1(CloudI::API const & api,
-                          int const command,
+                          int const request_type,
                           std::string const & name,
                           std::string const & pattern,
                           void const * const /*request_info*/,
@@ -971,12 +982,13 @@ class Input
         {
             std::string s(reinterpret_cast<char const *>(request));
             s += "suffix";
-            api.return_(command, name, pattern, "", 0, s.c_str(), s.size() + 1,
+            api.return_(request_type, name, pattern,
+                        "", 0, s.c_str(), s.size() + 1,
                         timeout, trans_id, pid, pid_size);
         }
 
         void sequence3(CloudI::API const & api,
-                       int const command,
+                       int const request_type,
                        std::string const & name,
                        std::string const & pattern,
                        void const * const /*request_info*/,
@@ -1013,7 +1025,7 @@ class Input
             result = api.send_async(std::string(api.prefix()) +
                                     "sequence1", "start", 6);
             assert(result == CloudI::API::return_value::success);
-            api.return_(command, name, pattern, "", 0, "end", 4,
+            api.return_(request_type, name, pattern, "", 0, "end", 4,
                         timeout, trans_id, pid, pid_size);
         }
 
