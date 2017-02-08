@@ -78,16 +78,37 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
+	var count1 uint32
+	count1, err = api.SubscribeCount("go.xml/get")
+	if err != nil {
+		cloudi.ErrorWrite(os.Stderr, err)
+		return
+	}
+	assert(count1, uint32(0))
 	err = api.Subscribe("go.xml/get", request)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
+	var count2 uint32
+	count2, err = api.SubscribeCount("go.xml/get")
+	if err != nil {
+		cloudi.ErrorWrite(os.Stderr, err)
+		return
+	}
+	assert(count2, uint32(1))
 	_, err = api.Poll(-1)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 	}
 	os.Stdout.WriteString("terminate http_req go\n")
+}
+
+func assert(value interface{}, expected interface{}) {
+	if value == expected {
+		return
+    }
+    panic("assert failed!")
 }
 
 func main() {

@@ -12,6 +12,7 @@
       helps to distinguish it from the internal "command" variable
     * The GO configure variable now works properly
     * The Go CloudI API is now tested with Go 1.7.5 and all is well
+    * Add SubscribeCount test to http_req Go integration test
 
 2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
