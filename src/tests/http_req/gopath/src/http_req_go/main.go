@@ -107,8 +107,8 @@ func task(threadIndex uint32, execution *sync.WaitGroup) {
 func assert(value interface{}, expected interface{}) {
 	if value == expected {
 		return
-    }
-    panic("assert failed!")
+	}
+	panic("assert failed!")
 }
 
 func main() {
