@@ -865,6 +865,28 @@ func (api *Instance) handleEvents(external bool, reader *bytes.Reader, command u
 			if err != nil {
 				return true, err
 			}
+			err = binary.Read(reader, nativeEndian, &(api.timeoutAsync))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.timeoutSync))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.priorityDefault))
+			if err != nil {
+				return false, err
+			}
+			var requestTimeoutAdjustment uint8
+			err = binary.Read(reader, nativeEndian, &requestTimeoutAdjustment)
+			if err != nil {
+				return false, err
+			}
+			api.requestTimeoutAdjustment = (requestTimeoutAdjustment != 0)
+			if api.requestTimeoutAdjustment {
+				api.requestTimer = time.Now()
+				api.requestTimeout = 0
+			}
 		case messageKeepalive:
 			var keepalive []byte
 			keepalive, err = erlang.TermToBinary(erlang.OtpErlangAtom("keepalive"), -1)
@@ -1211,6 +1233,28 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 			err = binary.Read(reader, nativeEndian, &(api.processCount))
 			if err != nil {
 				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.timeoutAsync))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.timeoutSync))
+			if err != nil {
+				return false, err
+			}
+			err = binary.Read(reader, nativeEndian, &(api.priorityDefault))
+			if err != nil {
+				return false, err
+			}
+			var requestTimeoutAdjustment uint8
+			err = binary.Read(reader, nativeEndian, &requestTimeoutAdjustment)
+			if err != nil {
+				return false, err
+			}
+			api.requestTimeoutAdjustment = (requestTimeoutAdjustment != 0)
+			if api.requestTimeoutAdjustment {
+				api.requestTimer = time.Now()
+				api.requestTimeout = 0
 			}
 		case messageKeepalive:
 			var keepalive []byte

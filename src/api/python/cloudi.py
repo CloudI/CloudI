@@ -444,8 +444,19 @@ class API(object):
                 else:
                     raise terminate_exception(self.__timeout_terminate)
             elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4
-                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
+                i, j = j, j + 4 + 4 + 4 + 1 + 1
+                (self.__process_count,
+                 self.__timeout_async, self.__timeout_sync,
+                 self.__priority_default,
+                 request_timeout_adjustment) = struct.unpack(
+                    b'=IIIbB', data[i:j]
+                )
+                self.__request_timeout_adjustment = bool(
+                    request_timeout_adjustment
+                )
+                if self.__request_timeout_adjustment:
+                    self.__request_timer = default_timer()
+                    self.__request_timeout = 0
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
             else:
@@ -593,10 +604,21 @@ class API(object):
                     return False
                 assert False
             elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4
-                self.__process_count = struct.unpack(b'=I', data[i:j])[0]
+                i, j = j, j + 4 + 4 + 4 + 1 + 1
+                (self.__process_count,
+                 self.__timeout_async, self.__timeout_sync,
+                 self.__priority_default,
+                 request_timeout_adjustment) = struct.unpack(
+                    b'=IIIbB', data[i:j]
+                )
+                self.__request_timeout_adjustment = bool(
+                    request_timeout_adjustment
+                )
+                if self.__request_timeout_adjustment:
+                    self.__request_timer = default_timer()
+                    self.__request_timeout = 0
                 if j == data_size:
-                    pass
+                    data = b''
                 elif j < data_size:
                     i, j = j, j + 4
                     continue
@@ -605,7 +627,7 @@ class API(object):
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
                 if j == data_size:
-                    pass
+                    data = b''
                 elif j < data_size:
                     i, j = j, j + 4
                     continue

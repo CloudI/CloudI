@@ -444,8 +444,17 @@ module CloudI
                         raise TerminateException.new(@timeout_terminate)
                     end
                 when MESSAGE_REINIT
-                    i += j; j = 4
-                    @process_count = data[i, j].unpack('L')[0]
+                    i += j; j = 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("LLLcC")
+                    @process_count = tmp[0]
+                    @timeout_async = tmp[1]
+                    @timeout_sync = tmp[2]
+                    @priority_default = tmp[3]
+                    @request_timeout_adjustment = (tmp[4] != 0)
+                    if @request_timeout_adjustment
+                        @request_timer = Time.now
+                        @request_timeout = 0
+                    end
                     i += j
                 when MESSAGE_KEEPALIVE
                     send(Erlang.term_to_binary(:keepalive))
@@ -608,11 +617,20 @@ module CloudI
                     end
                     API.assert{false}
                 when MESSAGE_REINIT
-                    i += j; j = 4
-                    @process_count = data[i, j].unpack('L')[0]
+                    i += j; j = 4 + 4 + 4 + 1 + 1
+                    tmp = data[i, j].unpack("LLLcC")
+                    @process_count = tmp[0]
+                    @timeout_async = tmp[1]
+                    @timeout_sync = tmp[2]
+                    @priority_default = tmp[3]
+                    @request_timeout_adjustment = (tmp[4] != 0)
+                    if @request_timeout_adjustment
+                        @request_timer = Time.now
+                        @request_timeout = 0
+                    end
                     i += j; j = 4
                     if i == data_size
-                        #
+                        data.clear()
                     elsif i < data_size
                         next
                     else
@@ -622,7 +640,7 @@ module CloudI
                     send(Erlang.term_to_binary(:keepalive))
                     i += j; j = 4
                     if i == data_size
-                        #
+                        data.clear()
                     elsif i < data_size
                         next
                     else

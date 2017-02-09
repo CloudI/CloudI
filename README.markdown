@@ -46,7 +46,7 @@ Service-Oriented Architecture (SOA) development in any supported language
 External communication that needs to scale (beyond 10,000 connections)
 can use an existing internal CloudI service (implemented in Erlang or Elixir)
 which may do processing for one or more external CloudI services
-(implemented C/C++, Java, JavaScript, Perl, PHP, Python, and/or Ruby)
+(implemented in C/C++, Go, Java, JavaScript, Perl, PHP, Python, and/or Ruby)
 
 Even if external communication doesn't need to scale, private cloud
 computing tasks (number crunching) can gain fault-tolerance and internal

@@ -1306,6 +1306,16 @@ public class API
                 case MESSAGE_REINIT:
                 {
                     this.process_count = buffer.getInt();
+                    this.timeout_async = buffer.getInt();
+                    this.timeout_sync = buffer.getInt();
+                    this.priority_default = buffer.get();
+                    this.request_timeout_adjustment =
+                        (buffer.get() & 0xFF) != 0;
+                    if (this.request_timeout_adjustment)
+                    {
+                        this.request_timer = System.nanoTime();
+                        this.request_timeout = 0;
+                    }
                     break;
                 }
                 case MESSAGE_KEEPALIVE:
@@ -1482,6 +1492,16 @@ public class API
                     case MESSAGE_REINIT:
                     {
                         this.process_count = buffer.getInt();
+                        this.timeout_async = buffer.getInt();
+                        this.timeout_sync = buffer.getInt();
+                        this.priority_default = buffer.get();
+                        this.request_timeout_adjustment =
+                            (buffer.get() & 0xFF) != 0;
+                        if (this.request_timeout_adjustment)
+                        {
+                            this.request_timer = System.nanoTime();
+                            this.request_timeout = 0;
+                        }
                         if (buffer.hasRemaining())
                             continue;
                         break;

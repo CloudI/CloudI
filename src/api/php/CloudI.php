@@ -612,9 +612,18 @@ class API
                     else
                         throw new TerminateException($this->timeout_terminate);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4;
-                    list(, $this->process_count) = unpack('L', substr($data,
-                                                                      $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
+                    $this->process_count = $tmp['a1'];
+                    $this->timeout_async = $tmp['a2'];
+                    $this->timeout_sync = $tmp['a3'];
+                    $this->priority_default = $tmp['b'];
+                    $this->request_timeout_adjustment = ($tmp['c'] == 1);
+                    if ($this->request_timeout_adjustment)
+                    {
+                        $this->request_timer = microtime(true);
+                        $this->request_timeout = 0;
+                    }
                     $i += $j;
                     break;
                 case MESSAGE_KEEPALIVE:
@@ -830,12 +839,24 @@ class API
                     }
                     assert(false);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4;
-                    list(, $this->process_count
-                         ) = unpack('L', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
+                    $this->process_count = $tmp['a1'];
+                    $this->timeout_async = $tmp['a2'];
+                    $this->timeout_sync = $tmp['a3'];
+                    $this->priority_default = $tmp['b'];
+                    $this->request_timeout_adjustment = ($tmp['c'] == 1);
+                    if ($this->request_timeout_adjustment)
+                    {
+                        $this->request_timer = microtime(true);
+                        $this->request_timeout = 0;
+                    }
                     $i += $j; $j = 4;
                     if ($i == $data_size)
+                    {
+                        $data = '';
                         break;
+                    }
                     elseif ($i < $data_size)
                         continue 2;
                     else
@@ -845,7 +866,10 @@ class API
                         new \Erlang\OtpErlangAtom('keepalive')));
                     $i += $j; $j = 4;
                     if ($i == $data_size)
+                    {
+                        $data = '';
                         break;
+                    }
                     elseif ($i < $data_size)
                         continue 2;
                     else

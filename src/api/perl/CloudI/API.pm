@@ -759,8 +759,19 @@ sub _handle_events
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4;
-            ($self->{_process_count}) = unpack('L', substr($data, $i, $j));
+            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+            ($self->{_process_count},
+             $self->{_timeout_async},
+             $self->{_timeout_sync},
+             $self->{_priority_default},
+             $self->{_request_timeout_adjustment}) = unpack("L3 c C",
+                                                            substr($data,
+                                                                   $i, $j));
+            if ($self->{_request_timeout_adjustment})
+            {
+                $self->{_request_timer} = _milliseconds();
+                $self->{_request_timeout} = 0;
+            }
             $i += $j;
         }
         elsif ($command == MESSAGE_KEEPALIVE)
@@ -983,12 +994,23 @@ sub _poll_request
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4;
-            ($self->{_process_count}) = unpack('L', substr($data, $i, $j));
+            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+            ($self->{_process_count},
+             $self->{_timeout_async},
+             $self->{_timeout_sync},
+             $self->{_priority_default},
+             $self->{_request_timeout_adjustment}) = unpack("L3 c C",
+                                                            substr($data,
+                                                                   $i, $j));
+            if ($self->{_request_timeout_adjustment})
+            {
+                $self->{_request_timer} = _milliseconds();
+                $self->{_request_timeout} = 0;
+            }
             $i += $j; $j = 4;
             if ($i == $data_size)
             {
-                1;
+                $data = '';
             }
             elsif ($i < $data_size)
             {
@@ -1006,7 +1028,7 @@ sub _poll_request
             $i += $j; $j = 4;
             if ($i == $data_size)
             {
-                1;
+                $data = '';
             }
             elsif ($i < $data_size)
             {

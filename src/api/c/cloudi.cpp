@@ -1479,6 +1479,7 @@ static bool handle_events(cloudi_instance_t * p,
                           uint32_t command = 0)
 {
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
+    timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
     if (command == 0)
     {
         if (index > p->buffer_recv_index)
@@ -1504,6 +1505,16 @@ static bool handle_events(cloudi_instance_t * p,
             case MESSAGE_REINIT:
             {
                 store_incoming_uint32(buffer_recv, index, p->process_count);
+                store_incoming_uint32(buffer_recv, index, p->timeout_async);
+                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
+                store_incoming_int8(buffer_recv, index, p->priority_default);
+                store_incoming_uint8(buffer_recv, index,
+                                     p->request_timeout_adjustment);
+                if (p->request_timeout_adjustment)
+                {
+                    request_timer.restart();
+                    p->request_timeout = 0;
+                }
                 break;
             }
             case MESSAGE_KEEPALIVE:
@@ -1551,6 +1562,7 @@ static int poll_request(cloudi_instance_t * p,
 
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
     buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
+    timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
 
     timer & poll_timer = *reinterpret_cast<timer *>(p->poll_timer);
     if (timeout > 0)
@@ -1718,6 +1730,16 @@ static int poll_request(cloudi_instance_t * p,
             case MESSAGE_REINIT:
             {
                 store_incoming_uint32(buffer_recv, index, p->process_count);
+                store_incoming_uint32(buffer_recv, index, p->timeout_async);
+                store_incoming_uint32(buffer_recv, index, p->timeout_sync);
+                store_incoming_int8(buffer_recv, index, p->priority_default);
+                store_incoming_uint8(buffer_recv, index,
+                                     p->request_timeout_adjustment);
+                if (p->request_timeout_adjustment)
+                {
+                    request_timer.restart();
+                    p->request_timeout = 0;
+                }
                 if (index == p->buffer_recv_index)
                 {
                     p->buffer_recv_index = 0;

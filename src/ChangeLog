@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the Perl, PHP, Python, and Ruby CloudI APIs so count_process_dynamic
+      usage is not able to cause external service processes to become
+      non-responsive (problem was not observed during testing)
+    * Fix CloudI Service API services_update usage with external services
+      so updates that do not create a new OS process do update the following
+      parameters used by the CloudI API instance:
+        * timeout_async (default async timeout value)
+        * timeout_sync (default sync timeout value)
+        * (default priority value)
+        * (request_timeout_adjustment service configuration option value)
+
 2017-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the messaging integration test in Go

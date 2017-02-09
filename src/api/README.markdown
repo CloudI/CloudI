@@ -13,6 +13,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `C++`
 * `Elixir`
 * `Erlang >= 19.0`
+* `Go >= 1.6`
 * `Java`
 * `Javascript/node.js >= 0.8.0`
 * `Perl >= 5.10`
@@ -20,7 +21,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
 
-C/C++, Java, Javascript, Perl, PHP, Python, and Ruby all have an
+C/C++, Go, Java, Javascript, Perl, PHP, Python, and Ruby all have an
 implementation of the CloudI API that is completely done in that programming
 language (to avoid extra complexity).  Python does have a Python with C
 integration CloudI API that is the Python module `cloudi_c`
@@ -56,6 +57,13 @@ SWIG could be used to create a CloudI API for Lua, R, Go, Ocaml, D, etc.
 * `src/tests/messaging` Basic Messaging Test ([Sequence 1](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence1.erl), [Sequence 2](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence2.erl), [Sequence 3](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence3.erl), [Sequence 4](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence4.erl))
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/src/cloudi_service_null.erl)
 * [Hexadecimal PI Fault-Tolerant Map/Reduce Test](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl)
+
+#### Go
+
+* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/gopath/src/http_req_go/main.go)
+* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/gopath/src/msg_size_go/main.go)
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/gopath/src/messaging_go/main.go)
+* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/gopath/src/null_go/main.go)
 
 #### [Java](http://cloudi.org/faq.html#6_Java)
 

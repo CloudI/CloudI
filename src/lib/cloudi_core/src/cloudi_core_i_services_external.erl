@@ -46,7 +46,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -1350,9 +1350,16 @@ handle_info('cloudi_count_process_dynamic_rate', StateName,
                      count_process_dynamic = NewCountProcessDynamic}}};
 
 handle_info({'cloudi_count_process_dynamic_update', ProcessCount}, StateName,
-            State) ->
-    ok = send('reinit_out'(ProcessCount), State),
-    {next_state, StateName, State};
+            #state{timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   options = #config_service_options{
+                       priority_default = PriorityDefault,
+                       request_timeout_adjustment = RequestTimeoutAdjustment}
+                   } = State) ->
+    ok = send('reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
+                           PriorityDefault, RequestTimeoutAdjustment), State),
+    {next_state, StateName,
+     State#state{process_count = ProcessCount}};
 
 handle_info('cloudi_count_process_dynamic_terminate', StateName,
             #state{dispatcher = Dispatcher,
@@ -1745,11 +1752,25 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority, StateName,
       PriorityDefault:8/signed-integer-native,
       RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
 
-'reinit_out'(ProcessCount)
-    when is_integer(ProcessCount) ->
+'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
+             PriorityDefault, RequestTimeoutAdjustment)
+    when is_integer(ProcessCount), is_integer(TimeoutAsync),
+         is_integer(TimeoutSync), is_integer(PriorityDefault),
+         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
+         is_boolean(RequestTimeoutAdjustment) ->
     true = ProcessCount < 4294967296,
+    RequestTimeoutAdjustmentInt = if
+        RequestTimeoutAdjustment ->
+            1;
+        true ->
+            0
+    end,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
-      ProcessCount:32/unsigned-integer-native>>.
+      ProcessCount:32/unsigned-integer-native,
+      TimeoutAsync:32/unsigned-integer-native,
+      TimeoutSync:32/unsigned-integer-native,
+      PriorityDefault:8/signed-integer-native,
+      RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
 
 'terminate_out'() ->
     <<?MESSAGE_TERM:32/unsigned-integer-native>>.
@@ -2049,10 +2070,18 @@ process_update(#state{dispatcher = Dispatcher,
     {NewOsProcess, NewState} = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
             false = SpawnOsProcess,
-            % TODO MESSAGE_REINIT needs to send
-            % new values for priority default,
-            % timeout_async default, timeout_sync default, and
-            % request_timeout_adjustment (with timer set)
+            % re-initialize the old OS process after the update success
+            % when a new OS process is not created during the update
+            #state{process_count = ProcessCount,
+                   timeout_async = TimeoutAsync,
+                   timeout_sync = TimeoutSync,
+                   options = #config_service_options{
+                       priority_default = PriorityDefault,
+                       request_timeout_adjustment = RequestTimeoutAdjustment}
+                   } = NextState,
+            ok = send('reinit_out'(ProcessCount,
+                                   TimeoutAsync, TimeoutSync, PriorityDefault,
+                                   RequestTimeoutAdjustment), NextState),
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
             {false, NextState};
         {ok, {error, _} = Error} ->
