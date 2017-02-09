@@ -58,7 +58,7 @@ SWIG could be used to create a CloudI API for Lua, R, Go, Ocaml, D, etc.
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/src/cloudi_service_null.erl)
 * [Hexadecimal PI Fault-Tolerant Map/Reduce Test](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl)
 
-#### Go
+#### [Go](http://cloudi.org/faq.html#6_Go)
 
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/gopath/src/http_req_go/main.go)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/gopath/src/msg_size_go/main.go)

@@ -5,6 +5,7 @@
 * [C++](#c-1)
 * [Elixir](#elixir)
 * [Erlang](#erlang)
+* [Go](#go)
 * [Java](#java)
 * [JavaScript](#javascript)
 * [Perl](#perl)
@@ -430,6 +431,95 @@
     The available service configuration parameters are described in
     the [services_add documentation](http://cloudi.org/api.html#2_services_add).
     More complex Erlang [examples are listed here](http://cloudi.org/faq.html#6_Erlang).
+
+### Go
+
+1.  A CloudI service written in Go is called an "external" service
+    because the service is ran inside an Operating System process
+    (external to the Erlang VM).  The example Go service can be
+    created by executing the following inside your shell:
+
+        mkdir -p src/hello_world_go/
+        cat << EOF > src/hello_world_go/main.go
+        package main
+        
+        import (
+            "github.com/CloudI/cloudi_api_go/src/cloudi"
+            "os"
+            "sync"
+        )
+        
+        func helloWorld(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+            return nil, []byte("Hello World!"), nil
+        }
+        
+        func task(threadIndex uint32, execution *sync.WaitGroup) {
+            defer execution.Done()
+            api, err := cloudi.API(threadIndex)
+            if err != nil {
+                cloudi.ErrorWrite(os.Stderr, err)
+                return
+            }
+            err = api.Subscribe("hello_world/get", helloWorld)
+            if err != nil {
+                cloudi.ErrorWrite(os.Stderr, err)
+                return
+            }
+            _, err = api.Poll(-1)
+            if err != nil {
+                cloudi.ErrorWrite(os.Stderr, err)
+            }
+        }
+        
+        func main() {
+            threadCount, err := cloudi.ThreadCount()
+            if err != nil {
+                cloudi.ErrorExit(os.Stderr, err)
+            }
+            var execution sync.WaitGroup
+            for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {
+                execution.Add(1)
+                go task(threadIndex, &execution)
+            }
+            execution.Wait()
+        }
+        EOF
+
+1.  Compile the CloudI service executable:
+
+        GOPATH=`pwd` GOBIN=$GOPATH/bin go get -x hello_world_go
+
+1.  Now it is necessary to create the CloudI service configuration that
+    specifies both the initialization and fault-tolerance constraints
+    the CloudI service should be executed with
+    (with the proplist format to rely on defaults):
+
+        export PWD=`pwd`
+        cat << EOF > hello_world.conf
+        [[{prefix, "/quickstart/go/"},
+          {file_path, "$PWD/bin/hello_world_go"}]]
+        EOF
+
+1.  To dynamically add the CloudI service configuration that
+    starts the service's execution use:
+
+        curl -X POST -d @hello_world.conf \
+            http://localhost:6464/cloudi/api/rpc/services_add.erl
+
+1.  The curl requests have been using the cowboy HTTP server that is
+    running within the default CloudI configuration to allow the
+    CloudI Service API to be used over HTTP.  The same HTTP server can
+    be used to make a CloudI service request to the hello_world service
+    with:
+
+        curl http://localhost:6464/quickstart/go/hello_world
+
+1.  If there was a problem during the service creation there would be an
+    ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+    If an error occurred with a curl command it would be displayed
+    in the shell.  The available service configuration parameters are
+    described in the [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    More complex Go [examples are listed here](http://cloudi.org/faq.html#6_Go).
 
 ### Java
 
