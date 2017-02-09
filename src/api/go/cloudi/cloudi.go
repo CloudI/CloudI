@@ -109,10 +109,13 @@ type Instance struct {
 	subscribeCount           uint32
 }
 
-// Callback is a function to handle a service request
-type Callback func(*Instance, int, string, string, []byte, []byte, uint32, int8, [16]byte, erlang.OtpErlangPid) ([]byte, []byte, error)
+// Source is the Erlang pid that is the source of the service request
+type Source erlang.OtpErlangPid
 
-func nullResponse(api *Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+// Callback is a function to handle a service request
+type Callback func(*Instance, int, string, string, []byte, []byte, uint32, int8, [16]byte, Source) ([]byte, []byte, error)
+
+func nullResponse(api *Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) ([]byte, []byte, error) {
 	return []byte{}, []byte{}, nil
 }
 
@@ -371,7 +374,7 @@ func (api *Instance) McastAsync(name string, requestInfo, request []byte, timeou
 	return api.transIds, nil
 }
 
-func (api *Instance) forwardAsyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+func (api *Instance) forwardAsyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) error {
 	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
 		_, timeout = api.timeoutAdjust()
 	}
@@ -381,7 +384,7 @@ func (api *Instance) forwardAsyncI(name string, requestInfo, request []byte, tim
 	if request == nil {
 		request = []byte{}
 	}
-	forwardAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_async"), name, requestInfo, request, timeout, priority, transId[:], pid}, -1)
+	forwardAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_async"), name, requestInfo, request, timeout, priority, transId[:], erlang.OtpErlangPid(pid)}, -1)
 	if err != nil {
 		return err
 	}
@@ -393,7 +396,7 @@ func (api *Instance) forwardAsyncI(name string, requestInfo, request []byte, tim
 }
 
 // ForwardAsync forwards an asynchronous service request to a different service name
-func (api *Instance) ForwardAsync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) ForwardAsync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) {
 	err := api.forwardAsyncI(name, requestInfo, request, timeout, priority, transId, pid)
 	if err == nil {
 		err = forwardAsyncErrorNew()
@@ -401,7 +404,7 @@ func (api *Instance) ForwardAsync(name string, requestInfo, request []byte, time
 	panic(err)
 }
 
-func (api *Instance) forwardSyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+func (api *Instance) forwardSyncI(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) error {
 	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
 		_, timeout = api.timeoutAdjust()
 	}
@@ -411,7 +414,7 @@ func (api *Instance) forwardSyncI(name string, requestInfo, request []byte, time
 	if request == nil {
 		request = []byte{}
 	}
-	forwardSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_sync"), name, requestInfo, request, timeout, priority, transId[:], pid}, -1)
+	forwardSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("forward_sync"), name, requestInfo, request, timeout, priority, transId[:], erlang.OtpErlangPid(pid)}, -1)
 	if err != nil {
 		return err
 	}
@@ -423,7 +426,7 @@ func (api *Instance) forwardSyncI(name string, requestInfo, request []byte, time
 }
 
 // ForwardSync forwards a synchronous service request to a different service name
-func (api *Instance) ForwardSync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) ForwardSync(name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) {
 	err := api.forwardSyncI(name, requestInfo, request, timeout, priority, transId, pid)
 	if err == nil {
 		err = forwardSyncErrorNew()
@@ -432,7 +435,7 @@ func (api *Instance) ForwardSync(name string, requestInfo, request []byte, timeo
 }
 
 // Forward forwards a service request to a different service name
-func (api *Instance) Forward(requestType int, name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) Forward(requestType int, name string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) {
 	switch requestType {
 	case ASYNC:
 		api.ForwardAsync(name, requestInfo, request, timeout, priority, transId, pid)
@@ -443,7 +446,7 @@ func (api *Instance) Forward(requestType int, name string, requestInfo, request 
 	}
 }
 
-func (api *Instance) returnAsyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) error {
+func (api *Instance) returnAsyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid Source) error {
 	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
 		var timedOut bool
 		timedOut, timeout = api.timeoutAdjust()
@@ -457,7 +460,7 @@ func (api *Instance) returnAsyncI(name, pattern string, responseInfo, response [
 	if response == nil {
 		response = []byte{}
 	}
-	returnAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_async"), name, pattern, responseInfo, response, timeout, transId[:], pid}, -1)
+	returnAsync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_async"), name, pattern, responseInfo, response, timeout, transId[:], erlang.OtpErlangPid(pid)}, -1)
 	if err != nil {
 		return err
 	}
@@ -469,7 +472,7 @@ func (api *Instance) returnAsyncI(name, pattern string, responseInfo, response [
 }
 
 // ReturnAsync provides a response to an asynchronous service request
-func (api *Instance) ReturnAsync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) ReturnAsync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid Source) {
 	err := api.returnAsyncI(name, pattern, responseInfo, response, timeout, transId, pid)
 	if err == nil {
 		err = returnAsyncErrorNew()
@@ -477,7 +480,7 @@ func (api *Instance) ReturnAsync(name, pattern string, responseInfo, response []
 	panic(err)
 }
 
-func (api *Instance) returnSyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) error {
+func (api *Instance) returnSyncI(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid Source) error {
 	if api.requestTimeoutAdjustment && timeout == api.requestTimeout {
 		var timedOut bool
 		timedOut, timeout = api.timeoutAdjust()
@@ -491,7 +494,7 @@ func (api *Instance) returnSyncI(name, pattern string, responseInfo, response []
 	if response == nil {
 		response = []byte{}
 	}
-	returnSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_sync"), name, pattern, responseInfo, response, timeout, transId[:], pid}, -1)
+	returnSync, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("return_sync"), name, pattern, responseInfo, response, timeout, transId[:], erlang.OtpErlangPid(pid)}, -1)
 	if err != nil {
 		return err
 	}
@@ -503,7 +506,7 @@ func (api *Instance) returnSyncI(name, pattern string, responseInfo, response []
 }
 
 // ReturnSync provides a response to a synchronous service request
-func (api *Instance) ReturnSync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) ReturnSync(name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid Source) {
 	err := api.returnSyncI(name, pattern, responseInfo, response, timeout, transId, pid)
 	if err == nil {
 		err = returnSyncErrorNew()
@@ -512,7 +515,7 @@ func (api *Instance) ReturnSync(name, pattern string, responseInfo, response []b
 }
 
 // Return provides a response to a service request
-func (api *Instance) Return(requestType int, name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid erlang.OtpErlangPid) {
+func (api *Instance) Return(requestType int, name, pattern string, responseInfo, response []byte, timeout uint32, transId [16]byte, pid Source) {
 	switch requestType {
 	case ASYNC:
 		api.ReturnAsync(name, pattern, responseInfo, response, timeout, transId, pid)
@@ -745,7 +748,7 @@ func (api *Instance) timeoutAdjust() (bool, uint32) {
 	return false, api.requestTimeout - uint32(elapsed)
 }
 
-func (api *Instance) callback(command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) error {
+func (api *Instance) callback(command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) error {
 	if api.requestTimeoutAdjustment {
 		api.requestTimer = time.Now()
 		api.requestTimeout = timeout
@@ -812,7 +815,7 @@ func (api *Instance) callback(command uint32, name, pattern string, requestInfo,
 	}
 }
 
-func (api *Instance) callbackExecute(function Callback, command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) (responseInfo []byte, response []byte, err error) {
+func (api *Instance) callbackExecute(function Callback, command uint32, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) (responseInfo []byte, response []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch errValue := r.(type) {
@@ -1122,7 +1125,7 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 					return false, nil
 				}
 			}
-			err = api.callback(command, string(name), string(pattern), requestInfo, request, requestTimeout, priority, transId, pid.(erlang.OtpErlangPid))
+			err = api.callback(command, string(name), string(pattern), requestInfo, request, requestTimeout, priority, transId, Source(pid.(erlang.OtpErlangPid)))
 			if err != nil {
 				return false, err
 			}

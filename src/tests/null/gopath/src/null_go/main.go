@@ -42,12 +42,11 @@ package main
 
 import (
 	"cloudi"
-	"erlang"
 	"os"
 	"sync"
 )
 
-func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
 	return nil, nil, nil
 }
 

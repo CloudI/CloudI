@@ -42,7 +42,6 @@ package main
 
 import (
 	"cloudi"
-	"erlang"
 	"fmt"
 	"os"
 	"sync"
@@ -54,7 +53,7 @@ const (
 	msg_size    = 2097152 // 2 MB
 )
 
-func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
 	if len(request) != msg_size {
 		panic(fmt.Errorf("len(requesst) != %d", msg_size))
 	}

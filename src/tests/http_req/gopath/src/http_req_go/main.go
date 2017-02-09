@@ -42,14 +42,13 @@ package main
 
 import (
 	"cloudi"
-	"erlang"
 	"fmt"
 	"os"
 	"strconv"
 	"sync"
 )
 
-func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid erlang.OtpErlangPid) ([]byte, []byte, error) {
+func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
 	httpQs := api.RequestHttpQsParse(request)
 	value := httpQs["value"]
 	var valueInt int
