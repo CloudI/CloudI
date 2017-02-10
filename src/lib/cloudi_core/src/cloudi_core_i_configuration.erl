@@ -3755,13 +3755,17 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
          FilePath, Args, Env,
          _, _, _, _, _,
          _, _, _, _, _, _, _]
-        when not ((((Type =:= undefined) orelse (Type =:= internal)) andalso
+        when not (((Type =:= internal) andalso
+                   (Module =:= undefined) andalso
+                   (ID /= <<>>)) orelse
+                  (((Type =:= internal) orelse
+                    (Type =:= undefined)) andalso
                    (Module =/= undefined)) orelse
-                  ((Type =:= external) orelse
-                   ((Type =:= undefined) andalso 
-                    ((FilePath =/= undefined) orelse
-                     (Args =/= undefined) orelse
-                     (Env =/= undefined))))) ->
+                  (((Type =:= external) orelse
+                    (Type =:= undefined)) andalso 
+                   ((FilePath =/= undefined) orelse
+                    (Args =/= undefined) orelse
+                    (Env =/= undefined)))) ->
             {error, {service_update_type_invalid,
                      Type}};
         [Type, Module, ModuleState,
@@ -3775,12 +3779,14 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
               (Env =/= undefined)) ->
             {error, {service_update_type_invalid,
                      Type}};
-        [_, Module, ModuleState,
+        [Type, Module, ModuleState,
          _, _, _,
          _, ModulesLoad, ModulesUnload, _, _,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
          DestListDeny, DestListAllow, Options]
-        when (Module =/= undefined) andalso (ModuleState =:= undefined) andalso
+        when ((Type =:= internal) orelse
+              (Module =/= undefined)) andalso
+             (ModuleState =:= undefined) andalso
              (ModulesLoad == []) andalso (ModulesUnload == []) andalso
              (DestRefresh =:= undefined) andalso
              (TimeoutInit =:= undefined) andalso
@@ -3810,25 +3816,26 @@ services_update_plan([{ID, Plan} | L], UpdatePlans, Services, ACL, Timeout)
              (Options == []) ->
             {error, {service_update_invalid,
                      no_update}};
-        [_, Module, ModuleState,
+        [Type, Module, ModuleState,
          _, _, _,
          Sync, ModulesLoad, ModulesUnload, CodePathsAdd, CodePathsRemove,
          DestRefresh, TimeoutInit, TimeoutAsync, TimeoutSync,
          DestListDeny, DestListAllow, Options]
-        when Module =/= undefined ->
+        when (Type =:= internal) orelse
+             (Module =/= undefined) ->
             TimeoutInitValue = ?TIMEOUT_INITIALIZE_ASSIGN(TimeoutInit),
             TimeoutAsyncValue = ?TIMEOUT_SEND_ASYNC_ASSIGN(TimeoutAsync),
             TimeoutSyncValue = ?TIMEOUT_SEND_SYNC_ASSIGN(TimeoutSync),
             case services_update_plan_internal(Module, ModuleState,
                                                DestListDeny, DestListAllow,
                                                Options, ID, Services, ACL) of
-                {ok, IDs, NewModuleState,
+                {ok, UpdateModule, IDs, NewModuleState,
                  NewDestListDeny, NewDestListAllow,
                  OptionsKeys, NewOptions, ModuleVersion, ReloadStop} ->
                     NewUpdatePlans =
                         [UpdatePlan#config_service_update{
                              type = internal,
-                             module = Module,
+                             module = UpdateModule,
                              module_state = NewModuleState,
                              sync = Sync,
                              modules_load = ModulesLoad,
@@ -3909,11 +3916,23 @@ services_update_plan([{ID, _} | _], _, _, _, _) ->
 services_update_plan_internal(Module, ModuleState,
                               DestListDeny, DestListAllow,
                               Options, UpdateID, Services, ACL) ->
+    UpdateModule = if
+        Module =:= undefined ->
+            case lists:keyfind(UpdateID, #config_service_internal.uuid,
+                               Services) of
+                #config_service_internal{module = UpdateIDModule} ->
+                    UpdateIDModule;
+                false ->
+                    undefined
+            end;
+        true ->
+            Module
+    end,
     {ModuleIDs,
      ReloadStop} = lists:foldr(fun(S, {IDs, ReloadModule} = Next) ->
         case S of
             #config_service_internal{
-                module = Module,
+                module = UpdateModule,
                 options = #config_service_options{
                     reload = Reload},
                 uuid = ID} ->
@@ -3943,9 +3962,11 @@ services_update_plan_internal(Module, ModuleState,
                             case services_update_plan_options_internal(Options) of
                                 {ok, NewOptions} ->
                                     OptionsKeys = [Key || {Key, _} <- Options],
-                                    ModuleVersion = cloudi_x_reltool_util:
-                                                    module_version(Module),
-                                    {ok, UpdateIDs, NewModuleState,
+                                    ModuleVersion =
+                                        cloudi_x_reltool_util:
+                                        module_version(UpdateModule),
+                                    {ok, UpdateModule, UpdateIDs,
+                                     NewModuleState,
                                      NewDestListDeny, NewDestListAllow,
                                      OptionsKeys, NewOptions,
                                      ModuleVersion, ReloadStop};

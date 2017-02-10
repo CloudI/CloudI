@@ -6,6 +6,9 @@
     * Change the Go CloudI API to use the cloudi.Source type for the
       erlang.OtpErlangPid type, simplifying package import usage
     * Add Go CloudI API documentation
+    * Fix the services_update CloudI Service API function so
+      {type, internal} may be used without specifying the module
+      (if the service ID is not "")
 
 2017-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
