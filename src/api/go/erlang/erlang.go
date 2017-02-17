@@ -81,6 +81,8 @@ const (
 	tagFunExt           = 117
 	tagAtomUtf8Ext      = 118
 	tagSmallAtomUtf8Ext = 119
+
+	bufferSize = 65536
 )
 
 // Erlang term structs listed alphabetically
@@ -214,6 +216,8 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	if compressed < -1 || compressed > 9 {
 		return nil, inputErrorNew("compressed in [-1..9]")
 	}
+	var dataBuffer = new(bytes.Buffer)
+	dataBuffer.Grow(bufferSize)
 	dataUncompressed, err := termsToBinary(term, new(bytes.Buffer))
 	if err != nil {
 		return nil, err
@@ -221,7 +225,9 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	if compressed == -1 {
 		return append([]byte{tagVersion}, dataUncompressed.Bytes()...), nil
 	}
+	var length = dataUncompressed.Len()
 	var dataCompressed *bytes.Buffer = new(bytes.Buffer)
+	dataCompressed.Grow(length)
 	var compress *zlib.Writer
 	compress, err = zlib.NewWriterLevel(dataCompressed, compressed)
 	if err != nil {
@@ -240,7 +246,7 @@ func TermToBinary(term interface{}, compressed int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = binary.Write(result, binary.BigEndian, uint32(dataUncompressed.Len()))
+	err = binary.Write(result, binary.BigEndian, uint32(length))
 	if err != nil {
 		return nil, err
 	}

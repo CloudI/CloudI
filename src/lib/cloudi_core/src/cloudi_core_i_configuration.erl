@@ -2017,11 +2017,11 @@ services_validate([#external{
         BufferSize =:= default ->
             if
                 NewProtocol =:= tcp ->
-                    16384; % Linux localhost (inet) MTU
+                    ?DEFAULT_BUFFER_SIZE_TCP;
                 NewProtocol =:= udp ->
-                    16384; % Linux localhost (inet) MTU
+                    ?DEFAULT_BUFFER_SIZE_UDP;
                 NewProtocol =:= local ->
-                    16384  % Linux localhost (inet) MTU for testing/comparison
+                    ?DEFAULT_BUFFER_SIZE_LOCAL
             end;
         true ->
             BufferSize

@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change the default buffer_size value for external service configuration
+      from 16384 to 65536 to match Linux localhost MTU setting
+      (http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=0cf833aefaa85bbfce3ff70485e5534e09254773)
+    * Add buffer_size 65536 usage in Go CloudI API erlang.TermToBinary code
+
 2017-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the Go CloudI API to use the cloudi.Source type for the

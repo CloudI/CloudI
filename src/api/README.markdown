@@ -38,7 +38,7 @@ with the same name.
 
 An example [SWIG](http://www.swig.org/) interface file is provided based on the
 C CloudI API in [cloudi.i](https://github.com/CloudI/CloudI/blob/develop/src/api/c/cloudi.i).
-SWIG could be used to create a CloudI API for Lua, R, Go, Ocaml, D, etc.
+SWIG could be used to create a CloudI API for Lua, R, Ocaml, D, etc.
 
 ### Examples exist within the integration tests:
 

@@ -57,6 +57,10 @@
 -define(DEFAULT_SCOPE,                        default).
 
 % CloudI system defaults
--define(DEFAULT_NODE_RECONNECT_START, 300). % seconds
--define(DEFAULT_NODE_RECONNECT_DELAY, 60). % seconds
+-define(DEFAULT_NODE_RECONNECT_START,             300). % seconds
+-define(DEFAULT_NODE_RECONNECT_DELAY,              60). % seconds
+% (values based on the Linux localhost MTU)
+-define(DEFAULT_BUFFER_SIZE_TCP,                65536). % bytes
+-define(DEFAULT_BUFFER_SIZE_UDP,                65536). % bytes
+-define(DEFAULT_BUFFER_SIZE_LOCAL,              65536). % bytes
 
