@@ -13,6 +13,9 @@ endif
 if JAVASCRIPT_SUPPORT
     JAVASCRIPT_SUBDIR = javascript
 endif
+if OCAML_SUPPORT
+    OCAML_SUBDIR = ocaml
+endif
 if PERL_SUPPORT
     PERL_SUBDIR = perl
 endif
@@ -27,6 +30,7 @@ if RUBY_SUPPORT
 endif
 SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) \
           $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
+          $(OCAML_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \
           $(PYTHON_SUBDIR) $(RUBY_SUBDIR)
 

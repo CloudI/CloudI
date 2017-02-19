@@ -138,6 +138,21 @@ AC_ARG_ENABLE([javascript-support],
     fi
     ], [javascript_support="true"])
 AC_MSG_RESULT([$javascript_support])
+AC_MSG_CHECKING([if the OCaml      CloudI API is enabled])
+AC_ARG_ENABLE([ocaml-support],
+    [AS_HELP_STRING([--enable-ocaml-support],
+                    [Enable the OCaml CloudI API
+                     @<:@default=no@:>@ ])],
+    [
+    if test "x$enableval" = "xyes"; then
+        ocaml_support="true"
+    elif test "x$enableval" = "xno"; then
+        ocaml_support="false"
+    else
+        AC_MSG_ERROR([bad value "$enableval" for --enable-ocaml-support])
+    fi
+    ], [ocaml_support="false"])
+AC_MSG_RESULT([$ocaml_support])
 AC_MSG_CHECKING([if the Perl       CloudI API is enabled])
 AC_ARG_ENABLE([perl-support],
     [AS_HELP_STRING([--enable-perl-support],
@@ -395,6 +410,26 @@ fi
 fi
 AM_CONDITIONAL([JAVASCRIPT_SUPPORT], [test "x$javascript_support" = "xtrue"])
 
+# OCaml CloudI API support
+if test "x$ocaml_support" = "xtrue" ; then
+AC_ARG_VAR([OCAMLC],[ocamlc executable])
+AC_PATH_PROGS([OCAMLC],[ocamlc])
+AC_ARG_VAR([OCAMLOPT],[ocamlopt executable])
+AC_PATH_PROGS([OCAMLOPT],[ocamlopt])
+if test "x$OCAMLC" = "x"; then
+    AC_MSG_ERROR([ocamlc not found])
+fi
+if test "x$OCAMLOPT" = "x"; then
+    AC_MSG_ERROR([ocamlopt not found])
+fi
+AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A-32-27"])
+AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+# AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"tests/messaging/priv/messaging_ocaml\"}, {dest_refresh, immediate_local}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
+# AC_SUBST(CONFIG_TESTS_OCAML_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_ocaml\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
+# AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+fi
+AM_CONDITIONAL([OCAML_SUPPORT], [test "x$ocaml_support" = "xtrue"])
+
 # Perl CloudI API support
 if test "x$perl_support" = "xtrue" ; then
 AC_ARG_VAR([PERL],[perl executable])
@@ -585,6 +620,7 @@ AC_CONFIG_FILES([
     api/java/com/ericsson/otp/erlang/Makefile
     api/java/jar/Makefile
     api/javascript/Makefile
+    api/ocaml/Makefile
     api/perl/Makefile
     api/php/Makefile
     api/python/Makefile
@@ -613,6 +649,7 @@ AC_CONFIG_FILES([
     tests/http_req/c_src/Makefile
     tests/http_req/gopath/Makefile
     tests/http_req/jar/Makefile
+    tests/http_req/ocaml/Makefile
     tests/http_req/org/Makefile
     tests/http_req/org/cloudi/Makefile
     tests/http_req/org/cloudi/tests/Makefile
