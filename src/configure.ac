@@ -426,7 +426,7 @@ AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A-32-27"])
 AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
 # AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"tests/messaging/priv/messaging_ocaml\"}, {dest_refresh, immediate_local}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
 # AC_SUBST(CONFIG_TESTS_OCAML_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_ocaml\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
-# AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([OCAML_SUPPORT], [test "x$ocaml_support" = "xtrue"])
 
@@ -677,6 +677,7 @@ AC_CONFIG_FILES([
     tests/null/c_src/Makefile
     tests/null/gopath/Makefile
     tests/null/jar/Makefile
+    tests/null/ocaml/Makefile
     tests/null/org/Makefile
     tests/null/org/cloudi/Makefile
     tests/null/org/cloudi/tests/Makefile

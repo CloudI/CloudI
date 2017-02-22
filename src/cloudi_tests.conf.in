@@ -423,6 +423,7 @@
            {count_max, 2.0},
            {count_min, 0.25}]}]},
 @CONFIG_TESTS_GO_NULL@
+@CONFIG_TESTS_OCAML_NULL@
     {external,
         "/tests/null/response/",
         "tests/null/priv/null", "",
