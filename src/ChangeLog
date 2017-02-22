@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * OCaml CloudI API now is working with the http_req integration test
+
 2017-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the beginnings of the OCaml CloudI API

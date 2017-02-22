@@ -41,21 +41,56 @@
  
  *)
 
+let request api
+  type_ name pattern request_info request timeout priority trans_id pid =
+  let http_qs = Cloudi.request_http_qs_parse request in
+  let value = try Some (int_of_string (List.hd (Hashtbl.find http_qs "value")))
+  with _ -> None in
+  let response = match value with
+  | None ->
+    "<http_test><error>no value specified</error></http_test>"
+  | Some (value) ->
+    let s = string_of_int value in
+    "<http_test><value>" ^ s ^ "</value></http_test>"
+  in
+  match Cloudi.return_ api
+    type_ name pattern "" response timeout trans_id pid with
+  | Error (error) ->
+    Cloudi.NullError (error)
+  | Ok _ ->
+    Cloudi.Null
+
 let task thread_index =
   match Cloudi.api thread_index with
   | Error (error) ->
-    print_endline error
+    prerr_endline error
   | Ok (api) ->
-    match Cloudi.poll api (-1) with
+    match Cloudi.subscribe_count api "ocaml.xml/get" with
     | Error (error) ->
-      print_endline error
-    | Ok (timeout) ->
-      print_endline "terminate http_req ocaml"
+      prerr_endline error
+    | Ok (count0) when count0 <> 0 ->
+      prerr_endline "subscribe_count <> 0"
+    | Ok _ ->
+      match Cloudi.subscribe api "ocaml.xml/get" request with
+      | Error (error) ->
+        prerr_endline error
+      | Ok _ ->
+        match Cloudi.subscribe_count api "ocaml.xml/get" with
+        | Error (error) ->
+          prerr_endline error
+        | Ok (count1) when count1 <> 1 ->
+          prerr_endline "subscribe_count <> 1"
+        | Ok _ ->
+          match Cloudi.poll api (-1) with
+          | Error (error) ->
+            prerr_endline error
+          | Ok (timeout) ->
+            print_endline "terminate http_req ocaml"
 
 let () = 
   match Cloudi.thread_count () with
   | Error (error) ->
-    print_endline error
+    prerr_endline error
   | Ok (thread_count) ->
     let rec loop thread_index threads =
       if thread_index = thread_count then

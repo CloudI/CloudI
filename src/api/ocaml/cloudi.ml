@@ -59,9 +59,9 @@ type request_type =
 type source = Erlang.Pid.t
 
 type response =
-    Null
+    Response of string
   | ResponseInfo of string * string
-  | Response of string
+  | Null
   | NullError of string
 
 module Instance = struct
@@ -146,6 +146,39 @@ module Instance = struct
     api.priority_default <- priority_default ;
     api.request_timeout_adjustment <- request_timeout_adjustment ;
     ()
+  let set_response api response_info response trans_id =
+    api.response_info <- response_info ;
+    api.response <- response ;
+    api.trans_id <- trans_id ;
+    ()
+  let set_trans_id api trans_id =
+    api.trans_id <- trans_id ;
+    ()
+  let set_trans_ids api trans_ids_str trans_id_count =
+    api.trans_ids <- Array.init trans_id_count (fun i ->
+      String.sub trans_ids_str (i * 16) 16
+    ) ;
+    ()
+  let set_subscribe_count api count =
+    api.subscribe_count <- count ;
+    ()
+  let callbacks_add api pattern f =
+    let key = api.prefix ^ pattern in
+    let value = try Hashtbl.find api.callbacks key
+    with Not_found -> (
+      let value_new = Queue.create () in
+      Hashtbl.add api.callbacks key value_new ;
+      value_new)
+    in
+    Queue.push f value ;
+    ()
+  let callbacks_remove api pattern =
+    let key = api.prefix ^ pattern in
+    let value = Hashtbl.find api.callbacks key in
+    let _ = Queue.pop value in
+    if Queue.is_empty value then
+      Hashtbl.remove api.callbacks key ;
+    ()
 end
 
 type callback = (
@@ -164,16 +197,48 @@ exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
 
+let print_exception s =
+  prerr_endline ("Exception: " ^ s)
+
+let print_error s =
+  prerr_endline ("Error: " ^ s)
+
+let str_replace input output =
+  Str.global_replace (Str.regexp_string input) output
+
+let str_split_on_char sep s =
+  (* based on https://github.com/ocaml/ocaml/blob/trunk/stdlib/string.ml
+   * (split_on_char) for use with OCaml 4.03.0
+   *)
+  let r = ref [] in
+  let j = ref (String.length s) in
+  for i = String.length s - 1 downto 0 do
+    if s.[i] = sep then begin
+      r := String.sub s (i + 1) (!j - i - 1) :: !r;
+      j := i
+    end
+  done;
+  String.sub s 0 !j :: !r
+
+let list_append l1 l2 = List.rev_append (List.rev l1) l2
+
+let backtrace (e : exn) : string =
+  let indent = "  " in
+  (Printexc.to_string e) ^ "\n" ^ indent ^
+  (String.trim (str_replace "\n" ("\n" ^ indent) (Printexc.get_backtrace ())))
+
+let trans_id_null = String.make 16 '\x00'
+
 let null_response _ _ _ _ _ _ _ _ _ _ =
   Null
 
 let getenv (key : string) : string =
-  try Sys.getenv key with
-  Not_found -> ""
+  try Sys.getenv key
+  with Not_found -> ""
 
 let getenv_to_uint (key : string) : (int, string) result =
-  try Ok (int_of_string (Sys.getenv key)) with
-  _ -> Error (invalid_input_error)
+  try Ok (int_of_string (Sys.getenv key))
+  with _ -> Error (invalid_input_error)
 
 let fd_of_int (fd: int) : Unix.file_descr = Obj.magic fd
 
@@ -250,7 +315,8 @@ let recv api : (string * int, string) result =
           Error ("recv failed")
         else (
           Buffer.add_subbytes buffer_recv fragment_recv 0 i ;
-          get_header ()) in
+          get_header ())
+    in
     let rec get_body (total : int) =
       if (Buffer.length buffer_recv) >= total then (
         let data = (Buffer.sub buffer_recv 4 (total - 4))
@@ -265,7 +331,8 @@ let recv api : (string * int, string) result =
           Error ("recv failed")
         else (
           Buffer.add_subbytes buffer_recv fragment_recv 0 i ;
-          get_body total) in
+          get_body total)
+    in
     match get_header () with
     | Error (error) ->
       Error (error)
@@ -290,12 +357,191 @@ let recv api : (string * int, string) result =
       else (
         let data_all = Buffer.contents buffer_recv in
         Buffer.clear buffer_recv ;
-        data_all) in
+        data_all)
+    in
     let data = get_body () in
     if (String.length data) = 0 then
       Error ("recv failed")
     else
       Ok ((data, String.length data)))
+
+let forward_async
+  api name request_info request timeout priority trans_id pid :
+  (unit, string) result =
+  let {Instance.request_timeout_adjustment;
+    request_timer; request_timeout; _} = api in
+  let timeout_new =
+    if request_timeout_adjustment && timeout = request_timeout then
+      let elapsed = truncate
+        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
+      if elapsed < 0 then
+        timeout
+      else if elapsed >= timeout then
+        0
+      else
+        timeout - elapsed
+    else
+      timeout
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("forward_async");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangBinary (request_info);
+      Erlang.OtpErlangBinary (request);
+      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (priority);
+      Erlang.OtpErlangBinary (trans_id);
+      Erlang.OtpErlangPid (pid)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (forward) ->
+    match send api forward with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      raise ForwardAsync
+
+let forward_sync
+  api name request_info request timeout priority trans_id pid :
+  (unit, string) result =
+  let {Instance.request_timeout_adjustment;
+    request_timer; request_timeout; _} = api in
+  let timeout_new =
+    if request_timeout_adjustment && timeout = request_timeout then
+      let elapsed = truncate
+        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
+      if elapsed < 0 then
+        timeout
+      else if elapsed >= timeout then
+        0
+      else
+        timeout - elapsed
+    else
+      timeout
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("forward_sync");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangBinary (request_info);
+      Erlang.OtpErlangBinary (request);
+      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (priority);
+      Erlang.OtpErlangBinary (trans_id);
+      Erlang.OtpErlangPid (pid)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (forward) ->
+    match send api forward with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      raise ForwardSync
+
+let forward_
+  api type_ name request_info request timeout priority trans_id pid :
+  (unit, string) result =
+  match type_ with
+  | ASYNC ->
+    forward_async api name request_info request timeout priority trans_id pid
+  | SYNC ->
+    forward_sync api name request_info request timeout priority trans_id pid
+
+let return_async_i
+  api name pattern response_info response timeout trans_id pid :
+  (unit, string) result =
+  let {Instance.request_timeout_adjustment;
+    request_timer; request_timeout; _} = api in
+  let timeout_new =
+    if request_timeout_adjustment && timeout = request_timeout then
+      let elapsed = truncate
+        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
+      if elapsed < 0 then
+        timeout
+      else if elapsed >= timeout then
+        0
+      else
+        timeout - elapsed
+    else
+      timeout
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("return_async");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangString (pattern);
+      Erlang.OtpErlangBinary (response_info);
+      Erlang.OtpErlangBinary (response);
+      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangBinary (trans_id);
+      Erlang.OtpErlangPid (pid)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (return) ->
+    send api return
+
+let return_async
+  api name pattern response_info response timeout trans_id pid :
+  (unit, string) result =
+  match return_async_i
+    api name pattern response_info response timeout trans_id pid with
+  | Error (error) ->
+    Error (error)
+  | Ok _ ->
+    raise ReturnAsync
+
+let return_sync_i
+  api name pattern response_info response timeout trans_id pid :
+  (unit, string) result =
+  let {Instance.request_timeout_adjustment;
+    request_timer; request_timeout; _} = api in
+  let timeout_new =
+    if request_timeout_adjustment && timeout = request_timeout then
+      let elapsed = truncate
+        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
+      if elapsed < 0 then
+        timeout
+      else if elapsed >= timeout then
+        0
+      else
+        timeout - elapsed
+    else
+      timeout
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("return_sync");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangString (pattern);
+      Erlang.OtpErlangBinary (response_info);
+      Erlang.OtpErlangBinary (response);
+      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangBinary (trans_id);
+      Erlang.OtpErlangPid (pid)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (return) ->
+    send api return
+
+let return_sync
+  api name pattern response_info response timeout trans_id pid :
+  (unit, string) result =
+  match return_sync_i
+    api name pattern response_info response timeout trans_id pid with
+  | Error (error) ->
+    Error (error)
+  | Ok _ ->
+    raise ReturnSync
+
+let return_
+  api type_ name pattern response_info response timeout trans_id pid :
+  (unit, string) result =
+  match type_ with
+  | ASYNC ->
+    return_async api name pattern response_info response timeout trans_id pid
+  | SYNC ->
+    return_sync api name pattern response_info response timeout trans_id pid
 
 let handle_events api ext data data_size i cmd : (bool, string) result =
   let i_cmd =
@@ -306,7 +552,8 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
       | Ok (value) ->
         Ok ((i + 4, value))
     else
-      Ok ((i, cmd)) in
+      Ok ((i, cmd))
+  in
   match i_cmd with
   | Error (error) ->
     Error (error)
@@ -363,7 +610,8 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
         | Error (error) ->
           Error (error)
         | Ok (cmd_next) ->
-          loop (i1 + 4) cmd_next in
+          loop (i1 + 4) cmd_next
+    in
     loop i0 cmd_value
 
 let rec poll_request_loop api timeout ext : (bool, string) result = 
@@ -371,8 +619,11 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
   and (poll_timer, timeout_value) =
     if timeout < 0 then
       (0.0, -1.0)
+    else if timeout = 0 then
+      (0.0, 0.0)
     else
-      (Unix.gettimeofday (), (float_of_int timeout) *. 0.001) in
+      (Unix.gettimeofday (), (float_of_int timeout) *. 0.001)
+  in
   let (reading, _, excepting) =
     Unix.select [socket] [] [socket] timeout_value in
   if (List.length excepting) > 0 then
@@ -384,7 +635,7 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
     | Error (error) ->
       Error (error)
     | Ok (data, data_size) ->
-      match poll_request_data api ext data data_size with
+      match poll_request_data api ext data data_size 0 with
       | Error (error) ->
         Error (error)
       | Ok (Some value) ->
@@ -393,7 +644,9 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
         let timeout_new = if timeout > 0 then
           let elapsed = truncate
             (((Unix.gettimeofday ()) -. poll_timer) *. 1000.0) in
-          if elapsed >= timeout then
+          if elapsed < 0 then
+            timeout
+          else if elapsed >= timeout then
             0
           else
             timeout - elapsed
@@ -405,55 +658,151 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
         else
           poll_request_loop api timeout_new ext
 
-and poll_request_data api ext data data_size : (bool option, string) result = 
-  match unpack_uint32_native 0 data with
+and callback
+  api cmd name pattern request_info request timeout priority trans_id pid :
+  (bool option, string) result =
+  let {Instance.callbacks; request_timeout_adjustment; _} = api in
+  if request_timeout_adjustment then (
+    api.Instance.request_timer <- Unix.gettimeofday () ;
+    api.Instance.request_timeout <- timeout) ;
+  let callback_get () =
+    let function_queue = Hashtbl.find callbacks pattern in
+    let f = Queue.pop function_queue in
+    Queue.push f function_queue ;
+    f
+  in
+  let callback_f =
+    try callback_get ()
+    with Not_found -> null_response
+  in
+  let callback_result =
+    if cmd = message_send_async then
+      try Some (
+        callback_f
+          api ASYNC name pattern request_info request
+          timeout priority trans_id pid)
+      with
+        | ReturnSync ->
+          print_exception "Synchronous Call Return Invalid" ;
+          None
+        | ReturnAsync ->
+          None
+        | ForwardSync ->
+          print_exception "Synchronous Call Forward Invalid" ;
+          None
+        | ForwardAsync ->
+          None
+        | e ->
+          print_exception (backtrace e) ;
+          Some (Null)
+    else if cmd = message_send_sync then
+      try Some (
+        callback_f
+          api SYNC name pattern request_info request
+          timeout priority trans_id pid)
+      with
+        | ReturnSync ->
+          None
+        | ReturnAsync ->
+          print_exception "Asynchronous Call Return Invalid" ;
+          None
+        | ForwardSync ->
+          None
+        | ForwardAsync ->
+          print_exception "Asynchronous Call Forward Invalid" ;
+          None
+        | e ->
+          print_exception (backtrace e) ;
+          Some (Null)
+    else
+      None
+  in
+  let response_result = match callback_result with
+  | Some (ResponseInfo (value1, value2)) ->
+    Some ((value1, value2))
+  | Some (Response (value)) ->
+    Some (("", value))
+  | Some (Null) ->
+    Some (("", ""))
+  | Some (NullError (error)) ->
+    print_error error ;
+    Some (("", ""))
+  | None ->
+    None
+  in
+  let return_result = if cmd = message_send_async then
+    match response_result with
+    | None ->
+      Ok (())
+    | Some ((response_info, response)) ->
+      return_async_i
+        api name pattern response_info response timeout trans_id pid
+  else if cmd = message_send_sync then
+    match response_result with
+    | None ->
+      Ok (())
+    | Some ((response_info, response)) ->
+      return_sync_i
+        api name pattern response_info response timeout trans_id pid
+  else
+    Error (message_decoding_error)
+  in
+  match return_result with
+  | Error (error) ->
+    Error (error)
+  | Ok _ ->
+    Ok (None)
+
+and poll_request_data api ext data data_size i : (bool option, string) result = 
+  match unpack_uint32_native i data with
   | Error (error) ->
     Error (error)
   | Ok (cmd) ->
-    if cmd = message_init then (
-      match unpack_uint32_native 4 data with
+    if cmd = message_init then
+      match unpack_uint32_native (i + 4) data with
       | Error (error) ->
         Error (error)
       | Ok (process_index) ->
-        match unpack_uint32_native 8 data with
+        match unpack_uint32_native (i + 8) data with
         | Error (error) ->
           Error (error)
         | Ok (process_count) ->
-          match unpack_uint32_native 12 data with
+          match unpack_uint32_native (i + 12) data with
           | Error (error) ->
             Error (error)
           | Ok (process_count_max) ->
-            match unpack_uint32_native 16 data with
+            match unpack_uint32_native (i + 16) data with
             | Error (error) ->
               Error (error)
             | Ok (process_count_min) ->
-              match unpack_uint32_native 20 data with
+              match unpack_uint32_native (i + 20) data with
               | Error (error) ->
                 Error (error)
               | Ok (prefix_size) ->
-                let prefix = String.sub data 24 (prefix_size - 1)
-                and i0 = 24 + prefix_size in
-                match unpack_uint32_native i0 data with
+                let i0 = i + 24 in
+                let prefix = String.sub data i0 (prefix_size - 1)
+                and i1 = i0 + prefix_size in
+                match unpack_uint32_native i1 data with
                 | Error (error) ->
                   Error (error)
                 | Ok (timeout_initialize) ->
-                  match unpack_uint32_native (i0 + 4) data with
+                  match unpack_uint32_native (i1 + 4) data with
                   | Error (error) ->
                     Error (error)
                   | Ok (timeout_async) ->
-                    match unpack_uint32_native (i0 + 8) data with
+                    match unpack_uint32_native (i1 + 8) data with
                     | Error (error) ->
                       Error (error)
                     | Ok (timeout_sync) ->
-                      match unpack_uint32_native (i0 + 12) data with
+                      match unpack_uint32_native (i1 + 12) data with
                       | Error (error) ->
                         Error (error)
                       | Ok (timeout_terminate) ->
                         let priority_default =
-                          int_of_char data.[i0 + 16]
+                          int_of_char data.[i1 + 16]
                         and request_timeout_adjustment =
-                          int_of_char data.[i0 + 17]
-                        and i1 = i0 + 18 in
+                          int_of_char data.[i1 + 17]
+                        and i2 = i1 + 18 in
                         Instance.init api
                           process_index
                           process_count
@@ -466,30 +815,225 @@ and poll_request_data api ext data data_size : (bool option, string) result =
                           timeout_terminate
                           priority_default
                           (request_timeout_adjustment <> 0) ;
-                        if i1 != data_size then
-                          match handle_events api ext data data_size i1 0 with
+                        if i2 <> data_size then
+                          match handle_events api ext data data_size i2 0 with
                           | Error (error) ->
                             Error (error)
                           | Ok _ ->
                             Ok (Some false)
                         else
-                          Ok (Some false))
+                          Ok (Some false)
     else if (cmd = message_send_async || cmd = message_send_sync) then
-      Error ("invalid")
+      match unpack_uint32_native (i + 4) data with
+      | Error (error) ->
+        Error (error)
+      | Ok (name_size) ->
+        let i0 = i + 8 in
+        let name = String.sub data i0 (name_size - 1)
+        and i1 = i0 + name_size in
+        match unpack_uint32_native i1 data with
+        | Error (error) ->
+          Error (error)
+        | Ok (pattern_size) ->
+          let i2 = i1 + 4 in
+          let pattern = String.sub data i2 (pattern_size - 1)
+          and i3 = i2 + pattern_size in
+          match unpack_uint32_native i3 data with
+          | Error (error) ->
+            Error (error)
+          | Ok (request_info_size) ->
+            let i4 = i3 + 4 in
+            let request_info = String.sub data i4 request_info_size
+            and i5 = i4 + request_info_size + 1 in
+            match unpack_uint32_native i5 data with
+            | Error (error) ->
+              Error (error)
+            | Ok (request_size) ->
+              let i6 = i5 + 4 in
+              let request = String.sub data i6 request_size
+              and i7 = i6 + request_size + 1 in
+              match unpack_uint32_native i7 data with
+              | Error (error) ->
+                Error (error)
+              | Ok (timeout) ->
+                let priority = int_of_char data.[i7 + 4]
+                and trans_id = String.sub data (i7 + 5) 16
+                and i8 = i7 + 4 + 1 + 16 in
+                match unpack_uint32_native i8 data with
+                | Error (error) ->
+                  Error (error)
+                | Ok (pid_size) ->
+                  let i9 = i8 + 4 in
+                  let pid_data = String.sub data i9 pid_size
+                  and i10 = i9 + pid_size in
+                  match Erlang.binary_to_term pid_data with
+                  | Error (error) ->
+                    Error (error)
+                  | Ok (
+                      Erlang.OtpErlangInteger _
+                    | Erlang.OtpErlangIntegerBig _
+                    | Erlang.OtpErlangFloat _
+                    | Erlang.OtpErlangAtom _
+                    | Erlang.OtpErlangAtomUTF8 _
+                    | Erlang.OtpErlangAtomCacheRef _
+                    | Erlang.OtpErlangAtomBool _
+                    | Erlang.OtpErlangString _
+                    | Erlang.OtpErlangBinary _
+                    | Erlang.OtpErlangBinaryBits (_, _)
+                    | Erlang.OtpErlangList _
+                    | Erlang.OtpErlangListImproper _
+                    | Erlang.OtpErlangTuple _
+                    | Erlang.OtpErlangMap _
+                    | Erlang.OtpErlangPort _
+                    | Erlang.OtpErlangReference _
+                    | Erlang.OtpErlangFunction _) ->
+                    Error (message_decoding_error)
+                  | Ok (Erlang.OtpErlangPid (pid)) ->
+                    let handled =
+                      if i10 <> data_size then
+                        handle_events api ext data data_size i10 0
+                      else
+                        Ok (true)
+                    in
+                    match handled with
+                    | Error (error) ->
+                      Error (error)
+                    | Ok (false)  ->
+                      Ok (Some false)
+                    | Ok (true)  ->
+                      callback
+                        api cmd name pattern request_info request
+                        timeout priority trans_id pid
     else if (cmd = message_recv_async || cmd = message_return_sync) then
-      Error ("invalid")
-    else if cmd = message_return_async then
-      Error ("invalid")
+      match unpack_uint32_native (i + 4) data with
+      | Error (error) ->
+        Error (error)
+      | Ok (response_info_size) ->
+        let i0 = i + 8 in
+        let response_info = String.sub data i0 response_info_size
+        and i1 = i0 + response_info_size + 1 in
+        match unpack_uint32_native i1 data with
+        | Error (error) ->
+          Error (error)
+        | Ok (response_size) ->
+          let i2 = i1 + 4 in
+          let response = String.sub data i2 response_size
+          and i3 = i2 + response_size + 1 in
+          let trans_id = String.sub data i3 16
+          and i4 = i3 + 16 in
+          Instance.set_response api
+            response_info
+            response
+            trans_id ;
+          if i4 <> data_size then
+            match handle_events api ext data data_size i4 0 with
+            | Error (error) ->
+              Error (error)
+            | Ok _ ->
+              Ok (Some false)
+          else
+            Ok (Some false)
+    else if cmd = message_return_async then (
+      let trans_id = String.sub data (i + 4) 16
+      and i0 = i + 4 + 16 in
+      Instance.set_trans_id api
+        trans_id ;
+      if i0 <> data_size then
+        match handle_events api ext data data_size i0 0 with
+        | Error (error) ->
+          Error (error)
+        | Ok _ ->
+          Ok (Some false)
+      else
+        Ok (Some false))
     else if cmd = message_returns_async then
-      Error ("invalid")
+      match unpack_uint32_native (i + 4) data with
+      | Error (error) ->
+        Error (error)
+      | Ok (trans_id_count) ->
+        let i0 = i + 8
+        and trans_ids_str_size = 16 * trans_id_count in
+        let trans_ids_str = String.sub data i0 trans_ids_str_size
+        and i1 = i0 + trans_ids_str_size in
+        Instance.set_trans_ids api
+          trans_ids_str
+          trans_id_count ;
+        if i1 <> data_size then
+          match handle_events api ext data data_size i1 0 with
+          | Error (error) ->
+            Error (error)
+          | Ok _ ->
+            Ok (Some false)
+        else
+          Ok (Some false)
     else if cmd = message_subscribe_count then
-      Error ("invalid")
+      match unpack_uint32_native (i + 4) data with
+      | Error (error) ->
+        Error (error)
+      | Ok (count) ->
+        let i0 = i + 8 in
+        Instance.set_subscribe_count api
+          count ;
+        if i0 <> data_size then
+          match handle_events api ext data data_size i0 0 with
+          | Error (error) ->
+            Error (error)
+          | Ok _ ->
+            Ok (Some false)
+        else
+          Ok (Some false)
     else if cmd = message_term then
-      Error ("invalid")
+      match handle_events api ext data data_size (i + 4) cmd with
+      | Error (error) ->
+        Error (error)
+      | Ok (true) ->
+        Error (message_decoding_error)
+      | Ok (false) ->
+        Ok (Some false)
     else if cmd = message_reinit then
-      Error ("invalid")
+      match unpack_uint32_native (i + 4) data with
+      | Error (error) ->
+        Error (error)
+      | Ok (process_count) ->
+        match unpack_uint32_native (i + 8) data with
+        | Error (error) ->
+          Error (error)
+        | Ok (timeout_async) ->
+          match unpack_uint32_native (i + 12) data with
+          | Error (error) ->
+            Error (error)
+          | Ok (timeout_sync) ->
+            let priority_default = int_of_char data.[i + 16]
+            and request_timeout_adjustment = int_of_char data.[i + 17]
+            and i1 = i + 18 in
+            Instance.reinit api
+              process_count
+              timeout_async
+              timeout_sync
+              priority_default
+              (request_timeout_adjustment <> 0) ;
+            if i1 = data_size then
+              Ok (None)
+            else if i1 < data_size then
+              poll_request_data api ext data data_size i1
+            else
+              Error (message_decoding_error)
     else if cmd = message_keepalive then
-      Error ("invalid")
+      match Erlang.term_to_binary (Erlang.OtpErlangAtom ("keepalive")) with
+      | Error (error) ->
+        Error (error)
+      | Ok (keepalive) ->
+        match send api keepalive with
+        | Error (error) ->
+          Error (error)
+        | Ok _ ->
+          let i1 = i + 4 in
+          if i1 = data_size then
+            Ok (None)
+          else if i1 < data_size then
+            poll_request_data api ext data data_size i1
+          else
+            Error (message_decoding_error)
     else
       Error (message_decoding_error)
 
@@ -552,6 +1096,201 @@ let api (thread_index : int) : (Instance.t, string) result =
 let thread_count () : (int, string) result =
   getenv_to_uint "CLOUDI_API_INIT_THREAD_COUNT"
 
+let subscribe api pattern f =
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("subscribe");
+      Erlang.OtpErlangString (pattern)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (subscribe) ->
+    match send api subscribe with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      Instance.callbacks_add api pattern f ;
+      Ok (())
+
+let subscribe_count api pattern =
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("subscribe_count");
+      Erlang.OtpErlangString (pattern)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (subscribe_count) ->
+    match send api subscribe_count with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      match poll_request api (-1) false with
+      | Error (error) ->
+        Error (error)
+      | Ok _ ->
+        Ok (api.Instance.subscribe_count)
+
+let unsubscribe api pattern =
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("unsubscribe");
+      Erlang.OtpErlangString (pattern)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (unsubscribe) ->
+    match send api unsubscribe with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      Instance.callbacks_remove api pattern ;
+      Ok (())
+
+let send_async
+  ?timeout:(timeout_arg = -1)
+  ?request_info:(request_info = "")
+  ?priority:(priority_arg = 256)
+  api name request =
+  let timeout =
+    if timeout_arg = -1 then
+      api.Instance.timeout_async
+    else
+      timeout_arg
+  and priority =
+    if priority_arg = 256 then
+      api.Instance.priority_default
+    else
+      priority_arg
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("send_async");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangBinary (request_info);
+      Erlang.OtpErlangBinary (request);
+      Erlang.OtpErlangInteger (timeout);
+      Erlang.OtpErlangInteger (priority)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (send_async) ->
+    match send api send_async with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      match poll_request api (-1) false with
+      | Error (error) ->
+        Error (error)
+      | Ok _ ->
+        Ok (api.Instance.trans_id)
+
+let send_sync
+  ?timeout:(timeout_arg = -1)
+  ?request_info:(request_info = "")
+  ?priority:(priority_arg = 256)
+  api name request =
+  let timeout =
+    if timeout_arg = -1 then
+      api.Instance.timeout_sync
+    else
+      timeout_arg
+  and priority =
+    if priority_arg = 256 then
+      api.Instance.priority_default
+    else
+      priority_arg
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("send_sync");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangBinary (request_info);
+      Erlang.OtpErlangBinary (request);
+      Erlang.OtpErlangInteger (timeout);
+      Erlang.OtpErlangInteger (priority)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (send_sync) ->
+    match send api send_sync with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      match poll_request api (-1) false with
+      | Error (error) ->
+        Error (error)
+      | Ok _ ->
+        Ok ((
+          api.Instance.response_info,
+          api.Instance.response,
+          api.Instance.trans_id))
+
+let mcast_async
+  ?timeout:(timeout_arg = -1)
+  ?request_info:(request_info = "")
+  ?priority:(priority_arg = 256)
+  api name request =
+  let timeout =
+    if timeout_arg = -1 then
+      api.Instance.timeout_async
+    else
+      timeout_arg
+  and priority =
+    if priority_arg = 256 then
+      api.Instance.priority_default
+    else
+      priority_arg
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("mcast_async");
+      Erlang.OtpErlangString (name);
+      Erlang.OtpErlangBinary (request_info);
+      Erlang.OtpErlangBinary (request);
+      Erlang.OtpErlangInteger (timeout);
+      Erlang.OtpErlangInteger (priority)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (mcast_async) ->
+    match send api mcast_async with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      match poll_request api (-1) false with
+      | Error (error) ->
+        Error (error)
+      | Ok _ ->
+        Ok (api.Instance.trans_ids)
+
+let recv_async
+  ?timeout:(timeout_arg = -1)
+  ?trans_id:(trans_id = trans_id_null)
+  ?consume:(consume = true)
+  api =
+  let timeout =
+    if timeout_arg = -1 then
+      api.Instance.timeout_sync
+    else
+      timeout_arg
+  in
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("recv_async");
+      Erlang.OtpErlangInteger (timeout);
+      Erlang.OtpErlangBinary (trans_id);
+      Erlang.OtpErlangAtomBool (consume)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (recv_async) ->
+    match send api recv_async with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      match poll_request api (-1) false with
+      | Error (error) ->
+        Error (error)
+      | Ok _ ->
+        Ok ((
+          api.Instance.response_info,
+          api.Instance.response,
+          api.Instance.trans_id))
+
 let process_index (api : Instance.t) : int =
   api.Instance.process_index
 
@@ -581,4 +1320,32 @@ let timeout_terminate (api : Instance.t) : int =
 
 let poll (api : Instance.t) (timeout : int) : (bool, string) result =
   poll_request api timeout true
+
+let text_key_value_parse text : (string, string list) Hashtbl.t =
+  let result = Hashtbl.create 32
+  and data = str_split_on_char '\x00' text in
+  let rec loop = function
+  | [] ->
+    result
+  | [""] ->
+    result
+  | key::t0 ->
+    match t0 with
+    | [] ->
+      raise Exit
+    | value::t1 -> (
+      try
+        let l = Hashtbl.find result key in
+        Hashtbl.replace result key (list_append l [value])
+      with Not_found ->
+        Hashtbl.add result key [value]) ;
+      loop t1
+  in
+  loop data
+
+let request_http_qs_parse request =
+  text_key_value_parse request
+
+let info_key_value_parse message_info =
+  text_key_value_parse message_info
 

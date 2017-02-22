@@ -995,25 +995,25 @@ exception TermOk of string
 let term_ok (value : (t, string) result) : t =
   match value with
   | Ok (term) ->
-      term
+    term
   | Error (error) ->
-      raise (TermOk error)
+    raise (TermOk error)
 
 exception TermError of string
 let term_error (value : (t, string) result) : string =
   match value with
   | Ok (term) ->
-      raise (TermError (t_to_string term))
+    raise (TermError (t_to_string term))
   | Error (error) ->
-      error
+    error
 
 exception BinaryOk of string
 let binary_ok (value : (string, string) result) : string =
   match value with
   | Ok (binary) ->
-      binary
+    binary
   | Error (error) ->
-      raise (BinaryOk error)
+    raise (BinaryOk error)
 
 let register_printers () =
   Printexc.register_printer (function

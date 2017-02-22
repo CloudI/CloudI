@@ -41,17 +41,28 @@
 
  *)
 
-type request_type = ASYNC | SYNC
+(** provided when handling a service request *)
+type request_type =
+    ASYNC
+  | SYNC
+
+(** the Erlang pid that is the source of the service request *)
 type source = Erlang.Pid.t
+
+(** service request callback function return type *)
 type response =
-    Null
+    Response of string
   | ResponseInfo of string * string
-  | Response of string
+  | Null
   | NullError of string
+
+(** an instance of the CloudI API *)
 module Instance :
   sig
     type t
   end
+
+(** a function to handle a service request *)
 type callback =
   Instance.t ->
   request_type ->
@@ -73,6 +84,72 @@ val api : int -> (Instance.t, string) result
 
 (** returns the thread count from the service configuration *)
 val thread_count : unit -> (int, string) result
+
+(** subscribes to a service name pattern with a callback *)
+val subscribe : Instance.t -> string -> callback -> (unit, string) result
+
+(** returns the number of subscriptions for a single service name pattern *)
+val subscribe_count : Instance.t -> string -> (int, string) result
+
+(** unsubscribes from a service name pattern once *)
+val unsubscribe : Instance.t -> string -> (unit, string) result
+
+(** sends an asynchronous service request *)
+val send_async :
+  ?timeout:int -> ?request_info:string -> ?priority:int ->
+  Instance.t -> string -> string -> (string, string) result
+
+(** sends a synchronous service request *)
+val send_sync :
+  ?timeout:int -> ?request_info:string -> ?priority:int ->
+  Instance.t -> string -> string -> (string * string * string, string) result
+
+(** sends asynchronous service requests to all subscribers
+    of the matching service name pattern *)
+val mcast_async :
+  ?timeout:int -> ?request_info:string -> ?priority:int ->
+  Instance.t -> string -> string -> (string array, string) result
+
+(** forwards an asynchronous service request to a different service name *)
+val forward_async :
+  Instance.t ->
+  string -> string -> string ->
+  int -> int -> string -> source -> (unit, string) result
+
+(** forwards a synchronous service request to a different service name *)
+val forward_sync :
+  Instance.t ->
+  string -> string -> string ->
+  int -> int -> string -> source -> (unit, string) result
+
+(** forwards a service request to a different service name *)
+val forward_ :
+  Instance.t -> request_type ->
+  string -> string -> string ->
+  int -> int -> string -> source -> (unit, string) result
+
+(** provides a response to an asynchronous service request *)
+val return_async :
+  Instance.t ->
+  string -> string -> string -> string ->
+  int -> string -> source -> (unit, string) result
+
+(** provides a response to a synchronous service request *)
+val return_sync :
+  Instance.t ->
+  string -> string -> string -> string ->
+  int -> string -> source -> (unit, string) result
+
+(** provides a response to a service request *)
+val return_ :
+  Instance.t -> request_type ->
+  string -> string -> string -> string ->
+  int -> string -> source -> (unit, string) result
+
+(** blocks to receive an asynchronous service request response *)
+val recv_async :
+  ?timeout:int -> ?trans_id:string -> ?consume:bool ->
+  Instance.t -> (string * string * string, string) result
 
 (** returns the 0-based index of this process in the service instance *)
 val process_index : Instance.t -> int
@@ -107,5 +184,12 @@ val timeout_sync : Instance.t -> int
     based on the service configuration *)
 val timeout_terminate : Instance.t -> int
 
+(** blocks to process incoming CloudI service requests *)
 val poll : Instance.t -> int -> (bool, string) result
+
+(** parses "text_pairs" from a HTTP GET query string *)
+val request_http_qs_parse : string -> (string, string list) Hashtbl.t
+
+(** parses "text_pairs" in service request info *)
+val info_key_value_parse : string -> (string, string list) Hashtbl.t
 
