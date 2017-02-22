@@ -5,6 +5,7 @@
 
     * OCaml CloudI API now is working with the http_req integration test
     * Add the null integration test in OCaml
+    * Add the msg_size integration test in OCaml
 
 2017-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 

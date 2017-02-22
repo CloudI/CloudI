@@ -65,7 +65,7 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(SUFFIXES_OPTIONAL, ["go"]).
+-define(SUFFIXES_OPTIONAL, ["go", "ocaml"]).
 
 -record(state,
     {

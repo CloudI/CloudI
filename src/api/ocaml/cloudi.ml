@@ -276,6 +276,13 @@ let unpack_uint32_big i binary : (int, string) result =
       )
     )
 
+let unpack_int8 i binary : int =
+  let byte0 = int_of_char binary.[i] in
+  if (byte0 lsr 7) = 1 then
+    -128 + (0x7f land byte0)
+  else
+    byte0
+
 let pack_uint32_big (value : int) buffer : unit =
   let byte0 = (value lsr 24) land 0xff
   and byte1 = (value lsr 16) land 0xff
@@ -578,7 +585,7 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
             | Error (error) ->
               Error (error)
             | Ok (timeout_sync) ->
-              let priority_default = int_of_char data.[i1 + 12]
+              let priority_default = unpack_int8 (i1 + 12) data
               and request_timeout_adjustment = int_of_char data.[i1 + 13]
               and i2 = i1 + 14 in
               Instance.reinit api
@@ -799,7 +806,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                         Error (error)
                       | Ok (timeout_terminate) ->
                         let priority_default =
-                          int_of_char data.[i1 + 16]
+                          unpack_int8 (i1 + 16) data
                         and request_timeout_adjustment =
                           int_of_char data.[i1 + 17]
                         and i2 = i1 + 18 in
@@ -856,7 +863,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
               | Error (error) ->
                 Error (error)
               | Ok (timeout) ->
-                let priority = int_of_char data.[i7 + 4]
+                let priority = unpack_int8 (i7 + 4) data
                 and trans_id = String.sub data (i7 + 5) 16
                 and i8 = i7 + 4 + 1 + 16 in
                 match unpack_uint32_native i8 data with
@@ -1003,7 +1010,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
           | Error (error) ->
             Error (error)
           | Ok (timeout_sync) ->
-            let priority_default = int_of_char data.[i + 16]
+            let priority_default = unpack_int8 (i + 16) data
             and request_timeout_adjustment = int_of_char data.[i + 17]
             and i1 = i + 18 in
             Instance.reinit api

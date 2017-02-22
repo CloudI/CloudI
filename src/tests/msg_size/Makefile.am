@@ -13,6 +13,9 @@ endif
 if JAVASCRIPT_SUPPORT
     JAVASCRIPT_INSTALL_HOOK = javascript-install
 endif
+if OCAML_SUPPORT
+    OCAML_SUBDIR = ocaml
+endif
 if PERL_SUPPORT
     PERL_INSTALL_HOOK = perl-install
 endif
@@ -36,7 +39,7 @@ endif
     python-c-install \
     ruby-install
 
-SUBDIRS = $(CXX_SUBDIR) $(GO_SUBDIR) $(JAVA_SUBDIR) src
+SUBDIRS = $(CXX_SUBDIR) $(GO_SUBDIR) $(JAVA_SUBDIR) $(OCAML_SUBDIR) src
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
 
 javascript-install:
