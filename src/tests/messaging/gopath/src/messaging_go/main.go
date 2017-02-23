@@ -362,7 +362,7 @@ func sequence1(api *cloudi.Instance, requestType int, name, pattern string, requ
 	if err != nil {
 		panic(err)
 	}
-	// n.b., depends on cloudi_constants.hrl having
+	// n.b., depends on cloudi_core_i_constants.hrl having
 	// RECV_ASYNC_STRATEGY == recv_async_select_oldest
 	_, _, _, err = api.RecvAsync(test1Id, false)
 	if err != nil {

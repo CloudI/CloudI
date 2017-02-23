@@ -72,8 +72,7 @@ let pack_uint32_native (value : int) : string =
   Bytes.set binary (if Sys.big_endian then 3 else 0) (char_of_int byte3) ;
   Bytes.to_string binary
 
-let request api
-  type_ name pattern request_info request timeout priority trans_id pid =
+let request api type_ _ _ request_info request timeout priority trans_id pid =
   match unpack_uint32_native request with
   | Error (error) ->
     Cloudi.NullError (error)
@@ -112,7 +111,7 @@ let task thread_index =
       match Cloudi.poll api (-1) with
       | Error (error) ->
         prerr_endline error
-      | Ok (timeout) ->
+      | Ok _ ->
         print_endline "terminate msg_size ocaml"
 
 let () = 

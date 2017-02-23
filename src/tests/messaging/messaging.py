@@ -241,7 +241,7 @@ class Task(threading.Thread):
         test15_id = self.__api.send_async(
             self.__api.prefix() + 'azbzczd',  b'test15'
         )
-        # n.b., depends on cloudi_constants.hrl having
+        # n.b., depends on cloudi_core_i_constants.hrl having
         # RECV_ASYNC_STRATEGY == recv_async_select_oldest
         self.__api.recv_async(trans_id=test1_id, consume=False)
         (tmp, test1_check, test1_id_check) = self.__api.recv_async()

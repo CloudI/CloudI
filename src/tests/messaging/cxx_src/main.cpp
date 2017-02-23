@@ -527,7 +527,7 @@ class Input
             char test15_id[16];
             ::memcpy(test15_id, api.get_trans_id(), 16);
 
-            // n.b., depends on cloudi_constants.hrl having
+            // n.b., depends on cloudi_core_i_constants.hrl having
             // RECV_ASYNC_STRATEGY == recv_async_select_oldest
             result = api.recv_async(test1_id, false);
             assert(result == CloudI::API::return_value::success);

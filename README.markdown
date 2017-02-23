@@ -95,6 +95,8 @@ Optional (default="no"):
 * `Go >= 1.6`
   * `(golang/Ubuntu, go/macports)`
   * Use the "--enable-go-support" configure flag to enable
+* `OCaml >= 4.03.0`
+  * Use the "--enable-ocaml-support" configure flag to enable
 * `ZeroMQ >= 3.x.x or 2.x.x`
   * `uuid-dev (uuid-dev/Ubuntu, ossp-uuid/macports)`
   * Use the "--with-zeromq" configure flag to enable

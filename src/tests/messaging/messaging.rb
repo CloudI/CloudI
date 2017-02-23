@@ -227,7 +227,7 @@ if __FILE__ == $PROGRAM_NAME
                 test13_id = @api.send_async("#{@api.prefix}a/bzczd", 'test13')
                 test14_id = @api.send_async("#{@api.prefix}azbzc/d", 'test14')
                 test15_id = @api.send_async("#{@api.prefix}azbzczd", 'test15')
-                # n.b., depends on cloudi_constants.hrl having
+                # n.b., depends on cloudi_core_i_constants.hrl having
                 # RECV_ASYNC_STRATEGY == recv_async_select_oldest
                 @api.recv_async(nil, test1_id, false)
                 test1 = @api.recv_async()

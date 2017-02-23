@@ -306,7 +306,7 @@ public class Task implements Runnable
             this.api.prefix() + "azbzc/d", ("test14").getBytes());
         API.TransId test15_id = this.api.send_async(
             this.api.prefix() + "azbzczd", ("test15").getBytes());
-        // n.b., depends on cloudi_constants.hrl having
+        // n.b., depends on cloudi_core_i_constants.hrl having
         // RECV_ASYNC_STRATEGY == recv_async_select_oldest
         this.api.recv_async(test1_id.id, false);
         API.Response test1_check = this.api.recv_async();

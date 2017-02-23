@@ -16,12 +16,13 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `Go >= 1.6`
 * `Java`
 * `Javascript/node.js >= 0.8.0`
+* `OCaml >= 4.03.0`
 * `Perl >= 5.10`
 * `PHP >= 5.3.6`
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
 
-C/C++, Go, Java, Javascript, Perl, PHP, Python, and Ruby all have an
+C/C++, Go, Java, Javascript, OCaml, Perl, PHP, Python, and Ruby all have an
 implementation of the CloudI API that is completely done in that programming
 language (to avoid extra complexity).  Python does have a Python with C
 integration CloudI API that is the Python module `cloudi_c`
@@ -38,7 +39,7 @@ with the same name.
 
 An example [SWIG](http://www.swig.org/) interface file is provided based on the
 C CloudI API in [cloudi.i](https://github.com/CloudI/CloudI/blob/develop/src/api/c/cloudi.i).
-SWIG could be used to create a CloudI API for Lua, R, Ocaml, D, etc.
+SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 ### Examples exist within the integration tests:
 
@@ -78,6 +79,13 @@ SWIG could be used to create a CloudI API for Lua, R, Ocaml, D, etc.
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.js)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.js)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.js)
+
+#### OCaml
+
+* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/ocaml/main.ml)
+* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/ocaml/main.ml)
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/ocaml/main.ml)
+* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/ocaml/main.ml)
 
 #### [Perl](http://cloudi.org/faq.html#6_Perl)
 

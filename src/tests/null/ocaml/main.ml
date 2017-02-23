@@ -41,8 +41,7 @@
  
  *)
 
-let request api
-  type_ name pattern request_info request timeout priority trans_id pid =
+let request _ _ _ _ _ _ _ _ _ _ =
   print_endline "null ocaml" ;
   Cloudi.Null
 
@@ -58,7 +57,7 @@ let task thread_index =
       match Cloudi.poll api (-1) with
       | Error (error) ->
         prerr_endline error
-      | Ok (timeout) ->
+      | Ok _ ->
         print_endline "terminate null ocaml"
 
 let () = 

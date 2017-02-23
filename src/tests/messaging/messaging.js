@@ -230,7 +230,7 @@ Task.prototype.sequence1 = function (request_type, name, pattern,
                              function (test14_id) {
         Task._api.send_async(Task._api.prefix() + 'azbzczd',  'test15',
                              function (test15_id) {
-        // n.b., depends on cloudi_constants.hrl having
+        // n.b., depends on cloudi_core_i_constants.hrl having
         // RECV_ASYNC_STRATEGY == recv_async_select_oldest
         Task._api.recv_async(undefined, undefined, undefined, false);
         Task._api.recv_async(function (tmp, test1_check, test1_id_check) {

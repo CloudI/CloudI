@@ -279,7 +279,7 @@ sub _sequence1
         $self->{api}->prefix() . 'azbzc/d',  'test14');
     my $test15_id = $self->{api}->send_async(
         $self->{api}->prefix() . 'azbzczd',  'test15');
-    # n.b., depends on cloudi_constants.hrl having
+    # n.b., depends on cloudi_core_i_constants.hrl having
     # RECV_ASYNC_STRATEGY == recv_async_select_oldest
     my $tmp;
     $self->{api}->recv_async(undef, $test1_id, 0);

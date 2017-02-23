@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2012-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_messaging_sequence1).
@@ -200,7 +200,7 @@ sequence1(Dispatcher, Prefix) ->
                                                "azbzc/d", <<"test14">>),
     {ok, Test15Id} = cloudi_service:send_async(Dispatcher, Prefix ++
                                                "azbzczd", <<"test15">>),
-    % n.b., depends on cloudi_constants.hrl having
+    % n.b., depends on cloudi_core_i_constants.hrl having
     % RECV_ASYNC_STRATEGY == recv_async_select_oldest
     cloudi_service:recv_async(Dispatcher, Test1Id, false),
     {ok, <<>>, Test1Response, Test1Id} =

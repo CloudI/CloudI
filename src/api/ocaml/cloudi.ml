@@ -188,6 +188,8 @@ type callback = (
   int -> int -> string -> source ->
   response)
 
+let trans_id_null = String.make 16 '\x00'
+
 let invalid_input_error = "Invalid Input"
 let message_decoding_error = "Message Decoding Error"
 let terminate_error = "Terminate"
@@ -226,8 +228,6 @@ let backtrace (e : exn) : string =
   let indent = "  " in
   (Printexc.to_string e) ^ "\n" ^ indent ^
   (String.trim (str_replace "\n" ("\n" ^ indent) (Printexc.get_backtrace ())))
-
-let trans_id_null = String.make 16 '\x00'
 
 let null_response _ _ _ _ _ _ _ _ _ _ =
   Null
@@ -941,12 +941,13 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
           else
             Ok (Some false)
     else if cmd = message_return_async then (
-      let trans_id = String.sub data (i + 4) 16
-      and i0 = i + 4 + 16 in
+      let i0 = i + 4 in
+      let trans_id = String.sub data i0 16
+      and i1 = i0 + 16 in
       Instance.set_trans_id api
         trans_id ;
-      if i0 <> data_size then
-        match handle_events api ext data data_size i0 0 with
+      if i1 <> data_size then
+        match handle_events api ext data data_size i1 0 with
         | Error (error) ->
           Error (error)
         | Ok _ ->

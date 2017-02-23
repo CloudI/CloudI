@@ -372,7 +372,7 @@ if test "x$GO" = "x"; then
     AC_MSG_ERROR([go not found])
 fi
 AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_GO_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"tests/messaging/priv/messaging_go\"}, {dest_refresh, immediate_local}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_go}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"tests/messaging/priv/messaging_go\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_go}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_GO_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_go\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_GO_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
@@ -422,9 +422,9 @@ fi
 if test "x$OCAMLOPT" = "x"; then
     AC_MSG_ERROR([ocamlopt not found])
 fi
-AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A-32-27"])
+AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A"])
 AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-# AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"tests/messaging/priv/messaging_ocaml\"}, {dest_refresh, immediate_local}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"tests/messaging/priv/messaging_ocaml\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_OCAML_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_ocaml\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
 AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
@@ -659,6 +659,7 @@ AC_CONFIG_FILES([
     tests/messaging/cxx_src/Makefile
     tests/messaging/gopath/Makefile
     tests/messaging/jar/Makefile
+    tests/messaging/ocaml/Makefile
     tests/messaging/org/Makefile
     tests/messaging/org/cloudi/Makefile
     tests/messaging/org/cloudi/tests/Makefile

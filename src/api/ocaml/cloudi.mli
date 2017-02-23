@@ -70,6 +70,10 @@ type callback =
   string -> string ->
   int -> int -> string -> source -> response
 
+(** a null trans_id is used to check for a timeout or
+    to get the oldest response with recv_async *)
+val trans_id_null : string
+
 val invalid_input_error : string
 val message_decoding_error : string
 val terminate_error : string

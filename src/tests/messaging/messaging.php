@@ -249,7 +249,7 @@ class Task //extends \Thread
             $this->api->prefix() . 'azbzc/d',  'test14');
         $test15_id = $this->api->send_async(
             $this->api->prefix() . 'azbzczd',  'test15');
-        // n.b., depends on cloudi_constants.hrl having
+        // n.b., depends on cloudi_core_i_constants.hrl having
         // RECV_ASYNC_STRATEGY == recv_async_select_oldest
         $this->api->recv_async(null, $test1_id, false);
         list(, $test1_check, $test1_id_check) = $this->api->recv_async();
