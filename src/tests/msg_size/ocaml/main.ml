@@ -115,6 +115,7 @@ let task thread_index =
         print_endline "terminate msg_size ocaml"
 
 let () = 
+  Printexc.record_backtrace true ;
   match Cloudi.thread_count () with
   | Error (error) ->
     prerr_endline error

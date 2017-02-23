@@ -5,6 +5,7 @@
 
     * Add the messaging integration test in OCaml
     * The OCaml CloudI API is now tested
+    * Record backtrace in OCaml integration tests
 
 2017-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
