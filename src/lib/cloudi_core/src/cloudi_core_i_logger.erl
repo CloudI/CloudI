@@ -1877,7 +1877,7 @@ int_to_dec(I) when 0 =< I, I =< 9 ->
                       fun((any(), #state{}) ->
                           {ok, #state{}} | {{error, any()}, #state{}})}),
            State :: #state{}) ->
-    {ok, #state{}} | {error, any()}.
+    {ok, #state{}} | {{error, any()}, #state{}}.
 
 eval([], State) ->
     {ok, State};
