@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the CloudI Service API logging_stdout_set functionality
+      to output all log data to stdout
+    * Improvements to the CloudI logger to reduce latency
+    * cloudi_service_api:aspect_log_f() now uses iodata for the LogMessage
+    * Improve service configuration format written to log to avoid column limit
+
 2017-02-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the messaging integration test in OCaml

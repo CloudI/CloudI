@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -71,6 +71,7 @@
          nodes/1,
          logging_set/2,
          logging_file_set/2,
+         logging_stdout_set/2,
          logging_level_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
@@ -752,7 +753,7 @@
          Function :: atom() | undefined,
          Arity :: arity() | undefined,
          MetaData :: list({atom(), any()}),
-         LogMessage :: list(byte())) ->
+         LogMessage :: iodata()) ->
         ok).
 -type aspect_log_before() ::
     aspect_log_f() |
@@ -1285,6 +1286,24 @@ logging_file_set(FilePath, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_file_set(FilePath, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Modify the current log stdout usage.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_stdout_set(Stdout :: boolean(),
+                         Timeout :: api_timeout_milliseconds()) ->
+    ok.
+
+logging_stdout_set(Stdout, Timeout)
+    when is_boolean(Stdout),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:logging_stdout_set(Stdout, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

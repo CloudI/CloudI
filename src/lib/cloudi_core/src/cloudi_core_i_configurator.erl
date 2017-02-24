@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -72,6 +72,7 @@
          nodes_remove/2,
          logging_set/2,
          logging_file_set/2,
+         logging_stdout_set/2,
          logging_level_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
@@ -224,6 +225,11 @@ logging_set(L, Timeout) ->
 logging_file_set(FilePath, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {logging_file_set, FilePath,
+                                 timeout_decr(Timeout)}, Timeout)).
+
+logging_stdout_set(Stdout, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {logging_stdout_set, Stdout,
                                  timeout_decr(Timeout)}, Timeout)).
 
 logging_level_set(Level, Timeout) ->
@@ -499,6 +505,15 @@ handle_call({logging_file_set, FilePath, _}, _,
         {error, _} = Error ->
             {reply, Error, State}
     end;
+
+handle_call({logging_stdout_set, Stdout, _}, _,
+            #state{configuration = Config} = State) ->
+    #config{logging = LoggingConfig} = Config,
+    ok = cloudi_core_i_logger:stdout_set(Stdout),
+    NewConfig = Config#config{
+                    logging = LoggingConfig#config_logging{
+                        stdout = Stdout}},
+    {reply, ok, State#state{configuration = NewConfig}};
 
 handle_call({logging_level_set, Level, _}, _,
             #state{configuration = Config} = State) ->
@@ -999,7 +1014,7 @@ service_start_internal(IndexProcess, Pids,
                  IndexProcess, CountProcess, 1, Scope,
                  TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
+            service_format_log(Service, P),
             service_start_internal(IndexProcess + 1, [P | Pids], Service,
                                    GroupLeader, CountProcess, Timeout);
         {error, Reason} ->
@@ -1045,7 +1060,7 @@ service_start_external(IndexProcess, Pids,
                  IndexProcess, CountProcess, CountThread, Scope,
                  TimeoutTerm, RestartDelay, MaxR, MaxT, ID, Timeout) of
         {ok, P} ->
-            ?LOG_INFO("~p -> ~p", [service_format(Service), P]),
+            service_format_log(Service, P),
             service_start_external(IndexProcess + 1, [P | Pids], Service,
                                    CountThread, CountProcess, Timeout);
         {error, Reason} ->
@@ -1213,6 +1228,9 @@ timeout_decr(infinity) ->
 timeout_decr(Timeout)
     when is_integer(Timeout), Timeout >= ?TIMEOUT_DELTA ->
     Timeout - ?TIMEOUT_DELTA.
+
+service_format_log(Service, Pids) ->
+    ?LOG_INFO("~p ->~n    ~p", [service_format(Service), Pids]).
 
 service_format(Service) ->
     {ID, ServiceConfig} = cloudi_core_i_configuration:service_format(Service),

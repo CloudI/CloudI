@@ -119,18 +119,28 @@
 
 -record(config_logging,
     {
+        % file path to write log output to while allowing the file to rotate
         file = "logs/cloudi.log"
             :: undefined | string(),
+        % write log output to stdout
+        stdout = false
+            :: boolean(),
+        % controls both file and stdout
         level = trace
             :: undefined | cloudi_service_api:loglevel(),
+        % redirect log output to a different CloudI node
         redirect = undefined
             :: undefined | node(),
+        % send log output to syslog
         syslog = undefined
             :: undefined | #config_logging_syslog{},
+        % use custom formatters for log output
         formatters = undefined
             :: undefined | #config_logging_formatters{},
+        % aspect functions to execute before logging
         aspects_log_before = []
             :: list(cloudi_service_api:aspect_log_before()),
+        % aspect functions to execute after logging
         aspects_log_after = []
             :: list(cloudi_service_api:aspect_log_after())
     }).

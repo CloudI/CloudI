@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -250,6 +250,7 @@
      logging_invalid |
      logging_redirect_invalid |
      logging_file_invalid |
+     logging_stdout_invalid |
      logging_level_invalid, any()} |
     error_reason_logging_syslog_set_configuration() |
     error_reason_logging_formatters_set_configuration().
@@ -1358,6 +1359,7 @@ logging_formatters_set(Value, #config{logging = OldLogging} = Config)
 
 logging(#config{logging = #config_logging{
                               file = File,
+                              stdout = Stdout,
                               level = Level,
                               redirect = Redirect,
                               syslog = Syslog,
@@ -1373,21 +1375,27 @@ logging(#config{logging = #config_logging{
             [{file, File} | LoggingList0]
     end,
     LoggingList2 = if
-        Level =:= Defaults#config_logging.level ->
+        Stdout == Defaults#config_logging.stdout ->
             LoggingList1;
         true ->
-            [{level, Level} | LoggingList1]
+            [{stdout, Stdout} | LoggingList1]
     end,
     LoggingList3 = if
-        Redirect =:= Defaults#config_logging.redirect ->
+        Level =:= Defaults#config_logging.level ->
             LoggingList2;
         true ->
-            [{redirect, Redirect} | LoggingList2]
+            [{level, Level} | LoggingList2]
+    end,
+    LoggingList4 = if
+        Redirect =:= Defaults#config_logging.redirect ->
+            LoggingList3;
+        true ->
+            [{redirect, Redirect} | LoggingList3]
     end,
     undefined = Defaults#config_logging.syslog,
-    LoggingList4 = case Syslog of
+    LoggingList5 = case Syslog of
         undefined ->
-            LoggingList3;
+            LoggingList4;
         #config_logging_syslog{identity = SyslogIdentity,
                                facility = SyslogFacility,
                                level = SyslogLevel,
@@ -1462,12 +1470,12 @@ logging(#config{logging = #config_logging{
                 true ->
                     [{port, SyslogPort} | SyslogList8]
             end,
-            [{syslog, lists:reverse(SyslogList9)} | LoggingList3]
+            [{syslog, lists:reverse(SyslogList9)} | LoggingList4]
     end,
     undefined = Defaults#config_logging.formatters,
-    LoggingList5 = case Formatters of
+    LoggingList6 = case Formatters of
         undefined ->
-            LoggingList4;
+            LoggingList5;
         #config_logging_formatters{default = FormattersDefault,
                                    lookup = FormattersLookup} ->
             FormattersList0 = if
@@ -1545,22 +1553,22 @@ logging(#config{logging = #config_logging{
                 end,
                 {FormatterKeys, lists:reverse(FormatterValue7)}
             end, FormattersList0),
-            [{formatters, FormattersList1} | LoggingList4]
+            [{formatters, FormattersList1} | LoggingList5]
            
     end,
-    LoggingList6 = if
-        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
-            LoggingList5;
-        true ->
-            [{aspects_log_before, AspectsLogBefore} | LoggingList5]
-    end,
     LoggingList7 = if
-        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
             LoggingList6;
         true ->
-            [{aspects_log_after, AspectsLogAfter} | LoggingList6]
+            [{aspects_log_before, AspectsLogBefore} | LoggingList6]
     end,
-    lists:reverse(LoggingList7).
+    LoggingList8 = if
+        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+            LoggingList7;
+        true ->
+            [{aspects_log_after, AspectsLogAfter} | LoggingList7]
+    end,
+    lists:reverse(LoggingList8).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -4722,35 +4730,40 @@ logging_proplist(Value) ->
     Defaults = [
         {level, Logging#config_logging.level},
         {file, Logging#config_logging.file},
+        {stdout, Logging#config_logging.stdout},
         {redirect, Logging#config_logging.redirect},
         {syslog, Logging#config_logging.syslog},
         {formatters, Logging#config_logging.formatters},
         {aspects_log_before, Logging#config_logging.aspects_log_before},
         {aspects_log_after, Logging#config_logging.aspects_log_after}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _, _, _, _]
+        [Level, _, _, _, _, _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_level_invalid,
                      Level}};
-        [_, File, _, _, _, _, _]
+        [_, File, _, _, _, _, _, _]
             when not ((is_list(File) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
             {error, {logging_file_invalid,
                      File}};
-        [_, _, Redirect, _, _, _, _]
+        [_, _, Stdout, _, _, _, _, _]
+            when not is_boolean(Stdout) ->
+            {error, {logging_stdout_invalid,
+                     Stdout}};
+        [_, _, _, Redirect, _, _, _, _]
             when not is_atom(Redirect) ->
             {error, {logging_redirect_invalid,
                      Redirect}};
-        [_, _, _, Syslog, _, _, _]
+        [_, _, _, _, Syslog, _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
             {error, {logging_syslog_invalid,
                      Syslog}};
-        [Level, File, Redirect, Syslog, Formatters,
+        [Level, File, Stdout, Redirect, Syslog, Formatters,
          AspectsLogBefore, AspectsLogAfter] ->
             NewFile = if
                 Level =:= undefined ->
@@ -4771,6 +4784,7 @@ logging_proplist(Value) ->
                     NewLogging = Logging#config_logging{
                                      level = NewLevel,
                                      file = NewFile,
+                                     stdout = Stdout,
                                      redirect = Redirect,
                                      syslog = SyslogConfig,
                                      formatters = FormattersConfig,
@@ -4780,7 +4794,7 @@ logging_proplist(Value) ->
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end.
 
