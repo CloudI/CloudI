@@ -526,6 +526,8 @@
          {aspects_terminate_before, list(aspect_terminate_before_external())} |
          {limit, limit_external()} |
          {owner, owner_external()} |
+         {nice, nice_external()} |
+         {cgroup, cgroup_external()} |
          {directory, directory_external()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).
@@ -806,6 +808,7 @@
                {formatter_config, list()})}).
 -type logging_proplist() ::
     nonempty_list({file, string() | undefined} |
+                  {stdout, boolean()} |
                   {level, loglevel()} |
                   {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |
