@@ -1,0 +1,5 @@
+/deps/
+/ebin/
+/hut_example.d
+/log/
+/.erlang.mk/

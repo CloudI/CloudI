@@ -55,7 +55,7 @@ probe_init(Name, _Type, Options) ->
 
     %% Setup random seed, if not already done.
     case get(random_seed) of
-        undefined -> random:seed(now());
+        undefined -> exometer_util:seed(os:timestamp());
         _ -> true
     end,
     {ok, St#st{ ets_ref = EtsRef }}.
@@ -99,7 +99,7 @@ probe_update(Value, St) when St#st.cur_sz < St#st.size ->
     { ok, St#st { cur_sz = NewSz} };
 
 probe_update(Value, St) ->
-    Slot = random:uniform(St#st.size),
+    Slot = exometer_util:uniform(St#st.size),
     ets:insert(St#st.ets_ref, #elem { slot = Slot, val = Value }),
     ok.
 

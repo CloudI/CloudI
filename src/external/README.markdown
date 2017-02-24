@@ -34,6 +34,15 @@ exception due to its C integration).
 - `Wed Nov 27 12:15:07 PST 2013`
 - `Boost Software License v1`
 
+`certifi`
+---------
+`SSL Certificates for Erlang`
+
+- `https://github.com/certifi/erlang-certifi`
+- `commit a613ba5d043f05474900752a4facc4d880cddf67 (0.7.0)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `BSD`
+
 `cowboy`
 --------
 `Erlang HTTP Server`
@@ -93,8 +102,8 @@ exception due to its C integration).
 `Erlang instrumentation package`
 
 - `https://github.com/Feuerlabs/exometer`
-- `commit 25aa831bebd9cbd83eb0187c0fd7b3f56a42907f (1.2.1)`
-- `Fri Dec 11 15:51:53 PST 2015`
+- `commit 7a7bd8d2b52de4d90f65aa3f6044b0e988319b9e`
+- `Fri Feb 24 10:27:11 PST 2017`
 - `Mozilla Public License 2.0`
 
 `exometer_core`
@@ -102,9 +111,20 @@ exception due to its C integration).
 `Erlang instrumentation package core`
 
 - `https://github.com/Feuerlabs/exometer_core`
-- `commit 88588f26f226210a1fc9e70271d8a0611ba83d30 (1.2)`
-- `Fri Dec 11 15:51:53 PST 2015`
+- `commit 09c2a9361c0295c977e441ef89382db964a64460`
+- `Fri Feb 24 10:27:11 PST 2017`
 - `Mozilla Public License 2.0`
+
+`exometer_influxdb`
+-------------------
+`Exometer InfluxDB reporter`
+
+- `https://github.com/travelping/exometer_influxdb`
+- `commit cc10115e60c6a5c05a561717cf38a9f59f11e223`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `Mozilla Public License 2.0`
+
+- `Fri Feb 24 10:27:11 PST 2017`
 
 `folsom`
 --------
@@ -136,6 +156,33 @@ exception due to its C integration).
 - `commit 71e63212f12c25827e0c1b4198d37d5d018a7fec (0.1.6)`
 - `Fri Dec 11 15:51:53 PST 2015`
 - `MIT`
+
+`hackney`
+---------
+`HTTP client library in Erlang`
+
+- `https://github.com/benoitc/hackney`
+- `commit f69567eb28d6cbf2fdf820100055fca5e6c66938 (1.6.5)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `Apache License 2.0`
+
+`hut`
+-----
+`helper library for making Erlang libraries logging framework agnostic`
+
+- `https://github.com/tolbrino/hut`
+- `commit 025540398478ab6f95932c3234382ac5bb21ad3e (v1.1.1)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `MIT`
+
+`idna`
+------
+`A pure Erlang IDNA implementation`
+
+- `https://github.com/benoitc/erlang-idna`
+- `commit 40c682fef283b7c3871c4b59aa0469304c6613ef (1.2.0)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `BSD`
 
 `jinterface`
 ------------
@@ -223,6 +270,24 @@ exception due to its C integration).
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
+`metrics`
+---------
+`A generic interface to different metrics systems in Erlang`
+
+- `https://github.com/benoitc/erlang-metrics`
+- `commit c6eb4dcf29f9e907539915e2ab996f40c2ec7e8e (1.0.1)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `BSD`
+
+`mimerl`
+--------
+`library to handle mimetypes`
+
+- `https://github.com/benoitc/mimerl`
+- `commit 678aba028a690da6822c87410d475841c048b6bf (1.0.2)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `MIT`
+
 `msgpack`
 ---------
 `MessagePack in Erlang`
@@ -246,9 +311,9 @@ exception due to its C integration).
 `Erlang parse transforms`
 
 - `https://github.com/uwiger/parse_trans`
-- `commit 82cc00264aa1bad8fc5c0739b7541feb4a843432 (2.9)`
-- `Fri Dec 11 15:51:53 PST 2015`
-- `Erlang Public License`
+- `commit 6f3645afb43c7c57d61b54ef59aecab288ce1013 (3.0.0)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `Apache License 2.0`
 
 `pgsql`
 -------
@@ -291,9 +356,18 @@ exception due to its C integration).
 `Erlang Setup Application`
 
 - `https://github.com/uwiger/setup`
-- `commit 51ee7c9f64d2bbe9dcbb58c278e8fbfd4d0ca5e2 (1.4)`
-- `Fri Dec 11 15:51:53 PST 2015`
+- `commit e4a089f743505f1166e026c51989f041da7b2f6d`
+- `Fri Feb 24 10:27:11 PST 2017`
 - `Mozilla Public License 2.0`
+
+`ssl_verify_fun`
+----------------
+`SSL verification for Erlang`
+
+- `https://github.com/deadtrickster/ssl_verify_fun.erl`
+- `commit 33406f6decdcb9f03cf1e69e34728a288af156a0 (1.1.1)`
+- `Fri Feb 24 10:27:11 PST 2017`
+- `MIT`
 
 `zeromq/v?/erlzmq`
 ------------------

@@ -1,2 +1,4 @@
 exometer.erl:209: The variable _ can never match since previous clauses completely covered the type 'enabled'
 exometer.erl:444: The variable _ can never match since previous clauses completely covered the type 'enabled'
+lager_trunc_io.erl:283: Call to missing or unexported function erlang:is_map/1
+lager_trunc_io.erl:335: Call to missing or unexported function erlang:map_size/1

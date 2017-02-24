@@ -13,31 +13,41 @@ Francisco Marchal           <marchal.francisco [at] gmail (dot) com>
 Dmitriy Mazurin             <dimas.m.19 [at] gmail (dot) com>
 
 CloudI Integration Dependencies (alphabetical project order):
-backward-cpp     François-Xavier Bourlet <bombela@gmail.com>
-bear             Boundary
-booster          Artyom Beilis (Tonkikh)
-cowboy           Loïc Hoguin <essen@ninenines.eu>
-elli             Knut Nesheim <knutin@gmail.com>
-emysql           Bill Warnecke <bill@rupture.com>,
-                 Jacob Vorreuter <jacob.vorreuter@gmail.com>,
-                 Henning Diedrich <hd2010@eonblast.com>,
-                 Eonblast Corporation [http://www.eonblast.com]
-epgsql           Anton Lebedevich
-epgsql_wg        Will Glozer
-erlang-oauth     Tim Fletcher <mail@tfletcher.com>
-erlzmq           Yurii Rashkovskii <yrashk@gmail.com>
-exometer         Basho Technologies
-exometer_core    Basho Technologies
-folsom           Boundary
-goldrush         Magnus Klaar <klaar@ninenines.eu>
-jinterface       Ericsson's OTP Team
-jsonlib          Josh Marshall
-jsx              Alisdair Sullivan <alisdairsullivan@yahoo.ca>
-lager            Basho Technologies
-nodefinder       Paul Mineiro <paul@n54.com>
-parse_trans      Ulf Wiger <ulf.wiger@feuerlabs.com>
-pgsql            Paul Guyot
-rebar            Basho Technologies
-setup            Ulf Wiger <ulf@wiger.net>
-zeromq           Martin Sustrik <sustrik@250bpm.com>
+backward-cpp         François-Xavier Bourlet <bombela@gmail.com>
+bear                 Boundary
+booster              Artyom Beilis (Tonkikh)
+certifi              Benoit Chesneau <bchesneau@gmail.com>
+cowboy               Loïc Hoguin <essen@ninenines.eu>
+cowlib               Loïc Hoguin <essen@ninenines.eu>
+elli                 Knut Nesheim <knutin@gmail.com>
+emysql               Bill Warnecke <bill@rupture.com>,
+                     Jacob Vorreuter <jacob.vorreuter@gmail.com>,
+                     Henning Diedrich <hd2010@eonblast.com>,
+                     Eonblast Corporation [http://www.eonblast.com]
+epgsql               Anton Lebedevich
+epgsql_wg            Will Glozer
+erlang-oauth         Tim Fletcher <mail@tfletcher.com>
+erlzmq               Yurii Rashkovskii <yrashk@gmail.com>
+exometer             Basho Technologies
+exometer_core        Basho Technologies
+exometer_influxdb    Travelping GmbH
+folsom               Boundary
+hackney              Benoît Chesneau <benoitc@e-engura.org>
+                     Eduardo Gurgel
+hut                  Tino Breddin
+idna                 Tim Fletcher
+                     Benoît Chesneau <benoitc@e-engura.org>
+jinterface           Ericsson's OTP Team
+jsonlib              Josh Marshall
+jsx                  Alisdair Sullivan <alisdairsullivan@yahoo.ca>
+metrics              Benoitît Chesneau <bchesneau@gmail.com>
+mimerl               Benoitît Chesneau <benoc@benoitcnetwork.eu>
+nodefinder           Paul Mineiro <paul@n54.com>
+parse_trans          Ulf Wiger <ulf.wiger@feuerlabs.com>
+pgsql                Paul Guyot
+ranch                Loïc Hoguin <essen@ninenines.eu>
+rebar                Basho Technologies
+setup                Ulf Wiger <ulf@wiger.net>
+ssl_verify_fun       Ilya Khaprov
+zeromq               Martin Sustrik <sustrik@250bpm.com>
 

@@ -231,7 +231,7 @@ printed as-is (note that any delimiter would need to be part of the prefix)
 Mode-specific options, `ets`:
 * `{table, ets:table()}` - Ets table identifier. If not specified, an
 ordered-set table will be created by the logger process. The incoming
-data will be inserted as `{erlang:now(), Data}`.
+data will be inserted as `{os:timestamp(), Data}`.
 
 
 

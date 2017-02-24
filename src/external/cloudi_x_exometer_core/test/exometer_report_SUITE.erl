@@ -24,6 +24,7 @@
     test_subscribe/1,
     test_subscribe_find/1,
     test_subscribe_select/1,
+    test_subscribe_select_bulk/1,
     test_logger_flow_control/1,
     test_logger_flow_control_2/1
    ]).
@@ -52,7 +53,8 @@ groups() ->
        test_newentry,
        test_subscribe,
        test_subscribe_find,
-       test_subscribe_select
+       test_subscribe_select,
+       test_subscribe_select_bulk
       ]},
      {test_logger, [],
       [
@@ -153,6 +155,30 @@ test_subscribe_select_(Config) ->
     [{_,R1},{_,R2},{_,R3}] = ets:tab2list(Tab),
     ok.
 
+test_subscribe_select_bulk(Config) ->
+    majority(fun test_subscribe_select_bulk_/1, Config).
+
+test_subscribe_select_bulk_({cleanup, _Config}) ->
+    restart_exometer_core();
+test_subscribe_select_bulk_(Config) ->
+    ok = exometer:new([c,1], counter, []),
+    ok = exometer:new([c,2], counter, []),
+    ok = exometer:new([c,3], counter, []),
+    {ok, Info} = start_logger_and_reporter(
+                   test_udp, [{report_bulk, true}], Config),
+    exometer_report:subscribe(
+      test_udp,
+      {select,[{ {[c,'$1'],'_','_'},[{'<','$1',3}], ['$_'] }]},
+      value, main, true),
+    {subscribe, [{metric, {select,_}},
+                 {datapoint, value} | _]} = R1 = check_logger_msg(),
+    exometer_report:trigger_interval(test_udp, main),
+    {report_bulk, [{[c,1], [{value, 0}]},
+                   {[c,2], [{value, 0}]}]} = R2 = check_logger_msg(),
+    Tab = ets_tab(Info),
+    [{_,R1},{_,R2}] = ets:tab2list(Tab),
+    ok.
+
 test_logger_flow_control(Config) ->
     test_subscribe_find([{input_port_options, [{active, false}]}|Config]).
 
@@ -160,6 +186,9 @@ test_logger_flow_control_2(Config) ->
     test_subscribe_find([{input_port_options, [{active, once}]}|Config]).
 
 start_logger_and_reporter(Reporter, Config) ->
+    start_logger_and_reporter(Reporter, [], Config).
+
+start_logger_and_reporter(Reporter, XArgs, Config) ->
     Port = get_port(Config),
     IPO = ensure_reuse(config(input_port_options, Config, [])),
     ct:log("IPO = ~p~n", [IPO]),
@@ -182,7 +211,7 @@ start_logger_and_reporter(Reporter, Config) ->
            [{module, exometer_test_udp_reporter},
             {hostname, "localhost"},
             {port, Port},
-            {intervals, [{main, manual}]}]),
+            {intervals, [{main, manual}]} | XArgs]),
     {ok, Info}.
 
 ensure_reuse(Opts) ->

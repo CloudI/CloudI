@@ -6,9 +6,10 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Parse transform for generating record access functions.
+
 __Authors:__ : Ulf Wiger ([`ulf@wiger.net`](mailto:ulf@wiger.net)).
+
 <a name="description"></a>
 
 ## Description ##
@@ -16,53 +17,27 @@ __Authors:__ : Ulf Wiger ([`ulf@wiger.net`](mailto:ulf@wiger.net)).
 This parse transform can be used to reduce compile-time
 dependencies in large systems.
 
-
 In the old days, before records, Erlang programmers often wrote
 access functions for tuple data. This was tedious and error-prone.
 The record syntax made this easier, but since records were implemented
 fully in the pre-processor, a nasty compile-time dependency was
 introduced.
 
-
 This module automates the generation of access functions for
 records. While this method cannot fully replace the utility of
 pattern matching, it does allow a fair bit of functionality on
 records without the need for compile-time dependencies.
-
 
 Whenever record definitions need to be exported from a module,
 inserting a compiler attribute,
 `export_records([RecName|...])` causes this transform
 to lay out access functions for the exported records:
 
-
 As an example, consider the following module:
 
-```
+```erlang
 
   -module(test_exprecs).
-  -export([f/0]).
-  -compile({parse_transform, exprecs}).
-  -record(r, {a = 0 :: integer(),
-              b = 0 :: integer(),
-              c = 0 :: integer()}).
-  -record(s,{a}).
-  -export_records([r,s]).
-  f() ->
-      {new,'#new-r'([])}.
-```
-
-
-
-Compiling this (assuming exprecs is in the path) will produce the
-following code.
-
-
-
-```
-
-  -module(test_exprecs).
-  -compile({pt_pp_src,true}).
   -export([f/0]).
   -record(r,{a = 0 :: integer(),b = 0 :: integer(),c = 0 :: integer()}).
   -record(s,{a}).
@@ -96,6 +71,7 @@ following code.
            '#fromlist-s'/2,
            '#info-s'/1,
            '#lens-s'/1]).
+  -export_type(['#prop-r'/0,'#attr-r'/0,'#prop-s'/0,'#attr-s'/0]).
   -type '#prop-r'() :: {a, integer()} | {b, integer()} | {c, integer()}.
   -type '#attr-r'() :: a | b | c.
   -type '#prop-s'() :: {a, any()}.
@@ -109,14 +85,14 @@ following code.
       '#new-r'();
   '#new-'(s) ->
       '#new-s'().
-  -spec '#info-'(r) -> [a | b | c];
-                (s) -> [a].
+  -spec '#info-'(r) -> ['#attr-r'()];
+                (s) -> ['#attr-s'()].
   '#info-'(RecName) ->
       '#info-'(RecName, fields).
   -spec '#info-'(r, size) -> 4;
-                (r, fields) -> [a | b | c];
+                (r, fields) -> ['#attr-r'()];
                 (s, size) -> 2;
-                (s, fields) -> [a].
+                (s, fields) -> ['#attr-s'()].
   '#info-'(r, Info) ->
       '#info-r'(Info);
   '#info-'(s, Info) ->
@@ -150,7 +126,8 @@ following code.
                (b, #r{}) -> integer();
                (c, #r{}) -> integer();
                (a, #s{}) -> any();
-               (['#attr-r'()], #r{}) -> [integer()];
+               (['#attr-r'()], #r{}) ->
+                   [integer() | integer() | integer()];
                (['#attr-s'()], #s{}) -> [any()].
   '#get-'(Attrs, Rec) when is_record(Rec, r) ->
       '#get-r'(Attrs, Rec);
@@ -168,10 +145,10 @@ following code.
       '#fromlist-r'(Vals, Rec);
   '#fromlist-'(Vals, Rec) when is_record(Rec, s) ->
       '#fromlist-s'(Vals, Rec).
-  -spec '#lens-'('#prop-r'(), r) ->
-                   {fun((#r{}) -> any()), fun((any(), #r{}) -> #r{})};
-               ('#prop-s'(), s) ->
-                   {fun((#s{}) -> any()), fun((any(), #s{}) -> #s{})}.
+  -spec '#lens-'('#attr-r'(), r) ->
+                    {fun((#r{}) -> any()), fun((any(), #r{}) -> #r{})};
+                ('#attr-s'(), s) ->
+                    {fun((#s{}) -> any()), fun((any(), #s{}) -> #s{})}.
   '#lens-'(Attr, r) ->
       '#lens-r'(Attr);
   '#lens-'(Attr, s) ->
@@ -185,7 +162,7 @@ following code.
   -spec '#get-r'(a, #r{}) -> integer();
                 (b, #r{}) -> integer();
                 (c, #r{}) -> integer();
-                (['#attr-r'()], #r{}) -> [integer()].
+                (['#attr-r'()], #r{}) -> [any()].
   '#get-r'(Attrs, R) when is_list(Attrs) ->
       [
        '#get-r'(A, R) ||
@@ -240,13 +217,13 @@ following code.
   '#pos-r'(A) when is_atom(A) ->
       0.
   -spec '#info-r'(fields) -> [a | b | c];
-                 (size) -> 3.
+                 (size) -> 4.
   '#info-r'(fields) ->
       record_info(fields, r);
   '#info-r'(size) ->
       record_info(size, r).
-  -spec '#lens-r'('#prop-r'()) ->
-                    {fun((#r{}) -> any()), fun((any(), #r{}) -> #r{})}.
+  -spec '#lens-r'('#attr-r'()) ->
+                     {fun((#r{}) -> any()), fun((any(), #r{}) -> #r{})}.
   '#lens-r'(a) ->
       {fun(R) ->
               '#get-r'(a, R)
@@ -320,13 +297,13 @@ following code.
   '#pos-s'(A) when is_atom(A) ->
       0.
   -spec '#info-s'(fields) -> [a];
-                 (size) -> 1.
+                 (size) -> 2.
   '#info-s'(fields) ->
       record_info(fields, s);
   '#info-s'(size) ->
       record_info(size, s).
-  -spec '#lens-s'('#prop-s'()) ->
-                    {fun((#s{}) -> any()), fun((any(), #s{}) -> #s{})}.
+  -spec '#lens-s'('#attr-s'()) ->
+                     {fun((#s{}) -> any()), fun((any(), #s{}) -> #s{})}.
   '#lens-s'(a) ->
       {fun(R) ->
               '#get-s'(a, R)
@@ -335,17 +312,13 @@ following code.
               '#set-s'([{a,X}], R)
        end};
   '#lens-s'(Attr) ->
-      error(bad_record_op, ['#lens-s', Attr]).
+      error(bad_record_op, ['#lens-s',Attr]).
   f() ->
       {new,'#new-r'([])}.
 ```
 
-
-
 It is possible to modify the naming rules of exprecs, through the use
 of the following attributes (example reflecting the current rules):
-
-
 
 ```
 
@@ -353,7 +326,6 @@ of the following attributes (example reflecting the current rules):
   -exprecs_fname([prefix, record]).
   -exprecs_vfname([fname, "__", version]).
 ```
-
 
 The lists must contain strings or any of the following control atoms:
 
@@ -364,12 +336,9 @@ The lists must contain strings or any of the following control atoms:
 * in `exprecs_vfname`: `operation`, `record`, `prefix`, `fname`, `version`
 
 
-
-
 Exprecs will substitute the control atoms with the string values of the
 corresponding items. The result will then be flattened and converted to an
 atom (a valid function or type name).
-
 
 `operation` is one of:
 
@@ -485,7 +454,6 @@ atom (a valid function or type name).
 ### <a name="type-form">form()</a> ###
 
 
-
 <pre><code>
 form() = any()
 </code></pre>
@@ -493,9 +461,7 @@ form() = any()
 
 
 
-
 ### <a name="type-forms">forms()</a> ###
-
 
 
 <pre><code>
@@ -505,15 +471,12 @@ forms() = [<a href="#type-form">form()</a>]
 
 
 
-
 ### <a name="type-options">options()</a> ###
-
 
 
 <pre><code>
 options() = [{atom(), any()}]
 </code></pre>
-
 
 <a name="index"></a>
 
@@ -531,10 +494,8 @@ options() = [{atom(), any()}]
 
 ### parse_transform/2 ###
 
-
 <pre><code>
 parse_transform(Forms::<a href="#type-forms">forms()</a>, Options::<a href="#type-options">options()</a>) -&gt; <a href="#type-forms">forms()</a>
 </code></pre>
 <br />
-
 

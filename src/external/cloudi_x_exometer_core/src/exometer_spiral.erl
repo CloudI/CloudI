@@ -60,7 +60,6 @@ probe_init(Name, _Type, Options) ->
                                     fun count_sample/3,
                                     fun count_transform/2,
                                     Options),
-    process_flag(min_heap_size, 40000),
     {ok, St#st{slide = Slide}}.
 
 probe_terminate(_St) ->

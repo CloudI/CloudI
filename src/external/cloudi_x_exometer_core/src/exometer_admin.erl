@@ -48,8 +48,8 @@
 -export([monitor/2, monitor/3, demonitor/1]).
 
 -compile({no_auto_import, [monitor/3]}).
+-include_lib("hut/include/hut.hrl").
 -include("exometer.hrl").
--include("log.hrl").
 
 -record(st, {}).
 
@@ -127,7 +127,7 @@ do_load_defaults(Src, L) when is_list(L) ->
               try set_default(NamePattern, Type, Spec)
               catch
                   error:E ->
-                      lager:error("Defaults(~p): ERROR: ~p~n", [Src, E])
+                      ?log(error, "Defaults(~p): ERROR: ~p~n", [Src, E])
               end
       end, L).
 
@@ -145,7 +145,7 @@ do_load_predef(Src, L) when is_list(L) ->
                 fun({K,_,_}) ->
                         predef_delete_entry(K, Src);
                    (Other) ->
-                        lager:error("Predef(~p): ~p~n",
+                        ?log(error, "Predef(~p): ~p~n",
                                     [Src, {bad_pattern,Other}])
                 end, Found);
          ({aliases, Aliases}) ->
@@ -159,7 +159,7 @@ predef_delete_entry(Key, Src) ->
     case delete_entry(Key) of
         ok -> ok;
         Error ->
-            lager:error("Predef(~p): ~p~n", [Src, Error])
+            ?log(error, "Predef(~p): ~p~n", [Src, Error])
     end.
 
 ok({ok, Res}, _) -> Res;
@@ -274,13 +274,13 @@ handle_call({new_entry, Name, Type, Opts, AllowExisting} = _Req, _From, S) ->
             {true, false} ->
                 {reply, {error, exists}, S};
             _Other ->
-		lager:debug("_Other = ~p~n", [_Other]),
+		?log(debug, "_Other = ~p~n", [_Other]),
                 E1 = process_opts(E0, NewOpts),
                 Res = try  exometer:create_entry(E1),
 			   exometer_report:new_entry(E1)
 		      catch
 			  error:Error1 ->
-			      lager:debug(
+			      ?log(debug,
 				"ERROR create_entry(~p) :- ~p~n~p",
 				[E1, Error1, erlang:get_stacktrace()]),
 			      erlang:error(Error1)
@@ -289,7 +289,7 @@ handle_call({new_entry, Name, Type, Opts, AllowExisting} = _Req, _From, S) ->
         end
     catch
         error:Error ->
-	    lager:error("~p -*-> error:~p~n~p~n",
+	    ?log(error, "~p -*-> error:~p~n~p~n",
 			[_Req, Error, erlang:get_stacktrace()]),
             {reply, {error, Error}, S}
     end;
@@ -448,14 +448,14 @@ on_error(Name, delete) ->
     try_delete_entry_(Name);
 on_error(_Proc, _OnError) ->
     %% Not good, but will do for now.
-    lager:debug("Unrecognized OnError: ~p (~p)~n", [_OnError, _Proc]),
+    ?log(debug, "Unrecognized OnError: ~p (~p)~n", [_OnError, _Proc]),
     ok.
 
 call_restart(M, F, A) ->
     apply(M, F, A).
 
 restart_failed(Name, Error) ->
-    lager:debug("Restart failed ~p: ~p~n", [Name, Error]),
+    ?log(debug, "Restart failed ~p: ~p~n", [Name, Error]),
     if is_list(Name) ->
 	    try_delete_entry_(Name);
        true ->
@@ -674,7 +674,7 @@ try_disable_entry_(Name) when is_list(Name) ->
     try exometer:setopts(Name, [{status, disabled}])
     catch
         error:Err ->
-            lager:debug("Couldn't disable ~p: ~p~n", [Name, Err]),
+            ?log(debug, "Couldn't disable ~p: ~p~n", [Name, Err]),
             try_delete_entry_(Name)
     end;
 try_disable_entry_(_Name) ->
@@ -684,7 +684,7 @@ try_delete_entry_(Name) ->
     try delete_entry_(Name)
     catch
 	error:R ->
-	    lager:debug("Couldn't delete ~p: ~p~n", [Name, R]),
+	    ?log(debug, "Couldn't delete ~p: ~p~n", [Name, R]),
 	    ok
     end.
 

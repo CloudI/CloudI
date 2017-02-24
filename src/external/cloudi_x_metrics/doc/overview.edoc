@@ -1,0 +1,46 @@
+@copyright 2016 Benoît Chesneau.
+@version 1.0.0
+@title: metrics: A generic interface to different metrics systems in Erlang.
+
+@doc
+
+# metrics
+
+A generic interface to folsom or exometer or any compliant interface. This
+application have been extracted from
+[hackney](https://github.com/benoitc/hackney).
+
+Currently support [Folsom](https://github.com/folsom-project/folsom) and [Exometer](https://github.com/Feuerlabs/exometer)
+
+
+[![Hex pm](http://img.shields.io/hexpm/v/metrics.svg?style=flat)](https://hex.pm/packages/metrics)
+
+Example:
+--------
+
+<pre lang="erlang">
+
+%% initialize an engine
+Engine = metrics:init(metrics_exometer),
+
+%% create a counter named TestCounter
+ok = metrics:new(Engine, counter, TestCounter),
+
+%% Increment the counter
+
+metrics:increment_counter(Engine, TestCounter).
+
+</pre>
+
+
+## Documentation
+
+Full doc is available in the {@link metrics} module.
+
+## Build
+
+```
+$ rebar3 compile
+'''
+
+@end

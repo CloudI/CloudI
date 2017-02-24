@@ -1,0 +1,9 @@
+%% -*- erlang -*-
+{application, hut, [
+  {description, "helper library for making Erlang libraries logging framework agnostic"},
+  {vsn, "1.1.1"},
+  {registered, []},
+  {applications, [kernel, stdlib]},
+  {modules, []},
+  {env, []}
+]}.

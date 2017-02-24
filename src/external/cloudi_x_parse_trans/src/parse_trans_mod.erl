@@ -37,19 +37,20 @@
 %%============================================================================
 
 transform_module(Mod, PT, Options) ->
-    Forms = abstract_code(beam_file(Mod)),
+    File = beam_file(Mod),
+    Forms = abstract_code(File),
     Context = parse_trans:initial_context(Forms, Options),
     PTMods = if is_atom(PT) -> [PT];
-		is_function(PT, 2) -> [PT];
-		is_list(PT) -> PT
-	     end,
+                is_function(PT, 2) -> [PT];
+                is_list(PT) -> PT
+             end,
     Transformed = lists:foldl(fun(PTx, Fs) when is_function(PTx, 2) ->
-				      PTx(Fs, Options);
-				 (PTMod, Fs) ->
-				      PTMod:parse_transform(Fs, Options)
-			      end, Forms, PTMods),
+                                      PTx(Fs, Options);
+                                 (PTMod, Fs) ->
+                                      PTMod:parse_transform(Fs, Options)
+                              end, Forms, PTMods),
     parse_trans:optionally_pretty_print(Transformed, Options, Context),
-    compile_and_load_forms(Transformed, Options).
+    compile_and_load_forms(Transformed, get_compile_options(Options)).
 
 
 -spec abstract_code(binary()) -> erlang_form().
@@ -76,9 +77,9 @@ compile_and_load_forms(AbsCode) -> compile_and_load_forms(AbsCode, []).
 compile_and_load_forms(AbsCode, Opts) ->
     case compile:forms(AbsCode, Opts) of
         {ok, ModName, Binary} ->
-            load_binary(ModName, Binary);
+            load_binary(ModName, Binary, Opts);
         {ok, ModName, Binary, _Warnings} ->
-            load_binary(ModName, Binary)
+            load_binary(ModName, Binary, Opts)
     end.
 
 -spec compile_options(binary() | module()) -> compile_options().
@@ -102,8 +103,26 @@ rename_module([H|T], NewName) ->
 %% Internal functions
 %%==============================================================================
 
-load_binary(Name, Binary) ->
-    case code:load_binary(Name, "", Binary) of
+load_binary(Name, Binary, Opts) ->
+    code:purge(Name),
+    File = beam_filename(Name, Opts),
+    case code:load_binary(Name, File, Binary) of
         {module, Name}  -> ok;
         {error, Reason} ->  exit({error_loading_module, Name, Reason})
+    end.
+
+get_compile_options(Options) ->
+    case lists:keyfind(compile_options, 1, Options) of
+        {_, COpts} ->
+            COpts;
+        false ->
+            []
+    end.
+
+beam_filename(Mod, Opts) ->
+    case lists:keyfind(outdir, 1, Opts) of
+        {_, D} ->
+            filename:join(D, atom_to_list(Mod) ++ code:objfile_extension());
+        false ->
+            ""
     end.

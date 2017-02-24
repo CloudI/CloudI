@@ -2,21 +2,22 @@
 {application, exometer_core,
  [
   {description, "Code instrumentation and metrics collection package."},
-  {vsn, "1.2"},
+  {vsn, "1.4-dev"},
   {registered, []},
   {applications,
    [
     kernel,
     stdlib,
-    lager,
-    setup
+    hut,
+    setup,
+    folsom
    ]},
   {included_applications,
    [
    ]},
   {mod, {exometer_core_app, []}},
-  {start_phases, [{preset_defaults, []},
-                  {start_reporters, []}]},
+  {start_phases, [{start_reporters, []},
+                  {preset_defaults, []}]},
   {env,
    [
    ]}

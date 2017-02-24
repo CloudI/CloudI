@@ -40,7 +40,8 @@
     test_history4_folsom/1,
     test_ext_predef/1,
     test_app_predef/1,
-    test_function_match/1
+    test_function_match/1,
+    test_status/1
    ]).
 
 %% utility exports
@@ -62,7 +63,8 @@ all() ->
      {group, test_counter},
      {group, test_defaults},
      {group, test_histogram},
-     {group, test_setup}
+     {group, test_setup},
+     {group, test_info}
     ].
 
 groups() ->
@@ -99,6 +101,10 @@ groups() ->
        test_ext_predef,
        test_app_predef,
        test_function_match
+      ]},
+     {test_info, [shuffle],
+      [
+       test_status
       ]}
     ].
 
@@ -116,6 +122,7 @@ init_per_testcase(Case, Config) when
       Case == test_history1_folsom;
       Case == test_history4_folsom ->
     {ok, StartedApps} = exometer_test_util:ensure_all_started(exometer_core),
+    ct:log("StartedApps = ~p", [StartedApps]),
     application:start(bear),
     application:start(folsom),
     [{started_apps, StartedApps} | Config];
@@ -394,6 +401,44 @@ test_app_predef(Config) ->
 test_function_match(_Config) ->
     {ok, [{gcs, _}]} = exometer:get_value([preset, match], [gcs]),
     [gcs] = exometer:info([preset, match], datapoints),
+    ok.
+
+test_status(_Config) ->
+    Opts1 = [{module, exometer_histogram}],
+    DPs1 = exometer_histogram:datapoints(),
+    exometer:new(M1 = [?MODULE,hist,?LINE], histogram, Opts1),
+    enabled = exometer:info(M1, status),
+    M1 = exometer:info(M1, name),
+    Opts1 = exometer:info(M1, options),
+    DPs1 = exometer:info(M1, datapoints),
+    Vals = [{DP,0} || DP <- DPs1],
+    [{name, M1},
+     {type, histogram},
+     {behaviour, undefined},
+     {module, exometer_histogram},
+     {status, enabled},
+     {cache, 0},
+     {value, Vals},
+     {timestamp, undefined},
+     {options, Opts1},
+     {ref, _}] = exometer:info(M1),
+    %% disable metric
+    ok = exometer:setopts(M1, [{status, disabled}]),
+    disabled = exometer:info(M1, status),
+    undefined = exometer:info(M1, datapoints),
+    M1 = exometer:info(M1, name),
+    undefined = exometer:info(M1, value),
+    Opts2 = Opts1 ++ [{status, disabled}],
+    [{name, M1},
+     {type, histogram},
+     {behaviour, undefined},
+     {module, exometer_histogram},
+     {status, disabled},
+     {cache, undefined},
+     {value, undefined},
+     {timestamp, undefined},
+     {options, Opts2},
+     {ref, undefined}] = exometer:info(M1),
     ok.
 
 %%%===================================================================

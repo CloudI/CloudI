@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update exometer and exometer_core dependencies for
+      cloudi_service_monitoring
+        * Add the hut dependency
+        * Update parse_trans and setup dependencies
+    * Add exometer_influxdb dependency for cloudi_service_monitoring
+        * Add hackney dependency
+            * Add certifi, idna, metrics, mimerl, ssl_verify_fun dependencies
+    * Remove lager and goldrush
+
 2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the CloudI Service API logging_stdout_set functionality

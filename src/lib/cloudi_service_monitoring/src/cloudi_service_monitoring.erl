@@ -463,7 +463,7 @@ update(Type, Name, Value,
             ok;
         {error, not_found} ->
             Opts = [],
-            case cloudi_x_exometer:ensure(Name, Type, Opts) of
+            try cloudi_x_exometer:ensure(Name, Type, Opts) of
                 ok ->
                     case cloudi_x_exometer:update(Name, Value) of
                         ok ->
@@ -500,8 +500,9 @@ update(Type, Name, Value,
                         {error, Reason} ->
                             ?LOG_ERROR("exometer:update/2 "
                                        "error: ~p", [Reason])
-                    end;
-                {error, Reason} ->
+                    end
+            catch
+                error:Reason ->
                     ?LOG_ERROR("exometer:ensure/3 "
                                "error: ~p", [Reason])
             end

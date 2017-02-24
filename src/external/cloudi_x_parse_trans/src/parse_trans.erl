@@ -1,35 +1,32 @@
-%%% The contents of this file are subject to the Erlang Public License,
-%%% Version 1.1, (the "License"); you may not use this file except in
-%%% compliance with the License. You may obtain a copy of the License at
-%%% http://www.erlang.org/EPLICENSE
-%%%
-%%% Software distributed under the License is distributed on an "AS IS"
-%%% basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
-%%% the License for the specific language governing rights and limitations
-%%% under the License.
-%%%
-%%% The Original Code is exprecs-0.2.
-%%%
-%%% The Initial Developer of the Original Code is Ericsson AB.
-%%% Portions created by Ericsson are Copyright (C), 2006, Ericsson AB.
-%%% All Rights Reserved.
-%%%
-%%% Contributor(s): ______________________________________.
-
-%%%-------------------------------------------------------------------
-%%% File    : parse_trans.erl
-%%% @author  : Ulf Wiger <ulf.wiger@feuerlabs.com>
-%%% @end
-%%% Description :
-%%%
-%%% Created : 13 Feb 2006 by Ulf Wiger <ulf.wiger@feuerlabs.com> (then Ericsson)
+%% -*- erlang-indent-level: 4;indent-tabs-mode: nil -*-
+%% --------------------------------------------------
+%% This file is provided to you under the Apache License,
+%% Version 2.0 (the "License"); you may not use this file
+%% except in compliance with the License.  You may obtain
+%% a copy of the License at
+%%
+%%   http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing,
+%% software distributed under the License is distributed on an
+%% "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+%% KIND, either express or implied.  See the License for the
+%% specific language governing permissions and limitations
+%% under the License.
+%% --------------------------------------------------
+%% File    : parse_trans.erl
+%% @author  : Ulf Wiger <ulf@wiger.net>
+%% @end
+%% Description :
+%%
+%% Created : 13 Feb 2006 by Ulf Wiger <ulf@wiger.net> (then Ericsson)
 %%%-------------------------------------------------------------------
 
-%%% @doc Generic parse transform library for Erlang.
-%%%
-%%% <p>...</p>
-%%%
-%%% @end
+%% @doc Generic parse transform library for Erlang.
+%%
+%% <p>...</p>
+%%
+%% @end
 
 -module(parse_trans).
 
@@ -37,12 +34,12 @@
 
 -export([
          inspect/4,
-	 transform/4,
+         transform/4,
          depth_first/4,
          revert/1,
-	 revert_form/1,
-	 format_exception/2, format_exception/3,
-	 return/2
+         revert_form/1,
+         format_exception/2, format_exception/3,
+         return/2
         ]).
 
 -export([
@@ -55,12 +52,13 @@
          do_inspect/4,
          do_transform/4,
          do_depth_first/4,
-	 top/3
+         top/3
         ]).
 
 -export([do_insert_forms/4,
-	 replace_function/4,
-	 export_function/3]).
+         replace_function/4,
+         replace_function/5,
+         export_function/3]).
 
 -export([
          context/2,
@@ -84,8 +82,8 @@
                     ]).
 
 -record(context, {module,
-		  function,
-		  arity,
+                  function,
+                  arity,
                   file,
                   options}).
 
@@ -96,7 +94,7 @@
 
 -define(ERROR(R, F, I),
         begin
-	    Trace = erlang:get_stacktrace(),
+            Trace = erlang:get_stacktrace(),
             rpt_error(R, F, I, Trace),
             throw({error,get_pos(I),{R, Trace}})
         end).
@@ -109,11 +107,11 @@
 -type options() :: [{atom(), any()}].
 -type type()    :: atom().
 -type xform_f_rec() :: fun((type(), form(), #context{}, Acc) ->
-				  {form(), boolean(), Acc}
-				      | {forms(), form(), forms(), boolean(), Acc}).
+                                  {form(), boolean(), Acc}
+                                      | {forms(), form(), forms(), boolean(), Acc}).
 -type xform_f_df() :: fun((type(), form(), #context{}, Acc) ->
-				 {form(), Acc}
-				     | {forms(), form(), forms(), Acc}).
+                                 {form(), Acc}
+                                     | {forms(), form(), forms(), Acc}).
 -type insp_f()  :: fun((type(), form(), #context{}, A) -> {boolean(), A}).
 
 
@@ -172,17 +170,17 @@ plain_transform1(_, []) ->
     [];
 plain_transform1(Fun, [F|Fs]) when is_atom(element(1,F)) ->
     case Fun(F) of
-	skip ->
-	    plain_transform1(Fun, Fs);
-	continue ->
-	    [list_to_tuple(plain_transform1(Fun, tuple_to_list(F))) |
-	     plain_transform1(Fun, Fs)];
-	{done, NewF} ->
-	    [NewF | Fs];
-	{error, Reason} ->
-	    error(Reason, F, [{form, F}]);
-	NewF when is_tuple(NewF) ->
-	    [NewF | plain_transform1(Fun, Fs)]
+        skip ->
+            plain_transform1(Fun, Fs);
+        continue ->
+            [list_to_tuple(plain_transform1(Fun, tuple_to_list(F))) |
+             plain_transform1(Fun, Fs)];
+        {done, NewF} ->
+            [NewF | Fs];
+        {error, Reason} ->
+            error(Reason, F, [{form, F}]);
+        NewF when is_tuple(NewF) ->
+            [NewF | plain_transform1(Fun, Fs)]
     end;
 plain_transform1(Fun, [L|Fs]) when is_list(L) ->
     [plain_transform1(Fun, L) | plain_transform1(Fun, Fs)];
@@ -203,10 +201,10 @@ plain_transform1(_, F) ->
     integer().
 get_pos(I) when is_list(I) ->
     case proplists:get_value(form, I) of
-	undefined ->
-	    ?DUMMY_LINE;
-	Form ->
-	    erl_syntax:get_pos(Form)
+        undefined ->
+            ?DUMMY_LINE;
+        Form ->
+            erl_syntax:get_pos(Form)
     end.
 
 
@@ -242,7 +240,7 @@ get_module(Forms) ->
 %%% @end
 %%%
 -spec get_attribute(atom(), [any()]) ->
-			   'none' | [erl_syntax:syntaxTree()].
+                           'none' | [erl_syntax:syntaxTree()].
 %%
 get_attribute(A, Forms) -> get_attribute(A,Forms,[erl_syntax:atom(undefined)]).
 get_attribute(A, Forms, Undef) ->
@@ -317,17 +315,17 @@ do(Transform, Fun, Acc, Forms, Options) ->
     Context = initial_context(Forms, Options),
     File = Context#context.file,
     try Transform(Fun, Acc, Forms, Context) of
-	{NewForms, Acc1} when is_list(NewForms) ->
-	    NewForms1 = optionally_renumber(NewForms, Options),
-	    optionally_pretty_print(NewForms1, Options, Context),
-	    {NewForms1, Acc1}
+        {NewForms, Acc1} when is_list(NewForms) ->
+            NewForms1 = optionally_renumber(NewForms, Options),
+            optionally_pretty_print(NewForms1, Options, Context),
+            {NewForms1, Acc1}
     catch
-	error:Reason ->
-	    {error,
-	     [{File, [{?DUMMY_LINE, ?MODULE,
-		       {Reason, erlang:get_stacktrace()}}]}]};
-	throw:{error, Ln, What} ->
-	    {error, [{error, {Ln, ?MODULE, What}}]}
+        error:Reason ->
+            {error,
+             [{File, [{?DUMMY_LINE, ?MODULE,
+                       {Reason, erlang:get_stacktrace()}}]}]};
+        throw:{error, Ln, What} ->
+            {error, [{error, {Ln, ?MODULE, What}}]}
     end.
 
 -spec top(function(), forms(), list()) ->
@@ -336,38 +334,58 @@ top(F, Forms, Options) ->
     Context = initial_context(Forms, Options),
     File = Context#context.file,
     try F(Forms, Context) of
-	{error, Reason} -> {error, Reason};
-	NewForms when is_list(NewForms) ->
-	    NewForms1 = optionally_renumber(NewForms, Options),
+        {error, Reason} -> {error, Reason};
+        NewForms when is_list(NewForms) ->
+            NewForms1 = optionally_renumber(NewForms, Options),
             optionally_pretty_print(NewForms1, Options, Context),
-	    NewForms1
+            NewForms1
     catch
         error:Reason ->
             {error,
              [{File, [{?DUMMY_LINE, ?MODULE,
                        {Reason, erlang:get_stacktrace()}}]}]};
-	throw:{error, Ln, What} ->
-	    {error, [{File, [{Ln, ?MODULE, What}]}], []}
+        throw:{error, Ln, What} ->
+            {error, [{File, [{Ln, ?MODULE, What}]}], []}
     end.
 
 replace_function(F, Arity, NewForm, Forms) ->
+    replace_function(F, Arity, NewForm, Forms, []).
+
+replace_function(F, Arity, NewForm, Forms, Opts) ->
     {NewForms, _} =
-	do_transform(
-	  fun(function, Form, _Ctxt, Acc) ->
-		  case erl_syntax:revert(Form) of
-		      {function, _, F, Arity, _} ->
-			  {NewForm, false, Acc};
-		      _ ->
-			  {Form, false, Acc}
-		  end;
-	     (_, Form, _Ctxt, Acc) ->
-		  {Form, false, Acc}
-	  end, false, Forms, initial_context(Forms, [])),
-    revert(NewForms).
+        do_transform(
+          fun(function, Form, _Ctxt, Acc) ->
+                  case erl_syntax:revert(Form) of
+                      {function, _, F, Arity, _} = RevForm ->
+                          {[], NewForm, with_original_f(RevForm, Opts),
+                           false, Acc};
+                      _ ->
+                          {Form, false, Acc}
+                  end;
+             (_, Form, _Ctxt, Acc) ->
+                  {Form, false, Acc}
+          end, false, Forms, initial_context(Forms, [])),
+    revert(maybe_export_renamed(NewForms, Arity, Opts)).
+
+with_original_f({function,_,_,_,_} = Form, Opts) ->
+    case lists:keyfind(rename_original, 1, Opts) of
+        {_, NewName} when is_atom(NewName) ->
+            [setelement(3, Form, NewName)];
+        _ ->
+            []
+    end.
+
+maybe_export_renamed(Forms, Arity, Opts) ->
+    case lists:keyfind(rename_original, 1, Opts) of
+        {_, NewName} when is_atom(NewName) ->
+            export_function(NewName, Arity, Forms);
+        _ ->
+            Forms
+    end.
 
 export_function(F, Arity, Forms) ->
     do_insert_forms(above, [{attribute, 1, export, [{F, Arity}]}], Forms,
-		    initial_context(Forms, [])).
+                    initial_context(Forms, [])).
 
 -spec do_insert_forms(above | below, forms(), forms(), #context{}) ->
     forms().
@@ -399,12 +417,12 @@ optionally_pretty_print(Result, Options, Context) ->
     DoLFs = option_value(pt_log_forms, Options, Result),
     File = Context#context.file,
     if DoLFs ->
-	    Out1 = outfile(File, forms),
-	    {ok,Fd} = file:open(Out1, [write]),
-	    try lists:foreach(fun(F) -> io:fwrite(Fd, "~p.~n", [F]) end, Result)
-	    after
-		ok = file:close(Fd)
-	    end;
+            Out1 = outfile(File, forms),
+            {ok,Fd} = file:open(Out1, [write]),
+            try lists:foreach(fun(F) -> io:fwrite(Fd, "~p.~n", [F]) end, Result)
+            after
+                ok = file:close(Fd)
+            end;
        true -> ok
     end,
     if DoPP ->
@@ -416,12 +434,12 @@ optionally_pretty_print(Result, Options, Context) ->
 
 optionally_renumber(Result, Options) ->
     case option_value(pt_renumber, Options, Result) of
-	true ->
-	    io:fwrite("renumbering...~n", []),
-	    Rev = revert(Result),
-	    renumber_(Rev);
-	false ->
-	    Result
+        true ->
+            io:fwrite("renumbering...~n", []),
+            Rev = revert(Result),
+            renumber_(Rev);
+        false ->
+            Result
     end.
 
 renumber_(L) when is_list(L) ->
@@ -432,15 +450,15 @@ renumber_(L, Acc) when is_list(L) ->
     lists:mapfoldl(fun renumber_/2, Acc, L);
 renumber_(T, Prev) when is_tuple(T) ->
     case is_form(T) of
-	true ->
-	    New = Prev+1,
-	    T1 = setelement(2, T, New),
-	    {Res, NewAcc} = renumber_(tuple_to_list(T1), New),
-	    {list_to_tuple(Res), NewAcc};
-	false ->
-	    L = tuple_to_list(T),
-	    {Res, NewAcc} = renumber_(L, Prev),
-	    {list_to_tuple(Res), NewAcc}
+        true ->
+            New = Prev+1,
+            T1 = setelement(2, T, New),
+            {Res, NewAcc} = renumber_(tuple_to_list(T1), New),
+            {list_to_tuple(Res), NewAcc};
+        false ->
+            L = tuple_to_list(T),
+            {Res, NewAcc} = renumber_(L, Prev),
+            {list_to_tuple(Res), NewAcc}
     end;
 renumber_(X, Prev) ->
     {X, Prev}.
@@ -448,10 +466,10 @@ renumber_(X, Prev) ->
 is_form(T) when element(1,T)==type -> true;
 is_form(T) ->
     try erl_syntax:type(T),
-	 true
+         true
     catch
-	error:_ ->
-	    false
+        error:_ ->
+            false
     end.
 
 option_value(Key, Options, Result) ->
@@ -585,12 +603,12 @@ revert_form(F) ->
 
 revert_form(F, W) ->
     case erl_syntax:revert(F) of
-	{attribute,L,A,Tree} when element(1,Tree) == tree ->
-	    {attribute,L,A,erl_syntax:revert(Tree)};
-	Result ->
-	    if W -> fix_impl_fun(Result);
-	       true -> Result
-	    end
+        {attribute,L,A,Tree} when element(1,Tree) == tree ->
+            {attribute,L,A,erl_syntax:revert(Tree)};
+        Result ->
+            if W -> fix_impl_fun(Result);
+               true -> Result
+            end
     end.
 
 fix_impl_fun({'fun',L,{function,{atom,_,Fn},{integer,_,Ay}}}) ->
@@ -606,26 +624,26 @@ fix_impl_fun(X) ->
 
 needs_revert_workaround() ->
     case application:get_env(parse_trans,revert_workaround) of
-	{ok, Bool} when is_boolean(Bool) -> Bool;
-	_ ->
-	    Res = try lint_reverted()
-		  catch
-		      error:_ ->
-			  true
-		  end,
-	    application:set_env(parse_trans,revert_workaround,Res),
-	    Res
+        {ok, Bool} when is_boolean(Bool) -> Bool;
+        _ ->
+            Res = try lint_reverted()
+                  catch
+                      error:_ ->
+                          true
+                  end,
+            application:set_env(parse_trans,revert_workaround,Res),
+            Res
     end.
 
 lint_reverted() ->
     Ts = [{attribute,1,module,m},
-	  {attribute,2,export,[{f,0}]},
-	  erl_syntax:function(erl_syntax:atom(f),
-			      [erl_syntax:clause(
-				 [],
-				 [erl_syntax:implicit_fun(
-				    erl_syntax:atom(f),
-				    erl_syntax:integer(0))])])],
+          {attribute,2,export,[{f,0}]},
+          erl_syntax:function(erl_syntax:atom(f),
+                              [erl_syntax:clause(
+                                 [],
+                                 [erl_syntax:implicit_fun(
+                                    erl_syntax:atom(f),
+                                    erl_syntax:integer(0))])])],
     Rev = erl_syntax:revert_forms(Ts),
     erl_lint:module(Rev),
     false.
@@ -654,23 +672,23 @@ lint_reverted() ->
 %%% @end
 return(Forms, Context) ->
     JustForms = plain_transform(
-		  fun({error,_}) -> skip;
-		     ({warning,_}) -> skip;
-		     (_) -> continue
-		  end, Forms),
+                  fun({error,_}) -> skip;
+                     ({warning,_}) -> skip;
+                     (_) -> continue
+                  end, Forms),
     File = case Context of
-	       #context{file = F} -> F;
-	       _ -> "parse_transform"
-	   end,
+               #context{file = F} -> F;
+               _ -> "parse_transform"
+           end,
     case {find_forms(Forms, error), find_forms(Forms, warning)} of
-	{[], []} ->
-	    JustForms;
-	{[], Ws} ->
-	    {warnings, JustForms, [{File, [W || {warning,W} <- Ws]}]};
-	{Es, Ws} ->
-	    {error,
-	     [{File, [E || {error,E} <- Es]}],
-	     [{File, [W || {warning,W} <- Ws]}]}
+        {[], []} ->
+            JustForms;
+        {[], Ws} ->
+            {warnings, JustForms, [{File, [W || {warning,W} <- Ws]}]};
+        {Es, Ws} ->
+            {error,
+             [{File, [E || {error,E} <- Es]}],
+             [{File, [W || {warning,W} <- Ws]}]}
     end.
 
 find_forms([H|T], Tag) when element(1, H) == Tag ->
@@ -710,18 +728,18 @@ format_exception(Class, Reason) ->
 %%% @end
 format_exception(Class, Reason, Lines) ->
     PrintF = fun(Term, I) ->
-		     io_lib_pretty:print(
-		       Term, I, columns(), ?LINEMAX, ?CHAR_MAX,
-		       record_print_fun())
-	     end,
+                     io_lib_pretty:print(
+                       Term, I, columns(), ?LINEMAX, ?CHAR_MAX,
+                       record_print_fun())
+             end,
     StackF = fun(_, _, _) -> false end,
     lines(Lines, lib:format_exception(
-		   1, Class, Reason, erlang:get_stacktrace(), StackF, PrintF)).
+                   1, Class, Reason, erlang:get_stacktrace(), StackF, PrintF)).
 
 columns() ->
     case io:columns() of
-	{ok, N} -> N;
-	_-> 80
+        {ok, N} -> N;
+        _-> 80
     end.
 
 lines(infinity, S) -> S;
@@ -783,8 +801,8 @@ recurse(Form, Else, F) ->
 do_transform(F, Acc, Forms, Context) ->
     Rec = fun do_transform/4, % this function
     F1 =
-	fun(Form, Acc0) ->
-		{Before1, Form1, After1, Recurse, Acc1} =
+        fun(Form, Acc0) ->
+                {Before1, Form1, After1, Recurse, Acc1} =
                     this_form_rec(F, Form, Context, Acc0),
                 if Recurse ->
                         {NewForm, NewAcc} =
@@ -794,7 +812,7 @@ do_transform(F, Acc, Forms, Context) ->
                    true ->
                         {Before1, Form1, After1, Acc1}
                 end
-	end,
+        end,
     mapfoldl(F1, Acc, Forms).
 
 -spec do_depth_first(xform_f_df(), term(), forms(), #context{}) ->
@@ -804,7 +822,7 @@ do_depth_first(F, Acc, Forms, Context) ->
     F1 =
         fun(Form, Acc0) ->
                 {NewForm, NewAcc} =
-		    enter_subtrees(Form, F, Context, Acc0, Rec),
+                    enter_subtrees(Form, F, Context, Acc0, Rec),
                 this_form_df(F, NewForm, Context, NewAcc)
         end,
     mapfoldl(F1, Acc, Forms).
@@ -859,13 +877,13 @@ apply_F(F, Type, Form, Context, Acc) ->
 
 update_context(Form, Context0) ->
     case type(Form) of
-	function ->
-	    {Fun, Arity} =
-		erl_syntax_lib:analyze_function(Form),
-	    Context0#context{function = Fun,
-			     arity = Arity};
-	_ ->
-	    Context0
+        function ->
+            {Fun, Arity} =
+                erl_syntax_lib:analyze_function(Form),
+            Context0#context{function = Fun,
+                             arity = Arity};
+        _ ->
+            Context0
     end.
 
 
@@ -876,12 +894,12 @@ update_context(Form, Context0) ->
 %%% in question. The inserted forms are not transformed afterwards.
 mapfoldl(F, Accu0, [Hd|Tail]) ->
     {Before, Res, After, Accu1} =
-	case F(Hd, Accu0) of
-	    {Be, _, Af, _} = Result when is_list(Be), is_list(Af) ->
-		Result;
-	    {R1, A1} ->
-		{[], R1, [], A1}
-	end,
+        case F(Hd, Accu0) of
+            {Be, _, Af, _} = Result when is_list(Be), is_list(Af) ->
+                Result;
+            {R1, A1} ->
+                {[], R1, [], A1}
+        end,
     {Rs, Accu2} = mapfoldl(F, Accu1, Tail),
     {Before ++ [Res| After ++ Rs], Accu2};
 mapfoldl(F, Accu, []) when is_function(F, 2) -> {[], Accu}.
@@ -889,16 +907,16 @@ mapfoldl(F, Accu, []) when is_function(F, 2) -> {[], Accu}.
 
 rpt_error(_Reason, _Fun, _Info, _Trace) ->
     %% Fmt = lists:flatten(
-    %% 	    ["*** ERROR in parse_transform function:~n"
-    %% 	     "*** Reason     = ~p~n",
+    %%      ["*** ERROR in parse_transform function:~n"
+    %%       "*** Reason     = ~p~n",
     %%          "*** Location: ~p~n",
-    %% 	     "*** Trace: ~p~n",
-    %% 	     ["*** ~10w = ~p~n" || _ <- Info]]),
+    %%       "*** Trace: ~p~n",
+    %%       ["*** ~10w = ~p~n" || _ <- Info]]),
     %% Args = [Reason, Fun, Trace |
-    %% 	    lists:foldr(
-    %% 	      fun({K,V}, Acc) ->
-    %% 		      [K, V | Acc]
-    %% 	      end, [], Info)],
+    %%      lists:foldr(
+    %%        fun({K,V}, Acc) ->
+    %%                [K, V | Acc]
+    %%        end, [], Info)],
     %%io:format(Fmt, Args),
     ok.
 
@@ -906,10 +924,10 @@ rpt_error(_Reason, _Fun, _Info, _Trace) ->
     iolist().
 format_error({E, [{M,F,A}|_]} = Error) ->
     try lists:flatten(io_lib:fwrite("~p in ~s:~s/~s", [E, atom_to_list(M),
-						       atom_to_list(F), integer_to_list(A)]))
+                                                       atom_to_list(F), integer_to_list(A)]))
     catch
-	error:_ ->
-	    format_error_(Error)
+        error:_ ->
+            format_error_(Error)
     end;
 format_error(Error) ->
     format_error_(Error).

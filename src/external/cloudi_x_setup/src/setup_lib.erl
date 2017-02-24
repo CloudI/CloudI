@@ -22,6 +22,8 @@
 	 releases_dir/0,
 	 write_eterm/2,
 	 write_script/2,
+	 is_escript/0,
+	 determine_if_escript/0,
 	 abort/2, help/0]).
 
 is_string(L) ->
@@ -55,7 +57,7 @@ write_script(F, Script) ->
 
 abort(Fmt, Args) ->
     E = io_lib:fwrite(Fmt, Args),
-    case get(is_escript) of
+    case is_escript() of
         true ->
             io:fwrite(E),
             help(),
@@ -63,6 +65,25 @@ abort(Fmt, Args) ->
         _ ->
             erlang:error(lists:flatten(E))
     end.
+
+is_escript() ->
+    %% Slightly dirty, but at least we know that the kernel app is loaded
+    case application:get_env(kernel, '$setup_is_escript') of
+	{ok, Flag} ->
+	    Flag;
+	_ ->
+	    false
+    end.
+
+determine_if_escript() ->
+    %% Assumes it's running in the escript main process, if running escript
+    IsEscript = initial_is_escript_(),
+    application:set_env(kernel, '$setup_is_escript', IsEscript).
+
+initial_is_escript_() ->
+    {_, ST} = process_info(self(), current_stacktrace),
+    [] =/= [1 || {escript,run,_,_} <- ST].
+
 
 sort_vsns(Dirs, AppStr) ->
     AppF = AppStr ++ ".app",

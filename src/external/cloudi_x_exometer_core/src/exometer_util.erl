@@ -35,7 +35,12 @@
     set_event_flag/2,
     clear_event_flag/2,
     test_event_flag/2,
-    ensure_all_started/1
+    ensure_all_started/1,
+    seed/0,
+    seed0/0,
+    seed/1,
+    uniform/0,
+    uniform/1
    ]).
 
 -export_type([timestamp/0]).
@@ -246,12 +251,6 @@ get_statistics(L, Total, Sorted) ->
 get_statistics2(_L, [], _Total, _Mean) ->
     [];
 
-%% Special case when we get called from
-%% exometer_histogram:get_value_int() with just
-%% a nil min/max pair.
-get_statistics2(_L, [0,0], _Total, _Mean) ->
-    [];
-
 get_statistics2(L, Sorted, Total, Mean) ->
     P50 = perc(0.5, L),
     Items = [{min,1}, {50, P50}, {median, P50}, {75, perc(0.75,L)},
@@ -372,6 +371,41 @@ ensure_all_started(App) ->
     %% Referencing application:ensure_all_started/1 will anger Xref
     %% in earlier R16B versions of OTP
     ensure_all_started(App, []).
+
+-ifdef(rand_module).
+seed() ->
+    {0, 0, 0}.
+
+seed0() ->
+    {0, 0, 0}.
+
+seed({A, B, C}) ->
+    %% rand in the erlang version 18 or above, use a different seed methond, does not use the seed like that any more
+    {A, B, C}.
+
+uniform() ->
+    rand:uniform().
+
+uniform(N) ->
+    rand:uniform(N).
+
+-else.
+seed() ->
+    random:seed().
+
+seed0() ->
+    random:seed0().
+
+seed({A, B, C}) ->
+    random:seed({A, B, C}).
+
+uniform() ->
+    random:uniform().
+
+uniform(N) ->
+    random:uniform(N).
+
+-endif.
 
 %% This implementation is originally from Basho's
 %% Webmachine. Reimplementation of ensure_all_started. NOTE this does

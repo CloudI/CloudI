@@ -8,9 +8,5 @@
                   stdlib,
                   inets
                  ]},
-  {env, []},
-
-  {maintainers,["Knut Nesheim"]},
-  {licenses,["MIT"]},
-  {links,[{"Github","https://github.com/knutin/elli"}]}
+  {env, []}
  ]}.

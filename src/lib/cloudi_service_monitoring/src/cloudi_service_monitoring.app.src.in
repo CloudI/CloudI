@@ -12,8 +12,7 @@
    {registered, []},
    {applications, [
         cloudi_x_exometer,
-        cloudi_x_folsom,
-        cloudi_x_lager,
+        cloudi_x_exometer_influxdb,
         cloudi_core,
         cloudi_x_key2value,
         stdlib,

@@ -40,8 +40,8 @@
     exometer_terminate/2
    ]).
 
+-include_lib("hut/include/hut.hrl").
 -include("exometer.hrl").
--include("log.hrl").
 
 -define(SERVER, ?MODULE).
 %% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}).
@@ -54,11 +54,11 @@
 %%%===================================================================
 
 exometer_init(Opts) ->
-    ?info("~p(~p): Starting~n", [?MODULE, Opts]),
+    ?log(info, "~p(~p): Starting~n", [?MODULE, Opts]),
     TypeMap = proplists:get_value(type_map, Opts, []),
     {ok, #st{type_map = TypeMap}}.
 
-exometer_subscribe(_Metric, _DataPoint, _Extra, _Interval, St) ->
+exometer_subscribe(_Metric, _DataPoint, _Interval, _Extra, St) ->
     {ok, St}.
 
 exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
@@ -67,7 +67,7 @@ exometer_unsubscribe(_Metric, _DataPoint, _Extra, St) ->
 %% Invoked through the remote_exometer() function to
 %% send out an update.
 exometer_report(Metric, DataPoint, Extra, Value, St)  ->
-    ?debug("Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
+    ?log(debug, "Report metric ~p_~p = ~p~n", [Metric, DataPoint, Value]),
     %% Report the value and setup a new refresh timer.
     Key = Metric ++ [DataPoint],
     Type = case exometer_util:report_type(Key, Extra, St#st.type_map) of
@@ -80,15 +80,15 @@ exometer_report(Metric, DataPoint, Extra, Value, St)  ->
     {ok, St}.
 
 exometer_call(Unknown, From, St) ->
-    ?info("Unknown call ~p from ~p", [Unknown, From]),
+    ?log(info, "Unknown call ~p from ~p", [Unknown, From]),
     {ok, St}.
 
 exometer_cast(Unknown, St) ->
-    ?info("Unknown cast: ~p", [Unknown]),
+    ?log(info, "Unknown cast: ~p", [Unknown]),
     {ok, St}.
 
 exometer_info(Unknown, St) ->
-    ?info("Unknown info: ~p", [Unknown]),
+    ?log(info, "Unknown info: ~p", [Unknown]),
     {ok, St}.
 
 exometer_newentry(_Entry, St) ->

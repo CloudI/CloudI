@@ -1,0 +1,11 @@
+{application, 'metrics',
+ [{description, "A generic interface to different metrics systems in Erlang."},
+  {vsn, "1.0.1"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []}
+ ]}.

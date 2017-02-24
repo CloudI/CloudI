@@ -80,7 +80,7 @@ will be reported to collectd.<a name="index"></a>
 
 ### exometer_subscribe/5 ###
 
-`exometer_subscribe(Metric, DataPoint, Extra, Interval, St) -> any()`
+`exometer_subscribe(Metric, DataPoint, Interval, Extra, St) -> any()`
 
 
 <a name="exometer_terminate-2"></a>
@@ -95,5 +95,3 @@ will be reported to collectd.<a name="index"></a>
 ### exometer_unsubscribe/4 ###
 
 `exometer_unsubscribe(Metric, DataPoint, Extra, St) -> any()`
-
-

@@ -208,7 +208,7 @@ get_value(_, function, {M, F, once, ArgsP, match, Pat}, DataPoints0) ->
                  end,
     try call_once(M, F, ArgsP, match, {Pat, DataPoints})
     catch
-        error:_ ->
+        _:_ ->
             {error, unavailable}
     end;
 get_value(_, _, {M, F, each, ArgsP, Type, DPs}, DataPoints) ->
@@ -222,14 +222,14 @@ get_value(_, function, {M, F, once, ArgsP, match, Pat}, DataPoints0) ->
                  end,
     try call_once(M, F, ArgsP, match, {Pat, DataPoints})
     catch
-        error:_ ->
+        _:_ ->
             {error, unavailable}
     end;
 get_value(_, _, {M, F, once, ArgsP, Type, DPs}, DataPoints0) ->
     DataPoints = actual_datapoints(DataPoints0, DPs, Type),
     try call_once(M, F, ArgsP, Type, DataPoints)
     catch
-        error:_ ->
+        _:_ ->
             {error, unavailable}
     end;
 get_value(_, _, {eval, Exprs, DataPoints}, DataPoints0) ->
@@ -317,7 +317,7 @@ call(M,F,ArgsP,T,D) ->
             return_dp(apply(M, F, Args), T, D)
         end
     catch
-        error:_ ->
+        _:_ ->
             undefined
     end.
 
@@ -379,7 +379,7 @@ return_dps(L, histogram, DPs) ->
 return_dps(Val, eval, {Expr, DPs}) ->
     try return_eval(eval_expr(Expr, Val, DPs), DPs)
     catch
-        error:_ -> undefined
+        _:_ -> undefined
     end;
 return_dps(Val, match, {Pat, DPs}) ->
     match_pat(Pat, Val, DPs).
@@ -639,7 +639,7 @@ case_clauses([{Pat, Gs, Body}|Cs], Val, Bs) ->
                     case_clauses(Cs, Val, Bs)
             end
     catch
-        error:_ ->
+        _:_ ->
             case_clauses(Cs, Val, Bs)
     end;
 case_clauses([], _, _) ->
@@ -654,7 +654,7 @@ and_gs([], _) -> false;
 and_gs([G|Gs], Bs) ->
     try [{value, true, _} = eval_(G1, Bs) || G1 <- G], true
     catch
-        error:_ ->
+        _:_ ->
             and_gs(Gs, Bs)
     end.
 

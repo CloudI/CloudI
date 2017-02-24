@@ -199,7 +199,13 @@ get_value_int_(#st{truncate = Trunc,
                 {Length, lists:sort(Lst0)}
         end,
     TopPercentiles = get_from_heap(Heap, TS, TimeSpan, FullLength, DataPoints),
-    Results = exometer_util:get_statistics2(Len, List, Total, Mean),
+    Results = case List of
+                  [0, 0] ->
+                      %% a case where Min and Max are the only data, nil
+                      [];
+                  _ ->
+                      exometer_util:get_statistics2(Len, List, Total, Mean)
+              end,
     CombinedResults = TopPercentiles ++ Results,
     [get_dp(K, CombinedResults, Trunc) || K <- DataPoints].
 
@@ -508,6 +514,6 @@ dupl(N,V) ->
     lists:duplicate(N, V).
 
 shuffle(List) ->
-    random:seed(random:seed0()),
-    Randomized = lists:keysort(1, [{random:uniform(), Item} || Item <- List]),
+    exometer_util:seed(exometer_util:seed0()),
+    Randomized = lists:keysort(1, [{exometer_util:uniform(), Item} || Item <- List]),
     [Value || {_, Value} <- Randomized].

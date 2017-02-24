@@ -148,7 +148,7 @@
 %% Mode-specific options, `ets':
 %% * `{table, ets:table()}' - Ets table identifier. If not specified, an
 %%    ordered-set table will be created by the logger process. The incoming
-%%    data will be inserted as `{erlang:now(), Data}'.
+%%    data will be inserted as `{os:timestamp(), Data}'.
 %%
 %% Mode-specific options, `internal':
 %% * `{process, PidOrRegname}' specifies another logger instance, which is to
@@ -414,7 +414,7 @@ handle_data_(Data, #tty{prefix = Pfx} = Out) ->
     io:fwrite(iolist_to_binary([Pfx, Data, $\n])),
     {Data, Out};
 handle_data_(Data, #ets{tab = T} = Out) ->
-    ets:insert(T, {erlang:now(), Data}),
+    ets:insert(T, {os:timestamp(), Data}),
     {Data, Out};
 handle_data_(Data, #int{process = P} = Out) ->
     try P ! {?MODULE, self(), Data} catch _:_ -> error end,
@@ -422,6 +422,3 @@ handle_data_(Data, #int{process = P} = Out) ->
 handle_data_(Data, #plugin{module = Mod, mod_state = ModSt} = Out) ->
     {Data1, ModSt1} = Mod:logger_handle_data(Data, ModSt),
     {Data1, Out#plugin{mod_state = ModSt1}}.
-
-
-

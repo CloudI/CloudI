@@ -17,11 +17,13 @@
 {application, setup,
  [
   {description, "Generic setup application for Erlang-based systems"},
-  {vsn, "1.4"},
+  {vsn, "1.8.1-dev"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
+  {mod, { setup_app, []}},
+  {start_phases, [{run_setup, []}]},
   {env, []}
  ]}.

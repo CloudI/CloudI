@@ -62,12 +62,12 @@
 %% cancel the creation of the custom reporting plugin.
 %%
 %%
-%% === exometer_subscribe/4 ===
+%% === exometer_subscribe/5 ===
 %%
 %% The `exometer_subscribe()' function is invoked as follows:
 %%
 %% <pre lang="erlang">
-%%      exometer_subscribe(Metric, DataPoint, Interval State)</pre>
+%%      exometer_subscribe(Metric, DataPoint, Interval, Extra, State)</pre>
 %%
 %% The custom plugin can use this notification to modify and return its
 %% state in order to prepare for future calls to `exometer_report()' with
@@ -82,6 +82,9 @@
 %% + `Interval'<br/>Specifies the interval, in milliseconds, that the
 %% subscribed-to value will be reported at, or an atom, referring to a named
 %% interval configured in the reporter.
+%%
+%% + `Extra'<br/>Specifies the extra data, which can be anything the reporter
+%% can understand.
 %%
 %% + `State'<br/>Contains the state returned by the last called plugin function.
 %%
@@ -110,18 +113,18 @@
 %%
 %% + `State'<br/>Contains the state returned by the last called plugin function.
 %%
-%% The `exomoeter_report()' function should return `{ok, State}' where
+%% The `exometer_report()' function should return `{ok, State}' where
 %% State is a tuple that will be provided as a reference argument to
 %% future calls made into the plugin. Any other return formats will
 %% generate an error log message by exometer.
 %%
 %%
-%% === exometer_unsubscribe/3 ===
+%% === exometer_unsubscribe/4 ===
 %%
 %% The `exometer_unsubscribe()' function is invoked as follows:
 %%
 %% <pre lang="erlang">
-%%      exometer_unsubscribe(Metric, DataPoint, State)</pre>
+%%      exometer_unsubscribe(Metric, DataPoint, Extra, State)</pre>
 %%
 %% The custom plugin can use this notification to modify and return its
 %% state in order to free resources used to maintain the now de-activated
@@ -134,12 +137,34 @@
 %% + `DataPoint'<br/>Specifies the data point or data points within the
 %%  subscribed-to metric as an atom or a list of atoms.
 %%
+%% + `Extra'<br/>Specifies the extra data, which can be anything the reporter
+%% can understand.
+%%
 %% + `State'<br/>Contains the state returned by the last called plugin function.
 %%
 %% The `exometer_unsubscribe()' function should return `{ok, State}' where
 %% State is a tuple that will be provided as a reference argument to
 %% future calls made into the plugin. Any other return formats will
 %% generate an error log message by exometer.
+%%
+%% === exometer_report_bulk/3 (Optional) ===
+%%
+%% If the option `{report_bulk, true}' has been given when starting the
+%% reporter, <em>and</em> this function is exported, it will be called as:
+%%
+%% <pre lang="erlang">
+%%      exometer_report_bulk(Found, Extra, State)
+%% </pre>
+%%
+%% where `Found' has the format `[{Metric, [{DataPoint, Value}|_]}|_]'
+%%
+%% That is, e.g. when a `select' pattern is used, all found values are passed
+%% to the reporter in one message. If bulk reporting is not enabled, each
+%% datapoint/value pair will be passed separately to the
+%% <a href="#exometer_report/4"><code>exometer_report/4</code></a> function. If `report_bulk' was enabled, the
+%% reporter callback will get all values at once. Note that this happens
+%% also for single values, which are then passed as a list of one metric,
+%% with a list of one datapoint/value pair.
 %%
 %% @end
 -module(exometer_report).
@@ -183,8 +208,8 @@
 
 -export_type([metric/0, datapoint/0, interval/0, extra/0]).
 
+-include_lib("hut/include/hut.hrl").
 -include("exometer.hrl").
--include("log.hrl").
 
 -define(SERVER, ?MODULE).
 
@@ -290,6 +315,8 @@
           reporters = []   :: [#reporter{}]
          }).
 
+-record(rst, {st, bulk = false}).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -304,7 +331,7 @@ start_link() ->
 
 -spec subscribe(reporter_name(), metric(), datapoints(), interval()) ->
                        ok | not_found | unknown_reporter | error.
-%% @equiv subscribe(Reporter, Metric, DataPoint, Interval, [], false)
+%% @equiv subscribe(Reporter, Metric, DataPoint, Interval, [], true)
 subscribe(Reporter, Metric, DataPoint, Interval) ->
     subscribe(Reporter, Metric, DataPoint, Interval, []).
 
@@ -315,7 +342,7 @@ subscribe(Reporter, Metric, DataPoint, Interval, Extra) ->
     call({subscribe, #key{reporter = Reporter,
                           metric = Metric,
                           datapoint = DataPoint,
-                          retry_failed_metrics = false,
+                          retry_failed_metrics = true,
                           extra = Extra}, Interval}).
 
 -spec subscribe(reporter_name(), metric(), datapoints(), interval(),
@@ -436,6 +463,11 @@ list_subscriptions(Reporter) ->
 %% reporting. If the interval is specified as ```'manual'''', it will have
 %% to be triggered manually using {@link trigger_interval/2}.
 %%
+%% `{report_bulk, true | false}'
+%% Pass all found datapoint/value pairs for a given subscription at once to
+%% the `exometer_report_bulk/3' function, if it is exported, otherwise use
+%% `exometer_report/4' as usual.
+%%
 %% @end
 add_reporter(Reporter, Options) ->
     call({add_reporter, Reporter, Options}).
@@ -446,7 +478,7 @@ remove_reporter(Reporter) ->
     call({remove_reporter, Reporter}).
 
 -spec set_interval(reporter_name(), atom(),
-                   time_ms() | {time_ms(), delay()}) -> ok |error().
+                   time_ms() | {time_ms(), delay()} | manual) -> ok |error().
 %% @doc Specify a named interval.
 %%
 %% See {@link add_reporter/2} for a description of named intervals.
@@ -629,7 +661,7 @@ start_reporters() ->
 
 do_start_reporters(S) ->
     Opts = get_report_env(),
-    ?info("Starting reporters with ~p~n", [ Opts ]),
+    ?log(info, "Starting reporters with ~p~n", [ Opts ]),
     %% Dig out the mod opts.
     %% { reporters, [ {reporter1, [{opt1, val}, ...]}, {reporter2, [...]}]}
     %% Traverse list of reporter and launch reporter gen servers as dynamic
@@ -1086,7 +1118,7 @@ handle_info({'DOWN', Ref, process, _Pid, Reason}, #st{} = S) ->
     {noreply, S};
 
 handle_info(_Info, State) ->
-    ?warning("exometer_report:info(??): ~p~n", [ _Info ]),
+    ?log(warning, "exometer_report:info(??): ~p~n", [ _Info ]),
     {noreply, State}.
 
 restart_reporter(#reporter{name = Name, opts = Opts, restart = Restart}) ->
@@ -1142,7 +1174,7 @@ handle_report(#key{reporter = Reporter} = Key, Interval, TS, #st{} = St) ->
                 end;
             false ->
                 %% Possibly an unsubscribe removed the subscriber
-                ?error("No such subscriber (Key=~p)~n", [Key])
+                ?log(error, "No such subscriber (Key=~p)~n", [Key])
         end,
     St.
 
@@ -1157,17 +1189,14 @@ do_report(#key{metric = Metric,
             true;
         %% We did not find a value, but we should try again.
         {true, _ } ->
-            if is_list(Metric) ->
-            ?debug("Metric(~p) Datapoint(~p) not found."
+            ?log(debug, "Metric(~p) Datapoint(~p) not found."
                    " Will try again in ~p msec~n",
                    [Metric, DataPoint, Interval]),
             true;
-               true -> false
-            end;
         %% We did not find a value, and we should not retry.
         _ ->
             %% Entry removed while timer in progress.
-            ?warning("Metric(~p) Datapoint(~p) not found. Will not try again~n",
+            ?log(warning, "Metric(~p) Datapoint(~p) not found. Will not try again~n",
                      [Metric, DataPoint]),
             false
     end.
@@ -1400,19 +1429,19 @@ assert_no_duplicates([]) ->
 -spec spawn_reporter(reporter_name(), options()) -> {pid(), reference()}.
 spawn_reporter(Reporter, Opt) when is_atom(Reporter), is_list(Opt) ->
     Fun = fun() ->
-                  maybe_register(Reporter, Opt),
                   {ok, Mod, St} = reporter_init(Reporter, Opt),
                   reporter_loop(Mod, St)
           end,
     Pid = proc_lib:spawn(Fun),
+    maybe_register(Reporter, Pid, Opt),
     MRef = erlang:monitor(process, Pid),
     {Pid, MRef}.
 
-maybe_register(R, Opts) ->
+maybe_register(R, Pid, Opts) ->
     case lists:keyfind(registered_name, 1, Opts) of
         {_, none} -> ok;
-        {_, Name} -> register(Name, self());
-        false     -> register(R, self())
+        {_, Name} -> register(Name, Pid);
+        false     -> register(R, Pid)
     end.
 
 terminate_reporter(#reporter{pid = Pid, mref = MRef}) when is_pid(Pid) ->
@@ -1449,7 +1478,7 @@ maybe_send_after(_, _, _) ->
     undefined.
 
 unsubscribe_(Reporter, Metric, DataPoint, Extra) ->
-    ?info("unsubscribe_(~p, ~p, ~p, ~p)~n",
+    ?log(info, "unsubscribe_(~p, ~p, ~p, ~p)~n",
           [ Reporter, Metric, DataPoint, Extra]),
     case ets:lookup(?EXOMETER_SUBS, #key{reporter = Reporter,
                                          metric = Metric,
@@ -1473,21 +1502,11 @@ unsubscribe_(#subscriber{key = #key{reporter = Reporter,
 
 
 report_values(Found, #key{reporter = Reporter, extra = Extra} = Key) ->
-    try
-        [[report_value(Reporter, Name, DP, Extra, Val)
-          || {DP, Val} <- Values] || {Name, Values} <- Found]
+    try Reporter ! {exometer_report, Found, Extra}
     catch
         error:Reason ->
-            lager:error("ERROR ~p~nKey = ~p~nTrace: ~p",
+            ?log(error, "~p~nKey = ~p~nTrace: ~p",
                         [Reason, Key, erlang:get_stacktrace()])
-    end.
-
-report_value(Reporter, Metric, DataPoint, Extra, Val) ->
-    try Reporter ! {exometer_report, Metric, DataPoint, Extra, Val},
-         true
-    catch
-        error:_ -> false;
-        exit:_ -> false
     end.
 
 retrieve_metric({Metric, Type, Enabled}, Acc) ->
@@ -1517,7 +1536,7 @@ get_subscribers(Metric, Type, Status,
                               metric = Metric,
                               datapoint = SDataPoint
                              }} | T ]) ->
-    ?debug("get_subscribers(~p, ~p, ~p): match~n", [ Metric, SDataPoint, SReporter]),
+    ?log(debug,"get_subscribers(~p, ~p, ~p): match~n", [ Metric, SDataPoint, SReporter]),
     [ { SReporter, SDataPoint } | get_subscribers(Metric, Type, Status, T) ];
 
 %% get_subscribers(Metric, Type, Status,
@@ -1543,7 +1562,7 @@ get_subscribers(Metric, Type, Status,
                               metric = SMetric,
                               datapoint = SDataPoint
                              }} | T]) ->
-    ?debug("get_subscribers(~p, ~p, ~p) nomatch(~p) ~n",
+    ?log(debug, "get_subscribers(~p, ~p, ~p) nomatch(~p) ~n",
            [ SMetric, SDataPoint, SReporter, Metric]),
     get_subscribers(Metric, Type, Status, T).
 
@@ -1568,28 +1587,27 @@ purge_subscriptions(R) ->
 %% Module is expected to implement exometer_report behavior
 reporter_init(Reporter, Opts) ->
     Module = proplists:get_value(module, Opts, Reporter),
+    Bulk = proplists:get_value(report_bulk, Opts, false),
     case Module:exometer_init(Opts) of
         {ok, St} ->
-            {ok, Module, St};
+            {ok, Module, #rst{st = St, bulk = Bulk}};
         {error, Reason} ->
-            ?error("Failed to start reporter ~p: ~p~n", [Module, Reason]),
+            ?log(error, "Failed to start reporter ~p: ~p~n", [Module, Reason]),
             exit(Reason)
     end.
 
-reporter_loop(Module, St) ->
+reporter_loop(Module, #rst{st = St, bulk = Bulk} = RSt) ->
     NSt = receive
-              {exometer_report, Metric, DataPoint, Extra, Value } ->
-                  case Module:exometer_report(Metric, DataPoint, Extra, Value, St) of
-                      {ok, St1} -> {ok, St1};
-                      _ -> {ok, St}
-                  end;
+              {exometer_report, Found, Extra} ->
+                  {ok, r_exometer_report(
+                         Bulk, Module, Found, Extra, St)};
               {exometer_unsubscribe, Metric, DataPoint, Extra } ->
                   case Module:exometer_unsubscribe(Metric, DataPoint, Extra, St) of
                       {ok, St1} -> {ok, St1};
                       _ -> {ok, St}
                   end;
-              {exometer_subscribe, Metric, DataPoint, Extra, Interval } ->
-                  case Module:exometer_subscribe(Metric, DataPoint, Extra, Interval, St) of
+              {exometer_subscribe, Metric, DataPoint, Interval, Extra } ->
+                  case Module:exometer_subscribe(Metric, DataPoint, Interval, Extra, St) of
                       {ok, St1} -> {ok, St1};
                       _ -> {ok, St}
                   end;
@@ -1625,7 +1643,7 @@ reporter_loop(Module, St) ->
                   end;
               %% Allow reporters to generate their own callbacks.
               Other ->
-                  ?debug("Custom invocation: ~p(~p)~n", [ Module, Other]),
+                  ?log(debug, "Custom invocation: ~p(~p)~n", [ Module, Other]),
                   case Module:exometer_info(Other, St) of
                       {ok, St1} -> {ok, St1};
                       _ -> {ok, St}
@@ -1633,9 +1651,34 @@ reporter_loop(Module, St) ->
           end,
     case NSt of
         {ok, St2} ->
-            reporter_loop(Module, St2);
+            reporter_loop(Module, RSt#rst{st = St2});
         _ ->
             ok
+    end.
+
+r_exometer_report(false, Module, Found, Extra, St) ->
+    lists:foldl(
+      fun({Name, Values}, Acc) ->
+              lists:foldl(
+                fun({DP, Val}, Acc1) ->
+                        case Module:exometer_report(
+                               Name, DP, Extra, Val, Acc1) of
+                            {ok, St1} -> St1;
+                            _ -> St
+                        end
+                end, Acc, Values)
+      end, St, Found);
+r_exometer_report(true, Module, Found, Extra, St) ->
+    case erlang:function_exported(Module, exometer_report_bulk, 3) of
+        true ->
+            case Module:exometer_report_bulk(Found, Extra, St) of
+                {ok, St1} ->
+                    St1;
+                _ ->
+                    St
+            end;
+        false ->
+            r_exometer_report(false, Module, Found, Extra, St)
     end.
 
 call(Req) ->
@@ -1679,7 +1722,7 @@ init_subscriber({select, Expr}) when tuple_size(Expr)==3;
       end, Entries);
 
 init_subscriber(Other) ->
-    ?warning("Incorrect static subscriber spec ~p. "
+    ?log(warning, "Incorrect static subscriber spec ~p. "
              "Use { Reporter, Metric, DataPoint, Interval [, Extra ]}~n",
              [ Other ]).
 

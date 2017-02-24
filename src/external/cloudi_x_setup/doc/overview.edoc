@@ -1,6 +1,9 @@
 @author Ulf Wiger <ulf@wiger.net>
 
 @doc Generic setup utility for Erlang-based systems
+
+[![Build Status](https://travis-ci.org/uwiger/setup.svg)](https://travis-ci.org/uwiger/setup)
+
 <h2>Introduction</h2>
 
 While Erlang/OTP comes with many wonderful applications, including the
@@ -84,5 +87,14 @@ If the option `-setup stop_when_done true' is added to the command line,
 the setup application will automatically shut down all running nodes after
 running the setup hooks. Otherwise (default), it will hand over control to
 the shell rather than terminate the Erlang VM.
+
+See {@link setup_gen:run/1} for documentation on all supported options.
+
+<h2>Variable expansion</h2>
+
+`setup' extends the functionality of `application:get_env/[2,3]' by also
+supporting variable expansion, as well as a function for searching all
+applications for instances of a given variable. This functionality is described
+in {@link setup}.
 
 @end

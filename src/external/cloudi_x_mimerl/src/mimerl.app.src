@@ -1,0 +1,8 @@
+{application, mimerl,
+ [{description, "An OTP library"},
+  {vsn, "1.0.2"},
+  {registered, []},
+  {applications, [kernel,stdlib]},
+  {env,[]},
+  {modules, []}
+ ]}.

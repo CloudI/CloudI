@@ -45,6 +45,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/varpool/src \
      -d $(top_srcdir)/lib/varpool/test \
      -d $(top_srcdir)/external/cloudi_x_bear/src \
+     -d $(top_srcdir)/external/cloudi_x_certifi/src \
      -d $(top_srcdir)/external/cloudi_x_cowboy/src \
      -d $(top_srcdir)/external/cloudi_x_cowlib/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
@@ -53,16 +54,20 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_epgsql_wg/src \
      -d $(top_srcdir)/external/cloudi_x_exometer/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_core/src \
+     -d $(top_srcdir)/external/cloudi_x_exometer_influxdb/src \
      -d $(top_srcdir)/external/cloudi_x_folsom/src \
-     -d $(top_srcdir)/external/cloudi_x_goldrush/src \
+     -d $(top_srcdir)/external/cloudi_x_hackney/src \
+     -d $(top_srcdir)/external/cloudi_x_hut/src \
+     -d $(top_srcdir)/external/cloudi_x_idna/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
-     -d $(top_srcdir)/external/cloudi_x_lager/src \
+     -d $(top_srcdir)/external/cloudi_x_metrics/src \
      -d $(top_srcdir)/external/cloudi_x_msgpack/src \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_ranch/src \
-     -d $(top_srcdir)/external/cloudi_x_setup/src
+     -d $(top_srcdir)/external/cloudi_x_setup/src \
+     -d $(top_srcdir)/external/cloudi_x_ssl_verify_fun/src
 
 if PYTHON_SUPPORT
     PYTHON_TEST_HOOK = api-python-test
