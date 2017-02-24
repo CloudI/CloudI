@@ -819,11 +819,11 @@ log_config_formatters_set(FormattersConfigNew,
     end.
 
 log_level_update(#state{main_level = MainLevel,
-                         level = LevelOld,
-                         mode = Mode,
-                         destination = Destination,
-                         syslog_level = SyslogLevel,
-                         formatters_level = FormattersLevel} = State) ->
+                        level = LevelOld,
+                        mode = Mode,
+                        destination = Destination,
+                        syslog_level = SyslogLevel,
+                        formatters_level = FormattersLevel} = State) ->
     case log_level([MainLevel, SyslogLevel, FormattersLevel]) of
         LevelOld ->
             {ok, State};
