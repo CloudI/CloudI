@@ -36,6 +36,7 @@
         cloudi_ip_address,
         cloudi_key_value,
         cloudi_lists,
+        cloudi_logger_hut,
         cloudi_math,
         cloudi_proplists,
         cloudi_queue,

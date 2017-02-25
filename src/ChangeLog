@@ -11,6 +11,12 @@
         * Add hackney dependency
             * Add certifi, idna, metrics, mimerl, ssl_verify_fun dependencies
     * Remove lager and goldrush
+    * Change to ensure data logged in sync mode is never dropped due to
+      flooding check for misbehaving Erlang processes
+    * Added cloudi_logger_hut module for hut logging integration
+      (used by cloudi_service_monitoring dependencies:
+       cloudi_x_exometer, cloudi_x_exometer_influxdb)
+
 
 2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

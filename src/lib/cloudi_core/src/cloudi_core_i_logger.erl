@@ -286,8 +286,8 @@ redirect_update(Node) ->
 
 -spec fatal(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: module(),
-            Line :: integer(),
+            Module :: atom(),
+            Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
             Format :: string(),
@@ -308,8 +308,8 @@ fatal(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec error(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: module(),
-            Line :: integer(),
+            Module :: atom(),
+            Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
             Format :: string(),
@@ -330,8 +330,8 @@ error(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec warn(Mode :: async | sync,
            Process :: atom() | {atom(), node()},
-           Module :: module(),
-           Line :: integer(),
+           Module :: atom(),
+           Line :: non_neg_integer(),
            Function :: atom(),
            Arity :: arity() | undefined,
            Format :: string(),
@@ -352,8 +352,8 @@ warn(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec info(Mode :: async | sync,
            Process :: atom() | {atom(), node()},
-           Module :: module(),
-           Line :: integer(),
+           Module :: atom(),
+           Line :: non_neg_integer(),
            Function :: atom(),
            Arity :: arity() | undefined,
            Format :: string(),
@@ -374,8 +374,8 @@ info(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec debug(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: module(),
-            Line :: integer(),
+            Module :: atom(),
+            Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
             Format :: string(),
@@ -396,8 +396,8 @@ debug(Mode, Process, Module, Line, Function, Arity, Format, Args) ->
 
 -spec trace(Mode :: async | sync,
             Process :: atom() | {atom(), node()},
-            Module :: module(),
-            Line :: integer(),
+            Module :: atom(),
+            Line :: non_neg_integer(),
             Function :: atom(),
             Arity :: arity() | undefined,
             Format :: string(),
@@ -845,8 +845,8 @@ log_level_update(#state{main_level = MainLevel,
                   Timestamp :: erlang:timestamp(),
                   Node :: node(),
                   Pid :: pid() | string() | undefined,
-                  Module :: module(),
-                  Line :: pos_integer(),
+                  Module :: atom(),
+                  Line :: non_neg_integer(),
                   Function :: atom(),
                   Arity :: arity() | undefined,
                   MetaData :: any(),
@@ -855,16 +855,13 @@ log_level_update(#state{main_level = MainLevel,
 
 format_line(Level, Timestamp, Node, Pid,
             Module, Line, Function, Arity, MetaData, LogMessage) ->
-    NodeBin = erlang:atom_to_binary(Node, utf8),
-    PidStr = if
-        is_pid(Pid) ->
-            erlang:pid_to_list(Pid);
-        is_list(Pid) ->
-            Pid;
-        Pid =:= undefined ->
-            ""
-    end,
     ModuleBin = erlang:atom_to_binary(Module, utf8),
+    LineStr = if
+        Line =:= 0 ->
+            "";
+        is_integer(Line), Line > 0 ->
+            int_to_dec_list(Line)
+    end,
     FunctionArity = if
         Function =:= undefined ->
             "";
@@ -874,6 +871,15 @@ format_line(Level, Timestamp, Node, Pid,
             [erlang:atom_to_binary(Function, utf8),
              [$/ | int_to_dec_list(Arity)]]
     end,
+    PidStr = if
+        is_pid(Pid) ->
+            erlang:pid_to_list(Pid);
+        is_list(Pid) ->
+            Pid;
+        Pid =:= undefined ->
+            ""
+    end,
+    NodeBin = erlang:atom_to_binary(Node, utf8),
     MetaDataStr = if
         MetaData == [] ->
             "";
@@ -883,7 +889,7 @@ format_line(Level, Timestamp, Node, Pid,
     [timestamp_iso8601(Timestamp), $\s, log_level_to_string(Level), $\s,
      $(,
      ModuleBin, $:,
-     int_to_dec_list(Line), $:,
+     LineStr, $:,
      FunctionArity, $:,
      PidStr, $:,
      NodeBin,
@@ -1029,15 +1035,15 @@ log_message_formatters(Level, Timestamp, Node, Pid,
 
 log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
                      Format, Args)
-    when is_atom(Level), is_atom(Module), is_integer(Line),
+    when is_atom(Level), is_atom(Module), is_integer(Line), Line >= 0,
          is_atom(Function),
          (Arity =:= undefined) orelse
          (is_integer(Arity) andalso (Arity >= 0)) ->
     Timestamp = cloudi_timestamp:timestamp(),
     case flooding_logger(Timestamp) of
-        {true, _} ->
+        {true, _} when Mode =:= async ->
             ok;
-        {false, FloodingWarning} ->
+        {_, FloodingWarning} ->
             MetaData = metadata_get(),
             LogMessage0 = if
                 is_list(Format), Args =:= undefined ->
@@ -1046,7 +1052,7 @@ log_message_external(Mode, Process, Level, Module, Line, Function, Arity,
                     log_message_safe(Format, Args)
             end,
             LogMessageN = if
-                FloodingWarning =:= undefined ->
+                FloodingWarning =:= undefined; Mode =:= sync ->
                     LogMessage0;
                 is_binary(FloodingWarning) ->
                     [LogMessage0, FloodingWarning]
@@ -1993,8 +1999,8 @@ lager_severity_input(debug) -> debug.
                 Timestamp :: erlang:timestamp(),
                 Node :: node(),
                 Pid :: pid(),
-                Module :: module(),
-                Line :: pos_integer(),
+                Module :: atom(),
+                Line :: non_neg_integer(),
                 Function :: atom(),
                 Arity :: non_neg_integer() | undefined,
                 MetaData :: list({atom(), any()}),

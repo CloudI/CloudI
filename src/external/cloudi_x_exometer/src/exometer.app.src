@@ -8,7 +8,8 @@
    [
     kernel,
     stdlib,
-    exometer_core
+    exometer_core,
+    hut
    ]},
   {included_applications,
    [

@@ -7,7 +7,8 @@
                   kernel,
                   stdlib,
                   hackney,
-                  exometer_core
+                  exometer_core,
+                  hut
                  ]},
   {env, []}
  ]}.
