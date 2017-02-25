@@ -73,7 +73,7 @@
 %% calendar:datetime_to_gregorian_seconds({{1970,1,1},{0,0,0}}).
 -define(UNIX_EPOCH, 62167219200).
 
--include("log.hrl").
+-include("exometer_log.hrl").
 
 %% Probe callbacks
 

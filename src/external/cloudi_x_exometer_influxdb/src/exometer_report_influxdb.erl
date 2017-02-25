@@ -40,7 +40,7 @@
 
 -define(HTTP(Proto), (Proto =:= http orelse Proto =:= https)).
 
--include("log.hrl").
+-include("exometer_log.hrl").
 
 -type options() :: [{atom(), any()}].
 -type value() :: any().

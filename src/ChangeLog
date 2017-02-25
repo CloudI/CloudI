@@ -18,6 +18,8 @@
        cloudi_x_exometer, cloudi_x_exometer_influxdb)
     * Rely on reltool to find all CloudI service dependencies
       (may now not be a problem after removing lager)
+    * Fix folsom usage of old random module to survive removal
+      (in Erlang/OTP 20.0 release)
 
 2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

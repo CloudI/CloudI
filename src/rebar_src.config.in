@@ -35,8 +35,8 @@
   "external/cloudi_x_emysql",
   "external/cloudi_x_epgsql",
   "external/cloudi_x_epgsql_wg",
+  "external/cloudi_x_exometer_core", % compile behaviour modules first
   "external/cloudi_x_exometer",
-  "external/cloudi_x_exometer_core",
   "external/cloudi_x_exometer_influxdb",
   "external/cloudi_x_folsom",
   "external/cloudi_x_hackney",

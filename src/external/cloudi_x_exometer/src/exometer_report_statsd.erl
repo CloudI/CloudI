@@ -13,7 +13,7 @@
 
 -include_lib("kernel/include/inet.hrl").
 -include_lib("exometer_core/include/exometer.hrl").
--include("log.hrl").
+-include("exometer_log.hrl").
 
 %% gen_server callbacks
 -export(

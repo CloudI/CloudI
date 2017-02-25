@@ -45,7 +45,9 @@ update(#slide_uniform{reservoir = Reservoir, size = Size} = Sample0, Value) ->
     MCnt = folsom_utils:update_counter(Reservoir, Moment, 1),
     Sample = case MCnt > Size of
                  true ->
-                     {Rnd, _NewSeed} = random:uniform_s(MCnt, Now),
+                     {Seed0, Seed1, Seed2} = Now,
+                     Seed = {Seed0 + 1, Seed1 + 1, Seed2 + 1}, % always >= 0
+                     {Rnd, _} = random_wh82:uniform_s(MCnt, Seed),
                      maybe_update(Reservoir, {{Moment, Rnd}, Value}, Size),
                      Sample0;
                  false ->

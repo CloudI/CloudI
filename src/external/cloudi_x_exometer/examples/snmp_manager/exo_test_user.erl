@@ -32,7 +32,7 @@
 
 -include_lib("snmp/include/snmp_types.hrl").
 
--include("log.hrl").
+-include("exometer_log.hrl").
 
 %% ========================================================================
 %% SNMPM user callback functions
