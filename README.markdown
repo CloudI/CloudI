@@ -36,7 +36,8 @@ of a software system (fully or partially) to the Erlang programming language.
 
 The CloudI API provides a simple set of functions for
 Service-Oriented Architecture (SOA) development in any supported language
-(currently C/C++, Java, JavaScript, Perl, PHP, Python, Ruby, and Erlang/Elixir):
+(currently C/C++, Go, Java, JavaScript, OCaml, Perl, PHP, Python, Ruby,
+ and Erlang/Elixir):
 
 * `subscribe`, `unsubscribe`, `subscribe_count`
 * `send_async`, `send_sync`, `mcast_async` (`mcast_async` == publish)
@@ -46,7 +47,8 @@ Service-Oriented Architecture (SOA) development in any supported language
 External communication that needs to scale (beyond 10,000 connections)
 can use an existing internal CloudI service (implemented in Erlang or Elixir)
 which may do processing for one or more external CloudI services
-(implemented in C/C++, Go, Java, JavaScript, Perl, PHP, Python, and/or Ruby)
+(implemented in C/C++, Go, Java, JavaScript, OCaml, Perl, PHP, Python,
+ and/or Ruby)
 
 Even if external communication doesn't need to scale, private cloud
 computing tasks (number crunching) can gain fault-tolerance and internal
@@ -147,7 +149,7 @@ Integration points:
 Dynamic Configuration and Monitoring:
 
 * CloudI Service API (See [`src/service_api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
-* Monitoring to Graphite, OpenTSDB, SNMP, or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
+* Monitoring to Graphite, OpenTSDB, SNMP, InfluxDB or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
 
 Routing:
 
