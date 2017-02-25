@@ -16,7 +16,8 @@
     * Added cloudi_logger_hut module for hut logging integration
       (used by cloudi_service_monitoring dependencies:
        cloudi_x_exometer, cloudi_x_exometer_influxdb)
-
+    * Rely on reltool to find all CloudI service dependencies
+      (may now not be a problem after removing lager)
 
 2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

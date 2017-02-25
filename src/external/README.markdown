@@ -148,15 +148,6 @@ exception due to its C integration).
 - `Wed Sep 21 02:08:55 UTC 2016`
 - `BSD`
 
-`goldrush`
-----------
-`Small, Fast Event Processing for Erlang`
-
-- `https://github.com/DeadZen/goldrush`
-- `commit 71e63212f12c25827e0c1b4198d37d5d018a7fec (0.1.6)`
-- `Fri Dec 11 15:51:53 PST 2015`
-- `MIT`
-
 `hackney`
 ---------
 `HTTP client library in Erlang`
@@ -210,16 +201,6 @@ exception due to its C integration).
 - `commit 3074d4865b3385a050badf7828ad31490d860df5 (2.8.0)`
 - `Tue May 17 11:17:32 PDT 2016`
 - `MIT`
-
-`lager`
--------
-`Erlang Logging`
-
-- `https://github.com/basho/lager`
-- `commit b6b6cebcb27ccff8acc59ae775acebc2f52e4926 (2.0.3)`
-  `with https://github.com/basho/lager/pull/321/commits/d35670e01a3c6f9f9bcb3150217d26cc92513586`
-- `Fri Dec 11 15:51:53 PST 2015`
-- `Apache License 2.0`
 
 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 -------------------------------------------------------------------

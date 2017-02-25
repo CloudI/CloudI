@@ -68,14 +68,6 @@
   {app, cloudi_service_zeromq,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
-  % dependencies reltool fails to see:
-  % (reltool has a bug due to xref usage,
-  %  http://erlang.org/pipermail/erlang-bugs/2014-May/004390.html)
-
-  % cloudi_x_exometer from cloudi_service_monitoring
-  {app, cloudi_x_exometer,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-
   % application directories
   {lib_dirs,
    [

@@ -61,6 +61,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_idna/src \
      -d $(top_srcdir)/external/cloudi_x_jsx/src \
      -d $(top_srcdir)/external/cloudi_x_metrics/src \
+     -d $(top_srcdir)/external/cloudi_x_mimerl/src \
      -d $(top_srcdir)/external/cloudi_x_msgpack/src \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
