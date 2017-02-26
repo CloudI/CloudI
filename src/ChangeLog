@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add lager integration in cloudi_logger_lager module
+
 2017-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update exometer and exometer_core dependencies for

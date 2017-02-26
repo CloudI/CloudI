@@ -67,8 +67,10 @@
     ok.
 
 log(Level, Fmt, Args, _Opts) ->
-    % consistent with both lager_severity_output/1 and lager_severity_input/1
-    % and cloudi_core_i_configuration:logging_formatter_level/1
+    % consistent with
+    % cloudi_core_i_logger:lager_severity_output/1,
+    % cloudi_core_i_logger:lager_severity_input/1 and
+    % cloudi_core_i_configuration:logging_formatter_level/1
     LogLevel = if
         Level =:= critical; Level =:= alert; Level =:= emergency ->
             fatal;

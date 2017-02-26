@@ -1,4 +1,6 @@
-# Examples
+# Examples Of Embedding CloudI Into An Erlang/Elixir Project
+
+(if you are looking for non-Erlang/Elixir examples, go to the [CloudI Examples List](http://cloudi.org/tutorials.html#cloudi_examples))
 
 ## Erlang/OTP applications as internal CloudI services
 
