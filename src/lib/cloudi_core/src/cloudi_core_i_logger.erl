@@ -2004,7 +2004,7 @@ lager_severity_input(debug) -> debug.
                 Function :: atom(),
                 Arity :: non_neg_integer() | undefined,
                 MetaData :: list({atom(), any()}),
-                LogMessage :: iodata()) ->
+                LogMessage :: iolist()) ->
     #lager_msg{}.
 
 % based on lager_msg:new/5

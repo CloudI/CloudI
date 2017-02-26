@@ -32,6 +32,10 @@
      ]},
     {report, []}
   ]},
+ {cloudi_x_hut, [
+    {use_log_level_gate, true},
+    {level, info}
+  ]},
  {cloudi_x_cgroups, [
     {version_default, 2},
     {version_default_required, false},
