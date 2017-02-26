@@ -124,30 +124,12 @@ log(Level, MetaData, Format, Args) when is_list(MetaData) ->
     ok = cloudi_core_i_logger:metadata_set(MetaData),
     log(Level, undefined, Format, Args);
 log(Level, _, Format, Args) ->
-    % consistent with
-    % cloudi_core_i_logger:lager_severity_output/1,
-    % cloudi_core_i_logger:lager_severity_input/1 and
-    % cloudi_core_i_configuration:logging_formatter_level/1
-    LogLevel = if
-        Level =:= critical; Level =:= alert; Level =:= emergency ->
-            fatal;
-        Level =:= error ->
-            error;
-        Level =:= warning; Level =:= notice ->
-            warn;
-        Level =:= info ->
-            info;
-        Level =:= debug ->
-            debug;
-        true ->
-            undefined
-    end,
-    if
-        LogLevel =:= undefined ->
+    case log_level(Level) of
+        undefined ->
             cloudi_core_i_logger_interface:error('LAGER(invalid_level)', 0,
                                                  undefined, undefined,
                                                  Format, Args);
-        true ->
+        LogLevel ->
             cloudi_core_i_logger_interface:LogLevel('LAGER', 0,
                                                     undefined, undefined,
                                                     Format, Args)
@@ -198,6 +180,26 @@ parse_transform(Forms, _CompileOptions) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+log_level(Level) ->
+    % consistent with
+    % cloudi_core_i_logger:lager_severity_output/1,
+    % cloudi_core_i_logger:lager_severity_input/1 and
+    % cloudi_core_i_configuration:logging_formatter_level/1
+    if
+        Level =:= critical; Level =:= alert; Level =:= emergency ->
+            fatal;
+        Level =:= error ->
+            error;
+        Level =:= warning; Level =:= notice ->
+            warn;
+        Level =:= info ->
+            info;
+        Level =:= debug ->
+            debug;
+        true ->
+            undefined
+    end.
+
 forms_process([{eof, _} = EOF], L, _) ->
     lists:reverse([EOF | L]);
 forms_process([{attribute, _, module, {Module, _}} = Attribute | Forms],
@@ -240,28 +242,10 @@ body_process([#'call'{anno = Anno,
              #state{module = Module,
                     function_name = FunctionName,
                     function_arity = FunctionArity} = State) ->
-    % consistent with
-    % cloudi_core_i_logger:lager_severity_output/1,
-    % cloudi_core_i_logger:lager_severity_input/1 and
-    % cloudi_core_i_configuration:logging_formatter_level/1
-    LogLevel = if
-        Level =:= critical; Level =:= alert; Level =:= emergency ->
-            fatal;
-        Level =:= error ->
-            error;
-        Level =:= warning; Level =:= notice ->
-            warn;
-        Level =:= info ->
-            info;
-        Level =:= debug ->
-            debug;
-        true ->
-            undefined
-    end,
-    if
-        LogLevel =:= undefined ->
+    case log_level(Level) of
+        undefined ->
             body_process(Statements, [Call | L], State);
-        true ->
+        LogLevel ->
             NewArgsSuffix = case Args of
                 [{string, LagerFormatAnno, _} = LagerFormat] ->
                     [LagerFormat, {nil, LagerFormatAnno}];
