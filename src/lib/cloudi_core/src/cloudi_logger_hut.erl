@@ -63,10 +63,13 @@
                    error | warning | notice | info | debug,
           Fmt :: string(),
           Args :: list(),
-          _Opts :: list()) ->
+          Opts0 :: list({module, atom()} |
+                        {line, pos_integer()} |
+                        {function_name, atom()} |
+                        {function_arity, arity()})) ->
     ok.
 
-log(Level, Fmt, Args, _Opts) ->
+log(Level, Fmt, Args, Opts0) ->
     % consistent with
     % cloudi_core_i_logger:lager_severity_output/1,
     % cloudi_core_i_logger:lager_severity_input/1 and
@@ -85,14 +88,39 @@ log(Level, Fmt, Args, _Opts) ->
         true ->
             undefined
     end,
+    {Module, Line, Opts3} = case lists:keytake(module, 1, Opts0) of
+        false ->
+            {'HUT', 0, Opts0};
+        {value, {module, ModuleValue}, Opts1} ->
+            case lists:keytake(line, 1, Opts1) of
+                false ->
+                    {ModuleValue, 0, Opts1};
+                {value, {line, LineValue}, Opts2} ->
+                    {ModuleValue, LineValue, Opts2}
+            end
+    end,
+    {FunctionName, FunctionArity,
+     _} = case lists:keytake(function_name, 1, Opts3) of
+        false ->
+            {undefined, undefined, Opts3};
+        {value, {function_name, FunctionNameValue}, Opts4} ->
+            case lists:keytake(function_arity, 1, Opts4) of
+                false ->
+                    {FunctionNameValue, undefined, Opts4};
+                {value, {function_arity, FunctionArityValue}, Opts5} ->
+                    {FunctionNameValue, FunctionArityValue, Opts5}
+            end
+    end,
     if
         LogLevel =:= undefined ->
             cloudi_core_i_logger_interface:error('HUT(invalid_level)', 0,
-                                                 undefined, undefined,
+                                                 FunctionName,
+                                                 FunctionArity,
                                                  Fmt, Args);
         true ->
-            cloudi_core_i_logger_interface:LogLevel('HUT', 0,
-                                                    undefined, undefined,
+            cloudi_core_i_logger_interface:LogLevel(Module, Line,
+                                                    FunctionName,
+                                                    FunctionArity,
                                                     Fmt, Args)
     end.
 

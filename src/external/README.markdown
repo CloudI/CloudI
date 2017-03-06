@@ -162,8 +162,8 @@ exception due to its C integration).
 `helper library for making Erlang libraries logging framework agnostic`
 
 - `https://github.com/tolbrino/hut`
-- `commit 025540398478ab6f95932c3234382ac5bb21ad3e (v1.1.1)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit b200e5acbfe6e52e0470eeabc68d83437bde6866`
+- `Mon Mar  6 10:12:42 PST 2017`
 - `MIT`
 
 `idna`

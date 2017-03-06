@@ -68,12 +68,19 @@
 -ifdef(HUT_CUSTOM_CB).
 -define(log_type, "custom").
 
+-ifndef(FUNCTION_NAME).
+-define(FUNCTION_NAME, undefined).
+-endif.
+-ifndef(FUNCTION_ARITY).
+-define(FUNCTION_ARITY, undefined).
+-endif.
+
 -define(log(__Level, __Fmt),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], []) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY}]) end)).
 -define(log(__Level, __Fmt, __Args),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, []) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY}]) end)).
 -define(log(__Level, __Fmt, __Args, __Opts),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, __Opts) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY} | __Opts]) end)).
 
 -endif.
 -else.
