@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update quickrand, uuid
+
 2017-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add module, line, function_name, function_arity information to

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2012-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2012-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -53,6 +53,8 @@
 %% external interface
 -export([seed/0,
          uniform/1,
+         uniform_cache/1,
+         uniform_cache/2,
          strong_uniform/1,
          strong_float/0]).
 
@@ -63,6 +65,8 @@
 -define(ERLANG_OTP_VERSION_18_FEATURES, true).
 -endif.
 -endif.
+
+-include("quickrand_internal.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -161,6 +165,103 @@ uniform(N) when is_integer(N), N > 21267638781707063560975648195455661513 ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Quick uniform random number generation with cached data.===
+%% Not meant for cryptographic purposes.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uniform_cache(N :: pos_integer()) ->
+    pos_integer().
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+
+uniform_cache(N) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform_cache(1) ->
+    1;
+
+uniform_cache(N) when is_integer(N), N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    (MicroSecs rem N) + 1;
+
+uniform_cache(N) when is_integer(N), N =< 16#ffffffff ->
+    (erlang:abs(erlang:monotonic_time() bxor
+                erlang:unique_integer()) rem N) + 1;
+
+uniform_cache(N) when is_integer(N), N > 16#ffffffff ->
+    quickrand_cache:uniform(N).
+
+-else.
+
+uniform_cache(N) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform_cache(1) ->
+    1;
+
+uniform_cache(N) when is_integer(N), N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    (MicroSecs rem N) + 1;
+
+uniform_cache(N) when is_integer(N), N >= 1000000 ->
+    quickrand_cache:uniform(N).
+
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Quick uniform random number generation with cached data.===
+%% Not meant for cryptographic purposes.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uniform_cache(N :: pos_integer(),
+                    State :: quickrand_cache:state()) ->
+    {pos_integer(), quickrand_cache:state()}.
+
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+
+uniform_cache(N, _) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform_cache(1, State) ->
+    {1, State};
+
+uniform_cache(N, State) when is_integer(N), N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    {(MicroSecs rem N) + 1, State};
+
+uniform_cache(N, State) when is_integer(N), N =< 16#ffffffff ->
+    {(erlang:abs(erlang:monotonic_time() bxor
+                 erlang:unique_integer()) rem N) + 1, State};
+
+uniform_cache(N, State) when is_integer(N), N > 16#ffffffff ->
+    quickrand_cache:uniform(N, State).
+
+-else.
+
+uniform_cache(N, _) when is_integer(N), N < 1 ->
+    erlang:exit(badarg);
+
+uniform_cache(1, State) ->
+    {1, State};
+
+uniform_cache(N, State) when is_integer(N), N < 1000000 ->
+    % os:timestamp/0 is currently the quickest source of uniform randomness
+    {_, _, MicroSecs} = os:timestamp(),
+    {(MicroSecs rem N) + 1, State};
+
+uniform_cache(N, State) when is_integer(N), N >= 1000000 ->
+    quickrand_cache:uniform(N, State).
+
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Strong uniform random number generation.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -175,23 +276,26 @@ strong_uniform(1) ->
     1;
 
 strong_uniform(N) when is_integer(N), N > 1 ->
-    Bytes = erlang:byte_size(binary:encode_unsigned(N)),
-    (binary:decode_unsigned(crypto:strong_rand_bytes(Bytes), big) rem N) + 1.
+    Bytes = bytes(N),
+    Bits = Bytes * 8,
+    <<I:Bits/integer>> = crypto:strong_rand_bytes(Bytes),
+    (I rem N) + 1.
 
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Return an Erlang floating point random number (double-precision).===
+%% return a floating point value between 0.0 and 1.0, inclusive
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec strong_float() ->
-    float().  % return a floating point value between 0.0 and 1.0, inclusive
+    float().
 
 strong_float() ->
     % 53 bits maximum for double precision floating point representation
-    Bytes = 7, % erlang:round(53.0 / 8), % bytes for random number
-    MaxRand = 72057594037927935, % (2 ** (7 * 8)) - 1 % max random number
-    binary:decode_unsigned(crypto:strong_rand_bytes(Bytes)) / MaxRand.
+    % erlang:round(53.0 / 8) == 7 bytes for random number
+    <<I:56/integer>> = crypto:strong_rand_bytes(7),
+    I / ?BITS56. % scaled by maximum random number (2 ^ (7 * 8)) - 1
 
 %%%------------------------------------------------------------------------
 %%% Private functions

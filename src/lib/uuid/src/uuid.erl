@@ -553,16 +553,33 @@ is_v3(_) ->
 get_v4() ->
     get_v4(strong).
 
--spec get_v4('strong') ->
-    uuid().
+-spec get_v4('strong' | 'cached' | quickrand_cache:state()) ->
+    uuid() | {uuid(), quickrand_cache:state()}.
 
 get_v4(strong) ->
-    <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> = crypto:strong_rand_bytes(16),
+    <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> =
+        crypto:strong_rand_bytes(16),
     <<Rand1:48,
       0:1, 1:1, 0:1, 0:1,  % version 4 bits
       Rand2:12,
       1:1, 0:1,            % RFC 4122 variant bits
-      Rand3:62>>.
+      Rand3:62>>;
+get_v4(cached) ->
+    <<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>> =
+        quickrand_cache:rand_bytes(16),
+    <<Rand1:48,
+      0:1, 1:1, 0:1, 0:1,  % version 4 bits
+      Rand2:12,
+      1:1, 0:1,            % RFC 4122 variant bits
+      Rand3:62>>;
+get_v4(Cache) when element(1, Cache) =:= quickrand_cache ->
+    {<<Rand1:48, _:4, Rand2:12, _:2, Rand3:62>>, NewCache} =
+        quickrand_cache:rand_bytes(16, Cache),
+    {<<Rand1:48,
+       0:1, 1:1, 0:1, 0:1,  % version 4 bits
+       Rand2:12,
+       1:1, 0:1,            % RFC 4122 variant bits
+       Rand3:62>>, NewCache}.
 
 %%-------------------------------------------------------------------------
 %% @doc

@@ -6,11 +6,15 @@
    {vsn, "1.6.0"},
    {modules, [
         quickrand,
+        quickrand_cache,
         random_wh82,
         random_wh06_int]},
    {registered, []},
    {applications, [
         crypto,
         stdlib,
-        kernel]}]}.
+        kernel]},
+   {env, [
+        % default cache_size == 64 KB
+        {cache_size, 65536}]}]}.
 
