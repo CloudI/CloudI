@@ -65,7 +65,8 @@ type response =
   | NullError of string
 
 module Instance = struct
-  type t = {
+  type 's t = {
+      mutable state : 's;
       socket : Unix.file_descr;
       use_header : bool;
       mutable initialization_complete : bool;
@@ -73,10 +74,11 @@ module Instance = struct
       fragment_size : int;
       fragment_recv : bytes;
       callbacks : (string, (
-        t -> request_type ->
+        request_type ->
         string -> string ->
         string -> string ->
         int -> int -> string -> source ->
+        's -> 's t ->
         response) Queue.t) Hashtbl.t;
       buffer_recv : Buffer.t;
       mutable process_index : int;
@@ -98,9 +100,9 @@ module Instance = struct
       mutable trans_ids : string array;
       mutable subscribe_count : int;
     }
-  let make ~socket ~use_header ~fragment_size ~fragment_recv
+  let make ~state ~socket ~use_header ~fragment_size ~fragment_recv
     ~callbacks ~buffer_recv ~timeout_terminate =
-    {socket; use_header;
+    {state; socket; use_header;
      initialization_complete = false;
      terminate = false;
      fragment_size; fragment_recv; callbacks; buffer_recv;
@@ -181,11 +183,12 @@ module Instance = struct
     ()
 end
 
-type callback = (
-  Instance.t -> request_type ->
+type 's callback = (
+  request_type ->
   string -> string ->
   string -> string ->
   int -> int -> string -> source ->
+  's -> 's Instance.t ->
   response)
 
 let trans_id_null = String.make 16 '\x00'
@@ -229,7 +232,7 @@ let backtrace (e : exn) : string =
   (Printexc.to_string e) ^ "\n" ^ indent ^
   (String.trim (str_replace "\n" ("\n" ^ indent) (Printexc.get_backtrace ())))
 
-let null_response _ _ _ _ _ _ _ _ _ _ =
+let null_response _ _ _ _ _ _ _ _ _ _ _ =
   Null
 
 let getenv (key : string) : string =
@@ -668,7 +671,7 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
 and callback
   api cmd name pattern request_info request timeout priority trans_id pid :
   (bool option, string) result =
-  let {Instance.callbacks; request_timeout_adjustment; _} = api in
+  let {Instance.state; callbacks; request_timeout_adjustment; _} = api in
   if request_timeout_adjustment then (
     api.Instance.request_timer <- Unix.gettimeofday () ;
     api.Instance.request_timeout <- timeout) ;
@@ -686,8 +689,8 @@ and callback
     if cmd = message_send_async then
       try Some (
         callback_f
-          api ASYNC name pattern request_info request
-          timeout priority trans_id pid)
+          ASYNC name pattern request_info request
+          timeout priority trans_id pid state api)
       with
         | ReturnSync ->
           print_exception "Synchronous Call Return Invalid" ;
@@ -705,8 +708,8 @@ and callback
     else if cmd = message_send_sync then
       try Some (
         callback_f
-          api SYNC name pattern request_info request
-          timeout priority trans_id pid)
+          SYNC name pattern request_info request
+          timeout priority trans_id pid state api)
       with
         | ReturnSync ->
           None
@@ -727,8 +730,8 @@ and callback
   let response_result = match callback_result with
   | Some (ResponseInfo (value1, value2)) ->
     Some ((value1, value2))
-  | Some (Response (value)) ->
-    Some (("", value))
+  | Some (Response (value1)) ->
+    Some (("", value1))
   | Some (Null) ->
     Some (("", ""))
   | Some (NullError (error)) ->
@@ -1063,7 +1066,7 @@ let poll_request api timeout ext : (bool, string) result =
   else
     poll_request_loop api timeout ext
 
-let api (thread_index : int) : (Instance.t, string) result =
+let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
   let protocol = getenv "CLOUDI_API_INIT_PROTOCOL" in
   if protocol = "" then
     Error (invalid_input_error)
@@ -1080,6 +1083,7 @@ let api (thread_index : int) : (Instance.t, string) result =
         and buffer_recv = Buffer.create buffer_size
         and timeout_terminate = 1000 in
         let api = Instance.make
+          ~state:state
           ~socket:socket
           ~use_header:use_header
           ~fragment_size:fragment_size
@@ -1299,34 +1303,34 @@ let recv_async
           api.Instance.response,
           api.Instance.trans_id))
 
-let process_index (api : Instance.t) : int =
+let process_index (api : 's Instance.t) : int =
   api.Instance.process_index
 
-let process_count (api : Instance.t) : int =
+let process_count (api : 's Instance.t) : int =
   api.Instance.process_count
 
-let process_count_max (api : Instance.t) : int =
+let process_count_max (api : 's Instance.t) : int =
   api.Instance.process_count_max
 
-let process_count_min (api : Instance.t) : int =
+let process_count_min (api : 's Instance.t) : int =
   api.Instance.process_count_min
 
-let prefix (api : Instance.t) : string =
+let prefix (api : 's Instance.t) : string =
   api.Instance.prefix
 
-let timeout_initialize (api : Instance.t) : int =
+let timeout_initialize (api : 's Instance.t) : int =
   api.Instance.timeout_initialize
 
-let timeout_async (api : Instance.t) : int =
+let timeout_async (api : 's Instance.t) : int =
   api.Instance.timeout_async
 
-let timeout_sync (api : Instance.t) : int =
+let timeout_sync (api : 's Instance.t) : int =
   api.Instance.timeout_sync
 
-let timeout_terminate (api : Instance.t) : int =
+let timeout_terminate (api : 's Instance.t) : int =
   api.Instance.timeout_terminate
 
-let poll (api : Instance.t) (timeout : int) : (bool, string) result =
+let poll (api : 's Instance.t) (timeout : int) : (bool, string) result =
   poll_request api timeout true
 
 let text_key_value_parse text : (string, string list) Hashtbl.t =

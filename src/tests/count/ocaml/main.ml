@@ -41,8 +41,20 @@
  
  *)
 
-let request api type_ name pattern _ _ timeout _ trans_id pid =
-  let response = string_of_int 0 in
+module ServiceState = struct
+  type t = {
+      mutable count : int;
+    }
+  let make () =
+    {count = 0}
+end
+
+let request type_ name pattern _ _ timeout _ trans_id pid state api =
+  let {ServiceState.count; _} = state in
+  let count_new = if count == 4294967295 then 0 else count + 1 in
+  state.ServiceState.count <- count_new ;
+  print_endline ("count == " ^ (string_of_int count_new) ^ " ocaml") ;
+  let response = string_of_int count_new in
   match Cloudi.return_ api
     type_ name pattern "" response timeout trans_id pid with
   | Error (error) ->
@@ -51,7 +63,8 @@ let request api type_ name pattern _ _ timeout _ trans_id pid =
     Cloudi.Null
 
 let task thread_index =
-  match Cloudi.api thread_index with
+  let state = ServiceState.make () in
+  match Cloudi.api thread_index state with
   | Error (error) ->
     prerr_endline error
   | Ok (api) ->

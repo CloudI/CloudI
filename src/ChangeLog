@@ -3,7 +3,7 @@
 
 2017-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * C and Go CloudI API change
+    * C, Go, OCaml CloudI API change
       (breaks previous use of the C CloudI API) to keep state data
       within the CloudI API instance while using the same callback
       function argument order used by the Erlang CloudI API

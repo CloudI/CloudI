@@ -72,7 +72,7 @@ let pack_uint32_native (value : int) : string =
   Bytes.set binary (if Sys.big_endian then 3 else 0) (char_of_int byte3) ;
   Bytes.to_string binary
 
-let request api type_ _ _ request_info request timeout priority trans_id pid =
+let request type_ _ _ request_info request timeout priority trans_id pid _ api =
   match unpack_uint32_native request with
   | Error (error) ->
     Cloudi.NullError (error)
@@ -100,7 +100,7 @@ let request api type_ _ _ request_info request timeout priority trans_id pid =
       Cloudi.Null
 
 let task thread_index =
-  match Cloudi.api thread_index with
+  match Cloudi.api thread_index () with
   | Error (error) ->
     prerr_endline error
   | Ok (api) ->

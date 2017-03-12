@@ -41,12 +41,12 @@
  
  *)
 
-let request _ _ _ _ _ _ _ _ _ _ =
+let request _ _ _ _ _ _ _ _ _ _ _ =
   print_endline "null ocaml" ;
   Cloudi.Null
 
 let task thread_index =
-  match Cloudi.api thread_index with
+  match Cloudi.api thread_index () with
   | Error (error) ->
     prerr_endline error
   | Ok (api) ->

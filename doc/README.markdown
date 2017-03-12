@@ -48,8 +48,7 @@
         #include "cloudi.h"
         #include <string.h>
         #include <assert.h>
-        static void hello_world(cloudi_instance_t * api,
-                                int const command,
+        static void hello_world(int const command,
                                 char const * const name,
                                 char const * const pattern,
                                 void const * const request_info,
@@ -60,7 +59,9 @@
                                 int8_t priority,
                                 char const * const trans_id,
                                 char const * const pid,
-                                uint32_t const pid_size)
+                                uint32_t const pid_size,
+                                void * state,
+                                cloudi_instance_t * api)
         {
             char const * const message = "Hello World!";
             uint32_t const message_size = strlen(message);
@@ -75,7 +76,7 @@
             assert(result == cloudi_success);
             assert(thread_count == 1);
             cloudi_instance_t api;
-            result = cloudi_initialize(&api, 0);
+            result = cloudi_initialize(&api, 0, 0);
             assert(result == cloudi_success);
             result = cloudi_subscribe(&api, "hello_world/get",
                                       &hello_world);
