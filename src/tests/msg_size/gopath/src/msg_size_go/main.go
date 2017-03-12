@@ -53,7 +53,7 @@ const (
 	msg_size    = 2097152 // 2 MB
 )
 
-func request(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	if len(request) != msg_size {
 		panic(fmt.Errorf("len(requesst) != %d", msg_size))
 	}
@@ -71,9 +71,9 @@ func request(api *cloudi.Instance, requestType int, name, pattern string, reques
 	return nil, nil, nil
 }
 
-func task(threadIndex uint32, execution *sync.WaitGroup) {
+func task(threadIndex uint32, state interface{}, execution *sync.WaitGroup) {
 	defer execution.Done()
-	api, err := cloudi.API(threadIndex)
+	api, err := cloudi.API(threadIndex, state)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
@@ -98,7 +98,7 @@ func main() {
 	var execution sync.WaitGroup
 	for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {
 		execution.Add(1)
-		go task(threadIndex, &execution)
+		go task(threadIndex, nil, &execution)
 	}
 	execution.Wait()
 }

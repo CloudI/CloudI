@@ -55,6 +55,7 @@ extern "C"
 
 typedef struct cloudi_instance_t
 {
+    void * state;
     int fd_in;
     int fd_out;
     int use_header;
@@ -94,8 +95,7 @@ typedef struct cloudi_instance_t
 #define CLOUDI_ASYNC     1
 #define CLOUDI_SYNC     -1
 
-typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
-                                  int const request_type,
+typedef void (*cloudi_callback_t)(int const request_type,
                                   char const * const name,
                                   char const * const pattern,
                                   void const * const request_info,
@@ -106,7 +106,9 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
                                   int8_t priority,
                                   char const * const trans_id,
                                   char const * const pid,
-                                  uint32_t const pid_size);
+                                  uint32_t const pid_size,
+                                  void * state,
+                                  cloudi_instance_t * p);
 
 #define cloudi_get_response(p)               ((p)->response)
 #define cloudi_get_response_size(p)          ((p)->response_size)
@@ -127,9 +129,10 @@ typedef void (*cloudi_callback_t)(cloudi_instance_t * p,
 #define cloudi_get_priority_default(p)       ((p)->priority_default)
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      unsigned int const thread_index);
+                      unsigned int const thread_index,
+                      void * state);
 
-void cloudi_destroy(cloudi_instance_t * p);
+void * cloudi_destroy(cloudi_instance_t * p);
 
 int cloudi_initialize_thread_count(unsigned int * const thread_count);
 

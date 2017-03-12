@@ -81,6 +81,7 @@ var nativeEndian binary.ByteOrder
 
 // Instance is an instance of the CloudI API
 type Instance struct {
+	state                    interface{}
 	socket                   net.Conn
 	useHeader                bool
 	initializationComplete   bool
@@ -113,14 +114,14 @@ type Instance struct {
 type Source erlang.OtpErlangPid
 
 // Callback is a function to handle a service request
-type Callback func(*Instance, int, string, string, []byte, []byte, uint32, int8, [16]byte, Source) ([]byte, []byte, error)
+type Callback func(int, string, string, []byte, []byte, uint32, int8, [16]byte, Source, interface{}, *Instance) ([]byte, []byte, error)
 
-func nullResponse(api *Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source) ([]byte, []byte, error) {
+func nullResponse(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid Source, state interface{}, api *Instance) ([]byte, []byte, error) {
 	return []byte{}, []byte{}, nil
 }
 
 // API creates an instance of the CloudI API
-func API(threadIndex uint32) (*Instance, error) {
+func API(threadIndex uint32, state interface{}) (*Instance, error) {
 	protocol := os.Getenv("CLOUDI_API_INIT_PROTOCOL")
 	if protocol == "" {
 		return nil, invalidInputErrorNew()
@@ -158,7 +159,7 @@ func API(threadIndex uint32) (*Instance, error) {
 	bufferRecv := new(bytes.Buffer)
 	bufferRecv.Grow(int(bufferSize))
 	timeoutTerminate := uint32(1000)
-	api := &Instance{socket: socket, useHeader: useHeader, fragmentSize: bufferSize, fragmentRecv: fragmentRecv, callbacks: callbacks, bufferRecv: bufferRecv, timeoutTerminate: timeoutTerminate}
+	api := &Instance{state: state, socket: socket, useHeader: useHeader, fragmentSize: bufferSize, fragmentRecv: fragmentRecv, callbacks: callbacks, bufferRecv: bufferRecv, timeoutTerminate: timeoutTerminate}
 	var init []byte
 	init, err = erlang.TermToBinary(erlang.OtpErlangAtom("init"), -1)
 	if err != nil {
@@ -840,9 +841,9 @@ func (api *Instance) callbackExecute(function Callback, command uint32, name, pa
 	}()
 	switch command {
 	case messageSendAsync:
-		responseInfo, response, err = function(api, ASYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+		responseInfo, response, err = function(ASYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid, api.state, api)
 	case messageSendSync:
-		responseInfo, response, err = function(api, SYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid)
+		responseInfo, response, err = function(SYNC, name, pattern, requestInfo, request, timeout, priority, transId, pid, api.state, api)
 	}
 	return
 }

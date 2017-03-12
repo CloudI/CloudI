@@ -51,9 +51,9 @@ import (
 	"sync"
 )
 
-func task(threadIndex uint32, execution *sync.WaitGroup) {
+func task(threadIndex uint32, state interface{}, execution *sync.WaitGroup) {
 	defer execution.Done()
-	api, err := cloudi.API(threadIndex)
+	api, err := cloudi.API(threadIndex, state)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
@@ -206,73 +206,73 @@ func assert(value interface{}, expected ...interface{}) {
 	panic("assert failed!")
 }
 
-func sequence1ABCD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1ABCD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/b/c/d")
 	assert(request, []byte("test1"))
 	return nil, request, nil
 }
 
-func sequence1ABCX(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1ABCX(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/b/c/*")
 	assert(request, []byte("test2"), []byte("test3"))
 	return nil, request, nil
 }
 
-func sequence1ABXD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1ABXD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/b/*/d")
 	assert(request, []byte("test4"), []byte("test5"))
 	return nil, request, nil
 }
 
-func sequence1AXCD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1AXCD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/*/c/d")
 	assert(request, []byte("test6"), []byte("test7"))
 	return nil, request, nil
 }
 
-func sequence1XBCD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1XBCD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"*/b/c/d")
 	assert(request, []byte("test8"), []byte("test9"))
 	return nil, request, nil
 }
 
-func sequence1ABX(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1ABX(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/b/*")
 	assert(request, []byte("test10"))
 	return nil, request, nil
 }
 
-func sequence1AXD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1AXD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/*/d")
 	assert(request, []byte("test11"))
 	return nil, request, nil
 }
 
-func sequence1XCD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1XCD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"*/c/d")
 	assert(request, []byte("test12"))
 	return nil, request, nil
 }
 
-func sequence1AX(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1AX(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"a/*")
 	assert(request, []byte("test13"))
 	return nil, request, nil
 }
 
-func sequence1XD(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1XD(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"*/d")
 	assert(request, []byte("test14"))
 	return nil, request, nil
 }
 
-func sequence1X(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1X(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	assert(pattern, api.Prefix()+"*")
 	assert(request, []byte("test15"))
 	return nil, request, nil
 }
 
-func sequence1(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence1(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	var err error
 	// consume all the 'end' responses from all sequences handled
 	// by this service
@@ -550,39 +550,39 @@ func sequence1(api *cloudi.Instance, requestType int, name, pattern string, requ
 	return nil, []byte("end"), err
 }
 
-func sequence2E1(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E1(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("1"), nil
 }
 
-func sequence2E2(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E2(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("2"), nil
 }
 
-func sequence2E3(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E3(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("3"), nil
 }
 
-func sequence2E4(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E4(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("4"), nil
 }
 
-func sequence2E5(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E5(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("5"), nil
 }
 
-func sequence2E6(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E6(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("6"), nil
 }
 
-func sequence2E7(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E7(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("7"), nil
 }
 
-func sequence2E8(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2E8(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, []byte("8"), nil
 }
 
-func sequence2(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence2(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	os.Stdout.WriteString("messaging sequence2 start go\n")
 	assert(request, []byte("start"))
 	var err error
@@ -628,7 +628,7 @@ func sequence2(api *cloudi.Instance, requestType int, name, pattern string, requ
 	return nil, []byte("end"), err
 }
 
-func sequence3F1(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence3F1(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	requestI, err := strconv.Atoi(string(request))
 	if err != nil {
 		panic(err)
@@ -641,7 +641,7 @@ func sequence3F1(api *cloudi.Instance, requestType int, name, pattern string, re
 	return nil, nil, nil
 }
 
-func sequence3F2(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence3F2(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	requestI, err := strconv.Atoi(string(request))
 	if err != nil {
 		panic(err)
@@ -651,11 +651,11 @@ func sequence3F2(api *cloudi.Instance, requestType int, name, pattern string, re
 	return nil, nil, nil
 }
 
-func sequence3G1(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence3G1(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	return nil, append(request, []byte("suffix")...), nil
 }
 
-func sequence3(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+func sequence3(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
 	os.Stdout.WriteString("messaging sequence3 start go\n")
 	assert(request, []byte("start"))
 	test1Id, err := api.SendAsync(api.Prefix()+"f1", []byte{}, []byte("0"))
@@ -689,7 +689,7 @@ func main() {
 	var execution sync.WaitGroup
 	for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {
 		execution.Add(1)
-		go task(threadIndex, &execution)
+		go task(threadIndex, nil, &execution)
 	}
 	execution.Wait()
 }

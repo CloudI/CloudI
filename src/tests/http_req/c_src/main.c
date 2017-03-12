@@ -49,8 +49,7 @@ typedef struct
 
 } process_requests_t;
 
-static void request(cloudi_instance_t * api,
-                    int const request_type,
+static void request(int const request_type,
                     char const * const name,
                     char const * const pattern,
                     void const * const request_info,
@@ -61,7 +60,9 @@ static void request(cloudi_instance_t * api,
                     int8_t priority,
                     char const * const trans_id,
                     char const * const pid,
-                    uint32_t const pid_size)
+                    uint32_t const pid_size,
+                    void * state,
+                    cloudi_instance_t * api)
 {
     char response[128];
     char const ** http_qs = cloudi_request_http_qs_parse(request, request_size);
@@ -95,7 +96,7 @@ void process_requests(void * p)
 {
     cloudi_instance_t api;
     process_requests_t * data = (process_requests_t *) p;
-    int result = cloudi_initialize(&api, data->thread_index);
+    int result = cloudi_initialize(&api, data->thread_index, 0);
     assert(result == cloudi_success);
 
     result = cloudi_subscribe_count(&api, "c.xml/get");

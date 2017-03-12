@@ -1,6 +1,22 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * C and Go CloudI API change
+      (breaks previous use of the C CloudI API) to keep state data
+      within the CloudI API instance while using the same callback
+      function argument order used by the Erlang CloudI API
+        * The consistent interface CloudI provides with the CloudI API for
+          CloudI service request data is:
+          (RequestType, Name, Pattern, RequestInfo, Request,
+           Timeout, Priority, TransId, Source)
+          with the (State, API) data before the service request data in
+          programming languages that use object methods
+          (State is the object) or after the service request data in
+          programming languages that rely on an isolated function
+          (C, Erlang, Go, OCaml, Haskell (not added yet))
+
 2017-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update quickrand, uuid

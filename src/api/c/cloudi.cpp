@@ -176,8 +176,7 @@ namespace
                                               char const * const pid,
                                               uint32_t const pid_size)
                     {
-                        m_f(m_p,
-                            request_type,
+                        m_f(request_type,
                             name,
                             pattern,
                             request_info,
@@ -188,7 +187,9 @@ namespace
                             priority,
                             trans_id,
                             pid,
-                            pid_size);
+                            pid_size,
+                            m_p->state,
+                            m_p);
                     }
                 private:
                     cloudi_instance_t * m_p;
@@ -558,7 +559,8 @@ static int poll_request(cloudi_instance_t * p,
                         int external);
 
 int cloudi_initialize(cloudi_instance_t * p,
-                      unsigned int const thread_index)
+                      unsigned int const thread_index,
+                      void * state)
 {
     if (p == 0)
         return cloudi_out_of_memory;
@@ -569,6 +571,7 @@ int cloudi_initialize(cloudi_instance_t * p,
     if (buffer_size_p == 0)
         return cloudi_invalid_input;
     ::memset(p, 0, sizeof(cloudi_instance_t));
+    p->state = state;
     uint32_t const buffer_size = ::atoi(buffer_size_p);
     if (::strcmp(protocol, "tcp") == 0)
     {
@@ -632,10 +635,10 @@ int cloudi_initialize(cloudi_instance_t * p,
     return result;
 }
 
-void cloudi_destroy(cloudi_instance_t * p)
+void * cloudi_destroy(cloudi_instance_t * p)
 {
     if (p == 0)
-        return;
+        return 0;
     if (p->fd_in != 0)
     {
         ::close(p->fd_in);
@@ -649,7 +652,9 @@ void cloudi_destroy(cloudi_instance_t * p)
         delete reinterpret_cast<timer *>(p->request_timer);
         if (p->prefix)
             delete [] p->prefix;
+        return p->state;
     }
+    return 0;
 }
 
 int cloudi_initialize_thread_count(unsigned int * const thread_count)
@@ -1878,7 +1883,7 @@ API::API(unsigned int const thread_index) :
     m_count(new int)
 {
     (*m_count) = 1;
-    int const result = cloudi_initialize(m_api, thread_index);
+    int const result = cloudi_initialize(m_api, thread_index, 0);
     if (result != return_value::success)
         throw invalid_input_exception(result);
 }

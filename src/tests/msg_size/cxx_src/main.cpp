@@ -48,8 +48,7 @@
 
 static char buffer[MSG_SIZE];
 
-static void request(cloudi_instance_t * api,
-                    int const request_type,
+static void request(int const request_type,
                     char const * const /*name*/,
                     char const * const /*pattern*/,
                     void const * const request_info,
@@ -60,7 +59,9 @@ static void request(cloudi_instance_t * api,
                     int8_t priority,
                     char const * const trans_id,
                     char const * const pid,
-                    uint32_t const pid_size)
+                    uint32_t const pid_size,
+                    void * /*state*/,
+                    cloudi_instance_t * api)
 {
     assert(request_size == MSG_SIZE);
     ::memcpy(buffer, request, request_size);
@@ -85,7 +86,7 @@ int main(int, char **)
     assert(thread_count == 1);
 
     cloudi_instance_t api;
-    result = cloudi_initialize(&api, 0);
+    result = cloudi_initialize(&api, 0, 0);
     assert(result == cloudi_success);
 
     assert(MSG_SIZE <= CLOUDI_MAX_BUFFERSIZE);
