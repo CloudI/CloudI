@@ -243,6 +243,7 @@ dialyze: all \
               lib/trie/ebin/ \
               lib/uuid/ebin/ \
               lib/varpool/ebin/ \
+              tests/count/ebin/ \
               tests/hexpi/ebin/ \
               tests/http_req/ebin/ \
               tests/messaging/ebin/ \

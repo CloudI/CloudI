@@ -51,9 +51,9 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 	return nil, nil, nil
 }
 
-func task(threadIndex uint32, state interface{}, execution *sync.WaitGroup) {
+func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
-	api, err := cloudi.API(threadIndex, state)
+	api, err := cloudi.API(threadIndex, nil)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
@@ -78,7 +78,7 @@ func main() {
 	var execution sync.WaitGroup
 	for threadIndex := uint32(0); threadIndex < threadCount; threadIndex++ {
 		execution.Add(1)
-		go task(threadIndex, nil, &execution)
+		go task(threadIndex, &execution)
 	}
 	execution.Wait()
 }

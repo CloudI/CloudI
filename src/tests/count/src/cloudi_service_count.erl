@@ -3,12 +3,12 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Service for the http_req Test==
+%%% ==CloudI Service for the count Test==
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
+%%% @copyright 2017 Michael Truog
 %%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_http_req).
+-module(cloudi_service_count).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_service).
@@ -59,7 +59,10 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--record(state, {}).
+-record(state,
+        {
+            count = 0 :: non_neg_integer()
+        }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -70,31 +73,24 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
-    cloudi_service:subscribe(Dispatcher, "erlang.xml/get"),
+    cloudi_service:subscribe(Dispatcher, "erlang/get"),
     {ok, #state{}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
-    HttpQS = cloudi_request:http_qs_parse(Request),
-    Response = case dict:find(<<"value">>, HttpQS) of
-        {ok, RawValue} ->
-            Value = case RawValue of
-                [V | _] ->
-                    erlang:binary_to_integer(V);
-                V ->
-                    erlang:binary_to_integer(V)
-            end,
-            cloudi_string:format_to_binary(
-                "<http_test><value>~w</value></http_test>", [Value]
-            );
-        error ->
-            <<"<http_test><error>no value specified</error></http_test>">>
+                              #state{count = Count0} = State, _Dispatcher) ->
+    CountN = if
+        Count0 == 4294967295 ->
+            0;
+        true ->
+            Count0 + 1
     end,
-    {reply, Response, State}.
+    ?LOG_INFO("count == ~w erlang", [CountN]),
+    Response = cloudi_string:format_to_binary("~w", [CountN]),
+    {reply, Response, State#state{count = CountN}}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
-    ?LOG_INFO("terminate http_req erlang", []),
+    ?LOG_INFO("terminate count erlang", []),
     ok.
 
 %%%------------------------------------------------------------------------

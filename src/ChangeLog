@@ -16,6 +16,7 @@
           (State is the object) or after the service request data in
           programming languages that rely on an isolated function
           (C, Erlang, Go, OCaml, Haskell (not added yet))
+    * Add the count integration test
 
 2017-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 

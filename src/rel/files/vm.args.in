@@ -28,6 +28,7 @@
 @ERL_OPTS@
 
 # Integration Tests code paths for the default configuration
+-pz tests/count/ebin/
 -pz tests/hexpi/ebin/
 -pz tests/http_req/ebin/
 -pz tests/msg_size/ebin/

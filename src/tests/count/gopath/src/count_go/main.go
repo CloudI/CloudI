@@ -44,27 +44,22 @@ import (
 	"cloudi"
 	"fmt"
 	"os"
-	"strconv"
 	"sync"
 )
 
+type serviceState struct {
+	count uint32
+}
+
 func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	httpQs := api.RequestHttpQsParse(request)
-	value := httpQs["value"]
-	var valueInt int
-	var err error
-	if value != nil {
-		valueInt, err = strconv.Atoi(value[0])
-		if err != nil {
-			value = nil
-		}
-	}
-	var response []byte
-	if value == nil {
-		response = []byte("<http_test><error>no value specified</error></http_test>")
+	stateP := state.(*serviceState)
+	if stateP.count == 4294967295 {
+		stateP.count = 0
 	} else {
-		response = []byte(fmt.Sprintf("<http_test><value>%d</value></http_test>", valueInt))
+		stateP.count += 1
 	}
+	fmt.Printf("count == %d go\n", stateP.count)
+	response := []byte(fmt.Sprintf("%d", stateP.count))
 	api.Return(requestType, name, pattern, []byte{}, response, timeout, transId, pid)
 	// execution doesn't reach here
 	return nil, nil, nil
@@ -72,35 +67,22 @@ func request(requestType int, name, pattern string, requestInfo, request []byte,
 
 func task(threadIndex uint32, execution *sync.WaitGroup) {
 	defer execution.Done()
-	api, err := cloudi.API(threadIndex, nil)
+	stateP := &serviceState{count: 0}
+	api, err := cloudi.API(threadIndex, stateP)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
-	var count1 uint32
-	count1, err = api.SubscribeCount("go.xml/get")
+	err = api.Subscribe("go/get", request)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 		return
 	}
-	assert(count1, uint32(0))
-	err = api.Subscribe("go.xml/get", request)
-	if err != nil {
-		cloudi.ErrorWrite(os.Stderr, err)
-		return
-	}
-	var count2 uint32
-	count2, err = api.SubscribeCount("go.xml/get")
-	if err != nil {
-		cloudi.ErrorWrite(os.Stderr, err)
-		return
-	}
-	assert(count2, uint32(1))
 	_, err = api.Poll(-1)
 	if err != nil {
 		cloudi.ErrorWrite(os.Stderr, err)
 	}
-	os.Stdout.WriteString("terminate http_req go\n")
+	os.Stdout.WriteString("terminate count go\n")
 }
 
 func assert(value interface{}, expected interface{}) {

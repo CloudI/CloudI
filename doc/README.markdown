@@ -449,13 +449,13 @@
             "sync"
         )
         
-        func helloWorld(api *cloudi.Instance, requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source) ([]byte, []byte, error) {
+        func helloWorld(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
             return nil, []byte("Hello World!"), nil
         }
         
         func task(threadIndex uint32, execution *sync.WaitGroup) {
             defer execution.Done()
-            api, err := cloudi.API(threadIndex)
+            api, err := cloudi.API(threadIndex, nil)
             if err != nil {
                 cloudi.ErrorWrite(os.Stderr, err)
                 return
