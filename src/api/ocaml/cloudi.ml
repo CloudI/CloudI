@@ -624,15 +624,15 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
     in
     loop i0 cmd_value
 
-let rec poll_request_loop api timeout ext : (bool, string) result = 
+let rec poll_request_loop api timeout ext poll_timer: (bool, string) result = 
   let {Instance.socket; _} = api
-  and (poll_timer, timeout_value) =
+  and timeout_value =
     if timeout < 0 then
-      (0.0, -1.0)
+      -1.0
     else if timeout = 0 then
-      (0.0, 0.0)
+      0.0
     else
-      (Unix.gettimeofday (), (float_of_int timeout) *. 0.001)
+      (float_of_int timeout) *. 0.001
   in
   let (reading, _, excepting) =
     Unix.select [socket] [] [socket] timeout_value in
@@ -651,22 +651,29 @@ let rec poll_request_loop api timeout ext : (bool, string) result =
       | Ok (Some value) ->
         Ok (value)
       | Ok (None) ->
-        let timeout_new = if timeout > 0 then
-          let elapsed = truncate
-            (((Unix.gettimeofday ()) -. poll_timer) *. 1000.0) in
-          if elapsed < 0 then
-            timeout
-          else if elapsed >= timeout then
-            0
+        let poll_timer_new =
+          if timeout > 0 then
+            Unix.gettimeofday ()
           else
-            timeout - elapsed
-        else
-          timeout
+            0.0
+        in
+        let timeout_new =
+          if timeout > 0 then
+            let elapsed = truncate
+              ((poll_timer_new -. poll_timer) *. 1000.0) in
+            if elapsed <= 0 then
+              timeout
+            else if elapsed >= timeout then
+              0
+            else
+              timeout - elapsed
+          else
+            timeout
         in
         if timeout = 0 then
           Ok (true)
         else
-          poll_request_loop api timeout_new ext
+          poll_request_loop api timeout_new ext poll_timer_new
 
 and callback
   api cmd name pattern request_info request timeout priority trans_id pid :
@@ -1052,19 +1059,26 @@ let poll_request api timeout ext : (bool, string) result =
   let {Instance.initialization_complete; terminate; _} = api in
   if terminate then
     Ok (false)
-  else if ext && not initialization_complete then (
-    match Erlang.term_to_binary (Erlang.OtpErlangAtom ("polling")) with
-    | Error (error) ->
-      Error (error)
-    | Ok (polling) ->
-      match send api polling with
+  else
+    let poll_timer =
+      if timeout > 0 then
+        Unix.gettimeofday ()
+      else
+        0.0
+    in
+    if ext && not initialization_complete then (
+      match Erlang.term_to_binary (Erlang.OtpErlangAtom ("polling")) with
       | Error (error) ->
         Error (error)
-      | Ok _ ->
-        api.Instance.initialization_complete <- true ;
-        poll_request_loop api timeout ext)
-  else
-    poll_request_loop api timeout ext
+      | Ok (polling) ->
+        match send api polling with
+        | Error (error) ->
+          Error (error)
+        | Ok _ ->
+          api.Instance.initialization_complete <- true ;
+          poll_request_loop api timeout ext poll_timer)
+    else
+      poll_request_loop api timeout ext poll_timer
 
 let api (thread_index : int) (state : 's): ('s Instance.t, string) result =
   let protocol = getenv "CLOUDI_API_INIT_PROTOCOL" in
