@@ -7,6 +7,9 @@ endif
 if GO_SUPPORT
     GO_SUBDIR = go
 endif
+if HASKELL_SUPPORT
+    HASKELL_SUBDIR = haskell
+endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = java
 endif
@@ -28,7 +31,7 @@ endif
 if RUBY_SUPPORT
     RUBY_SUBDIR = ruby
 endif
-SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) \
+SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(JAVA_SUBDIR) $(JAVASCRIPT_SUBDIR) \
           $(OCAML_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \

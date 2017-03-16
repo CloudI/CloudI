@@ -1,0 +1,259 @@
+{--*-Mode:haskell;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+  ex: set ft=haskell fenc=utf-8 sts=4 ts=4 sw=4 et nomod: -}
+
+{-
+
+  BSD LICENSE
+
+  Copyright (c) 2017, Michael Truog <mjtruog at gmail dot com>
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
+
+      * Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+      * Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in
+        the documentation and/or other materials provided with the
+        distribution.
+      * All advertising materials mentioning features or use of this
+        software must display the following acknowledgment:
+          This product includes software developed by Michael Truog
+      * The name of the author may not be used to endorse or promote
+        products derived from this software without specific prior
+        written permission
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+  CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+  INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+  CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+  DAMAGE.
+
+ -}
+
+module Foreign.CloudI.Instance
+    ( RequestType(..)
+    , Source
+    , Response(..)
+    , Callback
+    , T(..)
+    , make
+    , init
+    , reinit
+    , setResponse
+    , setTransId
+    , setTransIds
+    , setSubscribeCount
+    ) where
+
+import Prelude hiding (init)
+import qualified Data.Array.IArray as IArray
+import qualified Data.ByteString as ByteString
+import qualified Data.ByteString.Builder as Builder
+import qualified Data.Int as Int
+import qualified Data.Map.Strict as Map
+import qualified Data.Monoid as Monoid
+import qualified Data.Time.Clock as Clock
+import qualified Data.Word as Word
+import qualified Foreign.C.Types as C
+import qualified Foreign.Erlang.Pid as Erlang
+import qualified Network.Socket as Socket
+import qualified System.IO as SysIO
+import qualified System.Posix.IO as POSIX (fdToHandle)
+import qualified System.Posix.Types as POSIX (Fd(..))
+type Builder = Builder.Builder
+type ByteString = ByteString.ByteString
+type Socket = Socket.Socket
+type Handle = SysIO.Handle
+type Map = Map.Map
+type Array = IArray.Array
+type Int8 = Int.Int8
+type Word8 = Word.Word8
+type Word32 = Word.Word32
+
+data RequestType =
+      ASYNC
+    | SYNC
+    deriving (Eq, Show)
+
+type Source = Erlang.Pid
+
+type Callback s =
+    RequestType ->
+    ByteString -> ByteString ->
+    ByteString -> ByteString ->
+    Int -> Int -> ByteString -> Source ->
+    s -> T s ->
+    IO (Response s)
+
+data Response s =
+      Response (ByteString, s)
+    | ResponseInfo (ByteString, ByteString, s)
+    | Null (s)
+    | NullError (String, s)
+    deriving (Eq, Show)
+
+data T s = T
+    { state :: !s
+    , socket :: !(IO Socket)
+    , socketHandle :: !(IO Handle)
+    , useHeader :: !Bool
+    , initializationComplete :: !Bool
+    , terminate :: !Bool
+    , timeout :: !(Maybe Bool)
+    , callbacks :: !(Map ByteString (Callback s))
+    , bufferSize :: !Int
+    , bufferRecv :: !Builder
+    , bufferRecvSize :: !Int
+    , processIndex :: !Int
+    , processCount :: !Int
+    , processCountMax :: !Int
+    , processCountMin :: !Int
+    , prefix :: !ByteString
+    , timeoutInitialize :: !Int
+    , timeoutAsync :: !Int
+    , timeoutSync :: !Int
+    , timeoutTerminate :: !Int
+    , priorityDefault :: !Int
+    , requestTimeoutAdjustment :: !Bool
+    , requestTimer :: !Clock.NominalDiffTime
+    , requestTimeout :: !Int
+    , responseInfo :: !ByteString
+    , response :: !ByteString
+    , transId :: !ByteString
+    , transIds :: !(Array Int ByteString)
+    , subscribeCount :: !Int
+    }
+
+makeSocket :: String -> C.CInt -> IO Socket
+makeSocket "local" fd =
+    Socket.mkSocket fd Socket.AF_UNIX Socket.Stream
+        Socket.defaultProtocol Socket.Connected
+makeSocket "tcp" fd =
+    Socket.mkSocket fd Socket.AF_INET Socket.Stream
+        Socket.defaultProtocol Socket.Connected
+makeSocket "udp" fd =
+    Socket.mkSocket fd Socket.AF_INET Socket.Datagram
+        Socket.defaultProtocol Socket.Connected
+makeSocket _ _ =
+    error "invalid protocol"
+
+makeSocketHandle :: C.CInt -> IO Handle
+makeSocketHandle fd = do
+    handle <- POSIX.fdToHandle (POSIX.Fd fd)
+    SysIO.hSetEncoding handle SysIO.char8
+    SysIO.hSetBuffering handle SysIO.NoBuffering
+    return handle
+
+make :: s -> String -> C.CInt -> Bool -> Int -> Int -> T s
+make state' protocol fd useHeader' bufferSize' timeoutTerminate' =
+    T {   state = state'
+        , socket = makeSocket protocol fd
+        , socketHandle = makeSocketHandle fd
+        , useHeader = useHeader'
+        , initializationComplete = False
+        , terminate = False
+        , timeout = Nothing
+        , callbacks = Map.empty
+        , bufferSize = bufferSize'
+        , bufferRecv = Monoid.mempty
+        , bufferRecvSize = 0
+        , processIndex = 0
+        , processCount = 0
+        , processCountMax = 0
+        , processCountMin = 0
+        , prefix = ByteString.empty
+        , timeoutInitialize = 0
+        , timeoutAsync = 0
+        , timeoutSync = 0
+        , timeoutTerminate = timeoutTerminate'
+        , priorityDefault = 0
+        , requestTimeoutAdjustment = False
+        , requestTimer = 0
+        , requestTimeout = 0
+        , responseInfo = ByteString.empty
+        , response = ByteString.empty
+        , transId = ByteString.empty
+        , transIds = IArray.array (0, 0) [(0, ByteString.empty)]
+        , subscribeCount = 0
+    }
+
+init :: T s -> Word32 -> Word32 -> Word32 -> Word32 -> ByteString ->
+    Word32 -> Word32 -> Word32 -> Word32 -> Int8 -> Word8 -> T s
+init api0
+    processIndex' processCount' processCountMax' processCountMin'
+    prefix' timeoutInitialize' timeoutAsync' timeoutSync' timeoutTerminate'
+    priorityDefault' requestTimeoutAdjustment' =
+    api0{
+          timeout = Just False
+        , processIndex = fromIntegral processIndex'
+        , processCount = fromIntegral processCount'
+        , processCountMax = fromIntegral processCountMax'
+        , processCountMin = fromIntegral processCountMin'
+        , prefix = prefix'
+        , timeoutInitialize = fromIntegral timeoutInitialize'
+        , timeoutAsync = fromIntegral timeoutAsync'
+        , timeoutSync = fromIntegral timeoutSync'
+        , timeoutTerminate = fromIntegral timeoutTerminate'
+        , priorityDefault = fromIntegral priorityDefault'
+        , requestTimeoutAdjustment = requestTimeoutAdjustment' /= 0}
+
+reinit :: T s -> Word32 -> Word32 -> Word32 -> Int8 -> Word8 -> T s
+reinit api0
+    processCount' timeoutAsync' timeoutSync'
+    priorityDefault' requestTimeoutAdjustment' =
+    api0{
+          processCount = fromIntegral processCount'
+        , timeoutAsync = fromIntegral timeoutAsync'
+        , timeoutSync = fromIntegral timeoutSync'
+        , priorityDefault = fromIntegral priorityDefault'
+        , requestTimeoutAdjustment = requestTimeoutAdjustment' /= 0}
+
+setResponse :: T s -> ByteString -> ByteString -> ByteString -> T s
+setResponse api0
+    responseInfo' response' transId' =
+    api0{
+          timeout = Just False
+        , responseInfo = responseInfo'
+        , response = response'
+        , transId = transId'}
+
+setTransId :: T s -> ByteString -> T s
+setTransId api0
+    transId' =
+    api0{
+          timeout = Just False
+        , transId = transId'}
+
+setTransIds :: T s -> ByteString -> Word32 -> T s
+setTransIds api0
+    transIds' transIdCount =
+    let count = fromIntegral transIdCount :: Int
+        loop i l s = 
+            if i == count then
+                l
+            else
+                let (e, s') = ByteString.splitAt 16 s in
+                loop (i + 1) ((i, e):l) s'
+    in
+    api0{
+          timeout = Just False
+        , transIds = IArray.array (0, count - 1) (loop 0 [] transIds')}
+
+setSubscribeCount :: T s -> Word32 -> T s
+setSubscribeCount api0
+    subscribeCount' =
+    api0{
+          timeout = Just False
+        , subscribeCount = fromIntegral subscribeCount'}
+
