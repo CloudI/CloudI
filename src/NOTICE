@@ -24,9 +24,10 @@ lib/cpg/src/cpg.erl
 
 ----------------------------------------------------------------- Apache License
 lib/quickrand/src/random_wh06_int.erl
+lib/quickrand/src/random_wh82.erl
 
- Based on the random module in the OTP stdlib application
- (lib/stdlib-x.x.x/src/random.erl)
+ Based on the random module in the Erlang/OTP(<20.0) stdlib application
+ (lib/stdlib-x.x.x/src/random.erl ~= random_wh82.erl)
  The random module copyright is below:
  %CopyrightBegin%
  
@@ -73,8 +74,8 @@ lib/cloudi_service_oauth1/src/cloudi_service_oauth1_data.erl
  OTHER DEALINGS IN THE SOFTWARE.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_boost_base.m4
-external/m4/ax_boost_thread.m4
+m4/ax_boost_base.m4
+m4/ax_boost_thread.m4
 
   Copyright (c) 2008 Thomas Porschberg <thomas@randspringer.de>
   Copyright (c) 2009 Peter Adolphs
@@ -85,12 +86,12 @@ external/m4/ax_boost_thread.m4
   warranty.
 
 ---------------------------------------------------------------------------- GPL
-external/m4/ax_check_class.m4
-external/m4/ax_check_rqrd_class.m4
-external/m4/ax_prog_javac.m4
-external/m4/ax_prog_javac_works.m4
-external/m4/ax_prog_java.m4
-external/m4/ax_prog_java_works.m4
+m4/ax_check_class.m4
+m4/ax_check_rqrd_class.m4
+m4/ax_prog_javac.m4
+m4/ax_prog_javac_works.m4
+m4/ax_prog_java.m4
+m4/ax_prog_java_works.m4
 
   Copyright (c) 2008 Stephane Bortzmeyer <bortzmeyer@pasteur.fr>
 
@@ -121,7 +122,7 @@ external/m4/ax_prog_java_works.m4
   exception to the GPL to apply to your modified version as well.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_lib_socket_nsl.m4
+m4/ax_lib_socket_nsl.m4
 
   Copyright (c) 2008 Russ Allbery <rra@stanford.edu>
   Copyright (c) 2008 Stepan Kasal <kasal@ucw.cz>
@@ -133,7 +134,7 @@ external/m4/ax_lib_socket_nsl.m4
   warranty.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_prog_jar.m4
+m4/ax_prog_jar.m4
 
   Copyright (c) 2008 Egon Willighagen <e.willighagen@science.ru.nl>
 
@@ -143,7 +144,7 @@ external/m4/ax_prog_jar.m4
   warranty.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_try_compile_java.m4
+m4/ax_try_compile_java.m4
 
   Copyright (c) 2008 Devin Weaver <ktohg@tritarget.com>
 
@@ -153,8 +154,8 @@ external/m4/ax_try_compile_java.m4
   warranty.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_prog_python_version.m4
-external/m4/ax_prog_ruby_version.m4
+m4/ax_prog_python_version.m4
+m4/ax_prog_ruby_version.m4
 
   Copyright (c) 2009 Francesco Salvestrini <salvestrini@users.sourceforge.net>
 
@@ -164,7 +165,7 @@ external/m4/ax_prog_ruby_version.m4
   warranty.
 
 ----------------------------------------------------------------------- MIT-like
-external/m4/ax_compare_version.m4
+m4/ax_compare_version.m4
 
   Copyright (c) 2008 Tim Toolan <toolan@ele.uri.edu>
 
@@ -509,7 +510,7 @@ external/cloudi_x_idna
  OTHER DEALINGS IN THE SOFTWARE.
 
 ----------------------------------------------------------------- Apache License
-external/jinterface (api/java/com/ericsson/otp/erlang/*.java)
+api/java/com/ericsson/otp/erlang/*.java
 
  %CopyrightBegin%
 
@@ -530,7 +531,7 @@ external/jinterface (api/java/com/ericsson/otp/erlang/*.java)
  %CopyrightEnd%
 
 ----------------------------------------------------------------- Apache License
-external/jsonrpclib
+service_api/python/jsonrpclib/
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -756,6 +757,7 @@ external/cloudi_x_ssl_verify_fun
 ----------------------------------------------------------------- Apache License
 (as referenced by lib/cpg/src/cpg.erl)
 (as referenced by lib/quickrand/src/random_wh06_int.erl)
+(as referenced by lib/quickrand/src/random_wh82.erl)
 (as referenced by external/cloudi_x_bear)
 (as referenced by external/cloudi_x_folsom)
 (as referenced by external/cloudi_x_hackney)
@@ -1349,12 +1351,12 @@ permanent authorization for you to choose that version for the
 Library.
 
 -------------------------------------------------------------------------- GPLv3
-(as referenced by external/m4/ax_check_class.m4)
-(as referenced by external/m4/ax_check_rqrd_class.m4)
-(as referenced by external/m4/ax_prog_javac.m4)
-(as referenced by external/m4/ax_prog_javac_works.m4)
-(as referenced by external/m4/ax_prog_java.m4)
-(as referenced by external/m4/ax_prog_java_works.m4)
+(as referenced by m4/ax_check_class.m4)
+(as referenced by m4/ax_check_rqrd_class.m4)
+(as referenced by m4/ax_prog_javac.m4)
+(as referenced by m4/ax_prog_javac_works.m4)
+(as referenced by m4/ax_prog_java.m4)
+(as referenced by m4/ax_prog_java_works.m4)
 (as referenced by external/proper)
  
                        GNU GENERAL PUBLIC LICENSE

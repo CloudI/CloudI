@@ -5,6 +5,7 @@
 
     * Improve OCaml CloudI API callback type usage
     * Remove files duplicated in src/external/
+    * Update NOTICE file
 
 2017-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
