@@ -4,6 +4,7 @@
 2017-03-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve OCaml CloudI API callback type usage
+    * Remove files duplicated in src/external/
 
 2017-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 

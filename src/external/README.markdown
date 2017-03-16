@@ -1,7 +1,7 @@
 External Dependencies
 =====================
 
-All CloudI Erlang dependencies are now moved to exist with a `"cloudi_x_"`
+All CloudI Erlang dependencies are moved to exist with a `"cloudi_x_"`
 prefix to avoid any conflicts when CloudI shares the Erlang VM with other
 applications that may share common dependencies (`erlzmq2` is an
 exception due to its C integration).
@@ -181,6 +181,7 @@ exception due to its C integration).
 
 - `http://erlang.org/download/otp_src_18.3.tar.gz (jinterface-1.6.1)`
 - `(in otp_src_18.3/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `repository location: src/api/java/com/ericsson/otp/erlang/`
 - `Wed Sep 14 16:35:57 PDT 2016`
 - `Apache License 2.0`
 
@@ -189,6 +190,7 @@ exception due to its C integration).
 `Python JSON-RPC library`
 
 - `https://github.com/joshmarshall/jsonrpclib`
+- `repository location: src/service_api/python/jsonrpclib/`
 - `commit efcf5eee0e12ef8a148c`
 - `Tue Apr 12 18:07:44 PDT 2011`
 - `Apache License 2.0`
@@ -209,6 +211,7 @@ exception due to its C integration).
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_base.m4`
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_thread.m4` (required local modification!)
 - `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_system.m4`
+- `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
@@ -224,6 +227,7 @@ exception due to its C integration).
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html` (required local modification!)
 - `http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html`
+- `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `GPL` (build-time dependency only)
 
@@ -231,6 +235,7 @@ exception due to its C integration).
 -------------------------
 
 - `http://www.gnu.org/software/autoconf-archive/ax_lib_socket_nsl.html`
+- `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
@@ -239,6 +244,7 @@ exception due to its C integration).
 `autoconf m4 macros for python detection`
 
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html`
+- `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
@@ -248,6 +254,7 @@ exception due to its C integration).
 
 - `http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html`
 - `http://www.gnu.org/software/autoconf-archive/ax_compare_version.html`
+- `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
 
