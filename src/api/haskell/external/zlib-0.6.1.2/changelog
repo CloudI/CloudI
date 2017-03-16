@@ -1,0 +1,44 @@
+0.6.1.2 Herbert Valerio Riedel <hvr@gnu.org> October 2016
+
+ * Fix a segfault when reading the stream multithreaded, #7
+ * New experimental cabal flag 'non-blocking-ffi' for 'safe' ffi calls
+
+0.6.1.1 Duncan Coutts <duncan@community.haskell.org> April 2015
+
+ * Fixed building with GHC 7.0 and 7.2
+
+0.6.0.2 Duncan Coutts <duncan@community.haskell.org> April 2015
+
+ * Fixed building with GHC 7.0 and 7.2
+
+0.6.1.0 Duncan Coutts <duncan@community.haskell.org> April 2015
+
+ * Support for concatenated gzip files (multiple back-to-back streams)
+
+0.6.0.1 Duncan Coutts <duncan@community.haskell.org> April 2015
+
+ * Fixed building with older GHC
+ * Fixed warnings with new GHC
+ * Fixed building on Windows
+ * Fixed testsuite
+
+0.6.0.0 Duncan Coutts <duncan@community.haskell.org> April 2015
+
+ * New incremental interface for compression and decompression
+ * Provide access to unconsumed trailing data
+ * Simplified structured error type, and instance of Exception
+ * Updated bundled zlib C code to 1.2.8 (used on Windows)
+ * Fixed memory leak of zlib z_stream C structure
+ * More derivied instances (Eq, Show, Typeable, Generic)
+
+0.5.4.2 Duncan Coutts <duncan@community.haskell.org> November 2014
+
+ * Builds with GHC 7.10
+
+0.5.4.1 Duncan Coutts <duncan@community.haskell.org> February 2013
+
+ * Force tail of input when finished decompressing, to help lazy IO
+
+0.5.4.0 Duncan Coutts <duncan@community.haskell.org> September 2012
+
+ * New support for zlib custom dictionaries
