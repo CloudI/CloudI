@@ -676,8 +676,8 @@ let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
           poll_request_loop api timeout_new ext poll_timer_new
 
 and callback
-  api cmd name pattern request_info request timeout priority trans_id pid :
-  (bool option, string) result =
+  api request_type name pattern request_info request
+  timeout priority trans_id pid : (bool option, string) result =
   let {Instance.state; callbacks; request_timeout_adjustment; _} = api in
   if request_timeout_adjustment then (
     api.Instance.request_timer <- Unix.gettimeofday () ;
@@ -693,10 +693,11 @@ and callback
     with Not_found -> null_response
   in
   let callback_result =
-    if cmd = message_send_async then
+    match request_type with
+    | ASYNC -> (
       try Some (
         callback_f
-          ASYNC name pattern request_info request
+          request_type name pattern request_info request
           timeout priority trans_id pid state api)
       with
         | ReturnSync ->
@@ -711,11 +712,11 @@ and callback
           None
         | e ->
           print_exception (backtrace e) ;
-          Some (Null)
-    else if cmd = message_send_sync then
+          Some (Null))
+    | SYNC -> (
       try Some (
         callback_f
-          SYNC name pattern request_info request
+          request_type name pattern request_info request
           timeout priority trans_id pid state api)
       with
         | ReturnSync ->
@@ -730,39 +731,42 @@ and callback
           None
         | e ->
           print_exception (backtrace e) ;
-          Some (Null)
-    else
+          Some (Null))
+  in
+  let response_result =
+    match callback_result with
+    | Some (ResponseInfo _) ->
+      callback_result
+    | Some (Response (value1)) ->
+      Some (ResponseInfo ("", value1))
+    | Some (Null) ->
+      Some (ResponseInfo ("", ""))
+    | Some (NullError (error)) ->
+      print_error error ;
+      Some (ResponseInfo ("", ""))
+    | None ->
       None
   in
-  let response_result = match callback_result with
-  | Some (ResponseInfo (value1, value2)) ->
-    Some ((value1, value2))
-  | Some (Response (value1)) ->
-    Some (("", value1))
-  | Some (Null) ->
-    Some (("", ""))
-  | Some (NullError (error)) ->
-    print_error error ;
-    Some (("", ""))
-  | None ->
-    None
-  in
-  let return_result = if cmd = message_send_async then
-    match response_result with
-    | None ->
-      Ok (())
-    | Some ((response_info, response)) ->
-      return_async_i
-        api name pattern response_info response timeout trans_id pid
-  else if cmd = message_send_sync then
-    match response_result with
-    | None ->
-      Ok (())
-    | Some ((response_info, response)) ->
-      return_sync_i
-        api name pattern response_info response timeout trans_id pid
-  else
-    Error (message_decoding_error)
+  let return_result =
+    match request_type with
+    | ASYNC -> (
+      match response_result with
+      | None ->
+        Ok (())
+      | Some (ResponseInfo (response_info, response)) ->
+        return_async_i
+          api name pattern response_info response timeout trans_id pid
+      | Some (Response _ | Null | NullError _) ->
+        Error (message_decoding_error))
+    | SYNC -> (
+      match response_result with
+      | None ->
+        Ok (())
+      | Some (ResponseInfo (response_info, response)) ->
+        return_sync_i
+          api name pattern response_info response timeout trans_id pid
+      | Some (Response _ | Null | NullError _) ->
+        Error (message_decoding_error))
   in
   match return_result with
   | Error (error) ->
@@ -840,7 +844,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                             Ok (Some false)
                         else
                           Ok (Some false)
-    else if (cmd = message_send_async || cmd = message_send_sync) then
+    else if cmd = message_send_async || cmd = message_send_sync then
       match unpack_uint32_native (i + 4) data with
       | Error (error) ->
         Error (error)
@@ -918,10 +922,16 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                     | Ok (false)  ->
                       Ok (Some false)
                     | Ok (true)  ->
+                      let request_type =
+                        if cmd = message_send_async then
+                          ASYNC
+                        else (* cmd = message_send_sync *)
+                          SYNC
+                      in
                       callback
-                        api cmd name pattern request_info request
+                        api request_type name pattern request_info request
                         timeout priority trans_id pid
-    else if (cmd = message_recv_async || cmd = message_return_sync) then
+    else if cmd = message_recv_async || cmd = message_return_sync then
       match unpack_uint32_native (i + 4) data with
       | Error (error) ->
         Error (error)
