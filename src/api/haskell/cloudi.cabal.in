@@ -4,16 +4,14 @@ synopsis:            Haskell CloudI API
 description:         Haskell CloudI API
 homepage:            https://github.com/CloudI/cloudi_api_haskell
 license:             BSD4
-license-file:        LICENSE
+license-file:        @abs_top_srcdir@/LICENSE
 author:              Michael Truog
 maintainer:          mjtruog@gmail.com
 copyright:           2017 Michael Truog
 category:            Foreign
 stability:           provisional
 build-type:          Simple
-extra-source-files:  README.markdown
 cabal-version:       >= 1.10
-extra-source-files:  README.markdown
 
 library
   hs-source-dirs:      src

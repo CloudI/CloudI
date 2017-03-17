@@ -3,20 +3,24 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count/priv"
 
-all-local:
+all-local: count_go
+
+count_go:
 	cp -rf $(srcdir)/src $(builddir) || exit 0
 	$(MKDIR_P) $(builddir)/src/count_go/vendor
 	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/count_go/vendor/
 	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/count_go/vendor/
 	$(MKDIR_P) $(builddir)/bin
 	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x count_go
+	cp $(builddir)/bin/count_go .
 
 clean-local:
 	rm -rf $(builddir)/src/count_go/vendor/
 	rm -rf $(builddir)/pkg
 	rm -rf $(builddir)/bin
+	rm -f count_go
 
-install-exec-hook: $(builddir)/bin/count_go
+install-exec-hook: count_go
 	$(MKDIR_P) $(instdir)
-	$(INSTALL_SCRIPT) $(builddir)/bin/count_go $(instdir)
+	$(INSTALL_SCRIPT) count_go $(instdir)
 

@@ -3,20 +3,24 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size/priv"
 
-all-local:
+all-local: msg_size_go
+
+msg_size_go:
 	cp -rf $(srcdir)/src $(builddir) || exit 0
 	$(MKDIR_P) $(builddir)/src/msg_size_go/vendor
 	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/msg_size_go/vendor/
 	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/msg_size_go/vendor/
 	$(MKDIR_P) $(builddir)/bin
 	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x msg_size_go
+	cp $(builddir)/bin/msg_size_go .
 
 clean-local:
 	rm -rf $(builddir)/src/msg_size_go/vendor/
 	rm -rf $(builddir)/pkg
 	rm -rf $(builddir)/bin
+	rm -f msg_size_go
 
-install-exec-hook: $(builddir)/bin/msg_size_go
+install-exec-hook: msg_size_go
 	$(MKDIR_P) $(instdir)
-	$(INSTALL_SCRIPT) $(builddir)/bin/msg_size_go $(instdir)
+	$(INSTALL_SCRIPT) msg_size_go $(instdir)
 

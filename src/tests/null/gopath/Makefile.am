@@ -3,20 +3,24 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/null/priv"
 
-all-local:
+all-local: null_go
+
+null_go:
 	cp -rf $(srcdir)/src $(builddir) || exit 0
 	$(MKDIR_P) $(builddir)/src/null_go/vendor
 	cp -rf $(top_srcdir)/api/go/cloudi $(builddir)/src/null_go/vendor/
 	cp -rf $(top_srcdir)/api/go/erlang $(builddir)/src/null_go/vendor/
 	$(MKDIR_P) $(builddir)/bin
 	GOPATH=$(abs_builddir) GOBIN=$$GOPATH/bin $(GO) install -x null_go
+	cp $(builddir)/bin/null_go .
 
 clean-local:
 	rm -rf $(builddir)/src/null_go/vendor/
 	rm -rf $(builddir)/pkg
 	rm -rf $(builddir)/bin
+	rm -f null_go
 
-install-exec-hook: $(builddir)/bin/null_go
+install-exec-hook: null_go
 	$(MKDIR_P) $(instdir)
-	$(INSTALL_SCRIPT) $(builddir)/bin/null_go $(instdir)
+	$(INSTALL_SCRIPT) null_go $(instdir)
 
