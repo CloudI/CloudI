@@ -407,11 +407,11 @@ if test "x$CABAL" = "x"; then
     AC_MSG_ERROR([Haskell Cabal (cabal-install) not found])
 fi
 AC_SUBST([CABAL_SANDBOX], ["$abs_top_builddir/api/haskell/sandbox"])
-#AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"tests/count/priv/count_go\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
-#AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-#AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"tests/messaging/priv/messaging_go\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"HASKELLMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_go}, {nice, 15}]}]],"])
-#AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_go\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
-#AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"tests/count/priv/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"tests/http_req/priv/http_req_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+#AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"tests/messaging/priv/messaging_haskell\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"HASKELLMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_haskell}, {nice, 15}]}]],"])
+#AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"tests/msg_size/priv/msg_size_haskell\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
+#AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"tests/null/priv/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"tests/null/priv/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([HASKELL_SUPPORT], [test "x$haskell_support" = "xtrue"])
 
@@ -698,6 +698,8 @@ AC_CONFIG_FILES([
     tests/http_req/Makefile
     tests/http_req/c_src/Makefile
     tests/http_req/gopath/Makefile
+    tests/http_req/haskell/Makefile
+    tests/http_req/haskell/http_req_haskell.cabal
     tests/http_req/jar/Makefile
     tests/http_req/ocaml/Makefile
     tests/http_req/org/Makefile

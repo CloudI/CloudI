@@ -82,7 +82,8 @@ let () =
   Printexc.record_backtrace true ;
   match Cloudi.thread_count () with
   | Error (error) ->
-    prerr_endline error
+    prerr_endline error ;
+    exit 1
   | Ok (thread_count) ->
     let rec loop thread_index threads =
       if thread_index = thread_count then

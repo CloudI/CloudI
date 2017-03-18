@@ -3,9 +3,15 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/api/haskell"
 
-all-local: libHScloudi-$(VERSION).a
+all-local: cabal.sandbox.config
 
-libHScloudi-$(VERSION).a:
+cabal.sandbox.config: src/Foreign/CloudI.hs \
+                      src/Foreign/CloudI/Instance.hs \
+                      src/Foreign/Erlang.hs \
+                      src/Foreign/Erlang/Function.hs \
+                      src/Foreign/Erlang/Pid.hs \
+                      src/Foreign/Erlang/Port.hs \
+                      src/Foreign/Erlang/Reference.hs
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
 	$(CABAL) sandbox add-source $(srcdir)/external/binary-0.9.0.0
 	$(CABAL) sandbox add-source $(srcdir)/external/bytestring-0.10.8.1
@@ -15,11 +21,11 @@ libHScloudi-$(VERSION).a:
 	$(CABAL) install --only-dependencies
 	$(CABAL) configure
 	$(CABAL) build
-	cp $(builddir)/dist/build/libHScloudi-$(VERSION).a .
+	$(CABAL) install
 
 clean-local:
 	rm -rf $(builddir)/dist $(CABAL_SANDBOX)
-	rm -f $(builddir)/cabal.sandbox.config libHScloudi-$(VERSION).a
+	rm -f cabal.sandbox.config
 	rm -rf $(srcdir)/external/binary-0.9.0.0/dist
 	rm -rf $(srcdir)/external/bytestring-0.10.8.1/dist
 	rm -rf $(srcdir)/external/network-2.6.3.1/dist
@@ -33,7 +39,25 @@ clean-local:
 	rm -f $(srcdir)/external/unix-2.7.2.1/include/HsUnixConfig.h
 	rm -f $(srcdir)/external/unix-2.7.2.1/unix.buildinfo
 
-install-exec-hook: libHScloudi-$(VERSION).a
+install-exec-hook:
 	$(MKDIR_P) $(instdir)
-	$(INSTALL_DATA) libHScloudi-$(VERSION).a $(instdir)
+	$(INSTALL_DATA) cloudi.cabal $(instdir)
+	$(MKDIR_P) $(instdir)/src
+	$(MKDIR_P) $(instdir)/src/Foreign
+	$(INSTALL_DATA) src/Foreign/CloudI.hs \
+                    $(instdir)/src/Foreign
+	$(INSTALL_DATA) src/Foreign/Erlang.hs \
+                    $(instdir)/src/Foreign
+	$(MKDIR_P) $(instdir)/src/Foreign/CloudI
+	$(INSTALL_DATA) src/Foreign/CloudI/Instance.hs \
+                    $(instdir)/src/Foreign/CloudI
+	$(MKDIR_P) $(instdir)/src/Foreign/Erlang
+	$(INSTALL_DATA) src/Foreign/Erlang/Function.hs \
+                    $(instdir)/src/Foreign/Erlang
+	$(INSTALL_DATA) src/Foreign/Erlang/Pid.hs \
+                    $(instdir)/src/Foreign/Erlang
+	$(INSTALL_DATA) src/Foreign/Erlang/Port.hs \
+                    $(instdir)/src/Foreign/Erlang
+	$(INSTALL_DATA) src/Foreign/Erlang/Reference.hs \
+                    $(instdir)/src/Foreign/Erlang
 

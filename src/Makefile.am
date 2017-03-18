@@ -317,6 +317,7 @@ install-exec-hook: rel/files/app.config
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_bindir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)"
+	$(INSTALL_DATA) "$(top_builddir)/LICENSE" "$(DESTDIR)$(cloudi_prefix)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/lib"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/releases"
 	(cd "$(DESTDIR)$(cloudi_prefix)" && \

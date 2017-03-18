@@ -4,17 +4,17 @@ synopsis:            Haskell CloudI API
 description:         Haskell CloudI API
 homepage:            https://github.com/CloudI/cloudi_api_haskell
 license:             BSD4
-license-file:        @abs_top_srcdir@/LICENSE
+license-file:        ../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog@gmail.com
 copyright:           2017 Michael Truog
 category:            Foreign
 stability:           provisional
 build-type:          Simple
-cabal-version:       >= 1.10
+cabal-version:       >= 1.22
 
 library
-  hs-source-dirs:      src
+  hs-source-dirs:    src
   exposed-modules:     Foreign.CloudI
                      , Foreign.Erlang
                      , Foreign.Erlang.Pid
@@ -22,8 +22,8 @@ library
                      , Foreign.Erlang.Reference
                      , Foreign.Erlang.Function
   other-modules:       Foreign.CloudI.Instance
-  ghc-options:         -Wall -Werror -funbox-strict-fields
-  build-depends:       base >= 4.5.0
+  ghc-options:       -Wall -Werror -funbox-strict-fields
+  build-depends:       base >= 4.6.0.1
                      , binary >= 0.8.4.0
                      , bytestring >= 0.10.4
                      , array
@@ -32,8 +32,5 @@ library
                      , time
                      , unix
                      , zlib
-  default-language:    Haskell2010
+  default-language:  Haskell2010
 
-source-repository head
-  type:     git
-  location: https://github.com/CloudI/cloudi_api_haskell.git

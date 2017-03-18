@@ -7,6 +7,9 @@ endif
 if GO_SUPPORT
     GO_SUBDIR = gopath
 endif
+if HASKELL_SUPPORT
+    HASKELL_SUBDIR = haskell
+endif
 if JAVA_SUPPORT
     JAVA_SUBDIR = org jar
 endif
@@ -39,7 +42,8 @@ endif
     python-c-install \
     ruby-install
 
-SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(JAVA_SUBDIR) $(OCAML_SUBDIR) src
+SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
+          $(JAVA_SUBDIR) $(OCAML_SUBDIR) src
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
 
 javascript-install:

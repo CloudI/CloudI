@@ -1,16 +1,16 @@
-(*-*-Mode:ocaml;coding:utf-8;tab-width:2;c-basic-offset:2;indent-tabs-mode:()-*-
-  ex: set ft=ocaml fenc=utf-8 sts=2 ts=2 sw=2 et nomod: *)
+{--*-Mode:haskell;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+  ex: set ft=haskell fenc=utf-8 sts=4 ts=4 sw=4 et nomod: -}
 
-(*
- 
+{-
+
   BSD LICENSE
-  
+
   Copyright (c) 2017, Michael Truog <mjtruog at gmail dot com>
   All rights reserved.
-  
+
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
-  
+
       * Redistributions of source code must retain the above copyright
         notice, this list of conditions and the following disclaimer.
       * Redistributions in binary form must reproduce the above copyright
@@ -23,7 +23,7 @@
       * The name of the author may not be used to endorse or promote
         products derived from this software without specific prior
         written permission
-  
+
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
   CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
   INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -38,47 +38,42 @@
   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
   DAMAGE.
- 
- *)
 
-let request _ _ _ _ _ _ _ _ _ _ _ =
-  print_endline "null ocaml" ;
-  Cloudi.Null
+ -}
 
-let task thread_index =
-  match Cloudi.api thread_index () with
-  | Error (error) ->
-    prerr_endline error
-  | Ok (api) ->
-    match Cloudi.subscribe api "ocaml/get" request with
-    | Error (error) ->
-      prerr_endline error
-    | Ok _ ->
-      match Cloudi.poll api (-1) with
-      | Error (error) ->
-        prerr_endline error
-      | Ok _ ->
-        print_endline "terminate null ocaml"
+module Main where
 
-let () = 
-  Printexc.record_backtrace true ;
-  match Cloudi.thread_count () with
-  | Error (error) ->
-    prerr_endline error ;
-    exit 1
-  | Ok (thread_count) ->
-    let rec loop thread_index threads =
-      if thread_index = thread_count then
-        threads
-      else
-        let thread = Thread.create task thread_index in
-        loop (thread_index + 1) ([thread] @ threads)
-    and wait = function
-      | [] ->
-        ()
-      | thread::threads ->
-        Thread.join thread ;
-        wait threads
-    in
-    wait (loop 0 [])
+import System.Exit (ExitCode(ExitFailure),exitWith)
+import qualified Control.Concurrent as Concurrent
+import qualified System.IO as SysIO
+import qualified Foreign.CloudI as CloudI
+
+task :: Int -> IO ()
+task threadIndex = do
+    apiValue <- CloudI.api threadIndex ()
+    case apiValue of
+        Left err -> do
+            SysIO.hPutStrLn SysIO.stderr err
+        Right api -> do
+            pollValue <- CloudI.poll api (-1)
+            case pollValue of
+                Left err -> do
+                    SysIO.hPutStrLn SysIO.stderr err
+                Right (True, _) -> do
+                    SysIO.hPutStrLn SysIO.stderr "invalid timeout"
+                Right (False, _) -> do
+                    putStrLn "terminate http_req haskell"
+
+main :: IO ()
+main = do
+    threadCountValue <- CloudI.threadCount
+    case threadCountValue of
+        Left err -> do
+            SysIO.hPutStrLn SysIO.stderr err
+            _ <- exitWith (ExitFailure 1)
+            return ()
+        Right threadCount -> do
+            Concurrent.setNumCapabilities threadCount
+            mapM_ (\i -> CloudI.threadCreate (task i)) [0..threadCount - 1]
+            CloudI.threadsWait
 

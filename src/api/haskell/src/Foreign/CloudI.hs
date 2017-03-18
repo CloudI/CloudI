@@ -52,10 +52,13 @@ module Foreign.CloudI
     , api
     , threadCount
     , poll
+    , threadCreate
+    , threadsWait
     ) where
 
 import Prelude hiding (init,length)
 import Data.Bits (shiftL,(.|.))
+import qualified Control.Concurrent as Concurrent
 import qualified Data.Monoid as Monoid
 import qualified Data.Binary.Get as Get
 import qualified Data.ByteString as ByteString
@@ -71,6 +74,7 @@ import qualified Network.Socket as Socket hiding (send,sendTo,recv,recvFrom)
 import qualified Network.Socket.ByteString.Lazy as LazySocket
 import qualified Network.Socket.ByteString as Socket
 import qualified System.IO as SysIO
+import qualified System.IO.Unsafe as Unsafe
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang as Erlang
 import qualified Foreign.CloudI.Instance as Instance
@@ -82,6 +86,7 @@ type Socket = Socket.Socket
 type Word32 = Word.Word32
 type RequestType = Instance.RequestType
 type Source = Instance.Source
+type ThreadId = Concurrent.ThreadId
 
 messageInit :: Word32
 messageInit = 1
@@ -240,6 +245,10 @@ recv api0@Instance.T{
 
 api :: Int -> s -> IO (Result (Instance.T s))
 api threadIndex state = do
+    SysIO.hSetEncoding SysIO.stdout SysIO.utf8
+    SysIO.hSetBuffering SysIO.stdout SysIO.LineBuffering
+    SysIO.hSetEncoding SysIO.stderr SysIO.utf8
+    SysIO.hSetBuffering SysIO.stderr SysIO.LineBuffering
     protocolValue <- POSIX.getEnv "CLOUDI_API_INIT_PROTOCOL"
     bufferSizeValue <- POSIX.getEnv "CLOUDI_API_INIT_BUFFER_SIZE"
     case (protocolValue, bufferSizeValue) of
@@ -550,4 +559,25 @@ pollRequest api0@Instance.T{
 poll :: Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
+
+threadList :: Concurrent.MVar [Concurrent.MVar ()]
+threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])
+
+threadCreate :: IO () -> IO ThreadId
+threadCreate io = do
+    thread <- Concurrent.newEmptyMVar
+    threads <- Concurrent.takeMVar threadList
+    Concurrent.putMVar threadList (thread:threads)
+    Concurrent.forkFinally io (\_ -> Concurrent.putMVar thread ())
+
+threadsWait :: IO ()
+threadsWait = do
+    threads <- Concurrent.takeMVar threadList
+    case threads of
+        [] ->
+            return ()
+        done:remaining -> do
+            Concurrent.putMVar threadList remaining
+            Concurrent.takeMVar done
+            threadsWait
 
