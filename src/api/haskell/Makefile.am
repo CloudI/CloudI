@@ -18,10 +18,11 @@ cabal.sandbox.config: src/Foreign/CloudI.hs \
 	$(CABAL) sandbox add-source $(srcdir)/external/network-2.6.3.1
 	$(CABAL) sandbox add-source $(srcdir)/external/unix-2.7.2.1
 	$(CABAL) sandbox add-source $(srcdir)/external/zlib-0.6.1.2
-	$(CABAL) install --only-dependencies
-	$(CABAL) configure
+	$(CABAL) install --only-dependencies --force-reinstalls \
+                     --with-compiler=$(GHC)
+	$(CABAL) configure --with-compiler=$(GHC)
 	$(CABAL) build
-	$(CABAL) install
+	$(CABAL) install --with-compiler=$(GHC)
 
 clean-local:
 	rm -rf $(builddir)/dist $(CABAL_SANDBOX)

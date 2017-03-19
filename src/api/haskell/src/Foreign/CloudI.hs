@@ -58,6 +58,7 @@ module Foreign.CloudI
 
 import Prelude hiding (init,length)
 import Data.Bits (shiftL,(.|.))
+import Control.Exception (try,mask,SomeException)
 import qualified Control.Concurrent as Concurrent
 import qualified Data.Monoid as Monoid
 import qualified Data.Binary.Get as Get
@@ -70,9 +71,6 @@ import qualified Data.Time.Clock as Clock
 import qualified Data.Time.Clock.POSIX as POSIX (getPOSIXTime)
 import qualified System.Posix.Env as POSIX (getEnv)
 import qualified Data.Word as Word
-import qualified Network.Socket as Socket hiding (send,sendTo,recv,recvFrom)
-import qualified Network.Socket.ByteString.Lazy as LazySocket
-import qualified Network.Socket.ByteString as Socket
 import qualified System.IO as SysIO
 import qualified System.IO.Unsafe as Unsafe
 import qualified Foreign.C.Types as C
@@ -82,8 +80,8 @@ type Get = Get.Get
 type Builder = Builder.Builder
 type ByteString = ByteString.ByteString
 type LazyByteString = LazyByteString.ByteString
-type Socket = Socket.Socket
 type Word32 = Word.Word32
+type Handle = SysIO.Handle
 type RequestType = Instance.RequestType
 type Source = Instance.Source
 type ThreadId = Concurrent.ThreadId
@@ -158,54 +156,50 @@ timeoutAdjustmentValue timeout =
 send :: Instance.T s -> LazyByteString -> IO ()
 send Instance.T{
       Instance.useHeader = False
-    , Instance.socket = socket} binary = do
-    socketRecv <- socket
-    LazySocket.sendAll socketRecv binary
+    , Instance.socketHandle = socketHandle} binary = do
+    LazyByteString.hPut socketHandle binary
 send Instance.T{
       Instance.useHeader = True
-    , Instance.socket = socket} binary = do
-    socketRecv <- socket
+    , Instance.socketHandle = socketHandle} binary = do
     let total = fromIntegral (LazyByteString.length binary) :: Word32
-    LazySocket.sendAll socketRecv (Builder.toLazyByteString $
+    LazyByteString.hPut socketHandle (Builder.toLazyByteString $
         Builder.word32BE total `Monoid.mappend`
         Builder.lazyByteString binary)
 
-recvBuffer :: Builder -> Int -> Int -> IO Socket -> Int ->
+recvBuffer :: Builder -> Int -> Int -> Handle -> Int ->
     IO (Builder, Int)
-recvBuffer bufferRecv bufferRecvSize recvSize socket bufferSize
+recvBuffer bufferRecv bufferRecvSize recvSize socketHandle bufferSize
     | recvSize <= bufferRecvSize =
         return (bufferRecv, bufferRecvSize)
     | otherwise = do
-        socketRecv <- socket
-        fragment <- Socket.recv socketRecv bufferSize
+        fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
         recvBuffer
             (bufferRecv <> Builder.byteString fragment)
             (bufferRecvSize + ByteString.length fragment)
-            recvSize socket bufferSize
+            recvSize socketHandle bufferSize
 
-recvBufferAll :: Builder -> Int -> IO Socket -> Int ->
+recvBufferAll :: Builder -> Int -> Handle -> Int ->
     IO (Builder, Int)
-recvBufferAll bufferRecv bufferRecvSize socket bufferSize = do
-    socketRecv <- socket
-    fragment <- Socket.recv socketRecv bufferSize
+recvBufferAll bufferRecv bufferRecvSize socketHandle bufferSize = do
+    fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
     let fragmentSize = ByteString.length fragment
         bufferRecvNew = bufferRecv <> Builder.byteString fragment
         bufferRecvSizeNew = bufferRecvSize + fragmentSize
     if fragmentSize == bufferSize then
-        recvBufferAll bufferRecvNew bufferRecvSizeNew socket bufferSize
+        recvBufferAll bufferRecvNew bufferRecvSizeNew socketHandle bufferSize
     else
         return (bufferRecv, bufferRecvSize)
 
 recv :: Instance.T s -> IO (LazyByteString, Int, Instance.T s)
 recv api0@Instance.T{
       Instance.useHeader = False
-    , Instance.socket = socket
+    , Instance.socketHandle = socketHandle
     , Instance.bufferSize = bufferSize
     , Instance.bufferRecv = bufferRecv
     , Instance.bufferRecvSize = bufferRecvSize} = do
     (bufferRecvAll,
      bufferRecvAllSize) <- recvBufferAll
-        bufferRecv bufferRecvSize socket bufferSize
+        bufferRecv bufferRecvSize socketHandle bufferSize
     return $ (
           Builder.toLazyByteString bufferRecvAll
         , bufferRecvAllSize
@@ -214,12 +208,12 @@ recv api0@Instance.T{
             , Instance.bufferRecvSize = 0})
 recv api0@Instance.T{
       Instance.useHeader = True
-    , Instance.socket = socket
+    , Instance.socketHandle = socketHandle
     , Instance.bufferSize = bufferSize
     , Instance.bufferRecv = bufferRecv
     , Instance.bufferRecvSize = bufferRecvSize} = do
     (bufferRecvHeader, bufferRecvHeaderSize) <- recvBuffer
-        bufferRecv bufferRecvSize 4 socket bufferSize
+        bufferRecv bufferRecvSize 4 socketHandle bufferSize
     let header0 = Builder.toLazyByteString bufferRecvHeader
         Just (byte0, header1) = LazyByteString.uncons header0
         Just (byte1, header2) = LazyByteString.uncons header1
@@ -232,7 +226,7 @@ recv api0@Instance.T{
             (fromIntegral byte3 :: Word32) :: Int
     (bufferRecvAll, bufferRecvAllSize) <- recvBuffer
         (Builder.lazyByteString headerRemaining)
-        (bufferRecvHeaderSize - 4) total socket bufferSize
+        (bufferRecvHeaderSize - 4) total socketHandle bufferSize
     let bufferRecvAllStr = Builder.toLazyByteString bufferRecvAll
         (bufferRecvData, bufferRecvNew) =
             LazyByteString.splitAt (fromIntegral total) bufferRecvAllStr
@@ -261,20 +255,20 @@ api threadIndex state = do
                 fd = C.CInt $ fromIntegral (threadIndex + 3)
                 useHeader = protocol /= "udp"
                 timeoutTerminate = 1000
-                api0 = Instance.make
-                    state protocol fd useHeader bufferSize timeoutTerminate
                 initTerms = Erlang.OtpErlangAtom (Char8.pack "init")
             in
             case Erlang.termToBinary initTerms (-1) of
                 Left err ->
                     return $ Left $ show err
                 Right init -> do
+                    api0 <- Instance.make state protocol fd
+                        useHeader bufferSize timeoutTerminate
                     send api0 init
                     result <- pollRequest api0 (-1) False
                     case result of
-                        Left err ->
+                        Left err -> do
                             return $ Left err
-                        Right (_, api1) ->
+                        Right (_, api1) -> do
                             return $ Right api1
 
 threadCount :: IO (Result Int)
@@ -514,8 +508,7 @@ pollRequestLoop :: Instance.T s -> Int -> Bool ->
     Clock.NominalDiffTime -> IO (Result (Bool, Instance.T s))
 pollRequestLoop api0@Instance.T{
       Instance.socketHandle = socketHandle} timeout external pollTimer = do
-    socketPoll <- socketHandle
-    inputAvailable <- SysIO.hWaitForInput socketPoll timeout
+    inputAvailable <- SysIO.hWaitForInput socketHandle timeout
     if not inputAvailable then
         return $ Right (True, api0{Instance.timeout = Nothing})
     else do
@@ -534,6 +527,16 @@ pollRequestLoop api0@Instance.T{
                 else
                     pollRequestLoop api2 timeoutNew external pollTimerNew
 
+pollRequestLoopBegin :: Instance.T s -> Int -> Bool ->
+    Clock.NominalDiffTime -> IO (Result (Bool, Instance.T s))
+pollRequestLoopBegin api0 timeout external pollTimer = do
+    result <- try (pollRequestLoop api0 timeout external pollTimer)
+    case result of
+        Left exception ->
+            return $ Left $ show (exception :: SomeException)
+        Right success ->
+            return success
+
 pollRequest :: Instance.T s -> Int -> Bool ->
     IO (Result (Bool, Instance.T s))
 pollRequest api0@Instance.T{
@@ -550,11 +553,11 @@ pollRequest api0@Instance.T{
                     return $ Left $ show err
                 Right polling -> do
                     send api0 polling
-                    pollRequestLoop
+                    pollRequestLoopBegin
                         api0{Instance.initializationComplete = True}
                         timeout external pollTimer
         else
-            pollRequestLoop api0 timeout external pollTimer
+            pollRequestLoopBegin api0 timeout external pollTimer
 
 poll :: Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
@@ -563,12 +566,20 @@ poll api0 timeout =
 threadList :: Concurrent.MVar [Concurrent.MVar ()]
 threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])
 
-threadCreate :: IO () -> IO ThreadId
-threadCreate io = do
+threadCreate :: (Int -> IO ()) -> Int -> IO ThreadId
+threadCreate f threadIndex = do
     thread <- Concurrent.newEmptyMVar
     threads <- Concurrent.takeMVar threadList
     Concurrent.putMVar threadList (thread:threads)
-    Concurrent.forkFinally io (\_ -> Concurrent.putMVar thread ())
+    threadCreateFork threadIndex (f threadIndex)
+        (\_ -> Concurrent.putMVar thread ())
+
+threadCreateFork :: Int -> IO a -> (Either SomeException a -> IO ()) ->
+    IO ThreadId
+threadCreateFork threadIndex action finally =
+    -- similar to Concurrent.forkFinally
+    mask $ \restore ->
+        Concurrent.forkOn threadIndex (try (restore action) >>= finally)
 
 threadsWait :: IO ()
 threadsWait = do

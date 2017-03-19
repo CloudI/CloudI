@@ -9,9 +9,11 @@ cabal.sandbox.config:
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
 
 http_req_haskell: cabal.sandbox.config \
-                  Main.hs
-	$(CABAL) install --only-dependencies
-	$(CABAL) configure
+                  Main.hs \
+                  $(CABAL_SANDBOX)
+	$(CABAL) install --only-dependencies --force-reinstalls \
+                     --with-compiler=$(GHC)
+	$(CABAL) configure --with-compiler=$(GHC)
 	$(CABAL) build
 	cp $(builddir)/dist/build/http_req_haskell/http_req_haskell .
 

@@ -67,10 +67,8 @@ import qualified Data.Time.Clock as Clock
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang.Pid as Erlang
-import qualified Network.Socket as Socket
 import qualified System.IO as SysIO
-import qualified System.Posix.IO as POSIX (fdToHandle)
-import qualified System.Posix.Types as POSIX (Fd(..))
+import qualified Network.Socket as Socket
 type Builder = Builder.Builder
 type ByteString = ByteString.ByteString
 type Socket = Socket.Socket
@@ -105,8 +103,7 @@ data Response s =
 
 data T s = T
     { state :: !s
-    , socket :: !(IO Socket)
-    , socketHandle :: !(IO Handle)
+    , socketHandle :: !Handle
     , useHeader :: !Bool
     , initializationComplete :: !Bool
     , terminate :: !Bool
@@ -148,18 +145,17 @@ makeSocket "udp" fd =
 makeSocket _ _ =
     error "invalid protocol"
 
-makeSocketHandle :: C.CInt -> IO Handle
-makeSocketHandle fd = do
-    handle <- POSIX.fdToHandle (POSIX.Fd fd)
-    SysIO.hSetEncoding handle SysIO.char8
-    SysIO.hSetBuffering handle SysIO.NoBuffering
-    return handle
+makeSocketHandle :: String -> C.CInt -> IO Handle
+makeSocketHandle protocol fd = do
+    socket <- makeSocket protocol fd
+    Socket.socketToHandle socket SysIO.ReadWriteMode
 
-make :: s -> String -> C.CInt -> Bool -> Int -> Int -> T s
-make state' protocol fd useHeader' bufferSize' timeoutTerminate' =
-    T {   state = state'
-        , socket = makeSocket protocol fd
-        , socketHandle = makeSocketHandle fd
+make :: s -> String -> C.CInt -> Bool -> Int -> Int -> IO (T s)
+make state' protocol fd useHeader' bufferSize' timeoutTerminate' = do
+    socketHandle' <- makeSocketHandle protocol fd
+    return $ T {
+          state = state'
+        , socketHandle = socketHandle'
         , useHeader = useHeader'
         , initializationComplete = False
         , terminate = False
