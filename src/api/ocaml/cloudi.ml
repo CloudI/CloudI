@@ -61,11 +61,14 @@ type source = Erlang.Pid.t
 type response =
     Response of string
   | ResponseInfo of string * string
+  | Forward of string * string * string
+  | Forward_ of string * string * string * int * int
   | Null
   | NullError of string
 
 type callback_result =
-    Return of string * string
+    ReturnI of string * string
+  | ForwardI of string * string * string * int * int
   | Finished
 
 module Instance = struct
@@ -379,7 +382,7 @@ let recv api : (string * int, string) result =
     else
       Ok ((data, String.length data)))
 
-let forward_async
+let forward_async_i
   api name request_info request timeout priority trans_id pid :
   (unit, string) result =
   let {Instance.request_timeout_adjustment;
@@ -410,13 +413,19 @@ let forward_async
   | Error (error) ->
     Error (error)
   | Ok (forward) ->
-    match send api forward with
-    | Error (error) ->
-      Error (error)
-    | Ok _ ->
-      raise ForwardAsync
+    send api forward
 
-let forward_sync
+let forward_async
+  api name request_info request timeout priority trans_id pid :
+  (unit, string) result =
+  match forward_async_i
+    api name request_info request timeout priority trans_id pid with
+  | Error (error) ->
+    Error (error)
+  | Ok _ ->
+    raise ForwardAsync
+
+let forward_sync_i
   api name request_info request timeout priority trans_id pid :
   (unit, string) result =
   let {Instance.request_timeout_adjustment;
@@ -447,11 +456,17 @@ let forward_sync
   | Error (error) ->
     Error (error)
   | Ok (forward) ->
-    match send api forward with
-    | Error (error) ->
-      Error (error)
-    | Ok _ ->
-      raise ForwardSync
+    send api forward
+
+let forward_sync
+  api name request_info request timeout priority trans_id pid :
+  (unit, string) result =
+  match forward_sync_i
+    api name request_info request timeout priority trans_id pid with
+  | Error (error) ->
+    Error (error)
+  | Ok _ ->
+    raise ForwardSync
 
 let forward_
   api type_ name request_info request timeout priority trans_id pid :
@@ -739,15 +754,19 @@ and callback
   in
   let callback_result_type =
     match callback_result_value with
-    | Some (ResponseInfo (value1, value2)) ->
-      Return (value1, value2)
-    | Some (Response (value1)) ->
-      Return ("", value1)
+    | Some (ResponseInfo (v0, v1)) ->
+      ReturnI (v0, v1)
+    | Some (Response (v0)) ->
+      ReturnI ("", v0)
+    | Some (Forward (v0, v1, v2)) ->
+      ForwardI (v0, v1, v2, timeout, priority)
+    | Some (Forward_ (v0, v1, v2, v3, v4)) ->
+      ForwardI (v0, v1, v2, v3, v4)
     | Some (Null) ->
-      Return ("", "")
+      ReturnI ("", "")
     | Some (NullError (error)) ->
       print_error error ;
-      Return ("", "")
+      ReturnI ("", "")
     | None ->
       Finished
   in
@@ -757,16 +776,22 @@ and callback
       match callback_result_type with
       | Finished ->
         Ok (())
-      | Return (response_info, response) ->
+      | ReturnI (response_info, response) ->
         return_async_i
-          api name pattern response_info response timeout trans_id pid)
+          api name pattern response_info response timeout trans_id pid
+      | ForwardI (name_, request_info_, request_, timeout_, priority_) ->
+        forward_async_i
+          api name_ request_info_ request_ timeout_ priority_ trans_id pid)
     | SYNC -> (
       match callback_result_type with
       | Finished ->
         Ok (())
-      | Return (response_info, response) ->
+      | ReturnI (response_info, response) ->
         return_sync_i
-          api name pattern response_info response timeout trans_id pid)
+          api name pattern response_info response timeout trans_id pid
+      | ForwardI (name_, request_info_, request_, timeout_, priority_) ->
+        forward_sync_i
+          api name_ request_info_ request_ timeout_ priority_ trans_id pid)
   in
   match return_result with
   | Error (error) ->

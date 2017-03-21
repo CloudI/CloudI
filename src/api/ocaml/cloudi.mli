@@ -53,6 +53,8 @@ type source = Erlang.Pid.t
 type response =
     Response of string
   | ResponseInfo of string * string
+  | Forward of string * string * string
+  | Forward_ of string * string * string * int * int
   | Null
   | NullError of string
 

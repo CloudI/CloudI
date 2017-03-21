@@ -4,6 +4,8 @@
 2017-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add remaining core logic to Haskell CloudI API beginnings
+    * Add Forward return values to both the OCaml and Haskell CloudI APIs
+      to be similar to the Erlang CloudI API return values
 
 2017-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

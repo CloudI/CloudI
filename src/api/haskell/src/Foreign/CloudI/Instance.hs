@@ -102,6 +102,8 @@ type Callback s =
 data Response s =
       Response (ByteString, s, T s)
     | ResponseInfo (ByteString, ByteString, s, T s)
+    | Forward (ByteString, ByteString, ByteString, s, T s)
+    | Forward_ (ByteString, ByteString, ByteString, Int, Int, s, T s)
     | Null (s, T s)
     | NullError (String, s, T s)
     deriving (Show, Typeable.Typeable)

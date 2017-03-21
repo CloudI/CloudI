@@ -175,7 +175,9 @@ printError str =
     SysIO.hPutStrLn SysIO.stderr ("Error: " ++ str)
 
 data CallbackResult s =
-      Return (ByteString, ByteString, s, Instance.T s)
+      ReturnI (ByteString, ByteString, s, Instance.T s)
+    | ForwardI (ByteString, ByteString, ByteString, Int, Int,
+                s, Instance.T s)
     | Finished (Instance.T s)
 
 type Result a = Either String a
@@ -653,15 +655,19 @@ callback api0@Instance.T{
                     return $ Finished api3
                 Left (ForwardAsync api3) ->
                     return $ Finished api3
-                Right (Instance.ResponseInfo values) ->
-                    return $ Return values
-                Right (Instance.Response (value1, value2, value3)) ->
-                    return $ Return (empty, value1, value2, value3)
-                Right (Instance.Null (value1, value2)) ->
-                    return $ Return (empty, empty, value1, value2)
-                Right (Instance.NullError (err, value1, value2)) -> do
+                Right (Instance.ResponseInfo (v0, v1, v2, v3)) ->
+                    return $ ReturnI (v0, v1, v2, v3)
+                Right (Instance.Response (v0, v1, v2)) ->
+                    return $ ReturnI (empty, v0, v1, v2)
+                Right (Instance.Forward (v0, v1, v2, v3, v4)) ->
+                    return $ ForwardI (v0, v1, v2, timeout, priority, v3, v4)
+                Right (Instance.Forward_ (v0, v1, v2, v3, v4, v5, v6)) ->
+                    return $ ForwardI (v0, v1, v2, v3, v4, v5, v6)
+                Right (Instance.Null (v0, v1)) ->
+                    return $ ReturnI (empty, empty, v0, v1)
+                Right (Instance.NullError (err, v0, v1)) -> do
                     printError err
-                    return $ Return (empty, empty, value1, value2)
+                    return $ ReturnI (empty, empty, v0, v1)
         Instance.SYNC -> do
             callbackResultSyncValue <- Exception.try $
                 callbackF requestType name pattern
@@ -678,15 +684,19 @@ callback api0@Instance.T{
                 Left (ForwardAsync api3) -> do
                     printException "Asynchronous Call Forward Invalid"
                     return $ Finished api3
-                Right (Instance.ResponseInfo values) ->
-                    return $ Return values
-                Right (Instance.Response (value1, value2, value3)) ->
-                    return $ Return (empty, value1, value2, value3)
-                Right (Instance.Null (value1, value2)) ->
-                    return $ Return (empty, empty, value1, value2)
-                Right (Instance.NullError (err, value1, value2)) -> do
+                Right (Instance.ResponseInfo (v0, v1, v2, v3)) ->
+                    return $ ReturnI (v0, v1, v2, v3)
+                Right (Instance.Response (v0, v1, v2)) ->
+                    return $ ReturnI (empty, v0, v1, v2)
+                Right (Instance.Forward (v0, v1, v2, v3, v4)) ->
+                    return $ ForwardI (v0, v1, v2, timeout, priority, v3, v4)
+                Right (Instance.Forward_ (v0, v1, v2, v3, v4, v5, v6)) ->
+                    return $ ForwardI (v0, v1, v2, v3, v4, v5, v6)
+                Right (Instance.Null (v0, v1)) ->
+                    return $ ReturnI (empty, empty, v0, v1)
+                Right (Instance.NullError (err, v0, v1)) -> do
                     printError err
-                    return $ Return (empty, empty, value1, value2)
+                    return $ ReturnI (empty, empty, v0, v1)
     callbackResultType <- case callbackResultValue of
         Left exception -> do
             printException $ show (exception :: Exception.SomeException)
@@ -698,18 +708,26 @@ callback api0@Instance.T{
             case callbackResultType of
                 Finished api4 ->
                     return $ Right api4
-                Return (responseInfo, response, stateNew, api4) ->
-                    returnAsyncI api4{Instance.state = stateNew}
-                        name pattern responseInfo response
-                        timeout transId pid
+                ReturnI (responseInfo, response, state', api4) ->
+                    returnAsyncI api4{Instance.state = state'}
+                        name pattern responseInfo response timeout transId pid
+                ForwardI (name', requestInfo', request', timeout', priority',
+                          state', api4) ->
+                    forwardAsyncI api4{Instance.state = state'}
+                        name' requestInfo' request'
+                        timeout' priority' transId pid
         Instance.SYNC ->
             case callbackResultType of
                 Finished api4 ->
                     return $ Right api4
-                Return (responseInfo, response, stateNew, api4) ->
-                    returnSyncI api4{Instance.state = stateNew}
-                        name pattern responseInfo response
-                        timeout transId pid
+                ReturnI (responseInfo, response, state', api4) ->
+                    returnSyncI api4{Instance.state = state'}
+                        name pattern responseInfo response timeout transId pid
+                ForwardI (name', requestInfo', request', timeout', priority',
+                          state', api4) ->
+                    forwardSyncI api4{Instance.state = state'}
+                        name' requestInfo' request'
+                        timeout' priority' transId pid
 
 handleEvents :: [Message] -> Instance.T s -> Bool -> Word32 ->
     Get ([Message], Instance.T s)
