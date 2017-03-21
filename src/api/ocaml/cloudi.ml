@@ -64,6 +64,10 @@ type response =
   | Null
   | NullError of string
 
+type callback_result =
+    Return of string * string
+  | Finished
+
 module Instance = struct
   type 's t = {
       mutable state : 's;
@@ -202,28 +206,28 @@ exception ReturnAsync
 exception ForwardSync
 exception ForwardAsync
 
-let print_exception s =
-  prerr_endline ("Exception: " ^ s)
+let print_exception str =
+  prerr_endline ("Exception: " ^ str)
 
-let print_error s =
-  prerr_endline ("Error: " ^ s)
+let print_error str =
+  prerr_endline ("Error: " ^ str)
 
 let str_replace input output =
   Str.global_replace (Str.regexp_string input) output
 
-let str_split_on_char sep s =
+let str_split_on_char sep str =
   (* based on https://github.com/ocaml/ocaml/blob/trunk/stdlib/string.ml
    * (split_on_char) for use with OCaml 4.03.0
    *)
   let r = ref [] in
-  let j = ref (String.length s) in
-  for i = String.length s - 1 downto 0 do
-    if s.[i] = sep then begin
-      r := String.sub s (i + 1) (!j - i - 1) :: !r;
+  let j = ref (String.length str) in
+  for i = String.length str - 1 downto 0 do
+    if str.[i] = sep then begin
+      r := String.sub str (i + 1) (!j - i - 1) :: !r;
       j := i
     end
   done;
-  String.sub s 0 !j :: !r
+  String.sub str 0 !j :: !r
 
 let list_append l1 l2 = List.rev_append (List.rev l1) l2
 
@@ -692,7 +696,7 @@ and callback
     try callback_get ()
     with Not_found -> null_response
   in
-  let callback_result =
+  let callback_result_value =
     match request_type with
     | ASYNC -> (
       try Some (
@@ -733,40 +737,36 @@ and callback
           print_exception (backtrace e) ;
           Some (Null))
   in
-  let response_result =
-    match callback_result with
-    | Some (ResponseInfo _) ->
-      callback_result
+  let callback_result_type =
+    match callback_result_value with
+    | Some (ResponseInfo (value1, value2)) ->
+      Return (value1, value2)
     | Some (Response (value1)) ->
-      Some (ResponseInfo ("", value1))
+      Return ("", value1)
     | Some (Null) ->
-      Some (ResponseInfo ("", ""))
+      Return ("", "")
     | Some (NullError (error)) ->
       print_error error ;
-      Some (ResponseInfo ("", ""))
+      Return ("", "")
     | None ->
-      None
+      Finished
   in
   let return_result =
     match request_type with
     | ASYNC -> (
-      match response_result with
-      | None ->
+      match callback_result_type with
+      | Finished ->
         Ok (())
-      | Some (ResponseInfo (response_info, response)) ->
+      | Return (response_info, response) ->
         return_async_i
-          api name pattern response_info response timeout trans_id pid
-      | Some (Response _ | Null | NullError _) ->
-        Error (message_decoding_error))
+          api name pattern response_info response timeout trans_id pid)
     | SYNC -> (
-      match response_result with
-      | None ->
+      match callback_result_type with
+      | Finished ->
         Ok (())
-      | Some (ResponseInfo (response_info, response)) ->
+      | Return (response_info, response) ->
         return_sync_i
-          api name pattern response_info response timeout trans_id pid
-      | Some (Response _ | Null | NullError _) ->
-        Error (message_decoding_error))
+          api name pattern response_info response timeout trans_id pid)
   in
   match return_result with
   | Error (error) ->

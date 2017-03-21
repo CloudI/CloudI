@@ -74,6 +74,6 @@ main = do
             return ()
         Right threadCount -> do
             Concurrent.setNumCapabilities threadCount
-            mapM_ (CloudI.threadCreate (\i -> task i)) [0..threadCount - 1]
+            mapM_ (CloudI.threadCreate task) [0..threadCount - 1]
             CloudI.threadsWait
 

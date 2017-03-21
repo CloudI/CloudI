@@ -8,10 +8,10 @@
   Copyright (c) 2017, Michael Truog <mjtruog at gmail dot com>
   All rights reserved.
 
-  Redistribution and use in source and binary forms, with or without
+  Redistribution and use in pid and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
 
-      * Redistributions of source code must retain the above copyright
+      * Redistributions of pid code must retain the above copyright
         notice, this list of conditions and the following disclaimer.
       * Redistributions in binary form must reproduce the above copyright
         notice, this list of conditions and the following disclaimer in
@@ -46,9 +46,11 @@ module Foreign.CloudI
     , Instance.Source
     , Instance.Response(..)
     , Instance.Callback
+    , Instance.T
     , invalidInputError
     , messageDecodingError
     , terminateError
+    , Exception
     , api
     , threadCount
     , poll
@@ -58,7 +60,7 @@ module Foreign.CloudI
 
 import Prelude hiding (init,length)
 import Data.Bits (shiftL,(.|.))
-import Control.Exception (try,mask,SomeException)
+import qualified Control.Exception as Exception
 import qualified Control.Concurrent as Concurrent
 import qualified Data.Monoid as Monoid
 import qualified Data.Binary.Get as Get
@@ -67,8 +69,11 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
 import qualified Data.Time.Clock.POSIX as POSIX (getPOSIXTime)
+import qualified Data.Typeable as Typeable
 import qualified System.Posix.Env as POSIX (getEnv)
 import qualified Data.Word as Word
 import qualified System.IO as SysIO
@@ -85,6 +90,7 @@ type Handle = SysIO.Handle
 type RequestType = Instance.RequestType
 type Source = Instance.Source
 type ThreadId = Concurrent.ThreadId
+type SomeException = Exception.SomeException
 
 messageInit :: Word32
 messageInit = 1
@@ -122,6 +128,28 @@ messageDecodingError = "Message Decoding Error"
 terminateError :: String
 terminateError = "Terminate"
 
+data Exception s =
+      ReturnSync (Instance.T s)
+    | ReturnAsync (Instance.T s)
+    | ForwardSync (Instance.T s)
+    | ForwardAsync (Instance.T s)
+    deriving (Show, Typeable.Typeable)
+
+--instance Typeable.Typeable (Exception s) => Exception.Exception (Exception s)
+instance Typeable.Typeable s => Exception.Exception (Exception s)
+
+printException :: String -> IO ()
+printException str =
+    SysIO.hPutStrLn SysIO.stderr ("Exception: " ++ str)
+
+printError :: String -> IO ()
+printError str =
+    SysIO.hPutStrLn SysIO.stderr ("Error: " ++ str)
+
+data CallbackResult s =
+      Return (ByteString, ByteString, s, Instance.T s)
+    | Finished (Instance.T s)
+
 type Result a = Either String a
 
 infixr 4 <>
@@ -130,28 +158,17 @@ infixr 4 <>
 
 timeoutAdjustment :: Clock.NominalDiffTime -> Int ->
     IO (Clock.NominalDiffTime, Int)
-timeoutAdjustment t0 timeout =
-    if timeout <= 0 then
-        return (0, timeout)
-    else do
-        t1 <- POSIX.getPOSIXTime
-        if t1 <= t0 then
-            return (t1, timeout)
+timeoutAdjustment t0 timeout = do
+    t1 <- POSIX.getPOSIXTime
+    if t1 <= t0 then
+        return (t1, timeout)
+    else
+        let elapsed = floor ((t1 - t0) * 1000) :: Integer
+            timeoutValue = fromIntegral timeout :: Integer in
+        if elapsed >= timeoutValue then
+            return (t1, 0)
         else
-            let elapsed = floor ((t1 - t0) * 1000) :: Integer
-                timeoutValue = fromIntegral timeout :: Integer in
-            if elapsed >= timeoutValue then
-                return (t1, 0)
-            else
-                return (t1, fromIntegral (timeoutValue - elapsed))
-
-timeoutAdjustmentValue :: Int -> IO Clock.NominalDiffTime
-timeoutAdjustmentValue timeout =
-    if timeout <= 0 then
-        return 0
-    else do
-        t0 <- POSIX.getPOSIXTime
-        return t0
+            return (t1, fromIntegral (timeoutValue - elapsed))
 
 send :: Instance.T s -> LazyByteString -> IO ()
 send Instance.T{
@@ -237,7 +254,7 @@ recv api0@Instance.T{
               Instance.bufferRecv = Builder.lazyByteString bufferRecvNew
             , Instance.bufferRecvSize = bufferRecvAllSize - total})
 
-api :: Int -> s -> IO (Result (Instance.T s))
+api :: Typeable.Typeable s => Int -> s -> IO (Result (Instance.T s))
 api threadIndex state = do
     SysIO.hSetEncoding SysIO.stdout SysIO.utf8
     SysIO.hSetBuffering SysIO.stdout SysIO.LineBuffering
@@ -260,10 +277,10 @@ api threadIndex state = do
             case Erlang.termToBinary initTerms (-1) of
                 Left err ->
                     return $ Left $ show err
-                Right init -> do
+                Right initBinary -> do
                     api0 <- Instance.make state protocol fd
                         useHeader bufferSize timeoutTerminate
-                    send api0 init
+                    send api0 initBinary
                     result <- pollRequest api0 (-1) False
                     case result of
                         Left err -> do
@@ -280,16 +297,171 @@ threadCount = do
         Just threadCountStr ->
             return $ Right (read threadCountStr :: Int)
 
-callback :: Instance.T s ->
+returnAsyncI :: Instance.T s -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> ByteString -> Source ->
+    IO (Result (Instance.T s))
+returnAsyncI api0@Instance.T{
+      Instance.requestTimeoutAdjustment = requestTimeoutAdjustment
+    , Instance.requestTimer = requestTimer
+    , Instance.requestTimeout = requestTimeout}
+    name pattern responseInfo response timeout transId pid = do
+    (_, timeoutNew) <-
+        if requestTimeoutAdjustment && timeout == requestTimeout then
+            timeoutAdjustment requestTimer timeout
+        else
+            return (0, timeout)
+    let returnTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "return_async")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangString pattern
+            , Erlang.OtpErlangBinary responseInfo
+            , Erlang.OtpErlangBinary response
+            , Erlang.OtpErlangInteger timeoutNew
+            , Erlang.OtpErlangBinary transId
+            , Erlang.OtpErlangPid pid]
+    case Erlang.termToBinary returnTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right returnBinary -> do
+            send api0 returnBinary
+            return $ Right api0
+
+returnSyncI :: Instance.T s -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> ByteString -> Source ->
+    IO (Result (Instance.T s))
+returnSyncI api0@Instance.T{
+      Instance.requestTimeoutAdjustment = requestTimeoutAdjustment
+    , Instance.requestTimer = requestTimer
+    , Instance.requestTimeout = requestTimeout}
+    name pattern responseInfo response timeout transId pid = do
+    (_, timeoutNew) <-
+        if requestTimeoutAdjustment && timeout == requestTimeout then
+            timeoutAdjustment requestTimer timeout
+        else
+            return (0, timeout)
+    let returnTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "return_sync")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangString pattern
+            , Erlang.OtpErlangBinary responseInfo
+            , Erlang.OtpErlangBinary response
+            , Erlang.OtpErlangInteger timeoutNew
+            , Erlang.OtpErlangBinary transId
+            , Erlang.OtpErlangPid pid]
+    case Erlang.termToBinary returnTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right returnBinary -> do
+            send api0 returnBinary
+            return $ Right api0
+
+nullResponse :: RequestType -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    s -> Instance.T s -> IO (Instance.Response s)
+nullResponse _ _ _ _ _ _ _ _ _ state api0 =
+    return $ Instance.Null (state, api0)
+
+callback :: Typeable.Typeable s => Instance.T s ->
     (RequestType, ByteString, ByteString, ByteString, ByteString,
      Int, Int, ByteString, Source) -> IO (Result (Instance.T s))
-{-
-callback api0
+callback api0@Instance.T{
+      Instance.state = state
+    , Instance.callbacks = callbacks
+    , Instance.requestTimeoutAdjustment = requestTimeoutAdjustment}
     (requestType, name, pattern, requestInfo, request,
-     timeout, priority, transId, source) =
--}
-callback api0 _ =
-    return $ Right api0
+     timeout, priority, transId, pid) = do
+    api1 <- if requestTimeoutAdjustment then do
+            requestTimer <- POSIX.getPOSIXTime
+            return api0{
+                  Instance.requestTimer = requestTimer
+                , Instance.requestTimeout = timeout}
+        else
+            return api0
+    let (callbackF, callbacksNew) = case Map.lookup pattern callbacks of
+            Nothing ->
+                (nullResponse, callbacks)
+            Just functionQueue ->
+                let f = Sequence.index functionQueue 0
+                    functionQueueNew = (Sequence.|>)
+                        (Sequence.drop 0 functionQueue) f
+                in
+                (f, Map.insert pattern functionQueueNew callbacks)
+        api2 = api1{Instance.callbacks = callbacksNew}
+        empty = ByteString.empty
+    callbackResultValue <- Exception.try $ case requestType of
+        Instance.ASYNC -> do
+            callbackResultAsyncValue <- Exception.try $
+                callbackF requestType name pattern
+                requestInfo request timeout priority transId pid
+                state api2
+            case callbackResultAsyncValue of
+                Left (ReturnSync api3) -> do
+                    printException "Synchronous Call Return Invalid"
+                    return $ Finished api3
+                Left (ReturnAsync api3) ->
+                    return $ Finished api3
+                Left (ForwardSync api3) -> do
+                    printException "Synchronous Call Forward Invalid"
+                    return $ Finished api3
+                Left (ForwardAsync api3) ->
+                    return $ Finished api3
+                Right (Instance.ResponseInfo values) ->
+                    return $ Return values
+                Right (Instance.Response (value1, value2, value3)) ->
+                    return $ Return (empty, value1, value2, value3)
+                Right (Instance.Null (value1, value2)) ->
+                    return $ Return (empty, empty, value1, value2)
+                Right (Instance.NullError (err, value1, value2)) -> do
+                    printError err
+                    return $ Return (empty, empty, value1, value2)
+        Instance.SYNC -> do
+            callbackResultSyncValue <- Exception.try $
+                callbackF requestType name pattern
+                requestInfo request timeout priority transId pid
+                state api2
+            case callbackResultSyncValue of
+                Left (ReturnSync api3) ->
+                    return $ Finished api3
+                Left (ReturnAsync api3) -> do
+                    printException "Asynchronous Call Return Invalid"
+                    return $ Finished api3
+                Left (ForwardSync api3) ->
+                    return $ Finished api3
+                Left (ForwardAsync api3) -> do
+                    printException "Asynchronous Call Forward Invalid"
+                    return $ Finished api3
+                Right (Instance.ResponseInfo values) ->
+                    return $ Return values
+                Right (Instance.Response (value1, value2, value3)) ->
+                    return $ Return (empty, value1, value2, value3)
+                Right (Instance.Null (value1, value2)) ->
+                    return $ Return (empty, empty, value1, value2)
+                Right (Instance.NullError (err, value1, value2)) -> do
+                    printError err
+                    return $ Return (empty, empty, value1, value2)
+    callbackResultType <- case callbackResultValue of
+        Left exception -> do
+            printException $ show (exception :: Exception.SomeException)
+            return $ Finished api2
+        Right callbackResult ->
+            return $ callbackResult
+    case requestType of
+        Instance.ASYNC ->
+            case callbackResultType of
+                Finished api4 ->
+                    return $ Right api4
+                Return (responseInfo, response, stateNew, api4) ->
+                    returnAsyncI api4{Instance.state = stateNew}
+                        name pattern responseInfo response
+                        timeout transId pid
+        Instance.SYNC ->
+            case callbackResultType of
+                Finished api4 ->
+                    return $ Right api4
+                Return (responseInfo, response, stateNew, api4) ->
+                    returnSyncI api4{Instance.state = stateNew}
+                        name pattern responseInfo response
+                        timeout transId pid
 
 handleEvents :: [Message] -> Instance.T s -> Bool -> Word32 ->
     Get ([Message], Instance.T s)
@@ -473,7 +645,7 @@ pollRequestDataGet messages api0 external = do
         | otherwise ->
             fail messageDecodingError
 
-pollRequestDataProcess :: [Message] -> Instance.T s ->
+pollRequestDataProcess :: Typeable.Typeable s => [Message] -> Instance.T s ->
     IO (Result (Instance.T s))
 pollRequestDataProcess [] api0 =
     return $ Right api0
@@ -491,11 +663,12 @@ pollRequestDataProcess (message:messages) api0 =
             case Erlang.termToBinary aliveTerms (-1) of
                 Left err ->
                     return $ Left $ show err
-                Right keepalive -> do
-                    send api0 keepalive
+                Right aliveBinary -> do
+                    send api0 aliveBinary
                     pollRequestDataProcess messages api0
 
-pollRequestData :: Instance.T s -> Bool -> LazyByteString ->
+pollRequestData :: Typeable.Typeable s =>
+    Instance.T s -> Bool -> LazyByteString ->
     IO (Result (Instance.T s))
 pollRequestData api0 external dataIn =
     case Get.runGetOrFail (pollRequestDataGet [] api0 external) dataIn of
@@ -504,8 +677,9 @@ pollRequestData api0 external dataIn =
         Right (_, _, (messages, api1)) ->
             pollRequestDataProcess (List.reverse messages) api1
 
-pollRequestLoop :: Instance.T s -> Int -> Bool ->
-    Clock.NominalDiffTime -> IO (Result (Bool, Instance.T s))
+pollRequestLoop :: Typeable.Typeable s =>
+    Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
+    IO (Result (Bool, Instance.T s))
 pollRequestLoop api0@Instance.T{
       Instance.socketHandle = socketHandle} timeout external pollTimer = do
     inputAvailable <- SysIO.hWaitForInput socketHandle timeout
@@ -520,24 +694,28 @@ pollRequestLoop api0@Instance.T{
             Right api2@Instance.T{Instance.timeout = Just result} ->
                 return $ Right (result, api2{Instance.timeout = Nothing})
             Right api2 -> do
-                (pollTimerNew, timeoutNew) <-
-                    timeoutAdjustment pollTimer timeout
+                (pollTimerNew, timeoutNew) <- if timeout <= 0 then
+                        return (0, timeout)
+                    else
+                        timeoutAdjustment pollTimer timeout
                 if timeout == 0 then
                     return $ Right (True, api2{Instance.timeout = Nothing})
                 else
                     pollRequestLoop api2 timeoutNew external pollTimerNew
 
-pollRequestLoopBegin :: Instance.T s -> Int -> Bool ->
-    Clock.NominalDiffTime -> IO (Result (Bool, Instance.T s))
+pollRequestLoopBegin :: Typeable.Typeable s =>
+    Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
+    IO (Result (Bool, Instance.T s))
 pollRequestLoopBegin api0 timeout external pollTimer = do
-    result <- try (pollRequestLoop api0 timeout external pollTimer)
+    result <- Exception.try (pollRequestLoop api0 timeout external pollTimer)
     case result of
         Left exception ->
             return $ Left $ show (exception :: SomeException)
         Right success ->
             return success
 
-pollRequest :: Instance.T s -> Int -> Bool ->
+pollRequest :: Typeable.Typeable s =>
+    Instance.T s -> Int -> Bool ->
     IO (Result (Bool, Instance.T s))
 pollRequest api0@Instance.T{
       Instance.initializationComplete = initializationComplete
@@ -545,21 +723,25 @@ pollRequest api0@Instance.T{
     if terminate then
         return $ Right (False, api0)
     else do
-        pollTimer <- timeoutAdjustmentValue timeout
+        pollTimer <- if timeout <= 0 then
+                return 0
+            else
+                POSIX.getPOSIXTime
         if external && not initializationComplete then
             let pollingTerms = Erlang.OtpErlangAtom (Char8.pack "polling") in
             case Erlang.termToBinary pollingTerms (-1) of
                 Left err ->
                     return $ Left $ show err
-                Right polling -> do
-                    send api0 polling
+                Right pollingBinary -> do
+                    send api0 pollingBinary
                     pollRequestLoopBegin
                         api0{Instance.initializationComplete = True}
                         timeout external pollTimer
         else
             pollRequestLoopBegin api0 timeout external pollTimer
 
-poll :: Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
+poll :: Typeable.Typeable s =>
+    Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
 
@@ -576,10 +758,11 @@ threadCreate f threadIndex = do
 
 threadCreateFork :: Int -> IO a -> (Either SomeException a -> IO ()) ->
     IO ThreadId
-threadCreateFork threadIndex action finally =
+threadCreateFork threadIndex action afterF =
     -- similar to Concurrent.forkFinally
-    mask $ \restore ->
-        Concurrent.forkOn threadIndex (try (restore action) >>= finally)
+    Exception.mask $ \restore ->
+        Concurrent.forkOn threadIndex
+            (Exception.try (restore action) >>= afterF)
 
 threadsWait :: IO ()
 threadsWait = do

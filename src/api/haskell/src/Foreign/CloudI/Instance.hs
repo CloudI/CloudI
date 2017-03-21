@@ -63,7 +63,9 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.Int as Int
 import qualified Data.Map.Strict as Map
 import qualified Data.Monoid as Monoid
+import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
+import qualified Data.Typeable as Typeable
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang.Pid as Erlang
@@ -74,6 +76,7 @@ type ByteString = ByteString.ByteString
 type Socket = Socket.Socket
 type Handle = SysIO.Handle
 type Map = Map.Map
+type Seq = Sequence.Seq
 type Array = IArray.Array
 type Int8 = Int.Int8
 type Word8 = Word.Word8
@@ -95,11 +98,11 @@ type Callback s =
     IO (Response s)
 
 data Response s =
-      Response (ByteString, s)
-    | ResponseInfo (ByteString, ByteString, s)
-    | Null (s)
-    | NullError (String, s)
-    deriving (Eq, Show)
+      Response (ByteString, s, T s)
+    | ResponseInfo (ByteString, ByteString, s, T s)
+    | Null (s, T s)
+    | NullError (String, s, T s)
+    deriving (Show, Typeable.Typeable)
 
 data T s = T
     { state :: !s
@@ -108,7 +111,7 @@ data T s = T
     , initializationComplete :: !Bool
     , terminate :: !Bool
     , timeout :: !(Maybe Bool)
-    , callbacks :: !(Map ByteString (Callback s))
+    , callbacks :: !(Map ByteString (Seq (Callback s)))
     , bufferSize :: !Int
     , bufferRecv :: !Builder
     , bufferRecvSize :: !Int
@@ -131,6 +134,10 @@ data T s = T
     , transIds :: !(Array Int ByteString)
     , subscribeCount :: !Int
     }
+    deriving (Typeable.Typeable)
+
+instance Show (T s) where
+    show _ = "(CloudI.T s)"
 
 makeSocket :: String -> C.CInt -> IO Socket
 makeSocket "local" fd =
