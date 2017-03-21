@@ -54,6 +54,8 @@ module Foreign.CloudI.Instance
     , setTransId
     , setTransIds
     , setSubscribeCount
+    , callbacksAdd
+    , callbacksRemove
     ) where
 
 import Prelude hiding (init)
@@ -69,16 +71,16 @@ import qualified Data.Typeable as Typeable
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang.Pid as Erlang
-import qualified System.IO as SysIO
 import qualified Network.Socket as Socket
+import qualified System.IO as SysIO
+type Array = IArray.Array
 type Builder = Builder.Builder
 type ByteString = ByteString.ByteString
-type Socket = Socket.Socket
 type Handle = SysIO.Handle
+type Int8 = Int.Int8
 type Map = Map.Map
 type Seq = Sequence.Seq
-type Array = IArray.Array
-type Int8 = Int.Int8
+type Socket = Socket.Socket
 type Word8 = Word.Word8
 type Word32 = Word.Word32
 
@@ -242,7 +244,7 @@ setTransIds :: T s -> ByteString -> Word32 -> T s
 setTransIds api0
     transIds' transIdCount =
     let count = fromIntegral transIdCount :: Int
-        loop i l s = 
+        loop i l s =
             if i == count then
                 l
             else
@@ -259,4 +261,34 @@ setSubscribeCount api0
     api0{
           timeout = Just False
         , subscribeCount = fromIntegral subscribeCount'}
+
+callbacksAdd :: T s -> ByteString -> Callback s -> T s
+callbacksAdd api0@T{
+      callbacks = callbacks0
+    , prefix = prefix'} pattern f =
+    let key = ByteString.append prefix' pattern
+        callbacks1 = case Map.lookup key callbacks0 of
+            Nothing ->
+                Map.insert key (Sequence.singleton f) callbacks0
+            Just functionQueue ->
+                Map.insert key ((Sequence.|>) functionQueue f) callbacks0
+    in
+    api0{callbacks = callbacks1}
+
+callbacksRemove :: T s -> ByteString -> T s
+callbacksRemove api0@T{
+      callbacks = callbacks0
+    , prefix = prefix'} pattern =
+    let key = ByteString.append prefix' pattern
+        callbacks1 = case Map.lookup key callbacks0 of
+            Nothing ->
+                error "callbacks empty"
+            Just functionQueue ->
+                let functionQueueNew = Sequence.drop 0 functionQueue in
+                if Sequence.null functionQueueNew then
+                    Map.delete key callbacks0
+                else
+                    Map.insert key functionQueueNew callbacks0
+    in
+    api0{callbacks = callbacks1}
 

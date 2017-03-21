@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add remaining core logic to Haskell CloudI API beginnings
+
 2017-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve OCaml CloudI API internal type usage

@@ -47,12 +47,35 @@ module Foreign.CloudI
     , Instance.Response(..)
     , Instance.Callback
     , Instance.T
+    , transIdNull
     , invalidInputError
     , messageDecodingError
     , terminateError
     , Exception
     , api
     , threadCount
+    , subscribe
+    , subscribeCount
+    , unsubscribe
+    , sendAsync
+    , sendSync
+    , mcastAsync
+    , forward_
+    , forwardAsync
+    , forwardSync
+    , return_
+    , returnAsync
+    , returnSync
+    , recvAsync
+    , processIndex
+    , processCount
+    , processCountMax
+    , processCountMin
+    , prefix
+    , timeoutInitialize
+    , timeoutAsync
+    , timeoutSync
+    , timeoutTerminate
     , poll
     , threadCreate
     , threadsWait
@@ -60,9 +83,10 @@ module Foreign.CloudI
 
 import Prelude hiding (init,length)
 import Data.Bits (shiftL,(.|.))
+import Data.Maybe (fromMaybe)
 import qualified Control.Exception as Exception
 import qualified Control.Concurrent as Concurrent
-import qualified Data.Monoid as Monoid
+import qualified Data.Array.IArray as IArray
 import qualified Data.Binary.Get as Get
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Builder as Builder
@@ -70,27 +94,29 @@ import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
 import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
 import qualified Data.Time.Clock.POSIX as POSIX (getPOSIXTime)
 import qualified Data.Typeable as Typeable
-import qualified System.Posix.Env as POSIX (getEnv)
 import qualified Data.Word as Word
-import qualified System.IO as SysIO
-import qualified System.IO.Unsafe as Unsafe
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang as Erlang
 import qualified Foreign.CloudI.Instance as Instance
-type Get = Get.Get
+import qualified System.IO as SysIO
+import qualified System.IO.Unsafe as Unsafe
+import qualified System.Posix.Env as POSIX (getEnv)
+type Array = IArray.Array
 type Builder = Builder.Builder
 type ByteString = ByteString.ByteString
-type LazyByteString = LazyByteString.ByteString
-type Word32 = Word.Word32
+type Get = Get.Get
 type Handle = SysIO.Handle
+type LazyByteString = LazyByteString.ByteString
 type RequestType = Instance.RequestType
+type SomeException = Exception.SomeException
 type Source = Instance.Source
 type ThreadId = Concurrent.ThreadId
-type SomeException = Exception.SomeException
+type Word32 = Word.Word32
 
 messageInit :: Word32
 messageInit = 1
@@ -121,6 +147,9 @@ data Message =
         Int, Int, ByteString, Source)
     | MessageKeepalive
 
+transIdNull :: ByteString
+transIdNull = Char8.pack $ List.replicate 16 '\0'
+
 invalidInputError :: String
 invalidInputError = "Invalid Input"
 messageDecodingError :: String
@@ -135,7 +164,6 @@ data Exception s =
     | ForwardAsync (Instance.T s)
     deriving (Show, Typeable.Typeable)
 
---instance Typeable.Typeable (Exception s) => Exception.Exception (Exception s)
 instance Typeable.Typeable s => Exception.Exception (Exception s)
 
 printException :: String -> IO ()
@@ -152,109 +180,8 @@ data CallbackResult s =
 
 type Result a = Either String a
 
-infixr 4 <>
-(<>) :: Monoid.Monoid m => m -> m -> m
-(<>) = Monoid.mappend
-
-timeoutAdjustment :: Clock.NominalDiffTime -> Int ->
-    IO (Clock.NominalDiffTime, Int)
-timeoutAdjustment t0 timeout = do
-    t1 <- POSIX.getPOSIXTime
-    if t1 <= t0 then
-        return (t1, timeout)
-    else
-        let elapsed = floor ((t1 - t0) * 1000) :: Integer
-            timeoutValue = fromIntegral timeout :: Integer in
-        if elapsed >= timeoutValue then
-            return (t1, 0)
-        else
-            return (t1, fromIntegral (timeoutValue - elapsed))
-
-send :: Instance.T s -> LazyByteString -> IO ()
-send Instance.T{
-      Instance.useHeader = False
-    , Instance.socketHandle = socketHandle} binary = do
-    LazyByteString.hPut socketHandle binary
-send Instance.T{
-      Instance.useHeader = True
-    , Instance.socketHandle = socketHandle} binary = do
-    let total = fromIntegral (LazyByteString.length binary) :: Word32
-    LazyByteString.hPut socketHandle (Builder.toLazyByteString $
-        Builder.word32BE total `Monoid.mappend`
-        Builder.lazyByteString binary)
-
-recvBuffer :: Builder -> Int -> Int -> Handle -> Int ->
-    IO (Builder, Int)
-recvBuffer bufferRecv bufferRecvSize recvSize socketHandle bufferSize
-    | recvSize <= bufferRecvSize =
-        return (bufferRecv, bufferRecvSize)
-    | otherwise = do
-        fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
-        recvBuffer
-            (bufferRecv <> Builder.byteString fragment)
-            (bufferRecvSize + ByteString.length fragment)
-            recvSize socketHandle bufferSize
-
-recvBufferAll :: Builder -> Int -> Handle -> Int ->
-    IO (Builder, Int)
-recvBufferAll bufferRecv bufferRecvSize socketHandle bufferSize = do
-    fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
-    let fragmentSize = ByteString.length fragment
-        bufferRecvNew = bufferRecv <> Builder.byteString fragment
-        bufferRecvSizeNew = bufferRecvSize + fragmentSize
-    if fragmentSize == bufferSize then
-        recvBufferAll bufferRecvNew bufferRecvSizeNew socketHandle bufferSize
-    else
-        return (bufferRecv, bufferRecvSize)
-
-recv :: Instance.T s -> IO (LazyByteString, Int, Instance.T s)
-recv api0@Instance.T{
-      Instance.useHeader = False
-    , Instance.socketHandle = socketHandle
-    , Instance.bufferSize = bufferSize
-    , Instance.bufferRecv = bufferRecv
-    , Instance.bufferRecvSize = bufferRecvSize} = do
-    (bufferRecvAll,
-     bufferRecvAllSize) <- recvBufferAll
-        bufferRecv bufferRecvSize socketHandle bufferSize
-    return $ (
-          Builder.toLazyByteString bufferRecvAll
-        , bufferRecvAllSize
-        , api0{
-              Instance.bufferRecv = Monoid.mempty
-            , Instance.bufferRecvSize = 0})
-recv api0@Instance.T{
-      Instance.useHeader = True
-    , Instance.socketHandle = socketHandle
-    , Instance.bufferSize = bufferSize
-    , Instance.bufferRecv = bufferRecv
-    , Instance.bufferRecvSize = bufferRecvSize} = do
-    (bufferRecvHeader, bufferRecvHeaderSize) <- recvBuffer
-        bufferRecv bufferRecvSize 4 socketHandle bufferSize
-    let header0 = Builder.toLazyByteString bufferRecvHeader
-        Just (byte0, header1) = LazyByteString.uncons header0
-        Just (byte1, header2) = LazyByteString.uncons header1
-        Just (byte2, header3) = LazyByteString.uncons header2
-        Just (byte3, headerRemaining) = LazyByteString.uncons header3
-        total = fromIntegral $
-            (fromIntegral byte0 :: Word32) `shiftL` 24 .|.
-            (fromIntegral byte1 :: Word32) `shiftL` 16 .|.
-            (fromIntegral byte2 :: Word32) `shiftL` 8 .|.
-            (fromIntegral byte3 :: Word32) :: Int
-    (bufferRecvAll, bufferRecvAllSize) <- recvBuffer
-        (Builder.lazyByteString headerRemaining)
-        (bufferRecvHeaderSize - 4) total socketHandle bufferSize
-    let bufferRecvAllStr = Builder.toLazyByteString bufferRecvAll
-        (bufferRecvData, bufferRecvNew) =
-            LazyByteString.splitAt (fromIntegral total) bufferRecvAllStr
-    return $ (
-          bufferRecvData
-        , total
-        , api0{
-              Instance.bufferRecv = Builder.lazyByteString bufferRecvNew
-            , Instance.bufferRecvSize = bufferRecvAllSize - total})
-
-api :: Typeable.Typeable s => Int -> s -> IO (Result (Instance.T s))
+api :: Typeable.Typeable s => Int -> s ->
+    IO (Result (Instance.T s))
 api threadIndex state = do
     SysIO.hSetEncoding SysIO.stdout SysIO.utf8
     SysIO.hSetBuffering SysIO.stdout SysIO.LineBuffering
@@ -263,15 +190,11 @@ api threadIndex state = do
     protocolValue <- POSIX.getEnv "CLOUDI_API_INIT_PROTOCOL"
     bufferSizeValue <- POSIX.getEnv "CLOUDI_API_INIT_BUFFER_SIZE"
     case (protocolValue, bufferSizeValue) of
-        (Nothing, _) ->
-            return $ Left invalidInputError
-        (_, Nothing) ->
-            return $ Left invalidInputError
         (Just protocol, Just bufferSizeStr) ->
             let bufferSize = read bufferSizeStr :: Int
                 fd = C.CInt $ fromIntegral (threadIndex + 3)
                 useHeader = protocol /= "udp"
-                timeoutTerminate = 1000
+                timeoutTerminate' = 1000
                 initTerms = Erlang.OtpErlangAtom (Char8.pack "init")
             in
             case Erlang.termToBinary initTerms (-1) of
@@ -279,14 +202,16 @@ api threadIndex state = do
                     return $ Left $ show err
                 Right initBinary -> do
                     api0 <- Instance.make state protocol fd
-                        useHeader bufferSize timeoutTerminate
+                        useHeader bufferSize timeoutTerminate'
                     send api0 initBinary
                     result <- pollRequest api0 (-1) False
                     case result of
-                        Left err -> do
+                        Left err ->
                             return $ Left err
-                        Right (_, api1) -> do
+                        Right (_, api1) ->
                             return $ Right api1
+        (_, _) ->
+            return $ Left invalidInputError
 
 threadCount :: IO (Result Int)
 threadCount = do
@@ -297,6 +222,240 @@ threadCount = do
         Just threadCountStr ->
             return $ Right (read threadCountStr :: Int)
 
+subscribe :: Instance.T s -> ByteString -> Instance.Callback s ->
+    IO (Result (Instance.T s))
+subscribe api0 pattern f =
+    let subscribeTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "subscribe")
+            , Erlang.OtpErlangString pattern]
+    in
+    case Erlang.termToBinary subscribeTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right subscribeBinary -> do
+            send api0 subscribeBinary
+            return $ Right $ Instance.callbacksAdd api0 pattern f
+
+subscribeCount :: Typeable.Typeable s => Instance.T s -> ByteString ->
+    IO (Result (Int, Instance.T s))
+subscribeCount api0 pattern =
+    let subscribeCountTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "subscribe_count")
+            , Erlang.OtpErlangString pattern]
+    in
+    case Erlang.termToBinary subscribeCountTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right subscribeCountBinary -> do
+            send api0 subscribeCountBinary
+            result <- pollRequest api0 (-1) False
+            case result of
+                Left err ->
+                    return $ Left err
+                Right (_, api1@Instance.T{Instance.subscribeCount = count}) ->
+                    return $ Right (count, api1)
+
+unsubscribe :: Instance.T s -> ByteString ->
+    IO (Result (Instance.T s))
+unsubscribe api0 pattern =
+    let unsubscribeTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "unsubscribe")
+            , Erlang.OtpErlangString pattern]
+    in
+    case Erlang.termToBinary unsubscribeTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right unsubscribeBinary -> do
+            send api0 unsubscribeBinary
+            return $ Right $ Instance.callbacksRemove api0 pattern
+
+sendAsync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+    Maybe Int -> Maybe ByteString -> Maybe Int ->
+    IO (Result (ByteString, Instance.T s))
+sendAsync api0@Instance.T{
+      Instance.timeoutAsync = timeoutAsync'
+    , Instance.priorityDefault = priorityDefault}
+    name request timeoutOpt requestInfoOpt priorityOpt =
+    let timeout = fromMaybe timeoutAsync' timeoutOpt
+        requestInfo = fromMaybe ByteString.empty requestInfoOpt
+        priority = fromMaybe priorityDefault priorityOpt
+        sendAsyncTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "send_async")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangBinary requestInfo
+            , Erlang.OtpErlangBinary request
+            , Erlang.OtpErlangInteger timeout
+            , Erlang.OtpErlangInteger priority]
+    in
+    case Erlang.termToBinary sendAsyncTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right sendAsyncBinary -> do
+            send api0 sendAsyncBinary
+            result <- pollRequest api0 (-1) False
+            case result of
+                Left err ->
+                    return $ Left err
+                Right (_, api1@Instance.T{Instance.transId = transId}) ->
+                    return $ Right (transId, api1)
+
+sendSync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+    Maybe Int -> Maybe ByteString -> Maybe Int ->
+    IO (Result (ByteString, ByteString, ByteString, Instance.T s))
+sendSync api0@Instance.T{
+      Instance.timeoutSync = timeoutSync'
+    , Instance.priorityDefault = priorityDefault}
+    name request timeoutOpt requestInfoOpt priorityOpt =
+    let timeout = fromMaybe timeoutSync' timeoutOpt
+        requestInfo = fromMaybe ByteString.empty requestInfoOpt
+        priority = fromMaybe priorityDefault priorityOpt
+        sendSyncTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "send_sync")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangBinary requestInfo
+            , Erlang.OtpErlangBinary request
+            , Erlang.OtpErlangInteger timeout
+            , Erlang.OtpErlangInteger priority]
+    in
+    case Erlang.termToBinary sendSyncTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right sendSyncBinary -> do
+            send api0 sendSyncBinary
+            result <- pollRequest api0 (-1) False
+            case result of
+                Left err ->
+                    return $ Left err
+                Right (_, api1@Instance.T{
+                      Instance.responseInfo = responseInfo
+                    , Instance.response = response
+                    , Instance.transId = transId}) ->
+                    return $ Right (responseInfo, response, transId, api1)
+
+mcastAsync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+    Maybe Int -> Maybe ByteString -> Maybe Int ->
+    IO (Result (Array Int ByteString, Instance.T s))
+mcastAsync api0@Instance.T{
+      Instance.timeoutAsync = timeoutAsync'
+    , Instance.priorityDefault = priorityDefault}
+    name request timeoutOpt requestInfoOpt priorityOpt =
+    let timeout = fromMaybe timeoutAsync' timeoutOpt
+        requestInfo = fromMaybe ByteString.empty requestInfoOpt
+        priority = fromMaybe priorityDefault priorityOpt
+        mcastAsyncTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "mcast_async")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangBinary requestInfo
+            , Erlang.OtpErlangBinary request
+            , Erlang.OtpErlangInteger timeout
+            , Erlang.OtpErlangInteger priority]
+    in
+    case Erlang.termToBinary mcastAsyncTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right mcastAsyncBinary -> do
+            send api0 mcastAsyncBinary
+            result <- pollRequest api0 (-1) False
+            case result of
+                Left err ->
+                    return $ Left err
+                Right (_, api1@Instance.T{Instance.transIds = transIds}) ->
+                    return $ Right (transIds, api1)
+
+forward_ :: Typeable.Typeable s =>
+    Instance.T s -> Instance.RequestType -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    IO ()
+forward_ api0 Instance.ASYNC = forwardAsync api0
+forward_ api0 Instance.SYNC = forwardSync api0
+
+forwardAsyncI :: Instance.T s -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    IO (Result (Instance.T s))
+forwardAsyncI api0@Instance.T{
+      Instance.requestTimeoutAdjustment = requestTimeoutAdjustment
+    , Instance.requestTimer = requestTimer
+    , Instance.requestTimeout = requestTimeout}
+    name responseInfo response timeout priority transId pid = do
+    timeoutNew <- if requestTimeoutAdjustment && timeout == requestTimeout then
+            timeoutAdjustment requestTimer timeout
+        else
+            return timeout
+    let forwardTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "forward_async")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangBinary responseInfo
+            , Erlang.OtpErlangBinary response
+            , Erlang.OtpErlangInteger timeoutNew
+            , Erlang.OtpErlangInteger priority
+            , Erlang.OtpErlangBinary transId
+            , Erlang.OtpErlangPid pid]
+    case Erlang.termToBinary forwardTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right forwardBinary -> do
+            send api0 forwardBinary
+            return $ Right api0
+
+forwardAsync :: Typeable.Typeable s => Instance.T s -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    IO ()
+forwardAsync api0 name responseInfo response timeout priority transId pid = do
+    result <- forwardAsyncI api0
+        name responseInfo response timeout priority transId pid
+    case result of
+        Left err ->
+            error err
+        Right api1 ->
+            Exception.throwIO $ ForwardAsync api1
+
+forwardSyncI :: Instance.T s -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    IO (Result (Instance.T s))
+forwardSyncI api0@Instance.T{
+      Instance.requestTimeoutAdjustment = requestTimeoutAdjustment
+    , Instance.requestTimer = requestTimer
+    , Instance.requestTimeout = requestTimeout}
+    name responseInfo response timeout priority transId pid = do
+    timeoutNew <- if requestTimeoutAdjustment && timeout == requestTimeout then
+            timeoutAdjustment requestTimer timeout
+        else
+            return timeout
+    let forwardTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "forward_sync")
+            , Erlang.OtpErlangString name
+            , Erlang.OtpErlangBinary responseInfo
+            , Erlang.OtpErlangBinary response
+            , Erlang.OtpErlangInteger timeoutNew
+            , Erlang.OtpErlangInteger priority
+            , Erlang.OtpErlangBinary transId
+            , Erlang.OtpErlangPid pid]
+    case Erlang.termToBinary forwardTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right forwardBinary -> do
+            send api0 forwardBinary
+            return $ Right api0
+
+forwardSync :: Typeable.Typeable s => Instance.T s -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    IO ()
+forwardSync api0 name responseInfo response timeout priority transId pid = do
+    result <- forwardSyncI api0
+        name responseInfo response timeout priority transId pid
+    case result of
+        Left err ->
+            error err
+        Right api1 ->
+            Exception.throwIO $ ForwardSync api1
+
+return_ :: Typeable.Typeable s =>
+    Instance.T s -> Instance.RequestType -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> ByteString -> Source ->
+    IO ()
+return_ api0 Instance.ASYNC = returnAsync api0
+return_ api0 Instance.SYNC = returnSync api0
+
 returnAsyncI :: Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
@@ -305,11 +464,10 @@ returnAsyncI api0@Instance.T{
     , Instance.requestTimer = requestTimer
     , Instance.requestTimeout = requestTimeout}
     name pattern responseInfo response timeout transId pid = do
-    (_, timeoutNew) <-
-        if requestTimeoutAdjustment && timeout == requestTimeout then
+    timeoutNew <- if requestTimeoutAdjustment && timeout == requestTimeout then
             timeoutAdjustment requestTimer timeout
         else
-            return (0, timeout)
+            return timeout
     let returnTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "return_async")
             , Erlang.OtpErlangString name
@@ -326,6 +484,19 @@ returnAsyncI api0@Instance.T{
             send api0 returnBinary
             return $ Right api0
 
+returnAsync :: Typeable.Typeable s =>
+    Instance.T s -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> ByteString -> Source ->
+    IO ()
+returnAsync api0 name pattern responseInfo response timeout transId pid = do
+    result <- returnAsyncI api0
+        name pattern responseInfo response timeout transId pid
+    case result of
+        Left err ->
+            error err
+        Right api1 ->
+            Exception.throwIO $ ReturnAsync api1
+
 returnSyncI :: Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO (Result (Instance.T s))
@@ -334,11 +505,10 @@ returnSyncI api0@Instance.T{
     , Instance.requestTimer = requestTimer
     , Instance.requestTimeout = requestTimeout}
     name pattern responseInfo response timeout transId pid = do
-    (_, timeoutNew) <-
-        if requestTimeoutAdjustment && timeout == requestTimeout then
+    timeoutNew <- if requestTimeoutAdjustment && timeout == requestTimeout then
             timeoutAdjustment requestTimer timeout
         else
-            return (0, timeout)
+            return timeout
     let returnTerms = Erlang.OtpErlangTuple
             [ Erlang.OtpErlangAtom (Char8.pack "return_sync")
             , Erlang.OtpErlangString name
@@ -354,6 +524,84 @@ returnSyncI api0@Instance.T{
         Right returnBinary -> do
             send api0 returnBinary
             return $ Right api0
+
+returnSync :: Typeable.Typeable s =>
+    Instance.T s -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> ByteString -> Source ->
+    IO ()
+returnSync api0 name pattern responseInfo response timeout transId pid = do
+    result <- returnSyncI api0
+        name pattern responseInfo response timeout transId pid
+    case result of
+        Left err ->
+            error err
+        Right api1 ->
+            Exception.throwIO $ ReturnSync api1
+
+recvAsync :: Typeable.Typeable s => Instance.T s ->
+    Maybe Int -> Maybe ByteString -> Maybe Bool ->
+    IO (Result (ByteString, ByteString, ByteString, Instance.T s))
+recvAsync api0@Instance.T{Instance.timeoutSync = timeoutSync'}
+    timeoutOpt transIdOpt consumeOpt =
+    let timeout = fromMaybe timeoutSync' timeoutOpt
+        transId = fromMaybe transIdNull transIdOpt
+        consume = fromMaybe True consumeOpt
+        recvAsyncTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "recv_async")
+            , Erlang.OtpErlangInteger timeout
+            , Erlang.OtpErlangBinary transId
+            , Erlang.OtpErlangAtomBool consume]
+    in
+    case Erlang.termToBinary recvAsyncTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right recvAsyncBinary -> do
+            send api0 recvAsyncBinary
+            result <- pollRequest api0 (-1) False
+            case result of
+                Left err ->
+                    return $ Left err
+                Right (_, api1@Instance.T{
+                      Instance.responseInfo = responseInfo
+                    , Instance.response = response
+                    , Instance.transId = transId'}) ->
+                    return $ Right (responseInfo, response, transId', api1)
+
+processIndex :: Instance.T s -> Int
+processIndex Instance.T{Instance.processIndex = processIndex'} =
+    processIndex'
+
+processCount :: Instance.T s -> Int
+processCount Instance.T{Instance.processCount = processCount'} =
+    processCount'
+
+processCountMax :: Instance.T s -> Int
+processCountMax Instance.T{Instance.processCountMax = processCountMax'} =
+    processCountMax'
+
+processCountMin :: Instance.T s -> Int
+processCountMin Instance.T{Instance.processCountMin = processCountMin'} =
+    processCountMin'
+
+prefix :: Instance.T s -> ByteString
+prefix Instance.T{Instance.prefix = prefix'} =
+    prefix'
+
+timeoutInitialize :: Instance.T s -> Int
+timeoutInitialize Instance.T{Instance.timeoutInitialize = timeoutInitialize'} =
+    timeoutInitialize'
+
+timeoutAsync :: Instance.T s -> Int
+timeoutAsync Instance.T{Instance.timeoutAsync = timeoutAsync'} =
+    timeoutAsync'
+
+timeoutSync :: Instance.T s -> Int
+timeoutSync Instance.T{Instance.timeoutSync = timeoutSync'} =
+    timeoutSync'
+
+timeoutTerminate :: Instance.T s -> Int
+timeoutTerminate Instance.T{Instance.timeoutTerminate = timeoutTerminate'} =
+    timeoutTerminate'
 
 nullResponse :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
@@ -477,15 +725,15 @@ handleEvents messages api0 external cmd0 = do
             else
                 fail terminateError
         | cmd == messageReinit -> do
-            processCount <- Get.getWord32host
-            timeoutAsync <- Get.getWord32host
-            timeoutSync <- Get.getWord32host
+            processCount' <- Get.getWord32host
+            timeoutAsync' <- Get.getWord32host
+            timeoutSync' <- Get.getWord32host
             priorityDefault <- Get.getInt8
             requestTimeoutAdjustment <- Get.getWord8
             let api1 = Instance.reinit api0
-                    processCount
-                    timeoutAsync
-                    timeoutSync
+                    processCount'
+                    timeoutAsync'
+                    timeoutSync'
                     priorityDefault
                     requestTimeoutAdjustment
             empty <- Get.isEmpty
@@ -509,29 +757,29 @@ pollRequestDataGet messages api0 external = do
     cmd <- Get.getWord32host
     case () of
       _ | cmd == messageInit -> do
-            processIndex <- Get.getWord32host
-            processCount <- Get.getWord32host
-            processCountMax <- Get.getWord32host
-            processCountMin <- Get.getWord32host
+            processIndex' <- Get.getWord32host
+            processCount' <- Get.getWord32host
+            processCountMax' <- Get.getWord32host
+            processCountMin' <- Get.getWord32host
             prefixSize <- Get.getWord32host
-            prefix <- Get.getByteString $ fromIntegral prefixSize - 1
+            prefix' <- Get.getByteString $ fromIntegral prefixSize - 1
             Get.skip 1
-            timeoutInitialize <- Get.getWord32host
-            timeoutAsync <- Get.getWord32host
-            timeoutSync <- Get.getWord32host
-            timeoutTerminate <- Get.getWord32host
+            timeoutInitialize' <- Get.getWord32host
+            timeoutAsync' <- Get.getWord32host
+            timeoutSync' <- Get.getWord32host
+            timeoutTerminate' <- Get.getWord32host
             priorityDefault <- Get.getInt8
             requestTimeoutAdjustment <- Get.getWord8
             let api1 = Instance.init api0
-                    processIndex
-                    processCount
-                    processCountMax
-                    processCountMin
-                    prefix
-                    timeoutInitialize
-                    timeoutAsync
-                    timeoutSync
-                    timeoutTerminate
+                    processIndex'
+                    processCount'
+                    processCountMax'
+                    processCountMin'
+                    prefix'
+                    timeoutInitialize'
+                    timeoutAsync'
+                    timeoutSync'
+                    timeoutTerminate'
                     priorityDefault
                     requestTimeoutAdjustment
             empty <- Get.isEmpty
@@ -608,10 +856,10 @@ pollRequestDataGet messages api0 external = do
             else
                 return (messages, api1)
         | cmd == messageSubscribeCount -> do
-            subscribeCount <- Get.getWord32host
+            subscribeCount' <- Get.getWord32host
             empty <- Get.isEmpty
             let api1 = Instance.setSubscribeCount api0
-                    subscribeCount
+                    subscribeCount'
             if not empty then
                 handleEvents messages api1 external 0
             else
@@ -619,15 +867,15 @@ pollRequestDataGet messages api0 external = do
         | cmd == messageTerm ->
             handleEvents messages api0 external cmd
         | cmd == messageReinit -> do
-            processCount <- Get.getWord32host
-            timeoutAsync <- Get.getWord32host
-            timeoutSync <- Get.getWord32host
+            processCount' <- Get.getWord32host
+            timeoutAsync' <- Get.getWord32host
+            timeoutSync' <- Get.getWord32host
             priorityDefault <- Get.getInt8
             requestTimeoutAdjustment <- Get.getWord8
             let api1 = Instance.reinit api0
-                    processCount
-                    timeoutAsync
-                    timeoutSync
+                    processCount'
+                    timeoutAsync'
+                    timeoutSync'
                     priorityDefault
                     requestTimeoutAdjustment
             empty <- Get.isEmpty
@@ -697,7 +945,7 @@ pollRequestLoop api0@Instance.T{
                 (pollTimerNew, timeoutNew) <- if timeout <= 0 then
                         return (0, timeout)
                     else
-                        timeoutAdjustment pollTimer timeout
+                        timeoutAdjustmentPoll pollTimer timeout
                 if timeout == 0 then
                     return $ Right (True, api2{Instance.timeout = Nothing})
                 else
@@ -744,6 +992,118 @@ poll :: Typeable.Typeable s =>
     Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
+
+send :: Instance.T s -> LazyByteString -> IO ()
+send Instance.T{
+      Instance.useHeader = False
+    , Instance.socketHandle = socketHandle} binary = do
+    LazyByteString.hPut socketHandle binary
+send Instance.T{
+      Instance.useHeader = True
+    , Instance.socketHandle = socketHandle} binary = do
+    let total = fromIntegral (LazyByteString.length binary) :: Word32
+    LazyByteString.hPut socketHandle (Builder.toLazyByteString $
+        Builder.word32BE total `Monoid.mappend`
+        Builder.lazyByteString binary)
+
+recvBuffer :: Builder -> Int -> Int -> Handle -> Int ->
+    IO (Builder, Int)
+recvBuffer bufferRecv bufferRecvSize recvSize socketHandle bufferSize
+    | recvSize <= bufferRecvSize =
+        return (bufferRecv, bufferRecvSize)
+    | otherwise = do
+        fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
+        recvBuffer
+            (bufferRecv `Monoid.mappend` Builder.byteString fragment)
+            (bufferRecvSize + ByteString.length fragment)
+            recvSize socketHandle bufferSize
+
+recvBufferAll :: Builder -> Int -> Handle -> Int ->
+    IO (Builder, Int)
+recvBufferAll bufferRecv bufferRecvSize socketHandle bufferSize = do
+    fragment <- ByteString.hGetNonBlocking socketHandle bufferSize
+    let fragmentSize = ByteString.length fragment
+        bufferRecvNew = bufferRecv `Monoid.mappend` Builder.byteString fragment
+        bufferRecvSizeNew = bufferRecvSize + fragmentSize
+    if fragmentSize == bufferSize then
+        recvBufferAll bufferRecvNew bufferRecvSizeNew socketHandle bufferSize
+    else
+        return (bufferRecv, bufferRecvSize)
+
+recv :: Instance.T s -> IO (LazyByteString, Int, Instance.T s)
+recv api0@Instance.T{
+      Instance.useHeader = False
+    , Instance.socketHandle = socketHandle
+    , Instance.bufferSize = bufferSize
+    , Instance.bufferRecv = bufferRecv
+    , Instance.bufferRecvSize = bufferRecvSize} = do
+    (bufferRecvAll,
+     bufferRecvAllSize) <- recvBufferAll
+        bufferRecv bufferRecvSize socketHandle bufferSize
+    return $ (
+          Builder.toLazyByteString bufferRecvAll
+        , bufferRecvAllSize
+        , api0{
+              Instance.bufferRecv = Monoid.mempty
+            , Instance.bufferRecvSize = 0})
+recv api0@Instance.T{
+      Instance.useHeader = True
+    , Instance.socketHandle = socketHandle
+    , Instance.bufferSize = bufferSize
+    , Instance.bufferRecv = bufferRecv
+    , Instance.bufferRecvSize = bufferRecvSize} = do
+    (bufferRecvHeader, bufferRecvHeaderSize) <- recvBuffer
+        bufferRecv bufferRecvSize 4 socketHandle bufferSize
+    let header0 = Builder.toLazyByteString bufferRecvHeader
+        Just (byte0, header1) = LazyByteString.uncons header0
+        Just (byte1, header2) = LazyByteString.uncons header1
+        Just (byte2, header3) = LazyByteString.uncons header2
+        Just (byte3, headerRemaining) = LazyByteString.uncons header3
+        total = fromIntegral $
+            (fromIntegral byte0 :: Word32) `shiftL` 24 .|.
+            (fromIntegral byte1 :: Word32) `shiftL` 16 .|.
+            (fromIntegral byte2 :: Word32) `shiftL` 8 .|.
+            (fromIntegral byte3 :: Word32) :: Int
+    (bufferRecvAll, bufferRecvAllSize) <- recvBuffer
+        (Builder.lazyByteString headerRemaining)
+        (bufferRecvHeaderSize - 4) total socketHandle bufferSize
+    let bufferRecvAllStr = Builder.toLazyByteString bufferRecvAll
+        (bufferRecvData, bufferRecvNew) =
+            LazyByteString.splitAt (fromIntegral total) bufferRecvAllStr
+    return $ (
+          bufferRecvData
+        , total
+        , api0{
+              Instance.bufferRecv = Builder.lazyByteString bufferRecvNew
+            , Instance.bufferRecvSize = bufferRecvAllSize - total})
+
+timeoutAdjustment :: Clock.NominalDiffTime -> Int ->
+    IO (Int)
+timeoutAdjustment t0 timeout = do
+    t1 <- POSIX.getPOSIXTime
+    if t1 <= t0 then
+        return timeout
+    else
+        let elapsed = floor ((t1 - t0) * 1000) :: Integer
+            timeoutValue = fromIntegral timeout :: Integer in
+        if elapsed >= timeoutValue then
+            return 0
+        else
+            return $ fromIntegral $ timeoutValue - elapsed
+
+timeoutAdjustmentPoll :: Clock.NominalDiffTime -> Int ->
+    IO (Clock.NominalDiffTime, Int)
+timeoutAdjustmentPoll t0 timeout = do
+    t1 <- POSIX.getPOSIXTime
+    if t1 <= t0 then
+        return (t1, timeout)
+    else
+        let elapsed = floor ((t1 - t0) * 1000) :: Integer
+            timeoutValue = fromIntegral timeout :: Integer in
+        if elapsed >= timeoutValue then
+            return (t1, 0)
+        else
+            return (t1, fromIntegral $ timeoutValue - elapsed)
 
 threadList :: Concurrent.MVar [Concurrent.MVar ()]
 threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])
