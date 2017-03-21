@@ -137,7 +137,7 @@ data T s = T
     deriving (Typeable.Typeable)
 
 instance Show (T s) where
-    show _ = "(CloudI.T s)"
+    show _ = ""
 
 makeSocket :: String -> C.CInt -> IO Socket
 makeSocket "local" fd =
