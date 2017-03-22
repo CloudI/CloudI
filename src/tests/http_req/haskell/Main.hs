@@ -57,7 +57,7 @@ type Source = CloudI.Source
 request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-request_ requestType name pattern _ request timeout _ transId pid state api =
+request_ type_ name pattern _ request timeout _ transId pid state api =
     let httpQs = CloudI.requestHttpQsParse request 
         value = Map.lookup (Char8.pack "value") httpQs >>=
             (\l -> Just (read (Char8.unpack $ head l) :: Integer))
@@ -68,7 +68,7 @@ request_ requestType name pattern _ request timeout _ transId pid state api =
                 "<http_test><value>" ++ (show i) ++ "</value></http_test>"
     in do
     CloudI.return_ api
-        requestType name pattern ByteString.empty response timeout transId pid
+        type_ name pattern ByteString.empty response timeout transId pid
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()

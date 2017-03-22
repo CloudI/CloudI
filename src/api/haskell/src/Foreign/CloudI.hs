@@ -86,6 +86,7 @@ module Foreign.CloudI
 import Prelude hiding (init,length)
 import Data.Bits (shiftL,(.|.))
 import Data.Maybe (fromMaybe)
+import Data.Typeable (Typeable)
 import qualified Control.Exception as Exception
 import qualified Control.Concurrent as Concurrent
 import qualified Data.Array.IArray as IArray
@@ -100,7 +101,6 @@ import qualified Data.Monoid as Monoid
 import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
 import qualified Data.Time.Clock.POSIX as POSIX (getPOSIXTime)
-import qualified Data.Typeable as Typeable
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang as Erlang
@@ -165,9 +165,9 @@ data Exception s =
     | ReturnAsync (Instance.T s)
     | ForwardSync (Instance.T s)
     | ForwardAsync (Instance.T s)
-    deriving (Show, Typeable.Typeable)
+    deriving (Show, Typeable)
 
-instance Typeable.Typeable s => Exception.Exception (Exception s)
+instance Typeable s => Exception.Exception (Exception s)
 
 printException :: String -> IO ()
 printException str =
@@ -185,7 +185,7 @@ data CallbackResult s =
 
 type Result a = Either String a
 
-api :: Typeable.Typeable s => Int -> s ->
+api :: Typeable s => Int -> s ->
     IO (Result (Instance.T s))
 api threadIndex state = do
     SysIO.hSetEncoding SysIO.stdout SysIO.utf8
@@ -241,7 +241,7 @@ subscribe api0 pattern f =
             send api0 subscribeBinary
             return $ Right $ Instance.callbacksAdd api0 pattern f
 
-subscribeCount :: Typeable.Typeable s => Instance.T s -> ByteString ->
+subscribeCount :: Typeable s => Instance.T s -> ByteString ->
     IO (Result (Int, Instance.T s))
 subscribeCount api0 pattern =
     let subscribeCountTerms = Erlang.OtpErlangTuple
@@ -274,7 +274,7 @@ unsubscribe api0 pattern =
             send api0 unsubscribeBinary
             return $ Right $ Instance.callbacksRemove api0 pattern
 
-sendAsync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+sendAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, Instance.T s))
 sendAsync api0@Instance.T{
@@ -304,7 +304,7 @@ sendAsync api0@Instance.T{
                 Right (_, api1@Instance.T{Instance.transId = transId}) ->
                     return $ Right (transId, api1)
 
-sendSync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+sendSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
 sendSync api0@Instance.T{
@@ -337,7 +337,7 @@ sendSync api0@Instance.T{
                     , Instance.transId = transId}) ->
                     return $ Right (responseInfo, response, transId, api1)
 
-mcastAsync :: Typeable.Typeable s => Instance.T s -> ByteString -> ByteString ->
+mcastAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (Array Int ByteString, Instance.T s))
 mcastAsync api0@Instance.T{
@@ -367,7 +367,7 @@ mcastAsync api0@Instance.T{
                 Right (_, api1@Instance.T{Instance.transIds = transIds}) ->
                     return $ Right (transIds, api1)
 
-forward_ :: Typeable.Typeable s =>
+forward_ :: Typeable s =>
     Instance.T s -> Instance.RequestType -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
@@ -402,7 +402,7 @@ forwardAsyncI api0@Instance.T{
             send api0 forwardBinary
             return $ Right api0
 
-forwardAsync :: Typeable.Typeable s => Instance.T s -> ByteString ->
+forwardAsync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
 forwardAsync api0 name responseInfo response timeout priority transId pid = do
@@ -442,7 +442,7 @@ forwardSyncI api0@Instance.T{
             send api0 forwardBinary
             return $ Right api0
 
-forwardSync :: Typeable.Typeable s => Instance.T s -> ByteString ->
+forwardSync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
 forwardSync api0 name responseInfo response timeout priority transId pid = do
@@ -454,7 +454,7 @@ forwardSync api0 name responseInfo response timeout priority transId pid = do
         Right api1 ->
             Exception.throwIO $ ForwardSync api1
 
-return_ :: Typeable.Typeable s =>
+return_ :: Typeable s =>
     Instance.T s -> Instance.RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
@@ -489,8 +489,7 @@ returnAsyncI api0@Instance.T{
             send api0 returnBinary
             return $ Right api0
 
-returnAsync :: Typeable.Typeable s =>
-    Instance.T s -> ByteString -> ByteString ->
+returnAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
 returnAsync api0 name pattern responseInfo response timeout transId pid = do
@@ -530,8 +529,7 @@ returnSyncI api0@Instance.T{
             send api0 returnBinary
             return $ Right api0
 
-returnSync :: Typeable.Typeable s =>
-    Instance.T s -> ByteString -> ByteString ->
+returnSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
 returnSync api0 name pattern responseInfo response timeout transId pid = do
@@ -543,7 +541,7 @@ returnSync api0 name pattern responseInfo response timeout transId pid = do
         Right api1 ->
             Exception.throwIO $ ReturnSync api1
 
-recvAsync :: Typeable.Typeable s => Instance.T s ->
+recvAsync :: Typeable s => Instance.T s ->
     Maybe Int -> Maybe ByteString -> Maybe Bool ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
 recvAsync api0@Instance.T{Instance.timeoutSync = timeoutSync'}
@@ -614,7 +612,7 @@ nullResponse :: RequestType -> ByteString -> ByteString ->
 nullResponse _ _ _ _ _ _ _ _ _ state api0 =
     return $ Instance.Null (state, api0)
 
-callback :: Typeable.Typeable s => Instance.T s ->
+callback :: Typeable s => Instance.T s ->
     (RequestType, ByteString, ByteString, ByteString, ByteString,
      Int, Int, ByteString, Source) -> IO (Result (Instance.T s))
 callback api0@Instance.T{
@@ -916,7 +914,7 @@ pollRequestDataGet messages api0 external = do
         | otherwise ->
             fail messageDecodingError
 
-pollRequestDataProcess :: Typeable.Typeable s => [Message] -> Instance.T s ->
+pollRequestDataProcess :: Typeable s => [Message] -> Instance.T s ->
     IO (Result (Instance.T s))
 pollRequestDataProcess [] api0 =
     return $ Right api0
@@ -938,8 +936,7 @@ pollRequestDataProcess (message:messages) api0 =
                     send api0 aliveBinary
                     pollRequestDataProcess messages api0
 
-pollRequestData :: Typeable.Typeable s =>
-    Instance.T s -> Bool -> LazyByteString ->
+pollRequestData :: Typeable s => Instance.T s -> Bool -> LazyByteString ->
     IO (Result (Instance.T s))
 pollRequestData api0 external dataIn =
     case Get.runGetOrFail (pollRequestDataGet [] api0 external) dataIn of
@@ -948,7 +945,7 @@ pollRequestData api0 external dataIn =
         Right (_, _, (messages, api1)) ->
             pollRequestDataProcess (List.reverse messages) api1
 
-pollRequestLoop :: Typeable.Typeable s =>
+pollRequestLoop :: Typeable s =>
     Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
     IO (Result (Bool, Instance.T s))
 pollRequestLoop api0@Instance.T{
@@ -974,7 +971,7 @@ pollRequestLoop api0@Instance.T{
                 else
                     pollRequestLoop api2 timeoutNew external pollTimerNew
 
-pollRequestLoopBegin :: Typeable.Typeable s =>
+pollRequestLoopBegin :: Typeable s =>
     Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
     IO (Result (Bool, Instance.T s))
 pollRequestLoopBegin api0 timeout external pollTimer = do
@@ -985,8 +982,7 @@ pollRequestLoopBegin api0 timeout external pollTimer = do
         Right success ->
             return success
 
-pollRequest :: Typeable.Typeable s =>
-    Instance.T s -> Int -> Bool ->
+pollRequest :: Typeable s => Instance.T s -> Int -> Bool ->
     IO (Result (Bool, Instance.T s))
 pollRequest api0@Instance.T{
       Instance.initializationComplete = initializationComplete
@@ -1011,8 +1007,7 @@ pollRequest api0@Instance.T{
         else
             pollRequestLoopBegin api0 timeout external pollTimer
 
-poll :: Typeable.Typeable s =>
-    Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
+poll :: Typeable s => Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
 

@@ -97,6 +97,8 @@ Optional (default="no"):
 * `Go >= 1.6`
   * `(golang/Ubuntu, go/macports)`
   * Use the "--enable-go-support" configure flag to enable
+* `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
+  * Use the "--enable-haskell-support" configure flag to enable
 * `OCaml >= 4.03.0`
   * Use the "--enable-ocaml-support" configure flag to enable
 * `ZeroMQ >= 3.x.x or 2.x.x`

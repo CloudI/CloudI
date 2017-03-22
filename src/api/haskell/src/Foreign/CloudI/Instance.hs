@@ -59,6 +59,7 @@ module Foreign.CloudI.Instance
     ) where
 
 import Prelude hiding (init)
+import Data.Typeable (Typeable)
 import qualified Data.Array.IArray as IArray
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Builder as Builder
@@ -67,7 +68,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
-import qualified Data.Typeable as Typeable
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang.Pid as Erlang
@@ -106,7 +106,7 @@ data Response s =
     | Forward_ (ByteString, ByteString, ByteString, Int, Int, s, T s)
     | Null (s, T s)
     | NullError (String, s, T s)
-    deriving (Show, Typeable.Typeable)
+    deriving (Show, Typeable)
 
 data T s = T
     { state :: !s
@@ -138,7 +138,7 @@ data T s = T
     , transIds :: !(Array Int ByteString)
     , subscribeCount :: !Int
     }
-    deriving (Typeable.Typeable)
+    deriving (Typeable)
 
 instance Show (T s) where
     show _ = ""
