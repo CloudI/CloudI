@@ -79,6 +79,8 @@ module Foreign.CloudI
     , poll
     , threadCreate
     , threadsWait
+    , requestHttpQsParse
+    , infoKeyValueParse
     ) where
 
 import Prelude hiding (init,length)
@@ -93,7 +95,7 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.List as List
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Sequence as Sequence
 import qualified Data.Time.Clock as Clock
@@ -112,6 +114,7 @@ type ByteString = ByteString.ByteString
 type Get = Get.Get
 type Handle = SysIO.Handle
 type LazyByteString = LazyByteString.ByteString
+type Map = Map.Map
 type RequestType = Instance.RequestType
 type SomeException = Exception.SomeException
 type Source = Instance.Source
@@ -814,8 +817,10 @@ pollRequestDataGet messages api0 external = do
             Get.skip 1
             requestInfoSize <- Get.getWord32host
             requestInfo <- Get.getByteString $ fromIntegral requestInfoSize
+            Get.skip 1
             requestSize <- Get.getWord32host
             request <- Get.getByteString $ fromIntegral requestSize
+            Get.skip 1
             timeout <- Get.getWord32host
             priority <- Get.getInt8
             transId <- Get.getByteString 16
@@ -1152,4 +1157,27 @@ threadsWait = do
             Concurrent.putMVar threadList remaining
             Concurrent.takeMVar done
             threadsWait
+
+textKeyValueParse :: ByteString -> Map ByteString [ByteString]
+textKeyValueParse text =
+    let loop m [] = m
+        loop m [v] =
+            if v == ByteString.empty then
+                m
+            else
+                error "not text_pairs"
+        loop m (k:(v:l')) =
+            case Map.lookup k m of
+                Nothing ->
+                    loop (Map.insert k [v] m) l'
+                Just v' ->
+                    loop (Map.insert k (v:v') m) l'
+    in
+    loop Map.empty (Char8.split '\0' text)
+
+requestHttpQsParse :: ByteString -> Map ByteString [ByteString]
+requestHttpQsParse = textKeyValueParse
+
+infoKeyValueParse :: ByteString -> Map ByteString [ByteString]
+infoKeyValueParse = textKeyValueParse
 

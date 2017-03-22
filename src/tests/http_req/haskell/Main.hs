@@ -45,24 +45,67 @@ module Main where
 
 import System.Exit (ExitCode(ExitFailure),exitWith)
 import qualified Control.Concurrent as Concurrent
+import qualified Data.ByteString as ByteString
+import qualified Data.ByteString.Char8 as Char8
+import qualified Data.Map.Strict as Map
 import qualified System.IO as SysIO
 import qualified Foreign.CloudI as CloudI
+type ByteString = ByteString.ByteString
+type RequestType = CloudI.RequestType
+type Source = CloudI.Source
+
+request_ :: RequestType -> ByteString -> ByteString ->
+    ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
+    () -> CloudI.T () -> IO (CloudI.Response ())
+request_ requestType name pattern _ request timeout _ transId pid state api =
+    let httpQs = CloudI.requestHttpQsParse request 
+        value = Map.lookup (Char8.pack "value") httpQs >>=
+            (\l -> Just (read (Char8.unpack $ head l) :: Integer))
+        response = Char8.pack $ case value of
+            Nothing ->
+                "<http_test><error>no value specified</error></http_test>"
+            Just (i) ->
+                "<http_test><value>" ++ (show i) ++ "</value></http_test>"
+    in do
+    CloudI.return_ api
+        requestType name pattern ByteString.empty response timeout transId pid
+    return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()
 task threadIndex = do
+    let prerr = SysIO.hPutStrLn SysIO.stderr
+        prout = putStrLn
     apiValue <- CloudI.api threadIndex ()
     case apiValue of
-        Left err -> do
-            SysIO.hPutStrLn SysIO.stderr err
-        Right api -> do
-            pollValue <- CloudI.poll api (-1)
-            case pollValue of
-                Left err -> do
-                    SysIO.hPutStrLn SysIO.stderr err
-                Right (True, _) -> do
-                    SysIO.hPutStrLn SysIO.stderr "invalid timeout"
-                Right (False, _) -> do
-                    putStrLn "terminate http_req haskell"
+        Left err ->
+            prerr err
+        Right api0 -> do
+            let suffix = Char8.pack "haskell.xml/get"
+            countValue0 <- CloudI.subscribeCount api0 suffix
+            case countValue0 of
+                Left err ->
+                    prerr err
+                Right (0, api1) -> do
+                    subscribeValue <- CloudI.subscribe api1 suffix request_
+                    case subscribeValue of
+                        Left err ->
+                            prerr err
+                        Right api2 -> do
+                            countValue1 <- CloudI.subscribeCount api2 suffix
+                            case countValue1 of
+                                Left err ->
+                                    prerr err
+                                Right (1, api3) -> do
+                                    pollValue <- CloudI.poll api3 (-1)
+                                    case pollValue of
+                                        Left err ->
+                                            prerr err
+                                        Right (_, _) ->
+                                            prout "terminate http_req haskell"
+                                Right (_, _) ->
+                                    prerr "subscribe_count /= 1"
+                Right (_, _) ->
+                    prerr "subscribe_count /= 0"
 
 main :: IO ()
 main = do
