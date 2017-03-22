@@ -310,6 +310,7 @@
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
         [{nice, 15}]},
 @CONFIG_TESTS_GO_COUNT@
+@CONFIG_TESTS_HASKELL_COUNT@
 @CONFIG_TESTS_OCAML_COUNT@
     {external,
         "/tests/count/",
@@ -383,8 +384,8 @@
         none, 5000, 5000, 5000, undefined, undefined, 4, 5, 300,
         []},
 @CONFIG_TESTS_GO_HTTP_REQ@
-@CONFIG_TESTS_OCAML_HTTP_REQ@
 @CONFIG_TESTS_HASKELL_HTTP_REQ@
+@CONFIG_TESTS_OCAML_HTTP_REQ@
     {external,
         "/tests/http_req/",
         "tests/http_req/priv/http_req", "",
