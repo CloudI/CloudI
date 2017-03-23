@@ -23,15 +23,15 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `Python >= 2.7.0`
 * `Ruby >= 1.9.0`
 
-C/C++, Go, Java, Javascript, OCaml, Perl, PHP, Python, and Ruby all have an
-implementation of the CloudI API that is completely done in that programming
-language (to avoid extra complexity).  Python does have a Python with C
-integration CloudI API that is the Python module `cloudi_c`
-(instead of the Python module `cloudi`).  Any use of the CloudI API
-in these programming languages (that are not running in the Erlang VM,
-i.e., "external" services) is executed as separate OS processes with separate
-threads (using any native threading library) with CloudI as the application
-server.
+C/C++, Go, Haskell, Java, Javascript, OCaml, Perl, PHP, Python, and Ruby
+all have an implementation of the CloudI API that is completely done in that
+programming language (to avoid extra complexity).
+Python does have a Python with C integration CloudI API that is the
+Python module `cloudi_c` (instead of the Python module `cloudi`).
+Any use of the CloudI API in these programming languages
+(that are not running in the Erlang VM, i.e., "external" services)
+is executed as separate OS processes with separate threads
+(using any native threading library) with CloudI as the application server.
 
 Erlang (or Elixir) integration uses the `cloudi_service` behavior to
 create "internal" CloudI services.  Typically, the module name implementing
