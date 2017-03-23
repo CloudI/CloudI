@@ -14,6 +14,7 @@ fault-tolerance, messaging, dynamic configuration, and other features.
 * `Elixir`
 * `Erlang >= 19.0`
 * `Go >= 1.6`
+* `Haskell (GHC >= 7.10.3 and cabal-install >= 1.22)`
 * `Java`
 * `Javascript/node.js >= 0.8.0`
 * `OCaml >= 4.03.0`
@@ -45,6 +46,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [C/C++](http://cloudi.org/faq.html#6_C)
 
+* [`src/tests/count` (C, no threads) Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/c_src/main.c)
 * [`src/tests/http_req` (C, no threads) Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c)
 * [`src/tests/msg_size` (C++, no threads) Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx_src/main.cpp)
 * [`src/tests/messaging` (C++, threads) Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx_src/main.cpp)
@@ -53,6 +55,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Erlang](http://cloudi.org/faq.html#6_Erlang)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/src/cloudi_service_count.erl)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/src/cloudi_service_msg_size.erl)
 * `src/tests/messaging` Basic Messaging Test ([Sequence 1](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence1.erl), [Sequence 2](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence2.erl), [Sequence 3](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence3.erl), [Sequence 4](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence4.erl))
@@ -61,13 +64,23 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Go](http://cloudi.org/faq.html#6_Go)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/gopath/src/count_go/main.go)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/gopath/src/http_req_go/main.go)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/gopath/src/msg_size_go/main.go)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/gopath/src/messaging_go/main.go)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/gopath/src/null_go/main.go)
 
+#### Haskell
+
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/haskell/Main.hs)
+* [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/haskell/Main.hs)
+* [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/haskell/Main.hs)
+* [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/haskell/Main.hs)
+* [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/null/haskell/Main.hs)
+
 #### [Java](http://cloudi.org/faq.html#6_Java)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/org/cloudi/tests/count/Task.java)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/org/cloudi/tests/msg_size/Task.java)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/org/cloudi/tests/messaging/Task.java)
@@ -75,6 +88,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Javascript](http://cloudi.org/faq.html#6_JavaScript)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/count.js)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.js)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.js)
@@ -82,6 +96,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### OCaml
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/ocaml/main.ml)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/http_req/ocaml/main.ml)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/msg_size/ocaml/main.ml)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/messaging/ocaml/main.ml)
@@ -89,6 +104,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Perl](http://cloudi.org/faq.html#6_Perl)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/count.pl)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.pl)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/MessagingTask.pm)
@@ -96,6 +112,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [PHP](http://cloudi.org/faq.html#6_PHP)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/count.php)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.php)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php)
@@ -103,6 +120,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Python](http://cloudi.org/faq.html#6_Python)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/count.py)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.py)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py)
@@ -110,6 +128,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 #### [Ruby](http://cloudi.org/faq.html#6_Ruby)
 
+* [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/develop/src/tests/count/count.rb)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb)
 * [`src/tests/msg_size` Basic Message Size (Forwarding) Test](https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.rb)
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.rb)
