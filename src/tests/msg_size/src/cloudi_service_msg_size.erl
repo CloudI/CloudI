@@ -65,7 +65,7 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(SUFFIXES_OPTIONAL, ["go", "ocaml"]).
+-define(SUFFIXES_OPTIONAL, ["go", "haskell", "ocaml"]).
 
 -record(state,
     {
@@ -136,7 +136,7 @@ aspect_terminate(_, _, #state{service = Service,
 
 cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
     State0 = #state{service = ?MODULE},
-    StateN = lists:foldl(fun(Suffix, #state{suffixes = L} = State1) ->
+    State2 = lists:foldl(fun(Suffix, #state{suffixes = L} = State1) ->
         case cloudi_service:get_pid(Dispatcher, Prefix ++ Suffix, limit_min) of
             {ok, _} ->
                 State1#state{suffixes = L ++ [Suffix]};
@@ -144,6 +144,8 @@ cloudi_service_init(_Args, Prefix, _Timeout, Dispatcher) ->
                 State1
         end
     end, State0, ?SUFFIXES_OPTIONAL),
+    #state{suffixes = Suffixes} = State2,
+    StateN = #state{suffixes = lists:sort(Suffixes)},
     cloudi_service:subscribe(Dispatcher, "erlang"),
     {ok, StateN}.
 

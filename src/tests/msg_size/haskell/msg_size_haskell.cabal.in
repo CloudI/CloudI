@@ -1,7 +1,7 @@
-name:                HttpReq
+name:                MsgSize
 version:             @VERSION@
-synopsis:            Haskell http_req CloudI Integration Test
-description:         Haskell http_req CloudI Integration Test
+synopsis:            Haskell msg_size CloudI Integration Test
+description:         Haskell msg_size CloudI Integration Test
 homepage:            https://github.com/CloudI/CloudI/
 license:             BSD4
 license-file:        ../../../LICENSE
@@ -13,12 +13,12 @@ stability:           provisional
 build-type:          Simple
 cabal-version:       >= 1.22
 
-executable           http_req_haskell
+executable           msg_size_haskell
   main-is:           Main.hs
   ghc-options:       -Wall -Werror -funbox-strict-fields -threaded
   build-depends:       base >= 4.8.2.0
                      , cloudi == @VERSION@
                      , bytestring
-                     , containers
+                     , binary
   default-language:  Haskell2010
 

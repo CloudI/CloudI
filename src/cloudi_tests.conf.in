@@ -1078,6 +1078,7 @@
     %     {nice, 15}]},
     % msg_size tests can not use the udp protocol with the default buffer size
 @CONFIG_TESTS_GO_MSG_SIZE@
+@CONFIG_TESTS_HASKELL_MSG_SIZE@
 @CONFIG_TESTS_OCAML_MSG_SIZE@
     {internal,
         "/tests/msg_size/",

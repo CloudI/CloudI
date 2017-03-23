@@ -48,8 +48,8 @@ import System.Exit (ExitCode(ExitFailure),exitWith)
 import qualified Control.Concurrent as Concurrent
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
-import qualified System.IO as SysIO
 import qualified Foreign.CloudI as CloudI
+import qualified System.IO as SysIO
 type ByteString = ByteString.ByteString
 type RequestType = CloudI.RequestType
 type Source = CloudI.Source

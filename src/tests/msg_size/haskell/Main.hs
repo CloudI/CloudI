@@ -45,30 +45,40 @@ module Main where
 
 import System.Exit (ExitCode(ExitFailure),exitWith)
 import qualified Control.Concurrent as Concurrent
+import qualified Data.Binary.Builder as Builder
+import qualified Data.Binary.Get as Get
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Char8 as Char8
-import qualified Data.Map.Strict as Map
+import qualified Data.ByteString.Lazy as LazyByteString
+import qualified Data.Monoid as Monoid
 import qualified Foreign.CloudI as CloudI
 import qualified System.IO as SysIO
 type ByteString = ByteString.ByteString
 type RequestType = CloudI.RequestType
 type Source = CloudI.Source
 
+destination_ :: String
+destination_ = "/tests/msg_size/erlang"
+
 request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-request_ type_ name pattern _ request timeout _ transId pid state api =
-    let httpQs = CloudI.requestHttpQsParse request 
-        value = Map.lookup (Char8.pack "value") httpQs >>=
-            (\l -> Just (read (Char8.unpack $ head l) :: Integer))
-        response = Char8.pack $ case value of
-            Nothing ->
-                "<http_test><error>no value specified</error></http_test>"
-            Just (i) ->
-                "<http_test><value>" ++ (show i) ++ "</value></http_test>"
+request_ type_ _ _ requestInfo request timeout priority transId pid state api =
+    let destination = Char8.pack destination_
+        decode = do
+            i <- Get.getWord32host
+            remaining <- Get.getRemainingLazyByteString
+            return (fromIntegral i :: Int, remaining)
+        (i0, extra) = Get.runGet decode $ LazyByteString.fromStrict request
+        i1 = if i0 == 4294967295 then 0 else i0 + 1
+        requestNew = LazyByteString.toStrict $ Builder.toLazyByteString $
+            (Builder.putWord32host $ fromIntegral i1) `Monoid.mappend`
+            (Builder.fromLazyByteString extra)
     in do
-    CloudI.return_ api
-        type_ name pattern ByteString.empty response timeout transId pid
+    putStrLn $ "forward #" ++ (show i1) ++ " haskell to " ++ destination_ ++
+        " (with timeout " ++ (show timeout) ++ " ms)"
+    CloudI.forward_ api
+        type_ destination requestInfo requestNew timeout priority transId pid
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()
@@ -80,32 +90,18 @@ task threadIndex = do
         Left err ->
             prerr err
         Right api0 -> do
-            let suffix = Char8.pack "haskell.xml/get"
-            countValue0 <- CloudI.subscribeCount api0 suffix
-            case countValue0 of
+            let suffix = Char8.pack "haskell"
+            subscribeValue <- CloudI.subscribe api0 suffix request_
+            case subscribeValue of
                 Left err ->
                     prerr err
-                Right (0, api1) -> do
-                    subscribeValue <- CloudI.subscribe api1 suffix request_
-                    case subscribeValue of
+                Right api1 -> do
+                    pollValue <- CloudI.poll api1 (-1)
+                    case pollValue of
                         Left err ->
                             prerr err
-                        Right api2 -> do
-                            countValue1 <- CloudI.subscribeCount api2 suffix
-                            case countValue1 of
-                                Left err ->
-                                    prerr err
-                                Right (1, api3) -> do
-                                    pollValue <- CloudI.poll api3 (-1)
-                                    case pollValue of
-                                        Left err ->
-                                            prerr err
-                                        Right (_, _) ->
-                                            prout "terminate http_req haskell"
-                                Right (_, _) ->
-                                    prerr "subscribe_count /= 1"
-                Right (_, _) ->
-                    prerr "subscribe_count /= 0"
+                        Right (_, _) ->
+                            prout "terminate msg_size haskell"
 
 main :: IO ()
 main = do

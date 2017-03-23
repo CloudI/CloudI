@@ -4,6 +4,7 @@
 2017-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the count integration test in Haskell
+    * Add the msg_size integration test in Haskell
 
 2017-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
