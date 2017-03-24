@@ -87,8 +87,8 @@
     float().
 
 float() ->
-    <<I:56/integer>> = rand_bytes(7),
-    I / ?BITS56.
+    <<I:53/unsigned-integer, _:3>> = rand_bytes(7),
+    I * ?BITS53_INV.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -100,8 +100,8 @@ float() ->
     {float(), state()}.
 
 float(State) ->
-    {<<I:56/integer>>, NewState} = rand_bytes(7, State),
-    {I / ?BITS56, NewState}.
+    {<<I:53/unsigned-integer, _:3>>, NewState} = rand_bytes(7, State),
+    {I * ?BITS53_INV, NewState}.
 
 %%-------------------------------------------------------------------------
 %% @doc

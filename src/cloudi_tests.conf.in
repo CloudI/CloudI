@@ -1226,6 +1226,7 @@
          {scope, cloudi_service_msg_size},
          {nice, 15}]},
 @CONFIG_TESTS_GO_MESSAGING@
+@CONFIG_TESTS_HASKELL_MESSAGING@
 @CONFIG_TESTS_OCAML_MESSAGING@
     {external,
         "/tests/messaging/perl/",

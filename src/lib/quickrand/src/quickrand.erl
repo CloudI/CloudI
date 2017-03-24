@@ -293,9 +293,9 @@ strong_uniform(N) when is_integer(N), N > 1 ->
 
 strong_float() ->
     % 53 bits maximum for double precision floating point representation
-    % erlang:round(53.0 / 8) == 7 bytes for random number
-    <<I:56/integer>> = crypto:strong_rand_bytes(7),
-    I / ?BITS56. % scaled by maximum random number (2 ^ (7 * 8)) - 1
+    % (not using more than 53 bits to avoid rounding)
+    <<I:53/unsigned-integer, _:3>> = crypto:strong_rand_bytes(7),
+    I * ?BITS53_INV.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

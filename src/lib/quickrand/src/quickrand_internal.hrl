@@ -43,7 +43,8 @@
 
 -define(APPLICATION, quickrand).
 
--define(BITS56, 16#ffffffffffffff). % max 7 byte unsigned integer
+% ?BITS53_INV is slightly less than (DBL_EPSILON / 2) to provide [0.0 .. 1.0]
+-define(BITS53_INV, 1.1102230246251568e-16).  % 1 / 16#1fffffffffffff
 
 -define(BYTES_RESOLUTION, 4). % bytes
 

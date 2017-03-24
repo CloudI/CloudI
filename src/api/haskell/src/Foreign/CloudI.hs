@@ -847,8 +847,10 @@ pollRequestDataGet messages api0 external = do
         | cmd == messageRecvAsync || cmd == messageReturnSync -> do
             responseInfoSize <- Get.getWord32host
             responseInfo <- Get.getByteString $ fromIntegral responseInfoSize
+            Get.skip 1
             responseSize <- Get.getWord32host
             response <- Get.getByteString $ fromIntegral responseSize
+            Get.skip 1
             transId <- Get.getByteString 16
             empty <- Get.isEmpty
             let api1 = Instance.setResponse api0
