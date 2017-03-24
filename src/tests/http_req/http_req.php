@@ -74,7 +74,7 @@ class Task //extends \Thread
                             $request_info, $request,
                             $timeout, $priority, $trans_id, $pid)
     {
-        $http_qs = $this->api->request_http_qs_parse($request);
+        $http_qs = $this->api->info_key_value_parse($request);
         if (! isset($http_qs['value']))
         {
             $response =

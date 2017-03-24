@@ -953,11 +953,6 @@ class API
         return $result;
     }
 
-    public function request_http_qs_parse($request)
-    {
-        return $this->text_key_value_parse($request);
-    }
-
     public function info_key_value_parse($message_info)
     {
         return $this->text_key_value_parse($message_info);

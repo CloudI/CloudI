@@ -71,7 +71,7 @@ Task.prototype.request = function (request_type, name, pattern,
                                    request_info, request,
                                    timeout, priority, trans_id, pid) {
     var Task = this;
-    var http_qs = Task._api.request_http_qs_parse(request);
+    var http_qs = Task._api.info_key_value_parse(request);
     var value = http_qs['value'];
     var response;
     if (value === undefined) {

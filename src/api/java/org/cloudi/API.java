@@ -1608,12 +1608,6 @@ public class API
     }
 
     public HashMap<String,
-                   ArrayList<String>> request_http_qs_parse(final byte[] r)
-    {
-        return binary_key_value_parse(r);
-    }
-
-    public HashMap<String,
                    ArrayList<String>> info_key_value_parse(final byte[] info)
     {
         return binary_key_value_parse(info);

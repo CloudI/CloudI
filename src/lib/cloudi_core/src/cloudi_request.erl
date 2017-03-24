@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2013-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,16 +44,15 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2013-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request).
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([external_format/2,
-         http_qs_parse/1]).
+-export([external_format/2]).
 
 % erlang_binary:
 %
@@ -167,24 +166,6 @@ external_format(Request, Format)
                              unpack(Request, [{map_format, ?MSGPACK_MAP}]),
             Incoming
     end.
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Parse HTTP Request query string data.===
-%% Only for GET query string data (when either cloudi_service_http_cowboy
-%% or cloudi_service_http_elli is configured with query_get_format
-%% equal to 'text_pairs').  POST request data that provides parameters
-%% (or GET query strings when query_get_format is equal to 'raw'
-%%  (the default)) can be parsed with cloudi_x_cow_qs:parse_qs/1 from cowlib.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec http_qs_parse(Request :: binary() |
-                               cloudi_key_value:key_values()) ->
-    Result :: dict:dict(cloudi_key_value:key(), cloudi_key_value:value()).
-
-http_qs_parse(Request) ->
-    cloudi_request_info:key_value_parse(Request).
 
 %%%------------------------------------------------------------------------
 %%% Private functions

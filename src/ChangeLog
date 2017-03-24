@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Remove the CloudI API helper function
+      request_http_qs_parse so only the helper function
+      info_key_value_parse is used (both functions do the same thing)
+      (Erlang requires using cloudi_request_info:key_value_parse/1 instead of
+       cloudi_request:http_qs_parse/1)
+
 2017-03-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update quickrand

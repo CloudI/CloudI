@@ -709,10 +709,6 @@ module CloudI
             return result
         end
 
-        def request_http_qs_parse(request)
-            return text_key_value_parse(request)
-        end
-
         def info_key_value_parse(message_info)
             return text_key_value_parse(message_info)
         end

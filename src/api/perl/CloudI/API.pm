@@ -1140,13 +1140,6 @@ sub _text_key_value_parse
     return %result;
 }
 
-sub request_http_qs_parse
-{
-    my $self = shift;
-    my ($request) = @_;
-    return $self->_text_key_value_parse($request);
-}
-
 sub info_key_value_parse
 {
     my $self = shift;

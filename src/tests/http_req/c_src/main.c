@@ -65,7 +65,7 @@ static void request(int const request_type,
                     cloudi_instance_t * api)
 {
     char response[128];
-    char const ** http_qs = cloudi_request_http_qs_parse(request, request_size);
+    char const ** http_qs = cloudi_info_key_value_parse(request, request_size);
     char const * value = 0;
     size_t i;
     for (i = 0; http_qs[i]; i += 2)
@@ -76,7 +76,7 @@ static void request(int const request_type,
             break;
         }
     }
-    cloudi_request_http_qs_destroy(http_qs);
+    cloudi_info_key_value_destroy(http_qs);
     if (value)
     {
         snprintf(response, sizeof(response),

@@ -1850,17 +1850,6 @@ static void text_key_value_destroy(char const ** p)
 
 // CloudI helper functions
 
-char const ** cloudi_request_http_qs_parse(void const * const request,
-                                           uint32_t const request_size)
-{
-    return text_key_value_parse(request, request_size);
-}
-
-void cloudi_request_http_qs_destroy(char const ** p)
-{
-    text_key_value_destroy(p);
-}
-
 char const ** cloudi_info_key_value_parse(void const * const message_info,
                                           uint32_t const message_info_size)
 {
@@ -2326,18 +2315,6 @@ int API::poll(int timeout) const
 {
     return cloudi_poll(m_api,
                        timeout);
-}
-
-char const ** API::request_http_qs_parse(void const * const request,
-                                         uint32_t const request_size) const
-{
-    return cloudi_request_http_qs_parse(request,
-                                        request_size);
-}
-
-void API::request_http_qs_destroy(char const ** p) const
-{
-    cloudi_request_http_qs_destroy(p);
 }
 
 char const ** API::info_key_value_parse(void const * const message_info,

@@ -1404,9 +1404,6 @@ let text_key_value_parse text : (string, string list) Hashtbl.t =
   in
   loop data
 
-let request_http_qs_parse request =
-  text_key_value_parse request
-
 let info_key_value_parse message_info =
   text_key_value_parse message_info
 

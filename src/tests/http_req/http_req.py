@@ -73,7 +73,7 @@ class Task(threading.Thread):
 
     def request(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
-        http_qs = self.__api.request_http_qs_parse(request)
+        http_qs = self.__api.info_key_value_parse(request)
         value = http_qs.get(b'value', None)
         if value is None:
             response = """\

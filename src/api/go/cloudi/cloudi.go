@@ -1306,11 +1306,6 @@ func (api *Instance) textKeyValueParse(text []byte) map[string][]string {
 	return result
 }
 
-// RequestHttpQsParse parses "text_pairs" from a HTTP GET query string
-func (api *Instance) RequestHttpQsParse(request []byte) map[string][]string {
-	return api.textKeyValueParse(request)
-}
-
 // InfoKeyValueParse parses "text_pairs" in service request info
 func (api *Instance) InfoKeyValueParse(messageInfo []byte) map[string][]string {
 	return api.textKeyValueParse(messageInfo)

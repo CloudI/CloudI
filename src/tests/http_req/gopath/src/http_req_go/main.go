@@ -49,7 +49,7 @@ import (
 )
 
 func request(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
-	httpQs := api.RequestHttpQsParse(request)
+	httpQs := api.InfoKeyValueParse(request)
 	value := httpQs["value"]
 	var valueInt int
 	var err error

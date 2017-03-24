@@ -55,7 +55,7 @@ sub task
         {
             my ($request_type, $name, $pattern, $request_info, $request,
                 $timeout, $priority, $trans_id, $pid) = @_;
-            my %http_qs = $api->request_http_qs_parse($request);
+            my %http_qs = $api->info_key_value_parse($request);
             my $response;
             if (! defined($http_qs{'value'}))
             {

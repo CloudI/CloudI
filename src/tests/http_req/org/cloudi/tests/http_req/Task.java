@@ -81,7 +81,7 @@ public class Task implements Runnable
                API.InvalidInputException
     {
         HashMap<String, ArrayList<String>> http_qs =
-            this.api.request_http_qs_parse(request);
+            this.api.info_key_value_parse(request);
         final ArrayList<String> value = http_qs.remove("value");
         String response = null;
         if (value != null)

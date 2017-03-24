@@ -58,7 +58,7 @@ request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
 request_ type_ name pattern _ request timeout _ transId pid state api =
-    let httpQs = CloudI.requestHttpQsParse request 
+    let httpQs = CloudI.infoKeyValueParse request 
         value = Map.lookup (Char8.pack "value") httpQs >>=
             (\l -> Just (read (Char8.unpack $ head l) :: Integer))
         response = Char8.pack $ case value of

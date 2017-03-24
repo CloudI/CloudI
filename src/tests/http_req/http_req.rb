@@ -80,7 +80,7 @@ if __FILE__ == $PROGRAM_NAME
 
             def request(request_type, name, pattern, request_info, request,
                         timeout, priority, trans_id, pid)
-                http_qs = @api.request_http_qs_parse(request)
+                http_qs = @api.info_key_value_parse(request)
                 value = http_qs.fetch('value', nil)
                 response = if value.nil?
                     '<http_test><error>no value specified</error></http_test>'

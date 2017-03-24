@@ -680,9 +680,6 @@ class API(object):
                 result[key] = [current, data[i + 1]]
         return result
 
-    def request_http_qs_parse(self, request):
-        return self.__text_key_value_parse(request)
-
     def info_key_value_parse(self, message_info):
         return self.__text_key_value_parse(message_info)
 

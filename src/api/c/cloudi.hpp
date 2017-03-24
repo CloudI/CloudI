@@ -1234,10 +1234,6 @@ class API
 
         int poll(int timeout = -1) const;
 
-        char const ** request_http_qs_parse(void const * const request,
-                                            uint32_t const request_size) const;
-        void request_http_qs_destroy(char const ** p) const;
-
         char const ** info_key_value_parse(void const * const message_info,
                                            uint32_t const message_info_size)
                                            const;

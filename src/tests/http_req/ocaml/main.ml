@@ -42,7 +42,7 @@
  *)
 
 let request type_ name pattern _ request timeout _ trans_id pid _ api =
-  let http_qs = Cloudi.request_http_qs_parse request in
+  let http_qs = Cloudi.info_key_value_parse request in
   let value = try Some (int_of_string (List.hd (Hashtbl.find http_qs "value")))
   with _ -> None in
   let response = match value with

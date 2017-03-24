@@ -79,7 +79,6 @@ module Foreign.CloudI
     , poll
     , threadCreate
     , threadsWait
-    , requestHttpQsParse
     , infoKeyValueParse
     ) where
 
@@ -1171,9 +1170,6 @@ textKeyValueParse text =
                     loop (Map.insert k (v:v') m) l'
     in
     loop Map.empty (Char8.split '\0' text)
-
-requestHttpQsParse :: ByteString -> Map ByteString [ByteString]
-requestHttpQsParse = textKeyValueParse
 
 infoKeyValueParse :: ByteString -> Map ByteString [ByteString]
 infoKeyValueParse = textKeyValueParse

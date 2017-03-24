@@ -194,9 +194,6 @@ val timeout_terminate : 's Instance.t -> int
 (** blocks to process incoming CloudI service requests *)
 val poll : 's Instance.t -> int -> (bool, string) result
 
-(** parses "text_pairs" from a HTTP GET query string *)
-val request_http_qs_parse : string -> (string, string list) Hashtbl.t
-
 (** parses "text_pairs" in service request info *)
 val info_key_value_parse : string -> (string, string list) Hashtbl.t
 

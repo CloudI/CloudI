@@ -1114,10 +1114,6 @@ CloudI.API.prototype._text_key_value_parse = function (text) {
     return result;
 };
 
-CloudI.API.prototype.request_http_qs_parse = function (request) {
-    return CloudI.API.prototype._text_key_value_parse(request);
-};
-
 CloudI.API.prototype.info_key_value_parse = function (message_info) {
     return CloudI.API.prototype._text_key_value_parse(message_info);
 };
