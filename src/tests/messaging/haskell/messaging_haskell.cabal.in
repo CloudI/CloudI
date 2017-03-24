@@ -19,5 +19,6 @@ executable           messaging_haskell
   build-depends:       base >= 4.8.2.0
                      , cloudi == @VERSION@
                      , bytestring
+                     , array
   default-language:  Haskell2010
 

@@ -4,6 +4,9 @@
 2017-03-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update quickrand
+    * Add the messaging integration test in Haskell
+    * Improve the OCaml messaging integration test
+    * The Haskell CloudI API is now tested
 
 2017-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
 

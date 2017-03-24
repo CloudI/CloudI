@@ -232,17 +232,17 @@ let sequence2_e8 type_ name pattern _ _ timeout _ trans_id pid _ api =
 let sequence2 type_ name pattern _ request timeout _ trans_id pid _ api =
   print_endline "messaging sequence2 start ocaml" ;
   assert (request = "start") ;
-  match Cloudi.mcast_async api ((Cloudi.prefix api) ^ "e") " " with
-  | Error (error) ->
-    prerr_endline error ;
-    raise Exit
-  | Ok (trans_ids) ->
-    let rec recv_asyncs () =
-      (* the sending process is excluded from the services that receive
-        the asynchronous message, so in this case, the receiving thread
-        will not be called, despite the fact it has subscribed to 'e',
-        to prevent a process (in this case thread) from deadlocking
-        with itself. *)
+  let rec recv_asyncs_loop () =
+    (* the sending process is excluded from the services that receive
+      the asynchronous message, so in this case, the receiving thread
+      will not be called, despite the fact it has subscribed to 'e',
+      to prevent a process (in this case thread) from deadlocking
+      with itself. *)
+    match Cloudi.mcast_async api ((Cloudi.prefix api) ^ "e") " " with
+    | Error (error) ->
+      prerr_endline error ;
+      raise Exit
+    | Ok (trans_ids) ->
       let rec loop i l =
         if i = (Array.length trans_ids) then
           l
@@ -273,16 +273,16 @@ let sequence2 type_ name pattern _ request timeout _ trans_id pid _ api =
           raise Exit
         | Ok ((_, _, trans_id_wait))
           when trans_id_wait = Cloudi.trans_id_null ->
-          recv_asyncs ()
+          recv_asyncs_loop ()
         | Ok _ ->
           prerr_endline "invalid!" ;
           raise Exit) ;
-    in
-    recv_asyncs () ;
-    print_endline "messaging sequence2 end ocaml" ;
-    (* start sequence3 *)
-    let _ = send_async api "sequence3" "start" in
-    return api type_ name pattern "" "end" timeout trans_id pid
+  in
+  recv_asyncs_loop () ;
+  print_endline "messaging sequence2 end ocaml" ;
+  (* start sequence3 *)
+  let _ = send_async api "sequence3" "start" in
+  return api type_ name pattern "" "end" timeout trans_id pid
 
 let forward api
   type_ suffix request_info request timeout priority trans_id pid =
