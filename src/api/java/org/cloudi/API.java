@@ -2,13 +2,13 @@
 // ex: set ft=java fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 //
 // BSD LICENSE
-// 
+//
 // Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
+//
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
 //     * Redistributions in binary form must reproduce the above copyright
@@ -21,7 +21,7 @@
 //     * The name of the author may not be used to endorse or promote
 //       products derived from this software without specific prior
 //       written permission
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 // CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 // INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -222,14 +222,14 @@ public class API
     }
 
     /**
-     * Subscribes an object method to a service name pattern. 
+     * Subscribes an object method to a service name pattern.
      *
      * @param  pattern     the service name pattern
      * @param  instance    the object instance
      * @param  methodName  the object method to handle matching requests
      *
      * @throws NoSuchMethodException instance method arity is invalid
-     */ 
+     */
     public void subscribe(final String pattern,
                           final Object instance,
                           final String methodName)
@@ -239,11 +239,11 @@ public class API
     }
 
     /**
-     * Subscribes an object method to a service name pattern. 
+     * Subscribes an object method to a service name pattern.
      *
      * @param  pattern     the service name pattern
      * @param  callback    method reference for callback (Java 8 or higher)
-     */ 
+     */
     public void subscribe(final String pattern,
                           final FunctionInterface9 callback)
     {
@@ -275,7 +275,7 @@ public class API
      * @return count of active subscriptions
      * @throws InvalidInputException invalid input to internal function call
      * @throws TerminateException service execution must terminate
-     */ 
+     */
     public int subscribe_count(final String pattern)
         throws InvalidInputException,
                TerminateException
@@ -298,7 +298,7 @@ public class API
     }
 
     /**
-     * Unsubscribes from a service name pattern. 
+     * Unsubscribes from a service name pattern.
      *
      * @param pattern  the service name pattern
      *
@@ -1135,7 +1135,7 @@ public class API
                                  response_array[0],
                                  response_array[1],
                                  timeout, trans_id, pid);
-                    
+
                 }
                 else if (response.getClass() == byte[].class)
                 {
@@ -1212,7 +1212,7 @@ public class API
                                 response_array[0],
                                 response_array[1],
                                 timeout, trans_id, pid);
-                    
+
                 }
                 else if (response.getClass() == byte[].class)
                 {
@@ -1639,20 +1639,9 @@ public class API
                             final Integer timeout)
         throws IOException
     {
-        final ByteArrayOutputStream output =
-            new ByteArrayOutputStream(this.buffer_size);
-        int i = 0;
-        if (buffer_in != null && buffer_in.hasRemaining())
-        {
-            i += buffer_in.limit() - buffer_in.position();
-            output.write(buffer_in.array(),
-                         buffer_in.position(),
-                         buffer_in.limit());
-        }
-        int read = 0;
-        final byte[] bytes = new byte[this.buffer_size];
-        boolean consume;
-        if (i == 0 && timeout != null)
+        final boolean buffer_in_data =
+            (buffer_in != null && buffer_in.hasRemaining());
+        if (! buffer_in_data && timeout != null)
         {
             // simulate poll
             final FileInputStream input = this.input;
@@ -1682,12 +1671,70 @@ public class API
                 throw new IOException("poll exception");
             }
         }
+        int read = 0;
+        final byte[] bytes = new byte[this.buffer_size];
+        ByteBuffer buffer_out = null;
         if (this.use_header)
-            consume = (i < 4);
-        else
-            consume = (i < this.buffer_size);
-        while (consume)
         {
+            final byte[] header = new byte[4];
+            int header_i = 0;
+            while (header_i < 4)
+            {
+                read = this.input.read(header, header_i, 4 - header_i);
+                if (read == -1)
+                {
+                    throw new IOException("consume read eof");
+                }
+                else if (read > 0)
+                {
+                    header_i += read;
+                }
+            }
+            final int length = ((header[0] & 0xff) << 24) |
+                               ((header[1] & 0xff) << 16) |
+                               ((header[2] & 0xff) <<  8) |
+                               (header[3] & 0xff);
+            if (length < 0)
+                throw new IOException("negative length");
+            int total = length;
+            if (buffer_in_data)
+            {
+                total += buffer_in.limit() - buffer_in.position();
+            }
+            buffer_out = ByteBuffer.allocate(total);
+            if (buffer_in_data)
+            {
+                buffer_out.put(buffer_in);
+            }
+            int i = 0;
+            while (i < length)
+            {
+                read = this.input.read(bytes, 0,
+                                       Math.min(length - i, this.buffer_size));
+                if (read == -1)
+                {
+                    throw new IOException("remaining read eof");
+                }
+                else if (read > 0)
+                {
+                    i += read;
+                    buffer_out.put(bytes, 0, read);
+                }
+            }
+            buffer_out.rewind();
+        }
+        else
+        {
+            final ByteArrayOutputStream output =
+                new ByteArrayOutputStream(this.buffer_size);
+            int i = 0;
+            if (buffer_in_data)
+            {
+                i += buffer_in.limit() - buffer_in.position();
+                output.write(buffer_in.array(),
+                             buffer_in.position(),
+                             i);
+            }
             while ((read = this.input.read(bytes)) == this.buffer_size &&
                    this.input.available() > 0)
             {
@@ -1703,50 +1750,7 @@ public class API
                 i += read;
                 output.write(bytes, 0, read);
             }
-            if (this.use_header == false)
-                consume = false;
-            else if (i >= 4)
-                consume = false;
-        }
-        final byte[] result = output.toByteArray();
-        ByteBuffer buffer_out = null;
-        if (this.use_header)
-        {
-            final int length = ((result[0] & 0xff) << 24) |
-                               ((result[1] & 0xff) << 16) |
-                               ((result[2] & 0xff) <<  8) |
-                                (result[3] & 0xff);
-            if (length < 0)
-                throw new IOException("negative length");
-            i -= 4;
-            if (i < length)
-            {
-                buffer_out = ByteBuffer.allocate(length);
-                buffer_out.put(result, 4, i);
-                while (i < length)
-                {
-                    read = this.input.read(bytes, 0,
-                                      Math.min(length - i, this.buffer_size));
-                    if (read == -1)
-                    {
-                        throw new IOException("remaining read eof");
-                    }
-                    else if (read > 0)
-                    {
-                        i += read;
-                        buffer_out.put(bytes, 0, read);
-                    }
-                }
-                buffer_out.rewind();
-            }
-            else
-            {
-                buffer_out = ByteBuffer.wrap(result, 4, i);
-            }
-        }
-        else
-        {
-            buffer_out = ByteBuffer.wrap(result);
+            buffer_out = ByteBuffer.wrap(output.toByteArray());
         }
         buffer_out.order(ByteOrder.nativeOrder());
         return buffer_out;
@@ -1980,7 +1984,7 @@ public class API
             super("Synchronous Call Return Invalid");
         }
     }
-    
+
     public static class ReturnAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;
@@ -1998,7 +2002,7 @@ public class API
             super("Synchronous Call Forward Invalid");
         }
     }
-    
+
     public static class ForwardAsyncException extends Exception
     {
         private static final long serialVersionUID = 3L;

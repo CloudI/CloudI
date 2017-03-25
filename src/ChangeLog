@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve Java CloudI API socket recv logic
+    * Update quickrand
+
 2017-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Remove the CloudI API helper function
