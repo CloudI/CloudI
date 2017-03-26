@@ -328,7 +328,7 @@ let recv api : (string * int, string) result =
         unpack_uint32_big 0 (Buffer.sub buffer_recv 0 4)
       else
         let i = Unix.read socket fragment_recv 0 fragment_size in
-        if i = 0 then  
+        if i = 0 then
           Error ("recv failed")
         else (
           Buffer.add_subbytes buffer_recv fragment_recv 0 i ;
@@ -344,7 +344,7 @@ let recv api : (string * int, string) result =
         Ok (data))
       else
         let i = Unix.read socket fragment_recv 0 fragment_size in
-        if i = 0 then  
+        if i = 0 then
           Error ("recv failed")
         else (
           Buffer.add_subbytes buffer_recv fragment_recv 0 i ;
@@ -643,8 +643,8 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
     in
     loop i0 cmd_value
 
-let rec poll_request_loop api timeout ext poll_timer: (bool, string) result = 
-  let {Instance.socket; _} = api
+let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
+  let {Instance.socket; buffer_recv; _} = api
   and timeout_value =
     if timeout < 0 then
       -1.0
@@ -654,7 +654,11 @@ let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
       (float_of_int timeout) *. 0.001
   in
   let (reading, _, excepting) =
-    Unix.select [socket] [] [socket] timeout_value in
+    if (Buffer.length buffer_recv) > 0 then
+      ([socket], [], [])
+    else
+      Unix.select [socket] [] [socket] timeout_value
+  in
   if (List.length excepting) > 0 then
     Ok (false)
   else if (List.length reading) = 0 then
@@ -799,7 +803,7 @@ and callback
   | Ok _ ->
     Ok (None)
 
-and poll_request_data api ext data data_size i : (bool option, string) result = 
+and poll_request_data api ext data data_size i : (bool option, string) result =
   match unpack_uint32_native i data with
   | Error (error) ->
     Error (error)
@@ -1090,7 +1094,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
     else
       Error (message_decoding_error)
 
-let poll_request api timeout ext : (bool, string) result = 
+let poll_request api timeout ext : (bool, string) result =
   let {Instance.initialization_complete; terminate; _} = api in
   if terminate then
     Ok (false)
