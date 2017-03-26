@@ -950,8 +950,13 @@ pollRequestLoop :: Typeable s =>
     Instance.T s -> Int -> Bool -> Clock.NominalDiffTime ->
     IO (Result (Bool, Instance.T s))
 pollRequestLoop api0@Instance.T{
-      Instance.socketHandle = socketHandle} timeout external pollTimer = do
-    inputAvailable <- SysIO.hWaitForInput socketHandle timeout
+      Instance.socketHandle = socketHandle
+    , Instance.bufferRecvSize = bufferRecvSize}
+    timeout external pollTimer = do
+    inputAvailable <- if bufferRecvSize > 0 then
+            return True
+        else
+            SysIO.hWaitForInput socketHandle timeout
     if not inputAvailable then
         return $ Right (True, api0{Instance.timeout = Nothing})
     else do
@@ -1014,16 +1019,16 @@ poll api0 timeout =
 
 send :: Instance.T s -> LazyByteString -> IO ()
 send Instance.T{
-      Instance.useHeader = False
-    , Instance.socketHandle = socketHandle} binary = do
-    LazyByteString.hPut socketHandle binary
-send Instance.T{
       Instance.useHeader = True
     , Instance.socketHandle = socketHandle} binary = do
     let total = fromIntegral (LazyByteString.length binary) :: Word32
     LazyByteString.hPut socketHandle (Builder.toLazyByteString $
         Builder.word32BE total `Monoid.mappend`
         Builder.lazyByteString binary)
+send Instance.T{
+      Instance.useHeader = False
+    , Instance.socketHandle = socketHandle} binary = do
+    LazyByteString.hPut socketHandle binary
 
 recvBuffer :: Builder -> Int -> Int -> Handle -> Int ->
     IO (Builder, Int)
@@ -1050,21 +1055,6 @@ recvBufferAll bufferRecv bufferRecvSize socketHandle bufferSize = do
         return (bufferRecv, bufferRecvSize)
 
 recv :: Instance.T s -> IO (LazyByteString, Int, Instance.T s)
-recv api0@Instance.T{
-      Instance.useHeader = False
-    , Instance.socketHandle = socketHandle
-    , Instance.bufferSize = bufferSize
-    , Instance.bufferRecv = bufferRecv
-    , Instance.bufferRecvSize = bufferRecvSize} = do
-    (bufferRecvAll,
-     bufferRecvAllSize) <- recvBufferAll
-        bufferRecv bufferRecvSize socketHandle bufferSize
-    return $ (
-          Builder.toLazyByteString bufferRecvAll
-        , bufferRecvAllSize
-        , api0{
-              Instance.bufferRecv = Monoid.mempty
-            , Instance.bufferRecvSize = 0})
 recv api0@Instance.T{
       Instance.useHeader = True
     , Instance.socketHandle = socketHandle
@@ -1095,6 +1085,21 @@ recv api0@Instance.T{
         , api0{
               Instance.bufferRecv = Builder.lazyByteString bufferRecvNew
             , Instance.bufferRecvSize = bufferRecvAllSize - total})
+recv api0@Instance.T{
+      Instance.useHeader = False
+    , Instance.socketHandle = socketHandle
+    , Instance.bufferSize = bufferSize
+    , Instance.bufferRecv = bufferRecv
+    , Instance.bufferRecvSize = bufferRecvSize} = do
+    (bufferRecvAll,
+     bufferRecvAllSize) <- recvBufferAll
+        bufferRecv bufferRecvSize socketHandle bufferSize
+    return $ (
+          Builder.toLazyByteString bufferRecvAll
+        , bufferRecvAllSize
+        , api0{
+              Instance.bufferRecv = Monoid.mempty
+            , Instance.bufferRecvSize = 0})
 
 timeoutAdjustment :: Clock.NominalDiffTime -> Int ->
     IO (Int)
