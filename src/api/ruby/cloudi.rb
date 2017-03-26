@@ -3,13 +3,13 @@
 # ex: set ft=ruby fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 #
 # BSD LICENSE
-# 
+#
 # Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -22,7 +22,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -222,7 +222,7 @@ module CloudI
                     end
                 end
             end
-            send(Erlang.term_to_binary([:forward_sync, name, 
+            send(Erlang.term_to_binary([:forward_sync, name,
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
                                         timeout, priority,
@@ -496,7 +496,7 @@ module CloudI
             if result[2].length > 0
                 return false
             end
-        
+
             data = recv('')
             data_size = data.bytesize
             if data_size == 0
@@ -676,7 +676,7 @@ module CloudI
                 if result[2].length > 0
                     return false
                 end
-    
+
                 data = recv(data)
                 data_size = data.bytesize
                 if data_size == 0
@@ -731,25 +731,31 @@ module CloudI
             @s.write(data)
         end
 
-        def recv(data)
+        def recv(data_old)
+            data = ''
             if @use_header
-                while data.length < 4
-                    fragment = @s.readpartial(@size)
+                i = 0
+                while i < 4
+                    fragment = @s.readpartial(4 - i)
                     data += fragment
+                    i += fragment.length
                 end
-                total = data[0,4].unpack('N')[0]
-                data.slice!(0..3)
-                while data.length < total
-                    fragment = @s.readpartial(@size)
+                total = data.unpack('N')[0]
+                data = data_old
+                i = 0
+                while i < total
+                    fragment = @s.readpartial([total - i, @size].min)
                     data += fragment
+                    i += fragment.length
                 end
             else
+                data = data_old
                 ready = true
                 while ready == true
                     fragment = @s.readpartial(@size)
                     data += fragment
                     ready = (fragment.bytesize == @size)
-    
+
                     if ready
                         ready = ! IO.select([@s], nil, nil, 0).nil?
                     end
