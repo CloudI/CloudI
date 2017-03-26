@@ -3,13 +3,13 @@
 # ex: set ft=python fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 #
 # BSD LICENSE
-# 
+#
 # Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -22,7 +22,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -656,7 +656,7 @@ class API(object):
                 return False
             if len(IN) == 0:
                 return True
-    
+
             data = self.__recv(data)
             data_size = len(data)
             if data_size == 0:
@@ -688,17 +688,23 @@ class API(object):
             data = struct.pack(b'>I', len(data)) + data
         self.__s.sendall(data)
 
-    def __recv(self, data):
+    def __recv(self, data_old):
+        data = ''
         if self.__use_header:
-            while len(data) < 4:
-                fragment = self.__s.recv(self.__size)
+            i = 0
+            while i < 4:
+                fragment = self.__s.recv(4 - i)
                 data += fragment
-            total = struct.unpack(b'>I', data[:4])[0]
-            data = data[4:]
-            while len(data) < total:
-                fragment = self.__s.recv(self.__size)
+                i += len(fragment)
+            total = struct.unpack(b'>I', data)[0]
+            data = data_old
+            i = 0
+            while i < total:
+                fragment = self.__s.recv(min(total - i, self.__size))
                 data += fragment
+                i += len(fragment)
         else:
+            data = data_old
             ready = True
             while ready == True:
                 fragment = self.__s.recv(self.__size)
@@ -758,14 +764,14 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
             else:
                 import codecs
                 self.__stream = codecs.getwriter('UTF-8')(stream)
-    
+
         def write(self, data):
             self.__stream.write(data)
             self.__stream.flush()
-    
+
         def __getattr__(self, attr):
             return getattr(self.__stream, attr)
-    
+
     sys.stdout = _unbuffered(sys.stdout)
     sys.stderr = _unbuffered(sys.stderr)
 
