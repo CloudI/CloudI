@@ -1334,36 +1334,37 @@ func (api *Instance) send(data []byte) error {
 func (api *Instance) recv() ([]byte, error) {
 	var err error
 	var i int
-	var total uint32
+	var total int
 	if api.useHeader {
 		for api.bufferRecv.Len() < 4 {
-			_, err = api.recvFragment()
+			_, err = api.recvFragment(4 - api.bufferRecv.Len())
 			if err != nil {
 				return nil, err
 			}
 		}
 		header := make([]byte, 4)
-		copy(header, api.bufferRecv.Bytes()[:4])
-		err = binary.Read(bytes.NewReader(header), binary.BigEndian, &total)
-		if err != nil {
-			return nil, err
-		}
-		api.bufferRecv.Grow(int(total))
-		for api.bufferRecv.Len() < int(total) {
-			_, err = api.recvFragment()
-			if err != nil {
-				return nil, err
-			}
-		}
 		i, err = api.bufferRecv.Read(header)
 		if err != nil && i != 4 {
 			return nil, err
+		}
+		var length uint32
+		err = binary.Read(bytes.NewReader(header), binary.BigEndian, &length)
+		if err != nil {
+			return nil, err
+		}
+		total = int(length)
+		api.bufferRecv.Grow(total)
+		for api.bufferRecv.Len() < total {
+			_, err = api.recvFragment(total - api.bufferRecv.Len())
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		ready := true
 		nonblocking := false
 		for ready {
-			i, err = api.recvFragment()
+			i, err = api.recvFragment(0)
 			if err != nil {
 				switch errNet := err.(type) {
 				case *net.OpError:
@@ -1386,18 +1387,22 @@ func (api *Instance) recv() ([]byte, error) {
 				}()
 			}
 		}
-		total = uint32(api.bufferRecv.Len())
+		total = api.bufferRecv.Len()
 	}
 	recv := make([]byte, total)
 	i, err = api.bufferRecv.Read(recv)
-	if err != nil && i != int(total) {
+	if err != nil && i != total {
 		return nil, err
 	}
 	return recv, nil
 }
 
-func (api *Instance) recvFragment() (int, error) {
-	i, err1 := api.socket.Read(api.fragmentRecv)
+func (api *Instance) recvFragment(size int) (int, error) {
+	recvSize := int(api.fragmentSize)
+	if size != 0 && recvSize > size {
+		recvSize = size
+	}
+	i, err1 := api.socket.Read(api.fragmentRecv[:recvSize])
 	var err2 error
 	if i > 0 {
 		_, err2 = api.bufferRecv.Write(api.fragmentRecv[:i])
