@@ -2,13 +2,13 @@
 // ex: set ft=php fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 //
 // BSD LICENSE
-// 
+//
 // Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
-// 
+//
 //     * Redistributions of source code must retain the above copyright
 //       notice, this list of conditions and the following disclaimer.
 //     * Redistributions in binary form must reproduce the above copyright
@@ -21,7 +21,7 @@
 //     * The name of the author may not be used to endorse or promote
 //       products derived from this software without specific prior
 //       written permission
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 // CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 // INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -912,7 +912,7 @@ class API
                 return false;
             if (count($result_read) == 0)
                 return true;
-    
+
             $data = $this->recv($data);
             $data_size = strlen($data);
             if ($data_size == 0)
@@ -965,25 +965,31 @@ class API
         fwrite($this->s, $data);
     }
 
-    private function recv($data)
+    private function recv($data_old)
     {
+        $data = '';
         if ($this->use_header)
         {
-            while (strlen($data) < 4)
+            $i = 0;
+            while ($i < 4)
             {
-                $fragment = fread($this->s, $this->size);
+                $fragment = fread($this->s, 4 - $i);
                 $data .= $fragment;
+                $i += strlen($fragment);
             }
-            list(, $total) = unpack('N', substr($data, 0, 4));
-            $data = substr($data, 4);
-            while (strlen($data) < $total)
+            list(, $total) = unpack('N', $data);
+            $data = $data_old;
+            $i = 0;
+            while ($i < $total)
             {
-                $fragment = fread($this->s, $this->size);
+                $fragment = fread($this->s, min($total - $i, $this->size));
                 $data .= $fragment;
+                $i += strlen($fragment);
             }
         }
         else
         {
+            $data = $data_old;
             $ready = true;
             while ($ready == true)
             {
