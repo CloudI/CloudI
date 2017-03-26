@@ -3,6 +3,7 @@
 
 2017-03-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Improve Perl CloudI API socket recv logic
     * Improve OCaml CloudI API socket recv logic
     * Improve Haskell CloudI API socket recv logic
     * Improve Go CloudI API socket recv logic

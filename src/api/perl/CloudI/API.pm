@@ -2,13 +2,13 @@
 # ex: set ft=perl fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 #
 # BSD LICENSE
-# 
+#
 # Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #     * Redistributions of source code must retain the above copyright
 #       notice, this list of conditions and the following disclaimer.
 #     * Redistributions in binary form must reproduce the above copyright
@@ -21,7 +21,7 @@
 #     * The name of the author may not be used to endorse or promote
 #       products derived from this software without specific prior
 #       written permission
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 # CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
 # INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
@@ -1083,7 +1083,7 @@ sub _poll_request
         {
             return 1;
         }
-    
+
         $data = $self->_recv($data);
         $data_size = length($data);
         if ($data_size == 0)
@@ -1161,15 +1161,16 @@ sub _send
 sub _recv
 {
     my $self = shift;
-    my ($data) = @_;
+    my ($data_old) = @_;
+    my $data = '';
     my $fragment = '';
     my $read;
-    my $i = length($data);
     if ($self->{_use_header})
     {
+        my $i = 0;
         while ($i < 4)
         {
-            $read = sysread($self->{_s}, $fragment, $self->{_size});
+            $read = sysread($self->{_s}, $fragment, 4 - $i);
             if (! defined($read) || $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
@@ -1177,12 +1178,13 @@ sub _recv
             $i += $read;
             $data .= $fragment;
         }
-        my ($total) = unpack('N', substr($data, 0, 4));
-        $i -= 4;
-        $data = substr($data, 4);
+        my ($total) = unpack('N', $data);
+        $i = 0;
+        $data = $data_old;
         while ($i < $total)
         {
-            $read = sysread($self->{_s}, $fragment, $self->{_size});
+            $read = sysread($self->{_s}, $fragment,
+                            _min($total - $i, $self->{_size}));
             if (! defined($read) || $read == 0)
             {
                 die CloudI::MessageDecodingException->new();
@@ -1193,6 +1195,8 @@ sub _recv
     }
     else
     {
+        $data = $data_old;
+        my $i = length($data);
         my $ready = 1;
         while ($ready)
         {
@@ -1227,6 +1231,19 @@ sub _milliseconds
     use integer;
     my ($seconds, $microseconds) = gettimeofday();
     return $seconds * 1000 + $microseconds / 1000;
+}
+
+sub _min
+{
+    my ($min, @args) = @_;
+    for my $v (@args)
+    {
+        if ($v < $min)
+        {
+            $min = $v;
+        }
+    }
+    return $min;
 }
 
 sub _max
