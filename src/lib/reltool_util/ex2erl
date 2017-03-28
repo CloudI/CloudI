@@ -76,34 +76,15 @@ main(Arguments) ->
     {ok, _} = application:ensure_all_started(elixir),
 
     FileDirectoryElixir = filename:dirname(FilePathElixir),
-    [Module] = 'Elixir.Kernel.ParallelCompiler':
-               files_to_path([erlang:list_to_binary(FilePathElixir)],
-                             erlang:list_to_binary(FileDirectoryElixir),
-                             []),
-    ModuleName = erlang:atom_to_list(Module),
-    FilePathBeam = filename:join(FileDirectoryElixir,
-                                 ModuleName ++ ".beam"),
-    FilePathErlang = filename:join(FileDirectoryElixir,
-                                   ModuleName ++ ".erl"),
-
-    % as described at http://erlang.org/doc/man/beam_lib.html
-    % with minor modifications to make it valid Erlang source code
-    {ok,
-     {_, [{abstract_code,
-           {_, Forms}}]}} = beam_lib:chunks(FilePathBeam,
-                                            [abstract_code]),
-    SyntaxTree = erl_syntax_lib:map(fun(TreeNode) ->
-        case TreeNode of
-            #'var'{} = Variable ->
-                variable_erlang(Variable);
-            _ ->
-                TreeNode
-        end
-    end, erl_syntax:form_list(Forms)),
-    ok = file:write_file(FilePathErlang, erl_prettypr:format(SyntaxTree)),
-
-    % cleanup
-    ok = file:delete(FilePathBeam),
+    Modules = 'Elixir.Kernel.ParallelCompiler':
+              files_to_path([erlang:list_to_binary(FilePathElixir)],
+                            erlang:list_to_binary(FileDirectoryElixir),
+                            []),
+    DirectoryIn = FileDirectoryElixir,
+    DirectoryOut = FileDirectoryElixir,
+    FilePaths = [convert(Module, DirectoryIn, DirectoryOut)
+                 || Module <- Modules],
+    io:format("~p~n", [FilePaths]),
     exit_code(0).
 
 %%%------------------------------------------------------------------------
@@ -131,6 +112,33 @@ variable_erlang(#'var'{name = Name} = Variable) ->
             erlang:list_to_atom([$E | Suffix])
     end,
     Variable#'var'{name = NewName}.
+
+convert(Module, DirectoryIn, DirectoryOut) ->
+    ModuleName = erlang:atom_to_list(Module),
+    FilePathBeam = filename:join(DirectoryIn,
+                                 ModuleName ++ ".beam"),
+    FilePathErlang = filename:join(DirectoryOut,
+                                   ModuleName ++ ".erl"),
+
+    % as described at http://erlang.org/doc/man/beam_lib.html
+    % with minor modifications to make it valid Erlang source code
+    {ok,
+     {_, [{abstract_code,
+           {_, Forms}}]}} = beam_lib:chunks(FilePathBeam,
+                                            [abstract_code]),
+    SyntaxTree = erl_syntax_lib:map(fun(TreeNode) ->
+        case TreeNode of
+            #'var'{} = Variable ->
+                variable_erlang(Variable);
+            _ ->
+                TreeNode
+        end
+    end, erl_syntax:form_list(Forms)),
+    ok = file:write_file(FilePathErlang, erl_prettypr:format(SyntaxTree)),
+
+    % cleanup
+    ok = file:delete(FilePathBeam),
+    FilePathErlang.
 
 exit_code(ExitCode) when is_integer(ExitCode) ->
     erlang:halt(ExitCode, [{flush, true}]).

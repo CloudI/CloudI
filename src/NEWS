@@ -1,3 +1,62 @@
+------------------------------------------------------------------------        
+
+March 29, 2017
+  Version 1.7.0 released.
+  * backwards compatibility difference:
+    * The C CloudI API (not the C++ CloudI API) had a small change to
+      facilitate the use of thread local data with the callback
+      function arguments order changing to match the other programming
+      languages that lack (or avoid) state objects
+      (C, Erlang, Go, Haskell, OCaml).
+      All CloudI API callback functions have the arguments:
+      Type, Name, Pattern, RequestInfo, Request,
+      Timeout, Priority, TransId, Source (in this order).
+      The programming languages with state objects have the
+      two arguments: State, API, before the common arguments with
+      State as a state object (normally not present as a
+      function argument).  The programming languages without
+      state objects have the two arguments (State, API) after the
+      common arguments.
+      The C examples have been updated to show the changes
+      (http://cloudi.org/tutorials.html#cloudi_examples).
+      More function argument discussion is at
+      http://cloudi.org/faq.html#1_Reactive
+    * The CloudI API implementations had the function
+      request_http_qs_parse name change to info_key_value_parse
+  * The Go CloudI API was added
+    (requires the configure argument --enable-go-support and
+     Go (gc) >= 1.6)
+  * The Haskell CloudI API was added
+    (requires the configure argument --enable-haskell-support and
+     GHC >= 7.10.3, cabal-install >= 1.22)
+  * The OCaml CloudI API was added
+    (requires the configure argument --enable-ocaml-support and
+     OCaml >= 4.03.0)
+  * The CloudI Service API function logging_stdout_set was added to
+    allow all CloudI logging to be sent to stdout
+  * The count integration test was added to show how thread local
+    state works in all supported programming languages
+    (http://cloudi.org/tutorials.html#cloudi_examples).
+  * A bug with CloudI Service API services_update usage on
+    external services was fixed, to allow the service configuration
+    values: timeout_async, timeout_sync, and the service configuration
+    options: priority_default, request_timeout_adjustment, to
+    dynamically change during runtime if no new OS process is created
+    (to utilize the new values).
+  * A bug was fixed to make the use of the service configuration
+    option count_process_dynamic more dependable for external services
+    written in Perl, PHP, Python, and Ruby.
+  * lager was removed; hut is now used for exometer logging.
+    Erlang logging integration was added to the modules
+    cloudi_logger_lager and cloudi_logger_hut
+    (to use CloudI logging instead of lager or with hut)
+  * The default external service configuration buffer_size setting
+    changed from 16384 to 65536
+    (to match the same Linux localhost MTU change)
+  * UTF8 is now logged properly from Erlang source code
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 January 11, 2017
   Version 1.6.0 released.
   * backwards compatibility difference:

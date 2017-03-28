@@ -134,7 +134,8 @@ scoped: $(top_srcdir)/external/README.markdown
 rebar-compile: erlang-applications-scope-add \
                rebar-directories-compile
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config compile)
+     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config compile && \
+	 $(top_srcdir)/rebar_dirs.sh process $(abs_top_srcdir) $(abs_top_builddir))
 
 clean-local: rebar-clean \
              rebar-directories-clean

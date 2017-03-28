@@ -1,11 +1,11 @@
-#-*-Mode:ruby;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
-# ex: set ft=ruby fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+#-*-Mode:elixir;coding:utf-8;tab-width:2;c-basic-offset:2;indent-tabs-mode:()-*-
+# ex: set ft=elixir fenc=utf-8 sts=2 ts=2 sw=2 et nomod:
 ###
 ###------------------------------------------------------------------------
 ###
 ### BSD LICENSE
 ### 
-### Copyright (c) 2014-2016, Michael Truog <mjtruog at gmail dot com>
+### Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 ### All rights reserved.
 ### 
 ### Redistribution and use in source and binary forms, with or without

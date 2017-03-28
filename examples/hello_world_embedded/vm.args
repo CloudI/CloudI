@@ -1,0 +1,7 @@
+
+## Name of the node
+-sname cloudi_hello_world_embedded
+
+## Cookie for distributed erlang
+-setcookie cloudi_hello_world_embedded
+

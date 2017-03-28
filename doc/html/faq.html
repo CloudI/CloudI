@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.6.0<br />
-              last updated on January 11<sup>th</sup> 2017</h3></center>
+  <center><h3>version 1.7.0<br />
+              last updated on March 27<sup>th</sup> 2017</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -111,16 +111,19 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <ul class="faq">
     <li><a href="#6_C"          >6.1 - C/C++ Service Implementation</a></li>
     <li><a href="#6_Erlang"     >6.2 - Erlang Service Implementation</a></li>
-    <li><a href="#6_Java"       >6.3 - Java Service Implementation</a></li>
-    <li><a href="#6_JavaScript" >6.4 - JavaScript/node.js Service Implementation</a></li>
-    <li><a href="#6_Perl"       >6.5 - Perl Service Implementation</a></li>
-    <li><a href="#6_PHP"        >6.6 - PHP Service Implementation</a></li>
-    <li><a href="#6_Python"     >6.7 - Python Service Implementation</a></li>
-    <li><a href="#6_Ruby"       >6.8 - Ruby Service Implementation</a></li>
-    <li><a href="#6_HTTP"       >6.9 - HTTP Integration</a></li>
-    <li><a href="#6_ZeroMQ"     >6.10 - ZeroMQ Integration</a></li>
-    <li><a href="#6_FaultTolerance">6.11 - Service Fault Tolerance</a></li>
-    <li><a href="#6_Monitoring" >6.12 - Service Monitoring</a></li>
+    <li><a href="#6_Go"         >6.3 - Go Service Implementation</a></li>
+    <li><a href="#6_Haskell"    >6.4 - Haskell Service Implementation</a></li>
+    <li><a href="#6_Java"       >6.5 - Java Service Implementation</a></li>
+    <li><a href="#6_JavaScript" >6.6 - JavaScript/node.js Service Implementation</a></li>
+    <li><a href="#6_OCaml"      >6.7 - OCaml Service Implementation</a></li>
+    <li><a href="#6_Perl"       >6.8 - Perl Service Implementation</a></li>
+    <li><a href="#6_PHP"        >6.9 - PHP Service Implementation</a></li>
+    <li><a href="#6_Python"     >6.10 - Python Service Implementation</a></li>
+    <li><a href="#6_Ruby"       >6.11 - Ruby Service Implementation</a></li>
+    <li><a href="#6_HTTP"       >6.12 - HTTP Integration</a></li>
+    <li><a href="#6_ZeroMQ"     >6.13 - ZeroMQ Integration</a></li>
+    <li><a href="#6_FaultTolerance">6.14 - Service Fault Tolerance</a></li>
+    <li><a href="#6_Monitoring" >6.15 - Service Monitoring</a></li>
   </ul>
   <a name="7_contents"></a>
   <h2>7 - Troubleshooting</h2>
@@ -393,7 +396,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     To make CloudI service requests consistent across multiple
     service instances, the service requests can be sent through
     <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl" target="_blank">cloudi_service_quorum</a>.
-    The service request responses will be checked to make sure they
+    The service request responses will be checked to ensure the responses
     pass the initialized quorum requirement and the service request will
     fail (providing a <a href="faq.html#4_Null">null response</a>)
     if quorum is not obtained during the service request timeout period.
@@ -433,8 +436,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     CloudI was architected to easily integrate with other services, software,
     and frameworks.  The <a href="api.html#Service">CloudI API</a>
     provides a light-weight interface for
-    creating services in C++/C, Elixir, Erlang, Java, JavaScript,
-    Perl, PHP, Python, and Ruby.  By using
+    creating services in C++/C, Elixir, Erlang, Go, Haskell, Java, JavaScript,
+    OCaml, Perl, PHP, Python, and Ruby.  By using
     CloudI, external software can become more scalable and fault-tolerant
     by utilizing CloudI's load balancing of CloudI requests.  CloudI
     messaging enforces realtime constraints using timeouts, so that request
@@ -704,8 +707,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     for each datum within the data of a service request when the
     service request handling function is called
     (with the function arity as 9 in Java, Perl, PHP, Ruby, 10 in Python,
-     11 in Erlang/Elixir and 13 in C/C++, where arities higher than 9 are due
-     to data handling details specific to the programming languages).
+     11 in Erlang/Elixir, Go, Haskell, OCaml, 13 in C++ and 14 in C,
+     where arities higher than 9 are due to data handling details specific
+     to the programming languages).
     Using a relatively high arity count does initially make developers
     feel uncomfortable due to common Object-Oriented design considering it
     a bad code-smell
@@ -718,6 +722,28 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     part of a consistent interface that the CloudI API provides in each
     programming language (functions are common to all well-utilized
     programming languages while objects are not).
+  </p>
+  <p class="paragraph">
+    When a <a href="http://cloudi.org/api.html#1_subscribe">subscribe</a>d
+    callback function is called with the CloudI service request data,
+    the individual values are the most recent values.  For example, the
+    timeout parameter in the service request is automatically decremented
+    based on the time that has elapsed before getting to the function
+    call.  There are 2 constant parameters, the transaction id used to
+    identify the service request, and the source process identifier that
+    may receive the service request response, though all other parameters
+    can be changed with a call to
+    <a href="http://cloudi.org/api.html#1_forward">forward</a> the service
+    request to a new callback function execution.  For example,
+    the service name pattern may automatically change with a new
+    callback function execution even if the same service name is used for
+    the forward, due to the dynamic nature of service name pattern
+    subscriptions.  The execution time spent within the callback function
+    is automatically decremented from the timeout value used for the
+    <a href="http://cloudi.org/api.html#1_return">return</a>
+    or <a href="http://cloudi.org/api.html#1_forward">forward</a>
+    if the <a href="http://cloudi.org/api.html#2_services_add_config_opts">'request_timeout_adjustment' service configuration option</a>
+    is set to true (and the timeout value is not manually modified).
   </p>
   <p class="paragraph">
     For more details please refer to <a href="#1_WhatIs">"1.5 - What is CloudI?"</a>.
@@ -882,48 +908,87 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="2_CodeOfConduct"></a>
   <h3>2.9 - Code of Conduct</h3>
   <p class="paragraph">
-    To make sure there are no barriers to CloudI development for any developers
+    To ensure there are no barriers to CloudI development for any developers
     who want to get involved, a Code of Conduct was adopted:
   </p>
-  <h4>Contributor Code of Conduct</h4>
+  <h4>Contributor Covenant Code of Conduct</h4>
+  <h5>Our Pledge</h5>
   <p>
-    As contributors and maintainers of this project, we pledge to respect all
-    people who contribute through reporting issues, posting feature requests,
-    updating documentation, submitting pull requests or patches, and other
-    activities.
+    In the interest of fostering an open and welcoming environment, we as
+    contributors and maintainers pledge to making participation in our project
+    and our community a harassment-free experience for everyone, regardless of
+    age, body size, disability, ethnicity, gender identity and expression,
+    level of experience, nationality, personal appearance, race, religion,
+    or sexual identity and orientation.
+  </p>
+  <h5>Our Standards</h5>
+  <p>
+    Examples of behavior that contributes to creating a positive environment
+    include:
+    <ul>
+      <li>Using welcoming and inclusive language</li>
+      <li>Being respectful of differing viewpoints and experiences</li>
+      <li>Gracefully accepting constructive criticism</li>
+      <li>Focusing on what is best for the community</li>
+      <li>Showing empathy towards other community members</li>
+    </ul>
   </p>
   <p>
-    We are committed to making participation in this project a harassment-free
-    experience for everyone, regardless of level of experience, gender,
-    gender identity and expression, sexual orientation, disability, personal
-    appearance, body size, race, ethnicity, age, or religion.
+    Examples of unacceptable behavior by participants include:
+    <ul>
+      <li>The use of sexualized language or imagery and unwelcome sexual attention or advances</li>
+      <li>Trolling, insulting/derogatory comments, and personal or political attacks</li>
+      <li>Public or private harassment</li>
+      <li>Publishing others' private information, such as a physical or electronic address, without explicit permission</li>
+      <li>Other conduct which could reasonably be considered inappropriate in a professional setting</li>
+    </ul>
   </p>
+  <h5>Our Responsibilities</h5>
   <p>
-    Examples of unacceptable behavior by participants include the use of
-    sexual language or imagery, derogatory comments or personal attacks,
-    trolling, public or private harassment, insults, or other unprofessional
-    conduct.
+    Project maintainers are responsible for clarifying the standards of
+    acceptable behavior and are expected to take appropriate and fair
+    corrective action in response to any instances of unacceptable behavior.
   </p>
   <p>
     Project maintainers have the right and responsibility to remove, edit, or
     reject comments, commits, code, wiki edits, issues, and other contributions
-    that are not aligned to this Code of Conduct. Project maintainers who do
-    not follow the Code of Conduct may be removed from the project team.
+    that are not aligned to this Code of Conduct, or to ban temporarily or
+    permanently any contributor for other behaviors that they deem
+    inappropriate, threatening, offensive, or harmful.
   </p>
+  <h5>Scope</h5>
   <p>
-    This code of conduct applies both within project spaces and in public
+    This Code of Conduct applies both within project spaces and in public
     spaces when an individual is representing the project or its community.
+    Examples of representing a project or community include using an official
+    project e-mail address, posting via an official social media account,
+    or acting as an appointed representative at an online or offline event.
+    Representation of a project may be further defined and clarified by
+    project maintainers.
   </p>
+  <h5>Enforcement</h5>
   <p>
     Instances of abusive, harassing, or otherwise unacceptable behavior may be
-    reported by <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">opening an issue</a>
-    or contacting <a href="mailto:mjtruog@gmail.com">one or more of the project maintainers</a>.
+    reported by
+    <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">opening an issue</a>
+    or contacting
+    <a href="mailto:mjtruog@gmail.com">the project creator</a>. All
+    complaints will be reviewed and investigated and will result in a
+    response that is deemed necessary and appropriate to the circumstances.
+    The project team is obligated to maintain confidentiality with regard to
+    the reporter of an incident.  Further details of specific enforcement
+    policies may be posted separately.
   </p>
   <p>
+    Project maintainers who do not follow or enforce the Code of Conduct in
+    good faith may face temporary or permanent repercussions as determined by
+    other members of the project's leadership.
+  </p>
+  <h5>Attribution</h5>
+  <p>
     This Code of Conduct is adapted from the
-    <a href="http://contributor-covenant.org/" target="_blank">Contributor Covenant</a>,
-    version 1.1.0, available at
-    <a href="http://contributor-covenant.org/version/1/1/0/"target="_blank">http://contributor-covenant.org/version/1/1/0/</a>
+    <a href="http://contributor-covenant.org/" target="_blank">Contributor Covenant</a>, version 1.4,
+    available at <a href="http://contributor-covenant.org/version/1/4/" target="_blank">http://contributor-covenant.org/version/1/4/</a>
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -942,18 +1007,13 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </ol>
   </p>
   <p class="paragraph">
-    All the supported programming languages are expected by the configure
-    script and are required when executing all the integration tests
-    (with the provided cloudi_tests.conf containing the integration test
-     service configurations).
-    The dependencies are a C compiler, a C++ compiler,
-    Erlang (&ge; <a href="http://www.erlang.org/download.html" target="_blank">19.0</a>),
-    Java Development Kit (JDK &ge; 1.5), node.js (&ge; 0.8.0),
-    Perl (&ge; 5.10), PHP (&ge; 5.3.6), Python (&ge; 2.7), and
-    Ruby (&ge; 1.9).  Use the <a href="#3_Options">--disable-LANGUAGE-support configure argument</a>
-    to disable support for a programming language and the
-    --with-integration-tests-ran=no configure argument to use a minimal
-    cloudi.conf file in the installation (<a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in" target="_blank">src/cloudi_minimal.conf.in</a>).
+    The most common programming languages CloudI supports are expected to be
+    present by the configure script and are required when executing the
+    integration tests (with the provided cloudi_tests.conf containing the
+    integration tests service configurations).  For information about
+    the configure script arguments to enable or disable programming language
+    support, refer to the
+    <a href="#3_Options">Installation Options</a>.
   </p>
   <p class="paragraph">
     Dependencies as they are packaged for different operating systems are
@@ -1013,30 +1073,79 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </td></tr><tr><td nowrap>
     --with-python-version=[2|3]
     </td><td>
-    Specify the version of python to use<br />(2 is the default)
+    Specify the version of python to use<br />(default="2")
     </td></tr><tr><td nowrap>
     --with-python-debug
     </td><td>
-    Use the debug python executable instead of the normal python executable
+    Use the debug python executable instead of the normal python
+    executable<br />(default="no")
     </td></tr><tr><td nowrap>
     --with-zeromq
     </td><td>
-    Include <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a> support
+    Include <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
+    support<br />(default="no")
     </td></tr><tr><td nowrap>
     --with-zeromq-version=[2|3]
     </td><td>
-    ZeroMQ major version<br />(3 is the default)
-    </td></tr><tr><td nowrap>
-    --disable-LANGUAGE-support
-    </td><td>
-    Disable the support of a specific programming language and do not install
-    the CloudI API implementation or its integration tests<br />
-    (LANGUAGE == c, cxx, java, javascript, perl, php, python, python-c, or ruby)
+    ZeroMQ major version<br />(default="3")
     </td></tr><tr><td nowrap>
     --without-integration-tests
     </td><td>
     Do not build and install the integration tests or utilize the
-    integration tests configuration that causes them to run at startup
+    integration tests configuration that causes them to run at startup<br />
+    (default="yes")
+    </td></tr><tr><td nowrap>
+    --without-integration-tests-ran
+    </td><td>
+    Do not install the integration tests configuration that
+    causes them to run at startup<br />
+    (default="no")
+    </td></tr><tr><td nowrap>
+    --enable-go-support
+    </td><td>
+    Enable the Go CloudI API,<br />
+    requires Go&nbsp;&ge;&nbsp;1.6<br />(default="no")
+    </td></tr><tr><td nowrap>
+    --enable-haskell-support
+    </td><td>
+    Enable the Haskell CloudI API,<br />
+    requires GHC&nbsp;&ge;&nbsp;7.10.3 and
+    cabal&#8209;install&nbsp;&ge;&nbsp;1.22<br />(default="no")
+    </td></tr><tr><td nowrap>
+    --disable-java-support
+    </td><td>
+    Disable the Java CloudI API,<br />
+    requires Java&nbsp;&ge;&nbsp;1.5 JDK<br />(default="yes")
+    </td></tr><tr><td nowrap>
+    --disable-javascript-support
+    </td><td>
+    Disable the Javascript CloudI API,<br />
+    requires node.js&nbsp;&ge;&nbsp;0.8.0<br />(default="yes")
+    </td></tr><tr><td nowrap>
+    --enable-ocaml-support
+    </td><td>
+    Enable the OCaml CloudI API,<br />
+    requires OCaml&nbsp;&ge;&nbsp;4.03.0<br />(default="no")
+    </td></tr><tr><td nowrap>
+    --disable-perl-support
+    </td><td>
+    Disable the Perl CloudI API,<br />
+    requires Perl&nbsp;&ge;&nbsp;5.10 and Compress::Zlib<br />(default="yes")
+    </td></tr><tr><td nowrap>
+    --disable-php-support
+    </td><td>
+    Disable the PHP CloudI API,<br />
+    requires PHP&nbsp;&ge;&nbsp;5.3.6<br />(default="yes")
+    </td></tr><tr><td nowrap>
+    --disable-python-support
+    </td><td>
+    Disable the Python CloudI API,<br />
+    requires Python&nbsp;&ge;&nbsp;2.7.0<br />(default="yes")
+    </td></tr><tr><td nowrap>
+    --disable-ruby-support
+    </td><td>
+    Disable the Ruby CloudI API,<br />
+    requires Ruby&nbsp;&ge;&nbsp;1.9.0<br />(default="yes")
     </td></tr></table>
   </p>
   <p class="paragraph">
@@ -1185,9 +1294,9 @@ sudo cloudi stop
   <h4><a href="api.html#Service">CloudI API</a></h4>
   <p class="paragraph">
     The CloudI API provides a light-weight interface for creating services
-    in C++/C, Elixir, Erlang, Java, Javascript, Perl, PHP, Python, and Ruby.
-    Services subscribe to receive
-    requests from other services using the CloudI API
+    in C++/C, Elixir, Erlang, Go, Haskell, Java, Javascript, OCaml, Perl,
+    PHP, Python, and Ruby.  Services subscribe to receive requests from
+    other services using the CloudI API
     "<a href="api.html#1_subscribe">subscribe</a>" function
     call.  The subscribe function call takes a suffix string that is expected
     to contain a path using a forward slash '/' (e.g., /cloudi/api/json_rpc/).
@@ -1533,7 +1642,7 @@ sudo cloudi stop
     <a href="api.html#Service">CloudI API</a>
     to send requests to a configured CloudI database integration
     service.  The implementation of services that avoids state-keeping within
-    the service's data structures is required to make sure a service is
+    the service's data structures is required to ensure a service is
     scalable, fault-tolerant and can recover from a failure without losing
     a significant amount of data.
   </p>
@@ -1699,7 +1808,7 @@ sudo cloudi stop
       <li>A service request timeout is decreased by any queuing or processing delays to provide better soft-realtime timeout enforcement than what Erlang/OTP provides.</li>
       <li>Service name grouping with <a href="#4_URLregex">pattern matching</a>.</li>
       <li>Every service request can utilize 255 possible request priorities</li>
-      <li>TCP sockets are used instead of pipes to maximize atomic send throughput (the localhost MTU is 16436 on Linux, but pipes are typically 4096 on Linux (PIPE_BUF)).</li>
+      <li>TCP sockets are used instead of pipes to maximize atomic send throughput (pipes are typically 4096 on Linux (PIPE_BUF) while the localhost MTU on Linux is much higher).</li>
       <li>stdout and stderr output is logged automatically to the single CloudI log.</li>
       <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology).</li>
       <li>A long-running CloudI internal service is much more dependable when compared to a single Erlang process due to CloudI providing specific hints to the Erlang VM's garbage collection that avoids excessive memory consumption.</li>
@@ -1861,7 +1970,7 @@ sudo cloudi stop
     The service must exit whenever an unrecoverable error occurs.  If a
     CloudI request causes an exception, the request will fail but the service
     will not be restarted.  So, services should always have proper exception
-    handling, to make sure the context of any errors is explicit
+    handling, to ensure the context of any errors is explicit
     (otherwise, the service source code will become difficult to maintain
     if any CloudI requests fail).  Without service exception handling,
     the exception will cause exception information to be logged, however, the
@@ -2015,11 +2124,16 @@ sudo cloudi stop
     files do not bring in external dependencies but both require the standard
     C++ library as a link-time dependency.  When compiling an executable that
     uses the C CloudI API with a C compiler, the '-fexceptions' C compiler
-    flag is required to make sure source code is included to provide handling
-    of C++ exceptions (add it to the CFLAGS).  Some of the integration tests
-    that provide example usage of the C/C++
+    flag is required to ensure source code is included to provide handling
+    of C++ exceptions (add it to the CFLAGS).  The callback function type
+    used by the C CloudI API allows passing a void * for thread-specific data
+    to each execution of the callback function while the C++ CloudI API can
+    utilize class data with callback functions that are class member functions.
+    Some of the integration tests that provide example usage of the C/C++
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/c_src/main.c" target="_blank">src/tests/count (C, no threads)
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C, no threads)
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx_src/main.cpp" target="_blank">src/tests/msg_size (C++, no threads)
@@ -2035,7 +2149,7 @@ sudo cloudi stop
     executable in the service configuration and use the valgrind command line
     argument "--track-fds=yes" with the service command line after it.
     The valgrind output will appear within the cloudi.log output.  If you plan
-    on using vgdb while valgrind is running, make sure {"USER", "${USER}"} is
+    on using vgdb while valgrind is running, confirm {"USER", "${USER}"} is
     specified in the list of environment variables provided for valgrind
     (running as a CloudI service) so valgrind can properly create its
     vgdb file names.
@@ -2068,6 +2182,8 @@ sudo cloudi stop
     provide example usage of the Erlang
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/src/cloudi_service_count.erl" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/src/cloudi_service_msg_size.erl" target="_blank">src/tests/msg_size
@@ -2089,8 +2205,67 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
+  <a name="6_Go"></a>
+  <h3>6.3 - Go Service Implementation</h3>
+  <p class="paragraph">
+    The Go CloudI API provides a simple interface for making Go CloudI
+    services.  The Go CloudI API only uses Go source code internally
+    to avoid errors and simplify concurrency.  If thread-specific data is
+    necessary, the Go CloudI API initialization can be passed a pointer
+    type that is provided to each callback function execution.
+    The integration tests that provide example usage of the Go
+    <a href="api.html#Service">CloudI API</a> are:
+    <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/gopath/src/count_go/main.go" target="_blank">src/tests/count
+          Basic Count Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/gopath/src/http_req_go/main.go" target="_blank">src/tests/http_req
+          Basic HTTP Request Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/gopath/src/msg_size_go/main.go" target="_blank">src/tests/msg_size
+          Basic Message Size (Forwarding) Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/gopath/src/messaging_go/main.go" target="_blank">src/tests/messaging
+          Basic Messaging Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/null/gopath/src/null_go/main.go" target="_blank">src/tests/null
+          Basic Null Response Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
+  <a name="6_Haskell"></a>
+  <h3>6.4 - Haskell Service Implementation</h3>
+  <p class="paragraph">
+    The Haskell CloudI API provides a simple interface for making Haskell CloudI
+    services.  The Haskell CloudI API only uses Haskell source code internally
+    to avoid errors and simplify concurrency.  If thread-specific data is
+    necessary, the Haskell CloudI API would be instantiated using its
+    parameterized type to store the state data (if it is unnecessary, it is
+    simplest to use the unit type ("()") as the type parameter, as shown
+    in the examples below).  Updating the thread-specific data requires using
+    the callback function return type.  The integration tests that provide
+    example usage of the Haskell
+    <a href="api.html#Service">CloudI API</a> are:
+    <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/haskell/Main.hs" target="_blank">src/tests/count
+          Basic Count Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/haskell/Main.hs" target="_blank">src/tests/http_req
+          Basic HTTP Request Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/haskell/Main.hs" target="_blank">src/tests/msg_size
+          Basic Message Size (Forwarding) Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/haskell/Main.hs" target="_blank">src/tests/messaging
+          Basic Messaging Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/null/haskell/Main.hs" target="_blank">src/tests/null
+          Basic Null Response Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
   <a name="6_Java"></a>
-  <h3>6.3 - Java Service Implementation</h3>
+  <h3>6.5 - Java Service Implementation</h3>
   <p class="paragraph">
     The Java CloudI API uses synchronous IO on file descriptors for
     an efficient light-weight interface using only Java source code,
@@ -2100,10 +2275,14 @@ sudo cloudi stop
     Object-Oriented Software" (page 20, "Favor object composition over class inheritance")</a>
     and to stay consistent with the
     other CloudI API implementations using function references for
-    service name subscriptions.
+    service name subscriptions.  If Java 8 or higher is used, it is
+    possible to use method references for CloudI API subscriptions
+    (example use is shown in the http_req integration test).
     Some of the integration tests that provide example usage of the Java
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/org/cloudi/tests/count/Task.java" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/org/cloudi/tests/msg_size/Task.java" target="_blank">src/tests/msg_size
@@ -2118,7 +2297,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_JavaScript"></a>
-  <h3>6.4 - JavaScript/node.js Service Implementation</h3>
+  <h3>6.6 - JavaScript/node.js Service Implementation</h3>
   <p class="paragraph">
     The JavaScript CloudI API provides a simple interface for making JavaScript
     CloudI services. The JavaScript CloudI API only uses JavaScript source code
@@ -2128,6 +2307,8 @@ sudo cloudi stop
     The integration tests that provide example usage of the JavaScript
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.js" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.js" target="_blank">src/tests/msg_size
@@ -2145,15 +2326,46 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
+  <a name="6_OCaml"></a>
+  <h3>6.7 - OCaml Service Implementation</h3>
+  <p class="paragraph">
+    The OCaml CloudI API provides a simple interface for making OCaml CloudI
+    services.  The OCaml CloudI API only uses OCaml source code internally
+    to avoid errors and simplify concurrency.  If thread-specific data is
+    necessary, the OCaml CloudI API would be instantiated using its
+    parameterized type to store the state data (if it is unnecessary, it is
+    simplest to use the unit type as the type parameter).
+    The integration tests that provide example usage of the OCaml
+    <a href="api.html#Service">CloudI API</a> are:
+    <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/ocaml/main.ml" target="_blank">src/tests/count
+          Basic Count Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ocaml/main.ml" target="_blank">src/tests/http_req
+          Basic HTTP Request Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/ocaml/main.ml" target="_blank">src/tests/msg_size
+          Basic Message Size (Forwarding) Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ocaml/main.ml" target="_blank">src/tests/messaging
+          Basic Messaging Test</a></li>
+    </ul>
+  </p>
+  <p>
+    For more information, please refer to <a href="#4_API">"4.1 - How do I integrate external software with CloudI?"</a>.
+  </p>
+  <div class="top"><a href="#6_contents">Top</a></div>
+
   <a name="6_Perl"></a>
-  <h3>6.5 - Perl Service Implementation</h3>
+  <h3>6.8 - Perl Service Implementation</h3>
   <p class="paragraph">
     The Perl CloudI API provides a simple interface for making Perl
     CloudI services. The Perl CloudI API only uses Perl source code
-    internally to avoid errors and simplify concurrency.
+    internally to avoid errors and simplify concurrency. If thread-specific
+    data is necessary a Perl module can be used as the CloudI service
+    (the count integration test provides an example).
     The integration tests that provide example usage of the Perl
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/CountTask.pm" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.pl" target="_blank">src/tests/msg_size
@@ -2168,7 +2380,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_PHP"></a>
-  <h3>6.6 - PHP Service Implementation</h3>
+  <h3>6.9 - PHP Service Implementation</h3>
   <p class="paragraph">
     The PHP CloudI API provides a simple interface for making PHP
     CloudI services. The PHP CloudI API only uses PHP source code
@@ -2176,6 +2388,8 @@ sudo cloudi stop
     The integration tests that provide example usage of the PHP
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.php" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.php" target="_blank">src/tests/msg_size
@@ -2192,13 +2406,15 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_Python"></a>
-  <h3>6.7 - Python Service Implementation</h3>
+  <h3>6.10 - Python Service Implementation</h3>
   <p class="paragraph">
     The Python CloudI API provides a simple interface for making Python
     CloudI services.  Some of the integration tests that provide example usage
     of the Python
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.py" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.py" target="_blank">src/tests/msg_size
@@ -2233,7 +2449,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_Ruby"></a>
-  <h3>6.8 - Ruby Service Implementation</h3>
+  <h3>6.11 - Ruby Service Implementation</h3>
   <p class="paragraph">
     The Ruby CloudI API provides a simple interface for making Ruby
     CloudI services. The Ruby CloudI API only uses Ruby source code
@@ -2241,6 +2457,8 @@ sudo cloudi stop
     Some of the integration tests that provide example
     usage of the Ruby <a href="api.html#Service">CloudI API</a> are:
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.rb" target="_blank">src/tests/count
+          Basic Count Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.rb" target="_blank">src/tests/msg_size
@@ -2255,7 +2473,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_HTTP"></a>
-  <h3>6.9 - HTTP Integration</h3>
+  <h3>6.12 - HTTP Integration</h3>
   <p class="paragraph">
     HTTP integration with CloudI services uses service names that have a prefix
     that matches the Uniform Resource Locator (URL) path.  A simple example
@@ -2360,7 +2578,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_ZeroMQ"></a>
-  <h3>6.10 - ZeroMQ Integration</h3>
+  <h3>6.13 - ZeroMQ Integration</h3>
   <p class="paragraph">
     <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
     integration is provided by the cloudi_service_zeromq Erlang CloudI service.
@@ -2445,7 +2663,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_FaultTolerance"></a>
-  <h3>6.11 - Service Fault Tolerance</h3>
+  <h3>6.14 - Service Fault Tolerance</h3>
   <p class="paragraph">
     General fault tolerance considerations within the CloudI framework are
     described in <a href="#5_Stability">"5.3 - Stability and Fault Tolerance Considerations"</a>.
@@ -2488,14 +2706,14 @@ sudo cloudi stop
     options <a href="api.html#2_services_add_config_opts_monkey_latency">monkey_latency</a>
     and <a href="api.html#2_services_add_config_opts_monkey_chaos">monkey_chaos</a>
     can be used to simulate failures.  The simulated failures can then be used
-    with higher-level processing to make sure the system remains robust
+    with higher-level processing to ensure the system remains robust
     during the internal failures (i.e., to prove system fault tolerance
     during higher-level system testing).
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_Monitoring" ></a>
-  <h3>6.12 - Service Monitoring</h3>
+  <h3>6.15 - Service Monitoring</h3>
   <p class="paragraph">
     The <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl" target="_blank">cloudi_service_monitoring</a>
     provides the ability to monitor the internals of any CloudI service
@@ -2552,9 +2770,9 @@ sudo cloudi stop
   <h3>7.1 - Why does CloudI stop shortly after being started?</h3>
   <p class="paragraph">
   If any services listed in the CloudI configuration file fail to initialize
-  CloudI will shutdown.  This behavior is required to make sure CloudI services
+  CloudI will shutdown.  This behavior is required to ensure CloudI services
   are able to fail-fast when services are unable to initialize.  If this has
-  happened while running the integration tests, please make sure to submit
+  happened while running the integration tests, please submit
   the problem (with the /usr/local/var/log/cloudi/cloudi.log file and the
   build's config.log file) as <a href="#2_ReportingBugs">a bug</a>.
   </p>

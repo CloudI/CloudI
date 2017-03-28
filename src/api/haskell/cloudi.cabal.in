@@ -12,6 +12,7 @@ category:            Foreign
 stability:           provisional
 build-type:          Simple
 cabal-version:       >= 1.22
+tested-with:         GHC == 7.10.3, GHC == 8.0.2
 
 library
   hs-source-dirs:    src

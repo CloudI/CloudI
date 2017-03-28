@@ -11,7 +11,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.6.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -399,9 +399,9 @@ handle_info({changes, ServiceId},
             {I, Rate} = pids_change(ChangeList, CountProcessCurrent),
             NewServices = if
                 I == 0 ->
-                    ?LOG_TRACE("count_process_dynamic: "
+                    ?LOG_TRACE("count_process_dynamic(~p):~n "
                                "constant ~p for ~p requests/second",
-                               [CountProcessCurrent,
+                               [service_id(ServiceId), CountProcessCurrent,
                                 erlang:round(Rate * 10) / 10]),
                     Services;
                 I > 0 ->
@@ -856,9 +856,9 @@ pids_increase_loop(Count, ProcessIndex,
 pids_increase(Count, OldPids, CountProcessCurrent, Rate,
               ServiceId, Services) ->
     ServiceL = service_instance(OldPids, ServiceId, Services),
-    ?LOG_INFO("count_process_dynamic: "
+    ?LOG_INFO("count_process_dynamic(~p):~n "
               "increasing ~p with ~p for ~p requests/second~n~p",
-              [CountProcessCurrent, Count,
+              [service_id(ServiceId), CountProcessCurrent, Count,
                erlang:round(Rate * 10) / 10,
                [P || #service{pids = P} <- ServiceL]]),
     CountProcess = CountProcessCurrent + Count,
@@ -880,9 +880,9 @@ pids_decrease_loop(Count, [#service{pids = Pids} | ServiceL]) ->
 pids_decrease(Count, OldPids, CountProcessCurrent, Rate,
               ServiceId, Services) ->
     ServiceL = service_instance(OldPids, ServiceId, Services),
-    ?LOG_INFO("count_process_dynamic: "
+    ?LOG_INFO("count_process_dynamic(~p):~n "
               "decreasing ~p with ~p for ~p requests/second~n~p",
-              [CountProcessCurrent, Count,
+              [service_id(ServiceId), CountProcessCurrent, Count,
                erlang:round(Rate * 10) / 10,
                [P || #service{pids = P} <- ServiceL]]),
     CountProcess = CountProcessCurrent + Count,

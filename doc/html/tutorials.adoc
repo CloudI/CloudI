@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 1.6.0
-:revdate: 2017-01-11
+:revnumber: 1.7.0
+:revdate: 2017-03-27
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -40,11 +40,26 @@ If a supported programming language doesn't yet have a tutorial written yet, it 
 
 All Supported Programming Languages::
   * link:https://github.com/CloudI/CloudI/tree/master/doc#readme[Quick Start]
+  * Basic Count Integration Test
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/c_src/main.c[C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/src/cloudi_service_count.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/gopath/src/count_go/main.go[Go]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/haskell/Main.hs[Haskell]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/org/cloudi/tests/count/Task.java[Java]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/ocaml/main.ml[OCaml]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/CountTask.pm[Perl]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.php[PHP]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count_c.py[Python/C]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.rb[Ruby]
   * Basic HTTP Request Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c[C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/gopath/src/http_req_go/main.go[Go]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/haskell/Main.hs[Haskell]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java[Java]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ocaml/main.ml[OCaml]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl[Perl]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req_c.py[Python/C]
@@ -52,8 +67,11 @@ All Supported Programming Languages::
   * Basic Message Size (Forwarding) Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx_src/main.cpp[C++]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/src/cloudi_service_msg_size.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/gopath/src/msg_size_go/main.go[Go]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/haskell/Main.hs[Haskell]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/org/cloudi/tests/msg_size/Task.java[Java]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/ocaml/main.ml[OCaml]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.pl[Perl]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/msg_size_c.py[Python/C]
@@ -61,8 +79,11 @@ All Supported Programming Languages::
   * Basic Messaging Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx_src/main.cpp[C++]
   ** Erlang (link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence1.erl[Sequence 1] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence2.erl[Sequence 2] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence3.erl[Sequence 3] link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence4.erl[Sequence 4])
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/gopath/src/messaging_go/main.go[Go]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/haskell/Main.hs[Haskell]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/org/cloudi/tests/messaging/Task.java[Java]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ocaml/main.ml[OCaml]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/MessagingTask.pm[Perl]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging_c.py[Python/C]
@@ -70,8 +91,11 @@ All Supported Programming Languages::
   * Basic Null Response Integration Test
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/c_src/main.c[C]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/src/cloudi_service_null.erl[Erlang]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/gopath/src/null_go/main.go[Go]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/haskell/Main.hs[Haskell]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/org/cloudi/tests/null_/Task.java[Java]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.js[Javascript/node.js]
+  ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/ocaml/main.ml[OCaml]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.pl[Perl]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.php[PHP]
   ** link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.py[Python] and link:https://github.com/CloudI/CloudI/blob/master/src/tests/null/null_c.py[Python/C]

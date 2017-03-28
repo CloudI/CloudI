@@ -174,7 +174,7 @@ t_local_output_1(_Config) ->
     ok = syslog_socket:send(Pid, notice, os:timestamp(), ""),
     ok = syslog_socket:stop_link(Pid, 5000),
     receive after 10 -> ok end,
-    {ok, SyslogData} = file:read_file("/var/l""og/sysl""og"),
+    {ok, SyslogData} = file:read_file("/var/log/syslog"),
     SyslogDataLines = case lists:reverse(binary:split(SyslogData, <<"\n">>,
                                                       [global])) of
         [<<>> | SyslogDataLinesValue] ->

@@ -1,0 +1,133 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module quickrand_cache</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module quickrand_cache</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Quick_Random_Number_Generation_With_Cached_Data">Quick Random Number Generation With Cached Data</a></h3>.
+<p>Copyright © 2017 Michael Truog</p>
+
+<p><b>Version:</b> 1.6.1 Mar 28 2017 18:24:12
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Quick_Random_Number_Generation_With_Cached_Data">Quick Random Number Generation With Cached Data</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [{cache_size, Bytes::pos_integer()}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #quickrand_cache{i = non_neg_integer(), cache_size = pos_integer(), cache = binary()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#float-0">float/0</a></td><td>
+  <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_float/0.">Process dictionary cache version of quickrand:strong_float/0.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#float-1">float/1</a></td><td>
+  <h4><a name="State_cache_version_of_quickrand:strong_float/0.">State cache version of quickrand:strong_float/0.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#init-0">init/0</a></td><td>
+  <h4><a name="Initialize_cached_process_dictionary_data.">Initialize cached process dictionary data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td>
+  <h4><a name="Initialize_cached_process_dictionary_data_with_options.">Initialize cached process dictionary data with options.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-0">new/0</a></td><td>
+  <h4><a name="Initialize_cached_state_data.">Initialize cached state data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#new-1">new/1</a></td><td>
+  <h4><a name="Initialize_cached_state_data_with_options.">Initialize cached state data with options.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#rand_bytes-1">rand_bytes/1</a></td><td>
+  <h4><a name="Get_random_bytes_using_cached_process_dictionary_data.">Get random bytes using cached process dictionary data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#rand_bytes-2">rand_bytes/2</a></td><td>
+  <h4><a name="Get_random_bytes_using_cached_state_data.">Get random bytes using cached state data.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#uniform-1">uniform/1</a></td><td>
+  <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_uniform/1.">Process dictionary cache version of quickrand:strong_uniform/1.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#uniform-2">uniform/2</a></td><td>
+  <h4><a name="State_cache_version_of_quickrand:strong_uniform/1.">State cache version of quickrand:strong_uniform/1.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="float-0">float/0</a></h3>
+<div class="spec">
+<p><tt>float() -&gt; float()</tt><br></p>
+</div><p>
+  <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_float/0.">Process dictionary cache version of quickrand:strong_float/0.</a></h4>
+</p>
+
+<h3 class="function"><a name="float-1">float/1</a></h3>
+<div class="spec">
+<p><tt>float(State::<a href="#type-state">state()</a>) -&gt; {float(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="State_cache_version_of_quickrand:strong_float/0.">State cache version of quickrand:strong_float/0.</a></h4>
+</p>
+
+<h3 class="function"><a name="init-0">init/0</a></h3>
+<div class="spec">
+<p><tt>init() -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Initialize_cached_process_dictionary_data.">Initialize cached process dictionary data.</a></h4>
+</p>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(Options::<a href="#type-options">options()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Initialize_cached_process_dictionary_data_with_options.">Initialize cached process dictionary data with options.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-0">new/0</a></h3>
+<div class="spec">
+<p><tt>new() -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>
+  <h4><a name="Initialize_cached_state_data.">Initialize cached state data.</a></h4>
+</p>
+
+<h3 class="function"><a name="new-1">new/1</a></h3>
+<div class="spec">
+<p><tt>new(Options::<a href="#type-options">options()</a>) -&gt; <a href="#type-state">state()</a></tt><br></p>
+</div><p>
+  <h4><a name="Initialize_cached_state_data_with_options.">Initialize cached state data with options.</a></h4>
+</p>
+
+<h3 class="function"><a name="rand_bytes-1">rand_bytes/1</a></h3>
+<div class="spec">
+<p><tt>rand_bytes(N::pos_integer()) -&gt; binary()</tt><br></p>
+</div><p>
+  <h4><a name="Get_random_bytes_using_cached_process_dictionary_data.">Get random bytes using cached process dictionary data.</a></h4>
+</p>
+
+<h3 class="function"><a name="rand_bytes-2">rand_bytes/2</a></h3>
+<div class="spec">
+<p><tt>rand_bytes(N::pos_integer(), State::<a href="#type-state">state()</a>) -&gt; {binary(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="Get_random_bytes_using_cached_state_data.">Get random bytes using cached state data.</a></h4>
+</p>
+
+<h3 class="function"><a name="uniform-1">uniform/1</a></h3>
+<div class="spec">
+<p><tt>uniform(N::pos_integer()) -&gt; pos_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Process_dictionary_cache_version_of_quickrand:strong_uniform/1.">Process dictionary cache version of quickrand:strong_uniform/1.</a></h4>
+</p>
+
+<h3 class="function"><a name="uniform-2">uniform/2</a></h3>
+<div class="spec">
+<p><tt>uniform(N::pos_integer(), State::<a href="#type-state">state()</a>) -&gt; {pos_integer(), <a href="#type-state">state()</a>}</tt><br></p>
+</div><p>
+  <h4><a name="State_cache_version_of_quickrand:strong_uniform/1.">State cache version of quickrand:strong_uniform/1.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Mar 28 2017, 18:24:12.</i></p>
+</body>
+</html>

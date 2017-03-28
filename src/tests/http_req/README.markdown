@@ -1,4 +1,4 @@
-#CloudI Loadtesting
+# CloudI Loadtesting
 
 ## ABOUT
 
@@ -44,38 +44,38 @@ suited for loadtesting.  Despite both machines having similar technical
 specifications, machine #2 has much lower latency during testing and the
 results are more trustworthy.
 
-##CONFIGURATION
+## CONFIGURATION
 
 The general software configuration files are in
 [https://github.com/CloudI/loadtests/](https://github.com/CloudI/loadtests/)
 in `tests/http_req/loadtest/results_v*/*_tsung_output.tar.bz2`
 (inside the `setup` directory).
 
-###Hardware
+### Hardware
 
-####Machine 1 `(<= 1.2.2)`
+#### Machine 1 `(<= 1.2.2)`
 
     Core i7 2670QM 2.2GHz 1 cpu, 4 cores/cpu, 2 hts/core
     L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (Socket G2)
 
-####Machine 2
+#### Machine 2
 
     Core i7 2700K 3.5GHz 1 cpu, 4 cores/cpu, 2 hts/core
     L2:4x256KB L3:8MB RAM:16GB:DDR3-1333MHz
     Sandy Bridge-HE-4 (LGA1155)
 
-#####Disk
+##### Disk
 
     WDC WD10EZEX (1TB)
     max UDMA/133 (133 MB/s), SATA rev 2 (3.0 Gbps, 300 MB/s)
     4096 byte physical blocks, 512 byte logical blocks
 
-####Network
+#### Network
 
     Gigabit ethernet (Netgear JGS516)
 
-###Software
+### Software
 
     Ubuntu 12.05 LTS (GNU/Linux 3.2.0 x86_64)
 
@@ -131,9 +131,9 @@ during a loadtest, since it skews the results by causing abnormal latency.
 If the CPU is automatically ramped down during the loadtest, the results
 are considered invalid and will likely contain request latency spikes.
 
-##RESULTS
+## RESULTS
 
-###Summaries
+### Summaries
 
 * [CloudI version 1.5.1](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_summary.pdf)
 * [CloudI version 1.4.0](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_4_0/201412_summary.pdf)
@@ -141,7 +141,7 @@ are considered invalid and will likely contain request latency spikes.
 * [CloudI version 1.2.1](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_2_1/201303_summary.pdf)
 * [CloudI version 1.1.0](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_1_0/201210_summary.pdf)
 
-###Tsung Output Explanation
+### Tsung Output Explanation
 
 [`loadtest/results_v1_5_1/`](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_5_1/201512_tsung_output.tar.bz2):
 * shows default service configuration compared with previous versions
@@ -196,7 +196,7 @@ are considered invalid and will likely contain request latency spikes.
 * each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
 * used `Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)` with `Erlang R15B01`
 
-##INFORMATION
+## INFORMATION
 
 Any confusion about how to do benchmarks should go here (httpref results during 1 minute on localhost are useless, but typical on the internet):
 * [`http://www.mnot.net/blog/2011/05/18/http_benchmark_rules`](http://www.mnot.net/blog/2011/05/18/http_benchmark_rules)

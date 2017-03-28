@@ -16,6 +16,10 @@ methods are provided as specified within the RFC.
 
 Requires `Erlang >= R16B01`
 
+If you use the functions `uuid:new/1`, `uuid:new/2` or `uuid:get_v4_urandom/0`
+in an Erlang process, you must have called the function `quickrand:seed/0`
+first (within the same Erlang process).
+
 Build
 -----
 

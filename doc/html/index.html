@@ -47,8 +47,8 @@ Cloud<font style="font-family: serif">I</font><img src="images/cloud.png" />
   <p>
   CloudI is for back-end server processing tasks that require soft-realtime
   transaction processing external to database usage
-  (in C/C++, Erlang/Elixir, Java, JavaScript/node.js, Perl, PHP,
-   Python and Ruby).  Examples include:
+  (in C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml,
+   Perl, PHP, Python and Ruby).  Examples include:
   <ul>
     <li>REST API Implementation</li>
     <li>Account Management</li>
@@ -79,8 +79,7 @@ cat &lt;&lt; EOF &gt; hello_world.c
 #include "cloudi.h"
 #include &lt;string.h&gt;
 #include &lt;assert.h&gt;
-static void hello_world(cloudi_instance_t * api,
-                        int const command,
+static void hello_world(int const command,
                         char const * const name,
                         char const * const pattern,
                         void const * const request_info,
@@ -91,7 +90,9 @@ static void hello_world(cloudi_instance_t * api,
                         int8_t priority,
                         char const * const trans_id,
                         char const * const pid,
-                        uint32_t const pid_size)
+                        uint32_t const pid_size,
+                        void * state,
+                        cloudi_instance_t * api)
 {
     char const * const message = "Hello World!";
     uint32_t const message_size = strlen(message);
@@ -106,7 +107,7 @@ int main(int argc, char ** argv)
     assert(result == cloudi_success);
     assert(thread_count == 1);
     cloudi_instance_t api;
-    result = cloudi_initialize(&amp;api, 0);
+    result = cloudi_initialize(&amp;api, 0, 0);
     assert(result == cloudi_success);
     result = cloudi_subscribe(&amp;api, "hello_world/get",
                               &amp;hello_world);
@@ -121,8 +122,8 @@ EOF
       <li>
         Compile the CloudI service executable:
 <pre onclick="element_select(this);">
-gcc -I/usr/local/lib/cloudi-1.6.0/api/c \
-    -L/usr/local/lib/cloudi-1.6.0/api/c \
+gcc -I/usr/local/lib/cloudi-1.7.0/api/c \
+    -L/usr/local/lib/cloudi-1.7.0/api/c \
     -g -O0 -fexceptions hello_world.c -o hello_world_c -lcloudi
 </pre>
       </li>
@@ -137,10 +138,9 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/c/"},
   {file_path, "$PWD/hello_world_c"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.6.0/api/c/"},
+          "/usr/local/lib/cloudi-1.7.0/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.6.0/api/c/"}]},
-  {protocol, tcp}]]
+          "/usr/local/lib/cloudi-1.7.0/api/c/"}]}]]
 EOF
 </pre>
       </li>
@@ -243,8 +243,8 @@ EOF
       <li>
         Compile the CloudI service executable:
 <pre onclick="element_select(this);">
-g++ -I/usr/local/lib/cloudi-1.6.0/api/c \
-    -L/usr/local/lib/cloudi-1.6.0/api/c \
+g++ -I/usr/local/lib/cloudi-1.7.0/api/c \
+    -L/usr/local/lib/cloudi-1.7.0/api/c \
     -g -O0 hello_world.cpp -o hello_world_cxx -lcloudi
 </pre>
       </li>
@@ -259,10 +259,9 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/cxx/"},
   {file_path, "$PWD/hello_world_cxx"},
   {env, [{"LD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.6.0/api/c/"},
+          "/usr/local/lib/cloudi-1.7.0/api/c/"},
          {"DYLD_LIBRARY_PATH",
-          "/usr/local/lib/cloudi-1.6.0/api/c/"}]},
-  {protocol, tcp}]]
+          "/usr/local/lib/cloudi-1.7.0/api/c/"}]}]]
 EOF
 </pre>
       </li>
@@ -346,7 +345,7 @@ defmodule HelloWorld.Mixfile do
 
     def project do
         [app: :'Elixir.HelloWorld',
-         version: "1.6.0",
+         version: "1.7.0",
          elixirc_paths: ["lib/"],
          deps: []]
     end
@@ -484,7 +483,7 @@ EOF
         file would be added with the same filename
         (see the examples <a href="https://github.com/CloudI/CloudI/tree/develop/examples/hello_world1#readme">for more details</a>).
 <pre onclick="element_select(this);">
-erlc -pz /usr/local/lib/cloudi-1.6.0/lib/cloudi_core-1.6.0/ebin \
+erlc -pz /usr/local/lib/cloudi-1.7.0/lib/cloudi_core-1.7.0/ebin \
     hello_world.erl
 </pre>
       </li>
@@ -546,6 +545,124 @@ curl http://localhost:6464/quickstart/erlang/hello_world
   </p>
   </div>
   </div> <!-- Erlang -->
+
+  <div id="Go">
+  <a href="#Go">Go</a>
+  <div class="tab_contents">
+  <p>
+    <ol>
+      <li>
+        CloudI must be compiled and installed after using the configure
+        argument "--enable-go-support" before attempting the Go quickstart
+        below:
+      </li>
+      <li>
+        A CloudI service written in Go is called an "external" service
+        because the service is ran inside an Operating System process
+        (external to the Erlang VM).  The example Go service can be
+        created by executing the following inside your shell:
+<pre onclick="element_select(this);">
+mkdir -p src/hello_world_go/vendor/
+cp -rf /usr/local/lib/cloudi-1.7.0/api/go/cloudi src/hello_world_go/vendor/
+cp -rf /usr/local/lib/cloudi-1.7.0/api/go/erlang src/hello_world_go/vendor/
+cat &lt;&lt; EOF &gt; src/hello_world_go/main.go
+package main
+
+import (
+    "cloudi"
+    "os"
+    "sync"
+)
+
+func helloWorld(requestType int, name, pattern string, requestInfo, request []byte, timeout uint32, priority int8, transId [16]byte, pid cloudi.Source, state interface{}, api *cloudi.Instance) ([]byte, []byte, error) {
+    return nil, []byte("Hello World!"), nil
+}
+
+func task(threadIndex uint32, execution *sync.WaitGroup) {
+    defer execution.Done()
+    api, err := cloudi.API(threadIndex, nil)
+    if err != nil {
+        cloudi.ErrorWrite(os.Stderr, err)
+        return
+    }
+    err = api.Subscribe("hello_world/get", helloWorld)
+    if err != nil {
+        cloudi.ErrorWrite(os.Stderr, err)
+        return
+    }
+    _, err = api.Poll(-1)
+    if err != nil {
+        cloudi.ErrorWrite(os.Stderr, err)
+    }
+}
+
+func main() {
+    threadCount, err := cloudi.ThreadCount()
+    if err != nil {
+        cloudi.ErrorExit(os.Stderr, err)
+    }
+    var execution sync.WaitGroup
+    for threadIndex := uint32(0); threadIndex &lt; threadCount; threadIndex++ {
+        execution.Add(1)
+        go task(threadIndex, &amp;execution)
+    }
+    execution.Wait()
+}
+EOF
+</pre>
+      </li>
+      <li>
+        Compile the CloudI service executable:
+<pre onclick="element_select(this);">
+mkdir -p bin
+GOPATH=`pwd` GOBIN=$GOPATH/bin go install -x hello_world_go
+</pre>
+      </li>
+      <li>
+        Now it is necessary to create the CloudI service configuration that
+        specifies both the initialization and fault-tolerance constraints
+        the CloudI service should be executed with
+        (with the proplist format to rely on defaults):
+<pre onclick="element_select(this);">
+export PWD=`pwd`
+cat &lt;&lt; EOF &gt; hello_world.conf
+[[{prefix, "/quickstart/go/"},
+  {file_path, "$PWD/bin/hello_world_go"}]]
+EOF
+</pre>
+      </li>
+      <li>
+        To dynamically add the CloudI service configuration that
+        starts the service's execution use:
+<pre onclick="element_select(this);">
+curl -X POST -d @hello_world.conf \
+    http://localhost:6464/cloudi/api/rpc/services_add.erl
+</pre>
+      </li>
+      <li>
+        The curl requests have been using the cowboy HTTP server that is
+        running within the default CloudI configuration to allow the
+        CloudI Service API to be used over HTTP.  The same HTTP server can
+        be used to make a CloudI service request to the hello_world service
+        with:
+<pre onclick="element_select(this);">
+curl http://localhost:6464/quickstart/go/hello_world
+</pre>
+      </li>
+      <li>
+        If there was a problem during the service creation there would be an
+        ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
+        If an error occurred with a curl command it would be displayed
+        in the shell.  The available service configuration parameters are
+        described in the
+        <a href="api.html#2_services_add">services_add documentation</a>.
+        More complex Go
+        <a href="faq.html#6_Go">examples are listed here</a>.
+      </li>
+    </ol>
+  </p>
+  </div>
+  </div> <!-- Go -->
 
   <div id="Java">
   <a href="#Java">Java</a>
@@ -645,7 +762,7 @@ public class Task
 EOF
 cat &lt;&lt; EOF &gt; manifest.txt
 Main-Class: org.cloudi.tests.hello_world.Main
-Class-Path: /usr/local/lib/cloudi-1.6.0/api/java/cloudi.jar
+Class-Path: /usr/local/lib/cloudi-1.7.0/api/java/cloudi.jar
 
 EOF
 </pre>
@@ -654,7 +771,7 @@ EOF
         Compile the CloudI service jar:
 <pre onclick="element_select(this);">
 cd org/cloudi/tests/hello_world/
-CLASSPATH=/usr/local/lib/cloudi-1.6.0\
+CLASSPATH=/usr/local/lib/cloudi-1.7.0\
 /api/java/cloudi.jar:${CLASSPATH} javac Task.java Main.java
 cd ../../../../
 jar cvfm hello_world.jar manifest.txt org
@@ -671,9 +788,8 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/java/"},
   {file_path, "$JAVA"},
-  {args, "-cp /usr/local/lib/cloudi-1.6.0/api/java/ "
-         "-ea:org.cloudi... -jar $PWD/hello_world.jar"},
-  {protocol, tcp}]]
+  {args, "-cp /usr/local/lib/cloudi-1.7.0/api/java/ "
+         "-ea:org.cloudi... -jar $PWD/hello_world.jar"}]]
 EOF
 </pre>
       </li>
@@ -722,7 +838,7 @@ curl http://localhost:6464/quickstart/java/hello_world
         created by executing the following inside your shell:
 <pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.js
-var CloudI = require('/usr/local/lib/cloudi-1.6.0/' +
+var CloudI = require('/usr/local/lib/cloudi-1.7.0/' +
                      'api/javascript/CloudI.js').CloudI;
 var assert = require('assert');
 
@@ -775,8 +891,7 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/javascript/"},
   {file_path, "$NODE"},
-  {args, "$PWD/hello_world.js"},
-  {protocol, tcp}]]
+  {args, "$PWD/hello_world.js"}]]
 EOF
 </pre>
       </li>
@@ -878,8 +993,7 @@ cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/perl/"},
   {file_path, "$PERL"},
   {args, "$PWD/hello_world.pl"},
-  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.6.0/api/perl"}]},
-  {protocol, tcp}]]
+  {env, [{"PERL5LIB", "/usr/local/lib/cloudi-1.7.0/api/perl"}]}]]
 EOF
 </pre>
       </li>
@@ -930,7 +1044,7 @@ curl http://localhost:6464/quickstart/perl/hello_world
 cat &lt;&lt; EOF &gt; hello_world.php
 &lt;?php 
 
-require '/usr/local/lib/cloudi-1.6.0/api/php/CloudI.php';
+require '/usr/local/lib/cloudi-1.7.0/api/php/CloudI.php';
 
 class Task
 {
@@ -987,8 +1101,7 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/php/"},
   {file_path, "$PHP"},
-  {args, "$PWD/hello_world.php"},
-  {protocol, tcp}]]
+  {args, "$PWD/hello_world.php"}]]
 EOF
 </pre>
       </li>
@@ -1038,7 +1151,7 @@ curl http://localhost:6464/quickstart/php/hello_world
 <pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.py
 import sys
-sys.path.append('/usr/local/lib/cloudi-1.6.0/api/python/')
+sys.path.append('/usr/local/lib/cloudi-1.7.0/api/python/')
 import traceback
 from cloudi import API, terminate_exception
 
@@ -1079,8 +1192,7 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/python/"},
   {file_path, "$PYTHON"},
-  {args, "$PWD/hello_world.py"},
-  {protocol, tcp}]]
+  {args, "$PWD/hello_world.py"}]]
 EOF
 </pre>
       </li>
@@ -1129,7 +1241,7 @@ curl http://localhost:6464/quickstart/python/hello_world
         created by executing the following inside your shell:
 <pre onclick="element_select(this);">
 cat &lt;&lt; EOF &gt; hello_world.rb
-\$:.unshift '/usr/local/lib/cloudi-1.6.0/api/ruby'
+\$:.unshift '/usr/local/lib/cloudi-1.7.0/api/ruby'
 
 \$DEBUG = false
 
@@ -1188,8 +1300,7 @@ export PWD=`pwd`
 cat &lt;&lt; EOF &gt; hello_world.conf
 [[{prefix, "/quickstart/ruby/"},
   {file_path, "$RUBY"},
-  {args, "$PWD/hello_world.rb"},
-  {protocol, tcp}]]
+  {args, "$PWD/hello_world.rb"}]]
 EOF
 </pre>
       </li>
@@ -1251,10 +1362,10 @@ wget --content-disposition \
     http://sourceforge.net/projects/cloudi/files/latest/download
 </pre>
 <pre onclick="element_select(this);">
-tar zxvf cloudi-1.6.0.tar.gz
+tar zxvf cloudi-1.7.0.tar.gz
 </pre>
 <pre onclick="element_select(this);">
-cd cloudi-1.6.0/src
+cd cloudi-1.7.0/src
 </pre>
 <pre onclick="element_select(this);">
 ./configure

@@ -1,3 +1,3 @@
 %% encoding: UTF-8
 {application,quickrand}.
-{modules,[quickrand,random_wh06_int,random_wh82]}.
+{modules,[quickrand,quickrand_cache,random_wh06_int,random_wh82]}.

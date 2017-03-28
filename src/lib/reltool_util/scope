@@ -137,7 +137,7 @@ handle_operation(#config{directories_in = DirectoriesIn,
     lists:foreach(Fconversion, FilesSource),
     lists:foreach(Fconversion, FilesInclude),
     files_update_apps(FilesApplications, orddict:from_list(NameConversions)),
-    io:format("check modified files!~n", []),
+    io:format("~ncheck modified files!~n", []),
     exit_code(0);
 handle_operation(#config{directories_in = DirectoriesIn,
                          prefix_ignore = PrefixIgnore,
@@ -885,7 +885,7 @@ version_info() ->
                    ByteSize]).
 
 progress_bar_new(CountX)
-    when is_integer(CountX), CountX > 0 ->
+    when is_integer(CountX), CountX >= 0 ->
     #progress_bar{stdout = erlang:open_port({fd, 0, 1}, [out, {line, 256}]),
                   count_x = CountX}.
 

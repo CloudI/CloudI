@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.7.0 released
+
+2017-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve count_process_dynamic logging
+
 2017-03-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve Ruby CloudI API socket recv logic
@@ -4049,7 +4057,8 @@
     * python API added with BSD licensed encoding for Erlang term
     * java API added using jinterface encoding
     * uuid module implements version 1 and version 4 based on RFC
-    * pg2 changed to use a trie instead of ets (exists as module list_pg)
+    * pg2 changed to use a trie instead of ets
+      (exists as module list_pg, later it becomes cpg)
     * rebar and autoconf build integration added
 
 2011-12-.. Michael Truog   <mjtruog [at] gmail (dot) com>

@@ -1,0 +1,68 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+{sys,
+ [
+  {lib_dirs,
+   [
+    "/usr/local/lib/cloudi-1.7.0/lib"
+    ]},
+  {rel, "cloudi_hello_world_embedded", "1",
+   [
+    hello_world_embedded
+    ]},
+  {rel, "start_clean", "",
+   [
+    kernel,
+    stdlib
+    ]},
+  {boot_rel, "cloudi_hello_world_embedded"},
+  {app, hello_world_embedded,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep},
+    {lib_dir, "apps/hello_world_embedded"}]},
+
+  % reltool has trouble excluding these automatically
+  {app, cloudi_x_bear, [{incl_cond, exclude}]},
+  {app, cloudi_x_certifi, [{incl_cond, exclude}]},
+  {app, cloudi_x_exometer_core, [{incl_cond, exclude}]},
+  {app, cloudi_x_folsom, [{incl_cond, exclude}]},
+  {app, cloudi_x_hackney, [{incl_cond, exclude}]},
+  {app, cloudi_x_idna, [{incl_cond, exclude}]},
+  {app, cloudi_x_metrics, [{incl_cond, exclude}]},
+  {app, cloudi_x_mimerl, [{incl_cond, exclude}]},
+  {app, cloudi_x_parse_trans, [{incl_cond, exclude}]},
+
+  % typical defaults
+  {profile, embedded},
+  {incl_cond, derived},
+  {mod_cond, all},
+  {app_file, keep},
+  {excl_sys_filters, ["^bin/.*",
+                      "^erts.*/bin/(dialyzer|typer)",
+                      "^erts.*/(doc|info|include|lib|man|src)"]},
+
+  % keep beam files exposed for module loading of internal services
+  {excl_archive_filters, [".*"]},
+
+  % Erlang dependencies
+  {erts,
+   [{incl_cond, derived}, {mod_cond, all}, {app_file, keep}]},
+  {app, hipe,
+   [{incl_cond, exclude}]},
+  % sometimes services need the debug_info within OTP applications
+  {debug_info, keep}
+  %{app, debugger,
+  % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]}
+  ]}.
+
+{target_dir, "release"}.
+
+{overlay, [
+  {mkdir, "bin"},
+  {mkdir, "logs"},
+  {copy, "./cloudi_hello_world_embedded", "bin/cloudi_hello_world_embedded"},
+  {copy, "./erl", "{{erts_vsn}}/bin/erl"},
+  {copy, "./nodetool", "{{erts_vsn}}/bin/nodetool"},
+  {copy, "./app.config", "etc/cloudi/app.config"},
+  {copy, "./vm.args", "etc/cloudi/vm.args"}
+  ]}.

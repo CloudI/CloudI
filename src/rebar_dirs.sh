@@ -97,6 +97,14 @@ case $COMMAND in
             fi
         done
         ;;
+    process)
+        for d in $REBAR_DIRS; do
+            application=`basename $d`
+            # rebar2 creates _drv.so files for no reason
+            rm -f $abs_top_builddir/$d/priv/${application}_drv.so \
+                  $abs_top_builddir/$d/priv/cloudi_x_${application}_drv.so
+        done
+        ;;
     destroy)
         for d in $REBAR_DIRS; do
             application=`basename $d`
