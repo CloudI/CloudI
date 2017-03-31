@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Improve reltool configuration for examples
+      (nodefinder optional dependencies are not added to the release
+       automatically to keep the example release minimal)
+    * Update nodefinder
+
 2017-03-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.7.0 released

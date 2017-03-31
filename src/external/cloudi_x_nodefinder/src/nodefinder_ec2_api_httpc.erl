@@ -77,7 +77,8 @@ request(URL, Method, Hdrs, Body, Timeout,
     F(URL, Method, Hdrs, Body, Timeout, Config).
 
 request_lhttpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
-    lhttpc:request(URL, Method, Hdrs, Body, Timeout, []).
+    Module = hide_module(lhttpc),
+    Module:request(URL, Method, Hdrs, Body, Timeout, []).
 
 %% Guard clause protects against empty bodied requests from being
 %% unable to find a matching httpc:request call.
@@ -100,7 +101,8 @@ request_httpc(URL, Method, Hdrs, Body, Timeout, _Config) ->
                                  [{timeout, Timeout}],
                                  [{body_format, binary}])).
 
-request_hackney(URL, Method, Hdrs, Body, Timeout, #aws_config{hackney_pool = Pool}) ->
+request_hackney(URL, Method, Hdrs, Body, Timeout,
+                #aws_config{hackney_pool = Pool}) ->
     BinURL = to_binary(URL),
     BinHdrs = [{to_binary(K), to_binary(V)} || {K, V} <- Hdrs],
     PoolOpt = if Pool =:= undefined ->
@@ -108,10 +110,10 @@ request_hackney(URL, Method, Hdrs, Body, Timeout, #aws_config{hackney_pool = Poo
                  true ->
                       [{pool, Pool}]
               end,
-    response_hackney(hackney:request(Method,
-                                     BinURL, BinHdrs,
-                                     Body,
-                                     [{recv_timeout, Timeout}] ++ PoolOpt)).
+    Module = hide_module(hackney),
+    response_hackney(Module:
+                     request(Method, BinURL, BinHdrs, Body,
+                             [{recv_timeout, Timeout}] ++ PoolOpt)).
 
 response_httpc({ok, {{_HTTPVer, Status, StatusLine}, Headers, Body}}) ->
     {ok, {{Status, StatusLine}, Headers, Body}};
@@ -122,7 +124,8 @@ response_hackney({ok, Status, Hdrs}) ->
     HdrsStr = header_str(Hdrs),
     {ok, {{Status, undefined}, HdrsStr, undefined}};
 response_hackney({ok, Status, Hdrs, Ref}) ->
-    case hackney:body(Ref) of
+    Module = hide_module(hackney),
+    case Module:body(Ref) of
         {ok, Body} ->
             HdrsStr = header_str(Hdrs),
             {ok, {{Status, undefined}, HdrsStr, Body}};
@@ -136,7 +139,8 @@ response_hackney({error, _} = Error) ->
     Error.
 
 header_str(Hdrs) ->
-    [{string:to_lower(to_list_string(K)), to_list_string(V)} || {K, V} <- Hdrs].
+    [{string:to_lower(to_list_string(K)), to_list_string(V)}
+     || {K, V} <- Hdrs].
 
 to_list_string(Val) when erlang:is_binary(Val) ->
   erlang:binary_to_list(Val);
@@ -147,4 +151,10 @@ to_binary(Val) when erlang:is_list(Val) ->
   erlang:list_to_binary(Val);
 to_binary(Val) when erlang:is_binary(Val) ->
   Val.
+
+hide_module(Module) ->
+    % hide module from xref to prevent reltool from pulling in
+    % extra applications that are unnecessary
+    % (the Erlang compiler never inlines functions by default)
+    Module.
 
