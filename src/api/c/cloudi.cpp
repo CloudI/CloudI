@@ -42,6 +42,7 @@
 #undef CLOUDI_HPP // avoid header warning
 #include "cloudi.h"
 #define CLOUDI_HPP
+#include "config.h"
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
 #include "timer.hpp"

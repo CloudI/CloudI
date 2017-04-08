@@ -10,7 +10,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @copyright 2015-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -61,6 +61,7 @@
          cgroup_format/2,
          cgroup_set/2,
          cgroup_unset/2,
+         chroot_format/2,
          directory_format/2]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -435,6 +436,22 @@ cgroup_unset(OSPid, Values)
     end,
     ok = cloudi_x_cgroups:destroy(CGroups),
     ok.
+
+-spec chroot_format(Chroot :: cloudi_service_api:chroot_external(),
+                    EnvironmentLookup :: cloudi_environment:lookup()) ->
+    {ok, NewChroot :: string()} |
+    {error, any()}.
+
+chroot_format(undefined, _) ->
+    {ok, ""};
+chroot_format(Chroot, EnvironmentLookup) ->
+    NewChroot = cloudi_environment:transform(Chroot, EnvironmentLookup),
+    case filelib:is_dir(NewChroot) of
+        true ->
+            {ok, NewChroot};
+        false ->
+            {error, {service_options_chroot_invalid, NewChroot}}
+    end.
 
 -spec directory_format(Directory :: cloudi_service_api:directory_external(),
                        EnvironmentLookup :: cloudi_environment:lookup()) ->

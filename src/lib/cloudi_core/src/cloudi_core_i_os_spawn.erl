@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -64,12 +64,12 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_constants.hrl").
 -ifdef(CLOUDI_CORE_STANDALONE).
--export([spawn/14]).
+-export([spawn/15]).
 -define(ERL_PORT_NAME, "/dev/null").
 -compile({nowarn_unused_function, [{call_port_sync, 3}]}).
 spawn(_SpawnProcess, _SpawnProtocol, _SpawnSocketPath, _Ports, _SpawnRlimits,
       _SpawnUserI, _SpawnUserStr, _SpawnGroupI, _SpawnGroupStr,
-      _SpawnNice, _SpawnDirectory,
+      _SpawnNice, _SpawnChroot, _SpawnDirectory,
       _SpawnFilename, _SpawnArguments, _SpawnEnvironment) ->
     {error, badarg}.
 -else.

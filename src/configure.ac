@@ -340,6 +340,10 @@ AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_SIGPENDING)
 # (SmartOS)
 AX_CHECK_HEADER_MACRO(sys/resource.h, RLIMIT_VMEM)
 
+AC_CHECK_FUNC([chroot],
+    [AC_DEFINE([HAVE_CHROOT], [1],
+        [Define if chroot is available])])
+
 # C++ requirements
 AX_LIB_SOCKET_NSL
 AX_BOOST_BASE([1.40], ,

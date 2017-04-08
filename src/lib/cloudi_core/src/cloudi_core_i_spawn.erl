@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.4 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -74,7 +74,7 @@
 
 -ifdef(CLOUDI_CORE_STANDALONE).
 -dialyzer({no_match,
-           [start_external_spawn/18,
+           [start_external_spawn/19,
             update_external/3]}).
 -endif.
 
@@ -162,7 +162,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                      DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Nice, CGroup, Directory,
+         Rlimits, Owner, Nice, CGroup, Chroot, Directory,
          CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
             {ok, DestDeny, DestAllow} =
                 start_external_threads_params(DestListDeny, DestListAllow),
@@ -187,7 +187,7 @@ start_external(ProcessIndex, ProcessCount, ThreadsPerProcess,
                                          SocketPath,
                                          Pids, Ports,
                                          Rlimits, Owner,
-                                         Nice, CGroup, Directory,
+                                         Nice, CGroup, Chroot, Directory,
                                          ThreadsPerProcess,
                                          CommandLine,
                                          NewFilename,
@@ -216,12 +216,12 @@ update_external(Pids, Ports,
                                      DestRefresh, ConfigOptions, ID) of
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
-         Rlimits, Owner, Nice, CGroup, Directory,
+         Rlimits, Owner, Nice, CGroup, Chroot, Directory,
          CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       Pids, Ports,
                                       Rlimits, Owner,
-                                      Nice, CGroup, Directory,
+                                      Nice, CGroup, Chroot, Directory,
                                       ThreadsPerProcess,
                                       CommandLine, NewFilename, NewArguments,
                                       Environment, EnvironmentLookup,
@@ -381,6 +381,9 @@ nice(#config_service_options{nice = Nice}) ->
 cgroup(#config_service_options{cgroup = L}, EnvironmentLookup) ->
     cloudi_core_i_os_process:cgroup_format(L, EnvironmentLookup).
 
+chroot(#config_service_options{chroot = Chroot}, EnvironmentLookup) ->
+    cloudi_core_i_os_process:chroot_format(Chroot, EnvironmentLookup).
+
 directory(#config_service_options{directory = Directory}, EnvironmentLookup) ->
     cloudi_core_i_os_process:directory_format(Directory, EnvironmentLookup).
 
@@ -433,7 +436,7 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
     EnvironmentLookup = environment_lookup(),
     case start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                                            EnvironmentLookup) of
-        {ok, CommandLine, NewFilename, NewArguments, Directory} ->
+        {ok, CommandLine, NewFilename, NewArguments, Chroot, Directory} ->
             case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
                 SpawnProcess when is_pid(SpawnProcess) ->
                     SpawnProtocol = if
@@ -450,7 +453,7 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                     CGroup = cgroup(ConfigOptions, EnvironmentLookup),
                     {ok,
                      SpawnProcess, SpawnProtocol, SocketPath,
-                     Rlimits, Owner, Nice, CGroup, Directory,
+                     Rlimits, Owner, Nice, CGroup, Chroot, Directory,
                      CommandLine, NewFilename, NewArguments,
                      EnvironmentLookup};
                 undefined ->
@@ -483,13 +486,19 @@ start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                 {ok, NewArguments} ->
                     CommandLine = [NewFilename |
                                    string:tokens(NewArguments, [0])],
-                    case directory(ConfigOptions, EnvironmentLookup) of
-                        {ok, Directory} ->
-                            {ok,
-                             CommandLine,
-                             NewFilename,
-                             NewArguments,
-                             Directory};
+                    case chroot(ConfigOptions, EnvironmentLookup) of
+                        {ok, Chroot} ->
+                            case directory(ConfigOptions, EnvironmentLookup) of
+                                {ok, Directory} ->
+                                    {ok,
+                                     CommandLine,
+                                     NewFilename,
+                                     NewArguments,
+                                     Chroot,
+                                     Directory};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, _} = Error ->
                             Error
                     end;
@@ -545,7 +554,8 @@ start_external_threads(ThreadsPerProcess,
                           ConfigOptions, ID).
 
 start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
-                     Pids, Ports, Rlimits, Owner, Nice, CGroup, Directory,
+                     Pids, Ports, Rlimits, Owner,
+                     Nice, CGroup, Chroot, Directory,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
@@ -563,6 +573,7 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       GroupI,
                                       string_terminate(GroupStr),
                                       Nice,
+                                      string_terminate(Chroot),
                                       string_terminate(Directory),
                                       string_terminate(Filename),
                                       string_terminate(Arguments),

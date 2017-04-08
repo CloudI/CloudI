@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -372,6 +372,8 @@
     list({name, nonempty_string()} |
          {parameters, list({nonempty_string(), string()})} |
          {update_or_create, boolean()}).
+-type chroot_external() ::
+    file:filename() | undefined.
 -type directory_external() ::
     file:filename() | undefined.
 -export_type([limit_external_key/0,
@@ -380,6 +382,7 @@
               owner_external/0,
               nice_external/0,
               cgroup_external/0,
+              chroot_external/0,
               directory_external/0]).
 
 -type service_options_internal() ::
@@ -528,6 +531,7 @@
          {owner, owner_external()} |
          {nice, nice_external()} |
          {cgroup, cgroup_external()} |
+         {chroot, chroot_external()} |
          {directory, directory_external()}).
 -export_type([service_options_internal/0,
               service_options_external/0]).

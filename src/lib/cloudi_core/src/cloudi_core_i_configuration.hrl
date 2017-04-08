@@ -347,6 +347,9 @@
         % put each OS process spawned into a specific cgroup
         cgroup = undefined
             :: cloudi_service_api:cgroup_external(),
+        % set the root directory for spawning the OS process
+        chroot = undefined
+            :: cloudi_service_api:chroot_external(),
         % set the current directory for spawning the OS process
         directory = undefined
             :: cloudi_service_api:directory_external(),

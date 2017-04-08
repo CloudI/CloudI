@@ -3,6 +3,7 @@
 
 2017-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Add the chroot service configuration option for external services
     * Fix C++ compilation warnings
 
 2017-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>

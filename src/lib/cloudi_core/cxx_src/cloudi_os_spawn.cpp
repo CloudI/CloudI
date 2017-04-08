@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,7 @@
 #include <sys/socket.h>
 #include <signal.h>
 #include <iostream>
+#include "config.h"
 #include "port.hpp"
 #include "realloc_ptr.hpp"
 #include "copy_ptr.hpp"
@@ -779,6 +780,7 @@ int32_t spawn(char protocol,
               uint64_t group_i,
               char * group_str, uint32_t group_str_len,
               int32_t nice,
+              char * chroot_directory, uint32_t chroot_directory_len,
               char * directory, uint32_t directory_len,
               char * filename, uint32_t /*filename_len*/,
               char * argv, uint32_t argv_len,
@@ -994,6 +996,16 @@ int32_t spawn(char protocol,
             if (::nice(nice)) {} // ignore invalid -1 result
             if (errno != 0)
                 ::_exit(spawn_status::invalid_input);
+        }
+        if (chroot_directory_len > 1)
+        {
+#if defined(HAVE_CHROOT)
+            if (::chroot(chroot_directory))
+                ::_exit(spawn_status::invalid_input);
+#else
+            assert(chroot_directory);
+            ::_exit(spawn_status::invalid_input);
+#endif
         }
         if (directory_len > 1)
         {
