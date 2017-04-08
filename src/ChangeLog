@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix C++ compilation warnings
+
 2017-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Improve reltool configuration for examples

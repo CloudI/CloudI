@@ -826,7 +826,7 @@ int GEPD::consume_stream(int fd, short & revents,
     {
         i += left;
         left = stream.size() - i;
-        bool ready;
+        bool ready = true;
         data_ready(fd, ready);
         if (ready == false)
             break;
@@ -899,7 +899,7 @@ int GEPD::flush_stream(int fd, short revents,
     {
         i += left;
         left = stream.size() - i;
-        bool ready;
+        bool ready = true;
         data_ready(fd, ready);
         if (ready == false)
             break;

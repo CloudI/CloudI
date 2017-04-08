@@ -1333,7 +1333,7 @@ static void callback(cloudi_instance_t * p,
     }
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
     callback_function f = lookup.find(std::string(pattern));
-    int result;
+    int result = cloudi_success;
     
     if (command == MESSAGE_SEND_ASYNC)
     {

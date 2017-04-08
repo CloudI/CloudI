@@ -991,7 +991,7 @@ int32_t spawn(char protocol,
         if (nice != 0)
         {
             errno = 0;
-            ::nice(nice);
+            if (::nice(nice)) {} // ignore invalid 0 result
             if (errno != 0)
                 ::_exit(spawn_status::invalid_input);
         }
