@@ -1002,6 +1002,11 @@ int32_t spawn(char protocol,
 #if defined(HAVE_CHROOT)
             if (::chroot(chroot_directory))
                 ::_exit(spawn_status::invalid_input);
+            if (directory_len == 1)
+            {
+                if (::chdir(chroot_directory))
+                    ::_exit(spawn_status::invalid_input);
+            }
 #else
             assert(chroot_directory);
             ::_exit(spawn_status::invalid_input);

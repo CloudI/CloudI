@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-04-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the chroot service configuration option to change the
+      current working directory to / if the directory
+      service configuration option was not provided
+
 2017-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the chroot service configuration option for external services
