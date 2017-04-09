@@ -1000,9 +1000,6 @@ int32_t spawn(char protocol,
             ::_exit(spawn_status::invalid_input);
 #endif
         }
-        if (owner(user_i, user_str, user_str_len,
-                  group_i, group_str, group_str_len))
-            ::_exit(spawn_status::invalid_input);
         if (rlimit(rlimits, rlimits_len))
             ::_exit(spawn_status::invalid_input);
         if (nice != 0)
@@ -1012,6 +1009,9 @@ int32_t spawn(char protocol,
             if (errno != 0)
                 ::_exit(spawn_status::invalid_input);
         }
+        if (owner(user_i, user_str, user_str_len,
+                  group_i, group_str, group_str_len))
+            ::_exit(spawn_status::invalid_input);
         if (directory_len > 1)
         {
             if (::chdir(directory))

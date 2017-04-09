@@ -8,6 +8,13 @@
       service configuration option was not provided
     * Fix the chroot service configuration option to be done before
       the owner service configuration option is applied
+    * Change the nice and limit service configuration options to be
+      applied before the owner service configuration option
+      (this approach is more consistent with the cgroup
+       service configuration option; the user/group executing
+       CloudI owns the CloudI external service OS processes and these
+       permissions should be used for controlling the OS process
+       attributes before the exec occurs)
 
 2017-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
