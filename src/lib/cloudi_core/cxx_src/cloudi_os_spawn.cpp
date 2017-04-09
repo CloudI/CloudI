@@ -985,18 +985,6 @@ int32_t spawn(char protocol,
             }
         }
 
-        if (owner(user_i, user_str, user_str_len,
-                  group_i, group_str, group_str_len))
-            ::_exit(spawn_status::invalid_input);
-        if (rlimit(rlimits, rlimits_len))
-            ::_exit(spawn_status::invalid_input);
-        if (nice != 0)
-        {
-            errno = 0;
-            if (::nice(nice)) {} // ignore invalid -1 result
-            if (errno != 0)
-                ::_exit(spawn_status::invalid_input);
-        }
         if (chroot_directory_len > 1)
         {
 #if defined(HAVE_CHROOT)
@@ -1011,6 +999,18 @@ int32_t spawn(char protocol,
             assert(chroot_directory);
             ::_exit(spawn_status::invalid_input);
 #endif
+        }
+        if (owner(user_i, user_str, user_str_len,
+                  group_i, group_str, group_str_len))
+            ::_exit(spawn_status::invalid_input);
+        if (rlimit(rlimits, rlimits_len))
+            ::_exit(spawn_status::invalid_input);
+        if (nice != 0)
+        {
+            errno = 0;
+            if (::nice(nice)) {} // ignore invalid -1 result
+            if (errno != 0)
+                ::_exit(spawn_status::invalid_input);
         }
         if (directory_len > 1)
         {
