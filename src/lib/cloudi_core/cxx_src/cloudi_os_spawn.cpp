@@ -992,7 +992,7 @@ int32_t spawn(char protocol,
                 ::_exit(spawn_status::invalid_input);
             if (directory_len == 1)
             {
-                if (::chdir(chroot_directory))
+                if (::chdir("/"))
                     ::_exit(spawn_status::invalid_input);
             }
 #else
