@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-04-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add Erlang map type specification usage
+
 2017-04-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix the chroot service configuration option to change the
