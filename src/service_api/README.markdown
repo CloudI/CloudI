@@ -29,6 +29,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/services_remove.erl"`
   * `"/cloudi/api/rpc/services_restart.erl"`
   * `"/cloudi/api/rpc/services_search.erl"`
+  * `"/cloudi/api/rpc/services_update.erl"`
   * `"/cloudi/api/rpc/services.erl"`
   * `"/cloudi/api/rpc/nodes_set.erl"`
   * `"/cloudi/api/rpc/nodes_get.erl"`
@@ -37,8 +38,10 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/nodes_alive.erl"`
   * `"/cloudi/api/rpc/nodes_dead.erl"`
   * `"/cloudi/api/rpc/nodes.erl"`
+  * `"/cloudi/api/rpc/logging_set.erl"`
   * `"/cloudi/api/rpc/logging_file_set.erl"`
   * `"/cloudi/api/rpc/logging_level_set.erl"`
+  * `"/cloudi/api/rpc/logging_stdout_set.erl"`
   * `"/cloudi/api/rpc/logging_syslog_set.erl"`
   * `"/cloudi/api/rpc/logging_formatters_set"`
   * `"/cloudi/api/rpc/logging_redirect_set.erl"`
