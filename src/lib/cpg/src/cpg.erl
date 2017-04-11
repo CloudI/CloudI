@@ -56,6 +56,10 @@
          join/2,
          join/3,
          join/4,
+         join_counts/1,
+         join_counts/2,
+         join_counts/3,
+         join_counts/4,
          leave/0,
          leave/1,
          leave/2,
@@ -206,8 +210,11 @@
         listen :: visible | all
     }).
 
--compile({inline, [{join_impl, 4},
-                   {leave_impl, 4}]}).
+-compile({inline,
+          [{join_impl, 4},
+           {join_counts_impl, 4},
+           {leave_impl, 4},
+           {leave_counts_impl, 4}]}).
 
 -define(DEFAULT_TIMEOUT, 5000). % from gen_server:call/2
 
@@ -419,12 +426,89 @@ join(Scope, GroupName, Pid, Timeout)
     when is_atom(Scope), is_pid(Pid) ->
     join_impl(Scope, GroupName, Pid, Timeout).
 
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec join_counts(list({name(), pos_integer()})) ->
+    ok | error.
+
+join_counts(Counts)
+    when is_list(Counts) ->
+    join_counts_impl(?DEFAULT_SCOPE, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec join_counts(list({name(), pos_integer()}) | scope(),
+                  pid() | list({name(), pos_integer()})) ->
+    ok | error.
+
+join_counts(Counts, Pid)
+    when is_list(Counts), is_pid(Pid) ->
+    join_counts_impl(?DEFAULT_SCOPE, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+join_counts(Scope, Counts)
+    when is_atom(Scope), is_list(Counts) ->
+    join_counts_impl(Scope, Counts, self(), ?DEFAULT_TIMEOUT).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec join_counts(scope() | list({name(), pos_integer()}),
+                  list({name(), pos_integer()}) | pid(),
+                  pid() | pos_integer() | infinity) ->
+    ok | error.
+
+join_counts(Scope, Counts, Pid)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    join_counts_impl(Scope, Counts, Pid, ?DEFAULT_TIMEOUT);
+
+join_counts(Counts, Pid, Timeout)
+    when is_list(Counts), is_pid(Pid) ->
+    join_counts_impl(?DEFAULT_SCOPE, Counts, Pid, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Join specific groups a specific number of times.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec join_counts(scope(),
+                  list({name(), pos_integer()}),
+                  pid(),
+                  pos_integer() | infinity) ->
+    ok | error.
+
+join_counts(Scope, Counts, Pid, Timeout)
+    when is_atom(Scope), is_list(Counts), is_pid(Pid) ->
+    join_counts_impl(Scope, Counts, Pid, Timeout).
+
 join_impl(Scope, GroupName, Pid, Timeout)
     when node(Pid) =:= node() ->
     Request = {join, GroupName, Pid},
     ok = gen_server:call(Scope, Request, Timeout),
     gen_server:abcast(nodes(), Scope, Request),
     ok.
+
+join_counts_impl(Scope, Counts, Pid, Timeout)
+    when node(Pid) =:= node() ->
+    Request = {join_counts, Counts, Pid},
+    case gen_server:call(Scope, Request, Timeout) of
+        ok ->
+            gen_server:abcast(nodes(), Scope, Request),
+            ok;
+        error ->
+            error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -2608,6 +2692,21 @@ handle_call({join, GroupName, Pid} = Request, _, State) ->
     abcast_hidden_nodes(Request, State),
     {reply, ok, join_group_local(1, GroupName, Pid, State)};
 
+handle_call({join_counts, Counts, Pid} = Request, _, State0) ->
+    Valid = lists:all(fun({_, Count}) ->
+        is_integer(Count) andalso (Count > 0)
+    end, Counts),
+    if
+        Valid =:= true ->
+            abcast_hidden_nodes(Request, State0),
+            StateN = lists:foldl(fun({GroupName, Count}, State1) ->
+                join_group_local(Count, GroupName, Pid, State1)
+            end, State0, Counts),
+            {reply, ok, StateN};
+        Valid =:= false ->
+            {reply, error, State0}
+    end;
+
 handle_call({leave, Pid} = Request, _,
             #state{monitors = Monitors} = State) ->
     case maps:take(Pid, Monitors) of
@@ -2646,8 +2745,9 @@ handle_call({leave_counts, Counts, Pid} = Request, _,
         {ok, #state_monitor{monitor = MonitorRef,
                             names = GroupNameList}} ->
             true = is_reference(MonitorRef),
-            Valid = lists:all(fun({GroupName, _}) ->
-                lists:member(GroupName, GroupNameList)
+            Valid = lists:all(fun({GroupName, Count}) ->
+                lists:member(GroupName, GroupNameList) andalso
+                is_integer(Count) andalso (Count > 0)
             end, Counts),
             if
                 Valid =:= true ->
@@ -2846,6 +2946,12 @@ handle_cast({exchange, Node, {_, _} = ExternalGroups},
 
 handle_cast({join, GroupName, Pid}, State) ->
     {noreply, join_group_remote(1, GroupName, Pid, State)};
+
+handle_cast({join_counts, Counts, Pid}, State0) ->
+    StateN = lists:foldl(fun({GroupName, Count}, State1) ->
+        join_group_remote(Count, GroupName, Pid, State1)
+    end, State0, Counts),
+    {noreply, StateN};
 
 handle_cast({leave, Pid},
             #state{monitors = Monitors} = State) ->
