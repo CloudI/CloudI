@@ -13,7 +13,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -48,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -269,7 +269,7 @@ get_local_members(GroupName, Groups) ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
-            {ok, Pattern, [Pid || #cpg_data_pid{pid = Pid} <- Local]}
+            {ok, Pattern, Local}
     end.
 
 %%-------------------------------------------------------------------------
@@ -295,8 +295,7 @@ get_local_members(GroupName, Exclude, Groups)
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{local = Local}} ->
-            Members = [Pid || #cpg_data_pid{pid = Pid} <- Local,
-                       Pid =/= Exclude],
+            Members = [Pid || Pid <- Local, Pid =/= Exclude],
             if
                 Members == [] ->
                     % to keep return values consistent with pg2
@@ -326,7 +325,7 @@ get_remote_members(GroupName, Groups) ->
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
-            {ok, Pattern, [Pid || #cpg_data_pid{pid = Pid} <- Remote]}
+            {ok, Pattern, Remote}
     end.
 
 %%-------------------------------------------------------------------------
@@ -352,8 +351,7 @@ get_remote_members(GroupName, Exclude, Groups)
             % to keep return values consistent with pg2
             {error, {'no_such_group', GroupName}};
         {ok, Pattern, #cpg_data{remote = Remote}} ->
-            Members = [Pid || #cpg_data_pid{pid = Pid} <- Remote,
-                       Pid =/= Exclude],
+            Members = [Pid || Pid <- Remote, Pid =/= Exclude],
             if
                 Members == [] ->
                     % to keep return values consistent with pg2
@@ -930,11 +928,11 @@ group_find(GroupName, {DictI, GroupsData}) ->
             error
     end.
 
-pick(1, [#cpg_data_pid{pid = Pid}], Pattern) ->
+pick(1, [Pid], Pattern) ->
     {ok, Pattern, Pid};
 
 pick(N, L, Pattern) ->
-    #cpg_data_pid{pid = Pid} = lists:nth(random(N), L),
+    Pid = lists:nth(random(N), L),
     {ok, Pattern, Pid}.
 
 pick_i(I, I, _, [], [], _, GroupName, _) ->
@@ -947,21 +945,18 @@ pick_i(I, I, Length, Filtered, [], _, _, Pattern) ->
     {ok, Pattern, lists:nth((I rem Length) + 1, Filtered)};
 
 pick_i(I, I, Length, Filtered,
-       [#cpg_data_pid{pid = Exclude} | L],
-       Exclude, GroupName, Pattern) ->
+       [Exclude | L], Exclude, GroupName, Pattern) ->
     pick_i(I, I, Length, Filtered, L, Exclude, GroupName, Pattern);
 
-pick_i(I, I, _, _, [#cpg_data_pid{pid = Pid} | _], _, _, Pattern) ->
+pick_i(I, I, _, _, [Pid | _], _, _, Pattern) ->
     {ok, Pattern, Pid};
 
 pick_i(I, Random, Length, Filtered,
-       [#cpg_data_pid{pid = Exclude} | L],
-       Exclude, GroupName, Pattern) ->
+       [Exclude | L], Exclude, GroupName, Pattern) ->
     pick_i(I + 1, Random, Length, Filtered, L, Exclude, GroupName, Pattern);
 
 pick_i(I, Random, Length, Filtered,
-       [#cpg_data_pid{pid = Pid} | L],
-       Exclude, GroupName, Pattern) ->
+       [Pid | L], Exclude, GroupName, Pattern) ->
     pick_i(I + 1, Random, Length + 1, [Pid | Filtered],
            L, Exclude, GroupName, Pattern).
 

@@ -77,13 +77,6 @@ mutability on the local node (naturally, due to a single Erlang process
 owning the internal cpg data) before the operation is sent to the remote nodes
 (for join or leave function calls that operate as a CmRDT).
 
-The design description above assumes `GROUP_NAME_WITH_LOCAL_PIDS_ONLY` is
-defined within `cpg_constants.hrl` when cpg is compiled, which is always
-the default.  If `GROUP_NAME_WITH_LOCAL_PIDS_ONLY` is not defined, then
-cpg would use the global transaction locking that pg2 uses, which should
-cause partition tolerance problems.  The macro is present in case it is
-necessary to replicate pg2 semantics with cpg.
-
 Build
 -----
 

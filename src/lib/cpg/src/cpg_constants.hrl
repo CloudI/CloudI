@@ -6,7 +6,7 @@
 % only used if the scope application env is an empty list
 -define(DEFAULT_SCOPE, cpg_default_scope).
 
-% group names will only be joined/left with local pids
-% so that global locking is unnecessary
--define(GROUP_NAME_WITH_LOCAL_PIDS_ONLY, true).
+% how long to wait for remote pid monitor deaths before sending a list of them
+% (within cpg_node_monitor)
+-define(MONITORS_ACCUMULATE_DELAY, 0). % milliseconds
 
