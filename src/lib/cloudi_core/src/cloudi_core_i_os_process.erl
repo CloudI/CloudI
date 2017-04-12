@@ -446,10 +446,12 @@ chroot_format(undefined, _) ->
     {ok, ""};
 chroot_format(Chroot, EnvironmentLookup) ->
     NewChroot = cloudi_environment:transform(Chroot, EnvironmentLookup),
-    case filelib:is_dir(NewChroot) of
-        true ->
+    Valid = (filename:absname(NewChroot) == NewChroot) andalso
+            filelib:is_dir(NewChroot),
+    if
+        Valid =:= true ->
             {ok, NewChroot};
-        false ->
+        Valid =:= false ->
             {error, {service_options_chroot_invalid, NewChroot}}
     end.
 
@@ -462,10 +464,11 @@ directory_format(undefined, _) ->
     {ok, ""};
 directory_format(Directory, EnvironmentLookup) ->
     NewDirectory = cloudi_environment:transform(Directory, EnvironmentLookup),
-    case filelib:is_dir(NewDirectory) of
-        true ->
+    Valid = (filename:absname(NewDirectory) == NewDirectory),
+    if
+        Valid =:= true ->
             {ok, NewDirectory};
-        false ->
+        Valid =:= false ->
             {error, {service_options_directory_invalid, NewDirectory}}
     end.
 

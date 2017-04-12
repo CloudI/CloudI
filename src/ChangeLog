@@ -3,6 +3,8 @@
 
 2017-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Fix validation of chroot and directory service configuration options
+      to work properly together and require absolute paths
     * Update cpg
 
 2017-04-10 Michael Truog   <mjtruog [at] gmail (dot) com>
