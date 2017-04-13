@@ -19,7 +19,7 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 70b776aa0426935a6a37f074a28cbacc3d7a92fc`
+- `commit 70b776aa0426935a6a37f074a28cbacc3d7a92fc (v1.7.1-rc1)`
 - `Wed Apr 12 11:37:53 PDT 2017`
 - `BSD`
 
