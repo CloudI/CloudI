@@ -689,7 +689,7 @@ class API(object):
         self.__s.sendall(data)
 
     def __recv(self, data_old):
-        data = ''
+        data = b''
         if self.__use_header:
             i = 0
             while i < 4:
