@@ -1,0 +1,38 @@
+## make sure enif_send can be used in NIFs
+-smp
+
+## Name of the node
+-sname cloudi
+
+## Cookie for distributed erlang
+-setcookie cloudi
+
+## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
+## (Disabled by default..use with caution!)
+##-heart
+
+## Enable kernel poll and a few async threads
++K true
++A 5
+
+## Increase number of Erlang processes
++P 65536
+
+## Increase number of concurrent ports/sockets
++Q 32768
+
+## Distributed Erlang buffer size
+#+zdbbl 1024 # kB (valid values are 1 - 2097151)
+
+# CloudI configuration arguments specifically for Erlang/OTP 19_3
++C multi_time_warp +c true
+
+# Integration Tests code paths for the default configuration
+-pz tests/count/ebin/
+-pz tests/hexpi/ebin/
+-pz tests/http_req/ebin/
+-pz tests/msg_size/ebin/
+-pz tests/messaging/ebin/
+-pz tests/null/ebin/
+-pz tests/request_rate/ebin/
+

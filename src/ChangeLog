@@ -5,6 +5,7 @@
 
     * Fix Python CloudI API compatibility with Python v3
       (incompatibility was added in CloudI 1.7.0)
+    * Add request_rate integration test throughput data for 1.7.1
 
 2017-04-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
