@@ -38,77 +38,77 @@ sender service (cloudi_service_request_rate).
 Max Stable (Total) Request Rate (requests/second): C
 ----------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        21476                 lazy     true      2        2 (processes,-O0)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      21476                 lazy     true      2        2 (processes,-O0)
  
 Max Stable (Total) Request Rate (requests/second): Erlang
 ---------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        31081                 lazy     true      2        2
+    req/sec  dest_refresh_method duo_mode sender receiver
+      31081                 lazy     true      2        2
  
 Max Stable (Total) Request Rate (requests/second): Go
 -----------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        17944                 lazy     true      2        2 (processes)
-        18007                 lazy     true      2        2 (threads)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      17944                 lazy     true      2        2 (processes)
+      18007                 lazy     true      2        2 (threads)
  
 Max Stable (Total) Request Rate (requests/second): Haskell
 ----------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        17888                 lazy     true      2        2 (processes)
-        19959                 lazy     true      2        2 (threads)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      17888                 lazy     true      2        2 (processes)
+      19959                 lazy     true      2        2 (threads)
  
 Max Stable (Total) Request Rate (requests/second): Java
 -------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        19386                 lazy     true      2        2 (processes)
-        20121                 lazy     true      2        2 (threads)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      19386                 lazy     true      2        2 (processes)
+      20121                 lazy     true      2        2 (threads)
  
 Max Stable (Total) Request Rate (requests/second): Javascript
 -------------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        10856                 lazy     true      2        2 (processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      10856                 lazy     true      2        2 (processes)
  
 Max Stable (Total) Request Rate (requests/second): OCaml
 --------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        22477                 lazy     true      2        2 (threads)
-        22585                 lazy     true      2        2 (processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      22477                 lazy     true      2        2 (threads)
+      22585                 lazy     true      2        2 (processes)
 
 Max Stable (Total) Request Rate (requests/second): Perl
 -------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        13126                 lazy     true      2        2 (threads)
-        13502                 lazy     true      2        2 (processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      13126                 lazy     true      2        2 (threads)
+      13502                 lazy     true      2        2 (processes)
 
 Max Stable (Total) Request Rate (requests/second): PHP
 ------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        14512                 lazy     true      2        2 (processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      14512                 lazy     true      2        2 (processes)
  
 Max Stable (Total) Request Rate (requests/second): Python
 ---------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        10452                 lazy     true      2        2 (v3 threads)
-        10985                 lazy     true      2        2 (v2 threads)
-        14121                 lazy     true      2        2 (v3 processes)
-        14424                 lazy     true      2        2 (v2 processes)
-        20213                 lazy     true      2        2 (v2/C threads)
-        21334                 lazy     true      2        2 (v2/C processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      10452                 lazy     true      2        2 (v3 threads)
+      10985                 lazy     true      2        2 (v2 threads)
+      14121                 lazy     true      2        2 (v3 processes)
+      14424                 lazy     true      2        2 (v2 processes)
+      20213                 lazy     true      2        2 (v2/C threads)
+      21334                 lazy     true      2        2 (v2/C processes)
 
 Max Stable (Total) Request Rate (requests/second): Ruby
 -------------------------------------------------------
 
- requests/sec  dest_refresh_method duo_mode sender receiver
-        10673                 lazy     true      2        2 (threads)
-        17245                 lazy     true      2        2 (processes)
+    req/sec  dest_refresh_method duo_mode sender receiver
+      10673                 lazy     true      2        2 (threads)
+      17245                 lazy     true      2        2 (processes)
 
