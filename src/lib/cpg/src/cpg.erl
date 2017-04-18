@@ -3549,7 +3549,12 @@ merge_start(Node,
     HistoryL = DictI:fold(fun(GroupName, #cpg_data{history = History}, L) ->
         [{GroupName, History} | L]
     end, [], GroupsData),
-    gen_server:cast({Scope, Node}, {exchange, node(), HistoryL}).
+    if
+        HistoryL == [] ->
+            ok;
+        true ->
+            gen_server:cast({Scope, Node}, {exchange, node(), HistoryL})
+    end.
 
 member_died_local(Pid, Reason,
                   #state{monitors = Monitors} = State) ->
