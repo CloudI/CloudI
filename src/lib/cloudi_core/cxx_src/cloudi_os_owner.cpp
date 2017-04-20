@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -45,10 +45,10 @@
 #include <cstdio>
 #include "cloudi_os_owner.hpp"
 
-int owner(uint64_t user_i,
-          char * user_str, uint32_t user_str_len,
-          uint64_t group_i,
-          char * group_str, uint32_t group_str_len)
+int owner_get(uint64_t & user_i,
+              char * user_str, uint32_t user_str_len,
+              uint64_t & group_i,
+              char * group_str, uint32_t group_str_len)
 {
     uid_t uid = static_cast<uid_t>(user_i);
     gid_t gid = static_cast<gid_t>(group_i);
@@ -76,6 +76,16 @@ int owner(uint64_t user_i,
         }
         gid = group_p->gr_gid;
     }
+    user_i = static_cast<uint64_t>(uid);
+    group_i = static_cast<uint64_t>(gid);
+    return 0;
+}
+
+int owner_set(uint64_t const user_i,
+              uint64_t const group_i)
+{
+    uid_t const uid = static_cast<uid_t>(user_i);
+    gid_t const gid = static_cast<gid_t>(group_i);
     if (gid > 0)
     {
         if (::setgid(gid) == -1)

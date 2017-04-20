@@ -3,7 +3,7 @@
 //
 // BSD LICENSE
 // 
-// Copyright (c) 2015, Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,11 @@
 #define CLOUDI_OS_OWNER_HPP
 
 #include <stdint.h>
-int owner(uint64_t user_i,
-          char * user_str, uint32_t user_str_len,
-          uint64_t group_i,
-          char * group_str, uint32_t group_str_len);
+int owner_get(uint64_t & user_i,
+              char * user_str, uint32_t user_str_len,
+              uint64_t & group_i,
+              char * group_str, uint32_t group_str_len);
+int owner_set(uint64_t const user_i,
+              uint64_t const group_i);
 
 #endif // CLOUDI_OS_OWNER_HPP

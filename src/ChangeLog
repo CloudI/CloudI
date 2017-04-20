@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-04-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix usage of the owner service configuration option
+      when it is used with the chroot service configuration option
+
 2017-04-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Python CloudI API compatibility with Python v3

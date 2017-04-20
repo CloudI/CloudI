@@ -985,6 +985,9 @@ int32_t spawn(char protocol,
             }
         }
 
+        if (owner_get(user_i, user_str, user_str_len,
+                      group_i, group_str, group_str_len))
+            ::_exit(spawn_status::invalid_input);
         if (chroot_directory_len > 1)
         {
 #if defined(HAVE_CHROOT)
@@ -1009,8 +1012,7 @@ int32_t spawn(char protocol,
             if (errno != 0)
                 ::_exit(spawn_status::invalid_input);
         }
-        if (owner(user_i, user_str, user_str_len,
-                  group_i, group_str, group_str_len))
+        if (owner_set(user_i, group_i))
             ::_exit(spawn_status::invalid_input);
         if (directory_len > 1)
         {
