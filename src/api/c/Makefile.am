@@ -17,7 +17,7 @@ libcloudi_la_CPPFLAGS = -I$(ERLANG_LIB_DIR_erl_interface)/include/ \
                         $(BACKTRACE_CPPFLAGS) \
                         $(CXXFLAGS)
 libcloudi_la_LDFLAGS = -L$(ERLANG_LIB_DIR_erl_interface)/lib/ \
-                       -no-undefined -export-dynamic \
+                       -no-undefined \
                        $(BOOST_LDFLAGS) \
                        $(BACKTRACE_LDFLAGS)
 libcloudi_la_LIBADD = -lei $(RT_LIB) $(BACKTRACE_LIB)

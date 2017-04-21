@@ -446,7 +446,7 @@ chroot_format(undefined, _) ->
     {ok, ""};
 chroot_format(Chroot, EnvironmentLookup) ->
     NewChroot = cloudi_environment:transform(Chroot, EnvironmentLookup),
-    Valid = (filename:absname(NewChroot) == NewChroot) andalso
+    Valid = absolute_path(NewChroot) andalso
             filelib:is_dir(NewChroot),
     if
         Valid =:= true ->
@@ -464,11 +464,22 @@ directory_format(undefined, _) ->
     {ok, ""};
 directory_format(Directory, EnvironmentLookup) ->
     NewDirectory = cloudi_environment:transform(Directory, EnvironmentLookup),
-    Valid = (filename:absname(NewDirectory) == NewDirectory),
+    Valid = absolute_path(NewDirectory),
     if
         Valid =:= true ->
             {ok, NewDirectory};
         Valid =:= false ->
             {error, {service_options_directory_invalid, NewDirectory}}
     end.
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+absolute_path([]) ->
+    false;
+absolute_path([_ | _] = Path) ->
+    [H | _] = AbsolutePath = filename:absname(Path),
+    (AbsolutePath == Path) orelse
+    (AbsolutePath ++ [H] == Path).
 

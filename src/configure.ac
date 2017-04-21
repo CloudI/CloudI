@@ -22,11 +22,12 @@ AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.10 no-define no-dependencies foreign])
+LT_PREREQ([2.4.2])
+LT_INIT()
 AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
 AC_PROG_SED
-AC_PROG_LIBTOOL
 AM_PROG_CC_C_O
 
 # now in autoconf 2.69
