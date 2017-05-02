@@ -51,7 +51,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql/src \
-     -d $(top_srcdir)/external/cloudi_x_epgsql_wg/src \
      -d $(top_srcdir)/external/cloudi_x_exometer/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_core/src \
      -d $(top_srcdir)/external/cloudi_x_exometer_influxdb/src \
@@ -255,7 +254,6 @@ dialyze: all \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
-              external/cloudi_x_epgsql_wg/ebin \
               external/cloudi_x_folsom/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin

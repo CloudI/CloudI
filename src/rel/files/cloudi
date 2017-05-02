@@ -2,56 +2,40 @@
 # -*- tab-width:4;indent-tabs-mode:nil -*-
 # ex: ts=4 sw=4 et
 
-RUNNER_SCRIPT_DIR=$(cd ${0%/*} && pwd)
+# Name of the running pid (argv[0])
+PID_NAME=CloudI
 
-CALLER_DIR=$PWD
-
-RUNNER_BASE_DIR=${RUNNER_SCRIPT_DIR%/*}
-RUNNER_ETC_DIR=$RUNNER_BASE_DIR/etc
-# Note the trailing slash on $PIPE_DIR/
-PIPE_DIR=/tmp/$RUNNER_BASE_DIR/
-RUNNER_USER=
+# Script defaults
+SCRIPT=`basename $0`
+SCRIPT_DIR=`dirname $0`
+RUNNER_SCRIPT_DIR=`cd $SCRIPT_DIR && pwd`
+RUNNER_BASE_DIR=`dirname $RUNNER_SCRIPT_DIR`
+RUNNER_ETC_DIR="$RUNNER_BASE_DIR/etc"
+RUNNER_LOG_DIR="$RUNNER_BASE_DIR/logs"
 
 # Make sure this script is running as the appropriate user
+RUNNER_USER=
 if [ ! -z "$RUNNER_USER" ] && [ `whoami` != "$RUNNER_USER" ]; then
     exec sudo -u $RUNNER_USER -i $0 $@
 fi
 
-# Identify the script name
-SCRIPT=`basename $0`
+# Make sure log directory exists
+mkdir -p $RUNNER_LOG_DIR
 
 # Parse out release and erts info
 START_ERL=`cat $RUNNER_BASE_DIR/releases/start_erl.data`
 ERTS_VSN=${START_ERL% *}
 APP_VSN=${START_ERL#* }
 
-# Use $CWD/vm.args if exists, otherwise releases/APP_VSN/vm.args, or else etc/vm.args
-if [ -e "$CALLER_DIR/vm.args" ]; then
-    VMARGS_PATH=$CALLER_DIR/vm.args
-    USE_DIR=$CALLER_DIR
-else
-    USE_DIR=$RUNNER_BASE_DIR
-    if [ -e "$RUNNER_BASE_DIR/releases/$APP_VSN/vm.args" ]; then
-        VMARGS_PATH="$RUNNER_BASE_DIR/releases/$APP_VSN/vm.args"
-    else
-        VMARGS_PATH="$RUNNER_ETC_DIR/vm.args"
-    fi
-fi
+VMARGS_PATH="$RUNNER_ETC_DIR/vm.args"
+CONFIG_PATH="$RUNNER_ETC_DIR/app.config"
 
-RUNNER_LOG_DIR=$USE_DIR/logs
-# Make sure log directory exists
-mkdir -p $RUNNER_LOG_DIR
+# Note the trailing slash on $PIPE_DIR/
+PIPE_DIR_NAME=`basename $RUNNER_SCRIPT_DIR`
+PIPE_DIR="/tmp/$PIPE_DIR_NAME/"
 
-# Use releases/VSN/sys.config if it exists otherwise use etc/app.config
-if [ -e "$USE_DIR/sys.config" ]; then
-    CONFIG_PATH="$USE_DIR/sys.config"
-else
-    if [ -e "$RUNNER_BASE_DIR/releases/$APP_VSN/sys.config" ]; then
-        CONFIG_PATH="$RUNNER_BASE_DIR/releases/$APP_VSN/sys.config"
-    else
-        CONFIG_PATH="$RUNNER_ETC_DIR/app.config"
-    fi
-fi
+# Store the current pid in the log directory
+PID_FILE="$RUNNER_LOG_DIR/cloudi.pid"
 
 # Extract the target node name from node.args
 NAME_ARG=`egrep '^-s?name' $VMARGS_PATH`
@@ -76,10 +60,10 @@ if [ -z "$COOKIE_ARG" ]; then
 fi
 
 # Make sure CWD is set to the right dir
-cd $USE_DIR
+cd $RUNNER_BASE_DIR
 
 # Add ERTS bin dir to our path
-ERTS_PATH=$RUNNER_BASE_DIR/erts-$ERTS_VSN/bin
+ERTS_PATH="$RUNNER_BASE_DIR/erts-$ERTS_VSN/bin"
 
 # Setup command to control the node
 NODETOOL="$ERTS_PATH/escript $ERTS_PATH/nodetool $NAME_ARG $COOKIE_ARG"
@@ -126,8 +110,10 @@ case "$1" in
             export RUN_ERL_LOG_GENERATIONS
             export RUN_ERL_LOG_MAXSIZE
         fi
+        # OS process name created by run_erl
+        export ESCRIPT_NAME="$PID_NAME"
 
-        RUN_PARAM=$(printf "\'%s\' " "$@")
+        RUN_PARAM="'$@'"
         HEART_COMMAND="$RUNNER_BASE_DIR/bin/$SCRIPT $HEART_OPTION $RUN_PARAM"
         export HEART_COMMAND
         mkdir -p $PIPE_DIR
@@ -136,27 +122,15 @@ case "$1" in
 
     stop)
         # Wait for the node to completely stop...
-        case `uname -s` in
-            Linux|Darwin|FreeBSD|DragonFly|NetBSD|OpenBSD)
-                # PID COMMAND
-                PID=`ps ax -o pid= -o command=|\
-                    grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $1}'`
-                ;;
-            SunOS)
-                # PID COMMAND
-                PID=`ps -ef -o pid= -o args=|\
-                    grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $1}'`
-                ;;
-            CYGWIN*)
-                # UID PID PPID TTY STIME COMMAND
-                PID=`ps -efW|grep "$RUNNER_BASE_DIR/.*/[b]eam"|awk '{print $2}'`
-                ;;
-        esac
         $NODETOOL stop
         ES=$?
         if [ "$ES" -ne 0 ]; then
             exit $ES
         fi
+        if [ ! -f "$PID_FILE" ]; then
+            exit 1
+        fi
+        PID=`cat $PID_FILE`
         while `kill -0 $PID 2>/dev/null`;
         do
             sleep 1
@@ -216,28 +190,6 @@ case "$1" in
         exec $REMSH
         ;;
 
-    upgrade)
-        if [ -z "$2" ]; then
-            echo "Missing upgrade package argument"
-            echo "Usage: $SCRIPT upgrade {package base name}"
-            echo "NOTE {package base name} MUST NOT include the .tar.gz suffix"
-            exit 1
-        fi
-
-        # Make sure a node IS running
-        RES=`$NODETOOL ping`
-        ES=$?
-        if [ "$ES" -ne 0 ]; then
-            echo "Node is not running!"
-            exit $ES
-        fi
-
-        node_name=`echo $NAME_ARG | awk '{print $2}'`
-        erlang_cookie=`echo $COOKIE_ARG | awk '{print $2}'`
-
-        $ERTS_PATH/escript $RUNNER_BASE_DIR/bin/install_upgrade.escript $node_name $erlang_cookie $2
-        ;;
-
     console|console_clean|console_boot)
         # .boot file typically just $SCRIPT (ie, the app name)
         # however, for debugging, sometimes start_clean.boot is useful.
@@ -252,8 +204,8 @@ case "$1" in
                 ;;
         esac
         # Setup beam-required vars
-        ROOTDIR=$RUNNER_BASE_DIR
-        BINDIR=$ROOTDIR/erts-$ERTS_VSN/bin
+        ROOTDIR="$RUNNER_BASE_DIR"
+        BINDIR="$ROOTDIR/erts-$ERTS_VSN/bin"
         EMU=beam
         PROGNAME=`echo $0 | sed 's/.*\\///'`
         CMD="$BINDIR/erlexec -boot $RUNNER_BASE_DIR/releases/$APP_VSN/$BOOTFILE -mode embedded -config $CONFIG_PATH -args_file $VMARGS_PATH"
@@ -269,6 +221,9 @@ case "$1" in
         # Log the startup
         logger -t "$SCRIPT[$$]" "Starting up"
 
+        # Store the pid
+        echo $$ > $PID_FILE
+
         # Start the VM
         exec $CMD -- ${1+"$@"}
         ;;
@@ -277,12 +232,12 @@ case "$1" in
         # start up the release in the foreground for use by runit
         # or other supervision services
 
-        BOOTFILE=$SCRIPT
+        BOOTFILE="$SCRIPT"
         FOREGROUNDOPTIONS="-noinput +Bd"
 
         # Setup beam-required vars
-        ROOTDIR=$RUNNER_BASE_DIR
-        BINDIR=$ROOTDIR/erts-$ERTS_VSN/bin
+        ROOTDIR="$RUNNER_BASE_DIR"
+        BINDIR="$ROOTDIR/erts-$ERTS_VSN/bin"
         EMU=beam
         PROGNAME=`echo $0 | sed 's/.*\///'`
         CMD="$BINDIR/erlexec $FOREGROUNDOPTIONS -boot $RUNNER_BASE_DIR/releases/$APP_VSN/$BOOTFILE -config $CONFIG_PATH -args_file $VMARGS_PATH"
@@ -295,11 +250,14 @@ case "$1" in
         echo "Exec: $CMD" -- ${1+"$@"}
         echo "Root: $ROOTDIR"
 
+        # Not using the pid file
+        rm -f $PID_FILE
+
         # Start the VM
         exec $CMD -- ${1+"$@"}
         ;;
     *)
-        echo "Usage: $SCRIPT {start|start_boot <file>|foreground|stop|restart|reboot|ping|console|console_clean|console_boot <file>|attach|remote_console|upgrade}"
+        echo "Usage: $SCRIPT {start|start_boot <file>|foreground|stop|restart|reboot|ping|console|console_clean|console_boot <file>|attach|remote_console}"
         exit 1
         ;;
 esac

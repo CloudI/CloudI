@@ -110,15 +110,6 @@ Erlang `epgsql`
 - `Wed Jul 16 11:33:44 PDT 2014`
 - `BSD`
 
-Erlang `epgsql_wg`
-------------------
-`Erlang PostgreSQL (native) Driver (Will Glozer (older) fork with additions)`
-
-- `https://github.com/okeuday/epgsql_wg`
-- `commit b74e913679a450ff754d8a3cb022948e308d0509 (1.5.0)`
-- `Mon May  5 12:36:52 PDT 2014`
-- `BSD`
-
 Erlang `exometer`
 -----------------
 `Erlang instrumentation package`

@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fixes for Erlang/OTP 20.0 support
+        * epgsql_wg support was removed from cloudi_service_db_pgsql due to
+          being unmaintained and using gen_fsm
+          (cloudi_service_db_pgsql now uses semiocast as the default)
+        * The cloudi executable now uses a pid file to block during stop and
+          provides the OS process name as "CloudI"
+        * External service source code switched from gen_fsm to gen_statem
+        * Update quickrand
+
 2017-04-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix chroot and directory service configuration options

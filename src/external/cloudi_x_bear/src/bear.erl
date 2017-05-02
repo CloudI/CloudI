@@ -25,12 +25,55 @@
 
 -module(bear).
 
--compile([export_all]).
-
--export([
-         get_statistics/1,
-         get_statistics/2
-        ]).
+-export([get_statistics/1,
+         get_statistics_subset/2,
+         get_null_statistics_subset/2,
+         calc_steps/1,
+         level/1,
+         report_subset/5,
+         get_statistics/2,
+         scan_values/1,
+         scan_values/2,
+         scan_values2/2,
+         scan_values2/3,
+         arithmetic_mean/1,
+         geometric_mean/1,
+         harmonic_mean/1,
+         percentile/3,
+         variance/2,
+         std_deviation/2,
+         skewness/2,
+         kurtosis/2,
+         get_histogram/3,
+         update_bin/3,
+         get_covariance/2,
+         get_kendall_correlation/2,
+         get_spearman_correlation/2,
+         ranks_of/1,
+         ranks_of/5,
+         get_pearson_correlation/2,
+         revsort/1,
+         foldl2/4,
+         math_log/1,
+         inverse/1,
+         get_hist_bins/4,
+         get_bin_list/3,
+         round_bin/1,
+         round_bin/2,
+         get_bin_width/2,
+         get_bin_count/3,
+         kendall_correlation/2,
+         simple_ranking/1,
+         tied_ranking/1,
+         tied_ordered_ranking/1,
+         tied_ordered_ranking/3,
+         kendall_right_of/2,
+         kendall_right_of_item/2,
+         tied_add_prev/2,
+         tied_rank_worker/3,
+         percentiles/3,
+         pick_items/3,
+         perc/2]).
 
 -define(HIST_BINS, 10).
 

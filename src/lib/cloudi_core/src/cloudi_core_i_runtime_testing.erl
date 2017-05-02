@@ -142,7 +142,7 @@ monkey_latency_init(#monkey_latency{} = MonkeyLatency) ->
 monkey_latency_check(#monkey_latency{method = time_uniform,
                                      value1 = Min,
                                      value2 = Max} = MonkeyLatency) ->
-    Result = crypto:rand_uniform(Min, Max + 1),
+    Result = random_uniform(Min, Max),
     sleep(Result),
     MonkeyLatency;
 monkey_latency_check(#monkey_latency{method = time_gaussian,
@@ -445,6 +445,11 @@ monkey_chaos_pid_day(Percent)
                     monkey_chaos_pid_day(Percent)
             end
     end.
+
+random_uniform(Min, Min) ->
+    Min;
+random_uniform(Min, Max) ->
+    cloudi_x_quickrand:strong_uniform(1 + Max - Min) + Min.
 
 % return a floating point value between 0.0 and 1.0, inclusive
 random() ->

@@ -672,7 +672,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         external, ProcessInfo0, Pid,
                         QueuedEmptySize, MetricPrefix) ->
     case service_state(Pid) of
-        {ok, {_, State}} -> % gen_fsm
+        {ok, {_, State}} -> % gen_statem
             40 = erlang:tuple_size(State),
             state = erlang:element(1, State),
             Outgoing = ?MAP_SIZE(erlang:element(3, State)),  % send_timeouts

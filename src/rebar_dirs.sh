@@ -32,7 +32,6 @@ REBAR_DIRS="\
     external/cloudi_x_elli \
     external/cloudi_x_emysql \
     external/cloudi_x_epgsql \
-    external/cloudi_x_epgsql_wg \
     external/cloudi_x_exometer \
     external/cloudi_x_exometer_core \
     external/cloudi_x_exometer_influxdb \

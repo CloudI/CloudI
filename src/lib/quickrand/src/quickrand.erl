@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -63,6 +63,13 @@
 -ifdef(ERLANG_OTP_VERSION_17).
 -else.
 -define(ERLANG_OTP_VERSION_18_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_18).
+-else.
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
+-endif.
 -endif.
 -endif.
 
@@ -125,7 +132,7 @@ uniform(N) when is_integer(N), N =< 16#ffffffff ->
                 erlang:unique_integer()) rem N) + 1;
 
 uniform(N) when is_integer(N), N =< 16#03ffffffffffffff ->
-    % assuming exsplus for 58 bits, period 8.31e34
+    % assuming exsplus/exsp for 58 bits, period 8.31e34
     rand:uniform(N);
 
 uniform(N) when is_integer(N), N =< 21267638781707063560975648195455661513 ->
@@ -302,6 +309,11 @@ strong_float() ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+seed_rand(B1, B2, B3) ->
+    _ = rand:seed(exsp, {B1, B2, B3}),
+    ok.
+-else.
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 seed_rand(B1, B2, B3) ->
     _ = rand:seed(exsplus, {B1, B2, B3}),
@@ -309,5 +321,6 @@ seed_rand(B1, B2, B3) ->
 -else.
 seed_rand(_, _, _) ->
     ok.
+-endif.
 -endif.
 

@@ -8,7 +8,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2009-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -43,8 +43,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2009-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -66,10 +66,9 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_x_epgsql/include/cloudi_x_epgsql.hrl").
--include_lib("cloudi_x_epgsql_wg/include/cloudi_x_epgsql_wg.hrl").
 
 -define(DEFAULT_DATABASE,               undefined). % required argument, string
--define(DEFAULT_DRIVER,                        wg).
+-define(DEFAULT_DRIVER,                 semiocast).
 -define(DEFAULT_HOST_NAME,            "127.0.0.1").
 -define(DEFAULT_USER_NAME,               "cloudi").
 -define(DEFAULT_PASSWORD,                      "").
@@ -85,14 +84,14 @@
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
+
 % supported drivers
 -define(MODULE_EPGSQL, cloudi_x_epgsql).
--define(MODULE_WG, cloudi_x_epgsql_wg). % default
 -define(MODULE_SEMIOCAST, cloudi_x_pgsql_connection).
 
 -record(state,
     {
-        module :: ?MODULE_WG | ?MODULE_SEMIOCAST | ?MODULE_EPGSQL,
+        module :: ?MODULE_EPGSQL | ?MODULE_SEMIOCAST,
         connection :: any(),
         listen :: cloudi_service:service_name() | undefined,
         output_type :: both | internal | external,
@@ -265,9 +264,6 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     Module = if
         Driver =:= epgsql ->
             ?MODULE_EPGSQL;
-        Driver =:= wg; Driver =:= epgsql_wg ->
-            % NewArgs is passed to ssl application
-            ?MODULE_WG;
         Driver =:= semiocast ->
             [] = NewArgs,
             ?MODULE_SEMIOCAST
@@ -573,8 +569,6 @@ mysql_query_transform_get(NewString, Index, Remaining) ->
 
 driver_open(?MODULE_EPGSQL, HostName, UserName, Password, Args) ->
     ?MODULE_EPGSQL:connect(HostName, UserName, Password, Args);
-driver_open(?MODULE_WG, HostName, UserName, Password, Args) ->
-    ?MODULE_WG:connect(HostName, UserName, Password, Args);
 driver_open(?MODULE_SEMIOCAST, HostName, UserName, Password, Args0) ->
     {value, {_, Database}, Args1} = lists:keytake(database, 1, Args0),
     % timeout is per function call (not open though)
@@ -590,8 +584,6 @@ driver_open(?MODULE_SEMIOCAST, HostName, UserName, Password, Args0) ->
 
 driver_close(?MODULE_EPGSQL, Connection) ->
     ?MODULE_EPGSQL:close(Connection);
-driver_close(?MODULE_WG, Connection) ->
-    ?MODULE_WG:close(Connection);
 driver_close(?MODULE_SEMIOCAST, Connection) ->
     ?MODULE_SEMIOCAST:close(Connection).
 
@@ -641,37 +633,6 @@ driver_equery(Query, Parameters, _Timeout, ResponseOutputType,
     Response = if
         Interface =:= common; ResponseOutputType =:= external ->
             epgsql_to_common(Native);
-        Interface =:= native ->
-            Native
-    end,
-    if
-        ResponseOutputType =:= internal ->
-            Response;
-        ResponseOutputType =:= external ->
-            response_external(Response, ExternalFormat)
-    end;
-driver_equery(Query, Parameters, _Timeout, ResponseOutputType,
-              #state{module = ?MODULE_WG,
-                     connection = Connection,
-                     external_format = ExternalFormat,
-                     interface = Interface,
-                     debug_level = DebugLevel}) ->
-    Native = ?MODULE_WG:equery(Connection, Query, Parameters),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Parameters, Native)
-    end,
-    if
-        Native == {error, closed} ->
-            erlang:exit(closed);
-        true ->
-            ok
-    end,
-    Response = if
-        Interface =:= common; ResponseOutputType =:= external ->
-            wg_to_common(Native);
         Interface =:= native ->
             Native
     end,
@@ -736,37 +697,6 @@ driver_squery(Query, _Timeout, ResponseOutputType,
     Response = if
         Interface =:= common; ResponseOutputType =:= external ->
             epgsql_to_common(Native);
-        Interface =:= native ->
-            Native
-    end,
-    if
-        ResponseOutputType =:= internal ->
-            Response;
-        ResponseOutputType =:= external ->
-            response_external(Response, ExternalFormat)
-    end;
-driver_squery(Query, _Timeout, ResponseOutputType,
-              #state{module = ?MODULE_WG,
-                     connection = Connection,
-                     external_format = ExternalFormat,
-                     interface = Interface,
-                     debug_level = DebugLevel}) ->
-    Native = ?MODULE_WG:squery(Connection, Query),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
-    end,
-    if
-        Native == {error, closed} ->
-            erlang:exit(closed);
-        true ->
-            ok
-    end,
-    Response = if
-        Interface =:= common; ResponseOutputType =:= external ->
-            wg_to_common(Native);
         Interface =:= native ->
             Native
     end,
@@ -848,20 +778,6 @@ epgsql_to_common({error, #error{message = Message}}) ->
     {error, Message};
 epgsql_to_common([_ | _] = L) ->
     check_list(L, fun epgsql_to_common/1).
-
-% Rows in the wg format only use binary strings for data
-wg_to_common({ok, I}) ->
-    {updated, I};
-wg_to_common({ok, [], []}) ->
-    {updated, 0};
-wg_to_common({ok, _Columns, Rows}) ->
-    {selected, Rows};
-wg_to_common({ok, I, _Columns, Rows}) ->
-    {updated, I, Rows};
-wg_to_common({error, #epgsql_wg_error{message = Message}}) ->
-    {error, Message};
-wg_to_common([_ | _] = L) ->
-    check_list(L, fun wg_to_common/1).
 
 semiocast_to_common_rows([] = Rows) ->
     Rows;
@@ -945,12 +861,6 @@ driver_async_to_common(?MODULE_EPGSQL,
     {notify_ok, Pid, Channel, Payload};
 driver_async_to_common(?MODULE_EPGSQL,
                        {notice, #error{message = Message}}) ->
-    {notify_error, Message};
-driver_async_to_common(?MODULE_WG,
-                       {notification, Channel, Pid, Payload}) ->
-    {notify_ok, Pid, Channel, Payload};
-driver_async_to_common(?MODULE_WG,
-                       {notice, #epgsql_wg_error{message = Message}}) ->
     {notify_error, Message};
 driver_async_to_common(?MODULE_SEMIOCAST,
                        {notification, Pid, Channel, Payload}) ->

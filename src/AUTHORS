@@ -25,7 +25,6 @@ emysql               Bill Warnecke <bill@rupture.com>,
                      Henning Diedrich <hd2010@eonblast.com>,
                      Eonblast Corporation [http://www.eonblast.com]
 epgsql               Anton Lebedevich
-epgsql_wg            Will Glozer
 erlang-oauth         Tim Fletcher <mail@tfletcher.com>
 erlzmq               Yurii Rashkovskii <yrashk@gmail.com>
 exometer             Basho Technologies
