@@ -11,6 +11,9 @@
           provides the OS process name as "CloudI"
         * External service source code switched from gen_fsm to gen_statem
         * Update quickrand
+    * Fix OCaml CloudI API usage with Erlang/OTP 20.0
+      (Erlang binary term format parsing in OCaml had an atom parsing bug
+       for pids and other types that store an atom)
 
 2017-04-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

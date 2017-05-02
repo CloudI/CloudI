@@ -589,7 +589,7 @@ and binary_to_atom i binary : (int, int, string, string) result3 =
   else if tag = tag_atom_cache_ref then
     Ok3 (i0 + 1, tag, String.make 1 binary.[i0])
   else if tag = tag_small_atom_ext then
-    let j = int_of_char binary.[i]
+    let j = int_of_char binary.[i0]
     and i1 = i0 + 1 in
     Ok3 (i1 + j, tag, String.sub binary i0 (1 + j))
   else if tag = tag_atom_utf8_ext then
@@ -597,7 +597,7 @@ and binary_to_atom i binary : (int, int, string, string) result3 =
     and i1 = i0 + 2 in
     Ok3 (i1 + j, tag, String.sub binary i0 (2 + j))
   else if tag = tag_small_atom_utf8_ext then
-    let j = int_of_char binary.[i]
+    let j = int_of_char binary.[i0]
     and i1 = i0 + 1 in
     Ok3 (i1 + j, tag, String.sub binary i0 (1 + j))
   else
@@ -1082,10 +1082,18 @@ let test_pid () =
     ~node_tag:100
     ~node:"\x00\x0d\x6e\x6f\x6e\x6f\x64\x65\x40\x6e\x6f\x68\x6f\x73\x74"
     ~id:"\x00\x00\x00\x3b" ~serial:"\x00\x00\x00\x00" ~creation:0)
-  and binary = "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" ^
-    "\x68\x6F\x73\x74\x00\x00\x00\x3B\x00\x00\x00\x00\x00" in
-  assert ((binary_ok (term_to_binary pid1)) = binary) ;
-  assert ((term_ok (binary_to_term binary)) = pid1) ;
+  and binary1 = "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" ^
+    "\x68\x6F\x73\x74\x00\x00\x00\x3B\x00\x00\x00\x00\x00"
+  and pid2 = OtpErlangPid (Pid.make
+    ~node_tag:119
+    ~node:"\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74"
+    ~id:"\x00\x00\x00\x50" ~serial:"\x00\x00\x00\x00" ~creation:0)
+  and binary2 = "\x83\x67\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" ^
+    "\x6F\x73\x74\x00\x00\x00\x50\x00\x00\x00\x00\x00" in
+  assert ((binary_ok (term_to_binary pid1)) = binary1) ;
+  assert ((term_ok (binary_to_term binary1)) = pid1) ;
+  assert ((binary_ok (term_to_binary pid2)) = binary2) ;
+  assert ((term_ok (binary_to_term binary2)) = pid2) ;
   true
 
 let test_function () =
