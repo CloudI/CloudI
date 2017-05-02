@@ -56,6 +56,7 @@
          uniform_cache/1,
          uniform_cache/2,
          strong_uniform/1,
+         strong_uniform_range/2,
          strong_float/0]).
 
 -ifdef(ERLANG_OTP_VERSION_16).
@@ -287,6 +288,22 @@ strong_uniform(N) when is_integer(N), N > 1 ->
     Bits = Bytes * 8,
     <<I:Bits/integer>> = crypto:strong_rand_bytes(Bytes),
     (I rem N) + 1.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Strong uniform random number generation in a range.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_uniform_range(Min :: non_neg_integer(),
+                           Max :: non_neg_integer()) ->
+    non_neg_integer().
+
+strong_uniform_range(Min, Min) ->
+    Min;
+strong_uniform_range(Min, Max)
+    when is_integer(Min), is_integer(Max), Min < Max ->
+    strong_uniform(1 + Max - Min) - 1 + Min.
 
 %%-------------------------------------------------------------------------
 %% @doc

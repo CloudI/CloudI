@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_runtime_testing).
@@ -142,7 +142,7 @@ monkey_latency_init(#monkey_latency{} = MonkeyLatency) ->
 monkey_latency_check(#monkey_latency{method = time_uniform,
                                      value1 = Min,
                                      value2 = Max} = MonkeyLatency) ->
-    Result = random_uniform(Min, Max),
+    Result = random_range(Min, Max),
     sleep(Result),
     MonkeyLatency;
 monkey_latency_check(#monkey_latency{method = time_gaussian,
@@ -446,10 +446,8 @@ monkey_chaos_pid_day(Percent)
             end
     end.
 
-random_uniform(Min, Min) ->
-    Min;
-random_uniform(Min, Max) ->
-    cloudi_x_quickrand:strong_uniform(1 + Max - Min) + Min.
+random_range(Min, Max) ->
+    cloudi_x_quickrand:strong_uniform_range(Min, Max).
 
 % return a floating point value between 0.0 and 1.0, inclusive
 random() ->

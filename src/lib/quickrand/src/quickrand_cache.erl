@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_cache).
@@ -60,7 +60,9 @@
          rand_bytes/1,
          rand_bytes/2,
          uniform/1,
-         uniform/2]).
+         uniform/2,
+         uniform_range/2,
+         uniform_range/3]).
 
 -record(quickrand_cache,
         {
@@ -232,6 +234,40 @@ uniform(N, State) when is_integer(N), N > 1 ->
     Bits = Bytes * 8,
     {<<I:Bits/integer>>, NewState} = rand_bytes(Bytes, State),
     {(I rem N) + 1, NewState}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Process dictionary cache version of quickrand:strong_uniform_range/2.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uniform_range(Min :: non_neg_integer(),
+                    Max :: non_neg_integer()) ->
+    non_neg_integer().
+
+uniform_range(Min, Min) ->
+    Min;
+uniform_range(Min, Max)
+    when is_integer(Min), is_integer(Max), Min < Max ->
+    uniform(1 + Max - Min) - 1 + Min.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===State cache version of quickrand:strong_uniform_range/2.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uniform_range(Min :: non_neg_integer(),
+                    Max :: non_neg_integer(),
+                    State :: state()) ->
+    {non_neg_integer(), state()}.
+
+uniform_range(Min, Min, State) ->
+    {Min, State};
+uniform_range(Min, Max, State)
+    when is_integer(Min), is_integer(Max), Min < Max ->
+    {Value, NewState} = uniform(1 + Max - Min, State),
+    {Value - 1 + Min, NewState}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
