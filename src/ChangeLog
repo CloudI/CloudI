@@ -14,6 +14,7 @@
     * Fix OCaml CloudI API usage with Erlang/OTP 20.0
       (Erlang binary term format parsing in OCaml had an atom parsing bug
        for pids and other types that store an atom)
+    * Updated the cloudi executable used in the Erlang examples
 
 2017-04-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

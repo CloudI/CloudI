@@ -122,11 +122,4 @@
   {copy,
    "@srcdir@/rel/files/cloudi",
    "bin/cloudi"}
-  % windows scripts
-  %{copy,
-  % "@srcdir@/rel/files/cloudi.cmd",
-  % "bin/cloudi.cmd"},
-  %{copy,
-  % "@srcdir@/rel/files/start_erl.cmd",
-  % "bin/start_erl.cmd"}
  ]}.
