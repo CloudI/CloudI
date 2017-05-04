@@ -44,7 +44,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -54,7 +54,6 @@
 
 %% external interface
 -export([start_link/1,
-         current_function/0,
          set/1,
          file_set/1,
          stdout_set/1,
@@ -136,19 +135,6 @@
 
 start_link(#config{logging = LoggingConfig}) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [LoggingConfig], []).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Get the current function name being executed.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec current_function() ->
-    atom().
-
-current_function() ->
-    catch throw(x), [_, {_, F, _, _} | _] = erlang:get_stacktrace(),
-    F.
 
 %%-------------------------------------------------------------------------
 %% @doc
