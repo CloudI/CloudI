@@ -26,7 +26,7 @@
 
 %% Erlang representation of msgpack data.
 -type msgpack_term() :: [msgpack_term()] | msgpack_map() |
-                        integer() | float() | boolean() | binary().
+                        integer() | float() | boolean() | binary() | string() | {string, string()}.
 
 -type format_type() :: jsx|jiffy|map.
 
@@ -37,9 +37,9 @@
           spec = new :: new | old,
           allow_atom = pack  :: none | pack, %% allows atom when packing
           known_atoms = [] :: [atom()],
-          unpack_str = as_list :: as_binary | as_list,
+          unpack_str = as_list :: as_binary | as_list | as_tagged_list,
           validate_string = false :: boolean(),
-          pack_str = from_list :: from_binary | from_list | none,
+          pack_str = from_list :: from_binary | from_list | from_tagged_list | none,
           map_format = ?DEFAULT_MAP_FORMAT :: format_type(),
           map_unpack_fun = ?DEFAULT_MAP_UNPACKER_FUN :: msgpack_map_unpacker(),
           ext_packer = undefined   :: msgpack:ext_packer()   | undefined,

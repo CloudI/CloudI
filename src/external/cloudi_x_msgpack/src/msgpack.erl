@@ -48,13 +48,13 @@
 -export_type([object/0, msgpack_map/0, options/0, ext_packer/0, ext_unpacker/0]).
 -type object() :: msgpack_term().
 
--type options() :: 
+-type options() ::
         [{spec, new|old} |
          {allow_atom, none|pack} |
          {known_atoms, [atom()]} |
-         {unpack_str, as_binary|as_list} |
+         {unpack_str, as_binary|as_list|as_tagged_list} |
          {validate_string, boolean()} |
-         {pack_str, from_binary|from_list|none} |
+         {pack_str, from_binary|from_list|from_tagged_list|none} |
          {map_format, map|jiffy|jsx} |
          {ext, {msgpack:ext_packer(), msgpack:ext_unpacker()} | module()}].
 
@@ -86,10 +86,10 @@ binary_to_term(Bin, Opt) ->
 
 %% @doc Encode an erlang term into an msgpack binary.
 %%      Returns {error, {badarg, term()}} if the input is illegal.
--spec pack(msgpack:object()) -> binary() | {error, {badarg, term()}}.
+-spec pack(msgpack:object()) -> binary() | {error, _}.
 pack(Term) -> msgpack:pack(Term, []).
 
--spec pack(msgpack:object(), msgpack:options()) -> binary().
+-spec pack(msgpack:object(), msgpack:options()) -> binary() | {error, _}.
 pack(Term, Opts) ->
     Option = parse_options(Opts),
     try
@@ -158,14 +158,14 @@ parse_options([{allow_atom,Type}|T], Opt0) ->
 parse_options([{known_atoms, Atoms}|T], Opt0) when is_list(Atoms) ->
     parse_options(T, Opt0?OPTION{known_atoms=Atoms});
 
-parse_options([{unpack_str, As}|T], Opt0) when As =:= as_binary orelse As =:= as_list ->
+parse_options([{unpack_str, As}|T], Opt0) when As =:= as_binary orelse As =:= as_list orelse As =:= as_tagged_list ->
     parse_options(T, Opt0?OPTION{unpack_str=As});
 
 parse_options([{validate_string, Bool}|T], Opt) when is_boolean(Bool) ->
     parse_options(T, Opt?OPTION{validate_string=Bool});
 
 parse_options([{pack_str, From}|T], Opt)
-  when From =:= from_binary orelse From =:= from_list orelse From =:= none ->
+  when From =:= from_binary orelse From =:= from_list orelse From =:= from_tagged_list orelse From =:= none ->
     parse_options(T, Opt?OPTION{pack_str=From});
 
 parse_options([{map_format,Type}|T], Opt0)

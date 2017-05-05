@@ -47,8 +47,20 @@ unpack_stream(<<16#C6, L:32/big-unsigned-integer-unit:1, V:L/binary, Rest/binary
 %% Floats
 unpack_stream(<<16#CA, V:32/float-unit:1, Rest/binary>>, _) ->
     {V, Rest};
+unpack_stream(<<16#CA, 0:1, 16#FF:8, 0:23, Rest/binary>>, _) ->
+    {positive_infinity, Rest};
+unpack_stream(<<16#CA, 1:1, 16#FF:8, 0:23 , Rest/binary>>, _) ->
+    {negative_infinity, Rest};
+unpack_stream(<<16#CA, _:1, 16#FF:8, _:23 , Rest/binary>>, _) ->
+    {nan, Rest};
 unpack_stream(<<16#CB, V:64/float-unit:1, Rest/binary>>, _) ->
     {V, Rest};
+unpack_stream(<<16#CB, 0:1, 2#11111111111:11, 0:52, Rest/binary>>, _) ->
+    {positive_infinity, Rest};
+unpack_stream(<<16#CB, 1:1, 2#11111111111:11, 0:52 , Rest/binary>>, _) ->
+    {negative_infinity, Rest};
+unpack_stream(<<16#CB, _:1, 2#11111111111:11, _:52 , Rest/binary>>, _) ->
+    {nan, Rest};
 
 %% Unsigned integers
 unpack_stream(<<16#CC, V:8/unsigned-integer, Rest/binary>>, _) ->
@@ -221,7 +233,8 @@ unpack_str_or_raw(V, ?OPTION{spec=new,
     {case UnpackStr of
          as_binary when ValidateString -> unpack_str(V), maybe_bin(V, Opt);
          as_binary -> maybe_bin(V, Opt);
-         as_list -> unpack_str(V)
+         as_list -> unpack_str(V);
+         as_tagged_list -> {string, unpack_str(V)}
      end, Rest}.
 
 maybe_bin(Bin, _) ->

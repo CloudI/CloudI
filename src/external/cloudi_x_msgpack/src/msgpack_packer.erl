@@ -61,6 +61,11 @@ pack(Map, Opt = ?OPTION{map_format=jsx}) when Map =:= [{}]->
 pack([{_,_}|_] = Map, Opt = ?OPTION{map_format=jsx}) ->
     pack_map(Map, Opt);
 
+pack({string, String}, ?OPTION{spec=new, pack_str=from_tagged_list}=Opt) ->
+    case pack_string(String, Opt) of
+        {error, _} -> throw({badarg, String});
+        Bin when is_binary(Bin) -> Bin
+    end;
 pack(List, ?OPTION{spec=new, pack_str=from_list}=Opt)  when is_list(List) ->
     try
         case lists:all(fun is_integer/1, List) of

@@ -568,6 +568,17 @@ new_spec_pack_test_() ->
         ?_assertMatch(<<16#DD, 0, 1, 0, 0, _:65536/binary>>,       %% 0xDD, four bytes, N objects
                       msgpack:pack(list_minus_one(65536), [{spec,new},{pack_str,PackStr}]))]
        || PackStr <- [from_list, from_binary, none]]
+     },
+     {"pack_str from_tagged_list",
+      [?_assertEqual(<<2#101:3, 3:5, 97,97,97>>,
+                     msgpack:pack({string, "aaa"}, [{spec,new},{pack_str,from_tagged_list}])),
+       ?_assertMatch(<<16#D9, 32, _:32/binary>>,
+                     msgpack:pack({string, list_a(32)}, [{spec,new},{pack_str,from_tagged_list}])),
+       ?_assertMatch(<<16#DA, 1, 0, _:256/binary>>,
+                     msgpack:pack({string, list_a(256)}, [{spec,new},{pack_str,from_tagged_list}])),
+       ?_assertMatch(<<16#DB, 0, 1, 0, 0, _:65536/binary>>,
+                     msgpack:pack({string, list_a(65536)}, [{spec,new},{pack_str,from_tagged_list}]))
+      ]
      }].
 
 new_spec_unpack_test_() ->
@@ -603,7 +614,9 @@ new_spec_unpack_test_() ->
        ?_assertEqual({ok, list_a(256)},
                      msgpack:unpack(<<16#DA, 1,0, (binary_a(256))/binary>>, [{spec,new},{unpack_str,as_list}])),
        ?_assertEqual({ok, list_a(65536)},
-                     msgpack:unpack(<<16#DB, 0,1,0,0, (binary_a(65536))/binary>>, [{spec,new},{unpack_str,as_list}]))
+                     msgpack:unpack(<<16#DB, 0,1,0,0, (binary_a(65536))/binary>>, [{spec,new},{unpack_str,as_list}])),
+       ?_assertEqual({ok, {string, "aaa"}},
+                     msgpack:unpack(<<2#101:3, 3:5, 97,97,97>>, [{spec,new},{unpack_str,as_tagged_list}]))
       ]}].
 
 unpack_str_validation_test_() ->
@@ -625,3 +638,14 @@ unpack_str_validation_test_() ->
                      msgpack:unpack(binary_to_list(InvalidStr),
                                     [{spec,new},{unpack_str,from_list},{validate_string,true}]))]}
     ].
+
+
+float_unpacking_test_() ->
+    %% float 32
+   [?_assertEqual({ok, nan}, msgpack:unpack(<<16#CA, 16#FF, 16#FF, 16#FF, 16#FF>>)),
+    ?_assertEqual({ok, positive_infinity}, msgpack:unpack(<<16#CA, 16#7F, 16#80, 16#00, 16#00>>)),
+    ?_assertEqual({ok, negative_infinity}, msgpack:unpack(<<16#CA, 16#FF, 16#80, 16#00, 16#00>>)),
+    %% float 64
+    ?_assertEqual({ok, nan}, msgpack:unpack(<<16#CB, 16#FF, 16#FF, 16#FF, 16#FF, 16#FF, 16#FF, 16#FF, 16#FF>>)),
+    ?_assertEqual({ok, positive_infinity}, msgpack:unpack(<<16#CB, 16#7F, 16#F0, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00>>)),
+    ?_assertEqual({ok, negative_infinity}, msgpack:unpack(<<16#CB, 16#FF, 16#F0, 16#00, 16#00, 16#00, 16#00, 16#00, 16#00>>))].

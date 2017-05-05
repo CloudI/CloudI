@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-05-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update msgpack
+
 2017-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Removed the internal cloudi_core_i_logger:current_function/0 function

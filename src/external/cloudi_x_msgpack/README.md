@@ -144,11 +144,22 @@ Opt = [{ext,{Packer,Unpacker}}],
 {ok, {ref, Ref}} = msgpack:unpack(msgpack:pack({ref, Ref}, Opt), Opt).
 ```
 
+## Misc
+
+### Float type
+
+The Float type of Message Pack represents IEEE 754 floating point number, so it includes Nan and Infinity.
+In unpacking, msgpack-erlang returns `nan`, `positive_infinity` and `negative_infinity`.
+
 ## License
 
 Apache License 2.0
 
 # Release Notes
+
+## 0.7.0
+
+- Support `nan`, `positive_infinity` and `negative_infinity`
 
 ## 0.6.0
 

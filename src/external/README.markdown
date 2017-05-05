@@ -217,8 +217,8 @@ Erlang `msgpack`
 `MessagePack in Erlang`
 
 - `https://github.com/msgpack/msgpack-erlang`
-- `commit f4639fb968a0dc011c8e3ed16558624997b80cf2 (0.6.0)`
-- `Wed Sep 14 16:35:57 PDT 2016`
+- `commit c3aed39befd42ddd97edb41da265369230564956`
+- `Fri May  5 16:34:18 PDT 2017`
 - `Apache License 2.0`
 
 Erlang `nodefinder`
