@@ -14,33 +14,29 @@ Dmitriy Mazurin             <dimas.m.19 [at] gmail (dot) com>
 
 CloudI Integration Dependencies (alphabetical project order):
 backward-cpp         François-Xavier Bourlet <bombela@gmail.com>
-bear                 Boundary
+bear                 BMC TrueSight Pulse (formerly Boundary)
 booster              Artyom Beilis (Tonkikh)
 certifi              Benoit Chesneau <bchesneau@gmail.com>
 cowboy               Loïc Hoguin <essen@ninenines.eu>
 cowlib               Loïc Hoguin <essen@ninenines.eu>
 elli                 Knut Nesheim <knutin@gmail.com>
-emysql               Bill Warnecke <bill@rupture.com>,
-                     Jacob Vorreuter <jacob.vorreuter@gmail.com>,
-                     Henning Diedrich <hd2010@eonblast.com>,
-                     Eonblast Corporation [http://www.eonblast.com]
+emysql               Eonblast Corporation
 epgsql               Anton Lebedevich
 erlang-oauth         Tim Fletcher <mail@tfletcher.com>
 erlzmq               Yurii Rashkovskii <yrashk@gmail.com>
 exometer             Basho Technologies
 exometer_core        Basho Technologies
 exometer_influxdb    Travelping GmbH
-folsom               Boundary
+folsom               BMC TrueSight Pulse (formerly Boundary)
 hackney              Benoît Chesneau <benoitc@e-engura.org>
-                     Eduardo Gurgel
 hut                  Tino Breddin
-idna                 Tim Fletcher
-                     Benoît Chesneau <benoitc@e-engura.org>
+idna                 Benoît Chesneau <benoitc@e-engura.org>
 jinterface           Ericsson's OTP Team
 jsonlib              Josh Marshall
 jsx                  Alisdair Sullivan <alisdairsullivan@yahoo.ca>
 metrics              Benoitît Chesneau <bchesneau@gmail.com>
 mimerl               Benoitît Chesneau <benoc@benoitcnetwork.eu>
+msgpack              Kota Uenishi
 nodefinder           Paul Mineiro <paul@n54.com>
 parse_trans          Ulf Wiger <ulf.wiger@feuerlabs.com>
 pgsql                Paul Guyot
