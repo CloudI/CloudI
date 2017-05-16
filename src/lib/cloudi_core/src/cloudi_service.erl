@@ -213,7 +213,7 @@
               source/0]).
 
 -type error_reason() :: timeout.
--type error_reason_sync() :: error_reason() | invalid_state.
+-type error_reason_sync() :: error_reason().
 -export_type([error_reason/0,
               error_reason_sync/0]).
 

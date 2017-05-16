@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-05-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Using the CloudI API functions send_sync or recv_async during the
+      service's initialization previously returned an error, but will now
+      cause the service to crash, to pursue fail-fast operation and to keep
+      the effect the same for both internal and external services
+      
+
 2017-05-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update msgpack

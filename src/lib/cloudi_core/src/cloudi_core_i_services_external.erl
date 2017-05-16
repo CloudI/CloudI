@@ -465,6 +465,17 @@ handle_event(EventType, EventContent, StateName, State) ->
                          init_timer = undefined}}
     end;
 
+'HANDLE'(connection, Request,
+         #state{init_timer = InitTimer} = State)
+    when is_reference(InitTimer), is_tuple(Request),
+         (element(1, Request) =:= 'send_sync' orelse
+          element(1, Request) =:= 'recv_async') ->
+    % service request responses are always handled after initialization
+    % is successful though it is possible for the
+    % service request response to be received before initialization
+    % is complete (the response remains queued)
+    {stop, {error, invalid_state}, State};
+
 'HANDLE'(connection,
          {'subscribe', Pattern},
          #state{dispatcher = Dispatcher,
@@ -1549,8 +1560,8 @@ handle_info({udp, Socket, _, IncomingPort, Data}, StateName,
                    socket = Socket} = State) ->
     inet:setopts(Socket, [{active, once}]),
     try erlang:binary_to_term(Data, [safe]) of
-        Term ->
-            ?MODULE:StateName(connection, Term, State)
+        Request ->
+            ?MODULE:StateName(connection, Request, State)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
@@ -1563,8 +1574,8 @@ handle_info({tcp, Socket, Data}, StateName,
     when Protocol =:= tcp; Protocol =:= local ->
     inet:setopts(Socket, [{active, once}]),
     try erlang:binary_to_term(Data, [safe]) of
-        Term ->
-            ?MODULE:StateName(connection, Term, State)
+        Request ->
+            ?MODULE:StateName(connection, Request, State)
     catch
         error:badarg ->
             ?LOG_ERROR("Protocol Error ~p", [Data]),
