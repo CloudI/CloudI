@@ -64,8 +64,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit 86ccdd7a0b4eeb57b0ee8ee047da7d483401d5bf`
-- `Tue May  2 11:14:21 PDT 2017`
+- `commit b03969a8de2ee4f4d9821aa04f9ff06666be6501`
+- `Tue May 16 18:17:50 PDT 2017`
 - `BSD`
 
 `reltool_util`

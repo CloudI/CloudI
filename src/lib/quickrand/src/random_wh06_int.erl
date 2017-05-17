@@ -6,7 +6,7 @@
 %% which succeeds the old AS183 algorithm in 1982.
 
 %% Copyright (c) 2010 Kenji Rikitake All rights reserved.
-%% Copyright (c) 2012-2015 Michael Truog All rights reserved.
+%% Copyright (c) 2012-2017 Michael Truog All rights reserved.
 
 %%
 %% %CopyrightBegin%
@@ -106,7 +106,7 @@ seed() ->
 %% seed({A1, A2, A3, A4}) 
 %%  Seed random number generation 
 
--spec seed({pos_integer(), pos_integer(), pos_integer(), pos_integer()}) ->
+-spec seed(seed()) ->
     'undefined' | seed().
 
 seed({A1, A2, A3, A4}) ->
@@ -124,10 +124,10 @@ seed(A1, A2, A3, A4)
          is_integer(A3), A3 > 0,
          is_integer(A4), A4 > 0 ->
     put(?SEED_DICT,
-        {A1 rem ?PRIME1,
-         A2 rem ?PRIME2,
-         A3 rem ?PRIME3,
-         A4 rem ?PRIME4}).
+        {(A1 rem (?PRIME1 - 1)) + 1,
+         (A2 rem (?PRIME2 - 1)) + 1,
+         (A3 rem (?PRIME3 - 1)) + 1,
+         (A4 rem (?PRIME4 - 1)) + 1}).
 
 -spec reseed(seed()) ->
     seed().

@@ -1,9 +1,9 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-%% Modified version of random module
+%% Modified version of random module (in Erlang/OTP before version 20.0)
 
-%% Copyright (c) 2016 Michael Truog All rights reserved.
+%% Copyright (c) 2016-2017 Michael Truog All rights reserved.
 
 %%
 %% %CopyrightBegin%
@@ -65,7 +65,7 @@ seed() ->
 %% seed({A1, A2, A3}) 
 %%  Seed random number generation 
 
--spec seed({pos_integer(), pos_integer(), pos_integer()}) ->
+-spec seed(seed()) ->
     'undefined' | seed().
 
 seed({A1, A2, A3}) ->
@@ -82,9 +82,9 @@ seed(A1, A2, A3)
          is_integer(A2), A2 > 0,
          is_integer(A3), A3 > 0 ->
     put(?SEED_DICT,
-        {A1 rem ?PRIME1,
-         A2 rem ?PRIME2,
-         A3 rem ?PRIME3}).
+        {(A1 rem (?PRIME1 - 1)) + 1,
+         (A2 rem (?PRIME2 - 1)) + 1,
+         (A3 rem (?PRIME3 - 1)) + 1}).
 
 -spec reseed(seed()) ->
     seed().
@@ -96,7 +96,7 @@ reseed({A1, A2, A3}) ->
     end.
 
 %% uniform()
-%%  Returns a random float between 0 and 1.
+%%  Returns a random float in the range [0.0 .. 1.0)
 
 -spec uniform() -> float().
 
@@ -129,7 +129,7 @@ uniform(N)
 %%% Functional versions
 
 %% uniform_s(State) -> {F, NewState}
-%%  Returns a random float between 0 and 1.
+%%  Returns a random float in the range [0.0 .. 1.0)
 
 -spec uniform_s(seed()) -> {float(), seed()}.
 
