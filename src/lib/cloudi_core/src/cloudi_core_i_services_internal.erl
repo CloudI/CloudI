@@ -2530,8 +2530,12 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
             when NextPriority < ?PRIORITY_HIGH;
                  NextPriority > ?PRIORITY_LOW;
                  NextTimeout < 0 ->
-            {'cloudi_service_request_failure',
-             exit, badarg, erlang:get_stacktrace(), NewServiceState};
+            try erlang:exit(badarg)
+            catch
+                exit:badarg ->
+                    {'cloudi_service_request_failure',
+                     exit, badarg, erlang:get_stacktrace(), NewServiceState}
+            end;
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
@@ -2673,8 +2677,12 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
             when NextPriority < ?PRIORITY_HIGH;
                  NextPriority > ?PRIORITY_LOW;
                  NextTimeout < 0 ->
-            {'cloudi_service_request_failure',
-             exit, badarg, erlang:get_stacktrace(), NewServiceState};
+            try erlang:exit(badarg)
+            catch
+                exit:badarg ->
+                    {'cloudi_service_request_failure',
+                     exit, badarg, erlang:get_stacktrace(), NewServiceState}
+            end;
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
