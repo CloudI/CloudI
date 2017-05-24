@@ -7,12 +7,13 @@
 %%% Maintain 2 lookups for 2 separate keys and 1 value.
 %%% The interface creates a bidirectional lookup where key1 can store
 %%% multiple key2 associations to the same value.
-%%% The supplied data structure module must have dict interface functions.
+%%% The supplied data structure module must have dict interface functions
+%%% (unless the module is maps).
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2011-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -47,8 +48,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2016 Michael Truog
-%%% @version 1.5.2 {@date} {@time}
+%%% @copyright 2011-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(key2value).
@@ -109,33 +110,37 @@ erase(K1, K2,
       #key2value{module = Module,
                  lookup1 = Lookup1,
                  lookup2 = Lookup2} = State) ->
-    case Module:find(K1, Lookup1) of
+    case module_find(Module, K1, Lookup1) of
         {ok, {[K2], _}} ->
-            case Module:find(K2, Lookup2) of
+            case module_find(Module, K2, Lookup2) of
                 {ok, {[K1], _}} ->
                     State#key2value{
-                        lookup1 = Module:erase(K1, Lookup1),
-                        lookup2 = Module:erase(K2, Lookup2)};
+                        lookup1 = module_erase(Module, K1, Lookup1),
+                        lookup2 = module_erase(Module, K2, Lookup2)};
                 {ok, {L1, V1}} ->
                     State#key2value{
-                        lookup1 = Module:erase(K1, Lookup1),
-                        lookup2 = Module:store(K2, {lists:delete(K1, L1), V1},
+                        lookup1 = module_erase(Module, K1, Lookup1),
+                        lookup2 = module_store(Module, K2,
+                                               {lists:delete(K1, L1), V1},
                                                Lookup2)};
                 error ->
                     State
             end;
         {ok, {L2, V2}} ->
-            case Module:find(K2, Lookup2) of
+            case module_find(Module, K2, Lookup2) of
                 {ok, {[K1], _}} ->
                     State#key2value{
-                        lookup1 = Module:store(K1, {lists:delete(K2, L2), V2},
+                        lookup1 = module_store(Module, K1,
+                                               {lists:delete(K2, L2), V2},
                                                Lookup1),
-                        lookup2 = Module:erase(K2, Lookup2)};
+                        lookup2 = module_erase(Module, K2, Lookup2)};
                 {ok, {L1, V1}} ->
                     State#key2value{
-                        lookup1 = Module:store(K1, {lists:delete(K2, L2), V2},
+                        lookup1 = module_store(Module, K1,
+                                               {lists:delete(K2, L2), V2},
                                                Lookup1),
-                        lookup2 = Module:store(K2, {lists:delete(K1, L1), V1},
+                        lookup2 = module_store(Module, K2,
+                                               {lists:delete(K1, L1), V1},
                                                Lookup2)};
                 error ->
                     State
@@ -151,7 +156,7 @@ erase(K1, K2,
 erase1(K,
        #key2value{module = Module,
                   lookup1 = Lookup1} = State) ->
-    case Module:find(K, Lookup1) of
+    case module_find(Module, K, Lookup1) of
         {ok, {L, _}} ->
             lists:foldl(fun(K2, D) ->
                 erase(K, K2, D)
@@ -167,7 +172,7 @@ erase1(K,
 erase2(K,
        #key2value{module = Module,
                   lookup2 = Lookup2} = State) ->
-    case Module:find(K, Lookup2) of
+    case module_find(Module, K, Lookup2) of
         {ok, {L, _}} ->
             lists:foldl(fun(K1, D) ->
                 erase(K1, K, D)
@@ -183,7 +188,7 @@ erase2(K,
 fetch1(K,
        #key2value{module = Module,
                   lookup1 = Lookup1}) ->
-    Module:fetch(K, Lookup1).
+    module_fetch(Module, K, Lookup1).
 
 -spec fetch2(K :: key2(),
              key2value(key1(), key2(), value())) ->
@@ -192,7 +197,7 @@ fetch1(K,
 fetch2(K,
        #key2value{module = Module,
                   lookup2 = Lookup2}) ->
-    Module:fetch(K, Lookup2).
+    module_fetch(Module, K, Lookup2).
 
 -spec find1(K :: key1(),
             State :: key2value(key1(), key2(), value())) ->
@@ -202,7 +207,7 @@ fetch2(K,
 find1(K,
       #key2value{module = Module,
                  lookup1 = Lookup1}) ->
-    Module:find(K, Lookup1).
+    module_find(Module, K, Lookup1).
 
 -spec find2(K :: key2(),
             State :: key2value(key1(), key2(), value())) ->
@@ -212,7 +217,7 @@ find1(K,
 find2(K,
       #key2value{module = Module,
                  lookup2 = Lookup2}) ->
-    Module:find(K, Lookup2).
+    module_find(Module, K, Lookup2).
 
 -spec fold1(F :: fun((key1(), list(key2()), value(), any()) -> any()),
             A0 :: any(),
@@ -223,7 +228,7 @@ fold1(F, A0,
       #key2value{module = Module,
                  lookup1 = Lookup1})
     when is_function(F, 4) ->
-    Module:fold(fun(K1, {L1, V1}, AN) ->
+    module_fold(Module, fun(K1, {L1, V1}, AN) ->
         F(K1, L1, V1, AN)
     end, A0, Lookup1).
 
@@ -236,7 +241,7 @@ fold2(F, A0,
       #key2value{module = Module,
                  lookup2 = Lookup2})
     when is_function(F, 4) ->
-    Module:fold(fun(K2, {L2, V2}, AN) ->
+    module_fold(Module, fun(K2, {L2, V2}, AN) ->
         F(L2, K2, V2, AN)
     end, A0, Lookup2).
 
@@ -247,7 +252,7 @@ fold2(F, A0,
 is_key1(K,
         #key2value{module = Module,
                    lookup1 = Lookup1}) ->
-    Module:is_key(K, Lookup1).
+    module_is_key(Module, K, Lookup1).
 
 -spec is_key2(K :: key2(),
               key2value(key1(), key2(), value())) ->
@@ -256,7 +261,7 @@ is_key1(K,
 is_key2(K,
         #key2value{module = Module,
                    lookup2 = Lookup2}) ->
-    Module:is_key(K, Lookup2).
+    module_is_key(Module, K, Lookup2).
 
 -spec new() ->
     key2value_dict(key1(), key2(), value()).
@@ -272,8 +277,8 @@ new() ->
 new(Module)
     when is_atom(Module) ->
     #key2value{module = Module,
-               lookup1 = Module:new(),
-               lookup2 = Module:new()}.
+               lookup1 = module_new(Module),
+               lookup2 = module_new(Module)}.
 
 -spec store(K1 :: key1(),
             K2 :: key2(),
@@ -293,8 +298,8 @@ store(K1, K2, V,
     F2 = fun({L, _}) ->
         {lists:umerge(L, K1L), V}
     end,
-    State#key2value{lookup1 = Module:update(K1, F1, {K2L, V}, Lookup1),
-                    lookup2 = Module:update(K2, F2, {K1L, V}, Lookup2)}.
+    State#key2value{lookup1 = module_update(Module, K1, F1, {K2L, V}, Lookup1),
+                    lookup2 = module_update(Module, K2, F2, {K1L, V}, Lookup2)}.
 
 -spec update1(K1 :: key1(),
               F :: fun((value()) -> value()),
@@ -306,14 +311,14 @@ update1(K1, F,
                    lookup1 = Lookup1,
                    lookup2 = Lookup2} = State)
     when is_function(F, 1) ->
-    {ok, {K2L, _}} = Module:find(K1, Lookup1),
+    {ok, {K2L, _}} = module_find(Module, K1, Lookup1),
     FN = fun({L, V}) ->
         {L, F(V)}
     end,
     NewLookup2 = lists:foldl(fun(K2, NextLookup2) ->
-        Module:update(K2, FN, NextLookup2)
+        module_update(Module, K2, FN, NextLookup2)
     end, Lookup2, K2L),
-    State#key2value{lookup1 = Module:update(K1, FN, Lookup1),
+    State#key2value{lookup1 = module_update(Module, K1, FN, Lookup1),
                     lookup2 = NewLookup2}.
 
 -spec update2(K2 :: key2(),
@@ -326,17 +331,65 @@ update2(K2, F,
                    lookup1 = Lookup1,
                    lookup2 = Lookup2} = State)
     when is_function(F, 1) ->
-    {ok, {K1L, _}} = Module:find(K2, Lookup2),
+    {ok, {K1L, _}} = module_find(Module, K2, Lookup2),
     FN = fun({L, V}) ->
         {L, F(V)}
     end,
     NewLookup1 = lists:foldl(fun(K1, NextLookup1) ->
-        Module:update(K1, FN, NextLookup1)
+        module_update(Module, K1, FN, NextLookup1)
     end, Lookup1, K1L),
     State#key2value{lookup1 = NewLookup1,
-                    lookup2 = Module:update(K2, FN, Lookup2)}.
+                    lookup2 = module_update(Module, K2, FN, Lookup2)}.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+-compile({inline,
+          [module_erase/3,
+           module_fetch/3,
+           module_find/3,
+           module_fold/4,
+           module_is_key/3,
+           module_new/1,
+           module_store/4,
+           module_update/4,
+           module_update/5]}).
+
+module_erase(maps, Key, Lookup) ->
+    maps:remove(Key, Lookup);
+module_erase(Module, Key, Lookup) ->
+    Module:erase(Key, Lookup).
+
+module_fetch(maps, Key, Lookup) ->
+    maps:get(Key, Lookup);
+module_fetch(Module, Key, Lookup) ->
+    Module:fetch(Key, Lookup).
+
+module_find(Module, Key, Lookup) ->
+    Module:find(Key, Lookup).
+
+module_fold(Module, F, A, Lookup) ->
+    Module:fold(F, A, Lookup).
+
+module_is_key(Module, Key, Lookup) ->
+    Module:is_key(Key, Lookup).
+
+module_new(Module) ->
+    Module:new().
+
+module_store(maps, Key, Value, Lookup) ->
+    maps:put(Key, Value, Lookup);
+module_store(Module, Key, Value, Lookup) ->
+    Module:store(Key, Value, Lookup).
+
+module_update(maps, Key, F, Lookup) ->
+    maps:update_with(Key, F, Lookup);
+module_update(Module, Key, F, Lookup) ->
+    Module:update(Key, F, Lookup).
+
+module_update(maps, Key, F, Value, Lookup) ->
+    maps:update_with(Key, F, Value, Lookup);
+module_update(Module, Key, F, Value, Lookup) ->
+    Module:update(Key, F, Value, Lookup).
 

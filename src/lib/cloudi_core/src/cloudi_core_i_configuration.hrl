@@ -110,7 +110,7 @@
         default = undefined
             :: undefined | #config_logging_formatter{},
         % nonempty_list(module()) -> #config_logging_formatter{} lookup
-        lookup = cloudi_x_keys1value:new()
+        lookup = cloudi_x_keys1value:new(maps)
             :: cloudi_x_keys1value:
                cloudi_x_keys1value(module(), #config_logging_formatter{}),
         level = undefined

@@ -4,6 +4,8 @@
 2017-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix erlang:get_stacktrace/0 usage with Erlang/OTP 20.0
+    * Use maps in cloudi_core call paths that impact performance
+    * Update key2value and keys1value
 
 2017-05-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 

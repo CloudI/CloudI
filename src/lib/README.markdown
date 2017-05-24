@@ -37,8 +37,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang 2-way map`
 
 - `https://github.com/okeuday/key2value`
-- `commit 257d2e5c4648a5e2a8b98041f729eb0a63292a11 (v1.7.0)`
-- `Wed Mar 29 11:40:18 PDT 2017`
+- `commit 3d883fbf3d8db65685805ee4a450a7affccaca55`
+- `Tue May 23 19:42:20 PDT 2017`
 - `BSD`
 
 `keys1value`
@@ -46,8 +46,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang set associative map for key lists`
 
 - `https://github.com/okeuday/keys1value`
-- `commit a791d4b22cefd23f8e64f976ce94c994d29a291a (v1.7.0)`
-- `Wed Mar 29 11:40:18 PDT 2017`
+- `commit 80e8127d482bdfc7e81db0466fabeefdc04f8c90`
+- `Tue May 23 19:42:20 PDT 2017`
 - `BSD`
 
 `pqueue`

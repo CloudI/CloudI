@@ -47,7 +47,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -116,12 +116,12 @@
 
 -record(state,
     {
-        services = cloudi_x_key2value:new() ::
+        services = cloudi_x_key2value:new(maps) ::
             cloudi_x_key2value:
             cloudi_x_key2value(cloudi_service_api:service_id(),
                                pid(), #service{}),
-        changes = dict:new() ::
-            dict_proxy(cloudi_service_api:service_id(),
+        changes = maps:new() ::
+            maps_proxy(cloudi_service_api:service_id(),
                        list({increase | decrease,
                              number(), number(), number()}))
     }).
@@ -356,7 +356,7 @@ handle_cast({Direction,
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], _}} ->
             Entry = {Direction, RateCurrent, RateLimit, CountProcessLimit},
-            NewChangeList = case dict:find(ServiceId, Changes) of
+            NewChangeList = case maps:find(ServiceId, Changes) of
                 {ok, ChangeList} ->
                     [Entry | ChangeList];
                 error ->
@@ -364,9 +364,9 @@ handle_cast({Direction,
                                       {changes, ServiceId}),
                     [Entry]
             end,
-            {noreply, State#state{changes = dict:store(ServiceId,
-                                                       NewChangeList,
-                                                       Changes)}};
+            {noreply, State#state{changes = maps:put(ServiceId,
+                                                     NewChangeList,
+                                                     Changes)}};
         error ->
             % discard old change
             {noreply, State}
@@ -390,10 +390,10 @@ handle_cast(Request, State) ->
 handle_info({changes, ServiceId},
             #state{services = Services,
                    changes = Changes} = State) ->
-    NewChanges = dict:erase(ServiceId, Changes),
+    NewChanges = maps:remove(ServiceId, Changes),
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, #service{count_thread = CountThread}}} ->
-            ChangeList = dict:fetch(ServiceId, Changes),
+            ChangeList = maps:get(ServiceId, Changes),
             CountProcessCurrent = erlang:round(erlang:length(Pids) /
                                                CountThread),
             {I, Rate} = pids_change(ChangeList, CountProcessCurrent),

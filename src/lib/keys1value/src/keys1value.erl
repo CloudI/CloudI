@@ -5,12 +5,13 @@
 %%% @doc
 %%% ==Keys1Value==
 %%% Maintain an associative lookup for a list of keys and 1 value.
-%%% The supplied data structure module must have dict interface functions.
+%%% The supplied data structure module must have dict interface functions
+%%% (unless the module is maps).
 %%% @end
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -45,8 +46,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2014-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(keys1value).
@@ -92,10 +93,10 @@ erase(Key,
       #keys1value{module = Module,
                   lookup = Lookup} = State)
     when not is_list(Key) ->
-    case Module:find(Key, Lookup) of
+    case module_find(Module, Key, Lookup) of
         {ok, {Keys, _}} ->
             State#keys1value{
-                lookup = lists:foldl(fun Module:erase/2, Lookup, Keys)};
+                lookup = lists:foldl(module_erase_f(Module), Lookup, Keys)};
         error ->
             State
     end.
@@ -108,7 +109,7 @@ fetch(Key,
       #keys1value{module = Module,
                   lookup = Lookup})
     when not is_list(Key) ->
-    {_, Value} = Module:fetch(Key, Lookup),
+    {_, Value} = module_fetch(Module, Key, Lookup),
     Value.
 
 -spec find(Key :: key(),
@@ -119,7 +120,7 @@ find(Key,
      #keys1value{module = Module,
                  lookup = Lookup})
     when not is_list(Key) ->
-    case Module:find(Key, Lookup) of
+    case module_find(Module, Key, Lookup) of
         {ok, {_, Value}} ->
             {ok, Value};
         error ->
@@ -134,13 +135,13 @@ is_key([_ | _] = Keys,
        #keys1value{module = Module,
                    lookup = Lookup}) ->
     lists:any(fun(K) ->
-        Module:is_key(K, Lookup)
+        module_is_key(Module, K, Lookup)
     end, Keys);
 is_key(Key,
        #keys1value{module = Module,
                    lookup = Lookup})
     when not is_list(Key) ->
-    Module:is_key(Key, Lookup).
+    module_is_key(Module, Key, Lookup).
 
 -spec new() ->
     keys1value_dict(key(), value()).
@@ -153,7 +154,7 @@ new() ->
 
 new(Module)
     when is_atom(Module) ->
-    {keys1value, Module, Module:new()}.
+    {keys1value, Module, module_new(Module)}.
 
 -spec store(Keys :: keys(),
             Value :: value(),
@@ -164,8 +165,8 @@ store([_ | _] = Keys, Value,
       #keys1value{module = Module,
                   lookup = Lookup} = State) ->
     NewLookup = lists:foldl(fun(K, D) ->
-        error = Module:find(K, D),
-        Module:store(K, {Keys, Value}, D)
+        error = module_find(Module, K, D),
+        module_store(Module, K, {Keys, Value}, D)
     end, Lookup, Keys),
     State#keys1value{lookup = NewLookup}.
 
@@ -174,7 +175,7 @@ store([_ | _] = Keys, Value,
 
 to_list(#keys1value{module = Module,
                     lookup = Lookup}) ->
-    to_list(Module:to_list(Lookup), []).
+    to_list(module_to_list(Module, Lookup), []).
 
 to_list([], Output) ->
     Output;
@@ -183,4 +184,44 @@ to_list([{_, {Keys, _} = Entry} | L0], Output) ->
         lists:keydelete(K, 1, L1)
     end, L0, Keys),
     to_list(LN, [Entry | Output]).
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+-compile({inline,
+          [module_erase_f/1,
+           module_fetch/3,
+           module_find/3,
+           module_is_key/3,
+           module_new/1,
+           module_store/4,
+           module_to_list/2]}).
+
+module_erase_f(maps) ->
+    fun maps:remove/2;
+module_erase_f(Module) ->
+    fun Module:erase/2.
+
+module_fetch(maps, Key, Lookup) ->
+    maps:get(Key, Lookup);
+module_fetch(Module, Key, Lookup) ->
+    Module:fetch(Key, Lookup).
+
+module_find(Module, Key, Lookup) ->
+    Module:find(Key, Lookup).
+
+module_is_key(Module, Key, Lookup) ->
+    Module:is_key(Key, Lookup).
+
+module_new(Module) ->
+    Module:new().
+
+module_store(maps, Key, Value, Lookup) ->
+    maps:put(Key, Value, Lookup);
+module_store(Module, Key, Value, Lookup) ->
+    Module:store(Key, Value, Lookup).
+
+module_to_list(Module, Lookup) ->
+    Module:to_list(Lookup).
 
