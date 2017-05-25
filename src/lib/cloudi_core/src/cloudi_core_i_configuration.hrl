@@ -692,7 +692,8 @@
             :: cloudi_x_uuid:state(),
         logging = #config_logging{}
             :: #config_logging{},
-        acl = dict:new(),
+        acl = #{}
+            :: #{atom() := list(cloudi:service_name_pattern())},
         services = []
             :: list(#config_service_internal{} |
                     #config_service_external{}),

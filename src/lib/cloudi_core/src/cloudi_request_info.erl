@@ -24,7 +24,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2014-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -59,8 +59,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2015 Michael Truog
-%%% @version 1.5.1 {@date} {@time}
+%%% @copyright 2014-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request_info).
@@ -81,8 +81,8 @@
 %% @doc
 %% ===New RequestInfo key/value data.===
 %% RequestInfo is meant to contain key/value pairs that is request
-%% meta-data.  Create the binary RequestInfo data with a list of pairs or
-%% a dict data structure.
+%% meta-data.  Create the binary RequestInfo data with any supported
+%% data structure.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -120,13 +120,13 @@ key_value_append(RequestInfo, <<TextPairs:8, _/binary>> = Existing)
 
 -spec key_value_parse(RequestInfo :: binary() |
                                      cloudi_key_value:key_values()) ->
-    Result :: dict_proxy(cloudi_key_value:key(), cloudi_key_value:value()).
+    Result :: #{cloudi_key_value:key() := cloudi_key_value:value()}.
 
 key_value_parse(RequestInfo)
     when is_binary(RequestInfo) ->
-    text_pairs_binary_to_dict(RequestInfo);
+    text_pairs_binary_to_map(RequestInfo);
 key_value_parse(RequestInfo) ->
-    cloudi_key_value:to_dict(RequestInfo).
+    cloudi_key_value:to_map(RequestInfo).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -167,21 +167,21 @@ text_pairs_list_to_binary_element([{K, V} | L]) ->
 text_pairs_list_to_binary(L) ->
     erlang:iolist_to_binary(text_pairs_list_to_binary_element(L)).
 
-text_pairs_binary_to_dict_element([<<>>], Lookup) ->
+text_pairs_binary_to_map_element([<<>>], Lookup) ->
     Lookup;
-text_pairs_binary_to_dict_element([K, V | L], Lookup) ->
-    case dict:find(K, Lookup) of
+text_pairs_binary_to_map_element([K, V | L], Lookup) ->
+    case maps:find(K, Lookup) of
         {ok, [_ | _] = ListV} ->
-            NewLookup = dict:store(K, ListV ++ [V], Lookup),
-            text_pairs_binary_to_dict_element(L, NewLookup);
+            NewLookup = maps:put(K, ListV ++ [V], Lookup),
+            text_pairs_binary_to_map_element(L, NewLookup);
         {ok, PreviousV} when is_binary(PreviousV) ->
-            NewLookup = dict:store(K, [PreviousV, V], Lookup),
-            text_pairs_binary_to_dict_element(L, NewLookup);
+            NewLookup = maps:put(K, [PreviousV, V], Lookup),
+            text_pairs_binary_to_map_element(L, NewLookup);
         error ->
-            text_pairs_binary_to_dict_element(L, dict:store(K, V, Lookup))
+            text_pairs_binary_to_map_element(L, maps:put(K, V, Lookup))
     end.
 
-text_pairs_binary_to_dict(RequestInfo) ->
+text_pairs_binary_to_map(RequestInfo) ->
     L = binary:split(RequestInfo, <<0>>, [global]),
-    text_pairs_binary_to_dict_element(L, dict:new()).
+    text_pairs_binary_to_map_element(L, #{}).
 

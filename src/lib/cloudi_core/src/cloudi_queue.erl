@@ -26,7 +26,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2015-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -61,8 +61,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2015-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -103,8 +103,7 @@
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
         failures_source = [] :: list(erlang:timestamp()),
-        requests = dict:new() :: dict_proxy(cloudi_service:trans_id(),
-                                            #request{})
+        requests = #{} :: #{cloudi_service:trans_id() := #request{}}
     }).
 
 -include("cloudi_service.hrl").
@@ -246,8 +245,7 @@ recv(Dispatcher,
                    failures_source = FailuresSrc,
                    requests = Requests} = State)
     when is_pid(Dispatcher) ->
-    #request{} = dict:fetch(TransId, Requests),
-    NewRequests = dict:erase(TransId, Requests),
+    {#request{}, NewRequests} = maps:take(TransId, Requests),
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
@@ -376,9 +374,9 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
                                             timeout = Timeout,
                                             priority = Priority,
                                             pattern_pid = PatternPid},
-                    {ok, State#cloudi_queue{requests = dict:store(TransId,
-                                                                  RequestState,
-                                                                  Requests)}};
+                    {ok, State#cloudi_queue{requests = maps:put(TransId,
+                                                                RequestState,
+                                                                Requests)}};
                 {error, _} = Error ->
                     NewFailuresSrc = failure(FailuresSrcDie,
                                              FailuresSrcMaxCount,
@@ -419,7 +417,7 @@ timeout(Dispatcher,
                       failures_source = FailuresSrc,
                       requests = Requests} = State)
     when is_pid(Dispatcher) ->
-    case dict:fetch(TransId, Requests) of
+    case maps:get(TransId, Requests) of
         #request{retry_count = RetryMax} ->
             NewFailuresSrc = failure(FailuresSrcDie,
                                      FailuresSrcMaxCount,
@@ -427,7 +425,7 @@ timeout(Dispatcher,
                                      FailuresSrc),
             {{error, timeout},
              State#cloudi_queue{failures_source = NewFailuresSrc,
-                                requests = dict:erase(TransId, Requests)}};
+                                requests = maps:remove(TransId, Requests)}};
         #request{name = Name,
                  request_info = RequestInfo,
                  request = Request,
@@ -441,10 +439,10 @@ timeout(Dispatcher,
                                                   Timeout, Priority,
                                                   TransId, PatternPid) of
                 {ok, TransId} ->
-                    NewRequests = dict:store(TransId,
-                                             RequestState#request{
-                                                 retry_count = I + 1},
-                                             Requests),
+                    NewRequests = maps:put(TransId,
+                                           RequestState#request{
+                                               retry_count = I + 1},
+                                           Requests),
                     {ok, State#cloudi_queue{requests = NewRequests}};
                 {error, _} = Error ->
                     NewFailuresSrc = failure(FailuresSrcDie,
@@ -453,8 +451,8 @@ timeout(Dispatcher,
                                              FailuresSrc),
                     {Error,
                      State#cloudi_queue{failures_source = NewFailuresSrc,
-                                        requests = dict:erase(TransId,
-                                                              Requests)}}
+                                        requests = maps:remove(TransId,
+                                                               Requests)}}
             end
     end.
 

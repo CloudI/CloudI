@@ -460,7 +460,7 @@ acl_add(Value, _) ->
 
 acl_remove([A | _] = Value, #config{acl = ACL} = Config)
     when is_atom(A) ->
-    NewACL = lists:foldl(fun(E, D) -> dict:erase(E, D) end, ACL, Value),
+    NewACL = lists:foldl(fun(E, D) -> maps:remove(E, D) end, ACL, Value),
     {ok, Config#config{acl = NewACL}};
 acl_remove(Value, _) ->
     {error, {acl_invalid, Value}}.
@@ -475,7 +475,7 @@ acl_remove(Value, _) ->
     list({atom(), list(cloudi_service:service_name_pattern())}).
 
 acl(#config{acl = ACL}) ->
-    dict:to_list(ACL).
+    maps:to_list(ACL).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1620,8 +1620,7 @@ new([{'services', [T | _] = Value} | Terms],
     end;
 new([{'acl', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'acl', [{A, [_ | _]} | _] = Value} | Terms], Config)
-    when is_atom(A) ->
+new([{'acl', [_ | _] = Value} | Terms], Config) ->
     case acl_lookup_new(Value) of
         {ok, NewACL} ->
             new(Terms, Config#config{acl = NewACL});
@@ -1642,8 +1641,7 @@ new([{'nodes', [_ | _] = Value} | Terms], Config) ->
     end;
 new([{'logging', []} | Terms], Config) ->
     new(Terms, Config);
-new([{'logging', [T | _] = Value} | Terms], Config)
-    when is_atom(element(1, T)) ->
+new([{'logging', [_ | _] = Value} | Terms], Config) ->
     case logging_proplist(Value) of
         {ok, LoggingConfig} ->
             new(Terms, Config#config{logging = LoggingConfig});
@@ -4373,7 +4371,7 @@ service_acl_expand_list([], Output, _) ->
     {ok, lists:reverse(Output)};
 service_acl_expand_list([E | L], Output, ACL)
     when is_atom(E) ->
-    case dict:find(E, ACL) of
+    case maps:find(E, ACL) of
         {ok, Value} ->
             service_acl_expand_list(L, Value ++ Output, ACL);
         error ->
@@ -4392,7 +4390,7 @@ service_acl_expand_list([E | L], Output, ACL)
     end.
 
 acl_lookup_new(L) ->
-    acl_lookup_add(L, dict:new()).
+    acl_lookup_add(L, #{}).
 
 acl_lookup_add(L, OldACL) ->
     case acl_store(L, OldACL) of
@@ -4404,10 +4402,9 @@ acl_lookup_add(L, OldACL) ->
 
 acl_store([], ACL) ->
     {ok, ACL};
-acl_store([{Key, [E | _] = Value} | L], ACL)
-    when is_atom(E);
-         (is_list(E) andalso is_integer(hd(E))) ->
-    acl_store(L, dict:store(Key, Value, ACL));
+acl_store([{Key, [_ | _] = Value} | L], ACL)
+    when is_atom(Key) ->
+    acl_store(L, maps:put(Key, Value, ACL));
 acl_store([H | _], _) ->
     {error, {acl_invalid, H}}.
 
@@ -4416,7 +4413,7 @@ acl_update([], ACLFinal, _) ->
 acl_update([{Key, Value} | L], ACLFinal, ACLConfig) ->
     case acl_update_values(Value, [], [], Key, ACLConfig) of
         {ok, NewValue} ->
-            acl_update(L, dict:store(Key, NewValue, ACLFinal),
+            acl_update(L, maps:put(Key, NewValue, ACLFinal),
                        ACLConfig);
         {error, _} = Error ->
             Error
@@ -4430,7 +4427,7 @@ acl_update_values([E | L], Output, Path, Key, ACL)
         true ->
             {error, {acl_cyclic, Key, E}};
         false ->
-            case dict:find(E, ACL) of
+            case maps:find(E, ACL) of
                 error ->
                     {error, {acl_not_found, E}};
                 {ok, OtherL} ->
