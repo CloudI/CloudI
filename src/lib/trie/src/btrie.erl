@@ -18,7 +18,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010-2013, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -53,8 +53,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2010-2013 Michael Truog
-%%% @version 1.4.0 {@date} {@time}
+%%% @copyright 2010-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(btrie).
@@ -90,6 +90,7 @@
          size/1,
          store/2,
          store/3,
+         take/2,
          to_list/1,
          to_list_similar/2,
          update/3,

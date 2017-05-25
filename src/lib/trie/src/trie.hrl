@@ -9,7 +9,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010-2015, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%% 
 %%% Redistribution and use in source and binary forms, with or without
@@ -1072,6 +1072,62 @@ store_node(H, ?TYPE_H1T1 = T, NewValue, {I0, I1, Data})
             NewNode = {I0, I1,
                 erlang:setelement(I, Data, {{BH, BH, {{BT, Value}}}, error})},
             store_node(H, T, NewValue, NewNode)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Take a value from the trie.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec take(Key :: ?TYPE_NAME(),
+           Node :: trie()) ->
+    {any(), trie()} | 'error'.
+
+take(_, ?TYPE_EMPTY) ->
+    error;
+
+take(?TYPE_H0T0, Node) ->
+    take_node(H, T, Node).
+
+take_node(H, _, {I0, I1, _})
+    when is_integer(H), H < I0;
+         is_integer(H), H > I1 ->
+    error;
+
+take_node(H, T, {I0, I1, Data})
+    when is_integer(H) ->
+    I = H - I0 + 1,
+    {Node, Value} = erlang:element(I, Data),
+    if
+        T == Node ->
+            if
+                Value =:= error ->
+                    error;
+                true ->
+                    {Value,
+                     {I0, I1,
+                      erlang:setelement(I, Data, {?TYPE_EMPTY, error})}}
+            end;
+        T =:= ?TYPE_EMPTY ->
+            if
+                Value =:= error ->
+                    error;
+                true ->
+                    {Value,
+                     {I0, I1, erlang:setelement(I, Data, {Node, error})}}
+            end;
+        ?TYPE_CHECK(Node) ->
+            error;
+        is_tuple(Node) ->
+            ?TYPE_H1T1 = T,
+            case take_node(H1, T1, Node) of
+                error ->
+                    error;
+                {OldValue, NewNode} ->
+                    {OldValue,
+                     {I0, I1, erlang:setelement(I, Data, {NewNode, Value})}}
+            end
     end.
 
 %%-------------------------------------------------------------------------

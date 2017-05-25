@@ -20,7 +20,7 @@
 %%%
 %%% BSD LICENSE
 %%% 
-%%% Copyright (c) 2010-2016, Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2010-2017, Michael Truog <mjtruog at gmail dot com>
 %%% All rights reserved.
 %%%
 %%% Redistribution and use in source and binary forms, with or without
@@ -55,8 +55,8 @@
 %%% DAMAGE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2010-2016 Michael Truog
-%%% @version 1.5.5 {@date} {@time}
+%%% @copyright 2010-2017 Michael Truog
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -104,6 +104,7 @@
          size/1,
          store/2,
          store/3,
+         take/2,
          to_list/1,
          to_list_similar/2,
          update/3,
@@ -1170,6 +1171,9 @@ test() ->
     2.5 = trie:fetch("aaaa", RootNode5),
     {'EXIT', {if_clause, _}} = (catch trie:fetch("aaaa", RootNode4)),
     RootNode4 = trie:erase("a", trie:erase("aaaa", RootNode5)),
+    {2.5, RootNodePre4} = trie:take("aaaa", RootNode5),
+    {0, RootNode4} = trie:take("a", RootNodePre4),
+    error = trie:take("a", RootNode4),
     true = trie:is_key("aaaa", RootNode5),
     false = trie:is_key("aaaa", RootNode4),
     ["aa",

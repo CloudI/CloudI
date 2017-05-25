@@ -5,6 +5,7 @@
 
     * Use maps in cloudi_core helper modules
     * Remove older compatibility code for maps/dict/queue
+    * Update trie
 
 2017-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
