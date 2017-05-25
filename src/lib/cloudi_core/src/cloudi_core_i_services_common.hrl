@@ -203,18 +203,18 @@ send_async_timeout_start(Timeout, TransId, Pid,
                                         RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+    NewSendTimeoutMonitors = case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
-            ?MAP_STORE(Pid,
-                       {MonitorRef,
-                        lists:umerge(TransIdList, [TransId])},
-                       SendTimeoutMonitors);
+            maps:put(Pid,
+                     {MonitorRef,
+                      lists:umerge(TransIdList, [TransId])},
+                     SendTimeoutMonitors);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
-            ?MAP_STORE(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
+            maps:put(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
     end,
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {passive, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -226,7 +226,7 @@ send_async_timeout_start(Timeout, TransId, _Pid,
                                 send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {passive, undefined,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -242,18 +242,18 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
                                        RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+    NewSendTimeoutMonitors = case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
-            ?MAP_STORE(Pid,
-                       {MonitorRef,
-                        lists:umerge(TransIdList, [TransId])},
-                       SendTimeoutMonitors);
+            maps:put(Pid,
+                     {MonitorRef,
+                      lists:umerge(TransIdList, [TransId])},
+                     SendTimeoutMonitors);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
-            ?MAP_STORE(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
+            maps:put(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
     end,
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {Client, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
@@ -265,7 +265,7 @@ send_sync_timeout_start(Timeout, TransId, _Pid, Client,
                                send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {Client, undefined,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
@@ -277,22 +277,22 @@ send_timeout_end(TransId, Pid,
     when is_binary(TransId) ->
     NewSendTimeoutMonitors = if
         is_pid(Pid) ->
-            case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+            case maps:find(Pid, SendTimeoutMonitors) of
                 {ok, {MonitorRef, [TransId]}} ->
                     erlang:demonitor(MonitorRef),
-                    ?MAP_ERASE(Pid, SendTimeoutMonitors);
+                    maps:remove(Pid, SendTimeoutMonitors);
                 {ok, {MonitorRef, TransIdList}} ->
-                    ?MAP_STORE(Pid,
-                               {MonitorRef,
-                                lists:delete(TransId, TransIdList)},
-                               SendTimeoutMonitors);
+                    maps:put(Pid,
+                             {MonitorRef,
+                              lists:delete(TransId, TransIdList)},
+                             SendTimeoutMonitors);
                 error ->
                     SendTimeoutMonitors
             end;
         Pid =:= undefined ->
             SendTimeoutMonitors
     end,
-    State#state{send_timeouts = ?MAP_ERASE(TransId, SendTimeouts),
+    State#state{send_timeouts = maps:remove(TransId, SendTimeouts),
                 send_timeout_monitors = NewSendTimeoutMonitors}.
 
 send_timeout_dead(Pid,
@@ -301,10 +301,10 @@ send_timeout_dead(Pid,
                          send_timeout_monitors =
                              SendTimeoutMonitors} = State)
     when is_pid(Pid) ->
-    case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+    case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {_MonitorRef, TransIdList}} ->
             NewSendTimeouts = lists:foldl(fun(TransId, D) ->
-                case ?MAP_FIND(TransId, D) of
+                case maps:find(TransId, D) of
                     {ok, {Type, _, Tref}}
                     when Type =:= active; Type =:= passive ->
                         case erlang:cancel_timer(Tref) of
@@ -315,7 +315,7 @@ send_timeout_dead(Pid,
                                     {'cloudi_service_send_async_timeout',
                                      TransId}
                         end,
-                        ?MAP_STORE(TransId, {Type, undefined, Tref}, D);
+                        maps:put(TransId, {Type, undefined, Tref}, D);
                     {ok, {Client, _, Tref}} ->
                         case erlang:cancel_timer(Tref) of
                             false ->
@@ -325,12 +325,12 @@ send_timeout_dead(Pid,
                                     {'cloudi_service_send_sync_timeout',
                                      TransId}
                         end,
-                        ?MAP_STORE(TransId, {Client, undefined, Tref}, D);
+                        maps:put(TransId, {Client, undefined, Tref}, D);
                     error ->
                         D
                 end
             end, SendTimeouts, TransIdList),
-            NewSendTimeoutMonitors = ?MAP_ERASE(Pid, SendTimeoutMonitors),
+            NewSendTimeoutMonitors = maps:remove(Pid, SendTimeoutMonitors),
             {true,
              State#state{send_timeouts = NewSendTimeouts,
                          send_timeout_monitors = NewSendTimeoutMonitors}};
@@ -350,9 +350,9 @@ async_response_timeout_start(ResponseInfo, Response, Timeout, TransId,
     when is_integer(Timeout), is_binary(TransId) ->
     erlang:send_after(Timeout, Dispatcher,
                       {'cloudi_service_recv_async_timeout', TransId}),
-    State#state{async_responses = ?MAP_STORE(TransId,
-                                             {ResponseInfo, Response},
-                                             AsyncResponses)}.
+    State#state{async_responses = maps:put(TransId,
+                                           {ResponseInfo, Response},
+                                           AsyncResponses)}.
 
 recv_async_select_random([{TransId, _} | _]) ->
     TransId.

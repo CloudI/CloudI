@@ -45,7 +45,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.6.1 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_request).
@@ -163,7 +163,7 @@ external_format(Request, Format)
             erlang:binary_to_term(Request);
         Format =:= msgpack ->
             {ok, Incoming} = cloudi_x_msgpack:
-                             unpack(Request, [{map_format, ?MSGPACK_MAP}]),
+                             unpack(Request, [{map_format, map}]),
             Incoming
     end.
 

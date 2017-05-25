@@ -693,7 +693,7 @@
         logging = #config_logging{}
             :: #config_logging{},
         acl = #{}
-            :: #{atom() := list(cloudi:service_name_pattern())},
+            :: #{atom() := nonempty_list(cloudi:service_name_pattern())},
         services = []
             :: list(#config_service_internal{} |
                     #config_service_external{}),

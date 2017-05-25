@@ -4,6 +4,7 @@
 2017-05-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Use maps in cloudi_core helper modules
+    * Remove older compatibility code for maps/dict/queue
 
 2017-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -48,19 +48,6 @@
 %  due to the extra compilation required for external services support)
 %-define(CLOUDI_CORE_STANDALONE, true).
 
-% "proxy" types for compatibility checking
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
--type queue_proxy(Value) :: queue:queue(Value).
--type maps_proxy(Key, Value) :: #{Key := Value}.
-
--define(MAP_NEW(),           maps:new()).
--define(MAP_FIND(K, M),      maps:find(K, M)).
--define(MAP_FETCH(K, M),     maps:get(K, M)).
--define(MAP_STORE(K, V, M),  maps:put(K, V, M)).
--define(MAP_ERASE(K, M),     maps:remove(K, M)).
--define(MAP_TO_LIST(M),      maps:to_list(M)).
--define(MSGPACK_MAP, map).
-
 % used to calculate the timeout_terminate based on MaxT / MaxR
 -define(TIMEOUT_TERMINATE_CALC0(MaxT),
         ((1000 * MaxT) - ?TIMEOUT_DELTA)).

@@ -88,10 +88,10 @@
         % ( 2) self() value cached
         dispatcher :: pid(),
         % ( 3) timeout enforcement for any outgoing service requests
-        send_timeouts = ?MAP_NEW()
-            :: maps_proxy(cloudi:trans_id(),
-                          {active | passive | {pid(), any()},
-                           pid() | undefined, reference()}) |
+        send_timeouts = #{}
+            :: #{cloudi:trans_id() :=
+                 {active | passive | {pid(), any()},
+                  pid() | undefined, reference()}} |
                list({cloudi:trans_id(),
                      {active | passive | {pid(), any()},
                       pid() | undefined, reference()}}),
@@ -99,19 +99,19 @@
         % the service configuration option request_timeout_immediate_max,
         % monitor the destination process with the sent service request
         % transaction id
-        send_timeout_monitors = ?MAP_NEW()
-            :: maps_proxy(pid(), {reference(), list(cloudi:trans_id())}) |
+        send_timeout_monitors = #{}
+            :: #{pid() := {reference(), list(cloudi:trans_id())}} |
                list({pid(), {reference(), list(cloudi:trans_id())}}),
         % ( 5) timeout enforcement for any incoming service requests
-        recv_timeouts = ?MAP_NEW()
+        recv_timeouts = #{}
             :: undefined |
-               maps_proxy(cloudi:trans_id(), reference()) |
+               #{cloudi:trans_id() := reference()} |
                list({cloudi:trans_id(), reference()}),
         % ( 6) timeout enforcement for any responses to
         % asynchronous outgoing service requests
-        async_responses = ?MAP_NEW()
-            :: maps_proxy(cloudi:trans_id(),
-                          {cloudi:response_info(), cloudi:response()}) |
+        async_responses = #{}
+            :: #{cloudi:trans_id() :=
+                 {cloudi:response_info(), cloudi:response()}} |
                list({cloudi:trans_id(),
                      {cloudi:response_info(), cloudi:response()}}),
         % ( 7) pending update configuration
@@ -135,7 +135,7 @@
         queued_word_size :: pos_integer(),
         % (12) queued incoming Erlang process messages
         queued_info = queue:new()
-            :: undefined | queue_proxy(any()) |
+            :: undefined | queue:queue(any()) |
                list(any()),
         % (13) service module
         module :: module(),
@@ -192,8 +192,8 @@
         % ( 2) self() value cached
         duo_mode_pid :: pid(),
         % ( 3) timeout enforcement for any incoming service requests
-        recv_timeouts = ?MAP_NEW()
-            :: maps_proxy(cloudi:trans_id(), reference()) |
+        recv_timeouts = #{}
+            :: #{cloudi:trans_id() := reference()} |
                list({cloudi:trans_id(), reference()}),
         % ( 4) pending update configuration
         update_plan = undefined
@@ -211,7 +211,7 @@
         queued_word_size :: pos_integer(),
         % ( 9) queued incoming Erlang process messages
         queued_info = queue:new()
-            :: queue_proxy(any()) |
+            :: queue:queue(any()) |
                list(any()),
         % (10) service module
         module :: module(),
@@ -706,7 +706,7 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
             #state{async_responses = AsyncResponses} = State) ->
     hibernate_check(if
         TransId == <<0:128>> ->
-            case ?MAP_TO_LIST(AsyncResponses) of
+            case maps:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
@@ -717,20 +717,21 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
                     {reply, {error, timeout}, State};
                 L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
-                                                          AsyncResponses),
+                    {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                        AsyncResponses),
                     {reply, {ok, ResponseInfo, Response, TransIdPick},
-                     State#state{async_responses = ?MAP_ERASE(TransIdPick,
-                                                              AsyncResponses)}};
+                     State#state{
+                         async_responses = maps:remove(TransIdPick,
+                                                       AsyncResponses)}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
-                                                          AsyncResponses),
+                    {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                        AsyncResponses),
                     {reply, {ok, ResponseInfo, Response, TransIdPick},
                      State}
             end;
         true ->
-            case ?MAP_FIND(TransId, AsyncResponses) of
+            case maps:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
@@ -741,8 +742,9 @@ handle_call({'recv_async', Timeout, TransId, Consume}, Client,
                     {reply, {error, timeout}, State};
                 {ok, {ResponseInfo, Response}} when Consume =:= true ->
                     {reply, {ok, ResponseInfo, Response, TransId},
-                     State#state{async_responses = ?MAP_ERASE(TransId,
-                                                              AsyncResponses)}};
+                     State#state{
+                         async_responses = maps:remove(TransId,
+                                                       AsyncResponses)}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
                     {reply, {ok, ResponseInfo, Response, TransId},
                      State}
@@ -1063,7 +1065,7 @@ handle_info({'cloudi_service_recv_async_retry',
             #state{async_responses = AsyncResponses} = State) ->
     hibernate_check(if
         TransId == <<0:128>> ->
-            case ?MAP_TO_LIST(AsyncResponses) of
+            case maps:to_list(AsyncResponses) of
                 [] when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
@@ -1075,23 +1077,23 @@ handle_info({'cloudi_service_recv_async_retry',
                     {noreply, State};
                 L when Consume =:= true ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
-                                                          AsyncResponses),
+                    {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                        AsyncResponses),
                     gen_server:reply(Client,
                                      {ok, ResponseInfo, Response, TransIdPick}),
                     {noreply, State#state{
-                        async_responses = ?MAP_ERASE(TransIdPick,
-                                                     AsyncResponses)}};
+                        async_responses = maps:remove(TransIdPick,
+                                                      AsyncResponses)}};
                 L when Consume =:= false ->
                     TransIdPick = ?RECV_ASYNC_STRATEGY(L),
-                    {ResponseInfo, Response} = ?MAP_FETCH(TransIdPick,
-                                                          AsyncResponses),
+                    {ResponseInfo, Response} = maps:get(TransIdPick,
+                                                        AsyncResponses),
                     gen_server:reply(Client,
                                      {ok, ResponseInfo, Response, TransIdPick}),
                     {noreply, State}
             end;
         true ->
-            case ?MAP_FIND(TransId, AsyncResponses) of
+            case maps:find(TransId, AsyncResponses) of
                 error when Timeout >= ?RECV_ASYNC_INTERVAL ->
                     erlang:send_after(?RECV_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_recv_async_retry',
@@ -1105,8 +1107,8 @@ handle_info({'cloudi_service_recv_async_retry',
                     gen_server:reply(Client,
                                      {ok, ResponseInfo, Response, TransId}),
                     {noreply, State#state{
-                        async_responses = ?MAP_ERASE(TransId,
-                                                     AsyncResponses)}};
+                        async_responses = maps:remove(TransId,
+                                                      AsyncResponses)}};
                 {ok, {ResponseInfo, Response}} when Consume =:= false ->
                     gen_server:reply(Client,
                                      {ok, ResponseInfo, Response, TransId}),
@@ -1351,7 +1353,7 @@ handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
     end,
     hibernate_check({noreply,
                      State#state{
-                         recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
+                         recv_timeouts = maps:remove(TransId, RecvTimeouts),
                          queued = NewQueue,
                          queued_size = NewQueuedSize}});
 
@@ -1366,7 +1368,7 @@ handle_info({'cloudi_service_return_async',
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= ReceiverPid,
-    hibernate_check(case ?MAP_FIND(TransId, SendTimeouts) of
+    hibernate_check(case maps:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
@@ -1436,7 +1438,7 @@ handle_info({'cloudi_service_return_sync',
                        response_timeout_adjustment =
                            ResponseTimeoutAdjustment}} = State) ->
     true = Source =:= ReceiverPid,
-    hibernate_check(case ?MAP_FIND(TransId, SendTimeouts) of
+    hibernate_check(case maps:find(TransId, SendTimeouts) of
         error ->
             % send_async timeout already occurred
             {noreply, State};
@@ -1462,7 +1464,7 @@ handle_info({'cloudi_service_return_sync',
 handle_info({'cloudi_service_send_async_timeout', TransId},
             #state{send_timeouts = SendTimeouts,
                    receiver_pid = ReceiverPid} = State) ->
-    hibernate_check(case ?MAP_FIND(TransId, SendTimeouts) of
+    hibernate_check(case maps:find(TransId, SendTimeouts) of
         error ->
             % timer may have sent before being cancelled
             {noreply, State};
@@ -1475,7 +1477,7 @@ handle_info({'cloudi_service_send_async_timeout', TransId},
 
 handle_info({'cloudi_service_send_sync_timeout', TransId},
             #state{send_timeouts = SendTimeouts} = State) ->
-    hibernate_check(case ?MAP_FIND(TransId, SendTimeouts) of
+    hibernate_check(case maps:find(TransId, SendTimeouts) of
         error ->
             % timer may have sent before being cancelled
             {noreply, State};
@@ -1489,7 +1491,7 @@ handle_info({'cloudi_service_recv_async_timeout', TransId},
     hibernate_check({noreply,
                      State#state{
                          async_responses =
-                             ?MAP_ERASE(TransId, AsyncResponses)}});
+                             maps:remove(TransId, AsyncResponses)}});
 
 handle_info({'cloudi_service_send_async_minimal',
              Name, RequestInfo, Request,
@@ -1956,7 +1958,7 @@ format_status(_Opt,
         RecvTimeouts =:= undefined ->
             undefined;
         true ->
-            ?MAP_TO_LIST(RecvTimeouts)
+            maps:to_list(RecvTimeouts)
     end,
     NewQueue = if
         Queue =:= undefined ->
@@ -1992,10 +1994,10 @@ format_status(_Opt,
                        services_format_options_internal(ConfigOptions),
     [{data,
       [{"State",
-        State#state{send_timeouts = ?MAP_TO_LIST(SendTimeouts),
-                    send_timeout_monitors = ?MAP_TO_LIST(SendTimeoutMonitors),
+        State#state{send_timeouts = maps:to_list(SendTimeouts),
+                    send_timeout_monitors = maps:to_list(SendTimeoutMonitors),
                     recv_timeouts = NewRecvTimeouts,
-                    async_responses = ?MAP_TO_LIST(AsyncResponses),
+                    async_responses = maps:to_list(AsyncResponses),
                     queued = NewQueue,
                     queued_info = NewQueueInfo,
                     cpg_data = NewGroups,
@@ -2831,18 +2833,18 @@ send_async_active_timeout_start(Timeout, TransId, Pid,
                                     State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case ?MAP_FIND(Pid, SendTimeoutMonitors) of
+    NewSendTimeoutMonitors = case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
-            ?MAP_STORE(Pid,
-                       {MonitorRef,
-                        lists:umerge(TransIdList, [TransId])},
-                       SendTimeoutMonitors);
+            maps:put(Pid,
+                     {MonitorRef,
+                      lists:umerge(TransIdList, [TransId])},
+                     SendTimeoutMonitors);
         error ->
             MonitorRef = erlang:monitor(process, Pid),
-            ?MAP_STORE(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
+            maps:put(Pid, {MonitorRef, [TransId]}, SendTimeoutMonitors)
     end,
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {active, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -2854,7 +2856,7 @@ send_async_active_timeout_start(Timeout, TransId, _Pid,
                                        send_timeouts = SendTimeouts} = State)
     when is_integer(Timeout), is_binary(TransId) ->
     State#state{
-        send_timeouts = ?MAP_STORE(TransId,
+        send_timeouts = maps:put(TransId,
             {active, undefined,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
@@ -2867,7 +2869,7 @@ recv_timeout_start(Timeout, Priority, TransId, Size, T,
                           receiver_pid = ReceiverPid} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state{
-        recv_timeouts = ?MAP_STORE(TransId,
+        recv_timeouts = maps:put(TransId,
             erlang:send_after(Timeout, ReceiverPid,
                 {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
@@ -2881,7 +2883,7 @@ duo_recv_timeout_start(Timeout, Priority, TransId, Size, T,
                                   queued_size = QueuedSize} = State)
     when is_integer(Timeout), is_integer(Priority), is_binary(TransId) ->
     State#state_duo{
-        recv_timeouts = ?MAP_STORE(TransId,
+        recv_timeouts = maps:put(TransId,
             erlang:send_after(Timeout, DuoModePid,
                 {'cloudi_service_recv_timeout', Priority, TransId, Size}),
             RecvTimeouts),
@@ -2896,7 +2898,7 @@ recv_asyncs_pick([], L, Done, FoundOne, _Consume, NewAsyncResponses) ->
 
 recv_asyncs_pick([{<<>>, <<>>, TransId} = Entry | Results], L,
                  Done, FoundOne, Consume, AsyncResponses) ->
-    case ?MAP_FIND(TransId, AsyncResponses) of
+    case maps:find(TransId, AsyncResponses) of
         error ->
             recv_asyncs_pick(Results,
                              [Entry | L],
@@ -2904,7 +2906,7 @@ recv_asyncs_pick([{<<>>, <<>>, TransId} = Entry | Results], L,
         {ok, {ResponseInfo, Response}} ->
             NewAsyncResponses = if
                 Consume =:= true ->
-                    ?MAP_ERASE(TransId, AsyncResponses);
+                    maps:remove(TransId, AsyncResponses);
                 Consume =:= false ->
                     AsyncResponses
             end,
@@ -2936,8 +2938,8 @@ process_queue(#state{dispatcher = Dispatcher,
            {'cloudi_service_send_async', Name, Pattern,
             RequestInfo, Request,
             _, Priority, TransId, Source}}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(?MAP_FETCH(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
@@ -2945,7 +2947,7 @@ process_queue(#state{dispatcher = Dispatcher,
             end,
             NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state{
-                recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
+                recv_timeouts = maps:remove(TransId, RecvTimeouts),
                 queued = NewQueue,
                 queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
@@ -2961,8 +2963,8 @@ process_queue(#state{dispatcher = Dispatcher,
            {'cloudi_service_send_sync', Name, Pattern,
             RequestInfo, Request,
             _, Priority, TransId, Source}}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(?MAP_FETCH(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
@@ -2970,7 +2972,7 @@ process_queue(#state{dispatcher = Dispatcher,
             end,
             NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state{
-                recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
+                recv_timeouts = maps:remove(TransId, RecvTimeouts),
                 queued = NewQueue,
                 queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
@@ -3486,7 +3488,7 @@ duo_mode_format_state(#state_duo{recv_timeouts = RecvTimeouts,
                                  queued = Queue,
                                  queued_info = QueueInfo,
                                  options = ConfigOptions} = State) ->
-    State#state_duo{recv_timeouts = ?MAP_TO_LIST(RecvTimeouts),
+    State#state_duo{recv_timeouts = maps:to_list(RecvTimeouts),
                     queued = cloudi_x_pqueue4:to_plist(Queue),
                     queued_info = queue:to_list(QueueInfo),
                     options = cloudi_core_i_configuration:
@@ -3814,9 +3816,10 @@ duo_handle_info({'cloudi_service_recv_timeout', Priority, TransId, Size},
         true ->
             {Queue, QueuedSize}
     end,
-    {noreply, State#state_duo{recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
-                              queued = NewQueue,
-                              queued_size = NewQueuedSize}};
+    {noreply,
+     State#state_duo{recv_timeouts = maps:remove(TransId, RecvTimeouts),
+                     queued = NewQueue,
+                     queued_size = NewQueuedSize}};
 
 duo_handle_info('cloudi_hibernate_rate',
                 #state_duo{dispatcher = Dispatcher,
@@ -4018,8 +4021,8 @@ duo_process_queue(#state_duo{duo_mode_pid = DuoModePid,
            {'cloudi_service_send_async', Name, Pattern,
             RequestInfo, Request,
             _, Priority, TransId, Source}}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(?MAP_FETCH(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
@@ -4027,7 +4030,7 @@ duo_process_queue(#state_duo{duo_mode_pid = DuoModePid,
             end,
             NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state_duo{
-                recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
+                recv_timeouts = maps:remove(TransId, RecvTimeouts),
                 queued = NewQueue,
                 queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
@@ -4043,8 +4046,8 @@ duo_process_queue(#state_duo{duo_mode_pid = DuoModePid,
            {'cloudi_service_send_sync', Name, Pattern,
             RequestInfo, Request,
             _, Priority, TransId, Source}}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(?MAP_FETCH(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
@@ -4052,7 +4055,7 @@ duo_process_queue(#state_duo{duo_mode_pid = DuoModePid,
             end,
             NewConfigOptions = check_incoming(true, ConfigOptions),
             State#state_duo{
-                recv_timeouts = ?MAP_ERASE(TransId, RecvTimeouts),
+                recv_timeouts = maps:remove(TransId, RecvTimeouts),
                 queued = NewQueue,
                 queued_size = QueuedSize - Size,
                 request_pid = handle_module_request_loop_pid(RequestPid,
