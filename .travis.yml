@@ -10,9 +10,9 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-6
+            - g++-5
       env:
-        - CONFIGURE_ENV="CC=gcc-6 CXX=g++-6"
+         - CONFIGURE_ENV="CC=gcc-5 CXX=g++-5"
     # works on Precise and Trusty
     - os: linux
       addons:
