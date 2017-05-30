@@ -12,7 +12,7 @@ matrix:
           packages:
             - g++-6
       env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+        - CONFIGURE_ENV="CC=gcc-6 && CXX=g++-6"
     # works on Precise and Trusty
     - os: linux
       addons:
@@ -23,7 +23,7 @@ matrix:
           packages:
             - clang-3.8
       env:
-        - MATRIX_EVAL="CC=clang-3.8 && CXX=clang++-3.8"
+        - CONFIGURE_ENV="CC=clang-3.8 && CXX=clang++-3.8"
 compiler:
   - clang
   - gcc
@@ -34,7 +34,6 @@ python:
 rvm:
   - 1.9.3
 before_install:
-  - eval "${MATRIX_EVAL}"
   - sudo apt-get update
 # travis default image has: make autoconf automake libtool g++ git perl python python-dev
   - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
@@ -43,6 +42,7 @@ before_script:
   - mkdir build
   - cd build
   - ../src/autogen.sh
+  - eval "${CONFIGURE_ENV}"
   - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"
