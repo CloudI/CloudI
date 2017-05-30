@@ -1,12 +1,27 @@
+matrix:
+  include:
+    # works on Precise and Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
 language: erlang
+compiler:
+  - clang
+  - gcc
 otp_release:
-  - 19.2
-  - 19.0
+  - 19.3
 python:
   - "2.7"
 rvm:
   - 1.9.3
 before_install:
+  - eval "${MATRIX_EVAL}"
   - sudo apt-get update
 # travis default image has: make autoconf automake libtool g++ git perl python python-dev
   - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev uuid-dev
