@@ -12,7 +12,7 @@ matrix:
           packages:
             - g++-6
       env:
-        - CONFIGURE_ENV="CC=gcc-6 && CXX=g++-6"
+        - CONFIGURE_ENV="CC=gcc-6 CXX=g++-6"
     # works on Precise and Trusty
     - os: linux
       addons:
@@ -23,7 +23,7 @@ matrix:
           packages:
             - clang-3.8
       env:
-        - CONFIGURE_ENV="CC=clang-3.8 && CXX=clang++-3.8"
+        - CONFIGURE_ENV="CC=clang-3.8 CXX=clang++-3.8"
 compiler:
   - clang
   - gcc
@@ -42,7 +42,7 @@ before_script:
   - mkdir build
   - cd build
   - ../src/autogen.sh
-  - eval "${CONFIGURE_ENV}"
+  - export ${CONFIGURE_ENV}
   - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"

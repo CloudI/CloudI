@@ -122,7 +122,7 @@ AC_ARG_ENABLE([haskell-support],
     else
         AC_MSG_ERROR([bad value "$enableval" for --enable-haskell-support])
     fi
-    ], [go_support="false"])
+    ], [haskell_support="false"])
 AC_MSG_RESULT([$haskell_support])
 AC_MSG_CHECKING([if the Java       CloudI API is enabled])
 AC_ARG_ENABLE([java-support],
