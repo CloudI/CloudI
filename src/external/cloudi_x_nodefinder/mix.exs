@@ -1,9 +1,12 @@
+#-*-Mode:elixir;coding:utf-8;tab-width:2;c-basic-offset:2;indent-tabs-mode:()-*-
+# ex: set ft=elixir fenc=utf-8 sts=2 ts=2 sw=2 et nomod:
+
 defmodule Nodefinder.Mixfile do
   use Mix.Project
 
   def project do
     [app: :nodefinder,
-     version: "1.6.0",
+     version: "1.7.0",
      language: :erlang,
      description: description(),
      package: package(),
@@ -37,7 +40,7 @@ defmodule Nodefinder.Mixfile do
   defp package do
     [files: ~w(src doc rebar.config AUTHORS LICENSE ChangeLog README.markdown),
      maintainers: ["Michael Truog", "Paul Mineiro"],
-     licenses: ["BSD"],
+     licenses: ["MIT"],
      links: %{"GitHub" => "https://github.com/okeuday/nodefinder"}]
    end
 end

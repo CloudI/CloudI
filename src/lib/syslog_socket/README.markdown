@@ -18,5 +18,5 @@ Michael Truog (mjtruog [at] gmail (dot) com)
 License
 -------
 
-BSD
+MIT License
 

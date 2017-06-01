@@ -33,3 +33,12 @@ application manually, outside of a release (which is useful when regression
 testing requires that an application be started, especially if the tests are
 part of a build process like `rebar eunit` or `rebar ct`).
 
+Author
+------
+
+Michael Truog (mjtruog [at] gmail (dot) com)
+
+License
+-------
+
+MIT License

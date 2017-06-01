@@ -43,9 +43,9 @@ C++ `GEPD`
 - `(src/lib/cloudi_core/cxx_src/port.cpp)`
 - `(src/lib/cloudi_core/cxx_src/port.hpp)`
 - `(src/lib/cloudi_core/cxx_src/pchar_len_t.h)`
-- `commit a6e7ad6a1b7dca05cd0f8dda11fc89ff22e069bd (v0.9.7)`
-- `Wed Sep 21 02:08:55 UTC 2016`
-- `BSD`
+- `commit fc5cd53b0be1951a8819a811c66812732369f85a`
+- `Wed May 31 16:47:09 PDT 2017`
+- `MIT`
 
 Erlang `bear`
 -------------
@@ -226,9 +226,9 @@ Erlang `nodefinder`
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit 46bf7793df919b398f449a8be08663aa1ba8d1fa`
-- `Fri Mar 31 13:58:27 PDT 2017`
-- `BSD`
+- `commit d0c6a0ee8b61dddb3f589a8a8f9193302b0e5ccd`
+- `Wed May 31 16:47:09 PDT 2017`
+- `MIT`
 
 Erlang `parse_trans`
 --------------------

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Changed license from BSD-4-Clause to MIT
+
+2017-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Travis builds/tests with both gcc and clang
+
 2017-05-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Use maps in cloudi_core helper modules

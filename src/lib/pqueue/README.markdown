@@ -27,5 +27,5 @@ Thanks
 License
 -------
 
-BSD
+MIT License
 

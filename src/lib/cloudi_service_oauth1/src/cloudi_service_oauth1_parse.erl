@@ -25,7 +25,7 @@
 %%%
 %%% @author Loïc Hoguin <essen@ninenines.eu>
 %%% @copyright 2011-2013 Loïc Hoguin
-%%% @version 1.3.3 {@date} {@time}
+%%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_parse).

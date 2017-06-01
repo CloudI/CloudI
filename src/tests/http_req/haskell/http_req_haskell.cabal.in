@@ -3,7 +3,7 @@ version:             @VERSION@
 synopsis:            Haskell http_req CloudI Integration Test
 description:         Haskell http_req CloudI Integration Test
 homepage:            https://github.com/CloudI/CloudI/
-license:             BSD4
+license:             MIT
 license-file:        ../../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog@gmail.com

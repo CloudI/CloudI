@@ -133,5 +133,5 @@ Tests
 License
 -------
 
-BSD
+MIT License
 

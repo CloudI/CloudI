@@ -51,7 +51,7 @@ anticipating the in-memory size of a map, the size is taken directly by using
 License
 -------
 
-BSD
+MIT License
 
 Contact
 -------

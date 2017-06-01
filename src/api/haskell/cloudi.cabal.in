@@ -3,7 +3,7 @@ version:             @VERSION@
 synopsis:            Haskell CloudI API
 description:         Haskell CloudI API
 homepage:            https://github.com/CloudI/cloudi_api_haskell
-license:             BSD4
+license:             MIT
 license-file:        ../../LICENSE
 author:              Michael Truog
 maintainer:          mjtruog@gmail.com
