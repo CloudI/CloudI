@@ -65,13 +65,12 @@
         retries = 0 :: non_neg_integer()
     }).
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -record(state,
     {
         file = undefined :: undefined | string(),
         compression = undefined :: undefined | 0..9, % zlib compression level
         position = undefined :: undefined | non_neg_integer(),
-        chunks = dict:new() :: dict_proxy(cloudi_service:trans_id(), #chunk{}),
+        chunks = #{} :: #{cloudi_service:trans_id() := #chunk{}},
         chunks_free = [] :: list(#chunk{}) % ordered
     }).
 
@@ -102,12 +101,12 @@
 erase(ChunkId,
       #state{file = FilePath,
              chunks = Chunks} = State) ->
-    Chunk = dict:fetch(ChunkId, Chunks),
+    {Chunk, NewChunks} = maps:take(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
     {ok, Fd} = file_open_tmp(FilePath),
     NewState = erase_chunk(Chunk, Fd, State),
     ok = file_close_tmp(FilePath, Fd),
-    {ChunkRequest, NewState#state{chunks = dict:erase(ChunkId, Chunks)}}.
+    {ChunkRequest, NewState#state{chunks = NewChunks}}.
 
 -spec erase_retry(ChunkId :: cloudi_service:trans_id(),
                   RetryMax :: non_neg_integer(),
@@ -118,7 +117,7 @@ erase(ChunkId,
 erase_retry(ChunkId, RetryMax, RetryF,
             #state{file = FilePath,
                    chunks = Chunks} = State) ->
-    Chunk = dict:fetch(ChunkId, Chunks),
+    {Chunk, NewChunks} = maps:take(ChunkId, Chunks),
     #chunk{request = ChunkRequest,
            retries = Retries} = Chunk,
     NewChunkId = case RetryF(ChunkRequest, Retries < RetryMax) of
@@ -132,24 +131,23 @@ erase_retry(ChunkId, RetryMax, RetryF,
             {ok, Fd} = file_open_tmp(FilePath),
             NewState = erase_chunk(Chunk, Fd, State),
             ok = file_close_tmp(FilePath, Fd),
-            NewState#state{chunks = dict:erase(ChunkId, Chunks)};
+            NewState#state{chunks = NewChunks};
         is_binary(NewChunkId) ->
             NewChunk = Chunk#chunk{retries = Retries + 1},
-            NewChunks = dict:erase(ChunkId, Chunks),
-            State#state{chunks = dict:store(NewChunkId, NewChunk, NewChunks)}
+            State#state{chunks = maps:put(NewChunkId, NewChunk, NewChunks)}
     end.
 
 -spec fetch_keys(State :: #state{}) ->
     list(cloudi_service:trans_id()).
 
 fetch_keys(#state{chunks = Chunks}) ->
-    lists:sort(dict:fetch_keys(Chunks)). % oldest -> newest
+    lists:sort(maps:keys(Chunks)). % oldest -> newest
 
 -spec size(State :: #state{}) ->
     non_neg_integer().
 
 size(#state{chunks = Chunks}) ->
-    dict:size(Chunks).
+    maps:size(Chunks).
 
 -spec size_free(State :: #state{}) ->
     non_neg_integer().
@@ -164,7 +162,7 @@ size_free(#state{chunks_free = ChunksFree}) ->
 
 store_end(ChunkId, Chunk,
           #state{chunks = Chunks} = State) ->
-    State#state{chunks = dict:store(ChunkId, Chunk, Chunks)}.
+    State#state{chunks = maps:put(ChunkId, Chunk, Chunks)}.
 
 -spec store_fail(Chunk :: #chunk{},
                  State :: #state{}) ->
@@ -242,7 +240,7 @@ update(ChunkId, UpdateF,
               position = Position,
               chunks = Chunks,
               chunks_free = ChunksFree} = State) ->
-    Chunk = dict:fetch(ChunkId, Chunks),
+    Chunk = maps:get(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
     case UpdateF(ChunkRequest) of
         undefined ->
@@ -262,7 +260,7 @@ update(ChunkId, UpdateF,
                     NewChunk = #chunk{size = NewChunkSize,
                                       position = Position,
                                       request = NewChunkRequest},
-                    NewChunks = dict:store(NewChunkId, NewChunk, Chunks),
+                    NewChunks = maps:put(NewChunkId, NewChunk, Chunks),
                     State#state{chunks = NewChunks,
                                 position = NewPosition};
                 {#chunk{size = ChunkSize,
@@ -270,7 +268,7 @@ update(ChunkId, UpdateF,
                     chunk_write(ChunkSize, NewChunkSizeUsed,
                                 NewChunkData, ChunkPosition, Fd),
                     NewChunk = ChunkFree#chunk{request = NewChunkRequest},
-                    NewChunks = dict:store(NewChunkId, NewChunk, Chunks),
+                    NewChunks = maps:put(NewChunkId, NewChunk, Chunks),
                     State#state{chunks = NewChunks,
                                 chunks_free = NewChunksFree}
             end,
@@ -384,7 +382,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
                                    position = Position,
                                    request = ChunkRequest},
                     chunks_recover(NewPosition,
-                                   dict:store(ChunkId, Chunk, Chunks),
+                                   maps:put(ChunkId, Chunk, Chunks),
                                    ChunksFree, Fd, RetryF);
                 {ok, ChunkId} ->
                     ChunkEnd = (ChunkSize - ChunkSizeUsed),
@@ -394,7 +392,7 @@ chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
                                            position = Position,
                                            request = ChunkRequest},
                             chunks_recover(NewPosition,
-                                           dict:store(ChunkId, Chunk, Chunks),
+                                           maps:put(ChunkId, Chunk, Chunks),
                                            ChunksFree, Fd, RetryF);
                         {error, Reason} ->
                             {error, {chunk_corrupt, Reason}}

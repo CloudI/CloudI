@@ -188,7 +188,7 @@
         services :: cloudi_x_key2value:
                     cloudi_x_key2value(cloudi_service_api:service_id(),
                                        pid(), tuple()) | undefined,
-        process_info :: dict_proxy(pid(), #process_info{}),
+        process_info :: #{pid() := #process_info{}},
         queue_empty_size :: non_neg_integer(),
         nodes_visible :: non_neg_integer(),
         nodes_hidden :: non_neg_integer(),
@@ -603,7 +603,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
            lists:all(fun is_atom/1, MetricPrefix),
     true = is_boolean(UseAspectsOnly),
     EnvironmentLookup = cloudi_environment:lookup(),
-    ProcessInfo0 = dict:new(),
+    ProcessInfo0 = #{},
     ProcessInfoN = cloudi_service_monitoring_cloudi:
                    services_init(Interval, ProcessInfo0, MetricPrefix,
                                  UseAspectsOnly, Driver, EnvironmentLookup),

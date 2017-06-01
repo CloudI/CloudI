@@ -89,7 +89,6 @@
         destination :: pid()
     }).
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -record(state,
     {
         validate_request_info :: undefined | fun((any()) -> boolean()),
@@ -99,15 +98,15 @@
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
-        failures_source = dict:new()
-            :: dict_proxy(pid(), list(erlang:timestamp())),
+        failures_source = #{}
+            :: #{pid() := list(erlang:timestamp())},
         failures_dest_die :: boolean(),
         failures_dest_max_count :: pos_integer(),
         failures_dest_max_period :: infinity | pos_integer(),
-        failures_dest = dict:new()
-            :: dict_proxy(pid(), list(erlang:timestamp())),
-        requests = dict:new()
-            :: dict_proxy(cloudi_service:trans_id(), #request{})
+        failures_dest = #{}
+            :: #{pid() := list(erlang:timestamp())},
+        requests = #{}
+            :: #{cloudi_service:trans_id() := #request{}}
     }).
 
 %%%------------------------------------------------------------------------
@@ -192,9 +191,9 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                                        source = SrcPid,
                                                        destination = DstPid},
                             {noreply,
-                             State#state{requests = dict:store(ValidateTransId,
-                                                               ValidateRequest,
-                                                               Requests)}};
+                             State#state{requests = maps:put(ValidateTransId,
+                                                             ValidateRequest,
+                                                             Requests)}};
                         {error, timeout} ->
                             request_failed(SrcPid, State)
                     end;
@@ -225,13 +224,13 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   failures_dest = FailuresDst,
                                   requests = Requests} = State,
                            Dispatcher) ->
-    #request{type = Type,
-             name = Name,
-             pattern = Pattern,
-             trans_id = TransId,
-             source = SrcPid,
-             destination = DstPid} = dict:fetch(ValidateTransId, Requests),
-    NewRequests = dict:erase(ValidateTransId, Requests),
+    {#request{type = Type,
+              name = Name,
+              pattern = Pattern,
+              trans_id = TransId,
+              source = SrcPid,
+              destination = DstPid},
+     NewRequests} = maps:take(ValidateTransId, Requests),
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
@@ -277,14 +276,14 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
                                   failures_dest = FailuresDst,
                                   requests = Requests} = State,
                            Dispatcher) ->
-    #request{type = Type,
-             name = Name,
-             pattern = Pattern,
-             timeout = Timeout,
-             trans_id = TransId,
-             source = SrcPid,
-             destination = DstPid} = dict:fetch(ValidateTransId, Requests),
-    NewRequests = dict:erase(ValidateTransId, Requests),
+    {#request{type = Type,
+              name = Name,
+              pattern = Pattern,
+              timeout = Timeout,
+              trans_id = TransId,
+              source = SrcPid,
+              destination = DstPid},
+     NewRequests} = maps:take(ValidateTransId, Requests),
     {DeadSrc, NewFailuresSrc} = failure(FailuresSrcDie,
                                         FailuresSrcMaxCount,
                                         FailuresSrcMaxPeriod,
@@ -313,13 +312,13 @@ cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
                            _Dispatcher) ->
     NewFailuresSrc = if
         FailuresSrcDie =:= true ->
-            dict:erase(Pid, FailuresSrc);
+            maps:remove(Pid, FailuresSrc);
         FailuresSrcDie =:= false ->
             FailuresSrc
     end,
     NewFailuresDst = if
         FailuresDstDie =:= true ->
-            dict:erase(Pid, FailuresDst);
+            maps:remove(Pid, FailuresDst);
         FailuresDstDie =:= false ->
             FailuresDst
     end,
@@ -373,7 +372,7 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->
             SecondsNow = cloudi_timestamp:seconds(),
-            case dict:find(Pid, Failures) of
+            case maps:find(Pid, Failures) of
                 {ok, FailureList} ->
                     failure_check(SecondsNow, FailureList,
                                   MaxCount, MaxPeriod, Pid, Failures);
@@ -387,7 +386,7 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     end.
 
 failure_store(FailureList, FailureCount, MaxCount, Pid, Failures) ->
-    NewFailures = dict:store(Pid, FailureList, Failures),
+    NewFailures = maps:put(Pid, FailureList, Failures),
     if
         FailureCount == MaxCount ->
             failure_kill(Pid),

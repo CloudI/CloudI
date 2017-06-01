@@ -44,8 +44,6 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(node,
     {
         task_size :: number()
@@ -62,7 +60,7 @@
         target_time_max :: float(), % in hours
         target_time_incr = 0 :: integer(),
         target_time_decr = 0 :: integer(),
-        lookup = dict:new() :: dict_proxy(node(), #node{})
+        lookup = #{} :: #{node() := #node{}}
     }).
 
 -type state() :: #cloudi_task_size{}.
@@ -128,7 +126,7 @@ get(Pid,
     when is_pid(Pid) ->
     Timeout = erlang:round(?TARGET_TIME_USAGE_FACTOR *
                            TargetTime * 3600000.0),
-    case dict:find(node(Pid), Lookup) of
+    case maps:find(node(Pid), Lookup) of
         {ok, #node{task_size = TaskSize}} ->
             TaskSizeInteger = if
                 is_float(TaskSize) ->
@@ -159,13 +157,13 @@ reduce(Pid, Multiplier,
     when is_pid(Pid), is_float(Multiplier),
          Multiplier > 0.0, Multiplier =< 1.0 ->
     Node = node(Pid),
-    case dict:find(Node, Lookup) of
+    case maps:find(Node, Lookup) of
         {ok, #node{task_size = TaskSize} = NodeState} ->
             NewTaskSize = task_size_clamp(TaskSize * Multiplier,
                                           TaskSizeMin, TaskSizeMax),
             NewNodeState = NodeState#node{task_size = NewTaskSize},
-            State#cloudi_task_size{lookup = dict:store(Node, NewNodeState,
-                                                       Lookup)};
+            State#cloudi_task_size{lookup = maps:put(Node, NewNodeState,
+                                                     Lookup)};
         error ->
             State
     end.
@@ -196,7 +194,7 @@ put(Pid, TaskSize, ElapsedTime,
                       lookup = Lookup} = State)
     when is_pid(Pid), is_integer(TaskSize), is_float(ElapsedTime) ->
     Node = node(Pid),
-    #node{task_size = OldTaskSize} = NodeState = case dict:find(Node, Lookup) of
+    #node{task_size = OldTaskSize} = NodeState = case maps:find(Node, Lookup) of
         {ok, LookupValue} ->
             LookupValue;
         error ->
@@ -223,9 +221,9 @@ put(Pid, TaskSize, ElapsedTime,
         true ->
             {NextTargetTimeIncr, NextTargetTimeDecr}
     end,
-    NewLookup = dict:store(Node,
-                           NodeState#node{task_size = NewTaskSize},
-                           Lookup),
+    NewLookup = maps:put(Node,
+                         NodeState#node{task_size = NewTaskSize},
+                         Lookup),
     State#cloudi_task_size{target_time = TargetTimeN,
                            target_time_incr = NewTargetTimeIncr,
                            target_time_decr = NewTargetTimeDecr,

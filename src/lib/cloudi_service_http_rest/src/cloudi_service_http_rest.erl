@@ -145,15 +145,13 @@
         arity :: 11
     }).
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(state,
     {
         prefix :: cloudi:service_name_pattern(),
         lookup :: cloudi_x_trie:cloudi_x_trie(),
         info_f :: info_f() | undefined,
         terminate_f :: terminate_f() | undefined,
-        content_types :: dict_proxy(atom(), {request | attachment, binary()}),
+        content_types :: #{atom() := {request | attachment, binary()}},
         content_disposition :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal,
         api_state :: any()
@@ -225,10 +223,10 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         FormatN
     end, Formats0),
     ContentTypeLookupN = lists:foldl(fun(FormatN, ContentTypeLookup0) ->
-        dict:store(erlang:list_to_atom(FormatN),
-                   cloudi_x_trie:fetch("." ++ FormatN, ContentTypes),
-                   ContentTypeLookup0)
-    end, dict:new(), FormatsN),
+        maps:put(erlang:list_to_atom(FormatN),
+                 cloudi_x_trie:fetch("." ++ FormatN, ContentTypes),
+                 ContentTypeLookup0)
+    end, #{}, FormatsN),
     MethodListsN = cloudi_x_trie:to_list(lists:foldr(fun({Method, Path, _},
                                                          MethodLists0) ->
         MethodString = if
@@ -474,7 +472,7 @@ subscribe_paths(Method, Path, Formats, API, Lookup, Dispatcher)
 response_info_headers(ResponseInfo0, Name, Format,
                       ContentTypes, ContentDisposition)
     when is_list(ResponseInfo0) ->
-    {AttachmentGuess, ContentType} = dict:fetch(Format, ContentTypes),
+    {AttachmentGuess, ContentType} = maps:get(Format, ContentTypes),
     ResponseInfo1 = if
         (ContentDisposition =:= true) andalso
         (AttachmentGuess =:= attachment) ->

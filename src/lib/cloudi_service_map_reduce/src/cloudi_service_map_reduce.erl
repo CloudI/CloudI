@@ -155,7 +155,7 @@ cloudi_service_handle_info({init, Prefix, Timeout,
                                                        Timeout,
                                                        Dispatcher) of
         {ok, MapReduceState} ->
-            case map_send(MapCount, dict:new(), Dispatcher,
+            case map_send(MapCount, #{}, Dispatcher,
                           MapReduceModule, MapReduceState) of
                 {ok, MapRequests, NewMapReduceState} ->
                     {noreply, #state{map_reduce_module = MapReduceModule,
@@ -174,18 +174,18 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
                                   map_reduce_state = MapReduceState,
                                   map_requests = MapRequests} = State,
                            Dispatcher) ->
-    case dict:find(TransId, MapRequests) of
+    case maps:find(TransId, MapRequests) of
         {ok, [_ | SendArgs]} ->
-            NextMapRequests = dict:erase(TransId, MapRequests),
+            NextMapRequests = maps:remove(TransId, MapRequests),
             case MapReduceModule:cloudi_service_map_reduce_resend(
                 [Dispatcher | SendArgs], MapReduceState) of
                 {ok, NewSendArgs, NewMapReduceState} ->
                     case erlang:apply(cloudi_service, send_async_active,
                                       NewSendArgs) of
                         {ok, NewTransId} ->
-                            NewMapRequests = dict:store(NewTransId,
-                                                        NewSendArgs,
-                                                        NextMapRequests),
+                            NewMapRequests = maps:put(NewTransId,
+                                                      NewSendArgs,
+                                                      NextMapRequests),
                             {noreply,
                              State#state{map_reduce_state = NewMapReduceState,
                                          map_requests = NewMapRequests}};
@@ -207,13 +207,13 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   map_reduce_state = MapReduceState,
                                   map_requests = MapRequests} = State,
                            Dispatcher) ->
-    case dict:find(TransId, MapRequests) of
+    case maps:find(TransId, MapRequests) of
         {ok, [_ | SendArgs]} ->
             case MapReduceModule:cloudi_service_map_reduce_recv(
                 [Dispatcher | SendArgs], ResponseInfo, Response,
                 Timeout, TransId, MapReduceState, Dispatcher) of
                 {ok, NextMapReduceState} ->
-                    case map_send(dict:erase(TransId, MapRequests),
+                    case map_send(maps:remove(TransId, MapRequests),
                                   Dispatcher, MapReduceModule,
                                   NextMapReduceState) of
                         {ok, NewMapRequests, NewMapReduceState} ->
@@ -224,10 +224,10 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                             {stop, Error, State}
                     end;
                 {done, NewMapReduceState} ->
-                    NewMapRequests = dict:erase(TransId, MapRequests),
+                    NewMapRequests = maps:remove(TransId, MapRequests),
                     NewState = State#state{map_reduce_state = NewMapReduceState,
                                            map_requests = NewMapRequests},
-                    case dict:size(NewMapRequests) of
+                    case maps:size(NewMapRequests) of
                         0 ->
                             {stop, shutdown, NewState};
                         _ ->
@@ -265,7 +265,7 @@ map_send(Count, MapRequests, Dispatcher, MapReduceModule, MapReduceState) ->
             case erlang:apply(cloudi_service, send_async_active, SendArgs) of
                 {ok, TransId} ->
                     map_send(Count - 1,
-                             dict:store(TransId, SendArgs, MapRequests),
+                             maps:put(TransId, SendArgs, MapRequests),
                              Dispatcher, MapReduceModule, NewMapReduceState);
                 {error, _} = Error ->
                     Error
@@ -288,7 +288,7 @@ cloudi_service_map_reduce_info(Request,
             {noreply, State#state{map_reduce_state = NewMapReduceState}};
         {done, NewMapReduceState} ->
             NewState = State#state{map_reduce_state = NewMapReduceState},
-            case dict:size(MapRequests) of
+            case maps:size(MapRequests) of
                 0 ->
                     {stop, shutdown, NewState};
                 _ ->

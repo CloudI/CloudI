@@ -1,9 +1,6 @@
 %-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-% handle the dict type change
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(process_info,
     {
         memory = undefined :: non_neg_integer() | undefined,

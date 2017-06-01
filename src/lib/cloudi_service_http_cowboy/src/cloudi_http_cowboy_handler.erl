@@ -57,8 +57,6 @@
 -include_lib("cloudi_core/include/cloudi_service_children.hrl").
 -include("cloudi_http_cowboy_handler.hrl").
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(websocket_state,
     {
         % for service requests entering CloudI
@@ -74,10 +72,9 @@
             :: undefined | cloudi:message_service_request(),
         response_lookup
             :: undefined |
-               dict_proxy(any(), {cloudi:message_service_request(),
-                                  reference()}),
+               #{any() := {cloudi:message_service_request(), reference()}},
         recv_timeouts
-            :: undefined | dict_proxy(cloudi:trans_id(), reference()),
+            :: undefined | #{cloudi:trans_id() := reference()},
         queued
             :: undefined |
                cloudi_x_pqueue4:cloudi_x_pqueue4(
@@ -395,13 +392,13 @@ websocket_init(_Transport, Req0,
     end,
     ResponseLookup = if
         WebSocketProtocol /= undefined ->
-            dict:new();
+            #{};
         true ->
             undefined
     end,
     RecvTimeouts = if
         WebSocketProtocol =:= undefined ->
-            dict:new();
+            #{};
         true ->
             undefined
     end,
@@ -573,7 +570,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
         {incoming, Request} ->
             {undefined, undefined, Request};
         {ID, Response} ->
-            case dict:find(ID, ResponseLookup) of
+            case maps:find(ID, ResponseLookup) of
                 {ok, ResponseData} ->
                     {ID, ResponseData, Response};
                 error ->
@@ -602,7 +599,7 @@ websocket_handle({WebSocketRequestType, RequestBinary}, Req,
             {ok, Req,
              State#cowboy_state{websocket_state =
                  WebSocketState#websocket_state{
-                     response_lookup = dict:erase(LookupID, ResponseLookup)}
+                     response_lookup = maps:remove(LookupID, ResponseLookup)}
                  }}
     end.
 
@@ -616,7 +613,7 @@ websocket_info({response_timeout, ID}, Req,
     {ok, Req,
      State#cowboy_state{websocket_state =
          WebSocketState#websocket_state{
-             response_lookup = dict:erase(ID, ResponseLookup)}
+             response_lookup = maps:remove(ID, ResponseLookup)}
          }};
 
 websocket_info(response_timeout, Req,
@@ -685,7 +682,7 @@ websocket_info({Type, Name, Pattern, RequestInfo, RequestProtocol,
          Timeout, Priority, TransId, Source},
     ResponseTimer = erlang:send_after(Timeout, self(),
                                       {response_timeout, ID}),
-    NewResponseLookup = dict:store(ID, {T, ResponseTimer}, ResponseLookup),
+    NewResponseLookup = maps:put(ID, {T, ResponseTimer}, ResponseLookup),
     NewState = State#cowboy_state{
         websocket_state = WebSocketState#websocket_state{
             response_lookup = NewResponseLookup}},
@@ -722,7 +719,7 @@ websocket_info({Type, _, _, _, Request,
     {ok, Req,
      State#cowboy_state{
          websocket_state = WebSocketState#websocket_state{
-             recv_timeouts = dict:store(TransId,
+             recv_timeouts = maps:put(TransId,
                  erlang:send_after(Timeout, self(),
                      {'cloudi_service_recv_timeout', Priority, TransId}),
                  RecvTimeouts),
@@ -759,7 +756,7 @@ websocket_info({'cloudi_service_recv_timeout', Priority, TransId}, Req,
     {ok, Req,
      State#cowboy_state{
          websocket_state = WebSocketState#websocket_state{
-             recv_timeouts = dict:erase(TransId, RecvTimeouts),
+             recv_timeouts = maps:remove(TransId, RecvTimeouts),
              queued = NewQueue}
          }};
 
@@ -1526,8 +1523,8 @@ websocket_process_queue(Req,
                  WebSocketState#websocket_state{queued = NewQueue}}};
         {{value, {Type, Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(dict:fetch(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
@@ -1537,8 +1534,8 @@ websocket_process_queue(Req,
                             Timeout, Priority, TransId, Pid}, Req,
                            State#cowboy_state{websocket_state =
                                WebSocketState#websocket_state{
-                                   recv_timeouts = dict:erase(TransId,
-                                                              RecvTimeouts),
+                                   recv_timeouts = maps:remove(TransId,
+                                                               RecvTimeouts),
                                    queued = NewQueue}})
     end.
 

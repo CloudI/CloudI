@@ -60,7 +60,7 @@
         port,
         port_formatted,
         destination,
-        requests = dict:new()
+        requests = #{}
     }).
 
 -record(request,
@@ -134,8 +134,8 @@ cloudi_service_handle_info({udp, Socket, SourceAddress, SourcePort, Request},
         {ok, TransId} ->
             RequestData = #request{source_address = SourceAddress,
                                    source_port = SourcePort},
-            {noreply, State#state{requests = dict:store(TransId, RequestData,
-                                                        Requests)}};
+            {noreply, State#state{requests = maps:put(TransId, RequestData,
+                                                      Requests)}};
         {error, Reason} ->
             ?LOG_ERROR("dropped incoming udp packet: ~p", [Reason]),
             {noreply, State}
@@ -145,18 +145,20 @@ cloudi_service_handle_info({return_async_active, _Name, _Pattern,
                             _ResponseInfo, Response, _Timeout, TransId},
                            #state{socket = Socket,
                                   requests = Requests} = State, _Dispatcher) ->
-    #request{source_address = SourceAddress,
-             source_port = SourcePort} = dict:fetch(TransId, Requests),
+    {#request{source_address = SourceAddress,
+              source_port = SourcePort},
+     NewRequests} = maps:take(TransId, Requests),
     send(Socket, SourceAddress, SourcePort, Response),
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
+    {noreply, State#state{requests = NewRequests}};
 
 cloudi_service_handle_info({timeout_async_active, TransId},
                            #state{socket = Socket,
                                   requests = Requests} = State, _Dispatcher) ->
-    #request{source_address = SourceAddress,
-             source_port = SourcePort} = dict:fetch(TransId, Requests),
+    {#request{source_address = SourceAddress,
+              source_port = SourcePort},
+     NewRequests} = maps:take(TransId, Requests),
     send(Socket, SourceAddress, SourcePort, <<>>),
-    {noreply, State#state{requests = dict:erase(TransId, Requests)}};
+    {noreply, State#state{requests = NewRequests}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),

@@ -111,8 +111,6 @@
 -define(DEFAULT_DEBUG,                       false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                 trace).
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(state,
     {
         scope = undefined :: undefined | atom(),
@@ -135,7 +133,7 @@
             :: undefined | cloudi_service:service_name(),
         connection_count = 0 :: non_neg_integer(),
         connection_max = undefined :: undefined | pos_integer(),
-        requests = dict:new(),
+        requests = #{},
         destination_set = undefined :: undefined | boolean(),
         protocol_id_check = undefined
             :: undefined |
@@ -167,11 +165,10 @@
             :: undefined | cloudi:message_service_request(),
         response_lookup
             :: undefined |
-               dict_proxy(any(),
-                          {cloudi:message_service_request(), reference()}),
+               #{any() := {cloudi:message_service_request(), reference()}},
         recv_timeouts
             :: undefined |
-               dict_proxy(cloudi:trans_id(), reference()),
+               #{cloudi:trans_id() := reference()},
         queued
             :: undefined |
                cloudi_x_pqueue4:cloudi_x_pqueue4(
@@ -484,14 +481,14 @@ socket_loop_init_set(true, Scope,
             ResponseLookup = if
                 Subscribed =:= true,
                 ProtocolIdCheck /= undefined ->
-                    dict:new();
+                    #{};
                 true ->
                     undefined
             end,
             RecvTimeouts = if
                 Subscribed =:= true,
                 ProtocolIdCheck =:= undefined ->
-                    dict:new();
+                    #{};
                 true ->
                     undefined
             end,
@@ -593,7 +590,7 @@ socket_loop_out_request({Type, Name, Pattern, RequestInfo, RequestProtocol,
     socket_debug_log(DebugLevel,
                     "socket out request ~p", [Request]),
     State#state_socket{
-        response_lookup = dict:store(ID, {T, ResponseTimer}, ResponseLookup)};
+        response_lookup = maps:put(ID, {T, ResponseTimer}, ResponseLookup)};
 socket_loop_out_request({_, _, _, _, Request,
                          Timeout, Priority, TransId, _} = T,
                         #state_socket{
@@ -603,7 +600,7 @@ socket_loop_out_request({_, _, _, _, Request,
                             queued = Queue} = State)
     when is_binary(Request), Timeout > 0 ->
     State#state_socket{
-        recv_timeouts = dict:store(TransId,
+        recv_timeouts = maps:put(TransId,
             erlang:send_after(Timeout, self(),
                 {'cloudi_service_recv_timeout', Priority, TransId}),
             RecvTimeouts),
@@ -705,7 +702,7 @@ socket_loop_in_data(Data,
         {incoming, Request} ->
             {undefined, undefined, Request};
         {ID, Response} ->
-            case dict:find(ID, ResponseLookup) of
+            case maps:find(ID, ResponseLookup) of
                 {ok, ResponseData} ->
                     {ID, ResponseData, Response};
                 error ->
@@ -728,7 +725,7 @@ socket_loop_in_data(Data,
             ok = socket_loop_in_response(T, ResponseTimer,
                                          Info, Value, DebugLevel),
             State#state_socket{
-                response_lookup = dict:erase(LookupID, ResponseLookup)}
+                response_lookup = maps:remove(LookupID, ResponseLookup)}
     end.
 
 socket_loop(#state_socket{
@@ -753,7 +750,7 @@ socket_loop(#state_socket{
             F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
             {_, NewQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
             socket_loop(State#state_socket{
-                            recv_timeouts = dict:erase(TransId, RecvTimeouts),
+                            recv_timeouts = maps:remove(TransId, RecvTimeouts),
                             queued = NewQueue});
         response_timeout ->
             true = ResponsePending,
@@ -765,7 +762,7 @@ socket_loop(#state_socket{
         {response_timeout, ID} ->
             false = ResponsePending,
             socket_loop(State#state_socket{
-                            response_lookup = dict:erase(ID, ResponseLookup)})
+                            response_lookup = maps:remove(ID, ResponseLookup)})
     after
         TimeoutRecv ->
             socket_loop_terminate(normal, State)
@@ -841,14 +838,14 @@ socket_process_queue(#state_socket{recv_timeouts = RecvTimeouts,
             State#state_socket{queued = NewQueue};
         {{value, {Type, Name, Pattern, RequestInfo, Request,
                   _, Priority, TransId, Pid}}, NewQueue} ->
-            Timeout = case erlang:cancel_timer(dict:fetch(TransId,
-                                                          RecvTimeouts)) of
+            Timeout = case erlang:cancel_timer(maps:get(TransId,
+                                                        RecvTimeouts)) of
                 false ->
                     0;
                 V ->
                     V
             end,
-            NewRecvTimeouts = dict:erase(TransId, RecvTimeouts),
+            NewRecvTimeouts = maps:remove(TransId, RecvTimeouts),
             socket_loop_out_request({Type, Name, Pattern, RequestInfo, Request,
                                      Timeout, Priority, TransId, Pid},
                                     State#state_socket{

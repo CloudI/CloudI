@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Changed the included Erlang services from dict to maps usage
+
 2017-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Changed license from BSD-4-Clause to MIT
@@ -36,7 +40,6 @@
       service's initialization previously returned an error, but will now
       cause the service to crash, to pursue fail-fast operation and to keep
       the effect the same for both internal and external services
-      
 
 2017-05-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 

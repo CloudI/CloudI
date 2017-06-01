@@ -46,47 +46,6 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
-%% Example Usage:
-
-% Hardware:
-%  Core i7 2670QM 2.2GHz 4 cores, 8 hyper-threads
-%  L2:4×256KB L3:6MB RAM:8GB:DDR3-1333MHz
-%  Sandy Bridge-HE-4 (Socket G2)
-%
-% Software:
-%  Ubuntu 12.04.2 LTS (GNU/Linux 3.2.0-29-generic x86_64)
-%  Erlang R16B03-1 (with lock counting, so probably slower than possible)
-%
-%
-% Basic Speed Test:
-% Max Stable (Total) Request Rate (during informal testing):
-%  requests/second dest_refresh_method duo_mode sender receiver
-%             1000           immediate    false      1        1
-%            12000           immediate     true      1        1
-%            13000                lazy     true      1        1
-%            20000                lazy     true      2        4
-%            27000                lazy     true      3        6 (overheating)
-%
-% (dest_refresh_method is set on cloudi_service_request_rate
-%  duo_mode is set on cloudi_service_request_rate when true
-%  sender is the number of cloudi_service_request_rate processes while
-%  receiver is the number of cloudi_service_http_req processes)
-%
-% Basic Memory Test:
-% Max Stable (Total) Request Rate (during informal testing):
-%  requests/second dest_refresh_method duo_mode sender receiver queue_size(kB)
-%              149           immediate    false      1        1            512 
-%             1049           immediate    false      1        1           4096
-%             1125           immediate    false      1        1         131072
-%               97                lazy     true      1        1            512 
-%              772                lazy     true      1        1           4096
-%             8128                lazy     true      1        1         131072
-%
-%  requests/second dest_refresh_method duo_mode sender receiver    queue_limit
-%                1           immediate    false      1        1              0
-%                1                lazy     true      1        1              0
-% 
-
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST_INFO,             <<>>).
 -define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,
@@ -111,8 +70,6 @@
 -define(DEFAULT_TICK_LENGTH,              5000). % ms (set as async timeout)
 -define(DEFAULT_TICK_STABLE_COUNT,          24). % dynamic attempts for stable
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
-
 -record(dynamic,
     {
         count_stable_max :: pos_integer(),
@@ -133,7 +90,7 @@
         request_rate :: pos_integer() | #dynamic{},
         request_success :: non_neg_integer(),
         request_fail :: non_neg_integer(),
-        request_ids :: dict_proxy(cloudi_service:trans_id(), undefined),
+        request_ids :: #{cloudi_service:trans_id() := undefined},
         tick_length :: pos_integer()
     }).
 
@@ -206,7 +163,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 request_rate = RequestRateN,
                 request_success = 0,
                 request_fail = 0,
-                request_ids = dict:new(),
+                request_ids = #{},
                 tick_length = TickLength}}.
 
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
@@ -218,7 +175,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   request_fail = RequestFail,
                                   request_ids = RequestIds} = State,
                            _Dispatcher) ->
-    case dict:find(TransId, RequestIds) of
+    case maps:find(TransId, RequestIds) of
         {ok, _} ->
             case validate(ValidateResponseInfo, ValidateResponse,
                           ResponseInfo, Response) of
@@ -440,7 +397,7 @@ tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
         true ->
             Request
     end,
-    tick_request_send(I, dict:new(), Name,
+    tick_request_send(I, #{}, Name,
                       RequestInfoData, RequestData, Dispatcher).
 
 tick_request_send(0, RequestIds, _, _, _, _) ->
@@ -452,7 +409,7 @@ tick_request_send(I, RequestIds, Name,
                                                           undefined,
                                                           undefined) of
         {ok, TransId} ->
-            dict:store(TransId, undefined, RequestIds);
+            maps:put(TransId, undefined, RequestIds);
         {error, _} ->
             RequestIds
     end,

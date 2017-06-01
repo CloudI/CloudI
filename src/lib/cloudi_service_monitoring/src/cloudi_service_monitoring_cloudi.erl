@@ -84,7 +84,7 @@
 
 -record(service_data,
     {
-        process_info :: dict_proxy(pid(), #process_info{}),
+        process_info :: #{pid() := #process_info{}},
         % modifications to ?ETS_PID2METRIC
         ets_insert = [] :: list(pid_object()),
         ets_delete = [] :: list(pid()),
@@ -93,7 +93,7 @@
         count_external = 0 :: non_neg_integer(),
         concurrency_internal = 0 :: non_neg_integer(),
         concurrency_external = 0 :: non_neg_integer(),
-        scopes = dict:new() :: dict_proxy(atom(), #scope_data{}),
+        scopes = #{} :: #{atom() := #scope_data{}},
         metrics = [] :: metric_list()
     }).
 
@@ -416,7 +416,7 @@ nodes_update(NodesVisible, NodesHidden, NodesAll) ->
 %%%------------------------------------------------------------------------
 
 scopes_accumulate_internal(Scope, Concurrency, Scopes) ->
-    dict:update(Scope,
+    maps:update_with(Scope,
                 fun(#scope_data{count_internal = Count,
                                 concurrency_internal = ConcurrencySum} = V) ->
         V#scope_data{count_internal = Count + 1,
@@ -425,7 +425,7 @@ scopes_accumulate_internal(Scope, Concurrency, Scopes) ->
                      concurrency_internal = Concurrency}, Scopes).
 
 scopes_accumulate_external(Scope, Concurrency, Scopes) ->
-    dict:update(Scope,
+    maps:update_with(Scope,
                 fun(#scope_data{count_external = Count,
                                 concurrency_external = ConcurrencySum} = V) ->
         V#scope_data{count_external = Count + 1,
@@ -724,7 +724,7 @@ service_metrics_pid_external([Pid | Pids], Metrics, ProcessInfo0,
     {[_],
      #service{process_index = ProcessIndex}} =
         cloudi_x_key2value:fetch2(Pid, Services),
-    ThreadIndex = case dict:find(ProcessIndex, ThreadIndexLookup) of
+    ThreadIndex = case maps:find(ProcessIndex, ThreadIndexLookup) of
         {ok, ThreadIndexNext} ->
             ThreadIndexNext;
         error ->
@@ -740,8 +740,8 @@ service_metrics_pid_external([Pid | Pids], Metrics, ProcessInfo0,
                                              QueuedEmptySize,
                                              ThreadMetricPrefix),
     service_metrics_pid_external(Pids, MetricsNew ++ Metrics, ProcessInfoN,
-                                 dict:store(ProcessIndex,
-                                            ThreadIndex + 1, ThreadIndexLookup),
+                                 maps:put(ProcessIndex,
+                                          ThreadIndex + 1, ThreadIndexLookup),
                                  QueuedEmptySize,
                                  Services, MetricPrefix).
 
@@ -751,7 +751,7 @@ service_metrics_pid(internal, Pids, ProcessInfo,
                                  QueuedEmptySize, Services, MetricPrefix);
 service_metrics_pid(external, Pids, ProcessInfo,
                     QueuedEmptySize, Services, MetricPrefix) ->
-    service_metrics_pid_external(Pids, [], ProcessInfo, dict:new(),
+    service_metrics_pid_external(Pids, [], ProcessInfo, #{},
                                  QueuedEmptySize, Services, MetricPrefix).
 
 service_metrics(Pids, ProcessInfo0,
@@ -778,7 +778,7 @@ service_state(Pid) ->
 
 services_metrics(CountInternal, CountExternal,
                  ConcurrencyInternal, ConcurrencyExternal, Scopes) ->
-    dict:fold(fun(Scope, 
+    maps:fold(fun(Scope, 
                   #scope_data{
                       count_internal = ScopeCountInternal,
                       count_external = ScopeCountExternal,
@@ -800,7 +800,7 @@ services_metrics(CountInternal, CountExternal,
                 ScopeCountExternal) | ScopeMetrics]
     end,
     [metric(gauge, [scopes, count],
-            dict:size(Scopes)),
+            maps:size(Scopes)),
      metric(gauge, [concurrency],
             ConcurrencyInternal + ConcurrencyExternal),
      metric(gauge, [count],
@@ -820,7 +820,7 @@ process_info_store(Pid, ProcessInfo) ->
         [{memory, MemoryNew},
          {message_queue_len, MessagesNew},
          {reductions, ReductionsNew}] ->
-            case dict:find(Pid, ProcessInfo) of
+            case maps:find(Pid, ProcessInfo) of
                 {ok, #process_info{reductions = ReductionsOld}} ->
                     ReductionsNow = if
                         ReductionsOld =:= undefined ->
@@ -832,15 +832,15 @@ process_info_store(Pid, ProcessInfo) ->
                                             message_queue_len = MessagesNew,
                                             reductions = ReductionsNew,
                                             reductions_now = ReductionsNow},
-                    dict:store(Pid, InfoNew, ProcessInfo);
+                    maps:put(Pid, InfoNew, ProcessInfo);
                 error ->
                     InfoNew = #process_info{memory = MemoryNew,
                                             message_queue_len = MessagesNew,
                                             reductions = ReductionsNew},
-                    dict:store(Pid, InfoNew, ProcessInfo)
+                    maps:put(Pid, InfoNew, ProcessInfo)
             end;
         undefined ->
-            dict:store(Pid, #process_info{}, ProcessInfo)
+            maps:put(Pid, #process_info{}, ProcessInfo)
     end.
 
 process_info_update(Pid, ProcessInfo) ->
@@ -848,7 +848,7 @@ process_info_update(Pid, ProcessInfo) ->
         [{memory, MemoryNew},
          {message_queue_len, MessagesNew},
          {reductions, ReductionsNew}] ->
-            case dict:find(Pid, ProcessInfo) of
+            case maps:find(Pid, ProcessInfo) of
                 {ok, #process_info{reductions = ReductionsOld}} ->
                     ReductionsNow = if
                         ReductionsOld =:= undefined ->
@@ -861,21 +861,21 @@ process_info_update(Pid, ProcessInfo) ->
                                             reductions = ReductionsNew,
                                             reductions_now = ReductionsNow},
                     {{MemoryNew, MessagesNew, ReductionsNow},
-                     dict:store(Pid, InfoNew, ProcessInfo)};
+                     maps:put(Pid, InfoNew, ProcessInfo)};
                 error ->
                     InfoNew = #process_info{memory = MemoryNew,
                                             message_queue_len = MessagesNew,
                                             reductions = ReductionsNew},
                     {{MemoryNew, MessagesNew, undefined},
-                     dict:store(Pid, InfoNew, ProcessInfo)}
+                     maps:put(Pid, InfoNew, ProcessInfo)}
             end;
         undefined ->
             {{undefined, undefined, undefined},
-             dict:store(Pid, #process_info{}, ProcessInfo)}
+             maps:put(Pid, #process_info{}, ProcessInfo)}
     end.
 
 process_info_find(Pid, ProcessInfo) ->
-    case dict:find(Pid, ProcessInfo) of
+    case maps:find(Pid, ProcessInfo) of
         {ok, #process_info{memory = Memory,
                            message_queue_len = Messages,
                            reductions_now = ReductionsNow}} ->
@@ -885,7 +885,7 @@ process_info_find(Pid, ProcessInfo) ->
     end.
 
 process_info_erase(Pid, ProcessInfo) ->
-    dict:erase(Pid, ProcessInfo).
+    maps:remove(Pid, ProcessInfo).
 
 process_info_metrics({Memory, Messages, ReductionsNow}, MetricPrefix) ->
     L0 = [],

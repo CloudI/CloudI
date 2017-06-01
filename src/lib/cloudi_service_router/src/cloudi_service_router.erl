@@ -80,7 +80,6 @@
         length = 1 :: pos_integer()
     }).
 
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -record(state,
     {
         validate_request_info :: undefined | fun((any()) -> boolean()),
@@ -88,8 +87,8 @@
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
-        failures_source = dict:new()
-            :: dict_proxy(pid(), list(erlang:timestamp())),
+        failures_source = #{}
+            :: #{pid() := list(erlang:timestamp())},
         destinations
             :: cloudi_x_trie:cloudi_x_trie() % pattern -> #destination{}
     }).
@@ -236,7 +235,7 @@ cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
                            _Dispatcher) ->
     NewFailuresSrc = if
         FailuresSrcDie =:= true ->
-            dict:erase(Pid, FailuresSrc);
+            maps:remove(Pid, FailuresSrc);
         FailuresSrcDie =:= false ->
             FailuresSrc
     end,
@@ -323,7 +322,7 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->
             SecondsNow = cloudi_timestamp:seconds(),
-            case dict:find(Pid, Failures) of
+            case maps:find(Pid, Failures) of
                 {ok, FailureList} ->
                     failure_check(SecondsNow, FailureList,
                                   MaxCount, MaxPeriod, Pid, Failures);
@@ -337,7 +336,7 @@ failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     end.
 
 failure_store(FailureList, FailureCount, MaxCount, Pid, Failures) ->
-    NewFailures = dict:store(Pid, FailureList, Failures),
+    NewFailures = maps:put(Pid, FailureList, Failures),
     if
         FailureCount == MaxCount ->
             failure_kill(Pid),

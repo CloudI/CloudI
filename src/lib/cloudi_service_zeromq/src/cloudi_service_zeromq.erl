@@ -56,7 +56,6 @@
                                                     % meta-data through ZeroMQ
                                                     % w/4-byte big endian header
 -type socket() :: {pos_integer(), any()}.
--type dict_proxy(Key, Value) :: dict:dict(Key, Value).
 -record(state,
     {
         context :: erlzmq:erlzmq_context(),
@@ -68,14 +67,13 @@
         request :: cloudi_x_trie:cloudi_x_trie(),
         % Name -> Socket
         push :: cloudi_x_trie:cloudi_x_trie(),
-        receives :: dict_proxy(socket(),
-                               {reply, string()} |
-                               {subscribe,
-                                {non_neg_integer(), tuple(),
-                                 dict_proxy(binary(), string())}} |
-                               {request, fun((binary(), binary()) -> ok)}),
-        reply_replies = dict:new() :: dict_proxy(cloudi_service:trans_id(),
-                                                 socket())
+        receives :: #{socket() :=
+                      {reply, string()} |
+                      {subscribe,
+                       {non_neg_integer(), tuple(),
+                        #{binary() := string()}}} |
+                      {request, fun((binary(), binary()) -> ok)}},
+        reply_replies = #{} :: #{cloudi_service:trans_id() := socket()}
     }).
 
 %%%------------------------------------------------------------------------
@@ -109,7 +107,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
 
     {ok, Context} = erlzmq:context(),
     Service = cloudi_service:self(Dispatcher),
-    ReceivesZMQ1 = dict:new(),
+    ReceivesZMQ1 = #{},
     Publish = lists:foldl(fun({publish,
                                {[{[I1a | _], [I1b | _]} | _] = NamePairL,
                                 [[I2 | _] | _] = EndpointL}}, D) ->
@@ -135,13 +133,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         NameLookup = lists:foldl(fun({NameInternal, NameExternal}, DD) ->
             NameExternalBin = erlang:list_to_binary(NameExternal),
             ok = erlzmq:setsockopt(S, subscribe, NameExternalBin),
-            dict:append(NameExternalBin, Prefix ++ NameInternal, DD)
-        end, dict:new(), NamePairL),
-        NameL = dict:fetch_keys(NameLookup),
+            maps_append(NameExternalBin, Prefix ++ NameInternal, DD)
+        end, #{}, NamePairL),
+        NameL = maps:keys(NameLookup),
         NameMax = lists:foldl(fun(N, M) ->
             erlang:max(erlang:byte_size(N), M)
         end, 0, NameL),
-        dict:store(S, {subscribe, {NameMax,
+        maps:put(S, {subscribe, {NameMax,
                                    binary:compile_pattern(NameL),
                                    NameLookup}}, D)
     end, ReceivesZMQ1, SubscribeL),
@@ -164,7 +162,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:connect(S, Endpoint)
         end, EndpointL),
-        dict:store(S, {reply, Prefix ++ Name}, D)
+        maps:put(S, {reply, Prefix ++ Name}, D)
     end, ReceivesZMQ2, ReplyL),
     Push = lists:foldl(fun({push,
                             {[I1 | _] = Name,
@@ -185,7 +183,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         lists:foreach(fun(Endpoint) ->
             ok = erlzmq:connect(S, Endpoint)
         end, EndpointL),
-        dict:store(S, {pull, Prefix ++ Name}, D)
+        maps:put(S, {pull, Prefix ++ Name}, D)
     end, ReceivesZMQ3, PullL),
     {ok, #state{context = Context,
                 endian = Endian,
@@ -228,9 +226,9 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                               ResponseInfo, Response,
                                               Timeout, TransId, Pid)
             end,
-            {noreply, State#state{receives = dict:store(RequestS,
-                                                        {request, F},
-                                                        ReceivesZMQ)}};
+            {noreply, State#state{receives = maps:put(RequestS,
+                                                      {request, F},
+                                                      ReceivesZMQ)}};
         error ->
             % successful publish operations don't need to store a response
             % erroneous synchronous operations will get a timeout
@@ -243,12 +241,12 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
                                   receives = ReceivesZMQ,
                                   reply_replies = ReplyReplies} = State,
                            Dispatcher) ->
-    case dict:find(S, ReceivesZMQ) of
+    case maps:find(S, ReceivesZMQ) of
         {ok, {request, F}} ->
             {ResponseInfo, Response} = incoming(ProcessMetaData, Endian,
                                                 Incoming),
             F(ResponseInfo, Response),
-            {noreply, State#state{receives = dict:erase(S, ReceivesZMQ)}};
+            {noreply, State#state{receives = maps:remove(S, ReceivesZMQ)}};
         {ok, {reply, Name}} ->
             {RequestInfo, Request} = incoming(ProcessMetaData, Endian,
                                               Incoming),
@@ -257,8 +255,8 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
                                                   undefined, undefined) of
                 {ok, TransId} ->
                     {noreply,
-                     State#state{reply_replies = dict:store(TransId, S,
-                                                            ReplyReplies)}};
+                     State#state{reply_replies = maps:put(TransId, S,
+                                                          ReplyReplies)}};
                 {error, _} ->
                     ok = erlzmq:send(S, <<>>),
                     {noreply, State}
@@ -280,7 +278,7 @@ cloudi_service_handle_info({zmq, S, Incoming, _},
                 cloudi_service:send_async(Dispatcher, Name,
                                           RequestInfo, Request,
                                           undefined, undefined)
-            end, dict:fetch(NameZMQ, Lookup)),
+            end, maps:get(NameZMQ, Lookup)),
             {noreply, State}
     end;
 
@@ -293,16 +291,16 @@ cloudi_service_handle_info({'return_async_active', _Name, _Pattern,
                            _Dispatcher) ->
     true = is_binary(Response),
     Outgoing = outgoing(ProcessMetaData, Endian, ResponseInfo, Response),
-    S = dict:fetch(TransId, ReplyReplies),
+    {S, NewReplyReplies} = maps:take(TransId, ReplyReplies),
     ok = erlzmq:send(S, Outgoing),
-    {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
+    {noreply, State#state{reply_replies = NewReplyReplies}};
 
 cloudi_service_handle_info({'timeout_async_active', TransId},
                            #state{reply_replies = ReplyReplies} = State,
                            _Dispatcher) ->
-    S = dict:fetch(TransId, ReplyReplies),
+    {S, NewReplyReplies} = maps:take(TransId, ReplyReplies),
     ok = erlzmq:send(S, <<>>),
-    {noreply, State#state{reply_replies = dict:erase(TransId, ReplyReplies)}};
+    {noreply, State#state{reply_replies = NewReplyReplies}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
@@ -328,7 +326,7 @@ cloudi_service_terminate(_Reason, _Timeout,
     cloudi_x_trie:foreach(fun(_, S) ->
         erlzmq:close(S)
     end, Push),
-    dict:map(fun(S, _) ->
+    maps:map(fun(S, _) ->
         erlzmq:close(S)
     end, ReceivesZMQ),
     erlzmq:term(Context),
@@ -383,4 +381,7 @@ incoming_metadata_split(MetaDataSize, IncomingRest) ->
     RequestInfo = erlang:binary_part(IncomingRest, {0, MetaDataSize}),
     Request = erlang:binary_part(IncomingRest, {Size, MetaDataSize - Size}),
     {RequestInfo, Request}.
+
+maps_append(K, V, M) ->
+    maps:update_with(K, fun (L) -> L ++ [V] end, M).
 
