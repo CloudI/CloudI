@@ -4,6 +4,11 @@
 2017-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Changed license from BSD-4-Clause to MIT
+    * Haskell CloudI API 1.7.0 package has a bug
+      (http://hackage.haskell.org/package/cloudi)
+      though it wasn't in the 1.7.0 release of this repo
+      (https://github.com/CloudI/CloudI) that is fixed by
+      https://github.com/CloudI/cloudi_api_haskell/commit/6cb7bf2b7797a0e922cd89a65fa8d367e2e052fb#diff-92a7fa4cc96701cc12a30c282ce7f2eaL846
 
 2017-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
