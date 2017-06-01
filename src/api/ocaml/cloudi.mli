@@ -27,6 +27,11 @@
 
  *)
 
+(** OCaml {{:http://cloudi.org/api.html#1_Intro}CloudI API}.
+    Example usage is available in the
+    {{:http://cloudi.org/tutorials.html#cloudi_examples}integration tests}.
+ *)
+
 (** provided when handling a service request *)
 type request_type =
     ASYNC

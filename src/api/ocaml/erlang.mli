@@ -27,9 +27,7 @@
 
  *)
 
-(**
- * Erlang Binary Term Format Encoding/Decoding
- *)
+(** Erlang Binary Term Format Encoding/Decoding *)
 
 module Pid :
   sig
