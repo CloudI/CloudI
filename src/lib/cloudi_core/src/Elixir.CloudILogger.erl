@@ -1,6 +1,6 @@
 -compile(no_auto_import).
 
--file("lib/cloudi_core/priv/CloudILogger.ex", 53).
+-file("lib/cloudi_core/priv/CloudILogger.ex", 39).
 
 -module('Elixir.CloudILogger').
 
