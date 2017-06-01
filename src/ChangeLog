@@ -5,6 +5,7 @@
 
     * Changed the included Erlang services from dict to maps usage
     * Performed manual-update for generated source files
+    * Update backward-cpp
 
 2017-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
 
