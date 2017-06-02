@@ -70,13 +70,16 @@ type Socket = Socket.Socket
 type Word8 = Word.Word8
 type Word32 = Word.Word32
 
+-- | provided when handling a service request
 data RequestType =
       ASYNC
     | SYNC
     deriving (Eq, Show)
 
+-- | the Erlang pid that is the source of the service request
 type Source = Erlang.Pid
 
+-- | a function to handle a service request
 type Callback s =
     RequestType ->
     ByteString -> ByteString ->
@@ -85,6 +88,7 @@ type Callback s =
     s -> T s ->
     IO (Response s)
 
+-- | service request callback function return type
 data Response s =
       Response (ByteString, s, T s)
     | ResponseInfo (ByteString, ByteString, s, T s)
@@ -94,6 +98,7 @@ data Response s =
     | NullError (String, s, T s)
     deriving (Show, Typeable)
 
+-- | an instance of the CloudI API
 data T s = T
     { state :: !s
     , socketHandle :: !Handle

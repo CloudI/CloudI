@@ -27,6 +27,8 @@
 
  -}
 
+-- | Erlang Binary Term Format Encoding/Decoding
+
 module Foreign.Erlang
     ( OtpErlangTerm(..)
     , Error(..)
@@ -189,6 +191,7 @@ infixr 4 <>
 (<>) :: Monoid.Monoid m => m -> m -> m
 (<>) = Monoid.mappend
 
+-- | Decode Erlang terms within binary data into Haskell types
 binaryToTerm :: LazyByteString -> Result OtpErlangTerm
 binaryToTerm binary =
     let size = LazyByteString.length binary in
@@ -203,6 +206,7 @@ binaryToTerm binary =
             Right (_, _, term) ->
                 ok term
 
+-- | Encode Haskell types into Erlang terms in binary data
 termToBinary :: OtpErlangTerm -> Int -> Result LazyByteString
 termToBinary term compressed
     | compressed < (-1) || compressed > 9 =

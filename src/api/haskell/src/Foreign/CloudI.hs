@@ -27,6 +27,10 @@
 
  -}
 
+-- | Haskell <http://cloudi.org/api.html#1_Intro CloudI API>.
+-- Example usage is available in the
+-- <http://cloudi.org/tutorials.html#cloudi_examples integration tests>.
+
 module Foreign.CloudI
     ( Instance.RequestType(..)
     , Instance.Source
@@ -38,6 +42,7 @@ module Foreign.CloudI
     , messageDecodingError
     , terminateError
     , Exception
+    , Result
     , api
     , threadCount
     , subscribe
@@ -135,6 +140,8 @@ data Message =
         Int, Int, ByteString, Source)
     | MessageKeepalive
 
+-- | a null trans_id is used to check for a timeout or
+-- to get the oldest response with recv_async
 transIdNull :: ByteString
 transIdNull = Char8.pack $ List.replicate 16 '\0'
 
@@ -170,6 +177,7 @@ data CallbackResult s =
 
 type Result a = Either String a
 
+-- | creates an instance of the CloudI API
 api :: Typeable s => Int -> s ->
     IO (Result (Instance.T s))
 api threadIndex state = do
@@ -203,6 +211,7 @@ api threadIndex state = do
         (_, _) ->
             return $ Left invalidInputError
 
+-- | returns the thread count from the service configuration
 threadCount :: IO (Result Int)
 threadCount = do
     threadCountValue <- POSIX.getEnv "CLOUDI_API_INIT_THREAD_COUNT"
@@ -212,6 +221,7 @@ threadCount = do
         Just threadCountStr ->
             return $ Right (read threadCountStr :: Int)
 
+-- | subscribes to a service name pattern with a callback
 subscribe :: Instance.T s -> ByteString -> Instance.Callback s ->
     IO (Result (Instance.T s))
 subscribe api0 pattern f =
@@ -226,6 +236,7 @@ subscribe api0 pattern f =
             send api0 subscribeBinary
             return $ Right $ Instance.callbacksAdd api0 pattern f
 
+-- | returns the number of subscriptions for a single service name pattern
 subscribeCount :: Typeable s => Instance.T s -> ByteString ->
     IO (Result (Int, Instance.T s))
 subscribeCount api0 pattern =
@@ -245,6 +256,7 @@ subscribeCount api0 pattern =
                 Right (_, api1@Instance.T{Instance.subscribeCount = count}) ->
                     return $ Right (count, api1)
 
+-- | unsubscribes from a service name pattern once
 unsubscribe :: Instance.T s -> ByteString ->
     IO (Result (Instance.T s))
 unsubscribe api0 pattern =
@@ -259,6 +271,7 @@ unsubscribe api0 pattern =
             send api0 unsubscribeBinary
             return $ Right $ Instance.callbacksRemove api0 pattern
 
+-- | sends an asynchronous service request
 sendAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, Instance.T s))
@@ -289,6 +302,7 @@ sendAsync api0@Instance.T{
                 Right (_, api1@Instance.T{Instance.transId = transId}) ->
                     return $ Right (transId, api1)
 
+-- | sends a synchronous service request
 sendSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
@@ -322,6 +336,8 @@ sendSync api0@Instance.T{
                     , Instance.transId = transId}) ->
                     return $ Right (responseInfo, response, transId, api1)
 
+-- | sends asynchronous service requests to all subscribers
+-- of the matching service name pattern
 mcastAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     Maybe Int -> Maybe ByteString -> Maybe Int ->
     IO (Result (Array Int ByteString, Instance.T s))
@@ -352,6 +368,7 @@ mcastAsync api0@Instance.T{
                 Right (_, api1@Instance.T{Instance.transIds = transIds}) ->
                     return $ Right (transIds, api1)
 
+-- | forwards a service request to a different service name
 forward_ :: Typeable s =>
     Instance.T s -> Instance.RequestType -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
@@ -387,6 +404,7 @@ forwardAsyncI api0@Instance.T{
             send api0 forwardBinary
             return $ Right api0
 
+-- | forwards an asynchronous service request to a different service name
 forwardAsync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
@@ -427,6 +445,7 @@ forwardSyncI api0@Instance.T{
             send api0 forwardBinary
             return $ Right api0
 
+-- | forwards a synchronous service request to a different service name
 forwardSync :: Typeable s => Instance.T s -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     IO ()
@@ -439,6 +458,7 @@ forwardSync api0 name responseInfo response timeout priority transId pid = do
         Right api1 ->
             Exception.throwIO $ ForwardSync api1
 
+-- | provides a response to a service request
 return_ :: Typeable s =>
     Instance.T s -> Instance.RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
@@ -474,6 +494,7 @@ returnAsyncI api0@Instance.T{
             send api0 returnBinary
             return $ Right api0
 
+-- | provides a response to an asynchronous service request
 returnAsync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
@@ -514,6 +535,7 @@ returnSyncI api0@Instance.T{
             send api0 returnBinary
             return $ Right api0
 
+-- | provides a response to a synchronous service request
 returnSync :: Typeable s => Instance.T s -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> ByteString -> Source ->
     IO ()
@@ -526,6 +548,7 @@ returnSync api0 name pattern responseInfo response timeout transId pid = do
         Right api1 ->
             Exception.throwIO $ ReturnSync api1
 
+-- | blocks to receive an asynchronous service request response
 recvAsync :: Typeable s => Instance.T s ->
     Maybe Int -> Maybe ByteString -> Maybe Bool ->
     IO (Result (ByteString, ByteString, ByteString, Instance.T s))
@@ -555,38 +578,53 @@ recvAsync api0@Instance.T{Instance.timeoutSync = timeoutSync'}
                     , Instance.transId = transId'}) ->
                     return $ Right (responseInfo, response, transId', api1)
 
+-- | returns the 0-based index of this process in the service instance
 processIndex :: Instance.T s -> Int
 processIndex Instance.T{Instance.processIndex = processIndex'} =
     processIndex'
 
+-- | returns the current process count based on the service configuration
 processCount :: Instance.T s -> Int
 processCount Instance.T{Instance.processCount = processCount'} =
     processCount'
 
+-- | returns the count_process_dynamic maximum count
+-- based on the service configuration
 processCountMax :: Instance.T s -> Int
 processCountMax Instance.T{Instance.processCountMax = processCountMax'} =
     processCountMax'
 
+-- | returns the count_process_dynamic minimum count
+-- based on the service configuration
 processCountMin :: Instance.T s -> Int
 processCountMin Instance.T{Instance.processCountMin = processCountMin'} =
     processCountMin'
 
+-- | returns the service name pattern prefix from the service configuration
 prefix :: Instance.T s -> ByteString
 prefix Instance.T{Instance.prefix = prefix'} =
     prefix'
 
+-- | returns the service initialization timeout
+-- from the service configuration
 timeoutInitialize :: Instance.T s -> Int
 timeoutInitialize Instance.T{Instance.timeoutInitialize = timeoutInitialize'} =
     timeoutInitialize'
 
+-- | returns the default asynchronous service request send timeout
+-- from the service configuration
 timeoutAsync :: Instance.T s -> Int
 timeoutAsync Instance.T{Instance.timeoutAsync = timeoutAsync'} =
     timeoutAsync'
 
+-- | returns the default synchronous service request send timeout
+-- from the service configuration
 timeoutSync :: Instance.T s -> Int
 timeoutSync Instance.T{Instance.timeoutSync = timeoutSync'} =
     timeoutSync'
 
+-- | returns the service termination timeout
+-- based on the service configuration
 timeoutTerminate :: Instance.T s -> Int
 timeoutTerminate Instance.T{Instance.timeoutTerminate = timeoutTerminate'} =
     timeoutTerminate'
@@ -999,6 +1037,7 @@ pollRequest api0@Instance.T{
         else
             pollRequestLoopBegin api0 timeout external pollTimer
 
+-- | blocks to process incoming CloudI service requests
 poll :: Typeable s => Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
@@ -1118,6 +1157,11 @@ timeoutAdjustmentPoll t0 timeout = do
 threadList :: Concurrent.MVar [Concurrent.MVar ()]
 threadList = Unsafe.unsafePerformIO (Concurrent.newMVar [])
 
+-- | simplifies thread creation and join
+--
+-- > Concurrent.setNumCapabilities threadCount
+-- > mapM_ (CloudI.threadCreate task) [0..threadCount - 1]
+-- > CloudI.threadsWait
 threadCreate :: (Int -> IO ()) -> Int -> IO ThreadId
 threadCreate f threadIndex = do
     thread <- Concurrent.newEmptyMVar
@@ -1134,6 +1178,7 @@ threadCreateFork threadIndex action afterF =
         Concurrent.forkOn threadIndex
             (Exception.try (restore action) >>= afterF)
 
+-- | wait for threads to join after being created by 'threadCreate'
 threadsWait :: IO ()
 threadsWait = do
     threads <- Concurrent.takeMVar threadList
@@ -1162,6 +1207,7 @@ textKeyValueParse text =
     in
     loop Map.empty (Char8.split '\0' text)
 
+-- | parses "text_pairs" in service request info
 infoKeyValueParse :: ByteString -> Map ByteString [ByteString]
 infoKeyValueParse = textKeyValueParse
 
