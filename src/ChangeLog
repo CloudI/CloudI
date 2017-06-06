@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-06-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix internal services_remove use with automatic_loading == true
+      (the default) so all modules are marked as old before purge
+
 2017-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Changed the included Erlang services from dict to maps usage

@@ -1616,10 +1616,17 @@ is_module_loaded_check(Module) when is_atom(Module) ->
             false
     end.
 
+modules_unload([]) ->
+    ok;
+modules_unload([Module | Modules]) ->
+    _ = module_unload(Module),
+    modules_unload(Modules).
+
 modules_purged(Modules, infinity) ->
-    modules_purged(Modules, [], 5000);
+    modules_purged(Modules, 5000);
 modules_purged(Modules, Timeout)
     when is_list(Modules), is_integer(Timeout), Timeout >= 0 ->
+    ok = modules_unload(Modules),
     modules_purged(Modules, [], Timeout).
 
 modules_purged([], [], _) ->
