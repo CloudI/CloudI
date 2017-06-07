@@ -3573,16 +3573,16 @@ duo_handle_info({'EXIT', RequestPid, Reason},
     ?LOG_ERROR("~p duo_mode request exited: ~p", [RequestPid, Reason]),
     {stop, Reason, State};
 
-duo_handle_info({'EXIT', Dispatcher, shutdown},
-                #state_duo{dispatcher = Dispatcher} = State) ->
+duo_handle_info({'EXIT', _, shutdown}, State) ->
+    % CloudI Service shutdown
     {stop, shutdown, State};
 
-duo_handle_info({'EXIT', Dispatcher, {shutdown, _}},
-                #state_duo{dispatcher = Dispatcher} = State) ->
+duo_handle_info({'EXIT', _, {shutdown, _}}, State) ->
+    % CloudI Service shutdown w/reason
     {stop, shutdown, State};
 
-duo_handle_info({'EXIT', Dispatcher, restart},
-                #state_duo{dispatcher = Dispatcher} = State) ->
+duo_handle_info({'EXIT', _, restart}, State) ->
+    % CloudI Service API requested a restart
     {stop, restart, State};
 
 duo_handle_info({'EXIT', Dispatcher, Reason},
