@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix access after free in C http_req test
+
 2017-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.7.1 released
