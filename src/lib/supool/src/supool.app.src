@@ -3,7 +3,7 @@
 
 {application, supool,
   [{description, "Supervisor Pool"},
-   {vsn, "1.7.0"},
+   {vsn, "1.7.1"},
    {modules, [
         supool,
         supool_sup

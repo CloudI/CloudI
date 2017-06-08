@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.7.0<br />
-              last updated on March 27<sup>th</sup> 2017</h3></center>
+  <center><h3>version 1.7.1<br />
+              last updated on June 7<sup>th</sup> 2017</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -104,19 +104,18 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <h3>1.0 - Introduction</h3>
   <p class="paragraph">
     The CloudI API provides a simple messaging API which allows CloudI services
-    to send requests.  So, the CloudI API contains messaging primitives that
-    can be used to emulate other messaging APIs, but normally the CloudI API
-    is used directly.  The CloudI API supports both publish/subscribe and
+    to send requests.  The CloudI API supports both publish/subscribe and
     request/reply communication in an intuitive way.  It is not necessary to
     understand the Erlang programming language (or Elixir), to use the
     CloudI API since a full CloudI API implementation is provided for every
-    supported programming language (C/C++, Elixir, Erlang, Java, JavaScript,
-    Perl, PHP, Python, and Ruby, currently).
+    supported programming language (C/C++, Elixir, Erlang, Go, Haskell,
+    Java, JavaScript, OCaml, Perl, PHP, Python, and Ruby, currently).
   </p>
   <p class="paragraph">
     The CloudI API messaging is different from other messaging APIs and
     provides simpler integration for a few reasons: 
     <ul>
+      <li>CloudI API usage requires CloudI usage as an application server to enforce fault-tolerance and scalability constraints on source code execution</li>
       <li>The CloudI service that receives a request determines whether a reply occurs (returning no response data is the same as not providing a reply)</li>
       <li>All required callbacks are minimal (only a single request callback is necessary for a CloudI service to handle requests) to keep CloudI services simpler, so they are less error-prone than other solutions</li>
       <li>Requests are not persisted to database storage to avoid persisting errors since errors are often transient and only relate to a specific context</li>
@@ -191,13 +190,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <p class="paragraph">
     When separate service processes subscribe with the same service name
     pattern, each subscription is used based on random selection
-    (if both service processes are available based on the destination refresh
-     method), when a service request is sent to the service name.
-    If the same service subscribes with the same service name pattern more
-    than once within a single external service thread, each subscription
-    is used in round-robin order (first subscription is called first,
-    so order is preserved), when the service thread receives a request
-    for the specific service name pattern.
+    (if more than one service processes are available based on the
+     destination refresh method), when a service request is sent to the
+    service name.  If the same service subscribes with the same
+    service name pattern more than once within a single external service
+    thread, each subscription is used in round-robin order
+    (first subscription is called first, so order is preserved),
+    when the service thread receives a request for the specific
+    service name pattern.
   </p>
   <p class="paragraph">
     The <a href="#1_mcast_async">mcast_async</a> function provides
@@ -420,13 +420,13 @@ CloudI::API.new(thread_index)
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.7.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.7.1/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.7.0/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.7.1/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1691,7 +1691,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.7.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.7.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2073,7 +2073,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.7.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.7.1/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2551,7 +2551,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.7.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.7.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2720,7 +2720,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.7.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.7.1/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2852,7 +2852,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.7.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.7.1/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -3191,8 +3191,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     use the settings within the cloudi_core Erlang application configuration.
     The resource limits are based on what the OS supports
     (the supported resource limits can be found in the <a href="http://manpages.ubuntu.com/manpages/natty/man2/setrlimit.2.html" target="_blank">setrlimit</a>
-    manpage). If the 'owner' service configuration option is set,
-    it will influence the limits that may be set.
+    manpage).
   </td></tr><tr><td>
     <a href="#2_services_add_config_opts_owner">
     owner</a>
@@ -3215,6 +3214,13 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
     undefined
   </td><td>
     (external services only) Set the cgroup membership of any
+    OS processes an external service creates.
+  </td></tr><tr><td>
+    chroot
+  </td><td>
+    undefined
+  </td><td>
+    (external services only) Set the root directory of any
     OS processes an external service creates.
   </td></tr><tr><td>
     directory
@@ -3589,9 +3595,8 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
   <p class="paragraph">
     The value for any option can be an integer or 'infinity' to set the
     current limit or a list to set both the current and the maximum
-    (setting the maximum requires that the
-     <a href="api.html#2_services_add_config_opts_owner">owner</a>
-     of the external service has permission to set the maximum limit)
+    (setting the maximum requires that the user executing CloudI
+     has permission to set the maximum limit)
     (e.g., {limit, [{stack, [{current, 8388608}, {maximum, infinity}]}]}).
   </p>
   <table><tr><th>
@@ -4043,7 +4048,7 @@ curl -X POST -d '[{"", [{module, cloudi_service_messaging_sequence1}, {modules_l
   <p class="paragraph">
     Update services while they are running without any interruption in
     their operation.  Each update that should occur is specified as a
-    {UUID, Options} pair with the Options being described below:
+    {UUID, Options} pair with the Options described below:
   </p>
 <pre>
 % internal service update options
@@ -4575,6 +4580,7 @@ curl -X POST -d '[{file, undefined}, {syslog, []}]' http://localhost:6464/cloudi
          warn | info | debug | trace}</a>,        % defaults to trace
  <a href="#2_logging_redirect_set">{redirect, undefined | node()}</a>,              % defaults to undefined
  <a href="#2_logging_syslog_set">{syslog, undefined | list()}</a>,                % defaults to undefined
+ <a href="#2_logging_stdout_set">{stdout, boolean()}</a>,                         % defaults to false
  <a href="#2_logging_formatters_set">{formatters, undefined | list()}</a>,            % defaults to undefined
  <a href="#2_logging_set_config_opts_aspects_log_before">{aspects_log_before,
   list(aspects_log_before())}</a>,                % defaults to []
@@ -4598,7 +4604,7 @@ fun((Level :: fatal | error | warn | info | debug | trace,
      Function :: atom() | undefined,
      Arity :: arity() | undefined,
      MetaData :: list({atom(), any()}),
-     LogMessage :: string()) -&gt;
+     LogMessage :: iodata()) -&gt;
     ok.
 </pre>
     It is also possible to use the Erlang tuple
@@ -4622,7 +4628,7 @@ fun((Level :: fatal | error | warn | info | debug | trace,
      Function :: atom() | undefined,
      Arity :: arity() | undefined,
      MetaData :: list({atom(), any()}),
-     LogMessage :: string()) -&gt;
+     LogMessage :: iodata()) -&gt;
     ok.
 </pre>
     It is also possible to use the Erlang tuple

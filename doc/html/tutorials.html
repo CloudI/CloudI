@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI User Tutorials</h1>
 <div class="details">
-<span id="revnumber">version 1.7.0,</span>
-<span id="revdate">2017-03-27</span>
+<span id="revnumber">version 1.7.1,</span>
+<span id="revdate">2017-06-07</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -401,7 +401,7 @@ If the service request messaging is able to keep many separate external CloudI s
 <div class="paragraph">
 <p>Controlling the potential service request latency with the selection of the programming languages can avoid prematurely exhausting computational resources.
 A good approach is using as few programming languages that can reasonably be used for the business logic design.
-Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, Java, Python/C (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds) just due to inefficiencies within the programming language runtimes.
+Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds) just due to inefficiencies within the programming language runtimes.
 By considering the latency requirements of the system early during development it will be easier to scale the deployment and avoid wasted development effort.</p>
 </div>
 <div class="paragraph">

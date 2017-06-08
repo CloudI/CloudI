@@ -1,5 +1,32 @@
 ------------------------------------------------------------------------        
 
+June 7, 2017
+  Version 1.7.1 released.
+  * backwards compatibility difference:
+    * cpg (CloudI Process Groups) source code was changed to minimize
+      distributed Erlang communication (and local messaging) without
+      attempting to remain compatible with cpg versions before 1.7.1
+      (i.e., prevent CloudI 1.7.1 nodes from communicating with older
+       nodes by using different cookie settings or other means).
+    * Using the CloudI API functions send_sync or recv_async during
+      the service's initialization previously returned an error,
+      but will now cause the service to crash, to pursue fail-fast
+      operation and to keep the effect the same for both internal and
+      external services.
+  * All CloudI source code is under a MIT license instead of a
+    BSD-style license to make reuse simpler and to be GPL-compatible
+  * The chroot external service configuration option was added
+    (http://cloudi.org/api.html#2_services_add_config_opts)
+  * The order external service configuration options are applied
+    changed from owner, limit, nice, directory
+    to chroot, limit, nice, owner, directory which means that the
+    user/group responsible for running CloudI influences the
+    permissions for chroot, limit, nice (and cgroup).
+    This order will not need to change in the future.
+  * Erlang/OTP 20.0 compilation/runtime works
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 March 29, 2017
   Version 1.7.0 released.
   * backwards compatibility difference:

@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.7.0<br />
-              last updated on March 27<sup>th</sup> 2017</h3></center>
+  <center><h3>version 1.7.1<br />
+              last updated on June 7<sup>th</sup> 2017</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -335,7 +335,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Open Source license
   </td><td>
-  BSD
+  MIT
   </td><td>
   LGPL
   </td><td>
@@ -499,12 +499,11 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="1_ReallyFree"></a>
   <h3>1.8 - Is CloudI really free?</h3>
   <p class="paragraph">
-    CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">BSD license</a>
+    CloudI is completely free.  CloudI uses a <a href="LICENSE.txt" target="_blank">MIT license</a>
     which permits reuse for personal or commercial purposes.
     All external source code dependencies are also under a
     commercial-friendly license
-    (<a href="https://en.wikipedia.org/wiki/BSD_licenses" target="_blank">BSD</a>,
-     <a href="https://en.wikipedia.org/wiki/MIT_License" target="_blank">MIT</a>,
+    (<a href="https://en.wikipedia.org/wiki/MIT_License" target="_blank">MIT</a>,
      <a href="https://en.wikipedia.org/wiki/Apache_License" target="_blank">Apache</a>).
     Some conditional external source code dependencies
     (not included by default) are under other licenses
@@ -1179,7 +1178,7 @@ sudo cloudi stop
   </p>
   <p class="paragraph">
     When CloudI is running, CloudI logging output will be appended to
-    <a href="#3_Options">PREFIX</a>/var/logs/cloudi/cloudi.log.
+    <a href="#3_Options">PREFIX</a>/var/log/cloudi/cloudi.log.
   </p>
   <div class="top"><a href="#3_contents">Top</a></div>
 
@@ -1929,8 +1928,8 @@ sudo cloudi stop
     based on the nodes configuration.
   </p>
   <p class="paragraph">
-    ZeroMQ can also be used to bridge CloudI clusters
-    (i.e., with the CloudI service cloudi_service_zeromq).
+    HTTPS can also be used to bridge CloudI clusters
+    (i.e., with the CloudI service cloudi_service_http_cowboy).
     Scaling for capacity planning should often require increasing the
     database node count more than the CloudI node count, but that depends
     on the CloudI services and their incoming data rate.
