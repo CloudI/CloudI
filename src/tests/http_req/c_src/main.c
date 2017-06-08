@@ -62,6 +62,8 @@ static void request(int const request_type,
             break;
         }
     }
+    cloudi_info_key_value_destroy(http_qs);
+    /* value is a pointer within request */
     if (value)
     {
         snprintf(response, sizeof(response),
@@ -72,7 +74,6 @@ static void request(int const request_type,
         memcpy(response,
                "<http_test><error>no value specified</error></http_test>", 57);
     }
-    cloudi_info_key_value_destroy(http_qs);
     cloudi_return(api, request_type, name, pattern, "", 0,
                   response, strlen(response),
                   timeout, trans_id, pid, pid_size);

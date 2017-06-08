@@ -3,7 +3,7 @@
 
 2017-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
-    * Fix access after free in C http_req test
+    * Add pointer handling comment to C http_req test
 
 2017-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
