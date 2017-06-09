@@ -10,9 +10,9 @@
 
 ### What is CloudI?
 
-(short answer) "An application server that efficiently integrates with many
-languages, many databases, and many messaging buses in a way that is both
-scalable and fault-tolerant."
+(short answer) "A distributed application server that provides efficient
+messaging for many programming languages within a single service abstraction
+that is both scalable and fault-tolerant."
 
 (shorter answer) "A rock-solid transaction processing system for flexible
 software development."
