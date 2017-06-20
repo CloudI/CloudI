@@ -48,10 +48,10 @@ AC_DEFUN([AX_PYTHON_C],[
     else
         executable="$executable-dbg-config"
     fi
-    AC_ARG_VAR([PYTHON_CONFIG],[$executable executable])
+    AC_ARG_VAR([PYTHON_CONFIG],[python-config executable])
     AC_PATH_PROGS([PYTHON_CONFIG],
         [$executable],
-        [AC_MSG_ERROR([$executable not found])],
+        [AC_MSG_ERROR([python-config not found])],
         [`AS_DIRNAME("$PYTHON")`])
     PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
     AC_SUBST(PYTHON_CFLAGS)
