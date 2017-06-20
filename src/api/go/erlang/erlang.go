@@ -905,10 +905,8 @@ func termsToBinary(termI interface{}, buffer *bytes.Buffer) (*bytes.Buffer, erro
 			return termsToBinary(uint8(term), buffer)
 		case term >= math.MinInt32 && term <= math.MaxInt32:
 			return integerToBinary(int32(term), buffer)
-		case term >= math.MinInt64 && term <= math.MaxInt64:
-			return termsToBinary(int64(term), buffer)
 		default:
-			return buffer, outputErrorNew("invalid int")
+			return termsToBinary(int64(term), buffer)
 		}
 	case *big.Int:
 		return bignumToBinary(term, buffer)
@@ -975,7 +973,7 @@ func stringToBinary(term string, buffer *bytes.Buffer) (*bytes.Buffer, error) {
 		}
 		_, err = buffer.WriteString(term)
 		return buffer, err
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		err := buffer.WriteByte(tagListExt)
 		if err != nil {
 			return buffer, err
@@ -1006,7 +1004,7 @@ func tupleToBinary(term []interface{}, buffer *bytes.Buffer) (*bytes.Buffer, err
 		if err != nil {
 			return buffer, err
 		}
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		err = buffer.WriteByte(tagLargeTupleExt)
 		if err != nil {
 			return buffer, err
@@ -1031,7 +1029,7 @@ func mapToBinary(term map[interface{}]interface{}, buffer *bytes.Buffer) (*bytes
 	var length int
 	var err error
 	switch length = len(term); {
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		err = buffer.WriteByte(tagMapExt)
 		if err != nil {
 			return buffer, err
@@ -1063,7 +1061,7 @@ func listToBinary(term OtpErlangList, buffer *bytes.Buffer) (*bytes.Buffer, erro
 	case length == 0:
 		err = buffer.WriteByte(tagNilExt)
 		return buffer, err
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		err = buffer.WriteByte(tagListExt)
 		if err != nil {
 			return buffer, err
@@ -1121,7 +1119,7 @@ func bignumToBinary(term *big.Int, buffer *bytes.Buffer) (*bytes.Buffer, error) 
 		if err != nil {
 			return buffer, err
 		}
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		err = buffer.WriteByte(tagLargeBigExt)
 		if err != nil {
 			return buffer, err
@@ -1212,7 +1210,7 @@ func binaryObjectToBinary(term OtpErlangBinary, buffer *bytes.Buffer) (*bytes.Bu
 	switch length := len(term.Value); {
 	case term.Bits < 1 || term.Bits > 8:
 		return buffer, outputErrorNew("invalid OtpErlangBinary.Bits")
-	case length <= math.MaxUint32:
+	case uint64(length) <= math.MaxUint32:
 		if term.Bits != 8 {
 			err = buffer.WriteByte(tagBitBinaryExt)
 			if err != nil {

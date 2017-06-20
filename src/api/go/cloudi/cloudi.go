@@ -556,7 +556,7 @@ func (api *Instance) RecvAsync(extra ...interface{}) ([]byte, []byte, []byte, er
 			}
 			timeout = uint32(arg)
 		case int:
-			if arg < 0 || arg > math.MaxUint32 {
+			if arg < 0 || uint64(arg) > math.MaxUint32 {
 				return nil, nil, nil, invalidInputErrorNew()
 			}
 			timeout = uint32(arg)
@@ -622,7 +622,7 @@ func timeoutCheck(value interface{}) (uint32, error) {
 		}
 		return uint32(timeout), nil
 	case int:
-		if timeout < 0 || timeout > math.MaxUint32 {
+		if timeout < 0 || uint64(timeout) > math.MaxUint32 {
 			return 0, invalidInputErrorNew()
 		}
 		return uint32(timeout), nil
@@ -1408,7 +1408,7 @@ func uintGetenv(key string) (uint32, error) {
 		return 0, invalidInputErrorNew()
 	}
 	i, err := strconv.Atoi(s)
-	if err != nil || i < 0 || i > math.MaxUint32 {
+	if err != nil || i < 0 || uint64(i) > math.MaxUint32 {
 		return 0, invalidInputErrorNew()
 	}
 	return uint32(i), nil
