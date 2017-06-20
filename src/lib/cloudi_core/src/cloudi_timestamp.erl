@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -44,7 +44,9 @@
          milliseconds_os/0,
          microseconds/0,
          microseconds_os/0,
-         seconds_filter/3]).
+         seconds_filter/3,
+         uptime/0,
+         uptime/1]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -160,6 +162,33 @@ seconds_filter([Seconds | L], Output, Count, SecondsNow, MaxPeriod) ->
             seconds_filter(L, [Seconds | Output], Count + 1,
                            SecondsNow, MaxPeriod)
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===The uptime of the Erlang node in seconds.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uptime() ->
+    integer().
+
+uptime() ->
+    uptime(second).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===The uptime of the Erlang node..===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uptime(TimeUnit :: second | millisecond | microsecond | nanosecond) ->
+    integer().
+
+uptime(TimeUnit)
+    when TimeUnit =:= second; TimeUnit =:= millisecond;
+         TimeUnit =:= microsecond; TimeUnit =:= nanosecond ->
+    Value = erlang:monotonic_time() - erlang:system_info(start_time),
+    erlang:convert_time_unit(Value, native, TimeUnit).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
