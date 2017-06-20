@@ -38,16 +38,21 @@
 #
 
 AC_DEFUN([AX_PYTHON_C],[
-    AC_ARG_VAR([PYTHON_CONFIG],[python-config executable])
-    AS_IF([test "x$PYTHON_DEBUG" == "xno"],
-        [AC_PATH_PROGS([PYTHON_CONFIG],
-            [python$PYTHON_VERSION_RELEASE-config python-config],
-            [AC_MSG_ERROR([python-config not found])],
-            [`AS_DIRNAME("$PYTHON")`])],
-        [AC_PATH_PROGS([PYTHON_CONFIG],
-            [python$PYTHON_VERSION_RELEASE-dbg-config python-dbg-config],
-            [AC_MSG_ERROR([python-dbg-config not found])],
-            [`AS_DIRNAME("$PYTHON")`])])
+    if test "x$PYTHON_VERSION_REQUIRED" = "x2"; then
+        executable="python"
+    else
+        executable="python$PYTHON_VERSION_REQUIRED"
+    fi
+    if test "x$PYTHON_DEBUG" == "xno"; then
+        executable="$executable-config"
+    else
+        executable="$executable-dbg-config"
+    fi
+    AC_ARG_VAR([PYTHON_CONFIG],[$executable executable])
+    AC_PATH_PROGS([PYTHON_CONFIG],
+        [$executable],
+        [AC_MSG_ERROR([$executable not found])],
+        [`AS_DIRNAME("$PYTHON")`])
     PYTHON_CFLAGS=`$PYTHON_CONFIG --cflags`
     AC_SUBST(PYTHON_CFLAGS)
     PYTHON_LDFLAGS=`$PYTHON_CONFIG --ldflags`

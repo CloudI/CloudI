@@ -32,6 +32,10 @@
     ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 3))
 #define PYTHON_VERSION_3_3_COMPATIBLE
 #endif
+#if (PY_MAJOR_VERSION > 3) || \
+    ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 4))
+#define PYTHON_VERSION_3_4_COMPATIBLE
+#endif
 #include "cloudi.hpp"
 #include <limits>
 #include <string>
@@ -438,6 +442,10 @@ static PyTypeObject python_cloudi_instance_type = {
     0,                                       // tp_weaklist
     0,                                       // tp_del
     0                                        // tp_version_tag
+#ifdef PYTHON_VERSION_3_4_COMPATIBLE
+    ,
+    0                                        // tp_finalize
+#endif
 #ifdef COUNT_ALLOCS
      ,
     0,                                       // tp_allocs

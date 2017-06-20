@@ -4,6 +4,8 @@
 2017-06-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Go CloudI API 32bit support
+    * Fix Python/C CloudI API compilation when Python 3 is requested
+      (previously was compiling/linking with Python 2)
 
 2017-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
