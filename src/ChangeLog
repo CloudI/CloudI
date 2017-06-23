@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-06-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add fixes for cloudi_service_filesystem tests to use TMPDIR
+
 2017-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_timestamp:uptime functions

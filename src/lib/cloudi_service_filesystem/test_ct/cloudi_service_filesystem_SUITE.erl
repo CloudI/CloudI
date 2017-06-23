@@ -63,13 +63,7 @@
 -define(SERVICE_PREFIX1, "/filesystem/").
 % ASCII_FILE created with: file:write_file("ASCII.bin", lists:seq(0, 126)).
 -define(ASCII_FILE, "ASCII.bin").
--define(WRITABLE_DIRECTORY, "/tmp/").
--define(WRITABLE_DIRECTORY_PRIVATE, "/tmp/cloudi_service_filesystem_test/").
--define(WRITABLE_FILENAME, "cloudi_service_filesystem_test.txt").
--define(WRITABLE_FILEPATH,
-        ?WRITABLE_DIRECTORY ?WRITABLE_FILENAME).
--define(WRITABLE_FILEPATH_PRIVATE,
-        ?WRITABLE_DIRECTORY_PRIVATE ?WRITABLE_FILENAME).
+-define(WRITABLE_FILENAME1, "filename1.txt").
 -define(TIMEOUT, 960000).
 -define(REFRESH, 2400). % ((?TIMEOUT * 2.5) div 1000)
 -define(REFRESH_STRING, "2400").
@@ -99,12 +93,31 @@ suite() ->
 
 init_per_suite(Config) ->
     ?REFRESH = erlang:round(?TIMEOUT * 2.5) div 1000,
-    ok = filelib:ensure_dir(?WRITABLE_FILEPATH_PRIVATE),
     ok = cloudi_x_reltool_util:application_start(cloudi_core, [], infinity),
-    Config.
+    TmpDir = os:getenv("TMPDIR", "/tmp"),
+    TmpDir1 = TmpDir ++ "/cloudi_service_filesystem_test_dir1/",
+    TmpDir2 = TmpDir ++ "/cloudi_service_filesystem_test_dir2/",
+    ok = filelib:ensure_dir(TmpDir1),
+    ok = filelib:ensure_dir(TmpDir2),
+    [{tmpdir1, TmpDir1},
+     {tmpdir2, TmpDir2} | Config].
 
-end_per_suite(_Config) ->
+end_per_suite(Config) ->
     ok = cloudi_x_reltool_util:application_stop(cloudi_core),
+    TmpDir1Rm = os:cmd("rmdir " ++ ?config(tmpdir1, Config)),
+    if
+        TmpDir1Rm == [] ->
+            ok;
+        true ->
+            ?LOG_ERROR("~s", [TmpDir1Rm])
+    end,
+    TmpDir2Rm = os:cmd("rmdir " ++ ?config(tmpdir2, Config)),
+    if
+        TmpDir2Rm == [] ->
+            ok;
+        true ->
+            ?LOG_ERROR("~s", [TmpDir2Rm])
+    end,
     ok.
 
 group(_GroupName) ->
@@ -148,15 +161,15 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_basic_write_truncate_1) ->
-    ok = file:write_file(?WRITABLE_FILEPATH, <<>>),
+    ok = file:write_file(writable_filepath1(Config), <<>>),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY},
+          [{directory, ?config(tmpdir1, Config)},
            {write_truncate,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -165,17 +178,17 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_basic_write_truncate_wcache_1) ->
-    ok = file:write_file(?WRITABLE_FILEPATH, <<>>),
+    ok = file:write_file(writable_filepath1(Config), <<>>),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY},
+          [{directory, ?config(tmpdir1, Config)},
            {cache, 1},
            {refresh, ?REFRESH},
            {write_truncate,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -184,15 +197,15 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_basic_write_append_1) ->
-    ok = file:write_file(?WRITABLE_FILEPATH, <<>>),
+    ok = file:write_file(writable_filepath1(Config), <<>>),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY},
+          [{directory, ?config(tmpdir1, Config)},
            {write_append,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -201,17 +214,17 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_basic_write_append_wcache_1) ->
-    ok = file:write_file(?WRITABLE_FILEPATH, <<>>),
+    ok = file:write_file(writable_filepath1(Config), <<>>),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY},
+          [{directory, ?config(tmpdir1, Config)},
            {cache, 1},
            {refresh, ?REFRESH},
            {write_append,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -236,16 +249,16 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_size_limit_1) ->
-    file:delete(?WRITABLE_FILEPATH_PRIVATE),
+    _ = file:delete(writable_filepath2(Config)),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY_PRIVATE},
+          [{directory, ?config(tmpdir2, Config)},
            {files_size, 2}, % Kb
            {write_append,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -254,16 +267,16 @@ init_per_testcase(TestCase, Config)
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config)
     when (TestCase =:= t_filesystem_size_limit_2) ->
-    file:delete(?WRITABLE_FILEPATH_PRIVATE),
+    _ = file:delete(writable_filepath2(Config)),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
         [{prefix, ?SERVICE_PREFIX1},
          {module, cloudi_service_filesystem},
          {args,
-          [{directory, ?WRITABLE_DIRECTORY_PRIVATE},
+          [{directory, ?config(tmpdir2, Config)},
            {files_size, 1}, % Kb
            {write_truncate,
-            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME]},
+            [?SERVICE_PREFIX1 ?WRITABLE_FILENAME1]},
            {use_content_disposition, true}]},
          {dest_refresh, none},
          {timeout_init, ?TIMEOUT},
@@ -279,10 +292,10 @@ end_per_testcase(TestCase, Config) ->
         TestCase =:= t_filesystem_basic_write_truncate_wcache_1;
         TestCase =:= t_filesystem_basic_write_append_1;
         TestCase =:= t_filesystem_basic_write_append_wcache_1 ->
-            ok = file:delete(?WRITABLE_FILEPATH);
+            ok = file:delete(writable_filepath1(Config));
         TestCase =:= t_filesystem_size_limit_1;
         TestCase =:= t_filesystem_size_limit_2 ->
-            ok = file:delete(?WRITABLE_FILEPATH_PRIVATE);
+            ok = file:delete(writable_filepath2(Config));
         true ->
             ok
     end,
@@ -690,17 +703,17 @@ t_filesystem_basic_read_wcache_1(_Config) ->
                           Timeout, Priority),
     ok.
 
-t_filesystem_basic_write_truncate_1(_Config) ->
+t_filesystem_basic_write_truncate_1(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/put",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/put",
     Timeout = undefined, % default
     Priority = undefined, % default
-    {ok, <<>>} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, <<>>} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"last-modified">>, LastModified0},
        {<<"date">>, _},
@@ -713,7 +726,7 @@ t_filesystem_basic_write_truncate_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"last-modified">>, LastModified1},
        {<<"date">>, _},
@@ -726,7 +739,7 @@ t_filesystem_basic_write_truncate_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag2},
        {<<"last-modified">>, LastModified2},
        {<<"date">>, _},
@@ -739,7 +752,7 @@ t_filesystem_basic_write_truncate_1(_Config) ->
     true = LastModified0 =< LastModified1,
     true = ETag1 /= ETag2,
     true = LastModified1 =< LastModified2,
-    {ok, Response2} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, Response2} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"status">>, <<"400">>}],
       <<>>},
@@ -748,17 +761,17 @@ t_filesystem_basic_write_truncate_1(_Config) ->
                            Timeout, Priority),
     ok.
 
-t_filesystem_basic_write_truncate_wcache_1(_Config) ->
+t_filesystem_basic_write_truncate_wcache_1(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/put",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/put",
     Timeout = undefined, % default
     Priority = undefined, % default
-    {ok, <<>>} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, <<>>} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -773,7 +786,7 @@ t_filesystem_basic_write_truncate_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -788,7 +801,7 @@ t_filesystem_basic_write_truncate_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag2},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -803,7 +816,7 @@ t_filesystem_basic_write_truncate_wcache_1(_Config) ->
     true = LastModified0 =< LastModified1,
     true = ETag1 /= ETag2,
     true = LastModified1 =< LastModified2,
-    {ok, Response2} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, Response2} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"status">>, <<"400">>}],
       <<>>},
@@ -812,17 +825,17 @@ t_filesystem_basic_write_truncate_wcache_1(_Config) ->
                            Timeout, Priority),
     ok.
 
-t_filesystem_basic_write_append_1(_Config) ->
+t_filesystem_basic_write_append_1(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/post",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/post",
     Timeout = undefined, % default
     Priority = undefined, % default
-    {ok, <<>>} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, <<>>} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"last-modified">>, LastModified0},
        {<<"date">>, _},
@@ -835,7 +848,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"last-modified">>, LastModified1},
        {<<"date">>, _},
@@ -853,7 +866,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag2},
        {<<"last-modified">>, LastModified2},
        {<<"date">>, _},
@@ -874,7 +887,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag3},
        {<<"last-modified">>, LastModified3},
        {<<"date">>, _},
@@ -893,7 +906,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag4},
        {<<"last-modified">>, LastModified4},
        {<<"date">>, _},
@@ -912,7 +925,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag5},
        {<<"last-modified">>, LastModified5},
        {<<"date">>, _},
@@ -943,7 +956,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag7},
        {<<"last-modified">>, LastModified7},
        {<<"date">>, _},
@@ -960,7 +973,7 @@ t_filesystem_basic_write_append_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag8},
        {<<"last-modified">>, LastModified8},
        {<<"date">>, _},
@@ -971,20 +984,20 @@ t_filesystem_basic_write_append_1(_Config) ->
                            Timeout, Priority),
     true = ETag7 /= ETag8,
     true = LastModified7 =< LastModified8,
-    {ok, Response8} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, Response8} = file:read_file(writable_filepath1(Config)),
     ok.
 
-t_filesystem_basic_write_append_wcache_1(_Config) ->
+t_filesystem_basic_write_append_wcache_1(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/post",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/post",
     Timeout = undefined, % default
     Priority = undefined, % default
-    {ok, <<>>} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, <<>>} = file:read_file(writable_filepath1(Config)),
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -999,7 +1012,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1019,7 +1032,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag2},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1042,7 +1055,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag3},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1063,7 +1076,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag4},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1084,7 +1097,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag5},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1117,7 +1130,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag7},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1136,7 +1149,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag8},
        {<<"cache-control">>, <<"public,max-age=1">>},
        {<<"expires">>, _},
@@ -1149,7 +1162,7 @@ t_filesystem_basic_write_append_wcache_1(_Config) ->
                            Timeout, Priority),
     true = ETag7 /= ETag8,
     true = LastModified7 =< LastModified8,
-    {ok, Response8} = file:read_file(?WRITABLE_FILEPATH),
+    {ok, Response8} = file:read_file(writable_filepath1(Config)),
     ok.
 
 t_filesystem_basic_read_cache_1(_Config) ->
@@ -1277,16 +1290,16 @@ t_filesystem_basic_read_cache_1(_Config) ->
                            Timeout, Priority),
     ok.
 
-t_filesystem_size_limit_1(_Config) ->
+t_filesystem_size_limit_1(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/post",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePost = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/post",
     Timeout = undefined, % default
     Priority = undefined, % default
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"last-modified">>, LastModified0},
        {<<"date">>, _},
@@ -1295,12 +1308,12 @@ t_filesystem_size_limit_1(_Config) ->
      Context1} = cloudi:send_sync(Context0, ServiceNameGet,
                                   <<>>, <<>>,
                                   Timeout, Priority),
-    {error, enoent} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    {error, enoent} = file:read_file(writable_filepath2(Config)),
     Request1 = <<0:8192>>, % 1 Kb
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"last-modified">>, LastModified1},
        {<<"date">>, _},
@@ -1309,7 +1322,7 @@ t_filesystem_size_limit_1(_Config) ->
      Context2} = cloudi:send_sync(Context1, ServiceNamePost,
                                   <<>>, Request1,
                                   Timeout, Priority),
-    {ok, Request1} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    {ok, Request1} = file:read_file(writable_filepath2(Config)),
     true = ETag0 /= ETag1,
     true = LastModified0 =< LastModified1,
     Request2 = <<1:8192>>, % 1 Kb
@@ -1317,7 +1330,7 @@ t_filesystem_size_limit_1(_Config) ->
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag2},
        {<<"last-modified">>, LastModified2},
        {<<"date">>, _},
@@ -1328,7 +1341,7 @@ t_filesystem_size_limit_1(_Config) ->
                                   Timeout, Priority),
     true = ETag1 /= ETag2,
     true = LastModified1 =< LastModified2,
-    {ok, Response2} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    {ok, Response2} = file:read_file(writable_filepath2(Config)),
     Request3 = <<2:8>>, % 1 byte
     {{ok,
       [{<<"status">>, <<"400">>}],
@@ -1338,16 +1351,16 @@ t_filesystem_size_limit_1(_Config) ->
                            Timeout, Priority),
     ok.
 
-t_filesystem_size_limit_2(_Config) ->
+t_filesystem_size_limit_2(Config) ->
     Context0 = cloudi:new(),
-    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/get",
-    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME ++ "/put",
+    ServiceNameGet = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/get",
+    ServiceNamePut = ?SERVICE_PREFIX1 ++ ?WRITABLE_FILENAME1 ++ "/put",
     Timeout = undefined, % default
     Priority = undefined, % default
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag0},
        {<<"last-modified">>, LastModified0},
        {<<"date">>, _},
@@ -1356,12 +1369,12 @@ t_filesystem_size_limit_2(_Config) ->
      Context1} = cloudi:send_sync(Context0, ServiceNameGet,
                                   <<>>, <<>>,
                                   Timeout, Priority),
-    {error, enoent} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    {error, enoent} = file:read_file(writable_filepath2(Config)),
     Request1 = <<0:8192>>, % 1 Kb
     {{ok,
       [{<<"content-type">>, <<"text/plain">>},
        {<<"content-disposition">>,
-        <<"attachment; filename=\"" ?WRITABLE_FILENAME "\"">>},
+        <<"attachment; filename=\"" ?WRITABLE_FILENAME1 "\"">>},
        {<<"etag">>, ETag1},
        {<<"last-modified">>, LastModified1},
        {<<"date">>, _},
@@ -1370,7 +1383,7 @@ t_filesystem_size_limit_2(_Config) ->
      Context2} = cloudi:send_sync(Context1, ServiceNamePut,
                                   <<>>, Request1,
                                   Timeout, Priority),
-    {ok, Request1} = file:read_file(?WRITABLE_FILEPATH_PRIVATE),
+    {ok, Request1} = file:read_file(writable_filepath2(Config)),
     true = ETag0 /= ETag1,
     true = LastModified0 =< LastModified1,
     Request2 = <<0:8200>>, % 1 Kb + 1 byte
@@ -1385,4 +1398,10 @@ t_filesystem_size_limit_2(_Config) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+writable_filepath1(Config) ->
+    filename:join(?config(tmpdir1, Config), ?WRITABLE_FILENAME1).
+
+writable_filepath2(Config) ->
+    filename:join(?config(tmpdir2, Config), ?WRITABLE_FILENAME1).
 
