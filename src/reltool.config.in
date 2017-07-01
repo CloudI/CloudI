@@ -82,7 +82,7 @@
     @ZEROMQ_ERLZMQ_PATH@
    ]},
   % application startup for release generation
-  {rel, "cloudi", "1",
+  {rel, "cloudi", "@CLOUDI_CORE_RELEASE_VERSION@",
    [
     % CloudI
     cloudi_core,
@@ -111,15 +111,12 @@
    "etc/vm.args"},
   {mkdir, "bin"},
   {copy,
-   "@srcdir@/rel/files/erl",
+   "@builddir@/rel/files/erl",
    "{{erts_vsn}}/bin/erl"},
   {copy,
    "@srcdir@/rel/files/nodetool",
-   "{{erts_vsn}}/bin/nodetool"},
+   "bin/nodetool"},
   {copy,
-   "@srcdir@/rel/files/install_upgrade.escript",
-   "bin/install_upgrade.escript"},
-  {copy,
-   "@srcdir@/rel/files/cloudi",
+   "@builddir@/rel/files/cloudi",
    "bin/cloudi"}
  ]}.

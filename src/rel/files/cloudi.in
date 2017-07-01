@@ -1,0 +1,220 @@
+#!/bin/sh
+# -*- tab-width:4;indent-tabs-mode:nil -*-
+# ex: ts=4 sw=4 et
+
+# Name of the running pid (argv[0])
+PID_NAME=CloudI
+# Name of this file
+PROGNAME=cloudi
+
+ROOTDIR="@prefix@/lib/cloudi-@VERSION@"
+BINDIR="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin"
+EMU=beam
+RELEASEDIR="$ROOTDIR/releases/@CLOUDI_CORE_RELEASE_VERSION@"
+ROOT_BIN_DIR="$ROOTDIR/bin"
+ROOT_ETC_DIR="$ROOTDIR/etc"
+ROOT_LOG_DIR="$ROOTDIR/logs"
+PROGNAME_FILE="$ROOT_BIN_DIR/$PROGNAME"
+VMARGS_FILE="$ROOT_ETC_DIR/vm.args"
+ERLCONFIG_FILE="$ROOT_ETC_DIR/app.config"
+
+# Extract arguments from vm.args
+NODE_NAME_ARG=`egrep '^-s?name' $VMARGS_FILE`
+if [ -z "$NODE_NAME_ARG" ]; then
+    echo "vm.args needs to have either -name or -sname parameter."
+    exit 1
+fi
+NODE_COOKIE_ARG=`grep '^-setcookie' $VMARGS_FILE`
+if [ -z "$NODE_COOKIE_ARG" ]; then
+    echo "vm.args needs to have a -setcookie parameter."
+    exit 1
+fi
+
+# Create nodetool arguments
+NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool $NODE_NAME_ARG $NODE_COOKIE_ARG"
+
+# Deployment environment files
+if [ -z "$TMPDIR" ]; then
+    TMPDIR="/tmp"
+fi
+PIPE_DIR="$TMPDIR/$PROGNAME/"
+if [ -z "$PID_FILE" ]; then
+    PID_FILE="$ROOT_LOG_DIR/$PROGNAME.pid"
+fi
+
+cd "$ROOTDIR"
+
+case "$1" in
+    start|start_boot)
+        # Make sure there is not already a node running
+        PONG=`$NODETOOL ping`
+        if [ "$PONG" = "pong" ]; then
+            echo "Node is already running!"
+            exit 1
+        fi
+        case "$1" in
+            start)
+                shift
+                START_OPTION="console"
+                HEART_OPTION="start"
+                ;;
+            start_boot)
+                shift
+                START_OPTION="console_boot"
+                HEART_OPTION="start_boot"
+                ;;
+        esac
+        # Default CloudI run_erl logging settings
+        if [ -z "$RUN_ERL_LOG_ALIVE_MINUTES" -a \
+             -z "$RUN_ERL_LOG_ACTIVITY_MINUTES" -a \
+             -z "$RUN_ERL_LOG_ALIVE_IN_UTC" ]; then
+            RUN_ERL_LOG_ALIVE_MINUTES="15"      # 15 minutes (default)
+            RUN_ERL_LOG_ACTIVITY_MINUTES="5"    # 5 minutes (default)
+            RUN_ERL_LOG_ALIVE_IN_UTC="1"
+            export RUN_ERL_LOG_ALIVE_MINUTES
+            export RUN_ERL_LOG_ACTIVITY_MINUTES
+            export RUN_ERL_LOG_ALIVE_IN_UTC
+        fi
+        if [ -z "$RUN_ERL_LOG_GENERATIONS" -a \
+             -z "$RUN_ERL_LOG_MAXSIZE" ]; then
+            RUN_ERL_LOG_GENERATIONS="128"       # from app.config sasl env
+            RUN_ERL_LOG_MAXSIZE="536870912"     # from app.config sasl env
+            export RUN_ERL_LOG_GENERATIONS
+            export RUN_ERL_LOG_MAXSIZE
+        fi
+        # OS process name created by run_erl
+        export ESCRIPT_NAME="$PID_NAME"
+
+        RUN_PARAM="'$@'"
+        HEART_COMMAND="$PROGNAME_FILE $HEART_OPTION $RUN_PARAM"
+        export HEART_COMMAND
+        mkdir -p "$PIPE_DIR"
+        $BINDIR/run_erl -daemon "$PIPE_DIR" "$ROOT_LOG_DIR" "exec $PROGNAME_FILE $START_OPTION $RUN_PARAM" 2>&1
+        ;;
+
+    stop)
+        # Wait for the node to completely stop...
+        $NODETOOL stop
+        EXIT=$?
+        if [ $EXIT -ne 0 ]; then
+            exit $EXIT
+        fi
+        if [ ! -f "$PID_FILE" ]; then
+            exit 1
+        fi
+        PID=`cat "$PID_FILE"`
+        while `kill -0 "$PID" 2>/dev/null`;
+        do
+            sleep 1
+        done
+        ;;
+
+    restart)
+        ## Restart the VM without exiting the process
+        $NODETOOL restart
+        exit $?
+        ;;
+
+    reboot)
+        ## Restart the VM completely (uses heart to restart it)
+        $NODETOOL reboot
+        exit $?
+        ;;
+
+    ping)
+        ## See if the VM is alive
+        $NODETOOL ping
+        exit $?
+        ;;
+
+    attach)
+        # Make sure a node IS running
+        PONG=`$NODETOOL ping`
+        EXIT=$?
+        if [ $EXIT -ne 0 ]; then
+            echo "Node is not running!"
+            exit $EXIT
+        fi
+
+        shift
+        exec $BINDIR/to_erl "$PIPE_DIR"
+        ;;
+
+    remote_console)
+        # Make sure a node IS running
+        PONG=`$NODETOOL ping`
+        EXIT=$?
+        if [ $EXIT -ne 0 ]; then
+            echo "Node is not running!"
+            exit $EXIT
+        fi
+        
+        # Create remsh arguments
+        REMSH_TYPE=`echo $NODE_NAME_ARG | awk '{print $1}'`
+        REMSH_NAME=`echo $NODE_NAME_ARG | awk '{print $2}'`
+        REMSH_NODE_NAME_ARG="$REMSH_TYPE remsh`date +%s`@`echo $REMSH_NAME | awk -F@ '{print $2}'`"
+        REMSH="$BINDIR/erl $REMSH_NODE_NAME_ARG -remsh $REMSH_NAME $NODE_COOKIE_ARG"
+
+        shift
+        exec $REMSH
+        ;;
+
+    console|console_clean|console_boot)
+        # .boot file typically just $PROGNAME (ie, the app name)
+        # however, for debugging, sometimes start_clean.boot is useful.
+        # For e.g. 'setup', one may even want to name another boot script.
+        case "$1" in
+            console)        BOOTFILE=$PROGNAME ;;
+            console_clean)  BOOTFILE=start_clean ;;
+            console_boot)
+                shift
+                BOOTFILE="$1"
+                shift
+                ;;
+        esac
+        # Setup beam-required vars
+        CMD="$BINDIR/erlexec -boot $RELEASEDIR/$BOOTFILE -mode embedded -config $ERLCONFIG_FILE -args_file $VMARGS_FILE"
+        export EMU
+        export ROOTDIR
+        export BINDIR
+        export PROGNAME
+
+        # Dump the environment info to the console log
+        echo "Exec: $CMD" -- ${1+"$@"}
+        echo "Root: $ROOTDIR"
+
+        # Store the pid
+        echo $$ > "$PID_FILE"
+
+        # Start the VM
+        exec $CMD -- ${1+"$@"}
+        ;;
+
+    foreground)
+        # start up the release in the foreground for use by runit
+        # or other supervision services
+        FOREGROUNDOPTIONS="-noinput +Bd"
+
+        # Setup beam-required vars
+        CMD="$BINDIR/erlexec $FOREGROUNDOPTIONS -boot $RELEASEDIR/$PROGNAME -config $ERLCONFIG_FILE -args_file $VMARGS_FILE"
+        export EMU
+        export ROOTDIR
+        export BINDIR
+        export PROGNAME
+
+        # Dump the environment info to the console log
+        echo "Exec: $CMD" -- ${1+"$@"}
+        echo "Root: $ROOTDIR"
+
+        # Not using the pid file
+        rm -f "$PID_FILE"
+
+        # Start the VM
+        exec $CMD -- ${1+"$@"}
+        ;;
+    *)
+        echo "Usage: $PROGNAME {start|start_boot <file>|foreground|stop|restart|reboot|ping|console|console_clean|console_boot <file>|attach|remote_console}"
+        exit 1
+        ;;
+esac
+

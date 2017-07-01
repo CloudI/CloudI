@@ -3,6 +3,7 @@
 
 AC_INIT([CloudI], [1.7.1], [mjtruog at gmail dot com],
         [cloudi], [http://cloudi.org/])
+AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
@@ -626,6 +627,8 @@ AC_CONFIG_FILES([
     rebar_src.config
     rebar_src_test.config
     reltool.config
+    rel/files/cloudi
+    rel/files/erl
     rel/files/vm.args
     Makefile
     lib/Makefile

@@ -331,6 +331,8 @@ install-exec-hook: rel/files/app.config
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
              "$(DESTDIR)$(cloudi_prefix)" || exit 0
+	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/nodetool" \
+                    "$(DESTDIR)$(cloudi_bindir)/"
 	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
                     "$(DESTDIR)$(cloudi_bindir)/"
 	echo "#!/bin/sh"               > "$(CLOUDI_TMP_BIN_SCRIPT)"
