@@ -7,6 +7,8 @@
     * Add CLOUDI_PID_FILE as a configure environment variable
       with the default equivalent to $localstatedir/log/cloudi/cloudi.pid
       (keeps release script variables static)
+    * Now limit the number of atoms the nodetool script may add to the
+      running node to 2*251 (MAX_ATOMS is set to 251 in nodetool)
 
 2017-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
