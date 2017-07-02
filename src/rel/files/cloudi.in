@@ -1,6 +1,6 @@
 #!/bin/sh
-# -*- tab-width:4;indent-tabs-mode:nil -*-
-# ex: ts=4 sw=4 et
+#-*-Mode:sh;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+# ex: set ft=sh fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 # Name of the running pid (argv[0])
 PID_NAME=CloudI
@@ -17,6 +17,13 @@ ROOT_LOG_DIR="$ROOTDIR/logs"
 PROGNAME_FILE="$ROOT_BIN_DIR/$PROGNAME"
 VMARGS_FILE="$ROOT_ETC_DIR/vm.args"
 ERLCONFIG_FILE="$ROOT_ETC_DIR/app.config"
+PIPE_DIR="/tmp/$PROGNAME/"
+CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
+
+# Default pid file path, if it wasn't provided to the configure script
+if [ -z "$CLOUDI_PID_FILE" ]; then
+    CLOUDI_PID_FILE="$ROOT_LOG_DIR/$PROGNAME.pid"
+fi
 
 # based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl (milliseconds)
 SHUTDOWN_TIME_MAX=65000
@@ -29,15 +36,6 @@ NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool"
 
 # Common erl command-line arguments enforced on any vm.args file use
 VMARGS="-mode embedded -shutdown_time $SHUTDOWN_TIME_MAX"
-
-# Deployment environment files
-if [ -z "$TMPDIR" ]; then
-    TMPDIR="/tmp"
-fi
-PIPE_DIR="$TMPDIR/$PROGNAME/"
-if [ -z "$CLOUDI_PID_FILE" ]; then
-    CLOUDI_PID_FILE="$ROOT_LOG_DIR/$PROGNAME.pid"
-fi
 
 cd "$ROOTDIR"
 

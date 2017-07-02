@@ -621,6 +621,10 @@ else
     CLOUDI_CONF="cloudi_minimal.conf"
 fi
 AC_SUBST(CLOUDI_CONF)
+
+# Allow a specific pid file path to be used
+AC_ARG_VAR([CLOUDI_PID_FILE], [CloudI pid file path])
+
 AC_CONFIG_FILES([
     cloudi_tests.conf
     cloudi_minimal.conf
