@@ -350,8 +350,8 @@ install-exec-hook: rel/files/app.config
              "$(DESTDIR)$(cloudi_confdir)/vm.args.old" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
                   "$(DESTDIR)$(cloudi_confdir)/"
-	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/1" && \
-       mv -f "$(top_builddir)/rel/cloudi/releases/1" \
+	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/$(CLOUDI_CORE_RELEASE_VERSION)" && \
+       mv -f "$(top_builddir)/rel/cloudi/releases/$(CLOUDI_CORE_RELEASE_VERSION)" \
              "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0
 	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/releases/start_erl.data" \
                     "$(DESTDIR)$(cloudi_prefix)/releases/"
