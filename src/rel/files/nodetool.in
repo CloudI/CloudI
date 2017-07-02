@@ -1,0 +1,241 @@
+%-*-Mode:erlang;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
+%%! -config @prefix@/lib/cloudi-@VERSION@/etc/app.config
+% ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+
+-mode(compile).
+
+-define(CMD_PING,        "ping").
+-define(CMD_TEST,        "test").
+-define(CMD_STOP,        "stop").
+-define(CMD_RESTART,     "restart").
+-define(CMD_REBOOT,      "reboot").
+-define(CMD_ARGS_REMSH,  "args_remsh").
+
+-define(SHUTDOWN_TIME_MAX, 65000).
+
+-record(state,
+        {
+            timeout = ?SHUTDOWN_TIME_MAX :: pos_integer(),
+            test :: boolean(),
+            stderr :: port(),
+            node_name_type = undefined :: longnames | shortnames | undefined,
+            node = undefined :: node() | undefined,
+            node_script = undefined :: node() | undefined,
+            cookie = undefined :: atom()
+        }).
+
+main(Args) ->
+    % set during configuration
+    RootDir = "@prefix@/lib/cloudi-@VERSION@",
+    EpmdPath = RootDir ++ "/erts-@ERLANG_ERTS_VER@/bin/epmd",
+    VMArgs = RootDir ++ "/etc/vm.args",
+
+    State0 = #state{test = test_mode(Args),
+                    stderr = erlang:open_port({fd, 0, 2}, [out, {line, 256}])},
+    ok = ensure_epmd_started(EpmdPath, State0),
+    StateN = initialize(parse_vmargs(VMArgs, State0)),
+    ok = ensure_node_connection_works(StateN),
+    ok = command_line(Args, StateN),
+    exit_code(0).
+
+initialize(#state{node_name_type = NodeNameType,
+                  node = Node,
+                  cookie = Cookie} = State) ->
+    NodeScript = node_script(Node),
+    case net_kernel:start([NodeScript, NodeNameType]) of
+        {ok, _} ->
+            true = erlang:set_cookie(node(), Cookie),
+            NodeCanonical = node_canonical(Node),
+            State#state{node = NodeCanonical,
+                        node_script = NodeScript};
+        {error, Reason} ->
+            exit_error(1, "net_kernel failed (~p)!\n", [Reason], State)
+    end.
+
+ensure_epmd_started(EpmdPath, State) ->
+    case shell([EpmdPath, " -names"]) of
+        {0, _} ->
+            ok;
+        {ExitCode, Output} ->
+            exit_error(ExitCode, Output, State)
+    end.
+
+ensure_node_connection_works(#state{node = Node} = State) ->
+    case net_kernel:hidden_connect_node(Node) of
+        true ->
+            case net_adm:ping(Node) of
+                pong ->
+                    ok;
+                pang ->
+                    exit_error(1, "Node ping failed!\n", State)
+            end;
+        false ->
+            exit_error(1, "Node connect failed!\n", State)
+    end.
+
+command_line([?CMD_PING], _) ->
+    io:format("pong\n");
+command_line([?CMD_TEST], _) ->
+    ok;
+command_line([?CMD_STOP], State) ->
+    rpc_call_init(stop, State);
+command_line([?CMD_RESTART], State) ->
+    rpc_call_init(restart, State);
+command_line([?CMD_REBOOT], State) ->
+    rpc_call_init(reboot, State);
+command_line([?CMD_ARGS_REMSH],
+             #state{node_name_type = NodeNameType,
+                    node = Node,
+                    node_script = NodeScript,
+                    cookie = Cookie}) ->
+    NameArg = if
+        NodeNameType =:= shortnames ->
+            "-sname";
+        NodeNameType =:= longnames ->
+            "-name"
+    end,
+    NodeRemsh = node_remsh(NodeScript),
+    io:format("~s ~s -remsh ~s -setcookie ~s\n",
+              [NameArg, NodeRemsh, Node, Cookie]);
+command_line(_, State) ->
+    exit_error(1, help(), State).
+
+node_canonical(Node) ->
+    case node_split(Node) of
+        {Name, ""} ->
+            {_, Host} = node_split(node()),
+            erlang:list_to_atom(Name ++ [$@ | Host]);
+        {_, _} ->
+            Node
+    end.
+
+node_script(Node) ->
+    {Name, Host} = node_split(Node),
+    NameUnique = Name ++ erlang:integer_to_list(os:system_time(micro_seconds)),
+    if
+        Host == [] ->
+            erlang:list_to_atom(NameUnique);
+        true ->
+            erlang:list_to_atom(NameUnique ++ [$@ | Host])
+    end.
+
+node_remsh(NodeScript) ->
+    {NameScript, Host} = node_split(NodeScript),
+    NameUniqueRemsh = NameScript ++ "remsh",
+    if
+        Host == [] ->
+            erlang:list_to_atom(NameUniqueRemsh);
+        true ->
+            erlang:list_to_atom(NameUniqueRemsh ++ [$@ | Host])
+    end.
+
+parse_vmargs(VMArgs, State) ->
+    case file:open(VMArgs, [read, raw, read_ahead]) of
+        {ok, F} ->
+            parse_vmargs_line(F, State);
+        {error, Reason} ->
+            exit_error(1, "vm.args error (~p)!\n", [Reason], State)
+    end.
+
+parse_vmargs_line(F, State) ->
+    case file:read_line(F) of
+        eof ->
+            ok = file:close(F),
+            State;
+        {ok, "-sname" ++ SName} ->
+            SNameValue = strip_to_atom(SName),
+            parse_vmargs_line(F, State#state{node_name_type = shortnames,
+                                             node = SNameValue});
+        {ok, "-name" ++ Name} ->
+            NameValue = strip_to_atom(Name),
+            parse_vmargs_line(F, State#state{node_name_type = longnames,
+                                             node = NameValue});
+        {ok, "-setcookie" ++ SetCookie} ->
+            CookieValue = strip_to_atom(SetCookie),
+            parse_vmargs_line(F, State#state{cookie = CookieValue});
+        {ok, _} ->
+            parse_vmargs_line(F, State);
+        {error, Reason} ->
+            exit_error(1, "vm.args invalid (~p)!\n", [Reason], State)
+    end.
+
+rpc_call_init(F, #state{timeout = Timeout,
+                        node = Node} = State) ->
+    case rpc:call(Node, init, F, [], Timeout) of
+        ok ->
+            ok;
+        Error ->
+            exit_error(1, "~p\n~s failed!\n", [Error, F], State)
+    end.
+
+-spec shell(Exec :: iodata()) ->
+    {non_neg_integer(), list(binary())}.
+
+shell(Exec) ->
+    Shell = erlang:open_port({spawn_executable, "/bin/sh"},
+                             [{args, ["-"]}, {cd, "/"},
+                              stream, binary, stderr_to_stdout, exit_status]),
+    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
+    shell_output(Shell, []).
+
+shell_output(Shell, Output) ->
+    receive
+        {Shell, {data, Data}} ->
+            shell_output(Shell, [Data | Output]);
+        {Shell, {exit_status, Status}} ->
+            {Status, lists:reverse(Output)}
+    end.
+
+strip_to_atom(String) ->
+    erlang:list_to_atom(strip(String)).
+
+strip([]) ->
+    [];
+strip([H | T]) when H =:= $\s; H =:= $\t; H =:= $\r; H =:= $\n ->
+    strip(T);
+strip([H | T]) ->
+    [H | strip(T)].
+
+node_split(Node) when is_atom(Node) ->
+    node_split(erlang:atom_to_list(Node), []).
+
+node_split([], Name) ->
+    {lists:reverse(Name), []};
+node_split([$@ | NodeStr], Name) ->
+    {lists:reverse(Name), NodeStr};
+node_split([C | NodeStr], Name) ->
+    node_split(NodeStr, [C | Name]).
+
+test_mode(Args) ->
+    (Args == [?CMD_TEST]) orelse (Args == [?CMD_ARGS_REMSH]).
+
+exit_error(ExitCode, Format, State) ->
+    exit_error(ExitCode, Format, undefined, State).
+
+exit_error(_, _, _,
+           #state{test = true}) ->
+    exit_code(1);
+exit_error(ExitCode, Format, Args,
+           #state{test = false,
+                  stderr = STDERR}) ->
+    if
+        Args =:= undefined ->
+            erlang:port_command(STDERR, Format);
+        true ->
+            erlang:port_command(STDERR, io_lib:format(Format, Args))
+    end,
+    exit_code(ExitCode).
+
+exit_code(ExitCode) when is_integer(ExitCode), ExitCode >= 0 ->
+    erlang:halt(ExitCode).
+
+help() ->
+    "Usage: nodetool "
+        ?CMD_PING "|"
+        ?CMD_TEST "|"
+        ?CMD_STOP "|"
+        ?CMD_RESTART "|"
+        ?CMD_REBOOT "|"
+        ?CMD_ARGS_REMSH
+        "\n".
+

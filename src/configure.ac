@@ -629,6 +629,7 @@ AC_CONFIG_FILES([
     reltool.config
     rel/files/cloudi
     rel/files/erl
+    rel/files/nodetool
     rel/files/vm.args
     Makefile
     lib/Makefile

@@ -114,7 +114,7 @@
    "@builddir@/rel/files/erl",
    "{{erts_vsn}}/bin/erl"},
   {copy,
-   "@srcdir@/rel/files/nodetool",
+   "@builddir@/rel/files/nodetool",
    "bin/nodetool"},
   {copy,
    "@builddir@/rel/files/cloudi",
