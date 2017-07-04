@@ -91,8 +91,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
-- `commit 68a9fd7e863065d68c2ff5b0c0697ff7cbe37ed0 (v1.7.1)`
-- `Wed Jun  7 15:51:52 PDT 2017`
+- `commit 1f263c7c39067491a4c0014c50f89be84a9e1092`
+- `Mon Jul  3 22:00:38 PDT 2017`
 - `MIT`
 
 `trie`

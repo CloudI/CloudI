@@ -348,7 +348,7 @@ facility_valid(Facility) ->
 %%-------------------------------------------------------------------------
 
 -spec severity(Severity :: severity()) ->
-    non_neg_integer().
+    0..7.
 
 severity(emergency) ->      0; % system is unusable
 severity(alert) ->          1; % action must be taken immediately
