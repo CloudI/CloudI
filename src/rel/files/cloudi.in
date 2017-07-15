@@ -108,6 +108,9 @@ case "$1" in
         do
             sleep 1
         done
+
+        # Remove the pid file
+        rm -f "$CLOUDI_PID_FILE"
         ;;
     restart)
         ## Restart the VM without exiting the process
@@ -117,6 +120,11 @@ case "$1" in
     reboot)
         ## Restart the VM completely (uses heart to restart it)
         $NODETOOL reboot
+        exit $?
+        ;;
+    test)
+        ## Test if the VM is alive without any output
+        $NODETOOL test
         exit $?
         ;;
     ping)
@@ -200,7 +208,7 @@ case "$1" in
         exec $CMD -- ${1+"$@"}
         ;;
     *)
-        echo "Usage: $PROGNAME {start|start_boot <file>|foreground|stop|restart|reboot|ping|console|console_clean|console_boot <file>|attach|remote_console}"
+        echo "Usage: $PROGNAME {start|start_boot <file>|foreground|stop|restart|reboot|test|ping|console|console_clean|console_boot <file>|attach|remote_console}"
         exit 1
         ;;
 esac

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add the test command to the release script to provide the
+      current status as the script exit status value (currently only 0 or 1)
+    * Always remove the pid file in the release script when stop is done
+
 2017-07-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update syslog_socket
