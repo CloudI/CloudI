@@ -11,9 +11,7 @@
   ]},
  {sasl, [
     {sasl_error_logger, {file, "logs/sasl.log"}},
-    {error_logger_mf_dir, "logs"},
-    {error_logger_mf_maxbytes, 536870912}, % 512 MB
-    {error_logger_mf_maxfiles, 128},
+    {error_logger_mf_dir, false},
     {utc_log, true}
   ]},
  {cloudi_x_setup, [

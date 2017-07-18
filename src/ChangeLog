@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-07-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Do not use Erlang/OTP rb (report browser) files (log_mf_h)
+      to avoid creating the extra log files
+      (log_mf_h will soon be deprecated,
+       based on https://bugs.erlang.org/browse/ERL-101)
+    * Do not allow overriding run_erl env variables in the release script
+
 2017-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the test command to the release script to provide the

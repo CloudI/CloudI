@@ -66,24 +66,14 @@ case "$1" in
                 HEART_OPTION="start_boot"
                 ;;
         esac
-        # Default CloudI run_erl logging settings
-        if [ -z "$RUN_ERL_LOG_ALIVE_MINUTES" -a \
-             -z "$RUN_ERL_LOG_ACTIVITY_MINUTES" -a \
-             -z "$RUN_ERL_LOG_ALIVE_IN_UTC" ]; then
-            RUN_ERL_LOG_ALIVE_MINUTES="15"      # 15 minutes (default)
-            RUN_ERL_LOG_ACTIVITY_MINUTES="5"    # 5 minutes (default)
-            RUN_ERL_LOG_ALIVE_IN_UTC="1"
-            export RUN_ERL_LOG_ALIVE_MINUTES
-            export RUN_ERL_LOG_ACTIVITY_MINUTES
-            export RUN_ERL_LOG_ALIVE_IN_UTC
-        fi
-        if [ -z "$RUN_ERL_LOG_GENERATIONS" -a \
-             -z "$RUN_ERL_LOG_MAXSIZE" ]; then
-            RUN_ERL_LOG_GENERATIONS="128"       # from app.config sasl env
-            RUN_ERL_LOG_MAXSIZE="536870912"     # from app.config sasl env
-            export RUN_ERL_LOG_GENERATIONS
-            export RUN_ERL_LOG_MAXSIZE
-        fi
+        # CloudI run_erl logging settings
+        export RUN_ERL_LOG_ACTIVITY_MINUTES="5"    # 5 minutes (default)
+        export RUN_ERL_LOG_ALIVE_MINUTES="15"      # 15 minutes (default)
+        export RUN_ERL_LOG_ALIVE_IN_UTC="1"
+        export RUN_ERL_LOG_ALIVE_FORMAT="%Y-%m-%dT%H:%M:%SZ"
+        export RUN_ERL_LOG_GENERATIONS="128"
+        export RUN_ERL_LOG_MAXSIZE="536870912"
+        export RUN_ERL_DISABLE_FLOWCNTRL="true"
         # OS process name created by run_erl
         export ESCRIPT_NAME="$PID_NAME"
 
