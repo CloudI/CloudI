@@ -78,8 +78,7 @@ case "$1" in
         export ESCRIPT_NAME="$PID_NAME"
 
         RUN_PARAM="'$@'"
-        HEART_COMMAND="$PROGNAME_FILE $HEART_OPTION $RUN_PARAM"
-        export HEART_COMMAND
+        export HEART_COMMAND="$PROGNAME_FILE $HEART_OPTION $RUN_PARAM"
         mkdir -p "$PIPE_DIR"
         $BINDIR/run_erl -daemon "$PIPE_DIR" "$ROOT_LOG_DIR" "exec $PROGNAME_FILE $START_OPTION $RUN_PARAM" 2>&1
         ;;
@@ -103,22 +102,22 @@ case "$1" in
         rm -f "$CLOUDI_PID_FILE"
         ;;
     restart)
-        ## Restart the VM without exiting the process
+        # Restart the VM without exiting the process
         $NODETOOL restart
         exit $?
         ;;
     reboot)
-        ## Restart the VM completely (uses heart to restart it)
+        # Restart the VM completely (uses heart to restart it)
         $NODETOOL reboot
         exit $?
         ;;
     test)
-        ## Test if the VM is alive without any output
+        # Test if the VM is alive without any output
         $NODETOOL test
         exit $?
         ;;
     ping)
-        ## See if the VM is alive
+        # See if the VM is alive
         $NODETOOL ping
         exit $?
         ;;

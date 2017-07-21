@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update the release scripts for use without autoconf/automake in the
+      examples hello_world_reltool and hello_world_embedded
+
 2017-07-18 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Do not use Erlang/OTP rb (report browser) files (log_mf_h)

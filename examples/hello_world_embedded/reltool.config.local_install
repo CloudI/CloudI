@@ -57,12 +57,24 @@
 
 {target_dir, "release"}.
 
-{overlay, [
+{overlay,
+ [
+  {mkdir, "etc"},
+  {copy,
+   "./app.config",
+   "etc/app.config"},
+  {copy,
+   "./vm.args",
+   "etc/vm.args"},
   {mkdir, "bin"},
-  {mkdir, "logs"},
-  {copy, "./cloudi_hello_world_embedded", "bin/cloudi_hello_world_embedded"},
-  {copy, "./erl", "{{erts_vsn}}/bin/erl"},
-  {copy, "./nodetool", "{{erts_vsn}}/bin/nodetool"},
-  {copy, "./app.config", "etc/cloudi/app.config"},
-  {copy, "./vm.args", "etc/cloudi/vm.args"}
+  {copy,
+   "./erl",
+   "{{erts_vsn}}/bin/erl"},
+  {copy,
+   "./nodetool",
+   "bin/nodetool"},
+  {copy,
+   "./cloudi_hello_world_embedded",
+   "bin/cloudi_hello_world_embedded"},
+  {mkdir, "logs"}
   ]}.
