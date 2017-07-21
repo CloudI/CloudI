@@ -325,31 +325,31 @@ install-exec-hook: rel/files/app.config
 	test -e "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/cloudi.conf" \
              "$(DESTDIR)$(cloudi_confdir)/cloudi.conf.old" || exit 0
-	$(INSTALL_DATA) "$(top_builddir)/$(CLOUDI_CONF)" \
-                  "$(DESTDIR)$(cloudi_confdir)/cloudi.conf"
+	$(INSTALL) -m 600 "$(top_builddir)/$(CLOUDI_CONF)" \
+                      "$(DESTDIR)$(cloudi_confdir)/cloudi.conf"
 	$(ESCRIPT) $(top_srcdir)/lib/reltool_util/release
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/erts-$(ERLANG_ERTS_VER)" && \
        mv -f "$(top_builddir)/rel/cloudi/erts-$(ERLANG_ERTS_VER)" \
              "$(DESTDIR)$(cloudi_prefix)" || exit 0
-	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/nodetool" \
-                    "$(DESTDIR)$(cloudi_bindir)/"
-	$(INSTALL_SCRIPT) "$(top_builddir)/rel/cloudi/bin/cloudi" \
-                    "$(DESTDIR)$(cloudi_bindir)/"
+	$(INSTALL) -m 700 "$(top_builddir)/rel/cloudi/bin/nodetool" \
+                      "$(DESTDIR)$(cloudi_bindir)/"
+	$(INSTALL) -m 700 "$(top_builddir)/rel/cloudi/bin/cloudi" \
+                      "$(DESTDIR)$(cloudi_bindir)/"
 	echo "#!/bin/sh"               > "$(CLOUDI_TMP_BIN_SCRIPT)"
 	echo "cd $(cloudi_bindir)"     >> "$(CLOUDI_TMP_BIN_SCRIPT)"
 	echo "exec ./cloudi \$$*"      >> "$(CLOUDI_TMP_BIN_SCRIPT)"
-	$(INSTALL_SCRIPT) "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/cloudi"
+	$(INSTALL) -m 700 "$(CLOUDI_TMP_BIN_SCRIPT)" "$(DESTDIR)$(bindir)/cloudi"
 	rm -f "$(CLOUDI_TMP_BIN_SCRIPT)"
 	test -e "$(DESTDIR)$(cloudi_confdir)/app.config" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/app.config" \
              "$(DESTDIR)$(cloudi_confdir)/app.config.old" || exit 0
-	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/app.config" \
-                  "$(DESTDIR)$(cloudi_confdir)/"
+	$(INSTALL) -m 600 "$(top_builddir)/rel/cloudi/etc/app.config" \
+                      "$(DESTDIR)$(cloudi_confdir)/"
 	test -e "$(DESTDIR)$(cloudi_confdir)/vm.args" && \
        mv -f "$(DESTDIR)$(cloudi_confdir)/vm.args" \
              "$(DESTDIR)$(cloudi_confdir)/vm.args.old" || exit 0
-	$(INSTALL_DATA) "$(top_builddir)/rel/cloudi/etc/vm.args" \
-                  "$(DESTDIR)$(cloudi_confdir)/"
+	$(INSTALL) -m 600 "$(top_builddir)/rel/cloudi/etc/vm.args" \
+                      "$(DESTDIR)$(cloudi_confdir)/"
 	test ! -d "$(DESTDIR)$(cloudi_prefix)/releases/$(CLOUDI_CORE_RELEASE_VERSION)" && \
        mv -f "$(top_builddir)/rel/cloudi/releases/$(CLOUDI_CORE_RELEASE_VERSION)" \
              "$(DESTDIR)$(cloudi_prefix)/releases/" || exit 0

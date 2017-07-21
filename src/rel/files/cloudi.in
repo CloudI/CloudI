@@ -17,7 +17,8 @@ ROOT_LOG_DIR="$ROOTDIR/logs"
 PROGNAME_FILE="$ROOT_BIN_DIR/$PROGNAME"
 VMARGS_FILE="$ROOT_ETC_DIR/vm.args"
 ERLCONFIG_FILE="$ROOT_ETC_DIR/app.config"
-PIPE_DIR="/tmp/$PROGNAME/"
+TMPDIR="/tmp/$PROGNAME"
+PIPE_DIR="$TMPDIR/shell/"
 CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
 
 # Default pid file path, if it wasn't provided to the configure script
@@ -76,10 +77,16 @@ case "$1" in
         export RUN_ERL_DISABLE_FLOWCNTRL="true"
         # OS process name created by run_erl
         export ESCRIPT_NAME="$PID_NAME"
+        # CloudI environment variable settings
+        export TMPDIR
 
         RUN_PARAM="'$@'"
         export HEART_COMMAND="$PROGNAME_FILE $HEART_OPTION $RUN_PARAM"
-        mkdir -p "$PIPE_DIR"
+        rm -rf "$TMPDIR"
+        mkdir "$TMPDIR"
+        chmod 700 "$TMPDIR"
+        mkdir "$PIPE_DIR"
+        chmod 700 "$PIPE_DIR"
         $BINDIR/run_erl -daemon "$PIPE_DIR" "$ROOT_LOG_DIR" "exec $PROGNAME_FILE $START_OPTION $RUN_PARAM" 2>&1
         ;;
     stop)
@@ -100,6 +107,8 @@ case "$1" in
 
         # Remove the pid file
         rm -f "$CLOUDI_PID_FILE"
+        # Remove temporary data directory
+        rm -rf "$TMPDIR"
         ;;
     restart)
         # Restart the VM without exiting the process
@@ -177,10 +186,10 @@ case "$1" in
     foreground)
         # start up the release in the foreground for use by runit
         # or other supervision services
-        FOREGROUNDOPTIONS="-noinput +Bd"
+        FOREGROUND_ARGS="-noinput +Bd"
 
         # Setup beam-required vars
-        CMD="$BINDIR/erlexec $FOREGROUNDOPTIONS -boot $RELEASEDIR/$PROGNAME -config $ERLCONFIG_FILE -args_file $VMARGS_FILE $VMARGS"
+        CMD="$BINDIR/erlexec $FOREGROUND_ARGS -boot $RELEASEDIR/$PROGNAME -config $ERLCONFIG_FILE -args_file $VMARGS_FILE $VMARGS"
         export EMU
         export ROOTDIR
         export BINDIR
