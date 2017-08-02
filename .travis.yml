@@ -31,9 +31,9 @@ compiler:
 otp_release:
   - 19.3
 python:
-  - "2.7"
+  - "3.6"
 rvm:
-  - 1.9.3
+  - 2.4.0
 before_install:
   - sudo apt-get update
 # travis default image has: make autoconf automake libtool g++ git perl python python-dev
@@ -44,7 +44,7 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - export ${CONFIGURE_ENV}
-  - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
+  - ../src/configure --with-zeromq --with-cxx-backtrace --with-python-version=3 --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
