@@ -1,4 +1,4 @@
-dist: precise
+dist: trusty
 sudo: required
 language: erlang
 matrix:
@@ -10,20 +10,19 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-5
+            - g++-6
       env:
-        - CONFIGURE_ENV="CC=gcc-5 CXX=g++-5"
-    # works on Precise and Trusty
+        - CONFIGURE_ENV="CC=gcc-6 CXX=g++-6"
+    # works on Trusty
     - os: linux
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
+            - llvm-toolchain-trusty
           packages:
-            - clang-3.8
+            - clang-5.0
       env:
-        - CONFIGURE_ENV="CC=clang-3.8 CXX=clang++-3.8"
+        - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
 compiler:
   - clang
   - gcc
