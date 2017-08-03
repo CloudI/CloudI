@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-08-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Handle erlang:deprecated_time_unit() in Erlang/OTP 20
+      for future compatibility
+    * Update uuid
+
 2017-08-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update Travis build configuration to use

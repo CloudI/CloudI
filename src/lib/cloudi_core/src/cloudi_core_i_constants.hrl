@@ -28,6 +28,15 @@
 % Constants that should never be changed                                     %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% for features specific to Erlang/OTP version 20.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_18).
+-else.
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
+-endif.
+
 % for using cloudi_core as an isolated Erlang application
 % outside of the CloudI repository
 % (only internal services are supported,

@@ -41,7 +41,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -80,19 +80,24 @@
          test/0]).
 
 -ifdef(ERLANG_OTP_VERSION_16).
--define(TIMESTAMP_ERLANG_NOW, true).
 -else.
 -ifdef(ERLANG_OTP_VERSION_17).
--define(TIMESTAMP_ERLANG_NOW, true).
 -else.
 -define(ERLANG_OTP_VERSION_18_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_18).
+-else.
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
+-endif.
 -endif.
 -endif.
 
--ifdef(TIMESTAMP_ERLANG_NOW).
--type timestamp_type_internal() :: 'erlang_now' | 'os'.
--else.
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 -type timestamp_type_internal() :: 'erlang_timestamp' | 'os' | 'warp'.
+-else.
+-type timestamp_type_internal() :: 'erlang_now' | 'os'.
 -endif.
 
 -record(uuid_state,
@@ -102,7 +107,6 @@
         timestamp_type :: timestamp_type_internal(),
         timestamp_last :: integer() % microseconds
     }).
-
 
 -type uuid() :: <<_:128>>.
 -type timestamp_type() :: 'erlang' | 'os' | 'warp'.
@@ -288,16 +292,15 @@ get_v1_time() ->
 -spec get_v1_time(timestamp_type() | state() | uuid()) ->
     non_neg_integer().
 
--ifdef(TIMESTAMP_ERLANG_NOW).
-% Erlang < 18.0
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 get_v1_time(erlang) ->
-    timestamp(erlang_now);
+    timestamp(erlang_timestamp);
 
 get_v1_time(os) ->
     timestamp(os);
 
 get_v1_time(warp) ->
-    erlang:exit(badarg);
+    timestamp(warp);
 
 get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
     timestamp(TimestampTypeInternal);
@@ -313,15 +316,14 @@ get_v1_time(Value)
     <<Time:60>> = <<TimeHigh:12, TimeMid:16, TimeLow:32>>,
     ((Time - 16#01b21dd213814000) div 10). % microseconds since UNIX epoch
 -else.
-% Erlang >= 18.0
 get_v1_time(erlang) ->
-    timestamp(erlang_timestamp);
+    timestamp(erlang_now);
 
 get_v1_time(os) ->
     timestamp(os);
 
 get_v1_time(warp) ->
-    timestamp(warp);
+    erlang:exit(badarg);
 
 get_v1_time(#uuid_state{timestamp_type = TimestampTypeInternal}) ->
     timestamp(TimestampTypeInternal);
@@ -1251,8 +1253,41 @@ test() ->
            {int_to_hex,1},
            {hex_to_int,1}]}).
 
--ifdef(TIMESTAMP_ERLANG_NOW).
+-ifdef(ERLANG_OTP_VERSION_18_FEATURES).
+timestamp_type_erlang() ->
+    % Erlang >= 18.0
+    true = erlang:function_exported(erlang, system_time, 0),
+    erlang_timestamp.
 
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+timestamp(erlang_timestamp) ->
+    erlang:system_time(microsecond);
+timestamp(os) ->
+    os:system_time(microsecond);
+timestamp(warp) ->
+    erlang:system_time(microsecond).
+-else.
+timestamp(erlang_timestamp) ->
+    erlang:system_time(micro_seconds);
+timestamp(os) ->
+    os:system_time(micro_seconds);
+timestamp(warp) ->
+    erlang:system_time(micro_seconds).
+-endif.
+
+timestamp(erlang_timestamp, TimestampLast) ->
+    TimestampNext = timestamp(erlang_timestamp),
+    if
+        TimestampNext > TimestampLast ->
+            TimestampNext;
+        true ->
+            TimestampLast + 1
+    end;
+timestamp(os, _) ->
+    timestamp(os);
+timestamp(warp, _) ->
+    timestamp(warp).
+-else.
 timestamp_type_erlang() ->
     % Erlang < 18.0
     false = erlang:function_exported(erlang, system_time, 0),
@@ -1269,35 +1304,6 @@ timestamp(erlang_now, _) ->
     timestamp(erlang_now);
 timestamp(os, _) ->
     timestamp(os).
-
--else.
-
-timestamp_type_erlang() ->
-    % Erlang >= 18.0
-    true = erlang:function_exported(erlang, system_time, 0),
-    erlang_timestamp.
-
-timestamp(erlang_timestamp) ->
-    erlang:system_time(micro_seconds);
-timestamp(os) ->
-    {MegaSeconds, Seconds, MicroSeconds} = os:timestamp(),
-    (MegaSeconds * 1000000 + Seconds) * 1000000 + MicroSeconds;
-timestamp(warp) ->
-    erlang:system_time(micro_seconds).
-
-timestamp(erlang_timestamp, TimestampLast) ->
-    TimestampNext = timestamp(erlang_timestamp),
-    if
-        TimestampNext > TimestampLast ->
-            TimestampNext;
-        true ->
-            TimestampLast + 1
-    end;
-timestamp(os, _) ->
-    timestamp(os);
-timestamp(warp, _) ->
-    timestamp(warp).
-
 -endif.
 
 int_to_dec_list(I, N) when is_integer(I), I >= 0 ->
