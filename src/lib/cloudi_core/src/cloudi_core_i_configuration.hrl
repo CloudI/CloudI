@@ -123,6 +123,9 @@
         % use custom formatters for log output
         formatters = undefined
             :: undefined | #config_logging_formatters{},
+        % log when Erlang system time has changed with the amount
+        log_time_offset = off
+            :: cloudi_service_api:loglevel(),
         % aspect functions to execute before logging
         aspects_log_before = []
             :: list(cloudi_service_api:aspect_log_before()),

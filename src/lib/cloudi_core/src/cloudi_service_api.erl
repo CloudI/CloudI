@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -803,6 +803,7 @@
                   {redirect, node() | undefined} |
                   {syslog, logging_syslog_set_proplist() | undefined} |
                   {formatters, logging_formatters_set_proplist() | undefined} |
+                  {log_time_offset, loglevel()} |
                   {aspects_log_before, list(aspect_log_before())} |
                   {aspects_log_after, list(aspect_log_after())}).
 -export_type([loglevel/0,

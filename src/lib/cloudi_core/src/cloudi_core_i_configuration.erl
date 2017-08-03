@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -238,7 +238,8 @@
      logging_redirect_invalid |
      logging_file_invalid |
      logging_stdout_invalid |
-     logging_level_invalid, any()} |
+     logging_level_invalid |
+     logging_log_time_offset_invalid, any()} |
     error_reason_logging_syslog_set_configuration() |
     error_reason_logging_formatters_set_configuration().
 -type error_reason_logging_syslog_set_configuration() ::
@@ -1360,6 +1361,7 @@ logging(#config{logging = #config_logging{
                               redirect = Redirect,
                               syslog = Syslog,
                               formatters = Formatters,
+                              log_time_offset = LogTimeOffset,
                               aspects_log_before = AspectsLogBefore,
                               aspects_log_after = AspectsLogAfter}}) ->
     Defaults = #config_logging{},
@@ -1553,18 +1555,24 @@ logging(#config{logging = #config_logging{
            
     end,
     LoggingList7 = if
-        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
+        LogTimeOffset =:= Defaults#config_logging.log_time_offset ->
             LoggingList6;
         true ->
-            [{aspects_log_before, AspectsLogBefore} | LoggingList6]
+            [{log_time_offset, LogTimeOffset} | LoggingList6]
     end,
     LoggingList8 = if
-        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+        AspectsLogBefore =:= Defaults#config_logging.aspects_log_before ->
             LoggingList7;
         true ->
-            [{aspects_log_after, AspectsLogAfter} | LoggingList7]
+            [{aspects_log_before, AspectsLogBefore} | LoggingList7]
     end,
-    lists:reverse(LoggingList8).
+    LoggingList9 = if
+        AspectsLogAfter =:= Defaults#config_logging.aspects_log_after ->
+            LoggingList8;
+        true ->
+            [{aspects_log_after, AspectsLogAfter} | LoggingList8]
+    end,
+    lists:reverse(LoggingList9).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -4740,37 +4748,48 @@ logging_proplist(Value) ->
         {redirect, Logging#config_logging.redirect},
         {syslog, Logging#config_logging.syslog},
         {formatters, Logging#config_logging.formatters},
+        {log_time_offset, Logging#config_logging.log_time_offset},
         {aspects_log_before, Logging#config_logging.aspects_log_before},
         {aspects_log_after, Logging#config_logging.aspects_log_after}],
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Level, _, _, _, _, _, _, _]
+        [Level, _, _, _, _, _, _, _, _]
             when not ((Level =:= fatal) orelse (Level =:= error) orelse
                       (Level =:= warn) orelse (Level =:= info) orelse
                       (Level =:= debug) orelse (Level =:= trace) orelse
                       (Level =:= off) orelse (Level =:= undefined)) ->
             {error, {logging_level_invalid,
                      Level}};
-        [_, File, _, _, _, _, _, _]
+        [_, File, _, _, _, _, _, _, _]
             when not ((is_list(File) andalso
                        is_integer(hd(File))) orelse
                       (File =:= undefined))->
             {error, {logging_file_invalid,
                      File}};
-        [_, _, Stdout, _, _, _, _, _]
+        [_, _, Stdout, _, _, _, _, _, _]
             when not is_boolean(Stdout) ->
             {error, {logging_stdout_invalid,
                      Stdout}};
-        [_, _, _, Redirect, _, _, _, _]
+        [_, _, _, Redirect, _, _, _, _, _]
             when not is_atom(Redirect) ->
             {error, {logging_redirect_invalid,
                      Redirect}};
-        [_, _, _, _, Syslog, _, _, _]
+        [_, _, _, _, Syslog, _, _, _, _]
             when not ((Syslog =:= undefined) orelse
                       is_list(Syslog)) ->
             {error, {logging_syslog_invalid,
                      Syslog}};
+        [_, _, _, _, _, _, LogTimeOffset, _, _]
+            when not ((LogTimeOffset =:= fatal) orelse
+                      (LogTimeOffset =:= error) orelse
+                      (LogTimeOffset =:= warn) orelse
+                      (LogTimeOffset =:= info) orelse
+                      (LogTimeOffset =:= debug) orelse
+                      (LogTimeOffset =:= trace) orelse
+                      (LogTimeOffset =:= off)) ->
+            {error, {logging_log_time_offset_invalid,
+                     LogTimeOffset}};
         [Level, File, Stdout, Redirect, Syslog, Formatters,
-         AspectsLogBefore, AspectsLogAfter] ->
+         LogTimeOffset, AspectsLogBefore, AspectsLogAfter] ->
             NewFile = if
                 Level =:= undefined ->
                     undefined;
@@ -4794,13 +4813,14 @@ logging_proplist(Value) ->
                                      redirect = Redirect,
                                      syslog = SyslogConfig,
                                      formatters = FormattersConfig,
+                                     log_time_offset = LogTimeOffset,
                                      aspects_log_before = NewAspectsLogBefore,
                                      aspects_log_after = NewAspectsLogAfter},
                     {ok, NewLogging};
                 {error, _} = Error ->
                     Error
             end;
-        [_, _, _, _, _, _, _, _ | Extra] ->
+        [_, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {logging_invalid, Extra}}
     end.
 

@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -97,6 +97,12 @@
             :: undefined | #config_logging_formatters{},
         formatters_level
             :: undefined | cloudi_service_api:loglevel(),
+        log_time_offset
+            :: cloudi_service_api:loglevel(),
+        log_time_offset_nanoseconds
+            :: non_neg_integer(),
+        log_time_offset_monitor
+            :: reference(),
         aspects_log_before
             :: list(cloudi_service_api:aspect_log_before()),
         aspects_log_after
@@ -463,6 +469,7 @@ init([#config_logging{file = FilePath,
                       redirect = NodeLogger,
                       syslog = SyslogConfig,
                       formatters = FormattersConfig,
+                      log_time_offset = LogTimeOffset,
                       aspects_log_before = AspectsLogBefore,
                       aspects_log_after = AspectsLogAfter}]) ->
     StdoutPort = stdout_open(Stdout),
@@ -477,6 +484,10 @@ init([#config_logging{file = FilePath,
                main_level = MainLevel,
                formatters = FormattersConfig,
                formatters_level = FormattersLevel,
+               log_time_offset = LogTimeOffset,
+               log_time_offset_nanoseconds = time_offset_nanoseconds(),
+               log_time_offset_monitor = erlang:monitor(time_offset,
+                                                        clock_service),
                aspects_log_before = AspectsLogBefore,
                aspects_log_after = AspectsLogAfter,
                logger_node = node(),
@@ -632,15 +643,34 @@ handle_cast({Level, Timestamp, Node, Pid,
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
 
+handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
+            #state{log_time_offset = LogTimeOffset,
+                   log_time_offset_nanoseconds = ValueOld,
+                   log_time_offset_monitor = Monitor} = State) ->
+    ValueNew = time_offset_to_nanoseconds(TimeOffset),
+    Change = ValueNew - ValueOld,
+    case log_message_internal_t0(LogTimeOffset,
+                                 ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
+                                 "Erlang time_offset == ~w nanoseconds",
+                                 [Change],
+                                 State#state{
+                                     log_time_offset_nanoseconds = ValueNew}) of
+        {ok, StateNew} ->
+            {noreply, StateNew};
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
+    end;
 handle_info(Request, State) ->
     {stop, cloudi_string:format("Unknown info \"~p\"~n", [Request]), State}.
 
 terminate(_, #state{fd = Fd,
                     stdout = StdoutPort,
-                    syslog = Syslog}) ->
+                    syslog = Syslog,
+                    log_time_offset_monitor = Monitor}) ->
     _ = (catch file:close(Fd)),
     ok = stdout_close(StdoutPort),
     ok = syslog_close(Syslog),
+    true = erlang:demonitor(Monitor),
     ok.
 
 code_change(_, State, _) ->
@@ -656,6 +686,7 @@ log_config_set(#config_logging{file = FilePath,
                                redirect = NodeLogger,
                                syslog = SyslogConfig,
                                formatters = FormattersConfig,
+                               log_time_offset = LogTimeOffset,
                                aspects_log_before = AspectsLogBefore,
                                aspects_log_after = AspectsLogAfter},
                State) ->
@@ -664,7 +695,8 @@ log_config_set(#config_logging{file = FilePath,
                {Stdout, fun log_config_stdout_set/2},
                {SyslogConfig, fun log_config_syslog_set/2},
                {FormattersConfig, fun log_config_formatters_set/2}],
-              State#state{aspects_log_before = AspectsLogBefore,
+              State#state{log_time_offset = LogTimeOffset,
+                          aspects_log_before = AspectsLogBefore,
                           aspects_log_after = AspectsLogAfter}) of
         {ok, _} = Success ->
             ok = cloudi_core_i_nodes:logging_redirect_set(NodeLogger),
@@ -1081,6 +1113,8 @@ flooding_logger(Timestamp1) ->
             end
     end.
 
+log_message_internal_t0(off, _, _, _, _, _, State) ->
+    {ok, State};
 log_message_internal_t0(LevelCheck, Line, Function, Arity, Format, Args,
                         #state{level = Level,
                                logger_node = Node,
@@ -1797,6 +1831,18 @@ syslog_close(undefined) ->
     ok;
 syslog_close(Syslog) when is_pid(Syslog) ->
     cloudi_x_syslog_socket:stop_link(Syslog). % asynchronous stop
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+time_offset_nanoseconds() ->
+    erlang:time_offset(nanosecond).
+time_offset_to_nanoseconds(TimeOffset) ->
+    erlang:convert_time_unit(TimeOffset, native, nanosecond).
+-else.
+time_offset_nanoseconds() ->
+    erlang:time_offset(nano_seconds).
+time_offset_to_nanoseconds(TimeOffset) ->
+    erlang:convert_time_unit(TimeOffset, native, nano_seconds).
+-endif.
 
 aspects_log([], _, _, _, _, _, _, _, _, _, _) ->
     ok;

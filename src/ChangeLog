@@ -6,6 +6,12 @@
     * Handle erlang:deprecated_time_unit() in Erlang/OTP 20
       for future compatibility
     * Update uuid
+    * Add CloudI Service API logging_set configuration option
+      log_time_offset to log when the Erlang VM updates its time_offset
+      with the time_offset change logged in nanoseconds
+      (the difference between the Erlang monotomic time and
+       the Erlang system time which gets adjusted to match the OS system time,
+       every minute rougbly, when necessary)
 
 2017-08-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 

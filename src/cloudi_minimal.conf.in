@@ -25,4 +25,6 @@
      {query_get_format, text_pairs}]}]
  ]}.
 {nodes, []}.
-{logging, []}.
+{logging, [
+  {log_time_offset, info}
+ ]}.

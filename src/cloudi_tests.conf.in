@@ -1492,5 +1492,6 @@
     %    {formatter_config,
     %     [{mode, legacy_stderr}]}]}]},
     %{redirect, undefined}
+    {log_time_offset, info}
 ]}.
 
