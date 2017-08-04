@@ -62,12 +62,14 @@
 -include_lib("kernel/include/file.hrl").
 
 %% logging macros used only within this module
--define(LOG_INFO_T0(Format, Args, State),
-    log_message_internal_t0(info, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
+-define(LOG_T0(Level, Format, Args, State),
+    log_message_internal_t0(Level, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
                             Format, Args, State)).
--define(LOG_INFO_T1(Format, Args, State),
-    log_message_internal_t1(info, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
+-define(LOG_T1(Level, Format, Args, State),
+    log_message_internal_t1(Level, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
                             Format, Args, State)).
+-define(LOG_T0_INFO(Format, Args, State), ?LOG_T0(info, Format, Args, State)).
+-define(LOG_T1_INFO(Format, Args, State), ?LOG_T1(info, Format, Args, State)).
 
 -record(state,
     {
@@ -518,7 +520,7 @@ init([#config_logging{file = FilePath,
                     {stop, Reason}
             end;
         {ok, Binary} ->
-            case ?LOG_INFO_T0("redirecting log output to ~ts",
+            case ?LOG_T0_INFO("redirecting log output to ~ts",
                               [NodeLogger],
                               StateNext#state{file_path = FilePath,
                                               interface_module = Binary,
@@ -654,12 +656,10 @@ handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
         true ->
             {"-", ValueOld - ValueNew}
     end,
-    case log_message_internal_t0(LogTimeOffset,
-                                 ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
-                                 "Erlang time_offset changed ~s~w nanoseconds",
-                                 [Sign, Change],
-                                 State#state{
-                                     log_time_offset_nanoseconds = ValueNew}) of
+    case ?LOG_T0(LogTimeOffset,
+                 "Erlang time_offset changed ~s~w nanoseconds",
+                 [Sign, Change],
+                 State#state{log_time_offset_nanoseconds = ValueNew}) of
         {ok, StateNew} ->
             {noreply, StateNew};
         {{error, Reason}, StateNew} ->
@@ -715,7 +715,7 @@ log_config_main_level_set(MainLevel,
     {ok, State};
 log_config_main_level_set(MainLevelNew,
                           #state{main_level = MainLevelOld} = State) ->
-    case ?LOG_INFO_T0("changing main loglevel from ~s to ~s",
+    case ?LOG_T0_INFO("changing main loglevel from ~s to ~s",
                       [MainLevelOld, MainLevelNew], State) of
         {ok, StateNew} ->
             {ok, StateNew#state{main_level = MainLevelNew}};
@@ -740,7 +740,7 @@ log_config_file_set(FilePathNew,
         FilePathOld =:= undefined ->
             "'undefined'"
     end,
-    case ?LOG_INFO_T0("changing file path from ~s to ~s",
+    case ?LOG_T0_INFO("changing file path from ~s to ~s",
                       [FilePathOldStr, FilePathNewStr], State) of
         {ok, #state{fd = FdOld} = StateNew} ->
             file:close(FdOld),
@@ -788,7 +788,7 @@ log_config_syslog_set(SyslogConfig,
     end,
     if
         SyslogLevelNew /= SyslogLevelOld ->
-            case ?LOG_INFO_T0("changing syslog loglevel from ~s to ~s",
+            case ?LOG_T0_INFO("changing syslog loglevel from ~s to ~s",
                               [SyslogLevelOld, SyslogLevelNew], State) of
                 {ok, StateNew} ->
                     {ok, SwitchF(StateNew)};
@@ -815,7 +815,7 @@ log_config_formatters_set(FormattersConfigNew,
     end,
     if
         FormattersLevelNew /= FormattersLevelOld ->
-            case ?LOG_INFO_T0("changing formatters loglevel from ~s to ~s",
+            case ?LOG_T0_INFO("changing formatters loglevel from ~s to ~s",
                               [FormattersLevelOld, FormattersLevelNew],
                               State) of
                 {ok, StateNew} ->
@@ -842,7 +842,7 @@ log_level_update(#state{main_level = MainLevel,
                     StateNew = State#state{
                         interface_module = Binary,
                         level = LevelNew},
-                    ?LOG_INFO_T1("changed loglevel from ~s to ~s",
+                    ?LOG_T1_INFO("changed loglevel from ~s to ~s",
                                  [LevelOld, LevelNew], StateNew),
                     {ok, StateNew};
                 {error, _} = Error ->
@@ -1308,12 +1308,12 @@ log_redirect(Node, DestinationNew,
         true ->
             Node
     end,
-    case ?LOG_INFO_T0("redirecting log output to ~ts",
+    case ?LOG_T0_INFO("redirecting log output to ~ts",
                       [NodeLogger], State) of
         {ok, StateNext} ->
             case load_interface_module(Level, Mode, DestinationNew) of
                 {ok, Binary} ->
-                    ?LOG_INFO_T1("redirected log output from ~ts to ~ts",
+                    ?LOG_T1_INFO("redirected log output from ~ts to ~ts",
                                  [node(), NodeLogger], StateNext),
                     {ok, StateNext#state{interface_module = Binary,
                                          destination = DestinationNew}};
