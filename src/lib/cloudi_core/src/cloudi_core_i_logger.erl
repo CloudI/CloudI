@@ -648,11 +648,16 @@ handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
                    log_time_offset_nanoseconds = ValueOld,
                    log_time_offset_monitor = Monitor} = State) ->
     ValueNew = time_offset_to_nanoseconds(TimeOffset),
-    Change = ValueNew - ValueOld,
+    {Sign, Change} = if
+        ValueNew >= ValueOld ->
+            {"+", ValueNew - ValueOld};
+        true ->
+            {"-", ValueOld - ValueNew}
+    end,
     case log_message_internal_t0(LogTimeOffset,
                                  ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
-                                 "Erlang time_offset == ~w nanoseconds",
-                                 [Change],
+                                 "Erlang time_offset changed ~s~w nanoseconds",
+                                 [Sign, Change],
                                  State#state{
                                      log_time_offset_nanoseconds = ValueNew}) of
         {ok, StateNew} ->
