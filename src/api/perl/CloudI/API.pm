@@ -122,9 +122,6 @@ sub new
         _timeout_sync => undef,
         _timeout_terminate => 1000, # TIMEOUT_TERMINATE_MIN
         _priority_default => undef,
-        _request_timeout_adjustment => undef,
-        _request_timeout => undef,
-        _request_timer => undef,
     }, $class;
     $self->_send(Erlang::term_to_binary(Erlang::OtpErlangAtom->new('init')));
     ($self->{_process_index},
@@ -136,8 +133,7 @@ sub new
      $self->{_timeout_async},
      $self->{_timeout_sync},
      $self->{_timeout_terminate},
-     $self->{_priority_default},
-     $self->{_request_timeout_adjustment}) = $self->_poll_request(undef, 0);
+     $self->{_priority_default}) = $self->_poll_request(undef, 0);
     return $self;
 }
 
@@ -319,21 +315,6 @@ sub forward_async
     my $self = shift;
     my ($name, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    if ($self->{_request_timeout_adjustment})
-    {
-        if ($timeout == $self->{_request_timeout})
-        {
-            my $elapsed = _max(0, _milliseconds() - $self->{_request_timer});
-            if ($elapsed > $timeout)
-            {
-                $timeout = 0;
-            }
-            else
-            {
-                $timeout -= $elapsed;
-            }
-        }
-    }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('forward_async'), $name,
         Erlang::OtpErlangBinary->new($request_info),
@@ -347,21 +328,6 @@ sub forward_sync
     my $self = shift;
     my ($name, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    if ($self->{_request_timeout_adjustment})
-    {
-        if ($timeout == $self->{_request_timeout})
-        {
-            my $elapsed = _max(0, _milliseconds() - $self->{_request_timer});
-            if ($elapsed > $timeout)
-            {
-                $timeout = 0;
-            }
-            else
-            {
-                $timeout -= $elapsed;
-            }
-        }
-    }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('forward_sync'), $name,
         Erlang::OtpErlangBinary->new($request_info),
@@ -396,23 +362,6 @@ sub return_async
     my $self = shift;
     my ($name, $pattern, $response_info, $response,
         $timeout, $trans_id, $pid) = @_;
-    if ($self->{_request_timeout_adjustment})
-    {
-        if ($timeout == $self->{_request_timeout})
-        {
-            my $elapsed = _max(0, _milliseconds() - $self->{_request_timer});
-            if ($elapsed > $timeout)
-            {
-                $response_info = '';
-                $response = '';
-                $timeout = 0;
-            }
-            else
-            {
-                $timeout -= $elapsed;
-            }
-        }
-    }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('return_async'), $name, $pattern,
         Erlang::OtpErlangBinary->new($response_info),
@@ -426,23 +375,6 @@ sub return_sync
     my $self = shift;
     my ($name, $pattern, $response_info, $response,
         $timeout, $trans_id, $pid) = @_;
-    if ($self->{_request_timeout_adjustment})
-    {
-        if ($timeout == $self->{_request_timeout})
-        {
-            my $elapsed = _max(0, _milliseconds() - $self->{_request_timer});
-            if ($elapsed > $timeout)
-            {
-                $response_info = '';
-                $response = '';
-                $timeout = 0;
-            }
-            else
-            {
-                $timeout -= $elapsed;
-            }
-        }
-    }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('return_sync'), $name, $pattern,
         Erlang::OtpErlangBinary->new($response_info),
@@ -543,11 +475,6 @@ sub _callback
     my $self = shift;
     my ($command, $name, $pattern, $request_info, $request,
         $timeout, $priority, $trans_id, $pid) = @_;
-    if ($self->{_request_timeout_adjustment})
-    {
-        $self->{_request_timer} = _milliseconds();
-        $self->{_request_timeout} = $timeout;
-    }
     my $function;
     if (! defined($self->{_callbacks}{$pattern}))
     {
@@ -745,19 +672,12 @@ sub _handle_events
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+            $i += $j; $j = 4 + 4 + 4 + 1;
             ($self->{_process_count},
              $self->{_timeout_async},
              $self->{_timeout_sync},
-             $self->{_priority_default},
-             $self->{_request_timeout_adjustment}) = unpack("L3 c C",
-                                                            substr($data,
-                                                                   $i, $j));
-            if ($self->{_request_timeout_adjustment})
-            {
-                $self->{_request_timer} = _milliseconds();
-                $self->{_request_timeout} = 0;
-            }
+             $self->{_priority_default}) = unpack("L3 c",
+                                                  substr($data, $i, $j));
             $i += $j;
         }
         elsif ($command == MESSAGE_KEEPALIVE)
@@ -847,15 +767,14 @@ sub _poll_request
                 $process_count_max,
                 $process_count_min,
                 $prefix_size) = unpack('L5', substr($data, $i, $j));
-            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1 + 1;
+            $i += $j; $j = $prefix_size + 4 + 4 + 4 + 4 + 1;
             my ($prefix,
                 $timeout_initialize,
                 $timeout_async,
                 $timeout_sync,
                 $timeout_terminate,
-                $priority_default,
-                $request_timeout_adjustment) = unpack("Z$prefix_size L4 c C",
-                                                      substr($data, $i, $j));
+                $priority_default) = unpack("Z$prefix_size L4 c",
+                                            substr($data, $i, $j));
             $i += $j;
             if ($i != $data_size)
             {
@@ -866,8 +785,7 @@ sub _poll_request
                     $process_count_max, $process_count_min,
                     $prefix, $timeout_initialize,
                     $timeout_sync, $timeout_async,
-                    $timeout_terminate, $priority_default,
-                    $request_timeout_adjustment);
+                    $timeout_terminate, $priority_default);
         }
         elsif ($command == MESSAGE_SEND_ASYNC ||
                $command == MESSAGE_SEND_SYNC)
@@ -980,19 +898,12 @@ sub _poll_request
         }
         elsif ($command == MESSAGE_REINIT)
         {
-            $i += $j; $j = 4 + 4 + 4 + 1 + 1;
+            $i += $j; $j = 4 + 4 + 4 + 1;
             ($self->{_process_count},
              $self->{_timeout_async},
              $self->{_timeout_sync},
-             $self->{_priority_default},
-             $self->{_request_timeout_adjustment}) = unpack("L3 c C",
-                                                            substr($data,
-                                                                   $i, $j));
-            if ($self->{_request_timeout_adjustment})
-            {
-                $self->{_request_timer} = _milliseconds();
-                $self->{_request_timeout} = 0;
-            }
+             $self->{_priority_default}) = unpack("L3 c",
+                                                  substr($data, $i, $j));
             $i += $j; $j = 4;
             if ($i == $data_size)
             {

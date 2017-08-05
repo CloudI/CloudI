@@ -589,7 +589,6 @@ int cloudi_initialize(cloudi_instance_t * p,
     //p->buffer_recv_index = 0;
     p->buffer_call = new buffer_t(32768, CLOUDI_MAX_BUFFERSIZE);
     p->poll_timer = new timer();
-    p->request_timer = new timer();
     //p->prefix = 0;
     p->timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
 
@@ -636,7 +635,6 @@ void * cloudi_destroy(cloudi_instance_t * p)
         delete reinterpret_cast<buffer_t *>(p->buffer_recv);
         delete reinterpret_cast<buffer_t *>(p->buffer_call);
         delete reinterpret_cast<timer *>(p->poll_timer);
-        delete reinterpret_cast<timer *>(p->request_timer);
         if (p->prefix)
             delete [] p->prefix;
         return p->state;
@@ -893,21 +891,6 @@ static int cloudi_forward_(cloudi_instance_t * p,
     int index = 0;
     if (p->use_header)
         index = 4;
-    if (p->request_timeout_adjustment &&
-        timeout == p->request_timeout)
-    {
-        timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
-        uint32_t const elapsed = static_cast<uint32_t>(
-            std::max(0, static_cast<int>(request_timer.elapsed() * 1000.0)));
-        if (elapsed > timeout)
-        {
-            timeout = 0;
-        }
-        else
-        {
-            timeout -= elapsed;
-        }
-    }
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 8))
@@ -1055,23 +1038,6 @@ static int cloudi_return_(cloudi_instance_t * p,
     int index = 0;
     if (p->use_header)
         index = 4;
-    if (p->request_timeout_adjustment &&
-        timeout == p->request_timeout)
-    {
-        timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
-        uint32_t const elapsed = static_cast<uint32_t>(
-            std::max(0, static_cast<int>(request_timer.elapsed() * 1000.0)));
-        if (elapsed > timeout)
-        {
-            response_info_size = 0;
-            response_size = 0;
-            timeout = 0;
-        }
-        else
-        {
-            timeout -= elapsed;
-        }
-    }
     if (ei_encode_version(buffer.get<char>(), &index))
         return cloudi_error_ei_encode;
     if (ei_encode_tuple_header(buffer.get<char>(), &index, 8))
@@ -1312,12 +1278,6 @@ static void callback(cloudi_instance_t * p,
                      char const * const pid,
                      uint32_t const pid_size)
 {
-    timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
-    if (p->request_timeout_adjustment)
-    {
-        request_timer.restart();
-        p->request_timeout = timeout;
-    }
     lookup_t & lookup = *reinterpret_cast<lookup_t *>(p->lookup);
     callback_function f = lookup.find(std::string(pattern));
     int result = cloudi_success;
@@ -1456,14 +1416,6 @@ static void store_incoming_int8(buffer_t const & buffer,
     index += sizeof(int8_t);
 }
 
-static void store_incoming_uint8(buffer_t const & buffer,
-                                 uint32_t & index,
-                                 uint8_t & i)
-{
-    i = *reinterpret_cast<uint8_t *>(&buffer[index]);
-    index += sizeof(uint8_t);
-}
-
 static bool handle_events(cloudi_instance_t * p,
                           int external, 
                           uint32_t index,
@@ -1471,7 +1423,6 @@ static bool handle_events(cloudi_instance_t * p,
                           uint32_t command = 0)
 {
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
-    timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
     if (command == 0)
     {
         if (index > p->buffer_recv_index)
@@ -1500,13 +1451,6 @@ static bool handle_events(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_recv, index, p->timeout_async);
                 store_incoming_uint32(buffer_recv, index, p->timeout_sync);
                 store_incoming_int8(buffer_recv, index, p->priority_default);
-                store_incoming_uint8(buffer_recv, index,
-                                     p->request_timeout_adjustment);
-                if (p->request_timeout_adjustment)
-                {
-                    request_timer.restart();
-                    p->request_timeout = 0;
-                }
                 break;
             }
             case MESSAGE_KEEPALIVE:
@@ -1554,7 +1498,6 @@ static int poll_request(cloudi_instance_t * p,
 
     buffer_t & buffer_recv = *reinterpret_cast<buffer_t *>(p->buffer_recv);
     buffer_t & buffer_call = *reinterpret_cast<buffer_t *>(p->buffer_call);
-    timer & request_timer = *reinterpret_cast<timer *>(p->request_timer);
 
     timer & poll_timer = *reinterpret_cast<timer *>(p->poll_timer);
     if (timeout > 0)
@@ -1596,8 +1539,6 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_recv, index, p->timeout_sync);
                 store_incoming_uint32(buffer_recv, index, p->timeout_terminate);
                 store_incoming_int8(buffer_recv, index, p->priority_default);
-                store_incoming_uint8(buffer_recv, index,
-                                     p->request_timeout_adjustment);
                 if (index != p->buffer_recv_index)
                 {
                     assert(! external);
@@ -1725,13 +1666,6 @@ static int poll_request(cloudi_instance_t * p,
                 store_incoming_uint32(buffer_recv, index, p->timeout_async);
                 store_incoming_uint32(buffer_recv, index, p->timeout_sync);
                 store_incoming_int8(buffer_recv, index, p->priority_default);
-                store_incoming_uint8(buffer_recv, index,
-                                     p->request_timeout_adjustment);
-                if (p->request_timeout_adjustment)
-                {
-                    request_timer.restart();
-                    p->request_timeout = 0;
-                }
                 if (index == p->buffer_recv_index)
                 {
                     p->buffer_recv_index = 0;

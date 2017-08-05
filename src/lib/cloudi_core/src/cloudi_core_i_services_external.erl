@@ -142,8 +142,12 @@
         % (21) service state for executing aspect functions
         % (as assigned from aspect function execution)
         service_state = undefined,
-        % (22) pending aspects_request_after
-        aspects_request_after_f = undefined,
+        % (22) request data currently being processed by the OS process
+        request_data = undefined
+            :: undefined |
+               {cloudi:message_service_request(),
+                fun((cloudi:timeout_value_milliseconds()) ->
+                    cloudi:timeout_value_milliseconds())},
         % (23) 0-based index of the process in all service instance processes
         process_index :: non_neg_integer(),
         % (24) current count of all Erlang processes for the service instance
@@ -575,11 +579,13 @@ handle_event(EventType, EventContent, StateName, State) ->
     end;
 
 'HANDLE'(connection,
-         {'forward_async', Name, RequestInfo, Request,
-          Timeout, Priority, TransId, Source},
+         {'forward_async', NextName, NextRequestInfo, NextRequest,
+          NextTimeout, NextPriority, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
-                aspects_request_after_f = AspectsRequestAfterF,
+                request_data = {{_, Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, TransId, Source},
+                                RequestTimeoutF},
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
@@ -588,21 +594,31 @@ handle_event(EventType, EventContent, StateName, State) ->
                     request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
-    true = is_integer(Timeout),
-    true = (Timeout >= 0) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG),
-    true = is_integer(Priority),
-    true = (Priority >= ?PRIORITY_HIGH) andalso
-           (Priority =< ?PRIORITY_LOW),
-    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
-    true = is_pid(Source),
-    Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
-    try AspectsRequestAfterF(AspectsAfter, Timeout, Result, ServiceState) of
-        {ok, NewTimeout, NewServiceState} ->
-            case destination_allowed(Name, DestDeny, DestAllow) of
+    true = is_list(NextName) andalso is_integer(hd(NextName)),
+    true = is_integer(NextTimeout),
+    true = (NextTimeout >= 0) andalso
+           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(NextPriority),
+    true = (NextPriority >= ?PRIORITY_HIGH) andalso
+           (NextPriority =< ?PRIORITY_LOW),
+    Type = send_async,
+    Result = {forward, NextName,
+              NextRequestInfo, NextRequest,
+              NextTimeout, NextPriority},
+    try aspects_request_after(AspectsAfter, Type,
+                              Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, TransId, Source,
+                              Result, ServiceState) of
+        {ok, NewServiceState} ->
+            NewTimeout = if
+                NextTimeout == Timeout ->
+                    RequestTimeoutF(Timeout);
                 true ->
-                    case destination_get(DestRefresh, Scope, Name, Source,
+                    NextTimeout
+            end,
+            case destination_allowed(NextName, DestDeny, DestAllow) of
+                true ->
+                    case destination_get(DestRefresh, Scope, NextName, Source,
                                          Groups, NewTimeout) of
                         {error, timeout} ->
                             ok;
@@ -612,9 +628,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                         {error, _}
                             when NewTimeout >= ?FORWARD_ASYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_async_retry',
-                                     Name, RequestInfo, Request,
+                                     NextName, NextRequestInfo, NextRequest,
                                      NewTimeout - ?FORWARD_ASYNC_INTERVAL,
-                                     Priority, TransId, Source},
+                                     NextPriority, TransId, Source},
                             erlang:send_after(?FORWARD_ASYNC_INTERVAL,
                                               Dispatcher, Retry),
                             ok;
@@ -623,10 +639,10 @@ handle_event(EventType, EventContent, StateName, State) ->
                         {ok, NextPattern, NextPid}
                             when NewTimeout >= ?FORWARD_DELTA ->
                             NextPid ! {'cloudi_service_send_async',
-                                       Name, NextPattern,
-                                       RequestInfo, Request,
+                                       NextName, NextPattern,
+                                       NextRequestInfo, NextRequest,
                                        NewTimeout - ?FORWARD_DELTA,
-                                       Priority, TransId, Source};
+                                       NextPriority, TransId, Source};
                         _ ->
                             ok
                     end;
@@ -635,25 +651,27 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = NewServiceState,
-                                        aspects_request_after_f = undefined})};
+                                        request_data = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
-                         aspects_request_after_f = undefined}}
+                         request_data = undefined}}
     catch
         ErrorType:Error ->
             Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
             {stop, {ErrorType, {Error, Stack}},
-             State#state{aspects_request_after_f = undefined}}
+             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection,
-         {'forward_sync', Name, RequestInfo, Request,
-          Timeout, Priority, TransId, Source},
+         {'forward_sync', NextName, NextRequestInfo, NextRequest,
+          NextTimeout, NextPriority, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
-                aspects_request_after_f = AspectsRequestAfterF,
+                request_data = {{_, Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, TransId, Source},
+                                RequestTimeoutF},
                 dest_refresh = DestRefresh,
                 cpg_data = Groups,
                 dest_deny = DestDeny,
@@ -662,21 +680,30 @@ handle_event(EventType, EventContent, StateName, State) ->
                     request_name_lookup = RequestNameLookup,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
-    true = is_integer(Timeout),
-    true = (Timeout >= 0) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG),
-    true = is_integer(Priority),
-    true = (Priority >= ?PRIORITY_HIGH) andalso
-           (Priority =< ?PRIORITY_LOW),
-    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
-    true = is_pid(Source),
-    Result = {forward, Name, RequestInfo, Request, Timeout, Priority},
-    try AspectsRequestAfterF(AspectsAfter, Timeout, Result, ServiceState) of
-        {ok, NewTimeout, NewServiceState} ->
-            case destination_allowed(Name, DestDeny, DestAllow) of
+    true = is_list(NextName) andalso is_integer(hd(NextName)),
+    true = is_integer(NextTimeout),
+    true = (NextTimeout >= 0) andalso
+           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(NextPriority),
+    true = (NextPriority >= ?PRIORITY_HIGH) andalso
+           (NextPriority =< ?PRIORITY_LOW),
+    Type = send_sync,
+    Result = {forward, NextName, NextRequestInfo, NextRequest,
+              NextTimeout, NextPriority},
+    try aspects_request_after(AspectsAfter, Type,
+                              Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, TransId, Source,
+                              Result, ServiceState) of
+        {ok, NewServiceState} ->
+            NewTimeout = if
+                NextTimeout == Timeout ->
+                    RequestTimeoutF(Timeout);
                 true ->
-                    case destination_get(DestRefresh, Scope, Name, Source,
+                    NextTimeout
+            end,
+            case destination_allowed(NextName, DestDeny, DestAllow) of
+                true ->
+                    case destination_get(DestRefresh, Scope, NextName, Source,
                                          Groups, NewTimeout) of
                         {error, timeout} ->
                             ok;
@@ -686,9 +713,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                         {error, _}
                             when NewTimeout >= ?FORWARD_SYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_sync_retry',
-                                     Name, RequestInfo, Request,
+                                     NextName, NextRequestInfo, NextRequest,
                                      NewTimeout - ?FORWARD_SYNC_INTERVAL,
-                                     Priority, TransId, Source},
+                                     NextPriority, TransId, Source},
                             erlang:send_after(?FORWARD_SYNC_INTERVAL,
                                               Dispatcher, Retry),
                             ok;
@@ -697,10 +724,10 @@ handle_event(EventType, EventContent, StateName, State) ->
                         {ok, NextPattern, NextPid}
                             when NewTimeout >= ?FORWARD_DELTA ->
                             NextPid ! {'cloudi_service_send_sync',
-                                       Name, NextPattern,
-                                       RequestInfo, Request,
+                                       NextName, NextPattern,
+                                       NextRequestInfo, NextRequest,
                                        NewTimeout - ?FORWARD_DELTA,
-                                       Priority, TransId, Source};
+                                       NextPriority, TransId, Source};
                         _ ->
                             ok
                     end;
@@ -709,24 +736,26 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = NewServiceState,
-                                        aspects_request_after_f = undefined})};
+                                        request_data = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
-                         aspects_request_after_f = undefined}}
+                         request_data = undefined}}
     catch
         ErrorType:Error ->
             Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
             {stop, {ErrorType, {Error, Stack}},
-             State#state{aspects_request_after_f = undefined}}
+             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection,
          {ReturnType, Name, Pattern, ResponseInfo, Response,
-          Timeout, TransId, Source},
+          NextTimeout, TransId, Source},
          #state{service_state = ServiceState,
-                aspects_request_after_f = AspectsRequestAfterF,
+                request_data = {{_, Name, Pattern, RequestInfo, Request,
+                                 Timeout, Priority, TransId, Source},
+                                RequestTimeoutF},
                 options = #config_service_options{
                     response_timeout_immediate_max =
                         ResponseTimeoutImmediateMax,
@@ -734,22 +763,33 @@ handle_event(EventType, EventContent, StateName, State) ->
                         AspectsAfter}} = State)
     when ReturnType =:= 'return_async';
          ReturnType =:= 'return_sync' ->
-    true = is_list(Name) andalso is_integer(hd(Name)),
-    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
-    true = is_integer(Timeout),
-    true = (Timeout >= 0) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG),
-    <<_:48, 0:1, 0:1, 0:1, 1:1, _:12, 1:1, 0:1, _:62>> = TransId, % v1 UUID
-    true = is_pid(Source),
+    true = is_integer(NextTimeout),
+    true = (NextTimeout >= 0) andalso
+           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
+    Type = if
+        ReturnType =:= 'return_async' ->
+            send_async;
+        ReturnType =:= 'return_sync' ->
+            send_sync
+    end,
     Result = if
         ResponseInfo == <<>>, Response == <<>>,
-        Timeout < ResponseTimeoutImmediateMax ->
+        NextTimeout < ResponseTimeoutImmediateMax ->
             noreply;
         true ->
             {reply, ResponseInfo, Response}
     end,
-    try AspectsRequestAfterF(AspectsAfter, Timeout, Result, ServiceState) of
-        {ok, NewTimeout, NewServiceState} ->
+    try aspects_request_after(AspectsAfter, Type,
+                              Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, TransId, Source,
+                              Result, ServiceState) of
+        {ok, NewServiceState} ->
+            NewTimeout = if
+                NextTimeout == Timeout ->
+                    RequestTimeoutF(Timeout);
+                true ->
+                    NextTimeout
+            end,
             if
                 Result =:= noreply ->
                     ok;
@@ -764,17 +804,17 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              process_queues(State#state{service_state = NewServiceState,
-                                        aspects_request_after_f = undefined})};
+                                        request_data = undefined})};
         {stop, Reason, NewServiceState} ->
             {stop, Reason,
              State#state{service_state = NewServiceState,
-                         aspects_request_after_f = undefined}}
+                         request_data = undefined}}
     catch
         ErrorType:Error ->
             Stack = erlang:get_stacktrace(),
             ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
             {stop, {ErrorType, {Error, Stack}},
-             State#state{aspects_request_after_f = undefined}}
+             State#state{request_data = undefined}}
     end;
 
 'HANDLE'(connection,
@@ -962,7 +1002,7 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(info,
          {SendType, Name, Pattern, RequestInfo, Request,
-          Timeout, Priority, TransId, Source},
+          Timeout, Priority, TransId, Source} = T,
          #state{queue_requests = false,
                 service_state = ServiceState,
                 options = #config_service_options{
@@ -992,40 +1032,31 @@ handle_event(EventType, EventContent, StateName, State) ->
             #config_service_options{
                 request_timeout_adjustment = RequestTimeoutAdjustment,
                 aspects_request_before = AspectsBefore} = NewConfigOptions,
+            RequestTimeoutF =
+                request_timeout_adjustment_f(RequestTimeoutAdjustment),
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
                                        Timeout, Priority, TransId, Source,
-                                       ServiceState,
-                                       RequestTimeoutAdjustment) of
-                {ok, NextTimeout, NewServiceState} ->
+                                       ServiceState) of
+                {ok, NewServiceState} ->
                     if
                         SendType =:= 'cloudi_service_send_async' ->
                             ok = send('send_async_out'(Name, Pattern,
                                                        RequestInfo, Request,
-                                                       NextTimeout, Priority,
+                                                       Timeout, Priority,
                                                        TransId, Source),
                                       State);
                         SendType =:= 'cloudi_service_send_sync' ->
                             ok = send('send_sync_out'(Name, Pattern,
                                                       RequestInfo, Request,
-                                                      NextTimeout, Priority,
+                                                      Timeout, Priority,
                                                       TransId, Source),
                                       State)
-                    end,
-                    AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
-                                               Result, S) ->
-                        aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              NewTimeout, Priority,
-                                              TransId, Source,
-                                              Result, S,
-                                              RequestTimeoutAdjustment)
                     end,
                     {keep_state,
                      State#state{queue_requests = true,
                                  service_state = NewServiceState,
-                                 aspects_request_after_f = AspectsRequestAfterF,
+                                 request_data = {T, RequestTimeoutF},
                                  options = NewConfigOptions}};
                 {stop, Reason, NewServiceState} ->
                     {stop, Reason,
@@ -1295,11 +1326,10 @@ handle_event(EventType, EventContent, StateName, State) ->
          #state{timeout_async = TimeoutAsync,
                 timeout_sync = TimeoutSync,
                 options = #config_service_options{
-                    priority_default = PriorityDefault,
-                    request_timeout_adjustment = RequestTimeoutAdjustment}
+                    priority_default = PriorityDefault}
                 } = State) ->
     ok = send('reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
-                           PriorityDefault, RequestTimeoutAdjustment), State),
+                           PriorityDefault), State),
     {keep_state,
      State#state{process_count = ProcessCount}};
 
@@ -1499,7 +1529,6 @@ os_init(#state{initialize = true,
                timeout_term = TimeoutTerm,
                options = #config_service_options{
                    priority_default = PriorityDefault,
-                   request_timeout_adjustment = RequestTimeoutAdjustment,
                    count_process_dynamic = CountProcessDynamic}} = State) ->
     CountProcessDynamicFormat =
         cloudi_core_i_rate_based_configuration:
@@ -1517,7 +1546,7 @@ os_init(#state{initialize = true,
     ok = send('init_out'(ProcessIndex, ProcessCount,
                          ProcessCountMax, ProcessCountMin, Prefix,
                          TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                         PriorityDefault, RequestTimeoutAdjustment),
+                         PriorityDefault),
               State),
     ok.
 
@@ -1741,26 +1770,19 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority,
 'init_out'(ProcessIndex, ProcessCount,
            ProcessCountMax, ProcessCountMin, [PrefixC | _] = Prefix,
            TimeoutInit, TimeoutAsync, TimeoutSync, TimeoutTerm,
-           PriorityDefault, RequestTimeoutAdjustment)
+           PriorityDefault)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(ProcessCountMax), is_integer(ProcessCountMin),
          is_integer(PrefixC), is_integer(TimeoutInit),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
          is_integer(TimeoutTerm), is_integer(PriorityDefault),
-         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
-         is_boolean(RequestTimeoutAdjustment) ->
+         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
     true = ProcessCount < 4294967296,
     true = ProcessCountMax < 4294967296,
     true = ProcessCountMin < 4294967296,
     PrefixBin = erlang:list_to_binary(Prefix),
     PrefixSize = erlang:byte_size(PrefixBin) + 1,
     true = PrefixSize < 4294967296,
-    RequestTimeoutAdjustmentInt = if
-        RequestTimeoutAdjustment ->
-            1;
-        true ->
-            0
-    end,
     <<?MESSAGE_INIT:32/unsigned-integer-native,
       ProcessIndex:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
@@ -1772,28 +1794,19 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
       TimeoutTerm:32/unsigned-integer-native,
-      PriorityDefault:8/signed-integer-native,
-      RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
+      PriorityDefault:8/signed-integer-native>>.
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
-             PriorityDefault, RequestTimeoutAdjustment)
+             PriorityDefault)
     when is_integer(ProcessCount), is_integer(TimeoutAsync),
          is_integer(TimeoutSync), is_integer(PriorityDefault),
-         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW,
-         is_boolean(RequestTimeoutAdjustment) ->
+         PriorityDefault >= ?PRIORITY_HIGH, PriorityDefault =< ?PRIORITY_LOW ->
     true = ProcessCount < 4294967296,
-    RequestTimeoutAdjustmentInt = if
-        RequestTimeoutAdjustment ->
-            1;
-        true ->
-            0
-    end,
     <<?MESSAGE_REINIT:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
-      PriorityDefault:8/signed-integer-native,
-      RequestTimeoutAdjustmentInt:8/unsigned-integer-native>>.
+      PriorityDefault:8/signed-integer-native>>.
 
 'terminate_out'() ->
     <<?MESSAGE_TERM:32/unsigned-integer-native>>.
@@ -1982,8 +1995,8 @@ process_queue(#state{dispatcher = Dispatcher,
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
                                        OldTimeout, Priority, TransId, Source,
-                                       ServiceState, false) of
-                {ok, _, NewServiceState} ->
+                                       ServiceState) of
+                {ok, NewServiceState} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
@@ -1991,27 +2004,22 @@ process_queue(#state{dispatcher = Dispatcher,
                         V ->    
                             V       
                     end,
+                    T = {'cloudi_service_send_async',
+                         Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, TransId, Source},
+                    RequestTimeoutF =
+                        request_timeout_adjustment_f(RequestTimeoutAdjustment),
                     ok = send('send_async_out'(Name, Pattern,
                                                RequestInfo, Request,
                                                Timeout, Priority, TransId,
                                                Source),
                               State),
-                    AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
-                                               Result, S) ->
-                        aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              NewTimeout, Priority,
-                                              TransId, Source,
-                                              Result, S,
-                                              RequestTimeoutAdjustment)
-                    end,
                     State#state{recv_timeouts = maps:remove(TransId,
                                                             RecvTimeouts),
                                 queued = NewQueue,
                                 queued_size = QueuedSize - Size,
                                 service_state = NewServiceState,
-                                aspects_request_after_f = AspectsRequestAfterF,
+                                request_data = {T, RequestTimeoutF},
                                 options = NewConfigOptions};
                 {stop, Reason, NewServiceState} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
@@ -2040,8 +2048,8 @@ process_queue(#state{dispatcher = Dispatcher,
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
                                        OldTimeout, Priority, TransId, Source,
-                                       ServiceState, false) of
-                {ok, _, NewServiceState} ->
+                                       ServiceState) of
+                {ok, NewServiceState} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
@@ -2049,27 +2057,22 @@ process_queue(#state{dispatcher = Dispatcher,
                         V ->    
                             V       
                     end,
+                    T = {'cloudi_service_send_sync',
+                         Name, Pattern, RequestInfo, Request,
+                         Timeout, Priority, TransId, Source},
+                    RequestTimeoutF =
+                        request_timeout_adjustment_f(RequestTimeoutAdjustment),
                     ok = send('send_sync_out'(Name, Pattern,
                                               RequestInfo, Request,
                                               Timeout, Priority, TransId,
                                               Source),
                               State),
-                    AspectsRequestAfterF = fun(AspectsAfter, NewTimeout,
-                                               Result, S) ->
-                        aspects_request_after(AspectsAfter, Type,
-                                              Name, Pattern,
-                                              RequestInfo, Request,
-                                              NewTimeout, Priority,
-                                              TransId, Source,
-                                              Result, S,
-                                              RequestTimeoutAdjustment)
-                    end,
                     State#state{recv_timeouts = maps:remove(TransId,
                                                             RecvTimeouts),
                                 queued = NewQueue,
                                 queued_size = QueuedSize - Size,
                                 service_state = NewServiceState,
-                                aspects_request_after_f = AspectsRequestAfterF,
+                                request_data = {T, RequestTimeoutF},
                                 options = NewConfigOptions};
                 {stop, Reason, NewServiceState} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
@@ -2099,12 +2102,11 @@ process_update(#state{dispatcher = Dispatcher,
                    timeout_async = TimeoutAsync,
                    timeout_sync = TimeoutSync,
                    options = #config_service_options{
-                       priority_default = PriorityDefault,
-                       request_timeout_adjustment = RequestTimeoutAdjustment}
+                       priority_default = PriorityDefault}
                    } = NextState,
             ok = send('reinit_out'(ProcessCount,
-                                   TimeoutAsync, TimeoutSync, PriorityDefault,
-                                   RequestTimeoutAdjustment), NextState),
+                                   TimeoutAsync, TimeoutSync,
+                                   PriorityDefault), NextState),
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
             {false, NextState};
         {ok, {error, _} = Error} ->
@@ -2481,94 +2483,60 @@ aspects_init([F | L], CommandLine, Prefix, Timeout, ServiceState) ->
             Stop
     end.
 
-aspects_request_before([], _, _, _, _, _,
-                       Timeout, _, _, _, ServiceState, _) ->
-    {ok, Timeout, ServiceState};
-aspects_request_before([_ | _] = L, Type, Name, Pattern, RequestInfo, Request,
+aspects_request_before([], _, _, _, _, _, _, _, _, _, ServiceState) ->
+    {ok, ServiceState};
+aspects_request_before([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
                        Timeout, Priority, TransId, Source,
-                       ServiceState, RequestTimeoutAdjustment) ->
-    RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
-    aspects_request_before_f(L, Type,
-                             Name, Pattern, RequestInfo, Request,
-                             Timeout, Priority, TransId, Source,
-                             ServiceState, RequestTimeoutF).
-
-aspects_request_before_f([], _, _, _, _, _,
-                         Timeout, _, _, _, ServiceState, RequestTimeoutF) ->
-    {ok, RequestTimeoutF(Timeout), ServiceState};
-aspects_request_before_f([{M, F} | L], Type,
-                         Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, TransId, Source,
-                         ServiceState, RequestTimeoutF) ->
+                       ServiceState) ->
     case M:F(Type, Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              ServiceState) of
         {ok, NewServiceState} ->
-            aspects_request_before_f(L, Type,
-                                     Name, Pattern, RequestInfo, Request,
-                                     Timeout, Priority, TransId, Source,
-                                     NewServiceState, RequestTimeoutF);
+            aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
+                                   Timeout, Priority, TransId, Source,
+                                   NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end;
-aspects_request_before_f([F | L], Type,
-                         Name, Pattern, RequestInfo, Request,
-                         Timeout, Priority, TransId, Source,
-                         ServiceState, RequestTimeoutF) ->
+aspects_request_before([F | L], Type, Name, Pattern, RequestInfo, Request,
+                       Timeout, Priority, TransId, Source,
+                       ServiceState) ->
     case F(Type, Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Source,
            ServiceState) of
         {ok, NewServiceState} ->
-            aspects_request_before_f(L, Type,
-                                     Name, Pattern, RequestInfo, Request,
-                                     Timeout, Priority, TransId, Source,
-                                     NewServiceState, RequestTimeoutF);
+            aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
+                                   Timeout, Priority, TransId, Source,
+                                   NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end.
 
-aspects_request_after([], _, _, _, _, _,
-                      Timeout, _, _, _, _, ServiceState, _) ->
-    {ok, Timeout, ServiceState};
-aspects_request_after([_ | _] = L, Type, Name, Pattern, RequestInfo, Request,
+aspects_request_after([], _, _, _, _, _, _, _, _, _, _, ServiceState) ->
+    {ok, ServiceState};
+aspects_request_after([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
                       Timeout, Priority, TransId, Source,
-                      Result, ServiceState, RequestTimeoutAdjustment) ->
-    RequestTimeoutF = request_timeout_adjustment_f(RequestTimeoutAdjustment),
-    aspects_request_after_f(L, Type,
-                            Name, Pattern, RequestInfo, Request,
-                            Timeout, Priority, TransId, Source,
-                            Result, ServiceState, RequestTimeoutF).
-
-aspects_request_after_f([], _, _, _, _, _,
-                        Timeout, _, _, _, _, ServiceState, RequestTimeoutF) ->
-    {ok, RequestTimeoutF(Timeout), ServiceState};
-aspects_request_after_f([{M, F} | L], Type,
-                        Name, Pattern, RequestInfo, Request,
-                        Timeout, Priority, TransId, Source,
-                        Result, ServiceState, RequestTimeoutF) ->
+                      Result, ServiceState) ->
     case M:F(Type, Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              Result, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_request_after_f(L, Type,
-                                    Name, Pattern, RequestInfo, Request,
-                                    Timeout, Priority, TransId, Source,
-                                    Result, NewServiceState, RequestTimeoutF);
+            aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
+                                  Timeout, Priority, TransId, Source,
+                                  Result, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end;
-aspects_request_after_f([F | L], Type,
-                        Name, Pattern, RequestInfo, Request,
-                        Timeout, Priority, TransId, Source,
-                        Result, ServiceState, RequestTimeoutF) ->
+aspects_request_after([F | L], Type, Name, Pattern, RequestInfo, Request,
+                      Timeout, Priority, TransId, Source,
+                      Result, ServiceState) ->
     case F(Type, Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Source,
            Result, ServiceState) of
         {ok, NewServiceState} ->
-            aspects_request_after_f(L, Type,
-                                    Name, Pattern, RequestInfo, Request,
-                                    Timeout, Priority, TransId, Source,
-                                    Result, NewServiceState, RequestTimeoutF);
+            aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
+                                  Timeout, Priority, TransId, Source,
+                                  Result, NewServiceState);
         {stop, _, _} = Stop ->
             Stop
     end.

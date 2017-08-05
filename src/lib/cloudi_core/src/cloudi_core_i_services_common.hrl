@@ -468,12 +468,10 @@ check_incoming(ServiceRequest,
         hibernate = NewHibernate}.
 
 request_timeout_adjustment_f(true) ->
-    RequestTimeStart = cloudi_timestamp:milliseconds_os(),
+    RequestTimeStart = cloudi_timestamp:milliseconds_monotonic(),
     fun(T) ->
-        Delta = cloudi_timestamp:milliseconds_os() - RequestTimeStart,
+        Delta = cloudi_timestamp:milliseconds_monotonic() - RequestTimeStart,
         if
-            Delta =< 0 ->
-                T;
             Delta >= T ->
                 0;
             true ->

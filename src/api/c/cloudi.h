@@ -54,8 +54,6 @@ typedef struct cloudi_instance_t
     uint32_t buffer_recv_index;
     void * buffer_call;
     void * poll_timer;
-    void * request_timer;
-    uint32_t request_timeout;
     uint32_t process_index;
     uint32_t process_count;
     uint32_t process_count_max;
@@ -66,7 +64,6 @@ typedef struct cloudi_instance_t
     uint32_t timeout_sync;
     uint32_t timeout_terminate;
     int8_t priority_default;
-    uint8_t request_timeout_adjustment;
     char * response_info;
     uint32_t response_info_size;
     char * response;

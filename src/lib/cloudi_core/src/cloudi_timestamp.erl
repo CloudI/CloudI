@@ -37,24 +37,79 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([timestamp/0,
+-export([convert/3,
+         timestamp/0,
+         native/0,
+         native_monotonic/0,
+         native_os/0,
          seconds/0,
+         seconds_monotonic/0,
          seconds_os/0,
          milliseconds/0,
+         milliseconds_monotonic/0,
          milliseconds_os/0,
          microseconds/0,
+         microseconds_monotonic/0,
          microseconds_os/0,
          nanoseconds/0,
+         nanoseconds_monotonic/0,
          nanoseconds_os/0,
          seconds_filter/3,
          uptime/0,
          uptime/1]).
+
+-type time_unit() :: second | millisecond | microsecond | nanosecond |
+                     native | perf_counter | pos_integer().
+-export_type([time_unit/0]).
 
 -include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert between time units.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec convert(Time :: integer(),
+              FromUnit :: time_unit(),
+              ToUnit :: time_unit()) ->
+    integer().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+convert(Time, FromUnit, ToUnit) ->
+    erlang:convert_time_unit(Time, FromUnit, ToUnit).
+-else.
+convert(Time, FromUnit, ToUnit) ->
+    FromUnitDeprecated = if
+        FromUnit =:= second ->
+            seconds;
+        FromUnit =:= millisecond ->
+            milli_seconds;
+        FromUnit =:= microsecond ->
+            micro_seconds;
+        FromUnit =:= nanosecond ->
+            nano_seconds;
+        true ->
+            FromUnit
+    end,
+    ToUnitDeprecated = if
+        ToUnit =:= second ->
+            seconds;
+        ToUnit =:= millisecond ->
+            milli_seconds;
+        ToUnit =:= microsecond ->
+            micro_seconds;
+        ToUnit =:= nanosecond ->
+            nano_seconds;
+        true ->
+            ToUnit
+    end,
+    erlang:convert_time_unit(Time, FromUnitDeprecated, ToUnitDeprecated).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -71,6 +126,40 @@ timestamp() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Native time units since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec native() -> integer().
+
+native() ->
+    erlang:system_time().
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Native time units since an undefined point in time, from the Erlang VM.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec native_monotonic() -> integer().
+
+native_monotonic() ->
+    erlang:monotonic_time().
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Native time units since an undefined point in time, from the hardware.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec native_os() -> integer().
+
+native_os() ->
+    os:system_time().
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Seconds since the UNIX epoch.===
 %% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
@@ -84,6 +173,22 @@ seconds() ->
 -else.
 seconds() ->
     erlang:system_time(seconds).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Seconds since an undefined point in time, from the Erlang VM.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_monotonic() -> integer().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+seconds_monotonic() ->
+    erlang:monotonic_time(second).
+-else.
+seconds_monotonic() ->
+    erlang:monotonic_time(seconds).
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -121,6 +226,22 @@ milliseconds() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Milliseconds since an undefined point in time, from the Erlang VM.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec milliseconds_monotonic() -> integer().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+milliseconds_monotonic() ->
+    erlang:monotonic_time(millisecond).
+-else.
+milliseconds_monotonic() ->
+    erlang:monotonic_time(milli_seconds).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Milliseconds since an undefined point in time, from the hardware.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -154,6 +275,22 @@ microseconds() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Microseconds since an undefined point in time, from the Erlang VM.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds_monotonic() -> integer().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+microseconds_monotonic() ->
+    erlang:monotonic_time(microsecond).
+-else.
+microseconds_monotonic() ->
+    erlang:monotonic_time(micro_seconds).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Microseconds since an undefined point in time, from the hardware.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -183,6 +320,22 @@ nanoseconds() ->
 -else.
 nanoseconds() ->
     erlang:system_time(nano_seconds).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Nanoseconds since an undefined point in time, from the Erlang VM.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nanoseconds_monotonic() -> integer().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+nanoseconds_monotonic() ->
+    erlang:monotonic_time(nanosecond).
+-else.
+nanoseconds_monotonic() ->
+    erlang:monotonic_time(nano_seconds).
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -255,23 +408,9 @@ uptime(TimeUnit)
     when TimeUnit =:= second; TimeUnit =:= millisecond;
          TimeUnit =:= microsecond; TimeUnit =:= nanosecond ->
     Value = erlang:monotonic_time() - erlang:system_info(start_time),
-    convert_time_unit_native(Value, TimeUnit).
+    convert(Value, native, TimeUnit).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-convert_time_unit_native(Value, TimeUnit) ->
-    erlang:convert_time_unit(Value, native, TimeUnit).
--else.
-convert_time_unit_native(Value, second) ->
-    erlang:convert_time_unit(Value, native, seconds);
-convert_time_unit_native(Value, millisecond) ->
-    erlang:convert_time_unit(Value, native, milli_seconds);
-convert_time_unit_native(Value, microsecond) ->
-    erlang:convert_time_unit(Value, native, micro_seconds);
-convert_time_unit_native(Value, nanosecond) ->
-    erlang:convert_time_unit(Value, native, nano_seconds).
--endif.
 

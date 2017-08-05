@@ -53,7 +53,6 @@ import qualified Data.Int as Int
 import qualified Data.Map.Strict as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Sequence as Sequence
-import qualified Data.Time.Clock as Clock
 import qualified Data.Word as Word
 import qualified Foreign.C.Types as C
 import qualified Foreign.Erlang.Pid as Erlang
@@ -67,7 +66,6 @@ type Int8 = Int.Int8
 type Map = Map.Map
 type Seq = Sequence.Seq
 type Socket = Socket.Socket
-type Word8 = Word.Word8
 type Word32 = Word.Word32
 
 -- | provided when handling a service request
@@ -120,9 +118,6 @@ data T s = T
     , timeoutSync :: !Int
     , timeoutTerminate :: !Int
     , priorityDefault :: !Int
-    , requestTimeoutAdjustment :: !Bool
-    , requestTimer :: !Clock.NominalDiffTime
-    , requestTimeout :: !Int
     , responseInfo :: !ByteString
     , response :: !ByteString
     , transId :: !ByteString
@@ -176,9 +171,6 @@ make state' protocol fd useHeader' bufferSize' timeoutTerminate' = do
         , timeoutSync = 0
         , timeoutTerminate = timeoutTerminate'
         , priorityDefault = 0
-        , requestTimeoutAdjustment = False
-        , requestTimer = 0
-        , requestTimeout = 0
         , responseInfo = ByteString.empty
         , response = ByteString.empty
         , transId = ByteString.empty
@@ -187,11 +179,11 @@ make state' protocol fd useHeader' bufferSize' timeoutTerminate' = do
     }
 
 init :: T s -> Word32 -> Word32 -> Word32 -> Word32 -> ByteString ->
-    Word32 -> Word32 -> Word32 -> Word32 -> Int8 -> Word8 -> T s
+    Word32 -> Word32 -> Word32 -> Word32 -> Int8 -> T s
 init api0
     processIndex' processCount' processCountMax' processCountMin'
     prefix' timeoutInitialize' timeoutAsync' timeoutSync' timeoutTerminate'
-    priorityDefault' requestTimeoutAdjustment' =
+    priorityDefault' =
     api0{
           timeout = Just False
         , processIndex = fromIntegral processIndex'
@@ -203,19 +195,17 @@ init api0
         , timeoutAsync = fromIntegral timeoutAsync'
         , timeoutSync = fromIntegral timeoutSync'
         , timeoutTerminate = fromIntegral timeoutTerminate'
-        , priorityDefault = fromIntegral priorityDefault'
-        , requestTimeoutAdjustment = requestTimeoutAdjustment' /= 0}
+        , priorityDefault = fromIntegral priorityDefault'}
 
-reinit :: T s -> Word32 -> Word32 -> Word32 -> Int8 -> Word8 -> T s
+reinit :: T s -> Word32 -> Word32 -> Word32 -> Int8 -> T s
 reinit api0
     processCount' timeoutAsync' timeoutSync'
-    priorityDefault' requestTimeoutAdjustment' =
+    priorityDefault' =
     api0{
           processCount = fromIntegral processCount'
         , timeoutAsync = fromIntegral timeoutAsync'
         , timeoutSync = fromIntegral timeoutSync'
-        , priorityDefault = fromIntegral priorityDefault'
-        , requestTimeoutAdjustment = requestTimeoutAdjustment' /= 0}
+        , priorityDefault = fromIntegral priorityDefault'}
 
 setResponse :: T s -> ByteString -> ByteString -> ByteString -> T s
 setResponse api0

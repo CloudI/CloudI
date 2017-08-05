@@ -123,7 +123,7 @@ handle(Req0,
                      use_x_method_override = UseXMethodOverride,
                      use_method_suffix = UseMethodSuffix
                      } = State) ->
-    RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
+    RequestStartMilliSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     {MethodHTTP, Req1} = cloudi_x_cowboy_req:method(Req0),
     {HeadersIncoming0, Req2} = cloudi_x_cowboy_req:headers(Req1),
     Method = if
@@ -181,7 +181,7 @@ handle(Req0,
             ?LOG_WARN_APPLY(fun request_time_end_error/6,
                             [HttpCode, MethodHTTP,
                              NameIncoming, undefined,
-                             RequestStartMicroSec, not_acceptable]),
+                             RequestStartMilliSec, not_acceptable]),
             {ok, Req, State};
         RequestAccepted =:= true ->
             NameOutgoing = if
@@ -266,7 +266,7 @@ handle(Req0,
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                                      [HttpCode, MethodHTTP,
                                       NameIncoming, NameOutgoing,
-                                      RequestStartMicroSec]),
+                                      RequestStartMilliSec]),
                     {ok, Req, NewState};
                 {{cowboy_error, timeout},
                  ReqN0, NewState} ->
@@ -287,7 +287,7 @@ handle(Req0,
                     ?LOG_WARN_APPLY(fun request_time_end_error/6,
                                     [HttpCode, MethodHTTP,
                                      NameIncoming, NameOutgoing,
-                                     RequestStartMicroSec, timeout]),
+                                     RequestStartMilliSec, timeout]),
                     {ok, Req, NewState};
                 {{cowboy_error, Reason},
                  ReqN0, NewState} ->
@@ -297,7 +297,7 @@ handle(Req0,
                     ?LOG_WARN_APPLY(fun request_time_end_error/6,
                                     [HttpCode, MethodHTTP,
                                      NameIncoming, NameOutgoing,
-                                     RequestStartMicroSec, Reason]),
+                                     RequestStartMilliSec, Reason]),
                     {ok, Req, NewState}
             end
     end.
@@ -942,19 +942,19 @@ get_query_string_external_text([{K, V} | L]) ->
     end.
 
 request_time_start() ->
-    cloudi_x_uuid:get_v1_time(os).
+    cloudi_timestamp:milliseconds_monotonic().
 
 request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
-                         RequestStartMicroSec) ->
+                         RequestStartMilliSec) ->
     ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
                [HttpCode, Method, NameIncoming, NameOutgoing,
-                (cloudi_x_uuid:get_v1_time(os) -
-                 RequestStartMicroSec) / 1000.0]).
+                (cloudi_timestamp:milliseconds_monotonic() -
+                 RequestStartMilliSec)]).
 
 request_time_end_error(HttpCode, Method, NameIncoming, NameOutgoing,
-                       RequestStartMicroSec, Reason) ->
-    RequestTime = (cloudi_x_uuid:get_v1_time(os) -
-                   RequestStartMicroSec) / 1000.0,
+                       RequestStartMilliSec, Reason) ->
+    RequestTime = cloudi_timestamp:milliseconds_monotonic() -
+                  RequestStartMilliSec,
     if
         NameOutgoing =:= undefined ->
             ?LOG_WARN("~w ~s ~s ~p ms: ~p",
@@ -967,21 +967,21 @@ request_time_end_error(HttpCode, Method, NameIncoming, NameOutgoing,
     end.
 
 websocket_time_start() ->
-    cloudi_x_uuid:get_v1_time(os).
+    cloudi_timestamp:milliseconds_monotonic().
 
 websocket_time_end_success(NameIncoming, NameOutgoing,
-                           RequestStartMicroSec) ->
+                           RequestStartMilliSec) ->
     ?LOG_TRACE("~s (to ~s) ~p ms",
                [NameIncoming, NameOutgoing,
-                (cloudi_x_uuid:get_v1_time(os) -
-                 RequestStartMicroSec) / 1000.0]).
+                (cloudi_timestamp:milliseconds_monotonic() -
+                 RequestStartMilliSec)]).
 
 websocket_time_end_error(NameIncoming, NameOutgoing,
-                         RequestStartMicroSec, Reason) ->
+                         RequestStartMilliSec, Reason) ->
     ?LOG_WARN("~s (to ~s) ~p ms: ~p",
               [NameIncoming, NameOutgoing,
-               (cloudi_x_uuid:get_v1_time(os) -
-                RequestStartMicroSec) / 1000.0, Reason]).
+               (cloudi_timestamp:milliseconds_monotonic() -
+                RequestStartMilliSec), Reason]).
 
 websocket_request_end(Name, NewTimeout, OldTimeout) ->
     ?LOG_TRACE("~s ~p ms", [Name, OldTimeout - NewTimeout]).
@@ -1463,13 +1463,13 @@ websocket_handle_incoming_request(Dispatcher, NameOutgoing,
                                   RequestInfo, Request, TimeoutSync, ResponseF,
                                   WebSocketRequestType, Req,
                                   NameIncoming, State) ->
-    RequestStartMicroSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
+    RequestStartMilliSec = ?LOG_WARN_APPLY(fun websocket_time_start/0, []),
     case send_sync_minimal(Dispatcher, NameOutgoing, RequestInfo, Request,
                            TimeoutSync, self()) of
         {ok, ResponseInfo, Response} ->
             ?LOG_TRACE_APPLY(fun websocket_time_end_success/3,
                              [NameIncoming, NameOutgoing,
-                              RequestStartMicroSec]),
+                              RequestStartMilliSec]),
             case websocket_terminate_check(ResponseInfo) of
                 true when Response == <<>> ->
                     {reply, close, Req, State};
@@ -1483,7 +1483,7 @@ websocket_handle_incoming_request(Dispatcher, NameOutgoing,
         {error, timeout} ->
             ?LOG_WARN_APPLY(fun websocket_time_end_error/4,
                             [NameIncoming, NameOutgoing,
-                             RequestStartMicroSec, timeout]),
+                             RequestStartMilliSec, timeout]),
             {reply, {WebSocketRequestType, <<>>}, Req, State}
     end.
 

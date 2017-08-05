@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Service configuration option request_timeout_adjustment was modified to
+      use Erlang monotonic time so timeout adjustments are not impacted by any
+      OS time changes
+    * Javascript CloudI API now properly handles the request_timeout_adjustment
+      service configuration option for service request responses
+    * cloudi_service_http_client, cloudi_service_http_cowboy,
+      cloudi_service_http_elli now use Erlang monotonic time when reporting
+      the time a request takes in the log output
+
 2017-08-03 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Handle erlang:deprecated_time_unit() in Erlang/OTP 20
@@ -9,7 +20,7 @@
     * Add CloudI Service API logging_set configuration option
       log_time_offset to log when the Erlang VM updates its time_offset
       with the time_offset change logged in nanoseconds
-      (the difference between the Erlang monotomic time and
+      (the difference between the Erlang monotonic time and
        the Erlang system time which gets adjusted to match the OS system time,
        every minute rougbly, when necessary)
 

@@ -91,8 +91,7 @@ class API(object):
          self.__timeout_initialize,
          self.__timeout_async, self.__timeout_sync,
          self.__timeout_terminate,
-         self.__priority_default,
-         self.__request_timeout_adjustment) = self.__poll_request(None, False)
+         self.__priority_default) = self.__poll_request(None, False)
 
     @staticmethod
     def thread_count():
@@ -186,14 +185,6 @@ class API(object):
 
     def forward_async(self, name, request_info, request,
                       timeout, priority, trans_id, pid):
-        if self.__request_timeout_adjustment:
-            if timeout == self.__request_timeout:
-                elapsed = max(0, int((default_timer() -
-                                      self.__request_timer) * 1000.0))
-                if elapsed > timeout:
-                    timeout = 0
-                else:
-                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom(b'forward_async'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -203,14 +194,6 @@ class API(object):
 
     def forward_sync(self, name, request_info, request,
                      timeout, priority, trans_id, pid):
-        if self.__request_timeout_adjustment:
-            if timeout == self.__request_timeout:
-                elapsed = max(0, int((default_timer() -
-                                      self.__request_timer) * 1000.0))
-                if elapsed > timeout:
-                    timeout = 0
-                else:
-                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom(b'forward_sync'), name,
                                     OtpErlangBinary(request_info),
                                     OtpErlangBinary(request),
@@ -233,16 +216,6 @@ class API(object):
 
     def return_async(self, name, pattern, response_info, response,
                      timeout, trans_id, pid):
-        if self.__request_timeout_adjustment:
-            if timeout == self.__request_timeout:
-                elapsed = max(0, int((default_timer() -
-                                      self.__request_timer) * 1000.0))
-                if elapsed > timeout:
-                    response_info = b''
-                    response = b''
-                    timeout = 0
-                else:
-                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom(b'return_async'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),
@@ -252,16 +225,6 @@ class API(object):
 
     def return_sync(self, name, pattern, response_info, response,
                     timeout, trans_id, pid):
-        if self.__request_timeout_adjustment:
-            if timeout == self.__request_timeout:
-                elapsed = max(0, int((default_timer() -
-                                      self.__request_timer) * 1000.0))
-                if elapsed > timeout:
-                    response_info = b''
-                    response = b''
-                    timeout = 0
-                else:
-                    timeout -= elapsed
         self.__send(term_to_binary((OtpErlangAtom(b'return_sync'),
                                     name, pattern,
                                     OtpErlangBinary(response_info),
@@ -312,9 +275,6 @@ class API(object):
 
     def __callback(self, command, name, pattern, request_info, request,
                    timeout, priority, trans_id, pid):
-        if self.__request_timeout_adjustment:
-            self.__request_timer = default_timer()
-            self.__request_timeout = timeout
         function_queue = self.__callbacks.get(pattern, None)
         if function_queue is None:
             function = self.__null_response
@@ -430,19 +390,12 @@ class API(object):
                 else:
                     raise terminate_exception(self.__timeout_terminate)
             elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4 + 4 + 4 + 1 + 1
+                i, j = j, j + 4 + 4 + 4 + 1
                 (self.__process_count,
                  self.__timeout_async, self.__timeout_sync,
-                 self.__priority_default,
-                 request_timeout_adjustment) = struct.unpack(
-                    b'=IIIbB', data[i:j]
+                 self.__priority_default) = struct.unpack(
+                    b'=IIIb', data[i:j]
                 )
-                self.__request_timeout_adjustment = bool(
-                    request_timeout_adjustment
-                )
-                if self.__request_timeout_adjustment:
-                    self.__request_timer = default_timer()
-                    self.__request_timeout = 0
             elif command == _MESSAGE_KEEPALIVE:
                 self.__send(term_to_binary(OtpErlangAtom(b'keepalive')))
             else:
@@ -490,12 +443,11 @@ class API(object):
                 (process_index, process_count,
                  process_count_max, process_count_min,
                  prefix_size) = struct.unpack(b'=IIIII', data[i:j])
-                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1 + 1
+                i, j = j, j + prefix_size + 4 + 4 + 4 + 4 + 1
                 (prefix, null_terminator, timeout_initialize,
                  timeout_async, timeout_sync, timeout_terminate,
-                 priority_default,
-                 request_timeout_adjustment) = struct.unpack(
-                    '=%dscIIIIbB' % (prefix_size - 1), data[i:j]
+                 priority_default) = struct.unpack(
+                    '=%dscIIIIb' % (prefix_size - 1), data[i:j]
                 )
                 if j != data_size:
                     assert external == False
@@ -504,7 +456,7 @@ class API(object):
                         process_count_max, process_count_min,
                         prefix.decode('utf-8'), timeout_initialize,
                         timeout_sync, timeout_async, timeout_terminate,
-                        priority_default, bool(request_timeout_adjustment))
+                        priority_default)
             elif (command == _MESSAGE_SEND_ASYNC or
                   command == _MESSAGE_SEND_SYNC):
                 i, j = j, j + 4
@@ -590,19 +542,12 @@ class API(object):
                     return False
                 assert False
             elif command == _MESSAGE_REINIT:
-                i, j = j, j + 4 + 4 + 4 + 1 + 1
+                i, j = j, j + 4 + 4 + 4 + 1
                 (self.__process_count,
                  self.__timeout_async, self.__timeout_sync,
-                 self.__priority_default,
-                 request_timeout_adjustment) = struct.unpack(
-                    b'=IIIbB', data[i:j]
+                 self.__priority_default) = struct.unpack(
+                    b'=IIIb', data[i:j]
                 )
-                self.__request_timeout_adjustment = bool(
-                    request_timeout_adjustment
-                )
-                if self.__request_timeout_adjustment:
-                    self.__request_timer = default_timer()
-                    self.__request_timeout = 0
                 if j == data_size:
                     data = b''
                 elif j < data_size:

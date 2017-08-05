@@ -120,8 +120,6 @@ public class API
     private final HashMap<String, LinkedList<FunctionInterface9>> callbacks;
     private final FunctionInterface9 null_response;
     private final int buffer_size;
-    private long request_timer;
-    private Integer request_timeout;
     private int process_index;
     private int process_count;
     private int process_count_max;
@@ -132,7 +130,6 @@ public class API
     private int timeout_sync;
     private int timeout_terminate;
     private byte priority_default;
-    private boolean request_timeout_adjustment;
 
     public API(final int thread_index)
         throws InvalidInputException,
@@ -579,22 +576,6 @@ public class API
                               final OtpErlangPid pid)
         throws ForwardAsyncException
     {
-        if (this.request_timeout_adjustment)
-        {
-            if (timeout == this.request_timeout)
-            {
-                final int elapsed = (int) Math.max(0,
-                    ((System.nanoTime() - this.request_timer) * 1e-6));
-                if (elapsed > timeout)
-                {
-                    timeout = 0;
-                }
-                else
-                {
-                    timeout -= elapsed;
-                }
-            }
-        }
         try
         {
             OtpOutputStream forward_async = new OtpOutputStream();
@@ -641,22 +622,6 @@ public class API
                              final OtpErlangPid pid)
         throws ForwardSyncException
     {
-        if (this.request_timeout_adjustment)
-        {
-            if (timeout == this.request_timeout)
-            {
-                final int elapsed = (int) Math.max(0,
-                    ((System.nanoTime() - this.request_timer) * 1e-6));
-                if (elapsed > timeout)
-                {
-                    timeout = 0;
-                }
-                else
-                {
-                    timeout -= elapsed;
-                }
-            }
-        }
         try
         {
             OtpOutputStream forward_sync = new OtpOutputStream();
@@ -740,24 +705,6 @@ public class API
                              final OtpErlangPid pid)
         throws ReturnAsyncException
     {
-        if (this.request_timeout_adjustment)
-        {
-            if (timeout == this.request_timeout)
-            {
-                final int elapsed = (int) Math.max(0,
-                    ((System.nanoTime() - this.request_timer) * 1e-6));
-                if (elapsed > timeout)
-                {
-                    response_info = new byte[0];
-                    response = new byte[0];
-                    timeout = 0;
-                }
-                else
-                {
-                    timeout -= elapsed;
-                }
-            }
-        }
         try
         {
             OtpOutputStream return_async = new OtpOutputStream();
@@ -803,24 +750,6 @@ public class API
                             final OtpErlangPid pid)
         throws ReturnSyncException
     {
-        if (this.request_timeout_adjustment)
-        {
-            if (timeout == this.request_timeout)
-            {
-                final int elapsed = (int) Math.max(0,
-                    ((System.nanoTime() - this.request_timer) * 1e-6));
-                if (elapsed > timeout)
-                {
-                    response_info = new byte[0];
-                    response = new byte[0];
-                    timeout = 0;
-                }
-                else
-                {
-                    timeout -= elapsed;
-                }
-            }
-        }
         try
         {
             OtpOutputStream return_sync = new OtpOutputStream();
@@ -1080,12 +1009,6 @@ public class API
                MessageDecodingException,
                TerminateException
     {
-        long request_time_start = 0;
-        if (this.request_timeout_adjustment)
-        {
-            this.request_timer = System.nanoTime();
-            this.request_timeout = timeout;
-        }
         LinkedList<FunctionInterface9> callback_list =
             this.callbacks.get(pattern);
         FunctionInterface9 callback = null;
@@ -1295,13 +1218,6 @@ public class API
                     this.timeout_async = buffer.getInt();
                     this.timeout_sync = buffer.getInt();
                     this.priority_default = buffer.get();
-                    this.request_timeout_adjustment =
-                        (buffer.get() & 0xFF) != 0;
-                    if (this.request_timeout_adjustment)
-                    {
-                        this.request_timer = System.nanoTime();
-                        this.request_timeout = 0;
-                    }
                     break;
                 }
                 case MESSAGE_KEEPALIVE:
@@ -1376,8 +1292,6 @@ public class API
                         this.timeout_sync = buffer.getInt();
                         this.timeout_terminate = buffer.getInt();
                         this.priority_default = buffer.get();
-                        this.request_timeout_adjustment =
-                            (buffer.get() & 0xFF) != 0;
                         if (buffer.hasRemaining())
                         {
                             assert ! external;
@@ -1481,13 +1395,6 @@ public class API
                         this.timeout_async = buffer.getInt();
                         this.timeout_sync = buffer.getInt();
                         this.priority_default = buffer.get();
-                        this.request_timeout_adjustment =
-                            (buffer.get() & 0xFF) != 0;
-                        if (this.request_timeout_adjustment)
-                        {
-                            this.request_timer = System.nanoTime();
-                            this.request_timeout = 0;
-                        }
                         if (buffer.hasRemaining())
                             continue;
                         break;

@@ -67,9 +67,6 @@ class API
     private $timeout_sync;
     private $timeout_terminate;
     private $priority_default;
-    private $request_timeout_adjustment;
-    private $request_timeout;
-    private $request_timer;
 
     public function __construct($thread_index)
     {
@@ -103,8 +100,7 @@ class API
              $this->timeout_async,
              $this->timeout_sync,
              $this->timeout_terminate,
-             $this->priority_default,
-             $this->request_timeout_adjustment
+             $this->priority_default
              ) = $this->poll_request(null, false);
     }
 
@@ -220,19 +216,6 @@ class API
     public function forward_async($name, $request_info, $request,
                                   $timeout, $priority, $trans_id, $pid)
     {
-        if ($this->request_timeout_adjustment)
-        {
-            if ($timeout == $this->request_timeout)
-            {
-                $elapsed = max(0, (integer) floor((microtime(true) -
-                                                   $this->request_timer) *
-                                                  1000.0));
-                if ($elapsed > $timeout)
-                    $timeout = 0;
-                else
-                    $timeout -= $elapsed;
-            }
-        }
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('forward_async'), $name,
                   new \Erlang\OtpErlangBinary($request_info),
@@ -244,19 +227,6 @@ class API
     public function forward_sync($name, $request_info, $request,
                                  $timeout, $priority, $trans_id, $pid)
     {
-        if ($this->request_timeout_adjustment)
-        {
-            if ($timeout == $this->request_timeout)
-            {
-                $elapsed = max(0, (integer) floor((microtime(true) -
-                                                   $this->request_timer) *
-                                                  1000.0));
-                if ($elapsed > $timeout)
-                    $timeout = 0;
-                else
-                    $timeout -= $elapsed;
-            }
-        }
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('forward_sync'), $name,
                   new \Erlang\OtpErlangBinary($request_info),
@@ -283,25 +253,6 @@ class API
     public function return_async($name, $pattern, $response_info, $response,
                                  $timeout, $trans_id, $pid)
     {
-        if ($this->request_timeout_adjustment)
-        {
-            if ($timeout == $this->request_timeout)
-            {
-                $elapsed = max(0, (integer) floor((microtime(true) -
-                                                   $this->request_timer) *
-                                                  1000.0));
-                if ($elapsed > $timeout)
-                {
-                    $response_info = '';
-                    $response = '';
-                    $timeout = 0;
-                }
-                else
-                {
-                    $timeout -= $elapsed;
-                }
-            }
-        }
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('return_async'), $name, $pattern,
                   new \Erlang\OtpErlangBinary($response_info),
@@ -313,25 +264,6 @@ class API
     public function return_sync($name, $pattern, $response_info, $response,
                                 $timeout, $trans_id, $pid)
     {
-        if ($this->request_timeout_adjustment)
-        {
-            if ($timeout == $this->request_timeout)
-            {
-                $elapsed = max(0, (integer) floor((microtime(true) -
-                                                   $this->request_timer) *
-                                                  1000.0));
-                if ($elapsed > $timeout)
-                {
-                    $response_info = '';
-                    $response = '';
-                    $timeout = 0;
-                }
-                else
-                {
-                    $timeout -= $elapsed;
-                }
-            }
-        }
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('return_sync'), $name, $pattern,
                   new \Erlang\OtpErlangBinary($response_info),
@@ -409,11 +341,6 @@ class API
                               $request_info, $request,
                               $timeout, $priority, $trans_id, $pid)
     {
-        if ($this->request_timeout_adjustment)
-        {
-            $this->request_timer = microtime(true);
-            $this->request_timeout = $timeout;
-        }
         if (! isset($this->callbacks[$pattern]))
         {
             $function = array($this, 'null_response');
@@ -598,18 +525,12 @@ class API
                     else
                         throw new TerminateException($this->timeout_terminate);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
-                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1;
+                    $tmp = unpack('L3a/cb', substr($data, $i, $j));
                     $this->process_count = $tmp['a1'];
                     $this->timeout_async = $tmp['a2'];
                     $this->timeout_sync = $tmp['a3'];
                     $this->priority_default = $tmp['b'];
-                    $this->request_timeout_adjustment = ($tmp['c'] == 1);
-                    if ($this->request_timeout_adjustment)
-                    {
-                        $this->request_timer = microtime(true);
-                        $this->request_timeout = 0;
-                    }
                     $i += $j;
                     break;
                 case MESSAGE_KEEPALIVE:
@@ -691,14 +612,13 @@ class API
                          $prefix_size) = unpack('L5', substr($data, $i, $j));
                     $i += $j; $j = $prefix_size;
                     $prefix = substr($data, $i, $j - 1);
-                    $i += $j; $j = 4 + 4 + 4 + 4 + 1 + 1;
-                    $tmp = unpack('L4a/cb/Cc', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 4 + 1;
+                    $tmp = unpack('L4a/cb', substr($data, $i, $j));
                     $timeout_initialize = $tmp['a1'];
                     $timeout_async = $tmp['a2'];
                     $timeout_sync = $tmp['a3'];
                     $timeout_terminate = $tmp['a4'];
                     $priority_default = $tmp['b'];
-                    $request_timeout_adjustment = $tmp['c'];
                     $i += $j;
                     if ($i != $data_size)
                     {
@@ -709,8 +629,7 @@ class API
                                  $process_count_max, $process_count_min,
                                  $prefix, $timeout_initialize,
                                  $timeout_sync, $timeout_async,
-                                 $timeout_terminate, $priority_default,
-                                 ($request_timeout_adjustment == 1));
+                                 $timeout_terminate, $priority_default);
                 case MESSAGE_SEND_ASYNC:
                 case MESSAGE_SEND_SYNC:
                     $i += $j; $j = 4;
@@ -825,18 +744,12 @@ class API
                     }
                     assert(false);
                 case MESSAGE_REINIT:
-                    $i += $j; $j = 4 + 4 + 4 + 1 + 1;
-                    $tmp = unpack('L3a/cb/Cc', substr($data, $i, $j));
+                    $i += $j; $j = 4 + 4 + 4 + 1;
+                    $tmp = unpack('L3a/cb', substr($data, $i, $j));
                     $this->process_count = $tmp['a1'];
                     $this->timeout_async = $tmp['a2'];
                     $this->timeout_sync = $tmp['a3'];
                     $this->priority_default = $tmp['b'];
-                    $this->request_timeout_adjustment = ($tmp['c'] == 1);
-                    if ($this->request_timeout_adjustment)
-                    {
-                        $this->request_timer = microtime(true);
-                        $this->request_timeout = 0;
-                    }
                     $i += $j; $j = 4;
                     if ($i == $data_size)
                     {

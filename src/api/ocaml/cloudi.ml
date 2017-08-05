@@ -84,9 +84,6 @@ module Instance = struct
       mutable timeout_sync : int;
       mutable timeout_terminate : int;
       mutable priority_default : int;
-      mutable request_timeout_adjustment : bool;
-      mutable request_timer : float;
-      mutable request_timeout : int;
       mutable response_info : string;
       mutable response : string;
       mutable trans_id : string;
@@ -109,9 +106,6 @@ module Instance = struct
      timeout_sync = 0;
      timeout_terminate;
      priority_default = 0;
-     request_timeout_adjustment = false;
-     request_timer = 0.0;
-     request_timeout = 0;
      response_info = "";
      response = "";
      trans_id = "";
@@ -120,7 +114,7 @@ module Instance = struct
   let init api process_index process_count
     process_count_max process_count_min prefix
     timeout_initialize timeout_async timeout_sync timeout_terminate
-    priority_default request_timeout_adjustment =
+    priority_default =
     api.process_index <- process_index ;
     api.process_count <- process_count ;
     api.process_count_max <- process_count_max ;
@@ -131,15 +125,13 @@ module Instance = struct
     api.timeout_sync <- timeout_sync ;
     api.timeout_terminate <- timeout_terminate ;
     api.priority_default <- priority_default ;
-    api.request_timeout_adjustment <- request_timeout_adjustment ;
     ()
   let reinit api process_count timeout_async timeout_sync
-    priority_default request_timeout_adjustment =
+    priority_default =
     api.process_count <- process_count ;
     api.timeout_async <- timeout_async ;
     api.timeout_sync <- timeout_sync ;
     api.priority_default <- priority_default ;
-    api.request_timeout_adjustment <- request_timeout_adjustment ;
     ()
   let set_response api response_info response trans_id =
     api.response_info <- response_info ;
@@ -371,28 +363,13 @@ let recv api : (string * int, string) result =
 let forward_async_i
   api name request_info request timeout priority trans_id pid :
   (unit, string) result =
-  let {Instance.request_timeout_adjustment;
-    request_timer; request_timeout; _} = api in
-  let timeout_new =
-    if request_timeout_adjustment && timeout = request_timeout then
-      let elapsed = truncate
-        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
-      if elapsed < 0 then
-        timeout
-      else if elapsed >= timeout then
-        0
-      else
-        timeout - elapsed
-    else
-      timeout
-  in
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
       Erlang.OtpErlangAtom ("forward_async");
       Erlang.OtpErlangString (name);
       Erlang.OtpErlangBinary (request_info);
       Erlang.OtpErlangBinary (request);
-      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangInteger (priority);
       Erlang.OtpErlangBinary (trans_id);
       Erlang.OtpErlangPid (pid)])) with
@@ -414,28 +391,13 @@ let forward_async
 let forward_sync_i
   api name request_info request timeout priority trans_id pid :
   (unit, string) result =
-  let {Instance.request_timeout_adjustment;
-    request_timer; request_timeout; _} = api in
-  let timeout_new =
-    if request_timeout_adjustment && timeout = request_timeout then
-      let elapsed = truncate
-        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
-      if elapsed < 0 then
-        timeout
-      else if elapsed >= timeout then
-        0
-      else
-        timeout - elapsed
-    else
-      timeout
-  in
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
       Erlang.OtpErlangAtom ("forward_sync");
       Erlang.OtpErlangString (name);
       Erlang.OtpErlangBinary (request_info);
       Erlang.OtpErlangBinary (request);
-      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangInteger (priority);
       Erlang.OtpErlangBinary (trans_id);
       Erlang.OtpErlangPid (pid)])) with
@@ -466,21 +428,6 @@ let forward_
 let return_async_i
   api name pattern response_info response timeout trans_id pid :
   (unit, string) result =
-  let {Instance.request_timeout_adjustment;
-    request_timer; request_timeout; _} = api in
-  let timeout_new =
-    if request_timeout_adjustment && timeout = request_timeout then
-      let elapsed = truncate
-        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
-      if elapsed < 0 then
-        timeout
-      else if elapsed >= timeout then
-        0
-      else
-        timeout - elapsed
-    else
-      timeout
-  in
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
       Erlang.OtpErlangAtom ("return_async");
@@ -488,7 +435,7 @@ let return_async_i
       Erlang.OtpErlangString (pattern);
       Erlang.OtpErlangBinary (response_info);
       Erlang.OtpErlangBinary (response);
-      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangBinary (trans_id);
       Erlang.OtpErlangPid (pid)])) with
   | Error (error) ->
@@ -509,21 +456,6 @@ let return_async
 let return_sync_i
   api name pattern response_info response timeout trans_id pid :
   (unit, string) result =
-  let {Instance.request_timeout_adjustment;
-    request_timer; request_timeout; _} = api in
-  let timeout_new =
-    if request_timeout_adjustment && timeout = request_timeout then
-      let elapsed = truncate
-        (((Unix.gettimeofday ()) -. request_timer) *. 1000.0) in
-      if elapsed < 0 then
-        timeout
-      else if elapsed >= timeout then
-        0
-      else
-        timeout - elapsed
-    else
-      timeout
-  in
   match Erlang.term_to_binary (
     Erlang.OtpErlangTuple ([
       Erlang.OtpErlangAtom ("return_sync");
@@ -531,7 +463,7 @@ let return_sync_i
       Erlang.OtpErlangString (pattern);
       Erlang.OtpErlangBinary (response_info);
       Erlang.OtpErlangBinary (response);
-      Erlang.OtpErlangInteger (timeout_new);
+      Erlang.OtpErlangInteger (timeout);
       Erlang.OtpErlangBinary (trans_id);
       Erlang.OtpErlangPid (pid)])) with
   | Error (error) ->
@@ -594,14 +526,12 @@ let handle_events api ext data data_size i cmd : (bool, string) result =
               Error (error)
             | Ok (timeout_sync) ->
               let priority_default = unpack_int8 (i1 + 12) data
-              and request_timeout_adjustment = int_of_char data.[i1 + 13]
-              and i2 = i1 + 14 in
+              and i2 = i1 + 13 in
               Instance.reinit api
                 process_count
                 timeout_async
                 timeout_sync
-                priority_default
-                (request_timeout_adjustment <> 0) ;
+                priority_default ;
               loop_cmd i2)
       else if cmd_event = message_keepalive then
         match Erlang.term_to_binary (Erlang.OtpErlangAtom ("keepalive")) with
@@ -687,10 +617,7 @@ let rec poll_request_loop api timeout ext poll_timer: (bool, string) result =
 and callback
   api request_type name pattern request_info request
   timeout priority trans_id pid : (bool option, string) result =
-  let {Instance.state; callbacks; request_timeout_adjustment; _} = api in
-  if request_timeout_adjustment then (
-    api.Instance.request_timer <- Unix.gettimeofday () ;
-    api.Instance.request_timeout <- timeout) ;
+  let {Instance.state; callbacks; _} = api in
   let callback_get () =
     let function_queue = Hashtbl.find callbacks pattern in
     let f = Queue.pop function_queue in
@@ -836,9 +763,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                       | Ok (timeout_terminate) ->
                         let priority_default =
                           unpack_int8 (i1 + 16) data
-                        and request_timeout_adjustment =
-                          int_of_char data.[i1 + 17]
-                        and i2 = i1 + 18 in
+                        and i2 = i1 + 17 in
                         Instance.init api
                           process_index
                           process_count
@@ -849,8 +774,7 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
                           timeout_async
                           timeout_sync
                           timeout_terminate
-                          priority_default
-                          (request_timeout_adjustment <> 0) ;
+                          priority_default ;
                         if i2 <> data_size then
                           match handle_events api ext data data_size i2 0 with
                           | Error (error) ->
@@ -1047,14 +971,12 @@ and poll_request_data api ext data data_size i : (bool option, string) result =
             Error (error)
           | Ok (timeout_sync) ->
             let priority_default = unpack_int8 (i + 16) data
-            and request_timeout_adjustment = int_of_char data.[i + 17]
-            and i1 = i + 18 in
+            and i1 = i + 17 in
             Instance.reinit api
               process_count
               timeout_async
               timeout_sync
-              priority_default
-              (request_timeout_adjustment <> 0) ;
+              priority_default ;
             if i1 = data_size then
               Ok (None)
             else if i1 < data_size then

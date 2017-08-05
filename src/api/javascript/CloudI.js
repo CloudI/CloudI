@@ -412,18 +412,6 @@ CloudI.API.prototype.forward_async = function (name, request_info, request,
                                                timeout, priority,
                                                trans_id, pid) {
     this._poll_wait(function (API) {
-        if (API._request_timeout_adjustment) {
-            if (timeout == API._request_timeout) {
-                var elapsed = Math.max(0, new Date().getTime() -
-                                          API._request_timer);
-                if (elapsed > timeout) {
-                    timeout = 0;
-                }
-                else {
-                    timeout -= elapsed;
-                }
-            }
-        }
         API._send([new Erlang.OtpErlangAtom('forward_async'), name,
                    new Erlang.OtpErlangBinary(request_info),
                    new Erlang.OtpErlangBinary(request),
@@ -437,18 +425,6 @@ CloudI.API.prototype.forward_sync = function (name, request_info, request,
                                               timeout, priority,
                                               trans_id, pid) {
     this._poll_wait(function (API) {
-        if (API._request_timeout_adjustment) {
-            if (timeout == API._request_timeout) {
-                var elapsed = Math.max(0, new Date().getTime() -
-                                          API._request_timer);
-                if (elapsed > timeout) {
-                    timeout = 0;
-                }
-                else {
-                    timeout -= elapsed;
-                }
-            }
-        }
         API._send([new Erlang.OtpErlangAtom('forward_sync'), name,
                    new Erlang.OtpErlangBinary(request_info),
                    new Erlang.OtpErlangBinary(request),
@@ -480,18 +456,6 @@ CloudI.API.prototype.return_async = function (name, pattern,
                                               response_info, response,
                                               timeout, trans_id, pid) {
     this._poll_wait(function (API) {
-        if (API._response_timeout_adjustment) {
-            if (timeout == API._response_timeout) {
-                var elapsed = Math.max(0, new Date().getTime() -
-                                          API._response_timer);
-                if (elapsed > timeout) {
-                    timeout = 0;
-                }
-                else {
-                    timeout -= elapsed;
-                }
-            }
-        }
         API._send([new Erlang.OtpErlangAtom('return_async'), name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
@@ -504,18 +468,6 @@ CloudI.API.prototype.return_sync = function (name, pattern,
                                              response_info, response,
                                              timeout, trans_id, pid) {
     this._poll_wait(function (API) {
-        if (API._response_timeout_adjustment) {
-            if (timeout == API._response_timeout) {
-                var elapsed = Math.max(0, new Date().getTime() -
-                                          API._response_timer);
-                if (elapsed > timeout) {
-                    timeout = 0;
-                }
-                else {
-                    timeout -= elapsed;
-                }
-            }
-        }
         API._send([new Erlang.OtpErlangAtom('return_sync'), name, pattern,
                    new Erlang.OtpErlangBinary(response_info),
                    new Erlang.OtpErlangBinary(response),
@@ -589,10 +541,6 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                                            request_info, request,
                                            timeout, priority, trans_id, pid) {
     var API = this;
-    if (API._request_timeout_adjustment) {
-        API._request_timer = new Date().getTime();
-        API._request_timeout = timeout;
-    }
     var function_queue = API._callbacks[pattern];
     var f;
     if (function_queue === undefined) {
@@ -788,12 +736,6 @@ CloudI.API.prototype._handle_events = function (data, data_size, i, command) {
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
                 i += 1;
-                API._request_timeout_adjustment = unpackUint8(i, data);
-                i += 1;
-                if (API._request_timeout_adjustment) {
-                    API._request_timer = new Date().getTime();
-                    API._request_timeout = 0;
-                }
                 break;
             case MESSAGE_KEEPALIVE:
                 API._send(new Erlang.OtpErlangAtom('keepalive'));
@@ -846,8 +788,6 @@ CloudI.API.prototype._poll_request = function (data) {
                 API._timeout_terminate = unpackUint32(i, data);
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
-                i += 1;
-                API._request_timeout_adjustment = unpackUint8(i, data);
                 i += 1;
                 if (i != data_size) {
                     API._handle_events(data, data_size, i);
@@ -976,12 +916,6 @@ CloudI.API.prototype._poll_request = function (data) {
                 i += 4;
                 API._priority_default = unpackInt8(i, data);
                 i += 1;
-                API._request_timeout_adjustment = unpackUint8(i, data);
-                i += 1;
-                if (API._request_timeout_adjustment) {
-                    API._request_timer = new Date().getTime();
-                    API._request_timeout = 0;
-                }
                 if (i == data_size) {
                     return;
                 }

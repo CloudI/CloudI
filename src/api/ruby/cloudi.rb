@@ -176,17 +176,6 @@ module CloudI
 
         def forward_async(name, request_info, request,
                           timeout, priority, trans_id, pid)
-            if @request_timeout_adjustment
-                if timeout == @request_timeout
-                    elapsed = [0,
-                               ((Time.now - @request_timer) * 1000.0).floor].max
-                    if elapsed > timeout
-                        timeout = 0
-                    else
-                        timeout -= elapsed
-                    end
-                end
-            end
             send(Erlang.term_to_binary([:forward_async, name,
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
@@ -197,17 +186,6 @@ module CloudI
 
         def forward_sync(name, request_info, request,
                          timeout, priority, trans_id, pid)
-            if @request_timeout_adjustment
-                if timeout == @request_timeout
-                    elapsed = [0,
-                               ((Time.now - @request_timer) * 1000.0).floor].max
-                    if elapsed > timeout
-                        timeout = 0
-                    else
-                        timeout -= elapsed
-                    end
-                end
-            end
             send(Erlang.term_to_binary([:forward_sync, name,
                                         OtpErlangBinary.new(request_info),
                                         OtpErlangBinary.new(request),
@@ -230,19 +208,6 @@ module CloudI
 
         def return_async(name, pattern, response_info, response,
                          timeout, trans_id, pid)
-            if @request_timeout_adjustment
-                if timeout == @request_timeout
-                    elapsed = [0,
-                               ((Time.now - @request_timer) * 1000.0).floor].max
-                    if elapsed > timeout
-                        response_info = ''
-                        response = ''
-                        timeout = 0
-                    else
-                        timeout -= elapsed
-                    end
-                end
-            end
             send(Erlang.term_to_binary([:return_async, name, pattern,
                                         OtpErlangBinary.new(response_info),
                                         OtpErlangBinary.new(response),
@@ -253,19 +218,6 @@ module CloudI
 
         def return_sync(name, pattern, response_info, response,
                         timeout, trans_id, pid)
-            if @request_timeout_adjustment
-                if timeout == @request_timeout
-                    elapsed = [0,
-                               ((Time.now - @request_timer) * 1000.0).floor].max
-                    if elapsed > timeout
-                        response_info = ''
-                        response = ''
-                        timeout = 0
-                    else
-                        timeout -= elapsed
-                    end
-                end
-            end
             send(Erlang.term_to_binary([:return_sync, name, pattern,
                                         OtpErlangBinary.new(response_info),
                                         OtpErlangBinary.new(response),
@@ -294,11 +246,6 @@ module CloudI
 
         def callback(command, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid)
-            request_time_start = nil
-            if @request_timeout_adjustment
-                @request_timer = Time.now
-                @request_timeout = timeout
-            end
             function_queue = @callbacks.fetch(pattern, nil)
             if function_queue.nil?
                 function = method(:null_response)
@@ -430,17 +377,12 @@ module CloudI
                         raise TerminateException.new(@timeout_terminate)
                     end
                 when MESSAGE_REINIT
-                    i += j; j = 4 + 4 + 4 + 1 + 1
-                    tmp = data[i, j].unpack("LLLcC")
+                    i += j; j = 4 + 4 + 4 + 1
+                    tmp = data[i, j].unpack("LLLc")
                     @process_count = tmp[0]
                     @timeout_async = tmp[1]
                     @timeout_sync = tmp[2]
                     @priority_default = tmp[3]
-                    @request_timeout_adjustment = (tmp[4] != 0)
-                    if @request_timeout_adjustment
-                        @request_timer = Time.now
-                        @request_timeout = 0
-                    end
                     i += j
                 when MESSAGE_KEEPALIVE
                     send(Erlang.term_to_binary(:keepalive))
@@ -501,15 +443,14 @@ module CloudI
                     @process_count_max = tmp[2]
                     @process_count_min = tmp[3]
                     prefix_size = tmp[4]
-                    i += j; j = prefix_size + 4 + 4 + 4 + 4 + 1 + 1
-                    tmp = data[i, j].unpack("Z#{prefix_size}LLLLcC")
+                    i += j; j = prefix_size + 4 + 4 + 4 + 4 + 1
+                    tmp = data[i, j].unpack("Z#{prefix_size}LLLLc")
                     @prefix = tmp[0]
                     @timeout_initialize = tmp[1]
                     @timeout_async = tmp[2]
                     @timeout_sync = tmp[3]
                     @timeout_terminate = tmp[4]
                     @priority_default = tmp[5]
-                    @request_timeout_adjustment = (tmp[6] != 0)
                     i += j
                     if i != data_size
                         API.assert{external == false}
@@ -603,17 +544,12 @@ module CloudI
                     end
                     API.assert{false}
                 when MESSAGE_REINIT
-                    i += j; j = 4 + 4 + 4 + 1 + 1
-                    tmp = data[i, j].unpack("LLLcC")
+                    i += j; j = 4 + 4 + 4 + 1
+                    tmp = data[i, j].unpack("LLLc")
                     @process_count = tmp[0]
                     @timeout_async = tmp[1]
                     @timeout_sync = tmp[2]
                     @priority_default = tmp[3]
-                    @request_timeout_adjustment = (tmp[4] != 0)
-                    if @request_timeout_adjustment
-                        @request_timer = Time.now
-                        @request_timeout = 0
-                    end
                     i += j; j = 4
                     if i == data_size
                         data.clear()
