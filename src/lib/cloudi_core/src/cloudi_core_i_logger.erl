@@ -657,8 +657,8 @@ handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
             {"-", ValueOld - ValueNew}
     end,
     case ?LOG_T0(LogTimeOffset,
-                 "Erlang time_offset changed ~s~w nanoseconds",
-                 [Sign, Change],
+                 "Erlang time_offset changed ~s~s seconds",
+                 [Sign, nanoseconds_to_seconds_list(Change)],
                  State#state{log_time_offset_nanoseconds = ValueNew}) of
         {ok, StateNew} ->
             {noreply, StateNew};
@@ -1876,6 +1876,22 @@ aspects_log([F | L], Level, Timestamp, Node, Pid,
                         Module, Line, Function, Arity, MetaData, LogMessage)
     end.
 
+nanoseconds_to_seconds_list(NS) ->
+    L0 = int_to_dec_list(NS, 9, $0),
+    [NanoSeconds8, NanoSeconds7, NanoSeconds6,
+     NanoSeconds5, NanoSeconds4, NanoSeconds3,
+     NanoSeconds2, NanoSeconds1, NanoSeconds0 | L1] = lists:reverse(L0),
+    SecondsFraction = [$.,
+                       NanoSeconds0, NanoSeconds1, NanoSeconds2,
+                       NanoSeconds3, NanoSeconds4, NanoSeconds5,
+                       NanoSeconds6, NanoSeconds7, NanoSeconds8],
+    if
+        L1 == [] ->
+            [$0 | SecondsFraction];
+        true ->
+            lists:reverse(L1) ++ SecondsFraction
+    end.
+
 int_to_dec_list(I) when is_integer(I), I >= 0 ->
     int_to_dec_list([], I).
 
@@ -1894,7 +1910,7 @@ int_to_dec_list(L, I, Count, N, Char)
 int_to_dec_list(L, I, Count, N, Char) ->
     int_to_dec_list([int_to_dec(I rem 10) | L], I div 10, Count + 1, N, Char).
 
-int_to_list_pad(L, 0, _) ->
+int_to_list_pad(L, Count, _) when Count =< 0 ->
     L;
 int_to_list_pad(L, Count, Char) ->
     int_to_list_pad([Char | L], Count - 1, Char).

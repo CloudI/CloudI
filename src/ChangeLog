@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change log_time_offset log output to seconds with nanoseconds precision
+
 2017-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Service configuration option request_timeout_adjustment was modified to
