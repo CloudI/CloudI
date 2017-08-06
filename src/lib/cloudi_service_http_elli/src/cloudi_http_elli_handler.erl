@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -68,7 +68,7 @@ handle(Req,
                    use_client_ip_prefix = UseClientIpPrefix,
                    use_x_method_override = UseXMethodOverride,
                    use_method_suffix = UseMethodSuffix} = State) ->
-    RequestStartMilliSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
+    RequestStartMicroSec = ?LOG_WARN_APPLY(fun request_time_start/0, []),
     MethodHTTP = cloudi_x_elli_request:method(Req),
     HeadersIncoming0 = headers_to_lower(cloudi_x_elli_request:headers(Req)),
     Method = if
@@ -144,7 +144,7 @@ handle(Req,
             ?LOG_WARN_APPLY(fun request_time_end_error/6,
                             [HttpCode, MethodHTTP,
                              NameIncoming, undefined,
-                             RequestStartMilliSec, not_acceptable]),
+                             RequestStartMicroSec, not_acceptable]),
             {HttpCode, [], <<>>};
         RequestAccepted =:= true ->
             NameOutgoing = if
@@ -222,7 +222,7 @@ handle(Req,
                     ?LOG_TRACE_APPLY(fun request_time_end_success/5,
                                      [HttpCode, MethodHTTP,
                                       NameIncoming, NameOutgoing,
-                                      RequestStartMilliSec]),
+                                      RequestStartMicroSec]),
                     Result;
                 {elli_error, timeout} ->
                     HttpCode = StatusCodeTimeout,
@@ -239,7 +239,7 @@ handle(Req,
                     ?LOG_WARN_APPLY(fun request_time_end_error/6,
                                     [HttpCode, MethodHTTP,
                                      NameIncoming, NameOutgoing,
-                                     RequestStartMilliSec, timeout]),
+                                     RequestStartMicroSec, timeout]),
                     Result
             end
     end.
@@ -398,19 +398,19 @@ get_query_string_external_text([{K, V} | L]) ->
     end.
 
 request_time_start() ->
-    cloudi_timestamp:milliseconds_monotonic().
+    cloudi_timestamp:microseconds_monotonic().
 
 request_time_end_success(HttpCode, Method, NameIncoming, NameOutgoing,
-                         RequestStartMilliSec) ->
+                         RequestStartMicroSec) ->
     ?LOG_TRACE("~w ~s ~s (to ~s) ~p ms",
                [HttpCode, Method, NameIncoming, NameOutgoing,
-                (cloudi_timestamp:milliseconds_monotonic() -
-                 RequestStartMilliSec)]).
+                (cloudi_timestamp:microseconds_monotonic() -
+                 RequestStartMicroSec) / 1000.0]).
 
 request_time_end_error(HttpCode, Method, NameIncoming, NameOutgoing,
-                       RequestStartMilliSec, Reason) ->
-    RequestTime = cloudi_timestamp:milliseconds_monotonic() -
-                  RequestStartMilliSec,
+                       RequestStartMicroSec, Reason) ->
+    RequestTime = (cloudi_timestamp:microseconds_monotonic() -
+                   RequestStartMicroSec) / 1000.0,
     if
         NameOutgoing =:= undefined ->
             ?LOG_WARN("~w ~s ~s ~p ms: ~p",

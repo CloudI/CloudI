@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -661,7 +661,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
                                      content_type_lookup = ContentTypeLookup,
                                      prefix_length = PrefixLength} = State,
                               _Dispatcher) ->
-    RequestStartMilliSec = client_debug_start(DebugLevel),
+    RequestStartMicroSec = client_debug_start(DebugLevel),
     [$/ | Method] = string:to_upper(lists:nthtail(PrefixLength, Name)),
     HeadersIncoming = headers_request(RequestInfo, InputType),
     {HttpCode,
@@ -671,7 +671,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
                                 ContentTypeLookup),
     client_debug_end(DebugLevel, HttpCode, Method,
                      HeadersIncoming, Request,
-                     HeadersOutgoing, Response, RequestStartMilliSec),
+                     HeadersOutgoing, Response, RequestStartMicroSec),
     {reply, HeadersOutgoing, Response, State}.
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
@@ -855,13 +855,13 @@ client_debug_log(fatal, Message, Args) ->
 client_debug_start(off) ->
     undefined;
 client_debug_start(_) ->
-    cloudi_timestamp:milliseconds_monotonic().
+    cloudi_timestamp:microseconds_monotonic().
 
 client_debug_end(off, _, _, _, _, _, _, _) ->
     undefined;
 client_debug_end(Level, HttpCode, Method,
                  HeadersIncoming, Request,
-                 HeadersOutgoing, Response, RequestStartMilliSec) ->
+                 HeadersOutgoing, Response, RequestStartMicroSec) ->
     client_debug_log(Level,
                      "~p ~s ~p ms~n"
                      "headers__in(~p)~n"
@@ -869,8 +869,8 @@ client_debug_end(Level, HttpCode, Method,
                      "headers_out(~p)~n"
                      "request_out(~p)",
                      [HttpCode, Method,
-                      (cloudi_timestamp:milliseconds_monotonic() -
-                       RequestStartMilliSec),
+                      (cloudi_timestamp:microseconds_monotonic() -
+                       RequestStartMicroSec) / 1000.0,
                       HeadersIncoming, Request,
                       HeadersOutgoing, Response]).
 
