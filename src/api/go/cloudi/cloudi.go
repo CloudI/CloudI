@@ -67,30 +67,30 @@ var nativeEndian binary.ByteOrder
 
 // Instance is an instance of the CloudI API
 type Instance struct {
-	state                    interface{}
-	socket                   net.Conn
-	useHeader                bool
-	initializationComplete   bool
-	terminate                bool
-	fragmentSize             uint32
-	fragmentRecv             []byte
-	callbacks                map[string]*list.List
-	bufferRecv               *bytes.Buffer
-	processIndex             uint32
-	processCount             uint32
-	processCountMax          uint32
-	processCountMin          uint32
-	prefix                   string
-	timeoutInitialize        uint32
-	timeoutAsync             uint32
-	timeoutSync              uint32
-	timeoutTerminate         uint32
-	priorityDefault          int8
-	responseInfo             []byte
-	response                 []byte
-	transId                  []byte
-	transIds                 [][]byte
-	subscribeCount           uint32
+	state                  interface{}
+	socket                 net.Conn
+	useHeader              bool
+	initializationComplete bool
+	terminate              bool
+	fragmentSize           uint32
+	fragmentRecv           []byte
+	callbacks              map[string]*list.List
+	bufferRecv             *bytes.Buffer
+	processIndex           uint32
+	processCount           uint32
+	processCountMax        uint32
+	processCountMin        uint32
+	prefix                 string
+	timeoutInitialize      uint32
+	timeoutAsync           uint32
+	timeoutSync            uint32
+	timeoutTerminate       uint32
+	priorityDefault        int8
+	responseInfo           []byte
+	response               []byte
+	transId                []byte
+	transIds               [][]byte
+	subscribeCount         uint32
 }
 
 // Source is the Erlang pid that is the source of the service request
