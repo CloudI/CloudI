@@ -25,9 +25,6 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-path = File.split(File.dirname(__FILE__)); path.pop(2)
-$:.unshift File.join(*path, *%w[api ruby])
-
 $DEBUG = false
 
 require 'cloudi'

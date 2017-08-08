@@ -25,15 +25,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import sys, os
-sys.path.append(
-    os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-2] + ['api', 'python']
-    )
-)
-
-import threading, time, traceback
+import sys, os, threading, time, traceback
 from cloudi_c import API, terminate_exception
 
 class Task(threading.Thread):

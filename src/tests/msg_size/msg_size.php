@@ -25,7 +25,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-require dirname(__FILE__) . '/../../api/php/CloudI.php';
+require 'CloudI.php';
 
 define('DESTINATION', '/tests/msg_size/erlang');
 

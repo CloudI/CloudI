@@ -28,11 +28,11 @@
 @ERL_OPTS@
 
 # Integration Tests code paths for the default configuration
--pz tests/count/ebin/
--pz tests/hexpi/ebin/
--pz tests/http_req/ebin/
--pz tests/msg_size/ebin/
--pz tests/messaging/ebin/
--pz tests/null/ebin/
--pz tests/request_rate/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/count/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/hexpi/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/http_req/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/msg_size/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/messaging/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/null/ebin/
+-pz @prefix@/lib/cloudi-@VERSION@/tests/request_rate/ebin/
 

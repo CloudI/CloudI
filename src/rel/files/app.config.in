@@ -10,7 +10,7 @@
     {net_ticktime, 60}
   ]},
  {sasl, [
-    {sasl_error_logger, {file, "logs/sasl.log"}},
+    {sasl_error_logger, {file, "sasl.log"}},
     {error_logger_mf_dir, false},
     {utc_log, true}
   ]},

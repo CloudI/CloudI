@@ -24,7 +24,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-var CloudI = require('../../api/javascript/CloudI.js').CloudI;
+var CloudI = require('CloudI.js').CloudI;
 var assert = require('assert');
 
 Task = function Task (thread_index) {

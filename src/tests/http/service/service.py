@@ -25,15 +25,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import sys, os
-sys.path.append(
-    os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-3] + ['api', 'python']
-    )
-)
-
-import threading, socket, traceback
+import sys, threading, socket, traceback
 from cloudi import API, terminate_exception
 
 class _Task(threading.Thread):

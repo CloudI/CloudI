@@ -25,15 +25,7 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-import sys, os
-sys.path.append(
-    os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-2] + ['api', 'python']
-    )
-)
-
-import threading, struct, traceback
+import sys, threading, struct, traceback
 from cloudi_c import API, terminate_exception
 
 _DESTINATION = '/tests/msg_size/erlang'

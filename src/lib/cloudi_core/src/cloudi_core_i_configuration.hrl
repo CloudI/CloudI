@@ -106,7 +106,7 @@
 -record(config_logging,
     {
         % file path to write log output to while allowing the file to rotate
-        file = "logs/cloudi.log"
+        file = "cloudi.log"
             :: undefined | string(),
         % write log output to stdout
         stdout = false

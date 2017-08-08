@@ -38,7 +38,8 @@ NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool"
 # Common erl command-line arguments enforced on any vm.args file use
 VMARGS="-mode embedded -shutdown_time $SHUTDOWN_TIME_MAX"
 
-cd "$ROOTDIR"
+# Any erl_crash.dump or core files will be created in the log directory
+cd "$ROOT_LOG_DIR"
 
 # Ensure epmd is running
 $EPMD

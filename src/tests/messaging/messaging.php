@@ -25,7 +25,7 @@
 // DEALINGS IN THE SOFTWARE.
 //
 
-require dirname(__FILE__) . '/../../api/php/CloudI.php';
+require 'CloudI.php';
 
 class Task //extends \Thread
 {
