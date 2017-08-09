@@ -19,6 +19,20 @@ VMARGS_FILE="$ROOT_ETC_DIR/vm.args"
 ERLCONFIG_FILE="$ROOT_ETC_DIR/app.config"
 TMPDIR="/tmp/$PROGNAME"
 PIPE_DIR="$TMPDIR/shell/"
+RUN_ERL_LOG_ACTIVITY_MINUTES="5"
+RUN_ERL_LOG_ALIVE_MINUTES="15"
+RUN_ERL_LOG_ALIVE_IN_UTC="1"
+RUN_ERL_LOG_ALIVE_FORMAT="%Y-%m-%dT%H:%M:%SZ"
+RUN_ERL_LOG_GENERATIONS="128"
+RUN_ERL_LOG_MAXSIZE="536870912"
+RUN_ERL_DISABLE_FLOWCNTRL="true"
+ERL_CRASH_DUMP="erl_crash.dump"
+ERL_AFLAGS=""
+ERL_ZFLAGS=""
+ERL_FLAGS=""
+ERL_LIBS=""
+ERL_EPMD_ADDRESS=""
+ERL_EPMD_PORT="4369"
 CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
 
 # Default pid file path, if it wasn't provided to the configure script
@@ -29,9 +43,6 @@ fi
 # based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl (milliseconds)
 SHUTDOWN_TIME_MAX=65000
 
-# Create epmd command-line
-EPMD="$BINDIR/epmd -daemon"
-
 # Create nodetool command-line
 NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool"
 
@@ -41,6 +52,12 @@ VMARGS="-mode embedded -shutdown_time $SHUTDOWN_TIME_MAX"
 # Any erl_crash.dump or core files will be created in the log directory
 cd "$ROOT_LOG_DIR"
 
+# CloudI epmd settings
+export ERL_EPMD_ADDRESS
+export ERL_EPMD_PORT
+unset ERL_EPMD_RELAXED_COMMAND_CHECK
+# Create epmd command-line
+EPMD="$BINDIR/epmd -daemon -port $ERL_EPMD_PORT"
 # Ensure epmd is running
 $EPMD
 if [ $? -ne 0 ]; then
@@ -49,33 +66,23 @@ if [ $? -ne 0 ]; then
 fi
 
 case "$1" in
-    start|start_boot)
+    start)
         # Make sure there is not already a node running
         $NODETOOL test
         if [ $? -eq 0 ]; then
             echo "Node is already running!"
             exit 1
         fi
-        case "$1" in
-            start)
-                shift
-                START_OPTION="console"
-                HEART_OPTION="start"
-                ;;
-            start_boot)
-                shift
-                START_OPTION="console_boot"
-                HEART_OPTION="start_boot"
-                ;;
-        esac
+        START_OPTION="console"
+        HEART_OPTION="start"
         # CloudI run_erl logging settings
-        export RUN_ERL_LOG_ACTIVITY_MINUTES="5"    # 5 minutes (default)
-        export RUN_ERL_LOG_ALIVE_MINUTES="15"      # 15 minutes (default)
-        export RUN_ERL_LOG_ALIVE_IN_UTC="1"
-        export RUN_ERL_LOG_ALIVE_FORMAT="%Y-%m-%dT%H:%M:%SZ"
-        export RUN_ERL_LOG_GENERATIONS="128"
-        export RUN_ERL_LOG_MAXSIZE="536870912"
-        export RUN_ERL_DISABLE_FLOWCNTRL="true"
+        export RUN_ERL_LOG_ACTIVITY_MINUTES
+        export RUN_ERL_LOG_ALIVE_MINUTES
+        export RUN_ERL_LOG_ALIVE_IN_UTC
+        export RUN_ERL_LOG_ALIVE_FORMAT
+        export RUN_ERL_LOG_GENERATIONS
+        export RUN_ERL_LOG_MAXSIZE
+        export RUN_ERL_DISABLE_FLOWCNTRL
         # OS process name created by run_erl
         export ESCRIPT_NAME="$PID_NAME"
         # CloudI environment variable settings
@@ -149,24 +156,33 @@ case "$1" in
             echo "Node is not running!"
             exit 1
         fi
+        # CloudI erl settings
+        export ERL_CRASH_DUMP
+        unset ERL_CRASH_DUMP_NICE
+        unset ERL_CRASH_DUMP_SECONDS
+        unset ERL_CRASH_DUMP_BYTES
+        export ERL_AFLAGS
+        export ERL_ZFLAGS
+        export ERL_FLAGS
+        export ERL_LIBS
+
         CMD="$BINDIR/erl $REMSH"
 
         shift
         exec $CMD
         ;;
-    console|console_clean|console_boot)
-        # .boot file typically just $PROGNAME (ie, the app name)
-        # however, for debugging, sometimes start_clean.boot is useful.
-        # For e.g. 'setup', one may even want to name another boot script.
-        case "$1" in
-            console)        BOOTFILE=$PROGNAME ;;
-            console_clean)  BOOTFILE=start_clean ;;
-            console_boot)
-                shift
-                BOOTFILE="$1"
-                shift
-                ;;
-        esac
+    console)
+        BOOTFILE=$PROGNAME
+        # CloudI erl settings
+        export ERL_CRASH_DUMP
+        unset ERL_CRASH_DUMP_NICE
+        unset ERL_CRASH_DUMP_SECONDS
+        unset ERL_CRASH_DUMP_BYTES
+        export ERL_AFLAGS
+        export ERL_ZFLAGS
+        export ERL_FLAGS
+        export ERL_LIBS
+
         # Setup beam-required vars
         CMD="$BINDIR/erlexec -boot $RELEASEDIR/$BOOTFILE -config $ERLCONFIG_FILE -args_file $VMARGS_FILE $VMARGS"
         export EMU
@@ -184,30 +200,8 @@ case "$1" in
         # Start the VM
         exec $CMD -- ${1+"$@"}
         ;;
-    foreground)
-        # start up the release in the foreground for use by runit
-        # or other supervision services
-        FOREGROUND_ARGS="-noinput +Bd"
-
-        # Setup beam-required vars
-        CMD="$BINDIR/erlexec $FOREGROUND_ARGS -boot $RELEASEDIR/$PROGNAME -config $ERLCONFIG_FILE -args_file $VMARGS_FILE $VMARGS"
-        export EMU
-        export ROOTDIR
-        export BINDIR
-        export PROGNAME
-
-        # Dump the environment info to the console log
-        echo "Exec: $CMD" -- ${1+"$@"}
-        echo "Root: $ROOTDIR"
-
-        # Not using the pid file
-        rm -f "$CLOUDI_PID_FILE"
-
-        # Start the VM
-        exec $CMD -- ${1+"$@"}
-        ;;
     *)
-        echo "Usage: $PROGNAME {start|start_boot <file>|foreground|stop|restart|reboot|test|ping|console|console_clean|console_boot <file>|attach|remote_console}"
+        echo "Usage: $PROGNAME {start|stop|restart|reboot|test|ping|console|attach|remote_console}"
         exit 1
         ;;
 esac
