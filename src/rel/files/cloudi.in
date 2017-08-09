@@ -56,10 +56,8 @@ cd "$ROOT_LOG_DIR"
 export ERL_EPMD_ADDRESS
 export ERL_EPMD_PORT
 unset ERL_EPMD_RELAXED_COMMAND_CHECK
-# Create epmd command-line
-EPMD="$BINDIR/epmd -daemon -port $ERL_EPMD_PORT"
 # Ensure epmd is running
-$EPMD
+$BINDIR/epmd -daemon -port "$ERL_EPMD_PORT"
 if [ $? -ne 0 ]; then
     echo "EPMD failed to start!"
     exit 1
@@ -146,7 +144,6 @@ case "$1" in
             exit 1
         fi
 
-        shift
         exec "$BINDIR/to_erl" "$PIPE_DIR"
         ;;
     remote_console)
@@ -167,12 +164,10 @@ case "$1" in
         export ERL_LIBS
 
         CMD="$BINDIR/erl $REMSH"
-
-        shift
         exec $CMD
         ;;
     console)
-        BOOTFILE=$PROGNAME
+        BOOTFILE="$PROGNAME"
         # CloudI erl settings
         export ERL_CRASH_DUMP
         unset ERL_CRASH_DUMP_NICE
