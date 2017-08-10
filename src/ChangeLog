@@ -5,6 +5,7 @@
 
     * Reduce the release script functionality to the core necessary and
       add default values for all erl and epmd environment variables
+    * Fix Java CloudI API compilation for parallel make
 
 2017-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
 
