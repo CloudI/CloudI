@@ -2,7 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 if C_SUPPORT
-    C_SUBDIR = c_src
+    C_SUBDIR = c
 endif
 if GO_SUPPORT
     GO_SUBDIR = gopath
@@ -11,7 +11,7 @@ if HASKELL_SUPPORT
     HASKELL_SUBDIR = haskell
 endif
 if JAVA_SUPPORT
-    JAVA_SUBDIR = org jar
+    JAVA_SUBDIR = java
 endif
 if JAVASCRIPT_SUPPORT
     JAVASCRIPT_INSTALL_HOOK = javascript-install
@@ -43,7 +43,7 @@ endif
     ruby-install
 
 SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
-          $(JAVA_SUBDIR) $(OCAML_SUBDIR) src
+          $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
 
 javascript-install:

@@ -672,17 +672,19 @@ AC_CONFIG_FILES([
     service_api/python/jsonrpclib/Makefile
     tests/Makefile
     tests/count/Makefile
-    tests/count/c_src/Makefile
+    tests/count/c/Makefile
+    tests/count/erlang/Makefile
+    tests/count/erlang/src/Makefile
     tests/count/gopath/Makefile
     tests/count/haskell/Makefile
     tests/count/haskell/count_haskell.cabal
-    tests/count/jar/Makefile
+    tests/count/java/Makefile
+    tests/count/java/jar/Makefile
+    tests/count/java/org/Makefile
+    tests/count/java/org/cloudi/Makefile
+    tests/count/java/org/cloudi/tests/Makefile
+    tests/count/java/org/cloudi/tests/count/Makefile
     tests/count/ocaml/Makefile
-    tests/count/org/Makefile
-    tests/count/org/cloudi/Makefile
-    tests/count/org/cloudi/tests/Makefile
-    tests/count/org/cloudi/tests/count/Makefile
-    tests/count/src/Makefile
     tests/echo/Makefile
     tests/environment/Makefile
     tests/hexpi/Makefile

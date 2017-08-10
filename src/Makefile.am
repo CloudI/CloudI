@@ -99,6 +99,8 @@ endif
     manual-update \
     run
 
+.NOTPARALLEL:
+
 all-local: rel/files/app.config \
            erlang-applications-scope-add \
            rebar-directories-compile \

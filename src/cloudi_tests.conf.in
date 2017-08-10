@@ -315,7 +315,7 @@
 @CONFIG_TESTS_OCAML_COUNT@
     {external,
         "/tests/count/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/count/priv/count", "",
+        "@prefix@/lib/cloudi-@VERSION@/tests/count/c/count", "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
         none, default, default,
@@ -326,7 +326,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/count/jar/count.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/count/java/count.jar",
         [],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,

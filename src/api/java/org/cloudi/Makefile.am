@@ -3,10 +3,15 @@
 
 jardir = $(top_builddir)/api/java/jar
 JAVACFLAGS = -Xlint -Werror
+CLEANFILES = built
 FILES = $(srcdir)/API.java \
         $(srcdir)/Function9.java \
         $(srcdir)/FunctionInterface9.java \
         $(srcdir)/FunctionObject9.java
 
-all-local: $(FILES)
+all-local: built
+
+built: $(FILES)
 	$(JAVAC) $(JAVACFLAGS) -cp $(jardir) -d $(jardir) $(FILES)
+	touch built
+

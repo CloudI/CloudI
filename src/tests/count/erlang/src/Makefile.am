@@ -14,7 +14,7 @@ all-local: $(beam_DATA)
 	cp -f $(beam_DATA) $(buildbeamdir)
 
 .erl.beam:
-	@ERLC@ -b beam \
+	$(ERLC) -b beam \
            -pz $(top_builddir)/lib/cloudi_core/ebin \
            $(ERLC_OPTS) -o $@ $<
 

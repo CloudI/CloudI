@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-08-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Continue improving the automake build of Java source code
+
 2017-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Reduce the release script functionality to the core necessary and

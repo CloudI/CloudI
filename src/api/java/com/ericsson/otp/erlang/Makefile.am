@@ -3,6 +3,7 @@
 
 jardir = $(top_builddir)/api/java/jar
 JAVACFLAGS = -Xlint
+CLEANFILES = built
 FILES = $(srcdir)/AbstractConnection.java \
         $(srcdir)/AbstractNode.java \
         $(srcdir)/GenericQueue.java \
@@ -60,5 +61,9 @@ FILES = $(srcdir)/AbstractConnection.java \
         $(srcdir)/OtpTransportFactory.java \
         $(srcdir)/OtpTransport.java
 
-all-local: $(FILES)
+all-local: built
+
+built: $(FILES)
 	$(JAVAC) $(JAVACFLAGS) -d $(jardir) $(FILES)
+	touch built
+
