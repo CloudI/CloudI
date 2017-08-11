@@ -7,6 +7,8 @@ nativedir = "$(instdir)"
 native_DATA = erlang.cmi cloudi.cmi erlang.cmx cloudi.cmx
 CLEANFILES = $(native_DATA) erlang.o cloudi.o
 
+.NOTPARALLEL:
+
 all-local: $(native_DATA)
 
 .mli.cmi:
