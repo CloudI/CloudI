@@ -34,6 +34,10 @@ endif
 if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
+SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
+          $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
+instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
+
 .PHONY: \
     javascript-install \
     perl-install \
@@ -41,10 +45,6 @@ endif
     python-install \
     python-c-install \
     ruby-install
-
-SUBDIRS = $(C_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
-          $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
-instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
 
 javascript-install:
 	$(MKDIR_P) $(instdir)

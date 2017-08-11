@@ -1,15 +1,17 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
-instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req/priv"
+instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
+CLEANFILES = cabal.sandbox.config http_req_haskell
 
-all-local: http_req_haskell
+all-local: cabal.sandbox.config http_req_haskell
+
+.NOTPARALLEL:
 
 cabal.sandbox.config:
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
 
-http_req_haskell: cabal.sandbox.config \
-                  Main.hs \
+http_req_haskell: Main.hs \
                   $(CABAL_SANDBOX)
 	$(CABAL) install --only-dependencies --force-reinstalls \
                      --with-compiler=$(GHC)
@@ -19,7 +21,6 @@ http_req_haskell: cabal.sandbox.config \
 
 clean-local:
 	rm -rf $(builddir)/dist
-	rm -f cabal.sandbox.config http_req_haskell
 
 install-exec-hook: http_req_haskell
 	$(MKDIR_P) $(instdir)

@@ -1,15 +1,17 @@
 #-*-Mode:make;coding:utf-8;tab-width:4;c-basic-offset:4-*-
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
-instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging/priv"
+instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
+CLEANFILES = cabal.sandbox.config messaging_haskell
 
-all-local: messaging_haskell
+.NOTPARALLEL:
+
+all-local: cabal.sandbox.config messaging_haskell
 
 cabal.sandbox.config:
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
 
-messaging_haskell: cabal.sandbox.config \
-                   Main.hs \
+messaging_haskell: Main.hs \
                    $(CABAL_SANDBOX)
 	$(CABAL) install --only-dependencies --force-reinstalls \
                      --with-compiler=$(GHC)
@@ -19,7 +21,6 @@ messaging_haskell: cabal.sandbox.config \
 
 clean-local:
 	rm -rf $(builddir)/dist
-	rm -f cabal.sandbox.config messaging_haskell
 
 install-exec-hook: messaging_haskell
 	$(MKDIR_P) $(instdir)

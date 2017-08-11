@@ -2,6 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/api/haskell"
+CLEANFILES = cabal.sandbox.config
 
 all-local: cabal.sandbox.config
 
@@ -26,7 +27,6 @@ cabal.sandbox.config: src/Foreign/CloudI.hs \
 
 clean-local:
 	rm -rf $(builddir)/dist $(CABAL_SANDBOX)
-	rm -f cabal.sandbox.config
 	rm -rf $(srcdir)/external/binary-0.9.0.0/dist
 	rm -rf $(srcdir)/external/bytestring-0.10.8.1/dist
 	rm -rf $(srcdir)/external/network-2.6.3.1/dist

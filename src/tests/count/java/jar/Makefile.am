@@ -4,6 +4,10 @@
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count/java"
 CLEANFILES = count.jar cloudi.jar
 
+.NOTPARALLEL:
+
+all-local: count.jar cloudi.jar
+
 cloudi.jar: $(top_builddir)/api/java/jar/cloudi.jar
 	cp $(top_builddir)/api/java/jar/cloudi.jar .
 
@@ -11,8 +15,6 @@ count.jar: manifest.txt \
            org/cloudi/tests/count/Main.class \
            org/cloudi/tests/count/Task.class
 	$(JAR) cvfm count.jar $(srcdir)/manifest.txt org
-
-all-local: count.jar cloudi.jar
 
 clean-local:
 	rm -rf org

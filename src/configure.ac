@@ -377,11 +377,11 @@ AC_PATH_PROGS([GO],[go])
 if test "x$GO" = "x"; then
     AC_MSG_ERROR([go not found])
 fi
-AC_SUBST(CONFIG_TESTS_GO_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/priv/count_go\"}, {dest_refresh, none}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/priv/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_GO_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/priv/messaging_go\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_go}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_GO_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/priv/msg_size_go\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_GO_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/count_go\"}, {dest_refresh, none}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/http_req_go\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_MESSAGING, ["[[{prefix, \"/tests/messaging/go/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/messaging_go\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {env, [{\"GOMAXPROCS\", \"4\"}]}, {options, [{scope, cloudi_service_messaging_go}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/msg_size_go\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_GO_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_go\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([GO_SUPPORT], [test "x$go_support" = "xtrue"])
 
@@ -398,11 +398,11 @@ if test "x$CABAL" = "x"; then
     AC_MSG_ERROR([Haskell Cabal (cabal-install) not found])
 fi
 AC_SUBST([CABAL_SANDBOX], ["$abs_top_builddir/api/haskell/sandbox"])
-AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/priv/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/priv/http_req_haskell\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/haskell/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/priv/messaging_haskell\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_haskell}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/priv/msg_size_haskell\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/http_req_haskell\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_MESSAGING, ["[[{prefix, \"/tests/messaging/haskell/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/messaging_haskell\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_haskell}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/msg_size_haskell\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_HASKELL_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_haskell\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([HASKELL_SUPPORT], [test "x$haskell_support" = "xtrue"])
 
@@ -451,11 +451,11 @@ if test "x$OCAMLOPT" = "x"; then
     AC_MSG_ERROR([ocamlopt not found])
 fi
 AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A"])
-AC_SUBST(CONFIG_TESTS_OCAML_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/priv/count_ocaml\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/priv/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
-AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/priv/messaging_ocaml\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_OCAML_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/priv/msg_size_ocaml\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
-AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/priv/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/count_ocaml\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/http_req/http_req_ocaml\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_MESSAGING, ["[[{prefix, \"/tests/messaging/ocaml/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/messaging/messaging_ocaml\"}, {dest_refresh, immediate_local}, {timeout_async, 10000}, {timeout_sync, 10000}, {count_thread, 4}, {options, [{scope, cloudi_service_messaging_ocaml}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_MSG_SIZE, ["[[{prefix, \"/tests/msg_size/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/msg_size/msg_size_ocaml\"}, {options, [{request_timeout_adjustment, true}, {scope, cloudi_service_msg_size}, {nice, 15}]}]],"])
+AC_SUBST(CONFIG_TESTS_OCAML_NULL, ["[[{prefix, \"/tests/null/response/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_min}, {nice, 10}]}]],[[{prefix, \"/tests/null/timeout/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/null/null_ocaml\"}, {dest_refresh, none}, {options, [{response_timeout_immediate_max, limit_max}, {nice, 10}]}]],"])
 fi
 AM_CONDITIONAL([OCAML_SUPPORT], [test "x$ocaml_support" = "xtrue"])
 
@@ -688,65 +688,75 @@ AC_CONFIG_FILES([
     tests/echo/Makefile
     tests/environment/Makefile
     tests/hexpi/Makefile
-    tests/hexpi/src/Makefile
-    tests/hexpi/cxx_src/Makefile
+    tests/hexpi/cxx/Makefile
+    tests/hexpi/erlang/Makefile
+    tests/hexpi/erlang/src/Makefile
     tests/http/Makefile
-    tests/http/service/Makefile
-    tests/http/service/jar/Makefile
-    tests/http/service/org/Makefile
-    tests/http/service/org/cloudi/Makefile
-    tests/http/service/org/cloudi/tests/Makefile
-    tests/http/service/org/cloudi/tests/http/Makefile
+    tests/http/java/Makefile
+    tests/http/java/jar/Makefile
+    tests/http/java/org/Makefile
+    tests/http/java/org/cloudi/Makefile
+    tests/http/java/org/cloudi/tests/Makefile
+    tests/http/java/org/cloudi/tests/http/Makefile
     tests/http_req/Makefile
-    tests/http_req/c_src/Makefile
+    tests/http_req/c/Makefile
+    tests/http_req/erlang/Makefile
+    tests/http_req/erlang/src/Makefile
     tests/http_req/gopath/Makefile
     tests/http_req/haskell/Makefile
     tests/http_req/haskell/http_req_haskell.cabal
-    tests/http_req/jar/Makefile
+    tests/http_req/java/Makefile
+    tests/http_req/java/jar/Makefile
+    tests/http_req/java/org/Makefile
+    tests/http_req/java/org/cloudi/Makefile
+    tests/http_req/java/org/cloudi/tests/Makefile
+    tests/http_req/java/org/cloudi/tests/http_req/Makefile
     tests/http_req/ocaml/Makefile
-    tests/http_req/org/Makefile
-    tests/http_req/org/cloudi/Makefile
-    tests/http_req/org/cloudi/tests/Makefile
-    tests/http_req/org/cloudi/tests/http_req/Makefile
-    tests/http_req/src/Makefile
     tests/messaging/Makefile
-    tests/messaging/cxx_src/Makefile
+    tests/messaging/cxx/Makefile
+    tests/messaging/erlang/Makefile
+    tests/messaging/erlang/src/Makefile
     tests/messaging/gopath/Makefile
     tests/messaging/haskell/Makefile
     tests/messaging/haskell/messaging_haskell.cabal
-    tests/messaging/jar/Makefile
+    tests/messaging/java/Makefile
+    tests/messaging/java/jar/Makefile
+    tests/messaging/java/org/Makefile
+    tests/messaging/java/org/cloudi/Makefile
+    tests/messaging/java/org/cloudi/tests/Makefile
+    tests/messaging/java/org/cloudi/tests/messaging/Makefile
     tests/messaging/ocaml/Makefile
-    tests/messaging/org/Makefile
-    tests/messaging/org/cloudi/Makefile
-    tests/messaging/org/cloudi/tests/Makefile
-    tests/messaging/org/cloudi/tests/messaging/Makefile
-    tests/messaging/src/Makefile
     tests/msg_size/Makefile
+    tests/msg_size/cxx/Makefile
+    tests/msg_size/erlang/Makefile
+    tests/msg_size/erlang/src/Makefile
     tests/msg_size/gopath/Makefile
     tests/msg_size/haskell/Makefile
     tests/msg_size/haskell/msg_size_haskell.cabal
-    tests/msg_size/jar/Makefile
+    tests/msg_size/java/Makefile
+    tests/msg_size/java/jar/Makefile
+    tests/msg_size/java/org/Makefile
+    tests/msg_size/java/org/cloudi/Makefile
+    tests/msg_size/java/org/cloudi/tests/Makefile
+    tests/msg_size/java/org/cloudi/tests/msg_size/Makefile
     tests/msg_size/ocaml/Makefile
-    tests/msg_size/org/Makefile
-    tests/msg_size/org/cloudi/Makefile
-    tests/msg_size/org/cloudi/tests/Makefile
-    tests/msg_size/org/cloudi/tests/msg_size/Makefile
-    tests/msg_size/src/Makefile
-    tests/msg_size/cxx_src/Makefile
     tests/null/Makefile
-    tests/null/c_src/Makefile
+    tests/null/c/Makefile
+    tests/null/erlang/Makefile
+    tests/null/erlang/src/Makefile
     tests/null/gopath/Makefile
     tests/null/haskell/Makefile
     tests/null/haskell/null_haskell.cabal
-    tests/null/jar/Makefile
+    tests/null/java/Makefile
+    tests/null/java/jar/Makefile
+    tests/null/java/org/Makefile
+    tests/null/java/org/cloudi/Makefile
+    tests/null/java/org/cloudi/tests/Makefile
+    tests/null/java/org/cloudi/tests/null_/Makefile
     tests/null/ocaml/Makefile
-    tests/null/org/Makefile
-    tests/null/org/cloudi/Makefile
-    tests/null/org/cloudi/tests/Makefile
-    tests/null/org/cloudi/tests/null_/Makefile
-    tests/null/src/Makefile
     tests/request_rate/Makefile
-    tests/request_rate/src/Makefile
+    tests/request_rate/erlang/Makefile
+    tests/request_rate/erlang/src/Makefile
     tests/service_api/Makefile
     tests/websockets/Makefile
     tests/zeromq/Makefile

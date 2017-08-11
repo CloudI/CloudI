@@ -103,7 +103,7 @@
         % prefix specified for all subscriptions
         "/tests/",
         % executable file path
-        "@prefix@/lib/cloudi-@VERSION@/tests/hexpi/priv/hexpi",
+        "@prefix@/lib/cloudi-@VERSION@/tests/hexpi/hexpi_cxx",
         % command line arguments for the executable
         "",
         % {Key, Value} pairs to specify environment variables
@@ -287,7 +287,7 @@
     {external,
         "/tests/http/",
         "@PYTHON@",
-        "@prefix@/lib/cloudi-@VERSION@/tests/http/service/service.py",
+        "@prefix@/lib/cloudi-@VERSION@/tests/http/http.py",
         [{"PYTHONPATH", "@prefix@/lib/cloudi-@VERSION@/api/python/"}],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
@@ -297,7 +297,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/http/service/jar/service.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/http/java/http.jar",
         [],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
@@ -305,7 +305,7 @@
     {external,
         "/tests/http/",
         "@RUBY@",
-        "@prefix@/lib/cloudi-@VERSION@/tests/http/service/service.rb",
+        "@prefix@/lib/cloudi-@VERSION@/tests/http/http.rb",
         [{"RUBYLIB", "@prefix@/lib/cloudi-@VERSION@/api/ruby/"}],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 4, 5, 300,
@@ -315,7 +315,7 @@
 @CONFIG_TESTS_OCAML_COUNT@
     {external,
         "/tests/count/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/count/c/count", "",
+        "@prefix@/lib/cloudi-@VERSION@/tests/count/count_c", "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
         none, default, default,
@@ -391,7 +391,7 @@
 @CONFIG_TESTS_OCAML_HTTP_REQ@
     {external,
         "/tests/http_req/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/http_req/priv/http_req", "",
+        "@prefix@/lib/cloudi-@VERSION@/tests/http_req/http_req_c", "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
         none, default, default,
@@ -403,7 +403,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/http_req/jar/http_req.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/http_req/java/http_req.jar",
         [],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
@@ -507,7 +507,7 @@
 @CONFIG_TESTS_OCAML_NULL@
     {external,
         "/tests/null/response/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/null/priv/null", "",
+        "@prefix@/lib/cloudi-@VERSION@/tests/null/null_c", "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
         none, default, default,
@@ -519,7 +519,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/null/jar/null_.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/null/java/null_.jar",
         [],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
@@ -588,7 +588,7 @@
         [{response_timeout_immediate_max, limit_min}]},
     {external,
         "/tests/null/timeout/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/null/priv/null", "",
+        "@prefix@/lib/cloudi-@VERSION@/tests/null/null_c", "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
         none, default, default,
@@ -600,7 +600,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/null/jar/null_.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/null/java/null_.jar",
         [],
         none, default, default,
         5000, 5000, 5000, undefined, undefined, 1, 1, 5, 300,
@@ -1107,7 +1107,7 @@
          {scope, cloudi_service_msg_size}]},
     {external,
         "/tests/msg_size/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/msg_size/priv/msg_size",
+        "@prefix@/lib/cloudi-@VERSION@/tests/msg_size/msg_size_cxx",
         "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
@@ -1127,7 +1127,7 @@
         "@JAVA@",
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/msg_size/jar/msg_size.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/msg_size/java/msg_size.jar",
         [],
         immediate_closest, default, default,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300,
@@ -1297,7 +1297,7 @@
          {nice, 15}]},
     {external,
         "/tests/messaging/cxx/",
-        "@prefix@/lib/cloudi-@VERSION@/tests/messaging/priv/messaging",
+        "@prefix@/lib/cloudi-@VERSION@/tests/messaging/messaging_cxx",
         "",
         [{"LD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"},
          {"DYLD_LIBRARY_PATH", "@prefix@/lib/cloudi-@VERSION@/api/c/"}],
@@ -1312,7 +1312,7 @@
         "-Xbatch -server -Xmx1G -Xms1G "
         % enable assertions
         "-ea:org.cloudi... "
-        "-jar @prefix@/lib/cloudi-@VERSION@/tests/messaging/jar/messaging.jar",
+        "-jar @prefix@/lib/cloudi-@VERSION@/tests/messaging/java/messaging.jar",
         [],
         immediate_local, default, default,
         5000, 10000, 10000, [api], undefined, 1, 4, 5, 300,

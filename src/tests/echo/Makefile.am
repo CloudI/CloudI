@@ -6,4 +6,5 @@ instdir = "$(DESTDIR)$(cloudi_prefix)/tests/echo"
 install-exec-hook:
 	$(MKDIR_P) $(instdir)
 	$(INSTALL_SCRIPT) $(srcdir)/echo.py $(instdir)
+	$(INSTALL_SCRIPT) $(srcdir)/multipart.sh $(instdir)
 
