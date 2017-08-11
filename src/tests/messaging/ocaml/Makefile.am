@@ -6,6 +6,7 @@ CLEANFILES = messaging_ocaml main.cmx main.cmi main.o
 OCAMLDEPS = nums.cmxa str.cmxa unix.cmxa threads/threads.cmxa \
             $(top_builddir)/api/ocaml/erlang.cmx \
             $(top_builddir)/api/ocaml/cloudi.cmx
+SUFFIXES = .ml .cmx
 
 all-local: messaging_ocaml
 

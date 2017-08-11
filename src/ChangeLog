@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix automake build of Erlang source code for parallel use
+
 2017-08-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Finished improving the automake build of Java source code
