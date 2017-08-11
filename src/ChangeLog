@@ -4,6 +4,7 @@
 2017-08-10 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Finished improving the automake build of Java source code
+    * Fix the install step of the Haskell integration tests
 
 2017-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
 

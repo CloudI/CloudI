@@ -2,6 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/count"
+CLEANFILES = count_go
 
 all-local: count_go
 
@@ -17,10 +18,9 @@ count_go: src/count_go/main.go
 	cp $(builddir)/bin/count_go .
 
 clean-local:
-	rm -rf $(builddir)/src/count_go/vendor/
-	rm -rf $(builddir)/pkg
-	rm -rf $(builddir)/bin
-	rm -f count_go
+	rm -rf $(builddir)/src/count_go/vendor/ \
+           $(builddir)/pkg \
+           $(builddir)/bin
 
 install-exec-hook: count_go
 	$(MKDIR_P) $(instdir)

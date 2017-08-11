@@ -11,8 +11,7 @@ all-local: cabal.sandbox.config null_haskell
 cabal.sandbox.config:
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
 
-null_haskell: Main.hs \
-              $(CABAL_SANDBOX)
+null_haskell: Main.hs
 	$(CABAL) install --only-dependencies --force-reinstalls \
                      --with-compiler=$(GHC)
 	$(CABAL) configure --with-compiler=$(GHC)

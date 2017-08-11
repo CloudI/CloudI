@@ -2,6 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
+CLEANFILES = messaging_go
 
 all-local: messaging_go
 
@@ -17,10 +18,9 @@ messaging_go: src/messaging_go/main.go
 	cp $(builddir)/bin/messaging_go .
 
 clean-local:
-	rm -rf $(builddir)/src/messaging_go/vendor/
-	rm -rf $(builddir)/pkg
-	rm -rf $(builddir)/bin
-	rm -f messaging_go
+	rm -rf $(builddir)/src/messaging_go/vendor/ \
+           $(builddir)/pkg \
+           $(builddir)/bin
 
 install-exec-hook: messaging_go
 	$(MKDIR_P) $(instdir)

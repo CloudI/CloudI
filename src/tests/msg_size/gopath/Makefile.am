@@ -2,6 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
+CLEANFILES = msg_size_go
 
 all-local: msg_size_go
 
@@ -17,10 +18,9 @@ msg_size_go: src/msg_size_go/main.go
 	cp $(builddir)/bin/msg_size_go .
 
 clean-local:
-	rm -rf $(builddir)/src/msg_size_go/vendor/
-	rm -rf $(builddir)/pkg
-	rm -rf $(builddir)/bin
-	rm -f msg_size_go
+	rm -rf $(builddir)/src/msg_size_go/vendor/ \
+           $(builddir)/pkg \
+           $(builddir)/bin
 
 install-exec-hook: msg_size_go
 	$(MKDIR_P) $(instdir)

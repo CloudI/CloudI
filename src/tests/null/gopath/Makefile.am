@@ -2,6 +2,7 @@
 # ex: set ft=make fenc=utf-8 sts=4 ts=4 sw=4 noet nomod:
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/null"
+CLEANFILES = null_go
 
 all-local: null_go
 
@@ -17,10 +18,9 @@ null_go: src/null_go/main.go
 	cp $(builddir)/bin/null_go .
 
 clean-local:
-	rm -rf $(builddir)/src/null_go/vendor/
-	rm -rf $(builddir)/pkg
-	rm -rf $(builddir)/bin
-	rm -f null_go
+	rm -rf $(builddir)/src/null_go/vendor/ \
+           $(builddir)/pkg \
+           $(builddir)/bin
 
 install-exec-hook: null_go
 	$(MKDIR_P) $(instdir)
