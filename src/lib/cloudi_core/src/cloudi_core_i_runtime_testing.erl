@@ -135,7 +135,7 @@ monkey_latency_check(#monkey_latency{method = time_gaussian,
                                      value1 = Mean,
                                      value2 = StdDev,
                                      result1 = undefined} = MonkeyLatency) ->
-    {Latency1, Latency2} = quickrand_normal:box_muller(Mean, StdDev),
+    {Latency1, Latency2} = cloudi_x_quickrand_normal:box_muller(Mean, StdDev),
     Result1 = erlang:max(erlang:round(Latency1), 1),
     Result2 = erlang:max(erlang:round(Latency2), 1),
     sleep(Result2),

@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_count).
@@ -62,7 +62,7 @@ cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "erlang/get"),
     {ok, #state{}}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
+cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{count = Count0} = State, _Dispatcher) ->
     CountN = if

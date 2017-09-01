@@ -245,13 +245,13 @@ dialyze: all \
               lib/trie/ebin/ \
               lib/uuid/ebin/ \
               lib/varpool/ebin/ \
-              tests/count/ebin/ \
-              tests/hexpi/ebin/ \
-              tests/http_req/ebin/ \
-              tests/messaging/ebin/ \
-              tests/msg_size/ebin/ \
-              tests/null/ebin/ \
-              tests/request_rate/ebin/ \
+              tests/count/erlang/src/ \
+              tests/hexpi/erlang/src/ \
+              tests/http_req/erlang/src/ \
+              tests/messaging/erlang/src/ \
+              tests/msg_size/erlang/src/ \
+              tests/null/erlang/src/ \
+              tests/request_rate/erlang/src/ \
               external/cloudi_x_bear/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \

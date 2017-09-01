@@ -8,6 +8,8 @@
     * Fix monkey_latency time_gaussian bug that would almost never occur
       (the Box-Mullter transformation X1 would need to be 0.0)
     * Update quickrand
+    * Fix dialyzer execution to match the new paths of
+      the Erlang integration tests
 
 2017-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
