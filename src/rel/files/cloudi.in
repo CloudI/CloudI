@@ -96,20 +96,15 @@ case "$1" in
         $BINDIR/run_erl -daemon "$PIPE_DIR" "$ROOT_LOG_DIR" "exec $PROGNAME_FILE $START_OPTION $RUN_PARAM" 2>&1
         ;;
     stop)
-        # Wait for the node to completely stop...
+        # Wait for the node to completely stop
         $NODETOOL stop
-        EXIT=$?
-        if [ $EXIT -ne 0 ]; then
-            exit $EXIT
+        if [ $? -eq 0 -a -f "$CLOUDI_PID_FILE" ]; then
+            PID=`cat "$CLOUDI_PID_FILE"`
+            while `kill -0 "$PID" 2>/dev/null`;
+            do
+                sleep 1
+            done
         fi
-        if [ ! -f "$CLOUDI_PID_FILE" ]; then
-            exit 1
-        fi
-        PID=`cat "$CLOUDI_PID_FILE"`
-        while `kill -0 "$PID" 2>/dev/null`;
-        do
-            sleep 1
-        done
 
         # Remove the pid file
         rm -f "$CLOUDI_PID_FILE"

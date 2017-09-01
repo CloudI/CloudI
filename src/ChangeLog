@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix release script to always succeed with stop (for openrc-run)
+    * Improve configure script rebar check
+
 2017-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix automake build of Erlang source code for parallel use

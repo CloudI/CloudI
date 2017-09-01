@@ -582,8 +582,7 @@ if test "x$want_rebar" = "xyes"; then
          BUILDDIR=$abs_top_builddir])
     REBAR="$abs_top_builddir/rebar"
 else
-    AC_PATH_PROG([REBAR], [rebar], ,
-                 ["$abs_top_builddir" "$abs_top_builddir/../.." $PATH])
+    AC_PATH_PROG([REBAR], [rebar], , ["$abs_top_builddir" $PATH])
     if test -z "$REBAR"; then
         AC_MSG_ERROR([rebar not found (use --with-rebar)])
     fi
