@@ -134,18 +134,10 @@ monkey_latency_check(#monkey_latency{method = time_uniform,
 monkey_latency_check(#monkey_latency{method = time_gaussian,
                                      value1 = Mean,
                                      value2 = StdDev,
-                                     result1 = undefined,
-                                     pi2 = PI2} = MonkeyLatency) ->
-    % use Box-Muller transformation to generate Gaussian noise
-    % (G. E. P. Box and Mervin E. Muller,
-    %  A Note on the Generation of Random Normal Deviates,
-    %  The Annals of Mathematical Statistics (1958),
-    %  Vol. 29, No. 2 pp. 610–611)
-    X1 = random(),
-    X2 = PI2 * random(),
-    K = StdDev * math:sqrt(-2.0 * math:log(X1)),
-    Result1 = erlang:max(erlang:round(Mean + K * math:cos(X2)), 1),
-    Result2 = erlang:max(erlang:round(Mean + K * math:sin(X2)), 1),
+                                     result1 = undefined} = MonkeyLatency) ->
+    {Latency1, Latency2} = quickrand_normal:box_muller(Mean, StdDev),
+    Result1 = erlang:max(erlang:round(Latency1), 1),
+    Result2 = erlang:max(erlang:round(Latency2), 1),
     sleep(Result2),
     MonkeyLatency#monkey_latency{result1 = Result1};
 monkey_latency_check(#monkey_latency{method = time_gaussian,

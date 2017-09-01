@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand).
@@ -43,7 +43,10 @@
          uniform_cache/2,
          strong_uniform/1,
          strong_uniform_range/2,
-         strong_float/0]).
+         strong_float/0,
+         strong_floatL/0,
+         strong_floatM/0,
+         strong_floatR/0]).
 
 -ifdef(ERLANG_OTP_VERSION_16).
 -else.
@@ -293,8 +296,7 @@ strong_uniform_range(Min, Max)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return an Erlang floating point random number (double-precision).===
-%% return a floating point value between 0.0 and 1.0, inclusive
+%% ===Return an Erlang double-precision random number with the range [0.0 .. 1.0].===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -307,6 +309,53 @@ strong_float() ->
     %  i.e. 16#1fffffffffffff + 1)
     <<I:53/unsigned-integer, Bit:1, _:2>> = crypto:strong_rand_bytes(7),
     (I + Bit) * ?DBL_EPSILON_DIV2.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return an Erlang double-precision random number with the range [0.0 .. 1.0).===
+%% Left portion of the 0.0 to 1.0 range.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_floatL() ->
+    float().
+
+strong_floatL() ->
+    <<I:53/unsigned-integer, _:3>> = crypto:strong_rand_bytes(7),
+    I * ?DBL_EPSILON_DIV2.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return an Erlang double-precision random number with the range (0.0 .. 1.0).===
+%% Middle portion of the 0.0 to 1.0 range.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_floatM() ->
+    float().
+
+strong_floatM() ->
+    <<I:53/unsigned-integer, _:3>> = crypto:strong_rand_bytes(7),
+    if
+        I == 0 ->
+            ?DBL_EPSILON_DIV2;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return an Erlang double-precision random number with the range (0.0 .. 1.0].===
+%% Right portion of the 0.0 to 1.0 range.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec strong_floatR() ->
+    float().
+
+strong_floatR() ->
+    <<I:53/unsigned-integer, _:3>> = crypto:strong_rand_bytes(7),
+    (I + 1) * ?DBL_EPSILON_DIV2.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

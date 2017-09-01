@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(quickrand_cache).
@@ -39,6 +39,12 @@
 %% external interface
 -export([float/0,
          float/1,
+         floatL/0,
+         floatL/1,
+         floatM/0,
+         floatM/1,
+         floatR/0,
+         floatR/1,
          init/0,
          init/1,
          new/0,
@@ -90,6 +96,95 @@ float() ->
 float(State) ->
     {<<I:53/unsigned-integer, Bit:1, _:2>>, NewState} = rand_bytes(7, State),
     {(I + Bit) * ?DBL_EPSILON_DIV2, NewState}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Process dictionary cache version of quickrand:strong_floatL/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatL() ->
+    float().
+
+floatL() ->
+    <<I:53/unsigned-integer, _:3>> = rand_bytes(7),
+    I * ?DBL_EPSILON_DIV2.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===State cache version of quickrand:strong_floatL/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatL(State :: state()) ->
+    {float(), state()}.
+
+floatL(State) ->
+    {<<I:53/unsigned-integer, _:3>>, NewState} = rand_bytes(7, State),
+    {I * ?DBL_EPSILON_DIV2, NewState}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Process dictionary cache version of quickrand:strong_floatM/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatM() ->
+    float().
+
+floatM() ->
+    <<I:53/unsigned-integer, _:3>> = rand_bytes(7),
+    if
+        I == 0 ->
+            ?DBL_EPSILON_DIV2;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===State cache version of quickrand:strong_floatM/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatM(State :: state()) ->
+    {float(), state()}.
+
+floatM(State) ->
+    {<<I:53/unsigned-integer, _:3>>, NewState} = rand_bytes(7, State),
+    Value = if
+        I == 0 ->
+            ?DBL_EPSILON_DIV2;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end,
+    {Value, NewState}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Process dictionary cache version of quickrand:strong_floatR/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatR() ->
+    float().
+
+floatR() ->
+    <<I:53/unsigned-integer, _:3>> = rand_bytes(7),
+    (I + 1) * ?DBL_EPSILON_DIV2.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===State cache version of quickrand:strong_floatR/0.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec floatR(State :: state()) ->
+    {float(), state()}.
+
+floatR(State) ->
+    {<<I:53/unsigned-integer, _:3>>, NewState} = rand_bytes(7, State),
+    {(I + 1) * ?DBL_EPSILON_DIV2, NewState}.
 
 %%-------------------------------------------------------------------------
 %% @doc
