@@ -606,8 +606,30 @@ else
 fi
 AC_SUBST(CLOUDI_CONF)
 
-# Allow a specific pid file path to be used
-AC_ARG_VAR([CLOUDI_PID_FILE], [CloudI pid file path])
+# Set a specific pid file path to be used
+AC_ARG_VAR([CLOUDI_PID_FILE],
+           [CloudI pid file path
+            @<:@default='$localstatedir/log/cloudi/cloudi.pid'@:>@])
+# Set a specific Distributed Erlang node name
+AC_ARG_VAR([CLOUDI_ARG_NODE_NAME_LONG],
+           [CloudI distributed Erlang fully qualified node name])
+AC_ARG_VAR([CLOUDI_ARG_NODE_NAME_SHORT],
+           [CloudI distributed Erlang short node name
+            @<:@default='cloudi'@:>@])
+AS_IF([test -n "$CLOUDI_ARG_NODE_NAME_LONG"],
+      [CLOUDI_ARG_NODE_NAME="-name $CLOUDI_ARG_NODE_NAME_LONG"],
+      [test -n "$CLOUDI_ARG_NODE_NAME_SHORT"],
+      [CLOUDI_ARG_NODE_NAME="-sname $CLOUDI_ARG_NODE_NAME_SHORT"],
+      [CLOUDI_ARG_NODE_NAME="-sname cloudi"])
+AC_SUBST(CLOUDI_ARG_NODE_NAME)
+# Set a specific Distributed Erlang cookie
+AC_ARG_VAR([CLOUDI_ARG_NODE_COOKIE],
+           [CloudI distributed Erlang cookie
+            @<:@default='cloudi'@:>@])
+AS_IF([test -n "$CLOUDI_ARG_NODE_COOKIE"],
+      [CLOUDI_ARG_NODE_COOKIE="-setcookie '$CLOUDI_ARG_NODE_COOKIE'"],
+      [CLOUDI_ARG_NODE_COOKIE="-setcookie cloudi"])
+AC_SUBST(CLOUDI_ARG_NODE_COOKIE)
 
 AC_CONFIG_FILES([
     cloudi_tests.conf

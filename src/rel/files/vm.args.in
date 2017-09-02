@@ -2,10 +2,10 @@
 -smp
 
 ## Name of the node
--sname cloudi
+@CLOUDI_ARG_NODE_NAME@
 
 ## Cookie for distributed erlang
--setcookie cloudi
+@CLOUDI_ARG_NODE_COOKIE@
 
 ## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
 ## (Disabled by default..use with caution!)
