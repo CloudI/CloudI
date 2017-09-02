@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -291,7 +291,7 @@ send(Dispatcher, Name, Request, Timeout, State) ->
            Name :: cloudi_service:service_name(),
            Request :: cloudi_service:request(),
            Timeout :: cloudi_service:timeout_milliseconds(),
-           PatternPid :: cloudi_service:pattern_pid(),
+           PatternPid :: cloudi_service:pattern_pid() | undefined,
            State :: state()) ->
     {ok, NewState :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
@@ -349,17 +349,9 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
     case validate(RequestInfoF, RequestF,
                   RequestInfo, Request) of
         true ->
-            case cloudi_service:send_async_active(Dispatcher, Name,
-                                                  RequestInfo, Request,
-                                                  Timeout, Priority,
-                                                  PatternPid) of
-                {ok, TransId} ->
-                    RequestState = #request{name = Name,
-                                            request_info = RequestInfo,
-                                            request = Request,
-                                            timeout = Timeout,
-                                            priority = Priority,
-                                            pattern_pid = PatternPid},
+            case send_async(Dispatcher, Name, RequestInfo, Request,
+                            Timeout, Priority, PatternPid) of
+                {ok, TransId, RequestState} ->
                     {ok, State#cloudi_queue{requests = maps:put(TransId,
                                                                 RequestState,
                                                                 Requests)}};
@@ -457,6 +449,33 @@ validate(RInfoF, undefined, RInfo, _) ->
     validate_f_return(RInfoF(RInfo));
 validate(RInfoF, RF, RInfo, R) ->
     validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
+
+send_async(Dispatcher, Name, RequestInfo, Request,
+           Timeout, Priority, undefined) ->
+    case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
+        {ok, PatternPid} ->
+            send_async(Dispatcher, Name, RequestInfo, Request,
+                       Timeout, Priority, PatternPid);
+        {error, _} = Error ->
+            Error
+    end;
+send_async(Dispatcher, Name, RequestInfo, Request,
+           Timeout, Priority, PatternPid) ->
+    case cloudi_service:send_async_active(Dispatcher, Name,
+                                          RequestInfo, Request,
+                                          Timeout, Priority,
+                                          PatternPid) of
+        {ok, TransId} ->
+            RequestState = #request{name = Name,
+                                    request_info = RequestInfo,
+                                    request = Request,
+                                    timeout = Timeout,
+                                    priority = Priority,
+                                    pattern_pid = PatternPid},
+            {ok, TransId, RequestState};
+        {error, _} = Error ->
+            Error
+    end.
 
 failure(false, _, _, FailureList) ->
     FailureList;

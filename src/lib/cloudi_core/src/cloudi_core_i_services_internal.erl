@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -877,9 +877,9 @@ handle_info({'cloudi_service_request_success', RequestResponse,
             Source ! T;
         {'cloudi_service_return_sync', _, _, _, _, _, _, Source} = T ->
             Source ! T;
-        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _} = T ->
+        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _, _, _} = T ->
             Dispatcher ! T;
-        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _} = T ->
+        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _, _, _} = T ->
             Dispatcher ! T
     end,
     NewState = process_queues(State#state{service_state = NewServiceState}),
@@ -968,35 +968,48 @@ handle_info({'cloudi_service_mcast_async_active_retry',
                                               Timeout, Priority,
                                               Client, State));
 
-handle_info({'cloudi_service_forward_async_retry',
-             Name, RequestInfo, Request, Timeout, Priority, TransId, Source},
+handle_info({'cloudi_service_forward_async_retry', Name, Pattern,
+             NextName, NextRequestInfo, NextRequest,
+             Timeout, Priority, TransId, Source},
             #state{dest_refresh = DestRefresh,
                    cpg_data = Groups,
                    dest_deny = DestDeny,
                    dest_allow = DestAllow,
                    options = #config_service_options{
                        request_name_lookup = RequestNameLookup,
+                       response_timeout_immediate_max =
+                           ResponseTimeoutImmediateMax,
                        scope = Scope}} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    case destination_allowed(NextName, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Scope, Name, Source,
+            case destination_get(DestRefresh, Scope, NextName, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
                     ok;
                 {error, _} when RequestNameLookup =:= async ->
+                    if
+                        Timeout >= ResponseTimeoutImmediateMax ->
+                            Source ! {'cloudi_service_return_async',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source};
+                        true ->
+                            ok
+                    end,
                     ok;
                 {error, _} when Timeout >= ?FORWARD_ASYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_ASYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_async_retry',
-                                       Name, RequestInfo, Request,
+                                       Name, Pattern,
+                                       NextName, NextRequestInfo, NextRequest,
                                        Timeout - ?FORWARD_ASYNC_INTERVAL,
                                        Priority, TransId, Source}),
                     ok;
                 {error, _} ->
                     ok;
                 {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'cloudi_service_send_async', Name, NextPattern,
-                               RequestInfo, Request,
+                    NextPid ! {'cloudi_service_send_async',
+                               NextName, NextPattern,
+                               NextRequestInfo, NextRequest,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Source};
                 _ ->
@@ -1007,7 +1020,8 @@ handle_info({'cloudi_service_forward_async_retry',
     end,
     hibernate_check({noreply, State});
 
-handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
+handle_info({'cloudi_service_forward_sync_retry', Name, Pattern,
+             NextName, NextRequestInfo, NextRequest,
              Timeout, Priority, TransId, Source},
             #state{dest_refresh = DestRefresh,
                    cpg_data = Groups,
@@ -1015,27 +1029,39 @@ handle_info({'cloudi_service_forward_sync_retry', Name, RequestInfo, Request,
                    dest_allow = DestAllow,
                    options = #config_service_options{
                        request_name_lookup = RequestNameLookup,
+                       response_timeout_immediate_max =
+                           ResponseTimeoutImmediateMax,
                        scope = Scope}} = State) ->
-    case destination_allowed(Name, DestDeny, DestAllow) of
+    case destination_allowed(NextName, DestDeny, DestAllow) of
         true ->
-            case destination_get(DestRefresh, Scope, Name, Source,
+            case destination_get(DestRefresh, Scope, NextName, Source,
                                  Groups, Timeout) of
                 {error, timeout} ->
                     ok;
                 {error, _} when RequestNameLookup =:= async ->
+                    if
+                        Timeout >= ResponseTimeoutImmediateMax ->
+                            Source ! {'cloudi_service_return_sync',
+                                      Name, Pattern, <<>>, <<>>,
+                                      Timeout, TransId, Source};
+                        true ->
+                            ok
+                    end,
                     ok;
                 {error, _} when Timeout >= ?FORWARD_SYNC_INTERVAL ->
                     erlang:send_after(?FORWARD_SYNC_INTERVAL, self(),
                                       {'cloudi_service_forward_sync_retry',
-                                       Name, RequestInfo, Request,
+                                       Name, Pattern,
+                                       NextName, NextRequestInfo, NextRequest,
                                        Timeout - ?FORWARD_SYNC_INTERVAL,
                                        Priority, TransId, Source}),
                     ok;
                 {error, _} ->
                     ok;
                 {ok, NextPattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-                    NextPid ! {'cloudi_service_send_sync', Name, NextPattern,
-                               RequestInfo, Request,
+                    NextPid ! {'cloudi_service_send_sync',
+                               NextName, NextPattern,
+                               NextRequestInfo, NextRequest,
                                Timeout - ?FORWARD_DELTA,
                                Priority, TransId, Source};
                 _ ->
@@ -2396,8 +2422,8 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                              NewServiceState}
                     end;
                 {'cloudi_service_request_success',
-                 {ForwardType, NextName,
-                  NextRequestInfo, NextRequest,
+                 {ForwardType, Name, Pattern,
+                  NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, TransId, Source},
                  NewServiceState}
                 when ForwardType =:= 'cloudi_service_forward_async_retry';
@@ -2420,8 +2446,8 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                                     NextTimeout
                             end,
                             {'cloudi_service_request_success',
-                             {ForwardType, NextName,
-                              NextRequestInfo, NextRequest,
+                             {ForwardType, Name, Pattern,
+                              NextName, NextRequestInfo, NextRequest,
                               NewTimeout, NextPriority, TransId, Source},
                              FinalServiceState};
                         {stop, Reason, FinalServiceState} ->
@@ -2527,15 +2553,15 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
-             {'cloudi_service_forward_async_retry', NextName,
-              NextRequestInfo, NextRequest,
+             {'cloudi_service_forward_async_retry', Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewServiceState} ->
             {'cloudi_service_request_success',
-             {'cloudi_service_forward_async_retry', NextName,
-              NextRequestInfo, NextRequest,
+             {'cloudi_service_forward_async_retry', Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               Timeout, Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
@@ -2607,8 +2633,8 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
                 NextTimeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_async_retry' ->
             {'cloudi_service_request_success',
-             {ForwardType, NextName,
-              NextRequestInfo, NextRequest,
+             {ForwardType, Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
         ErrorType:Error ->
@@ -2674,15 +2700,15 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
             {'cloudi_service_request_success',
-             {'cloudi_service_forward_sync_retry', NextName,
-              NextRequestInfo, NextRequest,
+             {'cloudi_service_forward_sync_retry', Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              NewServiceState};
         {forward, NextName, NextRequestInfo, NextRequest,
                   NewServiceState} ->
             {'cloudi_service_request_success',
-             {'cloudi_service_forward_sync_retry', NextName,
-              NextRequestInfo, NextRequest,
+             {'cloudi_service_forward_sync_retry', Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               Timeout, Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
@@ -2754,8 +2780,8 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
                 NextTimeout, NextPriority, TransId, Source}}
             when ForwardType =:= 'cloudi_service_forward_sync_retry' ->
             {'cloudi_service_request_success',
-             {ForwardType, NextName,
-              NextRequestInfo, NextRequest,
+             {ForwardType, Name, Pattern,
+              NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
         ErrorType:Error ->
@@ -3527,9 +3553,9 @@ duo_handle_info({'cloudi_service_request_success', RequestResponse,
             Source ! T;
         {'cloudi_service_return_sync', _, _, _, _, _, _, Source} = T ->
             Source ! T;
-        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _} = T ->
+        {'cloudi_service_forward_async_retry', _, _, _, _, _, _, _, _, _} = T ->
             Dispatcher ! T;
-        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _} = T ->
+        {'cloudi_service_forward_sync_retry', _, _, _, _, _, _, _, _, _} = T ->
             Dispatcher ! T
     end,
     NewState = State#state_duo{service_state = NewServiceState},

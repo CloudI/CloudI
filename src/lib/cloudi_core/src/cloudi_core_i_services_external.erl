@@ -592,6 +592,8 @@ handle_event(EventType, EventContent, StateName, State) ->
                 dest_allow = DestAllow,
                 options = #config_service_options{
                     request_name_lookup = RequestNameLookup,
+                    response_timeout_immediate_max =
+                        ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     true = is_list(NextName) andalso is_integer(hd(NextName)),
@@ -624,6 +626,14 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
+                            if
+                                NewTimeout >= ResponseTimeoutImmediateMax ->
+                                    Source ! {'cloudi_service_return_async',
+                                              Name, Pattern, <<>>, <<>>,
+                                              NewTimeout, TransId, Source};
+                                true ->
+                                    ok
+                            end,
                             ok;
                         {error, _}
                             when NewTimeout >= ?FORWARD_ASYNC_INTERVAL ->
@@ -678,6 +688,8 @@ handle_event(EventType, EventContent, StateName, State) ->
                 dest_allow = DestAllow,
                 options = #config_service_options{
                     request_name_lookup = RequestNameLookup,
+                    response_timeout_immediate_max =
+                        ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
     true = is_list(NextName) andalso is_integer(hd(NextName)),
@@ -709,6 +721,14 @@ handle_event(EventType, EventContent, StateName, State) ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
+                            if
+                                NewTimeout >= ResponseTimeoutImmediateMax ->
+                                    Source ! {'cloudi_service_return_sync',
+                                              Name, Pattern, <<>>, <<>>,
+                                              NewTimeout, TransId, Source};
+                                true ->
+                                    ok
+                            end,
                             ok;
                         {error, _}
                             when NewTimeout >= ?FORWARD_SYNC_INTERVAL ->

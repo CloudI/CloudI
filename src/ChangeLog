@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the service configuration option response_timeout_immediate_max
+      when request_name_lookup is set to async and a lookup timeout occurs
+    * Fix cloudi_queue:send when PatternPid is provided as undefined
+
 2017-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix release script to always succeed with stop (for openrc-run)
