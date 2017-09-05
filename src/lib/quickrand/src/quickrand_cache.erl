@@ -81,8 +81,13 @@
     float().
 
 float() ->
-    <<I:53/unsigned-integer, Bit:1, _:2>> = rand_bytes(7),
-    (I + Bit) * ?DBL_EPSILON_DIV2.
+    <<Bit:1, I:53/unsigned-integer, _:2>> = rand_bytes(7),
+    if
+        Bit == 1, I == 0 ->
+            1.0;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -94,8 +99,14 @@ float() ->
     {float(), state()}.
 
 float(State) ->
-    {<<I:53/unsigned-integer, Bit:1, _:2>>, NewState} = rand_bytes(7, State),
-    {(I + Bit) * ?DBL_EPSILON_DIV2, NewState}.
+    {<<Bit:1, I:53/unsigned-integer, _:2>>, NewState} = rand_bytes(7, State),
+    Value = if
+        Bit == 1, I == 0 ->
+            1.0;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end,
+    {Value, NewState}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -136,7 +147,7 @@ floatM() ->
     <<I:53/unsigned-integer, _:3>> = rand_bytes(7),
     if
         I == 0 ->
-            ?DBL_EPSILON_DIV2;
+            floatM();
         true ->
             I * ?DBL_EPSILON_DIV2
     end.
@@ -152,13 +163,12 @@ floatM() ->
 
 floatM(State) ->
     {<<I:53/unsigned-integer, _:3>>, NewState} = rand_bytes(7, State),
-    Value = if
+    if
         I == 0 ->
-            ?DBL_EPSILON_DIV2;
+            floatM(NewState);
         true ->
-            I * ?DBL_EPSILON_DIV2
-    end,
-    {Value, NewState}.
+            {I * ?DBL_EPSILON_DIV2, NewState}
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc

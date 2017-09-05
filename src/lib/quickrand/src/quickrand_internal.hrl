@@ -29,7 +29,7 @@
 
 -define(APPLICATION, quickrand).
 
-% 1 / (16#1fffffffffffff + 1) =:= math:pow(2, -53) to provide [0.0 .. 1.0]
+% 1 / (1 + 16#1fffffffffffff) =:= math:pow(2, -53) to provide [0.0 .. 1.0]
 -define(DBL_EPSILON_DIV2, 1.1102230246251565e-16).
 
 -define(BYTES_RESOLUTION, 4). % bytes

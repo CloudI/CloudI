@@ -306,9 +306,14 @@ strong_uniform_range(Min, Max)
 strong_float() ->
     % 53 bits maximum for double precision floating point representation
     % (need to use a maximum value of math:pow(2, 53) with extra bit,
-    %  i.e. 16#1fffffffffffff + 1)
-    <<I:53/unsigned-integer, Bit:1, _:2>> = crypto:strong_rand_bytes(7),
-    (I + Bit) * ?DBL_EPSILON_DIV2.
+    %  i.e. 1 + 16#1fffffffffffff)
+    <<Bit:1, I:53/unsigned-integer, _:2>> = crypto:strong_rand_bytes(7),
+    if
+        Bit == 1, I == 0 ->
+            1.0;
+        true ->
+            I * ?DBL_EPSILON_DIV2
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -338,7 +343,9 @@ strong_floatM() ->
     <<I:53/unsigned-integer, _:3>> = crypto:strong_rand_bytes(7),
     if
         I == 0 ->
-            ?DBL_EPSILON_DIV2;
+            % almost never executes this case, an additional function call
+            % is necessary to have a uniform distribution
+            strong_floatM();
         true ->
             I * ?DBL_EPSILON_DIV2
     end.
