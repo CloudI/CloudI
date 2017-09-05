@@ -18,13 +18,11 @@ matrix:
       addons:
         apt:
           sources:
-            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
-              key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
-            - ubuntu-toolchain-r-test
+            - llvm-toolchain-trusty-5.0
           packages:
-            - clang-4.0
+            - clang-5.0
       env:
-        - CONFIGURE_ENV="CC=clang-4.0 CXX=clang++-4.0"
+        - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
 compiler:
   - clang
   - gcc
