@@ -13,16 +13,22 @@ matrix:
             - g++-6
       env:
         - CONFIGURE_ENV="CC=gcc-6 CXX=g++-6"
-    # works on Trusty
-    - os: linux
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
-          packages:
-            - clang-5.0
-      env:
-        - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
+# Clang 4.0/5.0 broken for Trusty at http://apt.llvm.org/trusty/ (2017-09-04)
+#    # works on Trusty
+#    - os: linux
+#      addons:
+#        apt:
+#          sources:
+#            # method 1
+#            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
+#              key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
+#            - ubuntu-toolchain-r-test
+#            # method 2
+#            - llvm-toolchain-trusty-4.0
+#          packages:
+#            - clang-4.0
+#      env:
+#        - CONFIGURE_ENV="CC=clang-4.0 CXX=clang++-4.0"
 compiler:
   - clang
   - gcc
