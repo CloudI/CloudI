@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -89,11 +89,19 @@
         % For example, a GET HTTP request method would cause "/get" to be
         % added to the service name (the URL path) that is used when sending
         % the service request.
+-define(DEFAULT_UPDATE_DELAY,                         5). % see below:
+        % The number of seconds before applying service configuration
+        % update (e.g., changes with cloudi_service_api:services_update/2)
+        % for the value timeout_sync.
 
 -record(state,
     {
-        listener
+        listener :: pid(),
+        service :: pid(),
+        handler_state :: #elli_state{}
     }).
+
+-define(CALLBACK, cloudi_http_elli_handler).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -123,12 +131,14 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
-        {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
+        {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX},
+        {update_delay,                  ?DEFAULT_UPDATE_DELAY}],
     [Interface, Port, AcceptTimeout, RecvTimeout, HeaderTimeout, BodyTimeout,
      MinAcceptors, SSL, MaxBodySize,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
      StatusCodeTimeout, QueryGetFormat,
-     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix] =
+     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
+     UpdateDelaySeconds] =
         cloudi_proplists:take_values(Defaults, Args),
     1 = cloudi_service:process_count_max(Dispatcher),
     true = is_integer(Port),
@@ -180,25 +190,30 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (UseMethodSuffix =:= true)) orelse
            (UseXMethodOverride =:= false),
     true = is_boolean(UseMethodSuffix),
+    true = is_integer(UpdateDelaySeconds) andalso
+           (UpdateDelaySeconds > 0) andalso (UpdateDelaySeconds =< 4294967),
     false = lists:member($*, Prefix),
-    CallbackArgs = #elli_state{
-                       dispatcher = cloudi_service:dispatcher(Dispatcher),
-                       timeout_sync = cloudi_service:timeout_sync(Dispatcher),
-                       output_type = OutputType,
-                       content_type_forced = ContentTypeForced1,
-                       content_types_accepted = ContentTypesAccepted1,
-                       set_x_forwarded_for = SetXForwardedFor,
-                       status_code_timeout = StatusCodeTimeout,
-                       query_get_format = QueryGetFormat,
-                       use_host_prefix = UseHostPrefix,
-                       use_client_ip_prefix = UseClientIpPrefix,
-                       use_x_method_override = UseXMethodOverride,
-                       use_method_suffix = UseMethodSuffix},
+    HandlerState = #elli_state{
+        dispatcher = cloudi_service:dispatcher(Dispatcher),
+        timeout_sync = cloudi_service:timeout_sync(Dispatcher),
+        output_type = OutputType,
+        content_type_forced = ContentTypeForced1,
+        content_types_accepted = ContentTypesAccepted1,
+        set_x_forwarded_for = SetXForwardedFor,
+        status_code_timeout = StatusCodeTimeout,
+        query_get_format = QueryGetFormat,
+        use_host_prefix = UseHostPrefix,
+        use_client_ip_prefix = UseClientIpPrefix,
+        use_x_method_override = UseXMethodOverride,
+        use_method_suffix = UseMethodSuffix},
+    Service = cloudi_service:self(Dispatcher),
+    erlang:send_after(UpdateDelaySeconds * 1000, Service,
+                      {update, UpdateDelaySeconds}),
     {ok,
      ListenerPid} = cloudi_x_elli:
                     start_link([{name, undefined},
-                                {callback, cloudi_http_elli_handler},
-                                {callback_args, CallbackArgs},
+                                {callback, ?CALLBACK},
+                                {callback_args, HandlerState},
                                 {ip, Interface},
                                 {port, Port},
                                 {min_acceptors, MinAcceptors},
@@ -207,13 +222,41 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                                 {request_timeout, RecvTimeout},
                                 {header_timeout, HeaderTimeout},
                                 {body_timeout, BodyTimeout} | SSLConfig]),
-    {ok, #state{listener = ListenerPid}}.
+    {ok, #state{listener = ListenerPid,
+                service = Service,
+                handler_state = HandlerState}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
+cloudi_service_handle_info({update, UpdateDelaySeconds},
+                           #state{listener = ListenerPid,
+                                  service = Service,
+                                  handler_state = HandlerState} = State,
+                           Dispatcher) ->
+    % The timeout_sync service configuration value needs to be updated
+    % within the elli_state record used for new connection processes,
+    % after an update has occurred using the
+    % CloudI Service API function services_update
+    #elli_state{timeout_sync = TimeoutSync} = HandlerState,
+    ContextOptions = cloudi_service:context_options(Dispatcher),
+    {_, TimeoutSyncCurrent} = lists:keyfind(timeout_sync, 1, ContextOptions),
+    NewHandlerState = if
+        TimeoutSync == TimeoutSyncCurrent ->
+            HandlerState;
+        true ->
+            NextHandlerState = HandlerState#elli_state{
+                timeout_sync = TimeoutSyncCurrent},
+            ok = cloudi_x_elli:set_callback(ListenerPid,
+                                            ?CALLBACK,
+                                            NextHandlerState),
+            NextHandlerState
+    end,
+    erlang:send_after(UpdateDelaySeconds * 1000, Service,
+                      {update, UpdateDelaySeconds}),
+    {noreply, State#state{handler_state = NewHandlerState}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.

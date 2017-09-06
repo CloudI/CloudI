@@ -173,9 +173,9 @@
 
 -record(state,
     {
-        listener,
-        service,
-        handler_state
+        listener :: pid(),
+        service :: pid(),
+        handler_state :: #cowboy_state{}
     }).
 
 %%%------------------------------------------------------------------------

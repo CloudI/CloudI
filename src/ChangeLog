@@ -5,7 +5,7 @@
 
     * Change the default version of Python to 3
     * Add update of timeout_async and timeout_sync to
-      cloudi_service_http_cowboy
+      cloudi_service_http_cowboy and cloudi_service_http_elli
 
 2017-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 

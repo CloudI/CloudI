@@ -249,6 +249,8 @@ handle(Req,
 %% create ETS tables or start supervised processes in a supervisor
 %% tree.
 handle_event(elli_startup, [], _) -> ok;
+%% elli_reconfigure is an event after elli:set_callback/3 is called
+handle_event(elli_reconfigure, [], _) -> ok;
 %% request_complete fires *after* Elli has sent the response to the
 %% client. Timings contains timestamps of events like when the
 %% connection was accepted, when request parsing finished, when the
