@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy).
@@ -166,11 +166,16 @@
         % For example, a GET HTTP request method would cause "/get" to be
         % added to the service name (the URL path) that is used when sending
         % the service request.
+-define(DEFAULT_UPDATE_DELAY,                         5). % see below:
+        % The number of seconds before applying service configuration
+        % updates (e.g., changes with cloudi_service_api:services_update/2)
+        % for the values timeout_async and timeout_sync.
 
 -record(state,
     {
         listener,
-        service
+        service,
+        handler_state
     }).
 
 %%%------------------------------------------------------------------------
@@ -251,7 +256,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {use_host_prefix,               ?DEFAULT_USE_HOST_PREFIX},
         {use_client_ip_prefix,          ?DEFAULT_USE_CLIENT_IP_PREFIX},
         {use_x_method_override,         ?DEFAULT_USE_X_METHOD_OVERRIDE},
-        {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX}],
+        {use_method_suffix,             ?DEFAULT_USE_METHOD_SUFFIX},
+        {update_delay,                  ?DEFAULT_UPDATE_DELAY}],
     [Interface, Port, Backlog, NoDelay, RecvTimeout,
      BodyTimeout, BodyLengthRead, BodyLengthChunk, MultipartHeaderTimeout,
      MultipartHeaderLengthRead, MultipartHeaderLengthChunk,
@@ -266,7 +272,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      MaxHeaders, MaxKeepAlive, MaxRequestLineLength,
      OutputType, ContentTypeForced0, ContentTypesAccepted0, SetXForwardedFor,
      StatusCodeTimeout, QueryGetFormat, UseWebSockets, UseSpdy,
-     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix] =
+     UseHostPrefix, UseClientIpPrefix, UseXMethodOverride, UseMethodSuffix,
+     UpdateDelaySeconds] =
         cloudi_proplists:take_values(Defaults, Args),
     1 = cloudi_service:process_count_max(Dispatcher),
     true = is_integer(Port),
@@ -391,49 +398,49 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (UseMethodSuffix =:= true)) orelse
            (UseXMethodOverride =:= false),
     true = is_boolean(UseMethodSuffix),
+    true = is_integer(UpdateDelaySeconds) andalso
+           (UpdateDelaySeconds > 0) andalso (UpdateDelaySeconds =< 4294967),
     false = lists:member($*, Prefix),
     {_, Scope} = lists:keyfind(groups_scope, 1,
                                cloudi_service:context_options(Dispatcher)),
-    Dispatch = cloudi_x_cowboy_router:compile([
-        %% {Host, list({Path, Handler, Opts})}
-        {'_', [{'_', cloudi_http_cowboy_handler,
-                #cowboy_state{
-                    dispatcher = cloudi_service:dispatcher(Dispatcher),
-                    timeout_async = cloudi_service:timeout_async(Dispatcher),
-                    timeout_sync = cloudi_service:timeout_sync(Dispatcher),
-                    scope = Scope,
-                    prefix = Prefix,
-                    timeout_body = BodyTimeout,
-                    timeout_part_header = MultipartHeaderTimeout,
-                    timeout_part_body = MultipartBodyTimeout,
-                    timeout_websocket = WebSocketTimeout,
-                    length_body_read = BodyLengthRead,
-                    length_body_chunk = BodyLengthChunk,
-                    length_part_header_read = MultipartHeaderLengthRead,
-                    length_part_header_chunk = MultipartHeaderLengthChunk,
-                    length_part_body_read = MultipartBodyLengthRead,
-                    length_part_body_chunk = MultipartBodyLengthChunk,
-                    parts_destination_lock = MultipartDestinationLock,
-                    output_type = OutputType,
-                    content_type_forced = ContentTypeForced1,
-                    content_types_accepted = ContentTypesAccepted1,
-                    set_x_forwarded_for = SetXForwardedFor,
-                    status_code_timeout = StatusCodeTimeout,
-                    query_get_format = QueryGetFormat,
-                    websocket_output_type = WebSocketOutputType,
-                    websocket_connect = WebSocketConnect1,
-                    websocket_disconnect = WebSocketDisconnect1,
-                    websocket_ping = WebSocketPing,
-                    websocket_protocol = WebSocketProtocol1,
-                    websocket_name_unique = WebSocketNameUnique,
-                    websocket_subscriptions = WebSocketSubscriptions1,
-                    use_websockets = UseWebSockets,
-                    use_host_prefix = UseHostPrefix,
-                    use_client_ip_prefix = UseClientIpPrefix,
-                    use_x_method_override = UseXMethodOverride,
-                    use_method_suffix = UseMethodSuffix}}]}
-    ]),
+    HandlerState = #cowboy_state{
+        dispatcher = cloudi_service:dispatcher(Dispatcher),
+        timeout_async = cloudi_service:timeout_async(Dispatcher),
+        timeout_sync = cloudi_service:timeout_sync(Dispatcher),
+        scope = Scope,
+        prefix = Prefix,
+        timeout_body = BodyTimeout,
+        timeout_part_header = MultipartHeaderTimeout,
+        timeout_part_body = MultipartBodyTimeout,
+        timeout_websocket = WebSocketTimeout,
+        length_body_read = BodyLengthRead,
+        length_body_chunk = BodyLengthChunk,
+        length_part_header_read = MultipartHeaderLengthRead,
+        length_part_header_chunk = MultipartHeaderLengthChunk,
+        length_part_body_read = MultipartBodyLengthRead,
+        length_part_body_chunk = MultipartBodyLengthChunk,
+        parts_destination_lock = MultipartDestinationLock,
+        output_type = OutputType,
+        content_type_forced = ContentTypeForced1,
+        content_types_accepted = ContentTypesAccepted1,
+        set_x_forwarded_for = SetXForwardedFor,
+        status_code_timeout = StatusCodeTimeout,
+        query_get_format = QueryGetFormat,
+        websocket_output_type = WebSocketOutputType,
+        websocket_connect = WebSocketConnect1,
+        websocket_disconnect = WebSocketDisconnect1,
+        websocket_ping = WebSocketPing,
+        websocket_protocol = WebSocketProtocol1,
+        websocket_name_unique = WebSocketNameUnique,
+        websocket_subscriptions = WebSocketSubscriptions1,
+        use_websockets = UseWebSockets,
+        use_host_prefix = UseHostPrefix,
+        use_client_ip_prefix = UseClientIpPrefix,
+        use_x_method_override = UseXMethodOverride,
+        use_method_suffix = UseMethodSuffix},
     Service = cloudi_service:self(Dispatcher),
+    erlang:send_after(UpdateDelaySeconds * 1000, Service,
+                      {update, UpdateDelaySeconds}),
     StartFunction = if
         UseSpdy =:= true ->
             start_spdy;
@@ -464,7 +471,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                  {max_connections, MaxConnections},
                  {certfile, CertFile}] ++
                 NewSSLOpts, % Transport options
-                [{env, [{dispatch, Dispatch}]},
+                [{env, [{dispatch, cowboy_dispatch(HandlerState)}]},
                  {compress, Compress},
                  {max_empty_lines, MaxEmptyLines},
                  {max_header_name_length, MaxHeaderNameLength},
@@ -483,7 +490,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                  {backlog, Backlog},
                  {nodelay, NoDelay},
                  {max_connections, MaxConnections}], % Transport options
-                [{env, [{dispatch, Dispatch}]},
+                [{env, [{dispatch, cowboy_dispatch(HandlerState)}]},
                  {compress, Compress},
                  {max_empty_lines, MaxEmptyLines},
                  {max_header_name_length, MaxHeaderNameLength},
@@ -495,13 +502,43 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             )
     end,
     {ok, #state{listener = ListenerPid,
-                service = Service}}.
+                service = Service,
+                handler_state = HandlerState}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
+cloudi_service_handle_info({update, UpdateDelaySeconds},
+                           #state{service = Service,
+                                  handler_state = HandlerState} = State,
+                           Dispatcher) ->
+    % The timeout_async and timeout_sync service configuration values
+    % need to be updated within the cowboy_state record used for new
+    % connection processes, after an update has occurred using the
+    % CloudI Service API function services_update
+    #cowboy_state{timeout_async = TimeoutAsync,
+                  timeout_sync = TimeoutSync} = HandlerState,
+    ContextOptions = cloudi_service:context_options(Dispatcher),
+    {_, TimeoutAsyncCurrent} = lists:keyfind(timeout_async, 1, ContextOptions),
+    {_, TimeoutSyncCurrent} = lists:keyfind(timeout_sync, 1, ContextOptions),
+    NewHandlerState = if
+        TimeoutAsync == TimeoutAsyncCurrent,
+        TimeoutSync == TimeoutSyncCurrent ->
+            HandlerState;
+        true ->
+            NextHandlerState = HandlerState#cowboy_state{
+                timeout_async = TimeoutAsyncCurrent,
+                timeout_sync = TimeoutSyncCurrent},
+            ok = cloudi_x_cowboy:set_env(Service,
+                                         dispatch,
+                                         cowboy_dispatch(NextHandlerState)),
+            NextHandlerState
+    end,
+    erlang:send_after(UpdateDelaySeconds * 1000, Service,
+                      {update, UpdateDelaySeconds}),
+    {noreply, State#state{handler_state = NewHandlerState}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
@@ -518,6 +555,12 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+cowboy_dispatch(HandlerState) ->
+    cloudi_x_cowboy_router:compile([
+        %% {Host, list({Path, Handler, Opts})}
+        {'_', [{'_', cloudi_http_cowboy_handler, HandlerState}]}
+    ]).
 
 websocket_subscriptions_lookup([], Lookup, _) ->
     Lookup;
