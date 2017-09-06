@@ -510,7 +510,7 @@ AC_ARG_WITH([python_version],
             AC_MSG_ERROR([Python version 2 or 3, not $withval])
         fi
         ],
-        [PYTHON_VERSION_REQUIRED="2"])
+        [PYTHON_VERSION_REQUIRED="3"])
 if test "x$PYTHON_VERSION_REQUIRED" = "x2"; then
     AS_IF([test "x$PYTHON_DEBUG" == "xno"],
         [AC_PATH_PROGS([PYTHON],[python2 python2.7 python])],
