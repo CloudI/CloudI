@@ -2,7 +2,7 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 {application, cloudi_service_request_rate, 
-  [{description, "Request rate testing CloudI Service"},
+  [{description, "Request Rate Testing CloudI Service"},
    {vsn, "@VERSION@"},
    {modules, [
         cloudi_service_request_rate
