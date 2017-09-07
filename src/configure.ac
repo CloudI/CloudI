@@ -656,9 +656,11 @@ AC_CONFIG_FILES([
     lib/cloudi_service_http_rest/src/cloudi_service_http_rest.app.src
     lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.app.src
     lib/cloudi_service_monitoring/src/cloudi_service_monitoring.app.src
+    lib/cloudi_service_null/src/cloudi_service_null.app.src
     lib/cloudi_service_oauth1/src/cloudi_service_oauth1.app.src
     lib/cloudi_service_queue/src/cloudi_service_queue.app.src
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
+    lib/cloudi_service_request_rate/src/cloudi_service_request_rate.app.src
     lib/cloudi_service_router/src/cloudi_service_router.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
@@ -775,9 +777,6 @@ AC_CONFIG_FILES([
     tests/null/java/org/cloudi/tests/Makefile
     tests/null/java/org/cloudi/tests/null_/Makefile
     tests/null/ocaml/Makefile
-    tests/request_rate/Makefile
-    tests/request_rate/erlang/Makefile
-    tests/request_rate/erlang/src/Makefile
     tests/service_api/Makefile
     tests/websockets/Makefile
     tests/zeromq/Makefile

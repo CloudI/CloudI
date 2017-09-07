@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Move the Erlang integration tests to have a prefix of
+      cloudi_service_test_ instead of cloudi_service_
+    * Move the cloudi_service_request_rate to be included in the
+      CloudI release
+    * Add cloudi_service_null to be the equivalent of /dev/null
+
 2017-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change the default version of Python to 3

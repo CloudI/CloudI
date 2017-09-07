@@ -4,7 +4,7 @@
 instdir = "$(cloudi_prefix)/tests/http_req/erlang/ebin"
 directinstdir = "$(DESTDIR)$(instdir)"
 beamdir = "$(instdir)"
-beam_DATA = cloudi_service_http_req.beam
+beam_DATA = cloudi_service_test_http_req.beam
 CLEANFILES = $(beam_DATA)
 SUFFIXES = .erl .beam
 
@@ -17,5 +17,5 @@ all-local: $(beam_DATA)
 
 install-exec-hook: $(beam_DATA)
 	$(MKDIR_P) $(directinstdir)
-	$(INSTALL_DATA) cloudi_service_http_req.beam $(directinstdir)
+	$(INSTALL_DATA) cloudi_service_test_http_req.beam $(directinstdir)
 

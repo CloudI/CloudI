@@ -34,5 +34,4 @@
 -pz @prefix@/lib/cloudi-@VERSION@/tests/msg_size/erlang/ebin/
 -pz @prefix@/lib/cloudi-@VERSION@/tests/messaging/erlang/ebin/
 -pz @prefix@/lib/cloudi-@VERSION@/tests/null/erlang/ebin/
--pz @prefix@/lib/cloudi-@VERSION@/tests/request_rate/erlang/ebin/
 

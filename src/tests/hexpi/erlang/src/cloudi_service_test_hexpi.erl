@@ -30,10 +30,10 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_hexpi).
+-module(cloudi_service_test_hexpi).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_service_map_reduce).

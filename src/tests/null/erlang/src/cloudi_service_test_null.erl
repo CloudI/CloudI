@@ -3,7 +3,7 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CloudI Service for the count Test==
+%%% ==CloudI Service for the null Test==
 %%% @end
 %%%
 %%% MIT License
@@ -33,7 +33,7 @@
 %%% @version 1.7.2 {@date} {@time}
 %%%------------------------------------------------------------------------
 
--module(cloudi_service_count).
+-module(cloudi_service_test_null).
 -author('mjtruog [at] gmail (dot) com').
 
 -behaviour(cloudi_service).
@@ -45,10 +45,7 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--record(state,
-        {
-            count = 0 :: non_neg_integer()
-        }).
+-record(state, {}).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -64,19 +61,12 @@ cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{count = Count0} = State, _Dispatcher) ->
-    CountN = if
-        Count0 == 4294967295 ->
-            0;
-        true ->
-            Count0 + 1
-    end,
-    ?LOG_INFO("count == ~w erlang", [CountN]),
-    Response = cloudi_string:format_to_binary("~w", [CountN]),
-    {reply, Response, State#state{count = CountN}}.
+                              State, _Dispatcher) ->
+    ?LOG_INFO("null erlang", []),
+    {noreply, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
-    ?LOG_INFO("terminate count erlang", []),
+    ?LOG_INFO("terminate null erlang", []),
     ok.
 
 %%%------------------------------------------------------------------------

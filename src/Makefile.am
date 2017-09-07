@@ -18,9 +18,11 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_http_rest/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
      -d $(top_srcdir)/lib/cloudi_service_monitoring/src \
+     -d $(top_srcdir)/lib/cloudi_service_null/src \
      -d $(top_srcdir)/lib/cloudi_service_oauth1/src \
      -d $(top_srcdir)/lib/cloudi_service_queue/src \
      -d $(top_srcdir)/lib/cloudi_service_quorum/src \
+     -d $(top_srcdir)/lib/cloudi_service_request_rate/src \
      -d $(top_srcdir)/lib/cloudi_service_router/src \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
@@ -224,9 +226,11 @@ dialyze: all \
               lib/cloudi_service_http_rest/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
               lib/cloudi_service_monitoring/ebin/ \
+              lib/cloudi_service_null/ebin/ \
               lib/cloudi_service_oauth1/ebin/ \
               lib/cloudi_service_queue/ebin/ \
               lib/cloudi_service_quorum/ebin/ \
+              lib/cloudi_service_request_rate/ebin/ \
               lib/cloudi_service_router/ebin/ \
               lib/cloudi_service_tcp/ebin/ \
               lib/cloudi_service_udp/ebin/ \
@@ -251,7 +255,6 @@ dialyze: all \
               tests/messaging/erlang/src/ \
               tests/msg_size/erlang/src/ \
               tests/null/erlang/src/ \
-              tests/request_rate/erlang/src/ \
               external/cloudi_x_bear/ebin \
               external/cloudi_x_cowlib/ebin \
               external/cloudi_x_emysql/ebin \

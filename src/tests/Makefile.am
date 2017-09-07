@@ -13,7 +13,7 @@ endif
 if INTEGRATION_TESTS
     INTEGRATION_TESTS_SUBDIR = \
         $(CXX_SUBDIR) $(PYTHON_SUBDIR) $(PYTHON_C_SUBDIR) \
-        count http http_req messaging msg_size null request_rate
+        count http http_req messaging msg_size null
 endif
 SUBDIRS = $(INTEGRATION_TESTS_SUBDIR)
 

@@ -51,13 +51,13 @@ if __name__ == '__main__':
     # start extra instances of the http_req test
     services_added = obj.services_add("""\
 [[{prefix, "/json_rpc/1/"},
-  {module, cloudi_service_http_req}],
+  {module, cloudi_service_test_http_req}],
  [{prefix, "/json_rpc/2/"},
-  {module, cloudi_service_http_req}],
+  {module, cloudi_service_test_http_req}],
  [{prefix, "/json_rpc/3/"},
-  {module, cloudi_service_http_req}],
+  {module, cloudi_service_test_http_req}],
  [{prefix, "/json_rpc/4/"},
-  {module, cloudi_service_http_req}]]
+  {module, cloudi_service_test_http_req}]]
 """)
     assert(type(services_added) == list) # returns the list of new ServiceIds
     assert(len(services_added) == 4)
