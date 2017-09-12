@@ -17,7 +17,7 @@
 {application, setup,
  [
   {description, "Generic setup application for Erlang-based systems"},
-  {vsn, "1.8.1-dev"},
+  {vsn, "1.8.2"},
   {registered, []},
   {applications, [
                   kernel,
@@ -25,5 +25,9 @@
                  ]},
   {mod, { setup_app, []}},
   {start_phases, [{run_setup, []}]},
-  {env, []}
+  {env, []},
+
+  {maintainers, ["Ulf Wiger"]},
+  {licenses, ["Apache 2.0"]},
+  {links, [{"Github", "https://github.com/uwiger/setup"}]}
  ]}.

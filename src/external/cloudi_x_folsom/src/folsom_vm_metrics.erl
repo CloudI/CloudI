@@ -55,7 +55,11 @@ get_process_info() ->
     [{pid_port_fun_to_atom(Pid), get_process_info(Pid)} || Pid <- processes()].
 
 get_port_info() ->
-    [{pid_port_fun_to_atom(Port), get_port_info(Port)} || Port <- erlang:ports()].
+    [{pid_port_fun_to_atom(Port), get_port_info(Port)} || Port <- erlang:ports(),
+        begin
+            {name, Type} = erlang:port_info(Port, name), Type /= "forker"
+        end
+    ].
 
 get_ets_info() ->
     [{Tab, get_ets_dets_info(ets, Tab)} || Tab <- ets:all()].

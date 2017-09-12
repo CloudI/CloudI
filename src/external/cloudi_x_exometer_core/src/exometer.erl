@@ -390,13 +390,18 @@ get_cached_value_(#exometer_entry{name = Name,
                     end, {[],[]}, DataPoints),
 
     %% Go through all cache misses and retreive their actual values.
-    Result = get_value_(E#exometer_entry { cache = 0 }, Uncached),
-
-    %% Update the cache with all the shiny new values retrieved.
-    [ exometer_cache:write(Name, DataPoint1, Value1, CacheTTL)
-      || { DataPoint1, Value1 } <- Result],
-    All = Result ++ Cached,
-    [{_,_} = lists:keyfind(DP, 1, All) || DP <- DataPoints].
+    case get_value_(E#exometer_entry { cache = 0 }, Uncached) of
+        {error, unavailable} = Result -> 
+            %% a function entry returns this in exception case.
+            %% see `exometer_function:get_value/4`
+            Result;
+        Result ->
+            %% Update the cache with all the shiny new values retrieved.
+            [ exometer_cache:write(Name, DataPoint1, Value1, CacheTTL)
+              || { DataPoint1, Value1 } <- Result],
+            All = Result ++ Cached,
+            [{_,_} = lists:keyfind(DP, 1, All) || DP <- DataPoints]
+    end.
 
 
 

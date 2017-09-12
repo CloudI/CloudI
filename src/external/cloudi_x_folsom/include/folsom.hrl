@@ -15,12 +15,20 @@
 -define(DEFAULT_INTERVAL, 5000).
 -define(DEFAULT_SAMPLE_TYPE, uniform).
 
+-ifdef(use_rand).
+-define(SEED, rand:seed(exsplus)).
+-else.
+-define(SEED, os:timestamp()).
+-endif.
+
 -record(spiral, {
           tid = folsom_metrics_histogram_ets:new(folsom_spiral,
                                                  [set,
                                                   {write_concurrency, true},
                                                   public]),
-          server
+          server,
+          update = update_counter :: update_counter |
+                                     update_counter_no_exception
          }).
 
 -record(slide, {
@@ -34,7 +42,7 @@
           window = ?DEFAULT_SLIDING_WINDOW,
           size = ?DEFAULT_SIZE,
           reservoir = folsom_metrics_histogram_ets:new(folsom_slide_uniform,[set, {write_concurrency, true}, public]),
-          seed = random_wh82:seed0(),
+          seed = ?SEED,
           server
          }).
 
@@ -42,7 +50,7 @@
           size = ?DEFAULT_SIZE,
           n = 1,
           reservoir = folsom_metrics_histogram_ets:new(folsom_uniform,[set, {write_concurrency, true}, public]),
-          seed = random_wh82:seed0()
+          seed = ?SEED
          }).
 
 -record(exdec, {
@@ -50,7 +58,7 @@
           next = 0,
           alpha = ?DEFAULT_ALPHA,
           size = ?DEFAULT_SIZE,
-          seed = random_wh82:seed0(),
+          seed = ?SEED,
           n = 1,
           reservoir = folsom_metrics_histogram_ets:new(folsom_exdec,[ordered_set, {write_concurrency, true}, public])
          }).
@@ -110,6 +118,7 @@
                       multi_scheduling,
                       multi_scheduling_blockers,
                       otp_release,
+                      port_count,
                       process_count,
                       process_limit,
                       scheduler_bind_type,
@@ -192,3 +201,19 @@
                       priority,
                       tos
                      ]).
+
+-define(DEFAULT_METRICS, [
+                          arithmetic_mean,
+                          geometric_mean,
+                          harmonic_mean,
+                          histogram,
+                          kurtosis,
+                          n,
+                          max,
+                          median,
+                          min,
+                          {percentile, [50, 75, 95, 99, 999]},
+                          skewness,
+                          standard_deviation,
+                          variance
+                         ]).

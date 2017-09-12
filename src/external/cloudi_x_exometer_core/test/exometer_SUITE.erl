@@ -23,6 +23,7 @@
     test_std_counter/1,
     test_gauge/1,
     test_fast_counter/1,
+    test_crashing_function/1,
     test_wrapping_counter/1,
     test_update_or_create/1,
     test_update_or_create2/1,
@@ -47,7 +48,8 @@
 %% utility exports
 -export(
    [
-    vals/0
+    vals/0,
+    crash_fun/0
    ]).
 
 -import(exometer_test_util, [majority/2]).
@@ -74,6 +76,7 @@ groups() ->
         test_std_counter,
         test_gauge,
         test_fast_counter,
+        test_crashing_function,
         test_wrapping_counter
       ]},
      {test_defaults, [shuffle],
@@ -129,7 +132,9 @@ init_per_testcase(Case, Config) when
 init_per_testcase(Case, Config) when
       Case == test_ext_predef;
       Case == test_function_match ->
-    ok = application:set_env(stdlib, exometer_predefined, {script, "../../test/data/test_defaults.script"}),
+    ok = application:set_env(
+           stdlib, exometer_predefined,
+           {script, file_path("test/data/test_defaults.script")}),
     {ok, StartedApps} = exometer_test_util:ensure_all_started(exometer_core),
     ct:log("StartedApps = ~p~n", [StartedApps]),
     [{started_apps, StartedApps} | Config];
@@ -214,6 +219,15 @@ test_fast_counter(_Config) ->
     fc(),
     {ok, [{value, 2}]} = exometer:get_value(C, [value]),
     {ok, [{value, 2}, {ms_since_reset, _}]} = exometer:get_value(C),
+    ok.
+
+test_crashing_function(_Config) ->
+    C1 = [?MODULE, function, ?LINE],
+    C2 = [?MODULE, cached_function, ?LINE],
+    ok = exometer:new(C1, {function, ?MODULE, crash_fun, [], valie, [value]}, []),
+    ok = exometer:new(C2, {function, ?MODULE, crash_fun, [], valie, [value]}, [{cache, 5000}]),
+    {ok, {error, unavailable}} = exometer:get_value(C1, [value]),
+    {ok, {error, unavailable}} = exometer:get_value(C2, [value]),
     ok.
 
 test_wrapping_counter(_Config) ->
@@ -362,22 +376,26 @@ test_aggregate(_Config) ->
     ok.
 
 test_history1_slide(_Config) ->
-    test_history(1, slide, "../../test/data/puts_time_hist1.bin").
+    test_history(1, slide, file_path("test/data/puts_time_hist1.bin")).
 
 test_history1_slotslide(_Config) ->
-    test_history(1, slot_slide, "../../test/data/puts_time_hist1.bin").
+    test_history(1, slot_slide, file_path("test/data/puts_time_hist1.bin")).
 
 test_history1_folsom(_Config) ->
-    test_history(1, folsom, "../../test/data/puts_time_hist1.bin").
+    test_history(1, folsom, file_path("test/data/puts_time_hist1.bin")).
 
 test_history4_slide(_Config) ->
-    test_history(4, slide, "../../test/data/puts_time_hist4.bin").
+    test_history(4, slide, file_path("test/data/puts_time_hist4.bin")).
 
 test_history4_slotslide(_Config) ->
-    test_history(4, slot_slide, "../../test/data/puts_time_hist4.bin").
+    test_history(4, slot_slide, file_path("test/data/puts_time_hist4.bin")).
 
 test_history4_folsom(_Config) ->
-    test_history(4, folsom, "../../test/data/puts_time_hist4.bin").
+    test_history(4, folsom, file_path("test/data/puts_time_hist4.bin")).
+
+file_path(F) ->
+    filename:join(code:lib_dir(exometer_core), F).
+
 
 test_ext_predef(_Config) ->
     {ok, [{total, _}]} = exometer:get_value([preset, func], [total]),
@@ -510,7 +528,13 @@ scale_mean([H|T]) ->
 fc() ->
     ok.
 
+crash_fun() ->
+    throw(error),
+    [{value, 1}].
+
 load_data(F, M) ->
+    ct:log("load_data(~s,...)", [F]),
+    ct:log("CWD = ~p", [element(2, file:get_cwd())]),
     {ok, [Values]} = file:consult(F),
     Stats = bear:get_statistics(Values),
     _T1 = os:timestamp(),

@@ -23,6 +23,12 @@
 
 -module(folsom_sample_slide_uniform).
 
+-ifdef(use_rand).
+-define(RANDOM, rand).
+-else.
+-define(RANDOM, random).
+-endif.
+
 -export([
          new/1,
          update/2,
@@ -45,9 +51,7 @@ update(#slide_uniform{reservoir = Reservoir, size = Size} = Sample0, Value) ->
     MCnt = folsom_utils:update_counter(Reservoir, Moment, 1),
     Sample = case MCnt > Size of
                  true ->
-                     {Seed0, Seed1, Seed2} = Now,
-                     Seed = {Seed0 + 1, Seed1 + 1, Seed2 + 1}, % always >= 0
-                     {Rnd, _} = random_wh82:uniform_s(MCnt, Seed),
+                     {Rnd, _NewSeed} = ?RANDOM:uniform_s(MCnt, ?SEED),
                      maybe_update(Reservoir, {{Moment, Rnd}, Value}, Size),
                      Sample0;
                  false ->

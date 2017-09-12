@@ -1,8 +1,12 @@
 {application, bear,
  [
-  {description, ""},
-  {vsn, "0.8.2"},
+  {description, "A set of statistics functions for erlang"},
+  {vsn, "0.8.5"}, %% replace as appropriate after tagging repo
   {registered, []},
   {applications, []},
-  {env, []}
+  {env, []},
+  {modules, []},
+  {maintainers, ["Joe Williams"]},
+  {licenses, ["Apache 2"]},
+  {links, [{"Github", "https://github.com/project-folsom/bear"}]}
  ]}.

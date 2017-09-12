@@ -654,6 +654,26 @@ new_entry(Entry) ->
 %%--------------------------------------------------------------------
 init([]) ->
     process_flag(trap_exit, true),
+    D = ets:foldl(
+        fun (#reporter{name = Name, module = Module, restart = Restart} = R, Acc) ->
+                terminate_reporter(R),
+                case add_restart(Restart) of
+                    {remove, How} ->
+                        case How of
+                            {M, F} when is_atom(M), is_atom(F) ->
+                                try M:F(Module, {?MODULE, parent_restart}) catch _:_ -> ok end;
+                            _ ->
+                                ok
+                        end,
+                        [Name | Acc];
+                    {restart, Restart1} ->
+                        restart_reporter(R#reporter{restart = Restart1}),
+                        Acc
+                end
+        end,
+        [],
+        ?EXOMETER_REPORTERS),
+    [ets:delete(?EXOMETER_REPORTERS, R) || R <- D],
     {ok, #st{}}.
 
 start_reporters() ->
@@ -817,15 +837,14 @@ handle_call({subscribe,
                    retry_failed_metrics = RetryFailedMetrics,
                    extra = Extra} , Interval },
             _From, #st{} = St) ->
-
     %% Verify that the given metric/data point actually exist.
     case ets:lookup(?EXOMETER_REPORTERS, Reporter) of
-        [#reporter{status = Status}] ->
+        [#reporter{status = Status, pid=ReporterPid}] ->
             case is_valid_metric(Metric, DataPoint) of
                 true ->
                     if Status =:= enabled ->
-                            Reporter ! {exometer_subscribe, Metric,
-                                        DataPoint, Interval, Extra};
+                            ReporterPid ! {exometer_subscribe, Metric,
+                                           DataPoint, Interval, Extra};
                        true -> ignore
                     end,
                     subscribe_(Reporter, Metric, DataPoint,
@@ -1148,7 +1167,20 @@ maybe_enable_subscriptions(#exometer_entry{name = Metric}) ->
       end, ets:select(?EXOMETER_SUBS,
                       [{#subscriber{key = #key{metric = Metric,
                                                _ = '_'},
-                                    _ = '_'}, [], ['$_']}])).
+                                    _ = '_'}, [], ['$_']}])),
+    %% Also re-check the static subscribers for select and apply
+    case lists:keyfind(subscribers, 1, get_report_env()) of
+        {subscribers, Subscribers} ->
+            lists:foreach(
+                fun(Sub) ->
+                    case Sub of
+                        {select, _} -> init_subscriber(Sub);
+                        {apply, _} -> init_subscriber(Sub);
+                        _ -> ok
+                    end
+                end, Subscribers);
+        false -> []
+    end.
 
 resubscribe(#subscriber{key = #key{reporter = RName,
                                    metric = Metric,
@@ -1233,8 +1265,9 @@ cancel_subscr_timers(Reporter) ->
                                     _ = '_'}, [], ['$_']}])).
 
 restart_subscr_timer(Key, Interval, T0) when is_integer(Interval) ->
-    TRef = erlang:send_after(adjust_interval(Interval, T0), self(),
-                             subscr_timer_msg(Key, Interval, T0)),
+    {AdjInt, RptTime} = adjust_interval(Interval, T0),
+    TRef = erlang:send_after(AdjInt, self(),
+                             subscr_timer_msg(Key, Interval, RptTime)),
     ets:update_element(?EXOMETER_SUBS, Key,
                        [{#subscriber.t_ref, TRef}]);
 restart_subscr_timer(_, _, _) ->
@@ -1245,9 +1278,10 @@ restart_batch_timer(Name, #reporter{name = Reporter,
     case lists:keyfind(Name, #interval.name, Ints) of
         #interval{time = Time, t_ref = OldTRef} = I when is_integer(Time) ->
             cancel_timer(OldTRef),
-            TRef = erlang:send_after(
-                     adjust_interval(Time, T0), self(),
-                     batch_timer_msg(Reporter, Name, Time, T0)),
+            {Int, RptTime} = adjust_interval(Time, T0),
+            TRef = erlang:send_after(Int, self(),
+                                     batch_timer_msg(
+                                       Reporter, Name, Time, RptTime)),
             ets:update_element(?EXOMETER_REPORTERS, Reporter,
                                [{#reporter.intervals,
                                  lists:keyreplace(Name, #interval.name, Ints,
@@ -1260,7 +1294,13 @@ restart_batch_timer(Name, #reporter{name = Reporter,
 
 adjust_interval(Time, T0) ->
     T1 = os:timestamp(),
-    erlang:max(0, Time - tdiff(T1, T0)).
+    case tdiff(T1, T0) of
+        D when D > Time; D < 0 ->
+            %% Most likely due to clock adjustment
+            {Time, T1};
+        D ->
+            {D, T0}
+    end.
 
 tdiff(T1, T0) ->
     timer:now_diff(T1, T0) div 1000.
@@ -1460,16 +1500,21 @@ terminate_reporter(#reporter{pid = undefined}) ->
 
 subscribe_(Reporter, Metric, DataPoint, Interval, RetryFailedMetrics,
            Extra, Status) ->
+    ?log(debug, "subscribe_(~p, ~p, ~p, ~p, ~p, ~p, ~p)~n", [Reporter, Metric, DataPoint, Interval, RetryFailedMetrics, Extra, Status]),
     Key = #key{reporter = Reporter,
                metric = Metric,
                datapoint = DataPoint,
                extra = Extra,
                retry_failed_metrics = RetryFailedMetrics
               },
-    ets:insert(?EXOMETER_SUBS,
-               #subscriber{key = Key,
-                           interval = Interval,
-                           t_ref = maybe_send_after(Status, Key, Interval)}).
+    case ets:lookup(?EXOMETER_SUBS, Key) of
+        [] -> ets:insert(?EXOMETER_SUBS,
+                 #subscriber{key = Key,
+                             interval = Interval,
+                             t_ref = maybe_send_after(Status, Key, Interval)});
+        _ ->
+            ?log(debug, "subscribe_(): not adding duplicate subscription")
+        end.
 
 maybe_send_after(enabled, Key, Interval) when is_integer(Interval) ->
     erlang:send_after(

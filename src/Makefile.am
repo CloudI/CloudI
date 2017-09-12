@@ -69,7 +69,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
      -d $(top_srcdir)/external/cloudi_x_ranch/src \
      -d $(top_srcdir)/external/cloudi_x_setup/src \
-     -d $(top_srcdir)/external/cloudi_x_ssl_verify_fun/src
+     -d $(top_srcdir)/external/cloudi_x_ssl_verify_fun/src \
+     -d $(top_srcdir)/external/cloudi_x_unicode_util_compat/src
 
 if PYTHON_SUPPORT
     PYTHON_TEST_HOOK = api-python-test

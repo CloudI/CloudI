@@ -22,8 +22,3 @@ Build
 -----
 
     $ rebar3 compile
-
-Regenerate the certificates
----------------------------
-
-    $ ./mkcert.escript

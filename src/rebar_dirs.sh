@@ -51,6 +51,7 @@ REBAR_DIRS="\
     external/cloudi_x_ranch \
     external/cloudi_x_setup \
     external/cloudi_x_ssl_verify_fun \
+    external/cloudi_x_unicode_util_compat \
     external/proper \
     lib/cgroups \
     lib/cpg \

@@ -1,6 +1,6 @@
 ### folsom
 
-Folsom is an Erlang based metrics system inspired by Coda Hale's metrics (https://github.com/codahale/metrics/). The metrics API's purpose is to collect realtime metrics from your Erlang applications and publish them via Erlang APIs and output plugins. folsom is *not* a persistent store. There are 6 types of metrics: counters, gauges, histograms (and timers), histories, meter_readers and meters. Metrics can be created, read and updated via the `folsom_metrics` module.
+Folsom is an Erlang based metrics system inspired by Coda Hale's metrics (https://github.com/dropwizard/metrics). The metrics API's purpose is to collect realtime metrics from your Erlang applications and publish them via Erlang APIs and output plugins. folsom is *not* a persistent store. There are 6 types of metrics: counters, gauges, histograms (and timers), histories, meter_readers and meters. Metrics can be created, read and updated via the `folsom_metrics` module.
 
 #### Building and running
 
@@ -14,12 +14,13 @@ folsom can be run standalone or embedded in an Erlang application.
 
        $ erl -pa ebin deps/*/ebin
 
+       > application:ensure_all_started(bear). % start dependency first
        > folsom:start(). % this creates the needed ETS tables and starts a gen_server
 
 You can also start it as an application:
 
        $ erl -pa ebin deps/*/ebin
-       > application:start(folsom).
+       > application:ensure_all_started(folsom).
 
        $ erl -pa ebin deps/*/ebin -s folsom
 

@@ -32,6 +32,12 @@
 
 -module(folsom_sample_uniform).
 
+-ifdef(use_rand).
+-define(RANDOM, rand).
+-else.
+-define(RANDOM, random).
+-endif.
+
 -export([
          new/1,
          update/2,
@@ -49,7 +55,7 @@ update(#uniform{size = Size, reservoir = Reservoir, n = N} = Sample, Value) when
 
 update(#uniform{reservoir = Reservoir, size = Size, n = N, seed = Seed} = Sample,
        Value) ->
-    {Rnd, New_seed} = random_wh82:uniform_s(N, Seed),
+    {Rnd, New_seed} = ?RANDOM:uniform_s(N, Seed),
     maybe_update(Rnd, Size, Value, Reservoir),
     Sample#uniform{n = N + 1, seed = New_seed}.
 

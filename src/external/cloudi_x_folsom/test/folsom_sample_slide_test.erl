@@ -94,8 +94,22 @@ exercise() ->
     Trimmed2 = folsom_sample_slide:trim(Slide#slide.reservoir, ?WINDOW),
     ?assertEqual((?RUNTIME * ?READINGS) - ((?RUNTIME - ?WINDOW - 1) * ?READINGS), Trimmed2),
     check_table(Slide, []),
-    ok.
 
+    %% trim shuld throw badarg in the case of nonexistant ETS tables
+    NonExistant = ets:new(non_existant, []),
+    ets:delete(NonExistant),
+    ?assertError(badarg, folsom_sample_slide:trim(NonExistant, ?WINDOW)),
+    ?assertError(badarg, folsom_sample_slide_uniform:trim(NonExistant, ?WINDOW)),
+
+    %% The slide server exits with reason normal in case the ets table it's trimming goes away
+    process_flag(trap_exit, true),
+    {ok, SlideServer} = folsom_sample_slide_server:start_link(folsom_sample_slide, NonExistant, 1),
+    ExitMsg = wait_for_exit(SlideServer, timer:seconds(2)),
+    ?assertMatch({'EXIT', SlideServer, normal}, ExitMsg),
+    process_flag(trap_exit, false),
+    ok.
+	
+	
 expand_window() ->
     %% create a new histogram
     %% will leave the trim server running, as resize() needs it
@@ -207,3 +221,13 @@ check_table(Slide, Moments) ->
     StrippedKeys = lists:usort([X || {X, _} <- Ks]),
     ?assertEqual(Moments, StrippedKeys),
     ?assertEqual(ExpectedVs, lists:sort(Vs)).
+
+wait_for_exit(Pid, Timeout) ->
+    receive
+	M = {'EXIT', Pid, _Reason} ->
+	    M;
+	Other ->
+	    Other
+    after Timeout ->
+	    timeout
+    end.

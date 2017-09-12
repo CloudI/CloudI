@@ -51,9 +51,9 @@ Erlang `bear`
 -------------
 `Statistics functions for Erlang`
 
-- `https://github.com/boundary/bear`
-- `commit 119234548783af19b8ec75c879c5062676b92571 (0.8.2)`
-- `Fri Dec 11 15:51:53 PST 2015`
+- `https://github.com/folsom-project/bear`
+- `commit cdd853442a20d36f2104f2be4dafcf94b32a8b06 (0.8.5)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Apache License 2.0`
 
 Erlang `certifi`
@@ -61,8 +61,8 @@ Erlang `certifi`
 `SSL Certificates for Erlang`
 
 - `https://github.com/certifi/erlang-certifi`
-- `commit a613ba5d043f05474900752a4facc4d880cddf67 (0.7.0)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit aad712ca0251ffed5d56c54c432aca04536bd18f (2.0.0)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `BSD`
 
 Erlang `cowboy`
@@ -116,7 +116,7 @@ Erlang `exometer`
 
 - `https://github.com/Feuerlabs/exometer`
 - `commit 7a7bd8d2b52de4d90f65aa3f6044b0e988319b9e`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_core`
@@ -124,8 +124,8 @@ Erlang `exometer_core`
 `Erlang instrumentation package core`
 
 - `https://github.com/Feuerlabs/exometer_core`
-- `commit 09c2a9361c0295c977e441ef89382db964a64460`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit c4afd6d095c8eef7c5447133a033b9165f53da02 (1.5.0)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_influxdb`
@@ -133,19 +133,17 @@ Erlang `exometer_influxdb`
 `Exometer InfluxDB reporter`
 
 - `https://github.com/travelping/exometer_influxdb`
-- `commit cc10115e60c6a5c05a561717cf38a9f59f11e223`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit f484d1e82d15319b110c1bce82b4afaddfc094d9`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Mozilla Public License 2.0`
-
-- `Fri Feb 24 10:27:11 PST 2017`
 
 Erlang `folsom`
 ---------------
 `Erlang Events and Metrics`
 
-- `https://github.com/boundary/folsom`
-- `commit 38e2cce7c64ce1f0a3a918d90394cfc0a940b1ba (0.8.2)`
-- `Fri Dec 11 15:51:53 PST 2015`
+- `https://github.com/folsom-project/folsom`
+- `commit 0948c5f7a2221cc7c4975d042b13c84bb9387517 (0.8.5)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Apache License 2.0`
 
 Erlang `hackney`
@@ -153,8 +151,8 @@ Erlang `hackney`
 `HTTP client library in Erlang`
 
 - `https://github.com/benoitc/hackney`
-- `commit f69567eb28d6cbf2fdf820100055fca5e6c66938 (1.6.5)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit ac85ef2a918e1c14875c60c611038f161e0ea2a3 (1.9.0)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `Apache License 2.0`
 
 Erlang `hut`
@@ -171,8 +169,8 @@ Erlang `idna`
 `A pure Erlang IDNA implementation`
 
 - `https://github.com/benoitc/erlang-idna`
-- `commit 40c682fef283b7c3871c4b59aa0469304c6613ef (1.2.0)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit b452d8fe4c15be8146f5ca15d4f0c08720a98be4 (5.1.0)`
+- `Tue Sep 12 13:35:26 PDT 2017`
 - `BSD`
 
 Erlang `jinterface`
@@ -280,9 +278,9 @@ Erlang `setup`
 `Erlang Setup Application`
 
 - `https://github.com/uwiger/setup`
-- `commit e4a089f743505f1166e026c51989f041da7b2f6d`
-- `Fri Feb 24 10:27:11 PST 2017`
-- `Mozilla Public License 2.0`
+- `commit a0b5a237b6359795af24257fee41d97bf1602819 (1.8.2)`
+- `Tue Sep 12 13:35:26 PDT 2017`
+- `Apache License 2.0`
 
 Erlang `ssl_verify_fun`
 -----------------------
@@ -292,6 +290,15 @@ Erlang `ssl_verify_fun`
 - `commit 33406f6decdcb9f03cf1e69e34728a288af156a0 (1.1.1)`
 - `Fri Feb 24 10:27:11 PST 2017`
 - `MIT`
+
+Erlang `unicode_util_compat`
+-----------------------
+`unicode_util compatibility library for Erlang < 20`
+
+- `https://github.com/benoitc/unicode_util_compat`
+- `commit 38d7bc105f51159e8ea3279c40121db9db1e652f (0.3.1)`
+- `Tue Sep 12 13:35:26 PDT 2017`
+- `Apache License 2.0`
 
 Erlang `zeromq/v?/erlzmq`
 -------------------------

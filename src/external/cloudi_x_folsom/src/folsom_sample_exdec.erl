@@ -40,6 +40,12 @@
 
 -define(HOURSECS, 3600).
 
+-ifdef(use_rand).
+-define(RANDOM, rand).
+-else.
+-define(RANDOM, random).
+-endif.
+
 -include("folsom.hrl").
 
 new(Size, Alpha) ->
@@ -64,7 +70,7 @@ get_values(#exdec{reservoir = Reservoir}) ->
 update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N, size = Size, seed = Seed} = Sample, Value, Timestamp) when N =< Size ->
     % since N is =< Size we can just add the new value to the sample
 
-    {Rand, New_seed} = random_wh82:uniform_s(N, Seed),
+    {Rand, New_seed} = ?RANDOM:uniform_s(N, Seed),
     Priority = priority(Alpha, Timestamp, Start, Rand),
     true = ets:insert(Reservoir, {Priority, Value}),
 
@@ -73,7 +79,7 @@ update(#exdec{reservoir = Reservoir, alpha = Alpha, start = Start, n = N, seed =
     % when N is not =< Size we need to check to see if the priority of
     % the new value is greater than the first (smallest) existing priority
 
-    {Rand, NewSeed} = random_wh82:uniform_s(N, Seed),
+    {Rand, NewSeed} = ?RANDOM:uniform_s(N, Seed),
     Priority = priority(Alpha, Timestamp, Start, Rand),
     First = ets:first(Reservoir),
 
