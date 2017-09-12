@@ -44,5 +44,6 @@ ranch                Loïc Hoguin <essen@ninenines.eu>
 rebar                Basho Technologies
 setup                Ulf Wiger <ulf@wiger.net>
 ssl_verify_fun       Ilya Khaprov
+unicode_util_compat  Benoit Chesneau <bchesneau@gmail.com>
 zeromq               Martin Sustrik <sustrik@250bpm.com>
 
