@@ -1,5 +1,36 @@
 ------------------------------------------------------------------------        
 
+September 13, 2017
+  Version 1.7.2 released.
+  * Service configuration option request_timeout_adjustment was modified
+    to use Erlang monotonic time so timeout adjustments are not impacted
+    by any OS time changes (now all CloudI service request
+    timeout handling is using monotonic time)
+  * Added CloudI Service API logging_set configuration option
+    log_time_offset to log when the Erlang VM updates its time-offset
+    with the time-offset change logged in nanoseconds
+    (the offset is logged exactly when logging timestamps are changed)
+  * configure script now accepts environment variables to set release
+    configuration values: CLOUDI_ARG_NODE_NAME_SHORT,
+    CLOUDI_ARG_NODE_NAME_LONG, CLOUDI_ARG_NODE_COOKIE, CLOUDI_PID_FILE
+    (can be used to avoid manual vm.args modifications)
+  * Many deployment changes to make CloudI use robust:
+    * The release script is safe for root use
+      (external environment variables are blocked,
+       functionality is locked down, manages a pid file correctly, etc.)
+    * Execution now occurs within the logging directory so any
+      crash dump output is put there automatically
+  * cloudi_service_null is an Erlang service added to provide a simple
+    way of consuming CloudI service requests
+    (during testing and/or to handle invalid URL service names)
+  * cloudi_service_request_rate was added to the CloudI release to
+    provide an easy way of testing max throughput
+  * cloudi_service_http_cowboy and cloudi_service_http_elli now use an
+    update_delay argument to apply a change to timeout_async and/or
+    timeout_sync performed with the CloudI Service API services_update
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 June 7, 2017
   Version 1.7.1 released.
   * backwards compatibility difference:

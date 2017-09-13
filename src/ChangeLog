@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * CloudI version 1.7.2 released
+
 2017-09-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update exometer_core

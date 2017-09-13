@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.7.1<br />
-              last updated on June 7<sup>th</sup> 2017</h3></center>
+  <center><h3>version 1.7.2<br />
+              last updated on September 13<sup>th</sup> 2017</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -407,9 +407,9 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <h3>1.5 - What is CloudI?</h3>
   <h4>Short Answer</h4>
   <p class="paragraph">
-    An application server that efficiently integrates with many languages,
-    many databases, and many messaging buses in a way that is both scalable
-    and fault-tolerant.
+    A distributed application server that provides efficient messaging
+    for many programming languages within a single service abstraction
+    that is both scalable and fault-tolerant.
   </p>
   <h4>Shorter Answer</h4>
   <p class="paragraph">
@@ -549,14 +549,12 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <p class="paragraph">
     CloudI is an <a href="http://en.wikipedia.org/wiki/CAP_theorem" target="_blank">AP-type distributed system</a>
     (guarantees of Availability and Partition tolerance). A Consistency
-    guarantee (the guarantee not provided by CloudI) can be provided by
-    either a CloudI service interface to a database driver or a
-    CloudI service interface to a messaging bus (i.e., to a persistent
-    message queue).  In both cases, a request can be sent to the CloudI
-    service with the <a href="api.html#Service">CloudI API</a>
-    (if a response is returned, the request succeeded).
+    guarantee (the guarantee not provided by CloudI) can be provided
+    by a database that is used within a CloudI service.  All CloudI
+    <a href="api.html#Service">service requests</a> are transactional
+    and a service request response may be used to confirm any state change.
     To understand consistency, as it relates to CloudI service
-    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.11 - Service Fault Tolerance"</a>.
+    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.14 - Service Fault Tolerance"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -1030,15 +1028,33 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>libboost-system-dev</li>
       <li>libboost-thread-dev</li>
       <li>libboost-dev</li>
+      <li>golang (optional)</li>
+      <li>ghc cabal-install (optional)</li>
       <li>default-jdk (optional)</li>
       <li>nodejs (optional)</li>
       <li>perl (optional)</li>
-      <li>php5 (optional)</li>
+      <li>php (optional)</li>
       <li>python (optional)</li>
       <li>python-dev (optional)</li>
-      <li>ruby1.9.1 (optional)</li>
+      <li>ruby (optional)</li>
       <li>libgmp3-dev (optional)</li>
       <li>uuid-dev (optional)</li>
+      <li>autoconf automake libtool<br />(to compile from repository)</li>
+    </ul>
+    </td></tr><tr><td>
+    Fedora<br />(yum install &lt;package(s)&gt;)
+    </td><td>
+    <ul>
+      <li>erlang</li>
+      <li>gcc-c++</li>
+      <li>boost-devel</li>
+      <li>java-devel (optional)</li>
+      <li>nodejs-devel (optional)</li>
+      <li>php-devel (optional)</li>
+      <li>python-devel (optional)</li>
+      <li>ruby-devel (optional)</li>
+      <li>gmp-devel (optional)</li>
+      <li>autoconf automake libtool<br />(to compile from repository)</li>
     </ul>
     </td></tr><tr><td>
     OSX w/macports<br />(port install &lt;package(s)&gt;)
@@ -2039,6 +2055,7 @@ sudo cloudi stop
     (to determine the maximum throughput for a service request during the
      service request timeout period without any errors or timeouts):
     <ul>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_7_1#readme" target="_blank">1.7.1 results (all CloudI API implementations)</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_5_4#readme" target="_blank">1.5.4 results (including cloudi_service_queue)</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_5_1/results.txt" target="_blank">1.5.1 results</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/request_rate/results/results_v1_4_0/results.txt" target="_blank">1.4.0 results</a></li>
@@ -2131,15 +2148,15 @@ sudo cloudi stop
     Some of the integration tests that provide example usage of the C/C++
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/c_src/main.c" target="_blank">src/tests/count (C, no threads)
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/c/main.c" target="_blank">src/tests/count (C, no threads)
           Basic Count Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">src/tests/http_req (C, no threads)
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c/main.c" target="_blank">src/tests/http_req (C, no threads)
           Basic HTTP Request Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx_src/main.cpp" target="_blank">src/tests/msg_size (C++, no threads)
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/cxx/main.cpp" target="_blank">src/tests/msg_size (C++, no threads)
           Basic Message Size (Forwarding) Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx_src/main.cpp" target="_blank">src/tests/messaging (C++, threads)
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/cxx/main.cpp" target="_blank">src/tests/messaging (C++, threads)
           Basic Messaging Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/cxx_src/main.cpp" target="_blank">src/tests/hexpi (C++, threads)
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/cxx/main.cpp" target="_blank">src/tests/hexpi (C++, threads)
           Hexadecimal PI Test</a></li>
     </ul>
   </p>
@@ -2175,25 +2192,25 @@ sudo cloudi stop
   <p class="paragraph">
     Many examples of Erlang CloudI services exist within the CloudI source code
     because the Erlang CloudI services provide integration with external
-    systems like the supported databases (CouchDB, PostgreSQL, etc.),
+    systems like the supported databases (PostgreSQL, MySQL, etc.),
     the supported messaging (HTTP, ZeroMQ, etc.), and the CloudI Service API
     functionality.  Some of the integration tests and services that
     provide example usage of the Erlang
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/src/cloudi_service_count.erl" target="_blank">src/tests/count
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/erlang/src/cloudi_service_test_count.erl" target="_blank">src/tests/count
           Basic Count Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl" target="_blank">src/tests/http_req
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/erlang/src/cloudi_service_test_http_req.erl" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/src/cloudi_service_msg_size.erl" target="_blank">src/tests/msg_size
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/erlang/src/cloudi_service_test_msg_size.erl" target="_blank">src/tests/msg_size
           Basic Message Size (Forwarding) Test</a></li>
       <li>src/tests/messaging 
-          Basic Messaging Test (<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence1.erl" target="_blank">Sequence 1</a>,
-          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence2.erl" target="_blank">Sequence 2</a>,
-          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence3.erl" target="_blank">Sequence 3</a>,
-          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/src/cloudi_service_messaging_sequence4.erl" target="_blank">Sequence 4</a>)
+          Basic Messaging Test (<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence1.erl" target="_blank">Sequence 1</a>,
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence2.erl" target="_blank">Sequence 2</a>,
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence3.erl" target="_blank">Sequence 3</a>,
+          <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/erlang/src/cloudi_service_test_messaging_sequence4.erl" target="_blank">Sequence 4</a>)
           </li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl" target="_blank">Hexadecimal PI Fault-Tolerant Map/Reduce Test</a></li>
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/erlang/src/cloudi_service_test_hexpi.erl" target="_blank">Hexadecimal PI Fault-Tolerant Map/Reduce Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl" target="_blank">cloudi_service_queue Service for Durable Service Requests</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl" target="_blank">cloudi_service_quorum Service for Service Redundancy</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_filesystem/src/cloudi_service_filesystem.erl" target="_blank">cloudi_service_filesystem Service for Caching Static File Data</a></li>
@@ -2280,13 +2297,13 @@ sudo cloudi stop
     Some of the integration tests that provide example usage of the Java
     <a href="api.html#Service">CloudI API</a> are:
     <ul>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/org/cloudi/tests/count/Task.java" target="_blank">src/tests/count
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/count/java/org/cloudi/tests/count/Task.java" target="_blank">src/tests/count
           Basic Count Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java" target="_blank">src/tests/http_req
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/java/org/cloudi/tests/http_req/Task.java" target="_blank">src/tests/http_req
           Basic HTTP Request Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/org/cloudi/tests/msg_size/Task.java" target="_blank">src/tests/msg_size
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/msg_size/java/org/cloudi/tests/msg_size/Task.java" target="_blank">src/tests/msg_size
           Basic Message Size (Forwarding) Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/org/cloudi/tests/messaging/Task.java" target="_blank">src/tests/messaging
+      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/java/org/cloudi/tests/messaging/Task.java" target="_blank">src/tests/messaging
           Basic Messaging Test</a></li>
     </ul>
   </p>
@@ -2517,11 +2534,11 @@ sudo cloudi stop
     tests:
     <ul>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/" target="_blank">src/tests/http_req Basic HTTP Request Test</a>
-          (with <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">C</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/src/cloudi_service_http_req.erl" target="_blank">Erlang</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/org/cloudi/tests/http_req/Task.java" target="_blank">Java</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js" target="_blank">JavaScript-node.js</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl" target="_blank">Perl</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php" target="_blank">PHP</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py" target="_blank">Python</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb" target="_blank">Ruby</a> services)</li>
+          (with <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c_src/main.c" target="_blank">C</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/erlang/src/cloudi_service_test_http_req.erl" target="_blank">Erlang</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/java/org/cloudi/tests/http_req/Task.java" target="_blank">Java</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js" target="_blank">JavaScript-node.js</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl" target="_blank">Perl</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php" target="_blank">PHP</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py" target="_blank">Python</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb" target="_blank">Ruby</a> services)</li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/" target="_blank">src/tests/http HTTP Test</a>
           (with <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/run.sh" target="_blank">curl file-based test requests</a> using
            <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl" target="_blank">cloudi_service_quorum</a>
-           and <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.py" target="_blank">Python</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/service.rb" target="_blank">Ruby</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/service/org/cloudi/tests/http/Task.java" target="_blank">Java</a> services)</li>
+           and <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/http.py" target="_blank">Python</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/http.rb" target="_blank">Ruby</a>/<a href="https://github.com/CloudI/CloudI/blob/master/src/tests/http/java/org/cloudi/tests/http/Task.java" target="_blank">Java</a> services)</li>
       <li><a href="#4_WebSockets" target="_blank">WebSocket Integration</a></li>
     </ul>
   </p>
@@ -2699,6 +2716,20 @@ sudo cloudi stop
     be configured as a percentage of the total available destination service
     processes or as an absolute integer count of required destination service
     processes.
+  </p>
+  <p class="paragraph">
+    If CloudI service requests need to be durable (stored on the filesystem
+    during the lifetime of the transaction, i.e., the timeout duration),
+    the service requests can be sent through
+    <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl" target="_blank">cloudi_service_queue</a>
+    to handle either a destination failure or both a source failure and
+    destination failure (based on the 'fault_isolation' configuration
+    argument being either 'destination' or 'both').  A durable service request
+    may contain data that causes a service failure so it is possible that
+    using cloudi_service_queue may cause the same failure to occur
+    multiple times.  To always pursue fail-fast operation with CloudI services
+    it is best to not make service requests durable and instead only rely on
+    the service request response to determine a transaction is successful.
   </p>
   <p class="paragraph">
     For system fault tolerance testing, the system configuration

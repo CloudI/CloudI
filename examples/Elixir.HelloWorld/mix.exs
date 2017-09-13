@@ -6,7 +6,7 @@ defmodule HelloWorld.Mixfile do
 
   def project do
     [app: :'Elixir.HelloWorld',
-     version: "1.7.1",
+     version: "1.7.2",
      elixirc_paths: ["lib/"],
      deps: deps()]
   end

@@ -6,7 +6,7 @@ defmodule Nodefinder.Mixfile do
 
   def project do
     [app: :nodefinder,
-     version: "1.7.0",
+     version: "1.7.2",
      language: :erlang,
      description: description(),
      package: package(),
