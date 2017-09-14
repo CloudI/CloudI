@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix service configuration option response_timeout_immediate_max
+      to work with internal services that use a noreply tuple
+      as the cloudi_service_handle_request/11 return value
+
 2017-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * CloudI version 1.7.2 released
