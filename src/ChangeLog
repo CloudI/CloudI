@@ -7,6 +7,8 @@
       (noreply does not provide a null response)
     * Change cloudi_service_null to only use the service pattern prefix
       for its subscription (so "*" is a valid catch-all prefix)
+    * Fix websockets integration test for Python 3
+    * Add cloudi_service_null to both default configuration files
 
 2017-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
 

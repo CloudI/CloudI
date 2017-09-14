@@ -52,14 +52,14 @@ class Task(threading.Thread):
 
     def __connect(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
-        assert request == 'CONNECT'
+        assert request == b'CONNECT'
         print('connect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
         return 'got connect! yay!'
 
     def __disconnect(self, request_type, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid):
-        assert request == 'DISCONNECT'
+        assert request == b'DISCONNECT'
         print('disconnect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
         return ''
@@ -76,8 +76,8 @@ class Task(threading.Thread):
         time.sleep(1.0)
         assert name[-6:] == '/delay'
         trans_ids = self.__api.mcast_async(name[:-6] + '/websocket',
-                                           'notification: got "' +
-                                           request + '" 1 second ago')
+                                           b'notification: got "' +
+                                           request + b'" 1 second ago')
         if len(trans_ids) == 0:
             print('websockets: (no websockets connected?)')
         else:

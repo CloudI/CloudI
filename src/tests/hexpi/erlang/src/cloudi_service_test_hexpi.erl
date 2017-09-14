@@ -204,54 +204,12 @@ cloudi_service_map_reduce_info(Request, _, _) ->
 
 setup(#state{queue = Queue0} = State, Dispatcher) ->
     TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
-    Pgsql = case cloudi_service:get_pid(Dispatcher,
-                                        ?NAME_PGSQL,
-                                        limit_min) of
-        {ok, PatternPid1} ->
-            PatternPid1;
-        {error, _} ->
-            undefined
-    end,
-    Mysql = case cloudi_service:get_pid(Dispatcher,
-                                        ?NAME_MYSQL,
-                                        limit_min) of
-        {ok, PatternPid2} ->
-            PatternPid2;
-        {error, _} ->
-            undefined
-    end,
-    Memcached = case cloudi_service:get_pid(Dispatcher,
-                                            ?NAME_MEMCACHED,
-                                            limit_min) of
-        {ok, PatternPid3} ->
-            PatternPid3;
-        {error, _} ->
-            undefined
-    end,
-    Tokyotyrant = case cloudi_service:get_pid(Dispatcher,
-                                              ?NAME_TOKYOTYRANT,
-                                              limit_min) of
-        {ok, PatternPid4} ->
-            PatternPid4;
-        {error, _} ->
-            undefined
-    end,
-    Couchdb = case cloudi_service:get_pid(Dispatcher,
-                                          ?NAME_COUCHDB,
-                                          limit_min) of
-        {ok, PatternPid5} ->
-            PatternPid5;
-        {error, _} ->
-            undefined
-    end,
-    Filesystem = case cloudi_service:get_pid(Dispatcher,
-                                             ?NAME_FILESYSTEM,
-                                             limit_min) of
-        {ok, PatternPid6} ->
-            PatternPid6;
-        {error, _} ->
-            undefined
-    end,
+    Pgsql = service_name_pattern_pid(?NAME_PGSQL, Dispatcher),
+    Mysql = service_name_pattern_pid(?NAME_MYSQL, Dispatcher),
+    Memcached = service_name_pattern_pid(?NAME_MEMCACHED, Dispatcher),
+    Tokyotyrant = service_name_pattern_pid(?NAME_TOKYOTYRANT, Dispatcher),
+    Couchdb = service_name_pattern_pid(?NAME_COUCHDB, Dispatcher),
+    Filesystem = service_name_pattern_pid(?NAME_FILESYSTEM, Dispatcher),
 
     SQLDrop = sql_drop(),
     SQLCreate = sql_create(),
@@ -385,4 +343,14 @@ couchdb(DigitIndex, Pid) ->
 
 filesystem(DigitIndex, PiResult) ->
     {[{<<"range">>, <<"bytes=", DigitIndex/binary, "-">>}], PiResult}.
+
+service_name_pattern_pid(Name, Dispatcher) ->
+    case cloudi_service:get_pid(Dispatcher, Name, limit_min) of
+        {ok, {Name, _} = PatternPid} ->
+            PatternPid;
+        {ok, _} ->
+            undefined;
+        {error, _} ->
+            undefined
+    end.
 
