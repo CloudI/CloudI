@@ -75,7 +75,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             (DebugLevel =:= warn) orelse
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
-    cloudi_service:subscribe(Dispatcher, "*"),
+    cloudi_service:subscribe(Dispatcher, ""),
     DebugLogLevel = if
         Debug =:= false ->
             off;

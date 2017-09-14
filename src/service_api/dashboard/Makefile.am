@@ -15,4 +15,5 @@ install-exec-hook:
 	$(INSTALL_DATA) $(srcdir)/README.md $(instdir)
 	$(INSTALL_DATA) $(srcdir)/service_summary.html $(instdir)
 	$(INSTALL_DATA) $(srcdir)/view_log.html $(instdir)
+	$(INSTALL_DATA) $(srcdir)/favicon.ico $(instdir)
 
