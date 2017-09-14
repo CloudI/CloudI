@@ -50,9 +50,9 @@
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
 -record(state,
-	{
-		debug_level :: off | trace | debug | info | warn | error | fatal
-	}).
+    {
+        debug_level :: off | trace | debug | info | warn | error | fatal
+    }).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -99,7 +99,7 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 
 debug_log(off, _, _) ->
-	ok;
+    ok;
 debug_log(trace, Message, Args) ->
     ?LOG_TRACE(Message, Args);
 debug_log(debug, Message, Args) ->
