@@ -2565,16 +2565,7 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
               Timeout, Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
-            if
-                Timeout < ResponseTimeoutImmediateMax ->
-                    {'cloudi_service_request_success',
-                     undefined, NewServiceState};
-                true ->
-                    {'cloudi_service_request_success',
-                     {'cloudi_service_return_async', Name, Pattern,
-                      <<>>, <<>>, Timeout, TransId, Source},
-                     NewServiceState}
-            end;
+            {'cloudi_service_request_success', undefined, NewServiceState};
         {stop, Reason, NewServiceState} ->
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NewServiceState}
@@ -2721,16 +2712,7 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
               Timeout, Priority, TransId, Source},
              NewServiceState};
         {noreply, NewServiceState} ->
-            if
-                Timeout < ResponseTimeoutImmediateMax ->
-                    {'cloudi_service_request_success',
-                     undefined, NewServiceState};
-                true ->
-                    {'cloudi_service_request_success',
-                     {'cloudi_service_return_sync', Name, Pattern,
-                      <<>>, <<>>, Timeout, TransId, Source},
-                     NewServiceState}
-            end;
+            {'cloudi_service_request_success', undefined, NewServiceState};
         {stop, Reason, NewServiceState} ->
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NewServiceState}

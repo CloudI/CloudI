@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_null).
@@ -89,7 +89,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, _Request,
                               #state{debug_level = DebugLogLevel} = State,
                               _Dispatcher) ->
     debug_log(DebugLogLevel, "\"~ts\" consumed", [Name]),
-    {noreply, State}.
+    {reply, <<>>, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
