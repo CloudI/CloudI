@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-10-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix monitor message leaks
+    * Fix optional programming language integration test configuration
+      scope name to reflect "test_" prefix that was added to test names
+
 2017-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_null to provide a null response

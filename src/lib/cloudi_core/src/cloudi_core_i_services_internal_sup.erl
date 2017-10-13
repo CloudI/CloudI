@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_sup).
@@ -138,7 +138,7 @@ result(Dispatcher) ->
     receive
         {self, Dispatcher, Service} ->
             % sent before cloudi_service_init/4 via create_internal_done/3
-            erlang:demonitor(MonitorRef),
+            erlang:demonitor(MonitorRef, [flush]),
             {ok, Service};
         {'DOWN', MonitorRef, process, Dispatcher, Info} ->
             {error, Info}

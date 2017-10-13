@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(varpool).
@@ -146,7 +146,7 @@ destroy(#varpool{owner = Owner,
                  supervisor = Supervisor,
                  monitors = Monitors}) ->
     true = Owner =:= self(),
-    [erlang:demonitor(MonitorRef) || MonitorRef <- Monitors],
+    [erlang:demonitor(MonitorRef, [flush]) || MonitorRef <- Monitors],
     ok = varpool_sup:stop_link(Supervisor),
     ok.
 

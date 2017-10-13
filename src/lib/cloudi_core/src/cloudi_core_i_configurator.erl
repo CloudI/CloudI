@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -926,7 +926,7 @@ service_start_wait_pid([], Error) ->
 service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
     receive
         {service_initialized_process, Pid} ->
-            erlang:demonitor(MonitorRef),
+            erlang:demonitor(MonitorRef, [flush]),
             % at this point:
             % - if it is an internal service process:
             %   it has already completed executing cloudi_service_init/3 and

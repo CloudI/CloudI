@@ -34,7 +34,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -2713,7 +2713,7 @@ handle_call({leave, Pid} = Request, _,
         {#state_monitor{monitor = MonitorRef,
                         names = GroupNameList}, NewMonitors} ->
             true = is_reference(MonitorRef),
-            true = erlang:demonitor(MonitorRef),
+            true = erlang:demonitor(MonitorRef, [flush]),
             abcast_hidden_nodes(Request, State),
             {reply, ok,
              leave_all_local(GroupNameList, Pid, leave_local,

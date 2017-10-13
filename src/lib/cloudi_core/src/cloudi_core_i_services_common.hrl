@@ -265,7 +265,7 @@ send_timeout_end(TransId, Pid,
         is_pid(Pid) ->
             case maps:find(Pid, SendTimeoutMonitors) of
                 {ok, {MonitorRef, [TransId]}} ->
-                    erlang:demonitor(MonitorRef),
+                    erlang:demonitor(MonitorRef, [flush]),
                     maps:remove(Pid, SendTimeoutMonitors);
                 {ok, {MonitorRef, TransIdList}} ->
                     maps:put(Pid,
