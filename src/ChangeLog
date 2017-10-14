@@ -6,6 +6,7 @@
     * Fix monitor message leaks
     * Fix optional programming language integration test configuration
       scope name to reflect "test_" prefix that was added to test names
+    * Update cpg and varpool
 
 2017-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
