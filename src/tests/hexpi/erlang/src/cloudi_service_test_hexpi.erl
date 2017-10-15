@@ -72,7 +72,7 @@
         index,
         index_start,
         index_end,
-        done = false,
+        map_done = false,
         step = ?PI_DIGIT_STEP_SIZE,
         task_size,
         queue,
@@ -113,7 +113,7 @@ cloudi_service_map_reduce_new([IndexStart, IndexEnd], ConcurrentTaskCount,
                       task_size = TaskSize,
                       queue = Queue}, Dispatcher)}.
 
-cloudi_service_map_reduce_send(#state{done = true} = State, _) ->
+cloudi_service_map_reduce_send(#state{map_done = true} = State, _) ->
     {done, State};
 cloudi_service_map_reduce_send(#state{destination = Name,
                                       index = Index,
@@ -137,7 +137,7 @@ cloudi_service_map_reduce_send(#state{destination = Name,
             NewIndex = Index + Step * Iterations,
             {ok, SendArgs,
              State#state{index = NewIndex,
-                         done = (NewIndex > IndexEnd)}};
+                         map_done = (NewIndex > IndexEnd)}};
         {error, _} = Error ->
             Error
     end.
@@ -307,9 +307,9 @@ reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
     end,
     State#state{queue = QueueN}.
 
-reduce_done_check(#state{done = false} = State) ->
+reduce_done_check(#state{map_done = false} = State) ->
     {ok, State};
-reduce_done_check(#state{done = true,
+reduce_done_check(#state{map_done = true,
                          queue = Queue} = State) ->
     ReduceSize = cloudi_queue:size(Queue),
     if
