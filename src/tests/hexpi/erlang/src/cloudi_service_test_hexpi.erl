@@ -166,8 +166,7 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
 cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
                                _ResponseInfo, Response,
                                Timeout, TransId,
-                               #state{done = Done,
-                                      task_size = TaskSize} = State,
+                               #state{task_size = TaskSize} = State,
                                Dispatcher)
     when is_integer(Timeout), is_binary(TransId) ->
     <<Iterations:32/unsigned-integer-native,
@@ -176,20 +175,15 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
     ?LOG_INFO("index ~s result received", [IndexBin]),
     <<ElapsedTime:32/float-native, PiResult/binary>> = Response,
     NewTaskSize = cloudi_task_size:put(Pid, Iterations, ElapsedTime, TaskSize),
-    NewState = send_results(IndexBin, PiResult, ElapsedTime, Pid,
-                            State#state{task_size = NewTaskSize},
-                            Dispatcher),
-    if
-        Done =:= true ->
-            {done, NewState};
-        true ->
-            {ok, NewState}
-    end.
+    NewState = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
+                           State#state{task_size = NewTaskSize},
+                           Dispatcher),
+    reduce_done_check(NewState).
 
 cloudi_service_map_reduce_info(#return_async_active{} = Request,
                                #state{queue = Queue0} = State, Dispatcher) ->
     {ok, QueueN} = cloudi_queue:recv(Dispatcher, Request, Queue0),
-    {ok, State#state{queue = QueueN}};
+    reduce_done_check(State#state{queue = QueueN});
 cloudi_service_map_reduce_info(#timeout_async_active{} = Request,
                                #state{queue = Queue0} = State, Dispatcher) ->
     {ok, QueueN} = cloudi_queue:timeout(Dispatcher, Request, Queue0),
@@ -241,14 +235,14 @@ setup(#state{queue = Queue0} = State, Dispatcher) ->
                 use_couchdb = is_tuple(Couchdb),
                 use_filesystem = is_tuple(Filesystem)}.
 
-send_results(DigitIndex, PiResult, ElapsedTime, Pid,
-             #state{queue = Queue0,
-                    use_pgsql = UsePgsql,
-                    use_mysql = UseMysql,
-                    use_memcached = UseMemcached,
-                    use_tokyotyrant = UseTokyotyrant,
-                    use_couchdb = UseCouchdb,
-                    use_filesystem = UseFilesystem} = State, Dispatcher)
+reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
+            #state{queue = Queue0,
+                   use_pgsql = UsePgsql,
+                   use_mysql = UseMysql,
+                   use_memcached = UseMemcached,
+                   use_tokyotyrant = UseTokyotyrant,
+                   use_couchdb = UseCouchdb,
+                   use_filesystem = UseFilesystem} = State, Dispatcher)
     when is_binary(DigitIndex), is_binary(PiResult), is_float(ElapsedTime),
          is_pid(Pid) ->
     Queue2 = if
@@ -312,6 +306,18 @@ send_results(DigitIndex, PiResult, ElapsedTime, Pid,
             Queue10
     end,
     State#state{queue = QueueN}.
+
+reduce_done_check(#state{done = false} = State) ->
+    {ok, State};
+reduce_done_check(#state{done = true,
+                         queue = Queue} = State) ->
+    ReduceSize = cloudi_queue:size(Queue),
+    if
+        ReduceSize == 0 ->
+            {done, State};
+        true ->
+            {ok, State}
+    end.
 
 sql_drop() ->
     <<"DROP TABLE IF EXISTS incoming_results;">>.

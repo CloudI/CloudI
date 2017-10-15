@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -57,12 +57,20 @@
 %% external interface
 -export([new/0,
          new/1,
+         failures/1,
          recv/3,
+         recv_id/3,
          send/4,
          send/5,
          send/6,
          send/7,
          send/8,
+         send_id/4,
+         send_id/5,
+         send_id/6,
+         send_id/7,
+         send_id/8,
+         size/1,
          timeout/3]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -74,6 +82,7 @@
         request :: cloudi_service:request(),
         timeout :: cloudi_service:timeout_milliseconds(),
         priority :: cloudi_service:priority(),
+        id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid(),
         retry_count = 0 :: non_neg_integer()
     }).
@@ -208,34 +217,67 @@ new(Options)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Return the current number of failures to send and validate.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec failures(State :: state()) ->
+    non_neg_integer().
+
+failures(#cloudi_queue{failures_source = FailuresSrc}) ->
+    erlang:length(FailuresSrc).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Receive a service request.===
 %% Must be called from the `cloudi_service_handle_info/3' callback function.
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec recv(Dispatcher :: cloudi_service:dispatcher(),
-           #return_async_active{},
+           Return :: #return_async_active{},
            State :: state()) ->
     {ok, NewState :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
 
-recv(Dispatcher,
-     #return_async_active{response_info = ResponseInfo,
-                          response = Response,
-                          trans_id = TransId},
-     #cloudi_queue{validate_response_info = ResponseInfoF,
-                   validate_response = ResponseF,
-                   failures_source_die = FailuresSrcDie,
-                   failures_source_max_count = FailuresSrcMaxCount,
-                   failures_source_max_period = FailuresSrcMaxPeriod,
-                   failures_source = FailuresSrc,
-                   requests = Requests} = State)
+recv(Dispatcher, Return, State) ->
+    case recv_id(Dispatcher, Return, State) of
+        {ok, _, NewState} ->
+            {ok, NewState};
+        {{error, _}, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Receive a service request and provide the first transaction id.===
+%% Must be called from the `cloudi_service_handle_info/3' callback function.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec recv_id(Dispatcher :: cloudi_service:dispatcher(),
+              #return_async_active{},
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+recv_id(Dispatcher,
+        #return_async_active{response_info = ResponseInfo,
+                             response = Response,
+                             trans_id = TransId},
+        #cloudi_queue{validate_response_info = ResponseInfoF,
+                      validate_response = ResponseF,
+                      failures_source_die = FailuresSrcDie,
+                      failures_source_max_count = FailuresSrcMaxCount,
+                      failures_source_max_period = FailuresSrcMaxPeriod,
+                      failures_source = FailuresSrc,
+                      requests = Requests} = State)
     when is_pid(Dispatcher) ->
-    {#request{}, NewRequests} = maps:take(TransId, Requests),
+    {#request{id = Id}, NewRequests} = maps:take(TransId, Requests),
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
-            {ok, State#cloudi_queue{requests = NewRequests}};
+            {ok, Id, State#cloudi_queue{requests = NewRequests}};
         false ->
             NewFailuresSrc = failure(FailuresSrcDie,
                                      FailuresSrcMaxCount,
@@ -337,14 +379,115 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
     {ok, NewState :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
 
-send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
-     #cloudi_queue{validate_request_info = RequestInfoF,
-                   validate_request = RequestF,
-                   failures_source_die = FailuresSrcDie,
-                   failures_source_max_count = FailuresSrcMaxCount,
-                   failures_source_max_period = FailuresSrcMaxPeriod,
-                   failures_source = FailuresSrc,
-                   requests = Requests} = State)
+send(Dispatcher, Name, RequestInfo, Request,
+     Timeout, Priority, PatternPid, State) ->
+    case send_id(Dispatcher, Name, RequestInfo, Request,
+                 Timeout, Priority, PatternPid, State) of
+        {ok, _, NewState} ->
+            {ok, NewState};
+        {{error, _}, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a service request and provide the first transaction id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_id(Dispatcher :: cloudi_service:dispatcher(),
+              Name :: cloudi_service:service_name(),
+              Request :: cloudi_service:request(),
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+send_id(Dispatcher, Name, Request, State) ->
+    send_id(Dispatcher, Name, <<>>, Request,
+            undefined, undefined, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a service request and provide the first transaction id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_id(Dispatcher :: cloudi_service:dispatcher(),
+              Name :: cloudi_service:service_name(),
+              Request :: cloudi_service:request(),
+              Timeout :: cloudi_service:timeout_milliseconds(),
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+send_id(Dispatcher, Name, Request, Timeout, State) ->
+    send_id(Dispatcher, Name, <<>>, Request,
+            Timeout, undefined, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a service request and provide the first transaction id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_id(Dispatcher :: cloudi_service:dispatcher(),
+              Name :: cloudi_service:service_name(),
+              Request :: cloudi_service:request(),
+              Timeout :: cloudi_service:timeout_milliseconds(),
+              PatternPid :: cloudi_service:pattern_pid() | undefined,
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+send_id(Dispatcher, Name, Request, Timeout, PatternPid, State) ->
+    send_id(Dispatcher, Name, <<>>, Request,
+            Timeout, undefined, PatternPid, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a service request and provide the first transaction id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_id(Dispatcher :: cloudi_service:dispatcher(),
+              Name :: cloudi_service:service_name(),
+              RequestInfo :: cloudi_service:request_info(),
+              Request :: cloudi_service:request(),
+              Timeout :: cloudi_service:timeout_milliseconds(),
+              Priority :: cloudi_service:priority(),
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
+    send_id(Dispatcher, Name, RequestInfo, Request,
+            Timeout, Priority, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Send a service request and provide the first transaction id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec send_id(Dispatcher :: cloudi_service:dispatcher(),
+              Name :: cloudi_service:service_name(),
+              RequestInfo :: cloudi_service:request_info(),
+              Request :: cloudi_service:request(),
+              Timeout :: cloudi_service:timeout_milliseconds(),
+              Priority :: cloudi_service:priority(),
+              PatternPid :: cloudi_service:pattern_pid() | undefined,
+              State :: state()) ->
+    {ok, Id :: cloudi_service:trans_id(), NewState :: state()} |
+    {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
+
+send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
+        #cloudi_queue{validate_request_info = RequestInfoF,
+                      validate_request = RequestF,
+                      failures_source_die = FailuresSrcDie,
+                      failures_source_max_count = FailuresSrcMaxCount,
+                      failures_source_max_period = FailuresSrcMaxPeriod,
+                      failures_source = FailuresSrc,
+                      requests = Requests} = State)
     when is_pid(Dispatcher) ->
     case validate(RequestInfoF, RequestF,
                   RequestInfo, Request) of
@@ -352,9 +495,10 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
             case send_async(Dispatcher, Name, RequestInfo, Request,
                             Timeout, Priority, PatternPid) of
                 {ok, TransId, RequestState} ->
-                    {ok, State#cloudi_queue{requests = maps:put(TransId,
-                                                                RequestState,
-                                                                Requests)}};
+                    {ok, TransId,
+                     State#cloudi_queue{requests = maps:put(TransId,
+                                                            RequestState,
+                                                            Requests)}};
                 {error, _} = Error ->
                     NewFailuresSrc = failure(FailuresSrcDie,
                                              FailuresSrcMaxCount,
@@ -371,6 +515,18 @@ send(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
             {{error, timeout},
              State#cloudi_queue{failures_source = NewFailuresSrc}}
     end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the queue.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec size(State :: state()) ->
+    non_neg_integer().
+
+size(#cloudi_queue{requests = Requests}) ->
+    maps:size(Requests).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -471,6 +627,7 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     request = Request,
                                     timeout = Timeout,
                                     priority = Priority,
+                                    id = TransId,
                                     pattern_pid = PatternPid},
             {ok, TransId, RequestState};
         {error, _} = Error ->
