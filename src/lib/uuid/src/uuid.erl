@@ -188,7 +188,7 @@ new(Pid, Options)
     % 48 bits for the first MAC address found is included with the
     % distributed Erlang node name to create a node specific value in 16 bits
     Node32 = quickrand_hash:jenkins_32([MacAddress,
-                                        erlang:atom_to_list(node())],
+                                        erlang:atom_to_binary(node(), utf8)],
                                        PidCR1),
     Node16 = (Node32 bsr 16) bxor (Node32 band 16#FFFF),
     % reduce the Erlang pid to 32 bits
