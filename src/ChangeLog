@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-10-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Change the transaction id v1 UUID to have a node id created from
+      the lookup3 Bob Jenkins hash function
+      (it remains 16 bits for the node hash and 32 bits for the pid hash)
+    * Update uuid and quickrand
+
 2017-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add cloudi_queue functions failures, recv_id, send_id and size

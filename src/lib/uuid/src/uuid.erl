@@ -41,7 +41,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -174,15 +174,7 @@ new(Pid, Options)
 
     % make the version 1 UUID specific to the Erlang node and pid
 
-    % 48 bits for the first MAC address found is included with the
-    % distributed Erlang node name
-    <<NodeD01, NodeD02, NodeD03, NodeD04, NodeD05,
-      NodeD06, NodeD07, NodeD08, NodeD09, NodeD10,
-      NodeD11, NodeD12, NodeD13, NodeD14, NodeD15,
-      NodeD16, NodeD17, NodeD18, NodeD19, NodeD20>> =
-      crypto:hash(sha, erlang:list_to_binary(MacAddress ++
-                                             erlang:atom_to_list(node()))),
-    % later, when the pid format changes, handle the different format
+    % (when the pid format changes, handle the different format)
     ExternalTermFormatVersion = 131,
     PidExtType = 103,
     <<ExternalTermFormatVersion:8,
@@ -191,33 +183,17 @@ new(Pid, Options)
     % 72 bits for the Erlang pid
     <<PidID1:8, PidID2:8, PidID3:8, PidID4:8, % ID (Node specific, 15 bits)
       PidSR1:8, PidSR2:8, PidSR3:8, PidSR4:8, % Serial (extra uniqueness)
-      PidCR1:8                       % Node Creation Count
+      PidCR1:8                                % Node Creation Count
       >> = binary:part(PidBin, erlang:byte_size(PidBin), -9),
-    % reduce the 160 bit NodeData checksum to 16 bits
-    NodeByte1 = ((((((((NodeD01 bxor NodeD02)
-                       bxor NodeD03)
-                      bxor NodeD04)
-                     bxor NodeD05)
-                    bxor NodeD06)
-                   bxor NodeD07)
-                  bxor NodeD08)
-                 bxor NodeD09)
-                bxor NodeD10,
-    NodeByte2 = (((((((((NodeD11 bxor NodeD12)
-                        bxor NodeD13)
-                       bxor NodeD14)
-                      bxor NodeD15)
-                     bxor NodeD16)
-                    bxor NodeD17)
-                   bxor NodeD18)
-                  bxor NodeD19)
-                 bxor NodeD20)
-                bxor PidCR1,
+    % 48 bits for the first MAC address found is included with the
+    % distributed Erlang node name to create a node specific value in 16 bits
+    Node32 = quickrand_hash:jenkins_32([MacAddress,
+                                        erlang:atom_to_list(node())],
+                                       PidCR1),
+    Node16 = (Node32 bsr 16) bxor (Node32 band 16#FFFF),
     % reduce the Erlang pid to 32 bits
-    PidByte1 = PidID1 bxor PidSR4,
-    PidByte2 = PidID2 bxor PidSR3,
-    PidByte3 = PidID3 bxor PidSR2,
-    PidByte4 = PidID4 bxor PidSR1,
+    Pid32 = quickrand_hash:jenkins_32([PidID1, PidID2, PidID3, PidID4,
+                                       PidSR1, PidSR2, PidSR3, PidSR4]),
     ClockSeq = pseudo_random(16384) - 1,
     TimestampTypeInternal = if
         TimestampType =:= os ->
@@ -235,9 +211,8 @@ new(Pid, Options)
             end
     end,
     TimestampLast = timestamp(TimestampTypeInternal),
-    #uuid_state{node_id = <<NodeByte1:8, NodeByte2:8,
-                            PidByte1:8, PidByte2:8,
-                            PidByte3:8, PidByte4:8>>,
+    #uuid_state{node_id = <<Node16:16/big-unsigned-integer,
+                            Pid32:32/big-unsigned-integer>>,
                 clock_seq = ClockSeq,
                 timestamp_type = TimestampTypeInternal,
                 timestamp_last = TimestampLast}.
@@ -1365,7 +1340,7 @@ mac_address([{_, L} | Rest]) ->
 
 -ifdef(ERLANG_OTP_VERSION_18_FEATURES).
 pseudo_random(N) ->
-    % assuming exsplus for 58 bits, period 8.31e34
+    % assuming exsp/exsplus for 58 bits, period 8.31e34
     rand:uniform(N).
 -else.
 pseudo_random(N) ->
