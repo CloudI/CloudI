@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Allow cloudi_queue to do a service name lookup for a retry if
+      the pattern_pid() was not provided to the initial cloudi_queue send
+
 2017-11-25 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add retry_delay option to cloudi_queue

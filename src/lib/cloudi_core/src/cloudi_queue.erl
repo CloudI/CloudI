@@ -84,6 +84,7 @@
         priority :: cloudi_service:priority(),
         id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid(),
+        retry_pattern_pid :: boolean(),
         retry_count = 0 :: non_neg_integer(),
         retry_delay = false :: boolean()
     }).
@@ -585,21 +586,12 @@ timeout(Dispatcher,
                                    Requests),
             {ok, State#cloudi_queue{service = Service,
                                     requests = NewRequests}};
-        #request{name = Name,
-                 request_info = RequestInfo,
-                 request = Request,
-                 timeout = Timeout,
-                 priority = Priority,
-                 pattern_pid = PatternPid,
-                 retry_count = I} = RequestState
+        #request{retry_count = I} = RequestState
             when I < Retry ->
-            case cloudi_service:send_async_active(Dispatcher, Name,
-                                                  RequestInfo, Request,
-                                                  Timeout, Priority,
-                                                  TransId, PatternPid) of
-                {ok, TransId} ->
+            case send_async_retry(Dispatcher, RequestState) of
+                {ok, NewRequestState} ->
                     NewRequests = maps:put(TransId,
-                                           RequestState#request{
+                                           NewRequestState#request{
                                                retry_count = I + 1,
                                                retry_delay = false},
                                            Requests),
@@ -636,8 +628,23 @@ send_async(Dispatcher, Name, RequestInfo, Request,
            Timeout, Priority, undefined) ->
     case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
         {ok, PatternPid} ->
-            send_async(Dispatcher, Name, RequestInfo, Request,
-                       Timeout, Priority, PatternPid);
+            case cloudi_service:send_async_active(Dispatcher, Name,
+                                                  RequestInfo, Request,
+                                                  Timeout, Priority,
+                                                  PatternPid) of
+                {ok, TransId} ->
+                    RequestState = #request{name = Name,
+                                            request_info = RequestInfo,
+                                            request = Request,
+                                            timeout = Timeout,
+                                            priority = Priority,
+                                            id = TransId,
+                                            pattern_pid = PatternPid,
+                                            retry_pattern_pid = false},
+                    {ok, TransId, RequestState};
+                {error, _} = Error ->
+                    Error
+            end;
         {error, _} = Error ->
             Error
     end;
@@ -654,8 +661,50 @@ send_async(Dispatcher, Name, RequestInfo, Request,
                                     timeout = Timeout,
                                     priority = Priority,
                                     id = TransId,
-                                    pattern_pid = PatternPid},
+                                    pattern_pid = PatternPid,
+                                    retry_pattern_pid = true},
             {ok, TransId, RequestState};
+        {error, _} = Error ->
+            Error
+    end.
+
+send_async_retry(Dispatcher,
+                 #request{name = Name,
+                          request_info = RequestInfo,
+                          request = Request,
+                          timeout = Timeout,
+                          priority = Priority,
+                          id = TransId,
+                          retry_pattern_pid = false} = RequestState) ->
+    case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
+        {ok, NewPatternPid} ->
+            case cloudi_service:send_async_active(Dispatcher, Name,
+                                                  RequestInfo, Request,
+                                                  Timeout, Priority,
+                                                  TransId, NewPatternPid) of
+                {ok, TransId} ->
+                    {ok, RequestState#request{pattern_pid = NewPatternPid}};
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+send_async_retry(Dispatcher,
+                 #request{name = Name,
+                          request_info = RequestInfo,
+                          request = Request,
+                          timeout = Timeout,
+                          priority = Priority,
+                          id = TransId,
+                          pattern_pid = PatternPid,
+                          retry_pattern_pid = true} = RequestState) ->
+    case cloudi_service:send_async_active(Dispatcher, Name,
+                                          RequestInfo, Request,
+                                          Timeout, Priority,
+                                          TransId, PatternPid) of
+        {ok, TransId} ->
+            {ok, RequestState};
         {error, _} = Error ->
             Error
     end.
