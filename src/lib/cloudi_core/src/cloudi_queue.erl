@@ -84,12 +84,15 @@
         priority :: cloudi_service:priority(),
         id :: cloudi_service:trans_id(),
         pattern_pid :: cloudi_service:pattern_pid(),
-        retry_count = 0 :: non_neg_integer()
+        retry_count = 0 :: non_neg_integer(),
+        retry_delay = false :: boolean()
     }).
 
 -record(cloudi_queue,
     {
-        retry_max :: non_neg_integer(),
+        retry :: non_neg_integer(),
+        retry_delay :: non_neg_integer(),
+        service = undefined :: undefined | pid(),
         validate_request_info :: undefined | fun((any()) -> boolean()),
         validate_request :: undefined | fun((any(), any()) -> boolean()),
         validate_response_info :: undefined | fun((any()) -> boolean()),
@@ -106,6 +109,7 @@
 -define(DEFAULT_RETRY,                                0). % see below:
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
+-define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
 -define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
 -define(DEFAULT_VALIDATE_REQUEST,             undefined).
 -define(DEFAULT_VALIDATE_RESPONSE_INFO,       undefined).
@@ -132,6 +136,7 @@
 
 -type options() ::
     list({retry, non_neg_integer()} |
+         {retry_delay, non_neg_integer()} |
          {validate_request_info,
           fun((RequestInfo :: cloudi_service:request_info()) -> boolean()) |
           {Module1 :: module(), Function1 :: atom()}} |
@@ -178,6 +183,7 @@ new(Options)
     when is_list(Options) ->
     Defaults = [
         {retry,                         ?DEFAULT_RETRY},
+        {retry_delay,                   ?DEFAULT_RETRY_DELAY},
         {validate_request_info,         ?DEFAULT_VALIDATE_REQUEST_INFO},
         {validate_request,              ?DEFAULT_VALIDATE_REQUEST},
         {validate_response_info,        ?DEFAULT_VALIDATE_RESPONSE_INFO},
@@ -185,12 +191,14 @@ new(Options)
         {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
         {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD}],
-    [RetryMax, ValidateRequestInfo0, ValidateRequest0,
+    [Retry, RetryDelay, ValidateRequestInfo0, ValidateRequest0,
      ValidateResponseInfo0, ValidateResponse0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod
      ] =
         cloudi_proplists:take_values(Defaults, Options),
-    true = is_integer(RetryMax) andalso (RetryMax >= 0),
+    true = is_integer(Retry) andalso (Retry >= 0),
+    true = is_integer(RetryDelay) andalso
+           (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
     ValidateRequestInfo1 = cloudi_args_type:
                            function_optional(ValidateRequestInfo0, 1),
     ValidateRequest1 = cloudi_args_type:
@@ -205,7 +213,8 @@ new(Options)
            (is_integer(FailuresSrcMaxPeriod) andalso
             (FailuresSrcMaxPeriod > 0)),
     #cloudi_queue{
-        retry_max = RetryMax,
+        retry = Retry,
+        retry_delay = RetryDelay,
         validate_request_info = ValidateRequestInfo1,
         validate_request = ValidateRequest1,
         validate_response_info = ValidateResponseInfo1,
@@ -235,13 +244,13 @@ failures(#cloudi_queue{failures_source = FailuresSrc}) ->
 %%-------------------------------------------------------------------------
 
 -spec recv(Dispatcher :: cloudi_service:dispatcher(),
-           Return :: #return_async_active{},
+           ReturnAsync :: #return_async_active{},
            State :: state()) ->
     {ok, NewState :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
 
-recv(Dispatcher, Return, State) ->
-    case recv_id(Dispatcher, Return, State) of
+recv(Dispatcher, ReturnAsync, State) ->
+    case recv_id(Dispatcher, ReturnAsync, State) of
         {ok, _, NewState} ->
             {ok, NewState};
         {{error, _}, _} = Error ->
@@ -537,14 +546,16 @@ size(#cloudi_queue{requests = Requests}) ->
 %%-------------------------------------------------------------------------
 
 -spec timeout(Dispatcher :: cloudi_service:dispatcher(),
-              #timeout_async_active{},
+              TimeoutAsync :: #timeout_async_active{},
               State :: state()) ->
     {ok, NewState :: state()} |
     {{error, Reason :: cloudi_service:error_reason()}, NewState :: state()}.
 
 timeout(Dispatcher,
-        #timeout_async_active{trans_id = TransId},
-        #cloudi_queue{retry_max = RetryMax,
+        #timeout_async_active{trans_id = TransId} = TimeoutAsync,
+        #cloudi_queue{retry = Retry,
+                      retry_delay = RetryDelay,
+                      service = ServiceOld,
                       failures_source_die = FailuresSrcDie,
                       failures_source_max_count = FailuresSrcMaxCount,
                       failures_source_max_period = FailuresSrcMaxPeriod,
@@ -552,7 +563,7 @@ timeout(Dispatcher,
                       requests = Requests} = State)
     when is_pid(Dispatcher) ->
     case maps:get(TransId, Requests) of
-        #request{retry_count = RetryMax} ->
+        #request{retry_count = Retry} ->
             NewFailuresSrc = failure(FailuresSrcDie,
                                      FailuresSrcMaxCount,
                                      FailuresSrcMaxPeriod,
@@ -560,6 +571,20 @@ timeout(Dispatcher,
             {{error, timeout},
              State#cloudi_queue{failures_source = NewFailuresSrc,
                                 requests = maps:remove(TransId, Requests)}};
+        #request{retry_delay = false} = RequestState
+            when RetryDelay > 0 ->
+            Service = if
+                ServiceOld =:= undefined ->
+                    cloudi_service:self(Dispatcher);
+                is_pid(ServiceOld) ->
+                    ServiceOld
+            end,
+            erlang:send_after(RetryDelay, Service, TimeoutAsync),
+            NewRequests = maps:put(TransId,
+                                   RequestState#request{retry_delay = true},
+                                   Requests),
+            {ok, State#cloudi_queue{service = Service,
+                                    requests = NewRequests}};
         #request{name = Name,
                  request_info = RequestInfo,
                  request = Request,
@@ -567,7 +592,7 @@ timeout(Dispatcher,
                  priority = Priority,
                  pattern_pid = PatternPid,
                  retry_count = I} = RequestState
-            when I < RetryMax ->
+            when I < Retry ->
             case cloudi_service:send_async_active(Dispatcher, Name,
                                                   RequestInfo, Request,
                                                   Timeout, Priority,

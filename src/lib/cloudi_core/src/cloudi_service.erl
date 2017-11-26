@@ -81,7 +81,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -401,7 +401,7 @@ demonitor(Dispatcher, MonitorRef, Options)
 %% ===Return the Erlang pid representing the service sender.===
 %% Use when the Dispatcher is stored and used after the current
 %% cloudi_service callback has returned.  This is only necessary when
-%% storing the dispatcher within the cloudi_service_init/3 callback,
+%% storing the dispatcher within the cloudi_service_init/4 callback,
 %% for use in a different callback.
 %% @end
 %%-------------------------------------------------------------------------
