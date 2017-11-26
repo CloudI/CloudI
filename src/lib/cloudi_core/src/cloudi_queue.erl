@@ -600,7 +600,8 @@ timeout(Dispatcher,
                 {ok, TransId} ->
                     NewRequests = maps:put(TransId,
                                            RequestState#request{
-                                               retry_count = I + 1},
+                                               retry_count = I + 1,
+                                               retry_delay = false},
                                            Requests),
                     {ok, State#cloudi_queue{requests = NewRequests}};
                 {error, _} = Error ->
