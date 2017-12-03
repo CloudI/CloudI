@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix the cloudi_service_monitoring aspect functions so they will
+      not cause an exception if the cloudi_service_monitoring_cloudi
+      module is reloaded
+
 2017-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Allow cloudi_queue to do a service name lookup for a retry if

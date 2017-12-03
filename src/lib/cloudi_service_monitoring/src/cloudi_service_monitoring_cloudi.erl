@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -55,6 +55,13 @@
          services_terminate/1,
          services_update/8,
          nodes_update/3]).
+
+%% internal functions used by anonymous aspect functions
+-export([aspect_init/0,
+         aspect_pid_to_service_id/1,
+         aspect_pid_to_object/0,
+         aspect_ref_to_object/2,
+         aspect_cloudi/0]).
 
 -include("cloudi_service_monitoring.hrl").
 -include("cloudi_service_monitoring_cloudi.hrl").
@@ -410,6 +417,83 @@ nodes_update(NodesVisible, NodesHidden, NodesAll) ->
     [metric(gauge, [visible], NodesVisible),
      metric(gauge, [hidden], NodesHidden),
      metric(gauge, [all], NodesAll)].
+
+%%%------------------------------------------------------------------------
+%%% Internal functions used by anonymous aspect functions
+%%%------------------------------------------------------------------------
+
+aspect_init() ->
+    try ets:lookup(?ETS_CONFIG, init) of
+        [] ->
+            undefined;
+        [{init, MetricPrefix, Driver}] ->
+            Pid = self(),
+            case service_metric_id_from_pid(Pid) of
+                undefined ->
+                    undefined;
+                ServiceMetricId ->
+                    ServiceMetricPrefix = MetricPrefix ++
+                                          [services | ServiceMetricId],
+                    PidObject = {Pid, ServiceMetricPrefix, Driver},
+                    true = ets:insert(?ETS_PID2METRIC, PidObject),
+                    PidObject
+            end
+    catch
+        error:badarg ->
+            undefined
+    end.
+
+aspect_pid_to_service_id(Pid) ->
+    try ets:lookup(?ETS_PID2METRIC, Pid) of
+        [] ->
+            undefined;
+        [{_, MetricPrefix, _}] ->
+            service_metric_id_from_metric_prefix(MetricPrefix)
+    catch
+        error:badarg ->
+            undefined
+    end.
+
+aspect_pid_to_object() ->
+    try ets:lookup(?ETS_PID2METRIC, self()) of
+        [] ->
+            undefined;
+        [PidObject] ->
+            PidObject
+    catch
+        error:badarg ->
+            undefined
+    end.
+
+aspect_ref_to_object(Ref, Dispatcher)
+    when is_reference(Ref) ->
+    try ets:lookup(?ETS_REF2METRIC, Ref) of
+        [] ->
+            case ets:lookup(?ETS_PID2METRIC, cloudi_service:self(Dispatcher)) of
+                [] ->
+                    undefined;
+                [PidObject] ->
+                    RefObject = {Ref, PidObject},
+                    true = ets:insert(?ETS_REF2METRIC, RefObject),
+                    PidObject
+            end;
+        [{Ref, PidObject}] ->
+            PidObject
+    catch
+        error:badarg ->
+            undefined
+    end.
+
+aspect_cloudi() ->
+    try ets:lookup(?ETS_CONFIG, init) of
+        [] ->
+            undefined;
+        [{_, _, _} = Init] ->
+            Init
+    catch
+        error:badarg ->
+            undefined
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -922,83 +1006,12 @@ metric(spiral, [_ | _] = Name, Value) ->
 metric(gauge, [_ | _] = Name, Value) ->
     {gauge, Name, Value}.
 
-aspect_init() ->
-    try ets:lookup(?ETS_CONFIG, init) of
-        [] ->
-            undefined;
-        [{init, MetricPrefix, Driver}] ->
-            Pid = self(),
-            case service_metric_id_from_pid(Pid) of
-                undefined ->
-                    undefined;
-                ServiceMetricId ->
-                    ServiceMetricPrefix = MetricPrefix ++
-                                          [services | ServiceMetricId],
-                    PidObject = {Pid, ServiceMetricPrefix, Driver},
-                    true = ets:insert(?ETS_PID2METRIC, PidObject),
-                    PidObject
-            end
-    catch
-        error:badarg ->
-            undefined
-    end.
-
-aspect_pid_to_service_id(Pid) ->
-    try ets:lookup(?ETS_PID2METRIC, Pid) of
-        [] ->
-            undefined;
-        [{_, MetricPrefix, _}] ->
-            service_metric_id_from_metric_prefix(MetricPrefix)
-    catch
-        error:badarg ->
-            undefined
-    end.
-
-aspect_pid_to_object() ->
-    try ets:lookup(?ETS_PID2METRIC, self()) of
-        [] ->
-            undefined;
-        [PidObject] ->
-            PidObject
-    catch
-        error:badarg ->
-            undefined
-    end.
-
-aspect_ref_to_object(Ref, Dispatcher)
-    when is_reference(Ref) ->
-    try ets:lookup(?ETS_REF2METRIC, Ref) of
-        [] ->
-            case ets:lookup(?ETS_PID2METRIC, cloudi_service:self(Dispatcher)) of
-                [] ->
-                    undefined;
-                [PidObject] ->
-                    RefObject = {Ref, PidObject},
-                    true = ets:insert(?ETS_REF2METRIC, RefObject),
-                    PidObject
-            end;
-        [{Ref, PidObject}] ->
-            PidObject
-    catch
-        error:badarg ->
-            undefined
-    end.
-
-aspect_cloudi() ->
-    try ets:lookup(?ETS_CONFIG, init) of
-        [] ->
-            undefined;
-        [{_, _, _} = Init] ->
-            Init
-    catch
-        error:badarg ->
-            undefined
-    end.
-
 aspect_init_after_internal_f() ->
     fun(_Args, _Prefix, _Timeout, State, _Dispatcher) ->
-        case aspect_init() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_init() of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(spiral, MetricPrefix ++ [init], 1, Driver);
             undefined ->
                 ok
@@ -1008,8 +1021,10 @@ aspect_init_after_internal_f() ->
 
 aspect_init_after_external_f() ->
     fun(_CommandLine, _Prefix, _Timeout, State) ->
-        case aspect_init() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_init() of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(spiral, MetricPrefix ++ [init], 1, Driver);
             undefined ->
                 ok
@@ -1020,13 +1035,16 @@ aspect_init_after_external_f() ->
 aspect_request_before_internal_f(Ref) ->
     fun(_Type, _Name, _Pattern, _RequestInfo, _Request,
         _Timeout, _Priority, _TransId, Source, State, Dispatcher) ->
-        case aspect_ref_to_object(Ref, Dispatcher) of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_ref_to_object(Ref, Dispatcher) of
             {_, MetricPrefix, Driver} ->
-                case aspect_pid_to_service_id(Source) of
+                case ?MODULE:aspect_pid_to_service_id(Source) of
                     undefined ->
+                        cloudi_service_monitoring:
                         update(spiral, MetricPrefix ++ [request, nonservice],
                                1, Driver);
                     ServiceMetricId ->
+                        cloudi_service_monitoring:
                         update(spiral, MetricPrefix ++ [request |
                                                         ServiceMetricId],
                                1, Driver)
@@ -1040,13 +1058,16 @@ aspect_request_before_internal_f(Ref) ->
 aspect_request_before_external_f() ->
     fun(_Type, _Name, _Pattern, _RequestInfo, _Request,
         _Timeout, _Priority, _TransId, Source, State) ->
-        case aspect_pid_to_object() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_pid_to_object() of
             {_, MetricPrefix, Driver} ->
-                case aspect_pid_to_service_id(Source) of
+                case ?MODULE:aspect_pid_to_service_id(Source) of
                     undefined ->
+                        cloudi_service_monitoring:
                         update(spiral, MetricPrefix ++ [request, nonservice],
                                1, Driver);
                     ServiceMetricId ->
+                        cloudi_service_monitoring:
                         update(spiral, MetricPrefix ++ [request |
                                                         ServiceMetricId],
                                1, Driver)
@@ -1060,8 +1081,10 @@ aspect_request_before_external_f() ->
 aspect_request_after_internal_f(Ref) ->
     fun(_Type, _Name, _Pattern, _RequestInfo, _Request,
         Timeout, _Priority, _TransId, _Source, _Result, State, Dispatcher) ->
-        case aspect_ref_to_object(Ref, Dispatcher) of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_ref_to_object(Ref, Dispatcher) of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(histogram, MetricPrefix ++ [request, timeout],
                        Timeout, Driver);
             undefined ->
@@ -1073,8 +1096,10 @@ aspect_request_after_internal_f(Ref) ->
 aspect_request_after_external_f() ->
     fun(_Type, _Name, _Pattern, _RequestInfo, _Request,
         Timeout, _Priority, _TransId, _Source, _Result, State) ->
-        case aspect_pid_to_object() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_pid_to_object() of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(histogram, MetricPrefix ++ [request, timeout],
                        Timeout, Driver);
             undefined ->
@@ -1085,8 +1110,10 @@ aspect_request_after_external_f() ->
 
 aspect_info_before_internal_f(Ref) ->
     fun(_Request, State, Dispatcher) ->
-        case aspect_ref_to_object(Ref, Dispatcher) of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_ref_to_object(Ref, Dispatcher) of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(spiral, MetricPrefix ++ [info], 1, Driver);
             undefined ->
                 ok
@@ -1096,7 +1123,8 @@ aspect_info_before_internal_f(Ref) ->
 
 aspect_info_after_internal_f(_Ref) ->
     fun(_Request, State, _Dispatcher) ->
-        %case aspect_ref_to_object(Ref, Dispatcher) of
+        % only remote function calls here to allow a module reload
+        %case ?MODULE:aspect_ref_to_object(Ref, Dispatcher) of
         %    {_, MetricPrefix, Driver} ->
         %        ok;
         %    undefined ->
@@ -1107,8 +1135,10 @@ aspect_info_after_internal_f(_Ref) ->
 
 aspect_terminate_before_internal_f() ->
     fun(_Reason, _Timeout, State) ->
-        case aspect_pid_to_object() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_pid_to_object() of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(counter, MetricPrefix ++ [terminate], 1, Driver);
             undefined ->
                 ok
@@ -1118,8 +1148,10 @@ aspect_terminate_before_internal_f() ->
 
 aspect_terminate_before_external_f() ->
     fun(_Reason, _Timeout, State) ->
-        case aspect_pid_to_object() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_pid_to_object() of
             {_, MetricPrefix, Driver} ->
+                cloudi_service_monitoring:
                 update(counter, MetricPrefix ++ [terminate], 1, Driver);
             undefined ->
                 ok
@@ -1131,9 +1163,11 @@ aspect_log_f(OutputTime)
     when OutputTime =:= 'before'; OutputTime =:= 'after' ->
     fun(Level, _Timestamp, _Node, _Pid,
         _Module, _Line, _Function, _Arity, _MetaData, _LogMessage) ->
-        case aspect_cloudi() of
+        % only remote function calls here to allow a module reload
+        case ?MODULE:aspect_cloudi() of
             {_, MetricPrefix, Driver} ->
                 Name = MetricPrefix ++ [logging, output, OutputTime, Level],
+                cloudi_service_monitoring:
                 update(spiral, Name, 1, Driver);
             undefined ->
                 ok
@@ -1236,7 +1270,4 @@ service_metric_id_index(Type, FileName, ID) ->
             1
     end,
     erlang:integer_to_list(Count - 1).
-
-update(Type, Name, Value, Driver) ->
-    cloudi_service_monitoring:update(Type, Name, Value, Driver).
 
