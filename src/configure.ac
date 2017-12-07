@@ -39,6 +39,10 @@ AC_SUBST(cloudi_prefix, ["$libdir/cloudi-$VERSION"])
 AC_SUBST(cloudi_logdir, ["$localstatedir/log/cloudi"])
 AC_SUBST(cloudi_confdir, ["$sysconfdir/cloudi"])
 AC_SUBST(cloudi_bindir, ["$cloudi_prefix/bin"])
+if test "x$prefix" = "xNONE"; then
+    # to allow using $prefix in the strings below
+    prefix="/usr/local"
+fi
 
 AC_SUBST(CLOUDI_TMP_BIN_SCRIPT,
          m4_maketemp(/tmp/cloudi_tmp_bin_script_XXXXXX))

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix optional integration tests configuration use of configure prefix
+    * Fix python quickstart for python 3 use
+
 2017-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix the cloudi_service_monitoring aspect functions so they will

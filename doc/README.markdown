@@ -963,7 +963,7 @@
             def __hello_world(self, command, name, pattern,
                               request_info, request,
                               timeout, priority, trans_id, pid):
-                return 'Hello World!'
+                return b'Hello World!'
         
         if __name__ == '__main__':
             assert API.thread_count() == 1
@@ -974,9 +974,10 @@
 1.  Now it is necessary to create the CloudI service configuration that
     specifies both the initialization and fault-tolerance constraints
     the CloudI service should be executed with
-    (with the proplist format to rely on defaults):
+    (either python2 or python3 will work and the python executable name
+     may instead be "python" on your system):
 
-        export PYTHON=`which python`
+        export PYTHON=`which python3`
         export PWD=`pwd`
         cat << EOF > hello_world.conf
         [[{prefix, "/quickstart/python/"},
