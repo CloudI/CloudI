@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_timestamp).
@@ -60,7 +60,35 @@
 
 -type time_unit() :: second | millisecond | microsecond | nanosecond |
                      native | perf_counter | pos_integer().
--export_type([time_unit/0]).
+% assuming that no clocks are set to before the
+% UNIX epoch (1970-01-01T00:00:00)
+-type seconds_epoch() :: non_neg_integer().
+-type milliseconds_epoch() :: non_neg_integer().
+-type microseconds_epoch() :: non_neg_integer().
+-type nanoseconds_epoch() :: non_neg_integer().
+% monotonic time values may be negative
+-type seconds_monotonic() :: integer().
+-type milliseconds_monotonic() :: integer().
+-type microseconds_monotonic() :: integer().
+-type nanoseconds_monotonic() :: integer().
+% a value coming from the hardware starting at some undefined point in time
+-type seconds_hardware() :: non_neg_integer().
+-type milliseconds_hardware() :: non_neg_integer().
+-type microseconds_hardware() :: non_neg_integer().
+-type nanoseconds_hardware() :: non_neg_integer().
+-export_type([time_unit/0,
+              seconds_epoch/0,
+              milliseconds_epoch/0,
+              microseconds_epoch/0,
+              nanoseconds_epoch/0,
+              seconds_monotonic/0,
+              milliseconds_monotonic/0,
+              microseconds_monotonic/0,
+              nanoseconds_monotonic/0,
+              seconds_hardware/0,
+              milliseconds_hardware/0,
+              microseconds_hardware/0,
+              nanoseconds_hardware/0]).
 
 -include("cloudi_core_i_constants.hrl").
 
@@ -165,7 +193,7 @@ native_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec seconds() -> non_neg_integer().
+-spec seconds() -> seconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds() ->
@@ -181,7 +209,7 @@ seconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec seconds_monotonic() -> integer().
+-spec seconds_monotonic() -> seconds_monotonic().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_monotonic() ->
@@ -197,7 +225,7 @@ seconds_monotonic() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec seconds_os() -> non_neg_integer().
+-spec seconds_os() -> seconds_hardware().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_os() ->
@@ -214,7 +242,7 @@ seconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec milliseconds() -> non_neg_integer().
+-spec milliseconds() -> milliseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds() ->
@@ -230,7 +258,7 @@ milliseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec milliseconds_monotonic() -> integer().
+-spec milliseconds_monotonic() -> milliseconds_monotonic().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds_monotonic() ->
@@ -246,7 +274,7 @@ milliseconds_monotonic() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec milliseconds_os() -> non_neg_integer().
+-spec milliseconds_os() -> milliseconds_hardware().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds_os() ->
@@ -263,7 +291,7 @@ milliseconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec microseconds() -> non_neg_integer().
+-spec microseconds() -> microseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds() ->
@@ -279,7 +307,7 @@ microseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec microseconds_monotonic() -> integer().
+-spec microseconds_monotonic() -> microseconds_monotonic().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds_monotonic() ->
@@ -295,7 +323,7 @@ microseconds_monotonic() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec microseconds_os() -> non_neg_integer().
+-spec microseconds_os() -> microseconds_hardware().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds_os() ->
@@ -312,7 +340,7 @@ microseconds_os() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nanoseconds() -> non_neg_integer().
+-spec nanoseconds() -> nanoseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds() ->
@@ -328,7 +356,7 @@ nanoseconds() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nanoseconds_monotonic() -> integer().
+-spec nanoseconds_monotonic() -> nanoseconds_monotonic().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds_monotonic() ->
@@ -344,7 +372,7 @@ nanoseconds_monotonic() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nanoseconds_os() -> non_neg_integer().
+-spec nanoseconds_os() -> nanoseconds_hardware().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds_os() ->
@@ -390,7 +418,7 @@ seconds_filter([Seconds | L], Output, Count, SecondsNow, MaxPeriod) ->
 %%-------------------------------------------------------------------------
 
 -spec uptime() ->
-    integer().
+    non_neg_integer().
 
 uptime() ->
     uptime(second).
@@ -402,7 +430,7 @@ uptime() ->
 %%-------------------------------------------------------------------------
 
 -spec uptime(TimeUnit :: second | millisecond | microsecond | nanosecond) ->
-    integer().
+    non_neg_integer().
 
 uptime(TimeUnit)
     when TimeUnit =:= second; TimeUnit =:= millisecond;

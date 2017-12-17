@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add cloudi_timestamp types
+    * Add log_execution_time argument to cloudi_service_map_reduce
+
 2017-12-07 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix optional integration tests configuration use of configure prefix
