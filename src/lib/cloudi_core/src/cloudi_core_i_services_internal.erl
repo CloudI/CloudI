@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -1511,6 +1511,8 @@ handle_info({'cloudi_service_send_async_minimal',
             #state{uuid_generator = UUID,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow,
                    options = #config_service_options{
                        priority_default = PriorityDefault,
                        request_name_lookup = RequestNameLookup,
@@ -1525,35 +1527,43 @@ handle_info({'cloudi_service_send_async_minimal',
                    Timeout, PriorityDefault, TransId, ReceiverPid},
             {noreply, State#state{uuid_generator = NewUUID}};
         undefined ->
-            case destination_get(DestRefresh, Scope, Name, ReceiverPid,
-                                 Groups, Timeout) of
-                {error, timeout} ->
+            case destination_allowed(Name, DestDeny, DestAllow) of
+                true ->
+                    case destination_get(DestRefresh, Scope, Name, ReceiverPid,
+                                         Groups, Timeout) of
+                        {error, timeout} ->
+                            ReceiverPid ! {'cloudi_service_send_async_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {error, _} when RequestNameLookup =:= async ->
+                            ReceiverPid ! {'cloudi_service_send_async_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
+                            erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
+                                              {'cloudi_service_send_async_minimal',
+                                               Name, RequestInfo, Request,
+                                               Timeout - ?SEND_ASYNC_INTERVAL,
+                                               Destination, ReceiverPid}),
+                            {noreply, State};
+                        {error, _} ->
+                            ReceiverPid ! {'cloudi_service_send_async_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {ok, Pattern, Pid} ->
+                            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+                            ReceiverPid ! {'cloudi_service_send_async_minimal',
+                                           TransId},
+                            Pid ! {'cloudi_service_send_async',
+                                   Name, Pattern, RequestInfo, Request,
+                                   Timeout, PriorityDefault,
+                                   TransId, ReceiverPid},
+                            {noreply, State#state{uuid_generator = NewUUID}}
+                    end;
+                false ->
                     ReceiverPid ! {'cloudi_service_send_async_minimal',
                                    timeout},
-                    {noreply, State};
-                {error, _} when RequestNameLookup =:= async ->
-                    ReceiverPid ! {'cloudi_service_send_async_minimal',
-                                   timeout},
-                    {noreply, State};
-                {error, _} when Timeout >= ?SEND_ASYNC_INTERVAL ->
-                    erlang:send_after(?SEND_ASYNC_INTERVAL, self(),
-                                      {'cloudi_service_send_async_minimal',
-                                       Name, RequestInfo, Request,
-                                       Timeout - ?SEND_ASYNC_INTERVAL,
-                                       Destination, ReceiverPid}),
-                    {noreply, State};
-                {error, _} ->
-                    ReceiverPid ! {'cloudi_service_send_async_minimal',
-                                   timeout},
-                    {noreply, State};
-                {ok, Pattern, Pid} ->
-                    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
-                    ReceiverPid ! {'cloudi_service_send_async_minimal',
-                                   TransId},
-                    Pid ! {'cloudi_service_send_async',
-                           Name, Pattern, RequestInfo, Request,
-                           Timeout, PriorityDefault, TransId, ReceiverPid},
-                    {noreply, State#state{uuid_generator = NewUUID}}
+                    {noreply, State}
             end
     end);
 
@@ -1563,6 +1573,8 @@ handle_info({'cloudi_service_send_sync_minimal',
             #state{uuid_generator = UUID,
                    dest_refresh = DestRefresh,
                    cpg_data = Groups,
+                   dest_deny = DestDeny,
+                   dest_allow = DestAllow,
                    options = #config_service_options{
                        priority_default = PriorityDefault,
                        request_name_lookup = RequestNameLookup,
@@ -1577,35 +1589,43 @@ handle_info({'cloudi_service_send_sync_minimal',
                    Timeout, PriorityDefault, TransId, ReceiverPid},
             {noreply, State#state{uuid_generator = NewUUID}};
         undefined ->
-            case destination_get(DestRefresh, Scope, Name, ReceiverPid,
-                                 Groups, Timeout) of
-                {error, timeout} ->
+            case destination_allowed(Name, DestDeny, DestAllow) of
+                true ->
+                    case destination_get(DestRefresh, Scope, Name, ReceiverPid,
+                                         Groups, Timeout) of
+                        {error, timeout} ->
+                            ReceiverPid ! {'cloudi_service_send_sync_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {error, _} when RequestNameLookup =:= async ->
+                            ReceiverPid ! {'cloudi_service_send_sync_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
+                            erlang:send_after(?SEND_SYNC_INTERVAL, self(),
+                                              {'cloudi_service_send_sync_minimal',
+                                               Name, RequestInfo, Request,
+                                               Timeout - ?SEND_SYNC_INTERVAL,
+                                               Destination, ReceiverPid}),
+                            {noreply, State};
+                        {error, _} ->
+                            ReceiverPid ! {'cloudi_service_send_sync_minimal',
+                                           timeout},
+                            {noreply, State};
+                        {ok, Pattern, Pid} ->
+                            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+                            ReceiverPid ! {'cloudi_service_send_sync_minimal',
+                                           TransId},
+                            Pid ! {'cloudi_service_send_sync',
+                                   Name, Pattern, RequestInfo, Request,
+                                   Timeout, PriorityDefault,
+                                   TransId, ReceiverPid},
+                            {noreply, State#state{uuid_generator = NewUUID}}
+                    end;
+                false ->
                     ReceiverPid ! {'cloudi_service_send_sync_minimal',
                                    timeout},
-                    {noreply, State};
-                {error, _} when RequestNameLookup =:= async ->
-                    ReceiverPid ! {'cloudi_service_send_sync_minimal',
-                                   timeout},
-                    {noreply, State};
-                {error, _} when Timeout >= ?SEND_SYNC_INTERVAL ->
-                    erlang:send_after(?SEND_SYNC_INTERVAL, self(),
-                                      {'cloudi_service_send_sync_minimal',
-                                       Name, RequestInfo, Request,
-                                       Timeout - ?SEND_SYNC_INTERVAL,
-                                       Destination, ReceiverPid}),
-                    {noreply, State};
-                {error, _} ->
-                    ReceiverPid ! {'cloudi_service_send_sync_minimal',
-                                   timeout},
-                    {noreply, State};
-                {ok, Pattern, Pid} ->
-                    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
-                    ReceiverPid ! {'cloudi_service_send_sync_minimal',
-                                   TransId},
-                    Pid ! {'cloudi_service_send_sync',
-                           Name, Pattern, RequestInfo, Request,
-                           Timeout, PriorityDefault, TransId, ReceiverPid},
-                    {noreply, State#state{uuid_generator = NewUUID}}
+                    {noreply, State}
             end
     end);
 
