@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add package name to Java CloudI API for Java 9
+
 2017-12-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix bug where the dest_list_deny and dest_list_allow were not checked

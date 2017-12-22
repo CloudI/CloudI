@@ -4,7 +4,8 @@
 instdir = "$(DESTDIR)$(cloudi_prefix)/api/java"
 CLEANFILES = cloudi.jar
 
-cloudi.jar: org/cloudi/API.class \
+cloudi.jar: $(srcdir)/manifest.txt \
+            org/cloudi/API.class \
             org/cloudi/Function9.class \
             org/cloudi/FunctionInterface9.class \
             org/cloudi/FunctionObject9.class \
@@ -64,7 +65,7 @@ cloudi.jar: org/cloudi/API.class \
             com/ericsson/otp/erlang/OtpSystem.class \
             com/ericsson/otp/erlang/OtpTransportFactory.class \
             com/ericsson/otp/erlang/OtpTransport.class
-	$(JAR) cvf cloudi.jar com org
+	$(JAR) cvfm cloudi.jar $(srcdir)/manifest.txt com org
 
 all-local: cloudi.jar
 
