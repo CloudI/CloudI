@@ -19,8 +19,7 @@
 %%%------------------------------------------------------------------------
 
 connect_type() ->
-    % must be called within internal Erlang processes
-    case application:get_env(node_type) of
+    case application:get_env(nodefinder, node_type) of
         {ok, V} when (V =:= visible) orelse (V =:= hidden) ->
             V;
         undefined ->

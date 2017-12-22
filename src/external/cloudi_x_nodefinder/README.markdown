@@ -30,7 +30,6 @@ EC2 tags and groups selection are selected with the following syntax
 Build
 -----
 
-    rebar get-deps
     rebar compile
 
 Example
@@ -38,10 +37,9 @@ Example
 
 **LAN multicast**
 
-    $ erl -sname foo1@localhost -pz ebin/ -pz deps/*/ebin
+    $ erl -sname foo1@localhost -pz ebin/
     (foo1@localhost)1> application:ensure_all_started(nodefinder).
-    {ok,[asn1,public_key,ssl,xmerl,inets,jsx,erlcloud,
-         nodefinder]}
+    {ok,[inets,xmerl,crypto,asn1,public_key,ssl,nodefinder]}
     (foo1@localhost)2> nodes(). 
     []
     (foo1@localhost)3> nodefinder:multicast_start().
@@ -57,10 +55,9 @@ Example
     (foo1@localhost)8> nodefinder:multicast_stop().
     {error,not_found}
     
-    $ erl -sname foo2@localhost -pz ebin/ -pz deps/*/ebin
+    $ erl -sname foo2@localhost -pz ebin/
     (foo2@localhost)1> application:ensure_all_started(nodefinder).
-    {ok,[asn1,public_key,ssl,xmerl,inets,jsx,erlcloud,
-         nodefinder]}
+    {ok,[inets,xmerl,crypto,asn1,public_key,ssl,nodefinder]}
     (foo2@localhost)2> nodes(). 
     []
     (foo2@localhost)3> nodefinder:multicast_start().
@@ -81,8 +78,7 @@ Functionality details:
 
 * The same Erlang distributed node name is used
   (separate Erlang VMs must be on separate EC2 instances)
-* Connections between availability zones are not supported due to the
-  high latency
+* Connections between regions are not supported due to the high latency
 
 Add security group TCP rules for:
 
@@ -96,7 +92,7 @@ Example:
         {inet_dist_listen_min, 4374},
         {inet_dist_listen_max, 4474}]}].
     EOF
-    $ erl -name test -config sys.config -pz ebin/ -pz deps/*/ebin
+    $ erl -name test -config sys.config -pz ebin/
     > application:ensure_all_started(nodefinder).
     > nodes().
     > Host = "ec2.amazonaws.com".
@@ -126,7 +122,6 @@ Example:
 Tests
 -----
 
-    rebar get-deps
     rebar compile
     rebar eunit skip_deps=true
 

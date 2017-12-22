@@ -224,8 +224,8 @@ Erlang `nodefinder`
 `Strategies for automatic node discovery in Erlang`
 
 - `https://github.com/okeuday/nodefinder`
-- `commit 97d0585f76a8300eb97ffd1bd612f533189f131d (v1.7.2)`
-- `Wed Sep 13 11:03:08 PDT 2017`
+- `commit 0aae09e15a86731111a9edd9f3dd2a5ab1d76f12`
+- `Thu Dec 21 21:04:42 PST 2017`
 - `MIT`
 
 Erlang `parse_trans`

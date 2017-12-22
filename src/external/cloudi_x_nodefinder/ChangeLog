@@ -1,3 +1,6 @@
+=Version 1.7.3=
+  * multicast protocol change to v3
+
 =Version 1.3.2=
   * major cleanup
   * add nodefinder_ec2 with boolean expressions for instance selection
