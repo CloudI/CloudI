@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_rate_based_configuration).
@@ -265,22 +265,24 @@ restart_delay_validate(Options) ->
 
 %% provide the value result
 
--spec restart_delay_value(RestartTimes :: list(non_neg_integer()),
+-spec restart_delay_value(RestartTimes ::
+                              list(cloudi_timestamp:seconds_monotonic()),
                           MaxT :: non_neg_integer(),
                           State :: #restart_delay{} | false) ->
     false |
     {NewRestartCount :: non_neg_integer(),
-     NewRestartTimes :: list(non_neg_integer()),
+     NewRestartTimes :: list(cloudi_timestamp:seconds_monotonic()),
      Value :: 0..?TIMEOUT_MAX_ERLANG}.
 
 restart_delay_value(_, _, false) ->
     false;
 restart_delay_value(RestartTimes, MaxT,
                     #restart_delay{} = State) ->
-    SecondsNow = cloudi_timestamp:seconds(),
+    SecondsNow = cloudi_timestamp:seconds_monotonic(),
     {NewRestartCount,
-     NewRestartTimes} = cloudi_timestamp:seconds_filter(RestartTimes,
-                                                        SecondsNow, MaxT),
+     NewRestartTimes} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
+                                                                  SecondsNow,
+                                                                  MaxT),
     Value = restart_delay_value_now(NewRestartCount, State),
     {NewRestartCount, NewRestartTimes, Value}.
 

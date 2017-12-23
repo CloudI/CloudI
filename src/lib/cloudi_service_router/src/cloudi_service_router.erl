@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -88,7 +88,7 @@
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
         failures_source = #{}
-            :: #{pid() := list(erlang:timestamp())},
+            :: #{pid() := list(cloudi_timestamp:seconds_monotonic())},
         destinations
             :: cloudi_x_trie:cloudi_x_trie() % pattern -> #destination{}
     }).
@@ -321,7 +321,7 @@ failure(false, _, _, _, Failures) ->
 failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            SecondsNow = cloudi_timestamp:seconds(),
+            SecondsNow = cloudi_timestamp:seconds_monotonic(),
             case maps:find(Pid, Failures) of
                 {ok, FailureList} ->
                     failure_check(SecondsNow, FailureList,
@@ -351,8 +351,9 @@ failure_check(SecondsNow, FailureList, MaxCount, infinity, Pid, Failures) ->
                   MaxCount, Pid, Failures);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
     {NewFailureCount,
-     NewFailureList} = cloudi_timestamp:seconds_filter(FailureList,
-                                                       SecondsNow, MaxPeriod),
+     NewFailureList} = cloudi_timestamp:seconds_filter_monotonic(FailureList,
+                                                                 SecondsNow,
+                                                                 MaxPeriod),
     failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
                   MaxCount, Pid, Failures).
 

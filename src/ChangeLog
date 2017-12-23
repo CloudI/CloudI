@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Switch CloudI service restart times to use monotonic time
+    * Switch cloudi_queue to use monotonic time
+    * Switch cloudi_service_monitoring to use monotonic time
+    * Switch cloudi_service_quorum to use monotonic time
+    * Switch cloudi_service_request_rate to use monotonic time
+    * Switch cloudi_service_router to use monotonic time
+    * Switch cloudi_service_validate to use monotonic time
+    * Fix cloudi_timestamp type additions
+    * Add cloudi_timestamp functions seconds_filter_monotonic/3,
+      uptime_days/0, uptime_months/0, uptime_years/0
+
 2017-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add package name to Java CloudI API for Java 9

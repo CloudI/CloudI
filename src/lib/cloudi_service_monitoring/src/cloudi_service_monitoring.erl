@@ -69,7 +69,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).
@@ -665,7 +665,7 @@ cloudi_service_handle_info(cloudi_update,
                                   nodes_all = NodesAll} = State,
                            _Dispatcher) ->
     erlang:send_after(Interval * 1000, Service, cloudi_update),
-    Start = cloudi_timestamp:milliseconds(),
+    Start = cloudi_timestamp:milliseconds_monotonic(),
     ServicesNew = case cloudi_service_monitoring_cloudi:
                        services_state(Interval * 1000) of
         {ok, ServicesUpdate} ->
@@ -694,7 +694,7 @@ cloudi_service_handle_info(cloudi_update,
                 MetricPrefix ++ [services], Driver),
     ok = update(NodesMetrics,
                 MetricPrefix ++ [nodes], Driver),
-    Elapsed = cloudi_timestamp:milliseconds() - Start,
+    Elapsed = cloudi_timestamp:milliseconds_monotonic() - Start,
     if
         Elapsed > (Interval * 1000) div 2 ->
             ?LOG_WARN("CloudI update took ~.3f s", [Elapsed / 1000]);
@@ -709,9 +709,9 @@ cloudi_service_handle_info(erlang_update,
                                   erlang_interval = ErlangInterval} = State,
                            _Dispatcher) ->
     erlang:send_after(ErlangInterval * 1000, Service, erlang_update),
-    Start = cloudi_timestamp:milliseconds(),
+    Start = cloudi_timestamp:milliseconds_monotonic(),
     ErlangStateNew = erlang_update(ErlangStateOld),
-    Elapsed = cloudi_timestamp:milliseconds() - Start,
+    Elapsed = cloudi_timestamp:milliseconds_monotonic() - Start,
     if
         Elapsed > (ErlangInterval * 1000) div 2 ->
             ?LOG_WARN("Erlang update took ~.3f s", [Elapsed / 1000]);

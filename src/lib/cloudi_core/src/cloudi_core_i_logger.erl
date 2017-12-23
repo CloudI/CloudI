@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -1889,7 +1889,7 @@ nanoseconds_to_seconds_list(NS) ->
         L1 == [] ->
             [$0 | SecondsFraction];
         true ->
-            lists:reverse(L1) ++ SecondsFraction
+            lists:reverse(L1, SecondsFraction)
     end.
 
 int_to_dec_list(I) when is_integer(I), I >= 0 ->

@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate).
@@ -99,12 +99,12 @@
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
         failures_source = #{}
-            :: #{pid() := list(erlang:timestamp())},
+            :: #{pid() := list(cloudi_timestamp:seconds_monotonic())},
         failures_dest_die :: boolean(),
         failures_dest_max_count :: pos_integer(),
         failures_dest_max_period :: infinity | pos_integer(),
         failures_dest = #{}
-            :: #{pid() := list(erlang:timestamp())},
+            :: #{pid() := list(cloudi_timestamp:seconds_monotonic())},
         requests = #{}
             :: #{cloudi_service:trans_id() := #request{}}
     }).
@@ -371,7 +371,7 @@ failure(false, _, _, _, Failures) ->
 failure(true, MaxCount, MaxPeriod, Pid, Failures) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            SecondsNow = cloudi_timestamp:seconds(),
+            SecondsNow = cloudi_timestamp:seconds_monotonic(),
             case maps:find(Pid, Failures) of
                 {ok, FailureList} ->
                     failure_check(SecondsNow, FailureList,
@@ -401,8 +401,9 @@ failure_check(SecondsNow, FailureList, MaxCount, infinity, Pid, Failures) ->
                   MaxCount, Pid, Failures);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod, Pid, Failures) ->
     {NewFailureCount,
-     NewFailureList} = cloudi_timestamp:seconds_filter(FailureList,
-                                                       SecondsNow, MaxPeriod),
+     NewFailureList} = cloudi_timestamp:seconds_filter_monotonic(FailureList,
+                                                                 SecondsNow,
+                                                                 MaxPeriod),
     failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
                   MaxCount, Pid, Failures).
 

@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_reload).
@@ -52,8 +52,8 @@
 
 -record(state,
     {
-        services = [],
-        reload_start
+        services = [] :: list(atom()),
+        reload_start :: cloudi_timestamp:seconds_epoch()
     }).
 
 -include("cloudi_logger.hrl").
@@ -174,7 +174,7 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 
 reload_start() ->
-    ReloadStart = cloudi_timestamp:seconds(),
+    ReloadStart = cloudi_timestamp:seconds_os(),
     erlang:send_after(?SERVICE_INTERNAL_RELOAD, self(), reload),
     ReloadStart.
 

@@ -80,7 +80,7 @@
         pids :: list(pid()),
         monitor :: undefined | reference(),
         restart_count = 0 :: non_neg_integer(),
-        restart_times = [] :: list(non_neg_integer()),
+        restart_times = [] :: list(cloudi_timestamp:seconds_monotonic()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
         restart_delay :: tuple() | false,
         % from the supervisor behavior documentation:
@@ -569,7 +569,7 @@ restart_stage3(#service{service_m = M,
                         restart_times = []} = Service,
                Services, State, ServiceId, OldPid) ->
     % first restart
-    SecondsNow = cloudi_timestamp:seconds(),
+    SecondsNow = cloudi_timestamp:seconds_monotonic(),
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
@@ -614,10 +614,11 @@ restart_stage3(#service{restart_count = RestartCount,
                Services, State, ServiceId, OldPid)
     when MaxR == RestartCount ->
     % last restart?
-    SecondsNow = cloudi_timestamp:seconds(),
+    SecondsNow = cloudi_timestamp:seconds_monotonic(),
     {NewRestartCount,
-     NewRestartTimes} = cloudi_timestamp:seconds_filter(RestartTimes,
-                                                        SecondsNow, MaxT),
+     NewRestartTimes} = cloudi_timestamp:seconds_filter_monotonic(RestartTimes,
+                                                                  SecondsNow,
+                                                                  MaxT),
     if
         NewRestartCount < RestartCount ->
             restart_stage3(Service#service{restart_count = NewRestartCount,
@@ -638,7 +639,7 @@ restart_stage3(#service{service_m = M,
                         restart_times = RestartTimes} = Service,
                Services, State, ServiceId, OldPid) ->
     % typical restart scenario
-    SecondsNow = cloudi_timestamp:seconds(),
+    SecondsNow = cloudi_timestamp:seconds_monotonic(),
     R = RestartCount + 1,
     T = erlang:max(SecondsNow - lists:min(RestartTimes), 0),
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of

@@ -101,7 +101,7 @@
         failures_source_die :: boolean(),
         failures_source_max_count :: pos_integer(),
         failures_source_max_period :: infinity | pos_integer(),
-        failures_source = [] :: list(erlang:timestamp()),
+        failures_source = [] :: list(cloudi_timestamp:seconds_monotonic()),
         requests = #{} :: #{cloudi_service:trans_id() := #request{}}
     }).
 
@@ -712,7 +712,8 @@ send_async_retry(Dispatcher,
 failure(false, _, _, FailureList) ->
     FailureList;
 failure(true, MaxCount, MaxPeriod, FailureList) ->
-    failure_check(cloudi_timestamp:seconds(), FailureList, MaxCount, MaxPeriod).
+    failure_check(cloudi_timestamp:seconds_monotonic(), FailureList,
+                  MaxCount, MaxPeriod).
 
 failure_store(FailureList, FailureCount, MaxCount) ->
     if
@@ -729,8 +730,9 @@ failure_check(SecondsNow, FailureList, MaxCount, infinity) ->
                   MaxCount);
 failure_check(SecondsNow, FailureList, MaxCount, MaxPeriod) ->
     {NewFailureCount,
-     NewFailureList} = cloudi_timestamp:seconds_filter(FailureList,
-                                                       SecondsNow, MaxPeriod),
+     NewFailureList} = cloudi_timestamp:seconds_filter_monotonic(FailureList,
+                                                                 SecondsNow,
+                                                                 MaxPeriod),
     failure_store([SecondsNow | NewFailureList], NewFailureCount + 1,
                   MaxCount).
 

@@ -55,13 +55,16 @@
          nanoseconds_monotonic/0,
          nanoseconds_os/0,
          seconds_filter/3,
+         seconds_filter_monotonic/3,
          uptime/0,
-         uptime/1]).
+         uptime/1,
+         uptime_days/0,
+         uptime_months/0,
+         uptime_years/0]).
 
 -type time_unit() :: second | millisecond | microsecond | nanosecond |
                      native | perf_counter | pos_integer().
-% assuming that no clocks are set to before the
-% UNIX epoch (1970-01-01T00:00:00)
+% UNIX epoch (1970-01-01T00:00:00) offsets (POSIX time)
 -type seconds_epoch() :: non_neg_integer().
 -type milliseconds_epoch() :: non_neg_integer().
 -type microseconds_epoch() :: non_neg_integer().
@@ -71,11 +74,6 @@
 -type milliseconds_monotonic() :: integer().
 -type microseconds_monotonic() :: integer().
 -type nanoseconds_monotonic() :: integer().
-% a value coming from the hardware starting at some undefined point in time
--type seconds_hardware() :: non_neg_integer().
--type milliseconds_hardware() :: non_neg_integer().
--type microseconds_hardware() :: non_neg_integer().
--type nanoseconds_hardware() :: non_neg_integer().
 -export_type([time_unit/0,
               seconds_epoch/0,
               milliseconds_epoch/0,
@@ -84,11 +82,7 @@
               seconds_monotonic/0,
               milliseconds_monotonic/0,
               microseconds_monotonic/0,
-              nanoseconds_monotonic/0,
-              seconds_hardware/0,
-              milliseconds_hardware/0,
-              microseconds_hardware/0,
-              nanoseconds_hardware/0]).
+              nanoseconds_monotonic/0]).
 
 -include("cloudi_core_i_constants.hrl").
 
@@ -177,7 +171,9 @@ native_monotonic() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Native time units since an undefined point in time, from the hardware.===
+%% ===Native time units since the UNIX epoch, from the hardware.===
+%% Always prefer the mative function instead of this function.
+%% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -221,11 +217,13 @@ seconds_monotonic() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Seconds since an undefined point in time, from the hardware.===
+%% ===Seconds since the UNIX epoch, from the hardware.===
+%% Always prefer the seconds function instead of this function.
+%% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec seconds_os() -> seconds_hardware().
+-spec seconds_os() -> seconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_os() ->
@@ -270,11 +268,13 @@ milliseconds_monotonic() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Milliseconds since an undefined point in time, from the hardware.===
+%% ===Milliseconds since the UNIX epoch, from the hardware.===
+%% Always prefer the milliseconds function instead of this function.
+%% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec milliseconds_os() -> milliseconds_hardware().
+-spec milliseconds_os() -> milliseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 milliseconds_os() ->
@@ -319,11 +319,13 @@ microseconds_monotonic() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Microseconds since an undefined point in time, from the hardware.===
+%% ===Microseconds since the UNIX epoch, from the hardware.===
+%% Always prefer the microseconds function instead of this function.
+%% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec microseconds_os() -> microseconds_hardware().
+-spec microseconds_os() -> microseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 microseconds_os() ->
@@ -368,11 +370,13 @@ nanoseconds_monotonic() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Nanoseconds since an undefined point in time, from the hardware.===
+%% ===Nanoseconds since the UNIX epoch, from the hardware.===
+%% Always prefer the nanoseconds function instead of this function.
+%% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec nanoseconds_os() -> nanoseconds_hardware().
+-spec nanoseconds_os() -> nanoseconds_epoch().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 nanoseconds_os() ->
@@ -384,16 +388,16 @@ nanoseconds_os() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Filter a list of seconds since the UNIX epoch..===
+%% ===Filter a list of seconds since the UNIX epoch.===
 %% The list is not ordered.
 %% @end
 %%-------------------------------------------------------------------------
 
--spec seconds_filter(L :: list(non_neg_integer()),
-                     SecondsNow :: non_neg_integer(),
+-spec seconds_filter(L :: list(seconds_epoch()),
+                     SecondsNow :: seconds_epoch(),
                      MaxPeriod :: pos_integer()) ->
     {Count :: non_neg_integer(),
-     NewL :: list(non_neg_integer())}.
+     NewL :: list(seconds_epoch())}.
 
 seconds_filter(L, SecondsNow, MaxPeriod) ->
     seconds_filter(L, [], 0, SecondsNow, MaxPeriod).
@@ -409,6 +413,34 @@ seconds_filter([Seconds | L], Output, Count, SecondsNow, MaxPeriod) ->
         true ->
             seconds_filter(L, [Seconds | Output], Count + 1,
                            SecondsNow, MaxPeriod)
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Filter a list of seconds since an undefined point in time, from the Erlang VM.===
+%% The list is not ordered.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_filter_monotonic(L :: list(seconds_monotonic()),
+                               SecondsNow :: seconds_monotonic(),
+                               MaxPeriod :: pos_integer()) ->
+    {Count :: non_neg_integer(),
+     NewL :: list(seconds_monotonic())}.
+
+seconds_filter_monotonic(L, SecondsNow, MaxPeriod) ->
+    seconds_filter_monotonic(L, [], 0, SecondsNow, MaxPeriod).
+
+seconds_filter_monotonic([], Output, Count, _, _) ->
+    {Count, Output};
+seconds_filter_monotonic([Seconds | L], Output, Count, SecondsNow, MaxPeriod) ->
+    if
+        (SecondsNow - Seconds) > MaxPeriod ->
+            seconds_filter_monotonic(L, Output, Count,
+                                     SecondsNow, MaxPeriod);
+        true ->
+            seconds_filter_monotonic(L, [Seconds | Output], Count + 1,
+                                     SecondsNow, MaxPeriod)
     end.
 
 %%-------------------------------------------------------------------------
@@ -437,6 +469,42 @@ uptime(TimeUnit)
          TimeUnit =:= microsecond; TimeUnit =:= nanosecond ->
     Value = erlang:monotonic_time() - erlang:system_info(start_time),
     convert(Value, native, TimeUnit).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===The uptime of the Erlang node in days.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uptime_days() ->
+    float().
+
+uptime_days() ->
+    uptime(second) / (60 * 60 * 24).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===The uptime of the Erlang node in months.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uptime_months() ->
+    float().
+
+uptime_months() ->
+    uptime_days() / (365.25 / 12).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===The uptime of the Erlang node in years.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec uptime_years() ->
+    float().
+
+uptime_years() ->
+    uptime_days() / 365.25.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

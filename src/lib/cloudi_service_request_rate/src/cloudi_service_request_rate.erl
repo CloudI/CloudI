@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -48,8 +48,8 @@
 
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST_INFO,             <<>>).
--define(DEFAULT_REQUEST,        <<(<<"value">>)/binary, 0:8,
-                                  (<<"40">>)/binary, 0:8>>).
+-define(DEFAULT_REQUEST,           <<"value", 0,
+                                     "40", 0>>).
 -define(DEFAULT_RESPONSE_INFO,       undefined). % see below:
         % check the response_info for each service request with
         % the return value of an anonymous function (arity 1)
@@ -81,6 +81,7 @@
 
 -record(state,
     {
+        service :: cloudi_service:source(),
         process_index :: non_neg_integer(),
         name :: string(),
         request_info :: any(),
@@ -152,9 +153,11 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
             RequestRate0
     end,
     true = is_integer(TickLength) andalso (TickLength >= 1000),
+    Service = cloudi_service:self(Dispatcher),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
-    tick_start(Dispatcher),
-    {ok, #state{process_index = ProcessIndex,
+    tick_start(Service),
+    {ok, #state{service = Service,
+                process_index = ProcessIndex,
                 name = Name,
                 request_info = RequestInfoN,
                 request = RequestN,
@@ -194,7 +197,8 @@ cloudi_service_handle_info(#timeout_async_active{},
                            _Dispatcher) ->
     {noreply, State};
 cloudi_service_handle_info(tick,
-                           #state{process_index = ProcessIndex,
+                           #state{service = Service,
+                                  process_index = ProcessIndex,
                                   name = Name,
                                   request_info = RequestInfo,
                                   request = Request,
@@ -204,7 +208,7 @@ cloudi_service_handle_info(tick,
     {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate, undefined,
                                           TickLength, ProcessIndex),
-    tick_send(TickLength, Dispatcher),
+    tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
@@ -212,7 +216,8 @@ cloudi_service_handle_info(tick,
                           request_fail = 0,
                           request_ids = RequestIds}};
 cloudi_service_handle_info({tick, T1},
-                           #state{process_index = ProcessIndex,
+                           #state{service = Service,
+                                  process_index = ProcessIndex,
                                   name = Name,
                                   request_info = RequestInfo,
                                   request = Request,
@@ -228,15 +233,15 @@ cloudi_service_handle_info({tick, T1},
         true ->
             ok
     end,
-    Elapsed = timer:now_diff(cloudi_timestamp:timestamp(),
-                             T1) / 1000000.0, % seconds
+    Elapsed = (cloudi_timestamp:microseconds_monotonic() -
+               T1) / 1000000.0, % seconds
     RequestRateComplete = RequestSuccessIn / Elapsed,
     {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate, RequestRateComplete,
                                           TickLength, ProcessIndex),
     request_rate_output(RequestRateNew, Elapsed,
                         RequestRateComplete, Name, ProcessIndex),
-    tick_send(TickLength, Dispatcher),
+    tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
@@ -374,14 +379,13 @@ request_rate_output(RequestRate, Elapsed,
     request_rate_output_log(RequestRate, Elapsed,
                             RequestRateComplete, Name, ProcessIndex).
 
-tick_start(Dispatcher) ->
-    erlang:send_after(500, cloudi_service:self(Dispatcher), tick),
+tick_start(Service) ->
+    erlang:send_after(500, Service, tick),
     ok.
 
-tick_send(TickLength, Dispatcher) ->
-    erlang:send_after(TickLength,
-                      cloudi_service:self(Dispatcher),
-                      {tick, cloudi_timestamp:timestamp()}),
+tick_send(TickLength, Service) ->
+    erlang:send_after(TickLength, Service,
+                      {tick, cloudi_timestamp:microseconds_monotonic()}),
     ok.
 
 tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
