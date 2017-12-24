@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -347,6 +347,8 @@
         max_t,
         options
     }).
+
+-define(PID_OPTIONS_DEFAULT, [link,{message_queue_data,on_heap}]).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -736,9 +738,11 @@ services_format_options_internal(Options) ->
             OptionsList2
     end,
     OptionsList4 = if
-        Options#config_service_options.init_pid_options /= [link] ->
-            [{init_pid_options, lists:delete(link,
-              Options#config_service_options.init_pid_options)} |
+        Options#config_service_options.init_pid_options /=
+        ?PID_OPTIONS_DEFAULT ->
+            [{init_pid_options,
+              pid_options_format(
+                  Options#config_service_options.init_pid_options)} |
              OptionsList3];
         true ->
             OptionsList3
@@ -753,9 +757,11 @@ services_format_options_internal(Options) ->
             OptionsList4
     end,
     OptionsList6 = if
-        Options#config_service_options.request_pid_options /= [link] ->
-            [{request_pid_options, lists:delete(link,
-              Options#config_service_options.request_pid_options)} |
+        Options#config_service_options.request_pid_options /=
+        ?PID_OPTIONS_DEFAULT ->
+            [{request_pid_options,
+              pid_options_format(
+                  Options#config_service_options.request_pid_options)} |
              OptionsList5];
         true ->
             OptionsList5
@@ -770,9 +776,11 @@ services_format_options_internal(Options) ->
             OptionsList6
     end,
     OptionsList8 = if
-        Options#config_service_options.info_pid_options /= [link] ->
-            [{info_pid_options, lists:delete(link,
-              Options#config_service_options.info_pid_options)} |
+        Options#config_service_options.info_pid_options /=
+        ?PID_OPTIONS_DEFAULT ->
+            [{info_pid_options,
+              pid_options_format(
+                  Options#config_service_options.info_pid_options)} |
              OptionsList7];
         true ->
             OptionsList7
@@ -996,9 +1004,11 @@ services_format_options_external(Options) ->
             OptionsList17
     end,
     OptionsList19 = if
-        Options#config_service_options.dispatcher_pid_options /= [link] ->
-            [{dispatcher_pid_options, lists:delete(link,
-              Options#config_service_options.dispatcher_pid_options)} |
+        Options#config_service_options.dispatcher_pid_options /=
+        ?PID_OPTIONS_DEFAULT ->
+            [{dispatcher_pid_options,
+              pid_options_format(
+                  Options#config_service_options.dispatcher_pid_options)} |
              OptionsList18];
         true ->
             OptionsList18
@@ -2223,6 +2233,16 @@ timeout_terminate(TimeoutTerminate, MaxR, MaxT)
             end
     end.
 
+pid_options_format(OptionsList0) ->
+    OptionsList1 = lists:delete(link, OptionsList0),
+    OptionsListN = case lists:keyfind(message_queue_data, 1, OptionsList1) of
+        {message_queue_data, on_heap} ->
+            lists:keydelete(message_queue_data, 1, OptionsList1);
+        {message_queue_data, _} ->
+            OptionsList1
+    end,
+    OptionsListN.
+
 -spec services_validate_options_internal(OptionsList ::
                                              cloudi_service_api:
                                              service_options_internal(),
@@ -3267,8 +3287,16 @@ services_validate_option_pid_options(OptionsList0,
 services_validate_option_pid_options(OptionsList) ->
     services_validate_option_pid_options(OptionsList, [link]).
 
-services_validate_option_pid_options([], Output) ->
-    {ok, lists:reverse(Output)};
+services_validate_option_pid_options([], Output0) ->
+    OutputN = case lists:keyfind(message_queue_data, 1, Output0) of
+        {message_queue_data, _} ->
+            Output0;
+        false ->
+            % based on testing, the best default option for
+            % CloudI service processes is on_heap
+            [{message_queue_data, on_heap} | Output0]
+    end,
+    {ok, lists:reverse(OutputN)};
 services_validate_option_pid_options([{sensitive, V} = PidOption |
                                       OptionsList], Output)
     when is_boolean(V) ->
@@ -3291,7 +3319,7 @@ services_validate_option_pid_options([{max_heap_size, V} = PidOption |
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([{message_queue_data, V} = PidOption |
                                       OptionsList], Output)
-    when (V =:= off_heap) orelse (V =:= on_heap) orelse (V =:= mixed) ->
+    when (V =:= off_heap) orelse (V =:= on_heap) ->
     services_validate_option_pid_options(OptionsList, [PidOption | Output]);
 services_validate_option_pid_options([{priority, V} = PidOption |
                                       OptionsList], Output)

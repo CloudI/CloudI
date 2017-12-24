@@ -3,6 +3,11 @@
 
 2017-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
+    * Change all the pid_options service configuration options to
+      default to {message_queue_data, on_heap} based on testing
+      CloudI service request performance, so CloudI services are
+      not adversely affected by using the "+hmqd off_heap"
+      command line argument
     * Add public_key to the dialyzer.plt file generated
 
 2017-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
