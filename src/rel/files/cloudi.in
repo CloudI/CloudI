@@ -33,7 +33,13 @@ ERL_FLAGS=""
 ERL_LIBS=""
 ERL_EPMD_ADDRESS=""
 ERL_EPMD_PORT="4369"
+CLOUDI_UMASK="@CLOUDI_UMASK@"
 CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
+
+# Default umask (u=rwx,g=rx,o=), if it wasn't provided to the configure script
+if [ -z "$CLOUDI_UMASK" ]; then
+    CLOUDI_UMASK="0027"
+fi
 
 # Default pid file path, if it wasn't provided to the configure script
 if [ -z "$CLOUDI_PID_FILE" ]; then
@@ -48,6 +54,8 @@ NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool"
 
 # Common erl command-line arguments enforced on any vm.args file use
 VMARGS="-mode embedded -shutdown_time $SHUTDOWN_TIME_MAX"
+
+umask "$CLOUDI_UMASK"
 
 # Any erl_crash.dump or core files will be created in the log directory
 cd "$ROOT_LOG_DIR"

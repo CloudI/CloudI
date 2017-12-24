@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add a default umask for CloudI execution as 0027
+    * Add the CLOUDI_UMASK configure variable to set the umask
+      for CloudI execution to something other than the default
+
 2017-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Change all the pid_options service configuration options to

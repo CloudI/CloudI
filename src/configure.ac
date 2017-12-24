@@ -610,6 +610,11 @@ else
 fi
 AC_SUBST(CLOUDI_CONF)
 
+# Set the umask used for file creation (e.g., log files)
+AC_ARG_VAR([CLOUDI_UMASK],
+           [CloudI execution umask
+            @<:@default=0027@:>@])
+
 # Set a specific pid file path to be used
 AC_ARG_VAR([CLOUDI_PID_FILE],
            [CloudI pid file path
