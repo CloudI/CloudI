@@ -1700,7 +1700,7 @@ public class API
         FileDescriptor object;
         try
         {
-            object = c.newInstance(new Integer(fd));
+            object = c.newInstance(Integer.valueOf(fd));
         }
         catch (IllegalArgumentException e)
         {

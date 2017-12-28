@@ -33,7 +33,7 @@
 
 % to use these functions, the module implementing the cloudi_service 
 % behaviour needs to provide the following variables
-% (assigned normally within cloudi_service_init/3):
+% (assigned normally within cloudi_service_init/4):
 % Dispatcher = cloudi_service:dispatcher(Dispatcher),
 % TimeoutSync = cloudi_service:timeout_sync(Dispatcher),
 % TimeoutAsync = cloudi_service:timeout_async(Dispatcher),
