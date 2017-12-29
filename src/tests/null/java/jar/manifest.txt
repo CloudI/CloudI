@@ -1,3 +1,4 @@
 Main-Class: org.cloudi.tests.null_.Main
 Class-Path: cloudi.jar
+Add-Opens: java.base/java.io
 

@@ -7,16 +7,17 @@ directinstdir = "$(DESTDIR)$(instdir)"
 nativedir = "$(instdir)"
 native_DATA = erlang.cmi cloudi.cmi erlang.cmx cloudi.cmx
 CLEANFILES = $(native_DATA) erlang.o cloudi.o
+OCAMLDEPS = -I $(builddir)/external/
 
 .NOTPARALLEL:
 
 all-local: $(native_DATA)
 
 .mli.cmi:
-	$(OCAMLC) $(OCAMLFLAGS) -o $@ -c $<
+	$(OCAMLC) $(OCAMLFLAGS) -o $@ $(OCAMLDEPS) -c $<
 
 .ml.cmx:
-	$(OCAMLOPT) $(OCAMLFLAGS) -o $@ -c $<
+	$(OCAMLOPT) $(OCAMLFLAGS) -o $@ $(OCAMLDEPS) -c $<
 
 install-exec-hook: $(native_DATA)
 	$(MKDIR_P) $(directinstdir)

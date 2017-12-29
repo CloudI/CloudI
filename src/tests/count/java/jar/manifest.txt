@@ -1,3 +1,4 @@
 Main-Class: org.cloudi.tests.count.Main
 Class-Path: cloudi.jar
+Add-Opens: java.base/java.io
 
