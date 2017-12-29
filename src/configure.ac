@@ -448,11 +448,21 @@ AC_ARG_VAR([OCAMLC],[ocamlc executable])
 AC_PATH_PROGS([OCAMLC],[ocamlc])
 AC_ARG_VAR([OCAMLOPT],[ocamlopt executable])
 AC_PATH_PROGS([OCAMLOPT],[ocamlopt])
+AC_ARG_VAR([OCAMLDEP],[ocamldep executable])
+AC_PATH_PROGS([OCAMLDEP],[ocamldep])
+AC_ARG_VAR([OCAMLMKLIB],[ocamlmklib executable])
+AC_PATH_PROGS([OCAMLMKLIB],[ocamlmklib])
 if test "x$OCAMLC" = "x"; then
     AC_MSG_ERROR([ocamlc not found])
 fi
 if test "x$OCAMLOPT" = "x"; then
     AC_MSG_ERROR([ocamlopt not found])
+fi
+if test "x$OCAMLDEP" = "x"; then
+    AC_MSG_ERROR([ocamldep not found])
+fi
+if test "x$OCAMLMKLIB" = "x"; then
+    AC_MSG_ERROR([ocamlmklib not found])
 fi
 AC_SUBST([OCAMLFLAGS], ["-safe-string -w @A"])
 AC_SUBST(CONFIG_TESTS_OCAML_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$prefix/lib/cloudi-$VERSION/tests/count/count_ocaml\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
@@ -691,6 +701,7 @@ AC_CONFIG_FILES([
     api/java/jar/Makefile
     api/javascript/Makefile
     api/ocaml/Makefile
+    api/ocaml/external/Makefile
     api/perl/Makefile
     api/php/Makefile
     api/python/Makefile

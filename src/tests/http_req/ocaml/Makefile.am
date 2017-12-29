@@ -3,7 +3,8 @@
 
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http_req"
 CLEANFILES = http_req_ocaml main.cmx main.cmi main.o
-OCAMLDEPS = nums.cmxa str.cmxa unix.cmxa threads/threads.cmxa \
+OCAMLDEPS = str.cmxa unix.cmxa threads/threads.cmxa \
+            $(top_builddir)/api/ocaml/external/nums.cmxa \
             $(top_builddir)/api/ocaml/erlang.cmx \
             $(top_builddir)/api/ocaml/cloudi.cmx
 SUFFIXES = .ml .cmx

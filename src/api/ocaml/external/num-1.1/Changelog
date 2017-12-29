@@ -1,0 +1,17 @@
+Release 1.1 (2017-10-13):
+
+- Install .cmx files as well.
+- Fix permissions on installed files.
+- Make tests compatible with safe strings.
+
+Release 1.0 (2017-06-04):
+
+- Fix build rule for nums.cmxs.
+- Typo in LICENSE file.
+
+Initialization (2016-12-08):
+
+- Initial import of the sources and test suite from the core OCaml system,
+  version 4.04.
+- Restructure as independent project with standalone Makefiles.
+- Integrate findlib support, including printers for toplevel use.

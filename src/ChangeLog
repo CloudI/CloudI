@@ -4,6 +4,10 @@
 2017-12-28 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix Java 9 CloudI API Integer constructor deprecation error
+    * Add OCaml num as an external dependency of the OCaml CloudI API
+      due to its removal from the core OCaml distribution in 4.06
+    * Update the NOTICE file
+      (now sorted with programming language to match external/README.markdown)
 
 2017-12-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 

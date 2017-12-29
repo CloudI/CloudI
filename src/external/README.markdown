@@ -173,16 +173,6 @@ Erlang `idna`
 - `Tue Sep 12 13:35:26 PDT 2017`
 - `BSD`
 
-Erlang `jinterface`
--------------------
-`Binary Erlang Term Encoding Java Source Code`
-
-- `http://erlang.org/download/otp_src_18.3.tar.gz (jinterface-1.6.1)`
-- `(in otp_src_18.3/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
-- `repository location: src/api/java/com/ericsson/otp/erlang/`
-- `Wed Sep 14 16:35:57 PDT 2016`
-- `Apache License 2.0`
-
 Erlang `jsx`
 ------------
 `Erlang JSON Parsing`
@@ -360,6 +350,16 @@ Haskell `zlib`
 - `Thu Mar 16 15:43:25 PDT 2017`
 - `BSD`
 
+Java `jinterface`
+-----------------
+`Binary Erlang Term Encoding Java Source Code`
+
+- `http://erlang.org/download/otp_src_18.3.tar.gz (jinterface-1.6.1)`
+- `(in otp_src_18.3/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `repository location: src/api/java/com/ericsson/otp/erlang/`
+- `Wed Sep 14 16:35:57 PDT 2016`
+- `Apache License 2.0`
+
 M4 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 ----------------------------------------------------------------------
 `autoconf m4 macros for boost detection`
@@ -413,6 +413,15 @@ M4 `m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4`
 - `repository location: src/m4/`
 - `Mon Sep 19 17:55:21 UTC 2016`
 - `MIT-like`
+
+OCaml `num`
+-----------
+`core distribution legacy Num library (separate with OCaml >= 4.06)`
+
+- `https://github.com/ocaml/num/`
+- `repository location: src/api/ocaml/external/`
+- `Fri Dec 29 00:58:57 UTC 2017`
+- `LGPL 2.1 w/link-exception`
 
 Python `jsonrpclib`
 -------------------
