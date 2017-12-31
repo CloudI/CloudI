@@ -90,7 +90,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -111,6 +111,12 @@
         % required argument, string
         % use "$I" or "${I}" for the process index within the string
         % so unique files are created when the configuration count_process > 1
+-define(DEFAULT_FILE_SIZE_LIMIT,       128 * 1024). % limit in kB
+        % if fault_isolation is both, the response size may cause
+        % the file size to exceed the file_size_limit because the
+        % response size isn't able to be anticipated accurately
+        % (if the response size is less than or equal to the request size
+        %  this is never a problem because the space is reused)
 -define(DEFAULT_COMPRESSION,                    0). % zlib compression 0..9
 -define(DEFAULT_RETRY,                          0).
 -define(DEFAULT_RETRY_DELAY,                    0). % milliseconds
@@ -160,6 +166,7 @@
 -record(state,
     {
         service :: pid(),
+        file_size_limit :: pos_integer(),
         logging :: cloudi_write_ahead_logging:state(),
         mode :: destination | both,
         retry :: non_neg_integer(),
@@ -178,14 +185,17 @@
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {file,                         ?DEFAULT_FILE},
+        {file_size_limit,   ?DEFAULT_FILE_SIZE_LIMIT},
         {compression,           ?DEFAULT_COMPRESSION},
         {retry,                       ?DEFAULT_RETRY},
         {retry_delay,           ?DEFAULT_RETRY_DELAY},
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
-    [FilePath, Compression, Retry, RetryDelay,
+    [FilePath, FileSizeLimit, Compression, Retry, RetryDelay,
      Mode] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_x_trie:is_pattern(Prefix),
     true = is_list(FilePath) andalso is_integer(hd(FilePath)),
+    true = is_integer(FileSizeLimit) andalso
+           (FileSizeLimit >= 1) andalso (FileSizeLimit =< 18014398509481983),
     true = is_integer(Compression) andalso
            (Compression >= 0) andalso (Compression =< 9),
     true = is_integer(Retry) andalso (Retry >= 0),
@@ -204,10 +214,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         retry(T, RetryT, Mode, DispatcherPid, Service)
     end,
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
+                                             FileSizeLimit * 1024,
                                              Compression,
                                              RetryF),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{service = Service,
+                file_size_limit = FileSizeLimit,
                 logging = Logging,
                 mode = Mode,
                 retry = Retry,
@@ -217,6 +229,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
 cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
                               #state{service = Service,
+                                     file_size_limit = FileSizeLimit,
                                      logging = Logging,
                                      mode = destination} = State,
                               Dispatcher) ->
@@ -230,21 +243,28 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                         priority = Priority,
                                         trans_id = TransId,
                                         pid = Pid},
-    {Chunk, NextLogging} = cloudi_write_ahead_logging:
-                           store_start(ChunkRequest, Logging),
-    % PERSISTENCE START:
-    % at this point the service request has been persisted and
-    % can be restarted
-    {ok, QueueTransId} = send_async_active(QueueName,
-                                           RequestInfo, Request,
-                                           Timeout, Priority,
-                                           Dispatcher, Service),
-    NewLogging = cloudi_write_ahead_logging:
-                 store_end(QueueTransId, Chunk, NextLogging),
-    {noreply, State#state{logging = NewLogging}};
+    case cloudi_write_ahead_logging:
+         store_start(ChunkRequest, Logging) of
+        {Chunk, NextLogging} ->
+            % PERSISTENCE START:
+            % at this point the service request has been persisted and
+            % can be restarted
+            {ok, QueueTransId} = send_async_active(QueueName,
+                                                   RequestInfo, Request,
+                                                   Timeout, Priority,
+                                                   Dispatcher, Service),
+            NewLogging = cloudi_write_ahead_logging:
+                         store_end(QueueTransId, Chunk, NextLogging),
+            {noreply, State#state{logging = NewLogging}};
+        full ->
+            ?LOG_WARN("file_size_limit of ~w KB has been reached!",
+                      [FileSizeLimit]),
+            {reply, <<>>, State}
+    end;
 cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
                               #state{service = Service,
+                                     file_size_limit = FileSizeLimit,
                                      logging = Logging,
                                      mode = both} = State,
                               Dispatcher) ->
@@ -267,18 +287,24 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                                          trans_id = TransId,
                                          next_name = NextName,
                                          next_trans_id = NextTransId},
-            {Chunk, NextLogging} = cloudi_write_ahead_logging:
-                                   store_start(ChunkRequest, Logging),
-            % PERSISTENCE START:
-            % at this point the service request has been persisted and
-            % can be restarted
-            {ok, QueueTransId} = send_async_active(QueueName,
-                                                   RequestInfo, Request,
-                                                   Timeout, Priority,
-                                                   Dispatcher, Service),
-            NewLogging = cloudi_write_ahead_logging:
-                         store_end(QueueTransId, Chunk, NextLogging),
-            {reply, NextTransId, State#state{logging = NewLogging}};
+            case cloudi_write_ahead_logging:
+                 store_start(ChunkRequest, Logging) of
+                {Chunk, NextLogging} ->
+                    % PERSISTENCE START:
+                    % at this point the service request has been persisted and
+                    % can be restarted
+                    {ok, QueueTransId} = send_async_active(QueueName,
+                                                           RequestInfo, Request,
+                                                           Timeout, Priority,
+                                                           Dispatcher, Service),
+                    NewLogging = cloudi_write_ahead_logging:
+                                 store_end(QueueTransId, Chunk, NextLogging),
+                    {reply, NextTransId, State#state{logging = NewLogging}};
+                full ->
+                    ?LOG_WARN("file_size_limit of ~w KB has been reached!",
+                              [FileSizeLimit]),
+                    {reply, <<>>, State}
+            end;
         error ->
             ?LOG_ERROR("service_name not found in RequestInfo for ~s",
                        [cloudi_trans_id:to_string(TransId, nodash)]),

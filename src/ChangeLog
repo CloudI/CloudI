@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2017-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add file_size_limit argument to cloudi_service_queue so the
+      file will always stay below the file_size_limit value
+      (default value is 128MB)
+      (if fault_isolation is both, the response size may cause
+       the file size to exceed the file_size_limit because the
+       response size isn't able to be anticipated accurately
+       (if the response size is less than or equal to the request size
+        this is never a problem because the space is reused))
+
 2017-12-29 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix OCaml 4.06 support by relying fully on

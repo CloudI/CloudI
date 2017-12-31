@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -47,7 +47,7 @@
          store_end/3,
          store_fail/2,
          store_start/2,
-         new/3,
+         new/4,
          update/3]).
 
 % overhead: chunk_size, chunk_size_used
@@ -67,11 +67,12 @@
 
 -record(state,
     {
-        file = undefined :: undefined | string(),
-        compression = undefined :: undefined | 0..9, % zlib compression level
-        position = undefined :: undefined | non_neg_integer(),
-        chunks = #{} :: #{cloudi_service:trans_id() := #chunk{}},
-        chunks_free = [] :: list(#chunk{}) % ordered
+        file :: string(),
+        file_size_limit :: pos_integer_64bit(), % bytes
+        compression :: 0..9, % zlib compression level
+        position :: non_neg_integer(),
+        chunks :: #{cloudi_service:trans_id() := #chunk{}},
+        chunks_free :: list(#chunk{}) % ordered
     }).
 
 -type state() :: #state{}.
@@ -176,10 +177,11 @@ store_fail(Chunk, #state{file = FilePath} = State) ->
 
 -spec store_start(ChunkRequest :: cloudi_service_queue:request(),
                   State :: #state{}) ->
-    {#chunk{}, #state{}}.
+    {#chunk{}, #state{}} | full.
 
 store_start(ChunkRequest,
             #state{file = FilePath,
+                   file_size_limit = FileSizeLimit,
                    compression = Compression,
                    position = Position,
                    chunks_free = ChunksFree} = State) ->
@@ -188,6 +190,9 @@ store_start(ChunkRequest,
                                       [{compressed, Compression}]),
     ChunkSizeUsed = erlang:byte_size(ChunkData),
     case chunk_free_check(ChunksFree, ChunkSizeUsed) of
+        false
+            when Position + (?CHUNK_OVERHEAD + ChunkSizeUsed) > FileSizeLimit ->
+            full;
         false ->
             ChunkSize = ChunkSizeUsed,
             NewPosition = chunk_write(ChunkSize, ChunkSizeUsed,
@@ -207,27 +212,28 @@ store_start(ChunkRequest,
     end.
 
 -spec new(FilePath :: string(),
+          FileSizeLimit :: 1024..?MAX_64BITS,
           Compression :: 0..9,
           RetryF :: retry_function()) ->
     #state{}.
 
-new(FilePath, Compression, RetryF)
-    when is_integer(Compression), Compression >= 0, Compression =< 9,
+new(FilePath, FileSizeLimit, Compression, RetryF)
+    when is_integer(FileSizeLimit),
+         FileSizeLimit >= 1024, FileSizeLimit =< ?MAX_64BITS,
+         is_integer(Compression), Compression >= 0, Compression =< 9,
          is_function(RetryF, 2) ->
-    State = #state{},
-    #state{chunks = Chunks,
-           chunks_free = ChunksFree} = State,
     {ok, Fd} = file_open_copy(FilePath),
     {ok,
      Position,
-     NewChunks,
-     NewChunksFree} = chunks_recover(Chunks, ChunksFree, Fd, RetryF),
+     Chunks,
+     ChunksFree} = chunks_recover(#{}, [], Fd, RetryF),
     ok = file_close_tmp(FilePath, Fd),
-    State#state{file = FilePath,
-                compression = Compression,
-                position = Position,
-                chunks = NewChunks,
-                chunks_free = NewChunksFree}.
+    #state{file = FilePath,
+           file_size_limit = FileSizeLimit,
+           compression = Compression,
+           position = Position,
+           chunks = Chunks,
+           chunks_free = ChunksFree}.
 
 -spec update(ChunkId :: cloudi_service:trans_id(),
              UpdateF :: update_function(),
@@ -237,9 +243,7 @@ new(FilePath, Compression, RetryF)
 update(ChunkId, UpdateF,
        #state{file = FilePath,
               compression = Compression,
-              position = Position,
-              chunks = Chunks,
-              chunks_free = ChunksFree} = State) ->
+              chunks = Chunks} = State) ->
     Chunk = maps:get(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
     case UpdateF(ChunkRequest) of
@@ -248,12 +252,20 @@ update(ChunkId, UpdateF,
             {undefined, NewState};
         {NewChunkId, NewChunkRequest} ->
             {ok, Fd} = file_open_tmp(FilePath),
+            % erase previous entry
+            NextState = erase_chunk(Chunk, Fd, State),
+            #state{position = Position,
+                   chunks_free = ChunksFree} = NextState,
             % store update
             NewChunkData = erlang:term_to_binary(NewChunkRequest,
                                                  [{compressed, Compression}]),
             NewChunkSizeUsed = erlang:byte_size(NewChunkData),
-            NextState = case chunk_free_check(ChunksFree, NewChunkSizeUsed) of
+            NewState = case chunk_free_check(ChunksFree, NewChunkSizeUsed) of
                 false ->
+                    % not checking NewChunkSizeUsed with file_size_limit
+                    % due to the operation being an update
+                    % (so it is possible to have the file size exceed
+                    %  file_size_limit here)
                     NewChunkSize = NewChunkSizeUsed,
                     NewPosition = chunk_write(NewChunkSize, NewChunkSizeUsed,
                                               NewChunkData, Position, Fd),
@@ -261,19 +273,17 @@ update(ChunkId, UpdateF,
                                       position = Position,
                                       request = NewChunkRequest},
                     NewChunks = maps:put(NewChunkId, NewChunk, Chunks),
-                    State#state{chunks = NewChunks,
-                                position = NewPosition};
+                    NextState#state{chunks = NewChunks,
+                                    position = NewPosition};
                 {#chunk{size = ChunkSize,
                         position = ChunkPosition} = ChunkFree, NewChunksFree} ->
                     chunk_write(ChunkSize, NewChunkSizeUsed,
                                 NewChunkData, ChunkPosition, Fd),
                     NewChunk = ChunkFree#chunk{request = NewChunkRequest},
                     NewChunks = maps:put(NewChunkId, NewChunk, Chunks),
-                    State#state{chunks = NewChunks,
-                                chunks_free = NewChunksFree}
+                    NextState#state{chunks = NewChunks,
+                                    chunks_free = NewChunksFree}
             end,
-            % erase previous entry
-            NewState = erase_chunk(Chunk, Fd, NextState),
             ok = file_close_tmp(FilePath, Fd),
             {NewChunkRequest, NewState}
     end.
