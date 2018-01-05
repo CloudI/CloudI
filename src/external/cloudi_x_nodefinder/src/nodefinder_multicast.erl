@@ -130,7 +130,14 @@ send_discover(#state{socket_send = SocketSend,
                 Identifier:32/binary, " ",
                 SecondsBin:8/binary, " ",
                 NodeBin/binary>>,
-    gen_udp:send(SocketSend, Address, Port, Message).
+    case gen_udp:send(SocketSend, Address, Port, Message) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            % enetunreach can occur here
+            ?LOG_WARN("udp error: ~p", [Reason]),
+            ok
+    end.
 
 process_packet(<<?MULTICAST_MESSAGE_NAME " "
                  ?MULTICAST_MESSAGE_PROTOCOL_VERSION " ",

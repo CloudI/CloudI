@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-01-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix multicast node discovery to not crash on udp errors
+      (e.g., enetunreach)
+    * Update nodefinder, cpg
+
 2017-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add file_size_limit argument to cloudi_service_queue so the
