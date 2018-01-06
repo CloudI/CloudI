@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix Javascript CloudI API to no longer have a busy-wait
+      problem when blocking on poll
+
 2018-01-04 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix multicast node discovery to not crash on udp errors

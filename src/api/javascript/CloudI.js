@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -217,6 +217,7 @@ CloudI.API = function API (thread_index, callback) {
     }
     API._initialization_complete = false;
     API._terminate = false;
+    API._terminate_callback = undefined;
     API._size = parseInt(buffer_size_str);
     API._callbacks = {};
     API._timeout_terminate = 1000; // TIMEOUT_TERMINATE_MIN
@@ -257,22 +258,22 @@ CloudI.API = function API (thread_index, callback) {
             if (err instanceof InvalidInputException ||
                 err instanceof MessageDecodingException) {
                 CloudI.stderr_write(err.stack + '\n');
-                API._terminate = true;
+                API._poll_terminate();
                 process.exit(1);
             }
             else if (err instanceof TerminateException) {
-                API._terminate = true;
+                API._poll_terminate();
             }
             else {
                 API._exception(err);
-                API._terminate = true;
+                API._poll_terminate();
                 process.exit(1);
             }
         }
     });
     API._s_in.on('error', function(err) {
         API._exception(err);
-        API._terminate = true;
+        API._poll_terminate();
         process.exit(1);
     });
     API._send(new Erlang.OtpErlangAtom('init'));
@@ -559,18 +560,18 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 if (err instanceof InvalidInputException ||
                     err instanceof MessageDecodingException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else if (err instanceof TerminateException) {
-                    API._terminate = true;
+                    API._poll_terminate();
                 }
                 else if (err instanceof ReturnAsyncException) {
                     return;
                 }
                 else if (err instanceof ReturnSyncException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else if (err instanceof ForwardAsyncException) {
@@ -578,7 +579,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 }
                 else if (err instanceof ForwardSyncException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else {
@@ -638,15 +639,15 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 if (err instanceof InvalidInputException ||
                     err instanceof MessageDecodingException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else if (err instanceof TerminateException) {
-                    API._terminate = true;
+                    API._poll_terminate();
                 }
                 else if (err instanceof ReturnAsyncException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else if (err instanceof ReturnSyncException) {
@@ -654,7 +655,7 @@ CloudI.API.prototype._callback = function (command, name, pattern,
                 }
                 else if (err instanceof ForwardAsyncException) {
                     CloudI.stderr_write(err.stack + '\n');
-                    API._terminate = true;
+                    API._poll_terminate();
                     process.exit(1);
                 }
                 else if (err instanceof ForwardSyncException) {
@@ -835,7 +836,7 @@ CloudI.API.prototype._poll_request = function (data) {
                 Erlang.binary_to_term(pid, function (err, pid_object) {
                     if (err) {
                         API._exception(err);
-                        API._terminate = true;
+                        API._poll_terminate();
                         process.exit(1);
                     }
                     else {
@@ -975,23 +976,50 @@ CloudI.API.prototype._poll_wait = function (f) {
     }
 };
 
+CloudI.API.prototype._poll_terminate = function () {
+    var API = this;
+    API._terminate = true;
+    if (API._terminate_callback !== undefined) {
+        API._terminate_callback(false);
+    }
+};
+
+CloudI.API.prototype._poll_blocked = function () {
+    var API = this;
+    if (API._terminate) {
+        return;
+    }
+    timers.setTimeout(function () {
+        API._poll_blocked();
+    }, 500);
+};
+
 CloudI.API.prototype._poll_block = function (callback, timeout) {
     var API = this;
     if (API._terminate) {
-        callback(false);
+        return;
     }
     else if (timeout == 0) {
+        API._terminate_callback = undefined;
         callback(true);
     }
     else if (timeout > 0) {
-        timers.setTimeout(function () {
-            API._poll_block(callback, 0);
-        }, timeout);
+        var timeout_interval = 500;
+        API._terminate_callback = callback;
+        if (timeout > timeout_interval) {
+            timers.setTimeout(function () {
+                API._poll_block(callback, timeout - timeout_interval);
+            }, timeout_interval);
+        }
+        else {
+            timers.setTimeout(function () {
+                API._poll_block(callback, 0);
+            }, timeout);
+        }
     }
     else {
-        timers.setTimeout(function () {
-            API._poll_block(callback, -1);
-        }, 0);
+        API._terminate_callback = callback;
+        API._poll_blocked();
     }
 };
 
@@ -1035,7 +1063,8 @@ CloudI.API.prototype._text_key_value_parse = function (text) {
 };
 
 CloudI.API.prototype.info_key_value_parse = function (message_info) {
-    return CloudI.API.prototype._text_key_value_parse(message_info);
+    var API = this;
+    return API._text_key_value_parse(message_info);
 };
 
 CloudI.API.prototype._exception = function (err) {
@@ -1050,7 +1079,7 @@ CloudI.API.prototype._send = function (terms) {
     Erlang.term_to_binary(terms, function (err, data) {
         if (err) {
             API._exception(err);
-            API._terminate = true;
+            API._poll_terminate();
             process.exit(1);
             return;
         }
