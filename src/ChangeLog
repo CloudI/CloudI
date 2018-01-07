@@ -6,7 +6,7 @@
     * Fix logging syslog handling to ensure misconfigured syslog
       settings will not cause a crash if the settings are set
       dynamically and add log output with the error information
-    * Update syslog
+    * Update syslog_socket
 
 2018-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
 
