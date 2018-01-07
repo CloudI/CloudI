@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2017 Michael Truog
+%%% @copyright 2009-2018 Michael Truog
 %%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -68,8 +68,12 @@
 -define(LOG_T1(Level, Format, Args, State),
     log_message_internal_t1(Level, ?LINE, ?FUNCTION_NAME, ?FUNCTION_ARITY,
                             Format, Args, State)).
--define(LOG_T0_INFO(Format, Args, State), ?LOG_T0(info, Format, Args, State)).
--define(LOG_T1_INFO(Format, Args, State), ?LOG_T1(info, Format, Args, State)).
+-define(LOG_T0_ERROR(Format, Args, State),
+    ?LOG_T0(error, Format, Args, State)).
+-define(LOG_T0_INFO(Format, Args, State),
+    ?LOG_T0(info, Format, Args, State)).
+-define(LOG_T1_INFO(Format, Args, State),
+    ?LOG_T1(info, Format, Args, State)).
 
 -record(state,
     {
@@ -494,12 +498,18 @@ init([#config_logging{file = FilePath,
                aspects_log_after = AspectsLogAfter,
                logger_node = node(),
                logger_self = self()},
-    #state{syslog_level = SyslogLevel} = StateNext = case SyslogConfig of
+    {SyslogResult,
+     #state{syslog_level = SyslogLevel} = StateNext} = case SyslogConfig of
         undefined ->
-            State;
+            {ok, State};
         #config_logging_syslog{level = SyslogLevel0} ->
-            State#state{syslog = syslog_open(SyslogConfig),
-                        syslog_level = SyslogLevel0}
+            case syslog_open(SyslogConfig) of
+                {ok, Syslog} ->
+                    {ok, State#state{syslog = Syslog,
+                                     syslog_level = SyslogLevel0}};
+                {error, _} = Error ->
+                    {Error, State}
+            end
     end,
     Level = log_level([MainLevel, SyslogLevel, FormattersLevel]),
     Destination = if
@@ -514,8 +524,8 @@ init([#config_logging{file = FilePath,
                                StateNext#state{interface_module = Binary,
                                                level = Level,
                                                destination = Destination}) of
-                {ok, _} = Success ->
-                    Success;
+                {ok, StateNew} ->
+                    log_init(SyslogResult, StateNew);
                 {error, Reason} ->
                     {stop, Reason}
             end;
@@ -527,7 +537,8 @@ init([#config_logging{file = FilePath,
                                               level = Level,
                                               destination = ?MODULE}) of
                 {ok, StateNew} ->
-                    {ok, StateNew#state{destination = Destination}};
+                    log_init(SyslogResult,
+                             StateNew#state{destination = Destination});
                 {{error, Reason}, _} ->
                     {stop, Reason}
             end;
@@ -557,61 +568,61 @@ handle_call(Request, _, State) ->
 
 handle_cast({set, LoggingConfig}, State) ->
     case log_config_set(LoggingConfig, State) of
-        {ok, NextState} ->
-            case log_level_update(NextState) of
-                {ok, NewState} ->
-                    {noreply, NewState};
-                {{error, Reason}, NewState} ->
-                    {stop, Reason, NewState}
+        {ok, StateNext} ->
+            case log_level_update(StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
+                {{error, Reason}, StateNew} ->
+                    {stop, Reason, StateNew}
             end;
-        {{error, Reason}, NewState} ->
-            {stop, Reason, NewState}
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({file_set, FilePath}, State) ->
     case log_config_file_set(FilePath, State) of
-        {ok, NewState} ->
-            {noreply, NewState};
-        {{error, Reason}, NewState} ->
-            {stop, Reason, NewState}
+        {ok, StateNew} ->
+            {noreply, StateNew};
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({stdout_set, Stdout}, State) ->
-    {ok, NewState} = log_config_stdout_set(Stdout, State),
-    {noreply, NewState};
+    {ok, StateNew} = log_config_stdout_set(Stdout, State),
+    {noreply, StateNew};
 handle_cast({level_set, MainLevel}, State) ->
     case log_config_main_level_set(MainLevel, State) of
-        {ok, NextState} ->
-            case log_level_update(NextState) of
-                {ok, NewState} ->
-                    {noreply, NewState};
-                {{error, Reason}, NewState} ->
-                    {stop, Reason, NewState}
+        {ok, StateNext} ->
+            case log_level_update(StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
+                {{error, Reason}, StateNew} ->
+                    {stop, Reason, StateNew}
             end;
-        {{error, Reason}, NewState} ->
-            {stop, Reason, NewState}
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({syslog_set, SyslogConfig}, State) ->
     case log_config_syslog_set(SyslogConfig, State) of
-        {ok, NextState} ->
-            case log_level_update(NextState) of
-                {ok, NewState} ->
-                    {noreply, NewState};
-                {{error, Reason}, NewState} ->
-                    {stop, Reason, NewState}
+        {ok, StateNext} ->
+            case log_level_update(StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
+                {{error, Reason}, StateNew} ->
+                    {stop, Reason, StateNew}
             end;
-        {{error, Reason}, NewState} ->
-            {stop, Reason, NewState}
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({formatters_set, FormattersConfigNew}, State) ->
     case log_config_formatters_set(FormattersConfigNew, State) of
-        {ok, NextState} ->
-            case log_level_update(NextState) of
-                {ok, NewState} ->
-                    {noreply, NewState};
-                {{error, Reason}, NewState} ->
-                    {stop, Reason, NewState}
+        {ok, StateNext} ->
+            case log_level_update(StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
+                {{error, Reason}, StateNew} ->
+                    {stop, Reason, StateNew}
             end;
-        {{error, Reason}, NewState} ->
-            {stop, Reason, NewState}
+        {{error, Reason}, StateNew} ->
+            {stop, Reason, StateNew}
     end;
 handle_cast({redirect_update, Node}, State) ->
     Destination = if
@@ -645,6 +656,33 @@ handle_cast({Level, Timestamp, Node, Pid,
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
 
+handle_info({'DOWN', _, process, Process, Info},
+            #state{syslog = Syslog} = State) ->
+    {Entity, StateUpdated} = if
+        Process == Syslog ->
+            {"syslog",
+             State#state{syslog = undefined,
+                         syslog_level = undefined}};
+        true ->
+            % will happen if syslog is stopped successfully (asynchronously)
+            % but should not occur with other processes
+            {io_lib:format("process(~w)", [Process]), State}
+    end,
+    case log_level_update(StateUpdated) of
+        {ok, StateNext}
+            when Info =:= normal ->
+            {noreply, StateNext};
+        {ok, StateNext} ->
+            case ?LOG_T0_ERROR("~s died: ~w",
+                               [Entity, Info], StateNext) of
+                {ok, StateNew} ->
+                    {noreply, StateNew};
+                {{error, Reason}, StateNew} ->
+                    {stop, Reason, StateNew}
+            end;
+        {{error, Reason}, StateNext} ->
+            {stop, Reason, StateNext}
+    end;
 handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
             #state{log_time_offset = LogTimeOffset,
                    log_time_offset_nanoseconds = ValueOld,
@@ -684,6 +722,16 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+log_init(ok, State) ->
+    {ok, State};
+log_init({error, Reason}, State) ->
+    case ?LOG_T0_ERROR("syslog error: ~p", [Reason], State) of
+        {ok, _} ->
+            {stop, syslog};
+        {{error, Reason}, _} ->
+            {stop, Reason}
+    end.
 
 log_config_set(#config_logging{file = FilePath,
                                stdout = Stdout,
@@ -757,14 +805,14 @@ log_config_stdout_set(Stdout,
     {ok, State};
 log_config_stdout_set(Stdout,
                       #state{stdout = StdoutPort} = State) ->
-    NewStdoutPort = if
+    StdoutPortNew = if
         Stdout =:= true ->
             stdout_open(true);
         Stdout =:= false ->
             ok = stdout_close(StdoutPort),
             undefined
     end,
-    {ok, State#state{stdout = NewStdoutPort}}.
+    {ok, State#state{stdout = StdoutPortNew}}.
 
 log_config_syslog_set(SyslogConfig,
                       #state{syslog = SyslogOld,
@@ -779,11 +827,19 @@ log_config_syslog_set(SyslogConfig,
         ok = syslog_close(SyslogOld),
         case SyslogConfig of
             undefined ->
-                StateSwitch#state{syslog = undefined,
-                                  syslog_level = undefined};
+                {ok, StateSwitch#state{syslog = undefined,
+                                       syslog_level = undefined}};
             #config_logging_syslog{} ->
-                StateSwitch#state{syslog = syslog_open(SyslogConfig),
-                                  syslog_level = SyslogLevelNew}
+                case syslog_open(SyslogConfig) of
+                    {ok, SyslogNew} ->
+                        {ok, StateSwitch#state{syslog = SyslogNew,
+                                               syslog_level = SyslogLevelNew}};
+                    {error, Reason} ->
+                        ?LOG_T0_ERROR("syslog error: ~p", [Reason],
+                                      StateSwitch#state{
+                                          syslog = undefined,
+                                          syslog_level = undefined})
+                end
         end
     end,
     if
@@ -791,12 +847,12 @@ log_config_syslog_set(SyslogConfig,
             case ?LOG_T0_INFO("changing syslog loglevel from ~s to ~s",
                               [SyslogLevelOld, SyslogLevelNew], State) of
                 {ok, StateNew} ->
-                    {ok, SwitchF(StateNew)};
+                    SwitchF(StateNew);
                 {{error, _}, _} = ErrorResult ->
                     ErrorResult
             end;
         true ->
-            {ok, SwitchF(State)}
+            SwitchF(State)
     end.
 
 log_config_formatters_set(FormattersConfigNew,
@@ -1173,7 +1229,7 @@ log_message_internal(Level, Timestamp, Node, Pid,
                      Level, Timestamp, Node, Pid,
                      Module, Line, Function, Arity,
                      MetaData, LogMessage),
-    {FileResult, NewState} = case log_level_allowed(MainLevel, Level) of
+    {FileResult, StateNew} = case log_level_allowed(MainLevel, Level) of
         true ->
             ok = log_stdout(Message, StdoutPort),
             log_file(Message, State);
@@ -1182,7 +1238,7 @@ log_message_internal(Level, Timestamp, Node, Pid,
     end,
     case log_level_allowed(SyslogLevel, Level) of
         true ->
-            ok = log_syslog(Level, Timestamp, Message, NewState);
+            ok = log_syslog(Level, Timestamp, Message, StateNew);
         false ->
             ok
     end,
@@ -1190,7 +1246,7 @@ log_message_internal(Level, Timestamp, Node, Pid,
                      Level, Timestamp, Node, Pid,
                      Module, Line, Function, Arity,
                      MetaData, LogMessage),
-    {FileResult, NewState}.
+    {FileResult, StateNew}.
 
 -spec log_message_safe(Format :: list(),
                        Args :: list()) ->
@@ -1829,13 +1885,12 @@ syslog_open(#config_logging_syslog{identity = SyslogIdentity,
                {host, SyslogHost},
                {port, SyslogPort},
                {timeout, 5000}],
-    {ok, Syslog} = cloudi_x_syslog_socket:start_link(Options),
-    Syslog.
+    cloudi_x_syslog_socket:start_monitor(Options).
 
 syslog_close(undefined) ->
     ok;
 syslog_close(Syslog) when is_pid(Syslog) ->
-    cloudi_x_syslog_socket:stop_link(Syslog). % asynchronous stop
+    cloudi_x_syslog_socket:stop_monitor(Syslog). % asynchronous stop
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 time_offset_nanoseconds() ->
@@ -1928,8 +1983,8 @@ eval([], State) ->
     {ok, State};
 eval([{Value, F} | L], State) ->
     case F(Value, State) of
-        {ok, NewState} ->
-            eval(L, NewState);
+        {ok, StateNew} ->
+            eval(L, StateNew);
         {{error, _}, _} = Error ->
             Error
     end.

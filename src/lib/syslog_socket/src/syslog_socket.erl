@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2016-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2016-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2016-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 -module(syslog_socket).
 -author('mjtruog [at] gmail (dot) com').
@@ -40,8 +40,11 @@
 
 %% external interface
 -export([start_link/1,
+         start_monitor/1,
          stop_link/1,
          stop_link/2,
+         stop_monitor/1,
+         stop_monitor/2,
          send/3,
          send/4,
          send/5,
@@ -123,7 +126,7 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Start a syslog socket.===
+%% ===Start a syslog socket with a link.===
 %% Connection is immediate within the new Erlang process.
 %% @end
 %%-------------------------------------------------------------------------
@@ -131,85 +134,37 @@
 -spec start_link(Options :: options()) ->
     {ok, pid()} | {error, any()}.
 
-start_link(Options) when is_list(Options) ->
-    Defaults = [{transport, ?TRANSPORT_DEFAULT},
-                {transport_options, undefined},
-                {protocol, ?PROTOCOL_DEFAULT},
-                {utf8, ?UTF8_DEFAULT},
-                {facility, ?FACILITY_DEFAULT},
-                {app_name, undefined},
-                {path, "/dev/log"},
-                {host, {127,0,0,1}},
-                {port, undefined},
-                {timeout, ?TIMEOUT_DEFAULT}],
-    [Transport, TransportOptionsValue, Protocol,
-     UTF8, FacilityValue, AppName,
-     Path, Host, PortValue, Timeout] = take_values(Defaults, Options),
-    true = is_list(AppName) andalso is_integer(hd(AppName)), % required
-    if
-        Protocol =:= rfc3164 ->
-            ok;
-        Protocol =:= rfc5424 ->
-            true = (length(AppName) =< 48)
-    end,
-    true = is_boolean(UTF8),
-    Facility = facility(FacilityValue),
-    true = is_integer(Timeout) andalso
-           (Timeout > 0) andalso (Timeout =< ?TIMEOUT_MAX_ERLANG),
-    TransportOptions = if
-        Transport =:= local ->
-            if
-                TransportOptionsValue =:= undefined ->
-                    [local];
-                is_list(TransportOptionsValue) ->
-                    [local | TransportOptionsValue]
-            end;
-        Transport =:= udp ->
-            if
-                TransportOptionsValue =:= undefined ->
-                    [];
-                is_list(TransportOptionsValue) ->
-                    TransportOptionsValue
-            end;
-        Transport =:= tcp ->
-            if
-                TransportOptionsValue =:= undefined ->
-                    [{send_timeout, Timeout},
-                     {send_timeout_close, true},
-                     {keepalive, true},
-                     {reuseaddr, true}];
-                is_list(TransportOptionsValue) ->
-                    TransportOptionsValue
-            end;
-        Transport =:= tls ->
-            true = is_list(TransportOptionsValue) andalso
-                   (length(TransportOptionsValue) > 0),
-            TransportOptionsValue
-    end,
-    true = is_list(Path) andalso is_integer(hd(Path)),
-    Port = if
-        PortValue =:= undefined ->
-            if
-                Transport =:= local ->
-                    0;
-                Transport =:= udp ->
-                    514;
-                Transport =:= tcp ->
-                    601;
-                Transport =:= tls ->
-                    6514
-            end;
-        is_integer(PortValue), PortValue > 0 ->
-            PortValue
-    end,
-    gen_server:start_link(?MODULE,
-                          [Transport, TransportOptions, Protocol,
-                           UTF8, Facility, AppName,
-                           Path, Host, Port, Timeout], []).
+start_link(Options) ->
+    case start(Options) of
+        {ok, Pid} = Success ->
+            true = erlang:link(Pid),
+            Success;
+        {error, _} = Error ->
+            Error
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Stop an existing syslog socket asynchronously.===
+%% ===Start a syslog socket with a monitor.===
+%% Connection is immediate within the new Erlang process.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec start_monitor(Options :: options()) ->
+    {ok, pid()} | {error, any()}.
+
+start_monitor(Options) ->
+    case start(Options) of
+        {ok, Pid} = Success ->
+            _ = erlang:monitor(process, Pid),
+            Success;
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop an existing syslog socket link asynchronously.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -221,7 +176,7 @@ stop_link(Pid) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Stop an existing syslog socket synchronously.===
+%% ===Stop an existing syslog socket link synchronously.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -231,6 +186,41 @@ stop_link(Pid) ->
 
 stop_link(Pid, Timeout) ->
     gen_server:call(Pid, stop, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop an existing syslog socket monitor asynchronously.===
+%% The parent process will still receive {'DOWN', _, process, Pid, Info}.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec stop_monitor(Pid :: pid()) ->
+    ok.
+
+stop_monitor(Pid) ->
+    gen_server:cast(Pid, stop).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Stop an existing syslog socket monitor synchronously.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec stop_monitor(Pid :: pid(),
+                   Timeout :: timeout_milliseconds()) ->
+    ok.
+
+stop_monitor(Pid, Timeout) ->
+    ok = gen_server:call(Pid, stop, Timeout),
+    receive
+        {'DOWN', _, process, Pid, normal} ->
+            ok;
+        {'DOWN', _, process, Pid, Info} ->
+            erlang:exit(Info)
+    after
+        Timeout ->
+            erlang:exit(timeout)
+    end.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -402,16 +392,22 @@ init([Transport, TransportOptions, Protocol,
                     port = Port,
                     timeout = Timeout},
     case transport_open(State0) of
-        {ok, StateN} ->
-            {ok, protocol_init(StateN)};
-        {error, _} = Error ->
-            {stop, Error, State0}
+        {ok, State1} ->
+            StateN = protocol_init(State1),
+            case transport_send(<<>>, StateN) of
+                ok ->
+                    {ok, StateN};
+                {error, Reason} ->
+                    {stop, Reason}
+            end;
+        {error, Reason} ->
+            {stop, Reason}
     end.
 
 handle_call(stop, _, State) ->
     {stop, normal, ok, State};
 handle_call(Request, _, State) ->
-    {stop, {error, {call, Request}}, State}.
+    {stop, {call, Request}, State}.
 
 handle_cast({send, Severity, Timestamp0, MessageId, Data}, State) ->
     TimestampN = case Timestamp0 of
@@ -423,25 +419,29 @@ handle_cast({send, Severity, Timestamp0, MessageId, Data}, State) ->
     HEADER = protocol_header(Severity, TimestampN, MessageId, State),
     DATA = protocol_data(State),
     MSG = protocol_msg(Data, State),
-    ok = transport_send([HEADER, DATA, MSG], State),
-    {noreply, State};
+    case transport_send([HEADER, DATA, MSG], State) of
+        ok ->
+            {noreply, State};
+        {error, Reason} ->
+            {stop, Reason, State}
+    end;
 handle_cast(stop, State) ->
     {stop, normal, State};
 handle_cast(Request, State) ->
-    {stop, {error, {cast, Request}}, State}.
+    {stop, {cast, Request}, State}.
 
-handle_info({Error, Socket}, #state{socket = Socket} = State)
-    when Error =:= udp_closed;
-         Error =:= tcp_closed;
-         Error =:= ssl_closed ->
-    {stop, {error, Error}, State#state{socket = undefined}};
-handle_info({Error, Socket}, #state{socket = Socket} = State)
-    when Error =:= udp_error;
-         Error =:= tcp_error;
-         Error =:= ssl_error ->
-    {stop, {error, Error}, State};
+handle_info({Reason, Socket}, #state{socket = Socket} = State)
+    when Reason =:= udp_closed;
+         Reason =:= tcp_closed;
+         Reason =:= ssl_closed ->
+    {stop, Reason, State#state{socket = undefined}};
+handle_info({Reason, Socket}, #state{socket = Socket} = State)
+    when Reason =:= udp_error;
+         Reason =:= tcp_error;
+         Reason =:= ssl_error ->
+    {stop, Reason, State};
 handle_info(Request, State) ->
-    {stop, {error, {info, Request}}, State}.
+    {stop, {info, Request}, State}.
 
 terminate(_, State) ->
     ok = transport_close(State),
@@ -453,6 +453,82 @@ code_change(_, State, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+start(Options) when is_list(Options) ->
+    Defaults = [{transport, ?TRANSPORT_DEFAULT},
+                {transport_options, undefined},
+                {protocol, ?PROTOCOL_DEFAULT},
+                {utf8, ?UTF8_DEFAULT},
+                {facility, ?FACILITY_DEFAULT},
+                {app_name, undefined},
+                {path, "/dev/log"},
+                {host, {127,0,0,1}},
+                {port, undefined},
+                {timeout, ?TIMEOUT_DEFAULT}],
+    [Transport, TransportOptionsValue, Protocol,
+     UTF8, FacilityValue, AppName,
+     Path, Host, PortValue, Timeout] = take_values(Defaults, Options),
+    true = is_list(AppName) andalso is_integer(hd(AppName)), % required
+    if
+        Protocol =:= rfc3164 ->
+            ok;
+        Protocol =:= rfc5424 ->
+            true = (length(AppName) =< 48)
+    end,
+    true = is_boolean(UTF8),
+    Facility = facility(FacilityValue),
+    true = is_integer(Timeout) andalso
+           (Timeout > 0) andalso (Timeout =< ?TIMEOUT_MAX_ERLANG),
+    TransportOptions = if
+        Transport =:= local ->
+            if
+                TransportOptionsValue =:= undefined ->
+                    [local];
+                is_list(TransportOptionsValue) ->
+                    [local | TransportOptionsValue]
+            end;
+        Transport =:= udp ->
+            if
+                TransportOptionsValue =:= undefined ->
+                    [];
+                is_list(TransportOptionsValue) ->
+                    TransportOptionsValue
+            end;
+        Transport =:= tcp ->
+            if
+                TransportOptionsValue =:= undefined ->
+                    [{send_timeout, Timeout},
+                     {send_timeout_close, true},
+                     {keepalive, true},
+                     {reuseaddr, true}];
+                is_list(TransportOptionsValue) ->
+                    TransportOptionsValue
+            end;
+        Transport =:= tls ->
+            true = is_list(TransportOptionsValue) andalso
+                   (length(TransportOptionsValue) > 0),
+            TransportOptionsValue
+    end,
+    true = is_list(Path) andalso is_integer(hd(Path)),
+    Port = if
+        PortValue =:= undefined ->
+            if
+                Transport =:= local ->
+                    0;
+                Transport =:= udp ->
+                    514;
+                Transport =:= tcp ->
+                    601;
+                Transport =:= tls ->
+                    6514
+            end;
+        is_integer(PortValue), PortValue > 0 ->
+            PortValue
+    end,
+    gen_server:start(?MODULE,
+                     [Transport, TransportOptions, Protocol,
+                      UTF8, Facility, AppName,
+                      Path, Host, Port, Timeout], []).
 
 protocol_init(#state{protocol = rfc3164} = State) ->
     HostnameOnly = lists:takewhile(fun(C) -> C /= $. end, hostname()),
@@ -623,18 +699,18 @@ transport_send(Data, #state{transport = local,
                             path = Path,
                             port = Port,
                             socket = Socket}) ->
-    ok = gen_udp:send(Socket, {local, Path}, Port, Data);
+    gen_udp:send(Socket, {local, Path}, Port, Data);
 transport_send(Data, #state{transport = udp,
                             host = Host,
                             port = Port,
                             socket = Socket}) ->
-    ok = gen_udp:send(Socket, Host, Port, Data);
+    gen_udp:send(Socket, Host, Port, Data);
 transport_send(Data, #state{transport = tcp,
                             socket = Socket}) ->
-    ok = gen_tcp:send(Socket, Data);
+    gen_tcp:send(Socket, Data);
 transport_send(Data, #state{transport = tls,
                             socket = Socket}) ->
-    ok = ssl:send(Socket, Data).
+    ssl:send(Socket, Data).
 
 transport_close(#state{socket = undefined}) ->
     ok;
