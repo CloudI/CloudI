@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -738,6 +738,11 @@ function _term_to_binary($term)
             $object = new OtpErlangAtom('true');
         else
             $object = new OtpErlangAtom('false');
+        return $object->binary();
+    }
+    elseif (is_null($term))
+    {
+        $object = new OtpErlangAtom('undefined');
         return $object->binary();
     }
     elseif (is_object($term))

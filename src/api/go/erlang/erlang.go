@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2017-2018 Michael Truog <mjtruog at gmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -919,6 +919,8 @@ func termsToBinary(termI interface{}, buffer *bytes.Buffer) (*bytes.Buffer, erro
 			return atomToBinary("true", buffer)
 		}
 		return atomToBinary("false", buffer)
+	case nil:
+		return atomToBinary("undefined", buffer)
 	case OtpErlangAtom:
 		return atomToBinary(string(term), buffer)
 	case OtpErlangAtomUTF8:

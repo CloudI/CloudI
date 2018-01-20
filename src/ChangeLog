@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-01-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update the Erlang Binary Term Format for
+      Go/Javascript/Perl/PHP/Python/Ruby to encode
+      nil/undefined/undef/NULL/None as an undefined Erlang atom
+
 2018-01-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix logging syslog handling to ensure misconfigured syslog

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -858,6 +858,9 @@ Erlang._term_to_binary = function _term_to_binary (term) {
             else {
                 term = new Erlang.OtpErlangAtom('false');
             }
+            return term.binary();
+        case 'undefined':
+            term = new Erlang.OtpErlangAtom('undefined');
             return term.binary();
         case 'object':
             switch (toNativeString.call(term)) {

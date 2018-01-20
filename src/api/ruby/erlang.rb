@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -643,6 +643,10 @@ module Erlang
         elsif term.kind_of?(FalseClass)
             return OtpErlangAtom.new(
                 'false'.force_encoding('ISO-8859-1')
+            ).binary
+        elsif term.nil?
+            return OtpErlangAtom.new(
+                'undefined'.force_encoding('ISO-8859-1')
             ).binary
         elsif term.kind_of?(OtpErlangAtom)
             return term.binary

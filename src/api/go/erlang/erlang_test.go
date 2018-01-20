@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at gmail dot com>
+// Copyright (c) 2017-2018 Michael Truog <mjtruog at gmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -359,9 +359,10 @@ func TestEncodeTermToBinaryString(t *testing.T) {
 	assertEqual(t, "\x83j", encode(t, "", -1), "")
 	assertEqual(t, "\x83k\x00\x04test", encode(t, "test", -1), "")
 }
-func TestEncodeTermToBinaryBoolean(t *testing.T) {
+func TestEncodeTermToBinaryPredefinedAtoms(t *testing.T) {
 	assertEqual(t, "\x83s\x04true", encode(t, true, -1), "")
 	assertEqual(t, "\x83s\x05false", encode(t, false, -1), "")
+	assertEqual(t, "\x83s\x09undefined", encode(t, nil, -1), "")
 }
 func TestEncodeTermToBinaryShortInteger(t *testing.T) {
 	assertEqual(t, "\x83a\x00", encode(t, 0, -1), "")
