@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
+%%% @copyright 2011-2018 Michael Truog
 %%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
@@ -408,7 +408,7 @@ handle_call(dispatcher, _,
             #state{dispatcher = Dispatcher} = State) ->
     hibernate_check({reply, Dispatcher, State});
 
-handle_call({'subscribe', Pattern}, _,
+handle_call({'subscribe', Suffix}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,
                    options = #config_service_options{
@@ -417,23 +417,27 @@ handle_call({'subscribe', Pattern}, _,
     Result = case cloudi_core_i_rate_based_configuration:
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
-            cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
+            Pattern = Prefix ++ Suffix,
+            _ = cloudi_x_trie:is_pattern(Pattern),
+            cloudi_x_cpg:join(Scope, Pattern,
                               ReceiverPid, infinity);
         true ->
             error
     end,
     hibernate_check({reply, Result, State});
 
-handle_call({'subscribe_count', Pattern}, _,
+handle_call({'subscribe_count', Suffix}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,
                    options = #config_service_options{
                        scope = Scope}} = State) ->
-    Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
+    Pattern = Prefix ++ Suffix,
+    _ = cloudi_x_trie:is_pattern(Pattern),
+    Count = cloudi_x_cpg:join_count(Scope, Pattern,
                                     ReceiverPid, infinity),
     hibernate_check({reply, Count, State});
 
-handle_call({'unsubscribe', Pattern}, _,
+handle_call({'unsubscribe', Suffix}, _,
             #state{prefix = Prefix,
                    receiver_pid = ReceiverPid,
                    options = #config_service_options{
@@ -442,7 +446,9 @@ handle_call({'unsubscribe', Pattern}, _,
     Result = case cloudi_core_i_rate_based_configuration:
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
-            cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
+            Pattern = Prefix ++ Suffix,
+            _ = cloudi_x_trie:is_pattern(Pattern),
+            cloudi_x_cpg:leave(Scope, Pattern,
                                ReceiverPid, infinity);
         true ->
             error

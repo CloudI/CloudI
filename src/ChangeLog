@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add check to cause an internal or external service to crash
+      if the CloudI API functions subscribe/subscribe_count/unsubscribe 
+      are passed a pattern that includes the character sequence "**"
+
 2018-01-19 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Update the Erlang Binary Term Format for

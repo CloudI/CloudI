@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -467,17 +467,19 @@ handle_event(EventType, EventContent, StateName, State) ->
     {stop, {error, invalid_state}, State};
 
 'HANDLE'(connection,
-         {'subscribe', Pattern},
+         {'subscribe', Suffix},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}}) ->
-    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
+    true = is_list(Suffix),
     case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
-            ok = cloudi_x_cpg:join(Scope, Prefix ++ Pattern,
+            Pattern = Prefix ++ Suffix,
+            _ = cloudi_x_trie:is_pattern(Pattern),
+            ok = cloudi_x_cpg:join(Scope, Pattern,
                                    Dispatcher, infinity);
         true ->
             ok
@@ -485,29 +487,33 @@ handle_event(EventType, EventContent, StateName, State) ->
     keep_state_and_data;
 
 'HANDLE'(connection,
-         {'subscribe_count', Pattern},
+         {'subscribe_count', Suffix},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix,
                 options = #config_service_options{
                     scope = Scope}} = State) ->
-    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
-    Count = cloudi_x_cpg:join_count(Scope, Prefix ++ Pattern,
+    true = is_list(Suffix),
+    Pattern = Prefix ++ Suffix,
+    _ = cloudi_x_trie:is_pattern(Pattern),
+    Count = cloudi_x_cpg:join_count(Scope, Pattern,
                                     Dispatcher, infinity),
     ok = send('subscribe_count_out'(Count), State),
     keep_state_and_data;
 
 'HANDLE'(connection,
-         {'unsubscribe', Pattern},
+         {'unsubscribe', Suffix},
          #state{dispatcher = Dispatcher,
                 prefix = Prefix,
                 options = #config_service_options{
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope}}) ->
-    true = is_list(Pattern) andalso is_integer(hd(Pattern)),
+    true = is_list(Suffix),
     case cloudi_core_i_rate_based_configuration:
          count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
-            case cloudi_x_cpg:leave(Scope, Prefix ++ Pattern,
+            Pattern = Prefix ++ Suffix,
+            _ = cloudi_x_trie:is_pattern(Pattern),
+            case cloudi_x_cpg:leave(Scope, Pattern,
                                     Dispatcher, infinity) of
                 ok ->
                     keep_state_and_data;
