@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-01-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix cloudi_service_http_rest cloudi_service_init failure handling
+
 2018-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add check to cause an internal or external service to crash

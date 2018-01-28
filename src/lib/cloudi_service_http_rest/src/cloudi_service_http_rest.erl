@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -420,6 +420,8 @@ cloudi_service_handle_info(Request,
             end
     end.
 
+cloudi_service_terminate(_Reason, _Timeout, undefined) ->
+    ok;
 cloudi_service_terminate(Reason, Timeout,
                          #state{terminate_f = TerminateF,
                                 api_state = StateAPI}) ->
