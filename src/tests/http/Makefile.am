@@ -11,6 +11,7 @@ if RUBY_SUPPORT
     RUBY_INSTALL_HOOK = ruby-install
 endif
 SUBDIRS = $(JAVA_SUBDIR)
+DIST_SUBDIRS = $(SUBDIRS)
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/http"
 
 .PHONY: \

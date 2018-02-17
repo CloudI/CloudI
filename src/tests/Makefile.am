@@ -16,6 +16,7 @@ if INTEGRATION_TESTS
         count http http_req messaging msg_size null
 endif
 SUBDIRS = $(INTEGRATION_TESTS_SUBDIR)
+DIST_SUBDIRS = $(SUBDIRS)
 
 install-exec-hook:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/tests"

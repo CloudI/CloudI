@@ -32,6 +32,7 @@
         cloudi_core_i_socket,
         cloudi_core_i_spawn,
         cloudi_core_i_sup,
+        cloudi_crdt,
         cloudi_future,
         cloudi_ip_address,
         cloudi_key_value,

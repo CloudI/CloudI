@@ -559,8 +559,8 @@ AM_CONDITIONAL([RUBY_SUPPORT], [test "x$ruby_support" = "xtrue"])
 # erlang checks
 AC_ERLANG_NEED_ERLC()
 AC_ERLANG_NEED_ERL()
-AX_ERLANG_REQUIRE_OTP_VER([19.0], ,
-    [AC_MSG_ERROR([Erlang >= 19.0 not found])])
+AX_ERLANG_REQUIRE_OTP_VER([19.3], ,
+    [AC_MSG_ERROR([Erlang >= 19.3 not found])])
 AC_ERLANG_SUBST_ERTS_VER
 AC_ERLANG_SUBST_ROOT_DIR
 AX_ERLANG_SUBST_OTP_VER

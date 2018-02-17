@@ -36,6 +36,7 @@ if RUBY_SUPPORT
 endif
 SUBDIRS = $(CXX_SUBDIR) $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(JAVA_SUBDIR) $(OCAML_SUBDIR) erlang
+DIST_SUBDIRS = $(SUBDIRS)
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/messaging"
 
 .PHONY: \

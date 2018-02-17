@@ -36,6 +36,7 @@ SUBDIRS = $(C_SUBDIR) erlang $(GO_SUBDIR) $(HASKELL_SUBDIR) \
           $(OCAML_SUBDIR) \
           $(PERL_SUBDIR) $(PHP_SUBDIR) \
           $(PYTHON_SUBDIR) $(RUBY_SUBDIR)
+DIST_SUBDIRS = $(SUBDIRS)
 
 install-exec-hook:
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_prefix)/api"

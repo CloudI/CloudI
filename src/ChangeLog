@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix automake subdirs use for distclean
+    * Fix minimum Erlang/OTP version (it is now 19.3)
+    * Add ordered argument to cloudi_queue
+    * Add mcast support to cloudi_queue
+    * Add the cloudi_crdt module for replicating an Erlang map
+      between internal CloudI services
+    * Add cloudi_crdt usage in the Erlang count integration test
+      (when the count test is ran with the mode argument as crdt)
+
 2018-01-27 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix cloudi_service_http_rest cloudi_service_init failure handling
