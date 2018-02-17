@@ -453,8 +453,13 @@ new(Dispatcher, Timeout, Options)
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern(ServiceNameFull),
     Service = cloudi_service:self(Dispatcher),
+    % CloudI CRDT service requests need to be ordered so that a retry
+    % that occurs after a failed send does not allow a duplicate of an
+    % operation to arrive after the operation has been removed from the POLog
+    % (i.e., taken effect in the data type, the Erlang map).
     Queue = cloudi_queue:new([{retry, Retry},
                               {retry_delay, RetryDelay},
+                              {ordered, true},
                               {failures_source_die, true}]),
     NodeId = node_id(Service),
     VClock0 = vclock_new(),
