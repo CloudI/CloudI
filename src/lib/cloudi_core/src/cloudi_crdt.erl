@@ -283,8 +283,10 @@ handle_info(Request,
                                       data = DataRemote}};
         #timeout_async_active{trans_id = RemoteStateId}
         when Result == ignored ->
-            erlang:exit(timeout),
-            {{error, timeout},
+            % A timeout occurred after attempting to initialize with
+            % remote data after the CloudI service process restarted.
+            erlang:exit(remote_state_timeout),
+            {{error, remote_state_timeout},
              StateNew#cloudi_crdt{remote_state_id = undefined}};
         #return_async_active{response = {vclock,
                                          NodeIdRemote, VClockRemote}}
@@ -451,9 +453,9 @@ new(Dispatcher, Timeout, Options)
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern(ServiceNameFull),
     Service = cloudi_service:self(Dispatcher),
-    Queue = cloudi_queue:new([{ordered, true},
-                              {retry, Retry},
-                              {retry_delay, RetryDelay}]),
+    Queue = cloudi_queue:new([{retry, Retry},
+                              {retry_delay, RetryDelay},
+                              {failures_source_die, true}]),
     NodeId = node_id(Service),
     VClock0 = vclock_new(),
     VClockN = VClock0#{NodeId => 0},
@@ -475,6 +477,7 @@ new(Dispatcher, Timeout, Options)
         RemoteStateId =:= undefined ->
             ok = cloudi_service:subscribe(Dispatcher, ServiceName);
         is_binary(RemoteStateId) ->
+            % initialization is delayed until remote state is received
             ok
     end,
     #cloudi_crdt{service_name = ServiceName,
@@ -523,6 +526,10 @@ zero(Dispatcher, Key, State) ->
 
 node_id(Service)
     when is_pid(Service) ->
+    % n.b., The Erlang Term Binary Format for an Erlang pid (PID_EXT)
+    % includes the node, so only the Erlang pid would be necessary here
+    % if a binary format was used.  The node is added here to make it
+    % more obvious for human examination.
     {node(Service), Service}.
 
 -spec event_local(Operation :: operation_write(),
@@ -537,12 +544,15 @@ event_local(Operation,
                          vclock = VClock0,
                          polog = POLog} = State,
             Dispatcher) ->
+    % A write operation occurs locally by getting added to the POLog
+    % and getting broadcasted to all other CloudI service processes.
+
     VClock1 = vclock_increment(NodeId, VClock0), % event
     POLogNew = polog_effect(Operation, VClock1, POLog),
     VClockN = vclock_increment(NodeId, VClock1), % send
-    {ok, QueueNew} = cloudi_queue:mcast(Dispatcher, ServiceNameFull,
-                                        {operation,
-                                         NodeId, VClockN, Operation}, Queue),
+    {ok, QueueNew} = cloudi_queue:
+                     mcast(Dispatcher, ServiceNameFull,
+                           {operation, NodeId, VClockN, Operation}, Queue),
     State#cloudi_crdt{queue = QueueNew,
                       vclock = VClockN,
                       polog = POLogNew}.
@@ -559,6 +569,11 @@ event_remote(NodeIdRemote, VClockRemote, Operation,
                           vclocks = VClocks,
                           polog = POLog,
                           data = Data} = State) ->
+    % A remote write operation is received and added to the POLog
+    % (from a CloudI service request sent by the broadcast in event_local/3).
+    % The current vclock() is provided as a response for this
+    % CloudI service request in the broadcast.
+
     VClock1 = vclock_merge(VClockRemote,
                            vclock_increment(NodeId, VClock0)), % receive
     POLogNext = polog_effect(Operation, VClock1, POLog),
@@ -589,17 +604,20 @@ event_local_vclock(NodeIdRemote, VClockRemote,
                                 polog = POLog,
                                 data = Data} = State,
                    Dispatcher) ->
-    % Update vclock from the local operation mcast response
+    % Update the vclock() from the local operation broadcast response
+    % that was provided by event_remote/4.
 
     VClock1 = vclock_merge(VClockRemote,
                            vclock_increment(NodeId, VClock0)), % receive
     {QueueNew, VClockN} = case cloudi_queue:size(Queue) of
         0 ->
             % If nothing else is currently being sent,
-            % send the current vclock to all the processes
-            {ok, QueueNext} = cloudi_queue:mcast(Dispatcher, ServiceNameFull,
-                                                 {vclock, NodeId, VClock1},
-                                                 Queue),
+            % send the current vclock to all the processes.
+            % This is executed after an operation has completed its
+            % broadcast and no other operations are ready to broadcast.
+            {ok, QueueNext} = cloudi_queue:
+                              mcast(Dispatcher, ServiceNameFull,
+                                    {vclock, NodeId, VClock1}, Queue),
             {QueueNext, vclock_increment(NodeId, VClock1)}; % send
         _ ->
             {Queue, VClock1}
@@ -630,16 +648,21 @@ event_remote_vclock(NodeIdRemote, VClockRemote,
                                  polog = POLog,
                                  data = Data} = State,
                     Dispatcher) ->
+    % The vclock() broadcasted from event_local_vclock/4 updates the
+    % the remote CloudI service process here.  The updated vclock() is
+    % broadcasted if no other operations are being sent, to ensure the
+    % the operation takes effect on all CloudI service processes as
+    % quick as possible.
+
     VClock1 = vclock_merge(VClockRemote,
                            vclock_increment(NodeId, VClock0)), % receive
     {QueueNew, VClockN} = case cloudi_queue:size(Queue) of
         0 ->
             % If nothing else is currently being sent,
-            % send the current vclock to all the processes
-            {ok, QueueNext} = cloudi_queue:mcast(Dispatcher, ServiceNameFull,
-                                                 {vclock_updated,
-                                                  NodeId, VClock1},
-                                                 Queue),
+            % send the current vclock to all the processes.
+            {ok, QueueNext} = cloudi_queue:
+                              mcast(Dispatcher, ServiceNameFull,
+                                    {vclock_updated, NodeId, VClock1}, Queue),
             {QueueNext, vclock_increment(NodeId, VClock1)}; % send
         _ ->
             {Queue, VClock1}
@@ -667,6 +690,9 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote,
                                         vclocks = VClocks,
                                         polog = POLog,
                                         data = Data} = State) ->
+    % Update the vclock() from the local vclock() broadcast response
+    % that was provided by event_remote_vclock/4.
+
     VClockN = vclock_merge(VClockRemote,
                            vclock_increment(NodeId, VClock0)), % receive
     VClocksNew = vclocks_update(NodeId, VClockN,
@@ -684,24 +710,12 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote,
                                   State :: state()) ->
     {vclock_updated, state()}.
 
-event_remote_vclock_updated(NodeIdRemote, VClockRemote,
-                            #cloudi_crdt{node_id = NodeId,
-                                         vclock = VClock0,
-                                         vclocks = VClocks,
-                                         polog = POLog,
-                                         data = Data} = State) ->
-    VClockN = vclock_merge(VClockRemote,
-                           vclock_increment(NodeId, VClock0)), % receive
-    VClocksNew = vclocks_update(NodeId, VClockN,
-                                vclocks_update(NodeIdRemote, VClockRemote,
-                                               VClocks)),
-    VClockMin = vclocks_minimum(VClocksNew),
-    {POLogNew, DataNew} = polog_stable(POLog, Data, VClockMin),
+event_remote_vclock_updated(NodeIdRemote, VClockRemote, State) ->
+    % The vclock() broadcasted from event_remote_vclock/4 updates the
+    % the remote CloudI service process here.
+
     {vclock_updated,
-     State#cloudi_crdt{vclock = VClockN,
-                       vclocks = VClocksNew,
-                       polog = POLogNew,
-                       data = DataNew}}.
+     event_local_vclock_updated(NodeIdRemote, VClockRemote, State)}.
 
 -spec polog_effect(Operation :: operation_write(),
                    VClock :: vclock(),
@@ -709,11 +723,16 @@ event_remote_vclock_updated(NodeIdRemote, VClockRemote,
     polog().
 
 polog_effect(Operation, VClock, POLog0) ->
-    case polog_redundancy_relation(Operation, VClock, POLog0) of
-        {ignore, POLogN} ->
-            POLogN;
-        {add, POLogN} ->
-            [{VClock, Operation} | POLogN]
+    case polog_duplicate_operation(VClock, POLog0) of
+        true ->
+            POLog0;
+        false ->
+            case polog_redundancy_relation(Operation, VClock, POLog0) of
+                {ignore, POLogN} ->
+                    POLogN;
+                {add, POLogN} ->
+                    [{VClock, Operation} | POLogN]
+            end
     end.
 
 -spec polog_stable(POLog :: polog(),
@@ -737,18 +756,44 @@ polog_stable([{VClock, Operation} = POLogValue | POLogOld], POLogNew,
                          Data, VClockMin)
     end.
 
+-spec polog_duplicate_operation(VClock :: vclock(),
+                                POLog :: polog()) ->
+    boolean().
+
+polog_duplicate_operation(VClock, POLog) ->
+    % If cloudi_queue was set to do retries of CloudI service requests,
+    % it is possible that a failure to send an operation causes an operation
+    % to be sent more than once, if it gets received the first time with
+    % a response failure. The vclock() value is unique, and vclock() updates
+    % are required to remove the operation from the POLog
+    % (i.e., the operation must still be in the POLog),
+    % so it is easy to check for.
+    case lists:keyfind(VClock, 1, POLog) of
+        {VClock, _} ->
+            true;
+        false ->
+            false
+    end.
+
 -spec polog_redundancy_relation(Operation :: operation_write(),
                                 VClock :: vclock(),
                                 POLog :: polog()) ->
     {add | ignore, POLogNew :: polog()}.
 
 polog_redundancy_relation({incr, _, _}, _, POLog) ->
+    % Both incr and decr only mutate existing data and are unable to be
+    % redundant, unless there is an incr/decr pair that contain the same
+    % Key and Value (or some combination is equivalent to this).
+    % The occurrence of redundant incr/decr will be infrequent and it is
+    % best to avoid the extra processing a check would require.
     {add, POLog};
 polog_redundancy_relation({decr, _, _}, _, POLog) ->
     {add, POLog};
 polog_redundancy_relation({put, Key, _}, VClock, POLog) ->
+    % only removes the first redundant operation to prevent memory growth
     polog_redundancy_relation_put(POLog, [], Key, VClock);
 polog_redundancy_relation({clear, Key}, VClock, POLog) ->
+    % only removes the first redundant operation to prevent memory growth
     polog_redundancy_relation_clear(POLog, [], Key, VClock);
 polog_redundancy_relation(clear_all, VClock, POLog) ->
     polog_redundancy_relation_clear_all(POLog, [], VClock).

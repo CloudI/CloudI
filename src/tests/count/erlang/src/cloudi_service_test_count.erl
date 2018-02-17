@@ -71,7 +71,9 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     		#state{mode = Mode};
 		Mode =:= crdt ->
     		#state{mode = Mode,
-                   crdt = cloudi_crdt:new(Dispatcher, Timeout)}
+                   crdt = cloudi_crdt:new(Dispatcher, Timeout,
+                                          [{retry, 20}, % 5 minutes total
+                                           {retry_delay, 15 * 1000}])} % 15 sec
 	end,
 	{ok, State}.
 
