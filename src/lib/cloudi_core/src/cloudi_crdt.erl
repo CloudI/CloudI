@@ -34,14 +34,14 @@
 %%% Practice of Eventual Consistency, page 7. ACM, 2014.
 %%% http://haslab.uminho.pt/ashoker/files/opbaseddais14.pdf
 %%%
-%%% Lamport, Leslie. "Time, clocks, and the ordering of events in a
-%%% distributed system". Communications of the ACM. 21 (7): 558–565. (1978)
-%%% http://research.microsoft.com/en-us/um/people/lamport/pubs/time-clocks.pdf
-%%%
 %%% Mattern, Friedemann. "Virtual Time and Global States of
 %%% Distributed Systems". Workshop on Parallel and Distributed
 %%% Algorithms: pp. 215-226 (1988).
 %%% http://homes.cs.washington.edu/~arvind/cs425/doc/mattern89virtual.pdf
+%%%
+%%% Lamport, Leslie. "Time, clocks, and the ordering of events in a
+%%% distributed system". Communications of the ACM. 21 (7): 558–565. (1978)
+%%% http://research.microsoft.com/en-us/um/people/lamport/pubs/time-clocks.pdf
 %%% @end
 %%%
 %%% MIT License
@@ -80,6 +80,7 @@
          decr/3,
          decr/4,
          find/3,
+         fold/4,
          get/3,
          handle_info/3,
          handle_request/11,
@@ -90,16 +91,28 @@
          new/2,
          new/3,
          put/4,
+         size/2,
+         values/2,
          zero/3]).
 
 -type node_id() :: {node(), cloudi_service:source()}.
 -type vclock() :: #{node_id() := non_neg_integer()}.
 -type vclocks() :: #{node_id() := vclock()}.
+-type operation_read() ::
+    {find,   Key :: any()} |
+    {fold,   F :: fun((Key :: any(), Value :: any(),
+                       AccIn :: any()) -> AccOut :: any()),
+             AccInit :: any()} |
+    {get,    Key :: any()} |
+    {is_key, Key :: any()} |
+    keys |
+    size |
+    values.
 -type operation_write() ::
-    {incr,  Key :: any(), Value :: any()} |
-    {decr,  Key :: any(), Value :: any()} |
-    {put,   Key :: any(), Value :: any()} |
-    {clear, Key :: any()} |
+    {incr,   Key :: any(), Value :: any()} |
+    {decr,   Key :: any(), Value :: any()} |
+    {put,    Key :: any(), Value :: any()} |
+    {clear,  Key :: any()} |
     clear_all.
 
 % The POLog is ordered based on the receive order of the operations
@@ -165,7 +178,7 @@
 clear(Dispatcher, State)
     when is_pid(Dispatcher) ->
     event_local(clear_all, State, Dispatcher).
-    
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Clear a key in the CloudI CRDT.===
@@ -220,14 +233,32 @@ decr(Dispatcher, Key, Value, State)
 -spec find(Dispatcher :: cloudi_service:dispatcher(),
            Key :: any(),
            State :: state()) ->
-    {{ok, Value :: any()}, state()} |
-    {error, state()}.
+    {ok, Value :: any()} |
+    error.
 
 find(Dispatcher, Key,
-     #cloudi_crdt{data = Data} = State)
+     #cloudi_crdt{data = Data})
     when is_pid(Dispatcher) ->
-    {read({find, Key}, Data), State}.
-    
+    read({find, Key}, Data).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fold a function over the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec fold(Dispatcher :: cloudi_service:dispatcher(),
+           F :: fun((Key :: any(), Value :: any(),
+                     AccIn :: any()) -> AccOut :: any()),
+           AccInit :: any(),
+           State :: state()) ->
+    AccFinal :: any().
+
+fold(Dispatcher, F, AccInit,
+     #cloudi_crdt{data = Data})
+    when is_pid(Dispatcher) ->
+    read({fold, F, AccInit}, Data).
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get a value from the CloudI CRDT.===
@@ -237,13 +268,13 @@ find(Dispatcher, Key,
 -spec get(Dispatcher :: cloudi_service:dispatcher(),
           Key :: any(),
           State :: state()) ->
-    {Value :: any(), state()}.
+    Value :: any().
 
 get(Dispatcher, Key,
-    #cloudi_crdt{data = Data} = State)
+    #cloudi_crdt{data = Data})
     when is_pid(Dispatcher) ->
-    {read({get, Key}, Data), State}.
-    
+    read({get, Key}, Data).
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Handle all info messages related to the CloudI CRDT.===
@@ -394,13 +425,13 @@ incr(Dispatcher, Key, Value, State)
 -spec is_key(Dispatcher :: cloudi_service:dispatcher(),
              Key :: any(),
              State :: state()) ->
-    {boolean(), state()}.
+    boolean().
 
 is_key(Dispatcher, Key,
-       #cloudi_crdt{data = Data} = State)
+       #cloudi_crdt{data = Data})
     when is_pid(Dispatcher) ->
-    {read({is_key, Key}, Data), State}.
-    
+    read({is_key, Key}, Data).
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Get all keys in the CloudI CRDT.===
@@ -409,13 +440,13 @@ is_key(Dispatcher, Key,
 
 -spec keys(Dispatcher :: cloudi_service:dispatcher(),
            State :: state()) ->
-    {list(), state()}.
+    list().
 
 keys(Dispatcher,
-     #cloudi_crdt{data = Data} = State)
+     #cloudi_crdt{data = Data})
     when is_pid(Dispatcher) ->
-    {read(keys, Data), State}.
-    
+    read(keys, Data).
+
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Create a CloudI CRDT.===
@@ -507,6 +538,36 @@ new(Dispatcher, Timeout, Options)
 put(Dispatcher, Key, Value, State)
     when is_pid(Dispatcher) ->
     event_local({put, Key, Value}, State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get the size of the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec size(Dispatcher :: cloudi_service:dispatcher(),
+           State :: state()) ->
+    non_neg_integer().
+
+size(Dispatcher,
+     #cloudi_crdt{data = Data})
+    when is_pid(Dispatcher) ->
+    read(size, Data).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Get all values in the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec values(Dispatcher :: cloudi_service:dispatcher(),
+             State :: state()) ->
+    list().
+
+values(Dispatcher,
+       #cloudi_crdt{data = Data})
+    when is_pid(Dispatcher) ->
+    read(values, Data).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -860,14 +921,28 @@ polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
             {ignore, lists:reverse(POLog, POLogWith)}
     end.
 
+-spec read(operation_read(),
+           Data :: data()) ->
+    any().
+
 read({find, Key}, Data) ->
     maps:find(Key, Data);
+read({fold, F, AccInit}, Data) ->
+    maps:fold(F, AccInit, Data);
 read({get, Key}, Data) ->
     maps:get(Key, Data);
 read({is_key, Key}, Data) ->
     maps:is_key(Key, Data);
 read(keys, Data) ->
-    maps:keys(Data).
+    maps:keys(Data);
+read(size, Data) ->
+    maps:size(Data);
+read(values, Data) ->
+    maps:values(Data).
+
+-spec write(Operation :: operation_write(),
+            Data :: data()) ->
+    DataNew :: data().
 
 write({incr, Key, Value}, Data) ->
     try maps:update_with(Key, fun(OldValue) ->

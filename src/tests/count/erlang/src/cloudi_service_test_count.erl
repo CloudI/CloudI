@@ -48,8 +48,8 @@
 
 -record(state,
         {
-			mode :: isolated | crdt,
-			crdt = undefined :: cloudi_crdt:state() | undefined,
+            mode :: isolated | crdt,
+            crdt = undefined :: cloudi_crdt:state() | undefined,
             count = 0 :: non_neg_integer()
         }).
 
@@ -67,15 +67,15 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
     cloudi_service:subscribe(Dispatcher, "erlang/get"),
     State = if
-		Mode =:= isolated ->
-    		#state{mode = Mode};
-		Mode =:= crdt ->
-    		#state{mode = Mode,
+        Mode =:= isolated ->
+            #state{mode = Mode};
+        Mode =:= crdt ->
+            #state{mode = Mode,
                    crdt = cloudi_crdt:new(Dispatcher, Timeout,
                                           [{retry, 20}, % 5 minutes total
                                            {retry_delay, 15 * 1000}])} % 15 sec
-	end,
-	{ok, State}.
+    end,
+    {ok, State}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
@@ -94,35 +94,35 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
                               #state{mode = crdt,
                                      crdt = CRDT0} = State, Dispatcher) ->
-	case cloudi_crdt:handle_request(Type, Name, Pattern, RequestInfo, Request,
+    case cloudi_crdt:handle_request(Type, Name, Pattern, RequestInfo, Request,
                                     Timeout, Priority, TransId, Pid,
                                     CRDT0, Dispatcher) of
-		{ok, CRDTN} ->
-			{noreply, State#state{crdt = CRDTN}};
-		{ignored, CRDT1} ->
+        {ok, CRDTN} ->
+            {noreply, State#state{crdt = CRDTN}};
+        {ignored, CRDT1} ->
             {CountN,
              CRDTN} = case cloudi_crdt:find(Dispatcher, count, CRDT1) of
-			    {{ok, Count0}, CRDT2} ->
-    		        CRDT3 = if
-        		        Count0 >= 4294967295 ->
-                            cloudi_crdt:zero(Dispatcher, count, CRDT2);
-        		        true ->
-					        cloudi_crdt:incr(Dispatcher, count, CRDT2)
-    		        end,
-                    {Count0, CRDT3};
-			    {error, CRDT2} ->
-                    {1, cloudi_crdt:put(Dispatcher, count, 2, CRDT2)}
+                {ok, Count0} ->
+                    CRDT2 = if
+                        Count0 >= 4294967295 ->
+                            cloudi_crdt:zero(Dispatcher, count, CRDT1);
+                        true ->
+                            cloudi_crdt:incr(Dispatcher, count, CRDT1)
+                    end,
+                    {Count0, CRDT2};
+                error ->
+                    {1, cloudi_crdt:put(Dispatcher, count, 2, CRDT1)}
             end,
-    		?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
-    		Response = cloudi_string:format_to_binary("~w", [CountN]),
-    		{reply, Response, State#state{crdt = CRDTN}}
-	end.
+            ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
+            Response = cloudi_string:format_to_binary("~w", [CountN]),
+            {reply, Response, State#state{crdt = CRDTN}}
+    end.
 
 cloudi_service_handle_info(Request,
                            #state{mode = crdt,
                                   crdt = CRDT0} = State, Dispatcher) ->
-	{ok, CRDTN} = cloudi_crdt:handle_info(Request, CRDT0, Dispatcher),
-	{noreply, State#state{crdt = CRDTN}}.
+    {ok, CRDTN} = cloudi_crdt:handle_info(Request, CRDT0, Dispatcher),
+    {noreply, State#state{crdt = CRDTN}}.
 
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ?LOG_INFO("terminate count erlang", []),
