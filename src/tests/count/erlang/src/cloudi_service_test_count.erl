@@ -61,7 +61,7 @@
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
+cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {mode,                             isolated}],
     [Mode] = cloudi_proplists:take_values(Defaults, Args),
@@ -71,7 +71,7 @@ cloudi_service_init(Args, _Prefix, Timeout, Dispatcher) ->
             #state{mode = Mode};
         Mode =:= crdt ->
             #state{mode = Mode,
-                   crdt = cloudi_crdt:new(Dispatcher, Timeout,
+                   crdt = cloudi_crdt:new(Dispatcher,
                                           [{retry, 20}, % 5 minutes total
                                            {retry_delay, 15 * 1000}])} % 15 sec
     end,

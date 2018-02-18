@@ -10,11 +10,17 @@
 %%% provide an eventually consistent data store among internal CloudI service
 %%% processes.
 %%%
-%%% It is best to have services that utilize cloudi_crdt be configured with
-%%% an "oldest" destination refresh method so a process restart may obtain
-%%% existing state from the most stable of the peer processes.  The only
-%%% cloudi_crdt function that may be called within cloudi_service_init/4
-%%% is the new function.
+%%% The only cloudi_crdt function that may be called within
+%%% cloudi_service_init/4 is the new function.  A service instance
+%%% that uses cloudi_crdt should have restarts disabled
+%%% (max_r set to 0 in the service configuration) and needs to
+%%% have the same count_process value on each distributed Erlang node
+%%% that is connected (creation of cloudi_crdt waits until all CloudI
+%%% service processes are ready).  These constraints mean that the
+%%% count_process_dynamic service configuration option must not be used
+%%% with an internal CloudI service that uses cloudi_crdt.
+%%% The constraints mentioned here may be removed in the future with
+%%% improvements to cloudi_crdt.
 %%%
 %%% The papers related to this implementation of the POLog CRDT are:
 %%%
@@ -88,8 +94,8 @@
          incr/4,
          is_key/3,
          keys/2,
+         new/1,
          new/2,
-         new/3,
          put/4,
          size/2,
          values/2,
@@ -126,9 +132,8 @@
 
 -record(cloudi_crdt,
     {
-        service_name :: cloudi_service:service_name(),
         service_name_full :: cloudi_service:service_name(),
-        remote_state_id :: cloudi_service:trans_id() | undefined,
+        timeout_init :: cloudi_service:timeout_value_milliseconds(),
         queue :: cloudi_queue:state(),
         node_id :: node_id(),
         vclock :: vclock(),
@@ -137,17 +142,12 @@
         data = #{} :: data()
     }).
 
--record(cloudi_crdt_state,
-    {
-        vclock :: vclock(),
-        vclocks :: vclocks(),
-        polog :: polog(),
-        data :: data()
-    }).
-
 -include("cloudi_service.hrl").
 
 -define(DEFAULT_SERVICE_NAME,                    "crdt").
+-define(DEFAULT_TIMEOUT_INIT,                      5000). % milliseconds
+        % maximum amount of time to wait for all (including remote nodes)
+        % CloudI service processes to be present
 -define(DEFAULT_RETRY,                                0). % see below:
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
@@ -289,36 +289,17 @@ get(Dispatcher, Key,
     {{error, Reason :: cloudi_service:error_reason()}, StateNew :: state()} |
     {ignored, State :: state()}.
 
-handle_info(Request,
-            #cloudi_crdt{service_name = ServiceName,
-                         remote_state_id = RemoteStateId,
-                         queue = Queue,
-                         vclock = VClock} = State,
+handle_info({initialize, ProcessCountTotal},
+            #cloudi_crdt{service_name_full = ServiceNameFull,
+                         timeout_init = TimeoutInit} = State,
             Dispatcher) ->
+    ok = initialize(TimeoutInit, ProcessCountTotal,
+                    ServiceNameFull, Dispatcher),
+    {ok, State};
+handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
     {Result, QueueNew} = cloudi_queue:handle_info(Request, Queue, Dispatcher),
     StateNew = State#cloudi_crdt{queue = QueueNew},
     case Request of
-        #return_async_active{response = RemoteState,
-                             trans_id = RemoteStateId}
-        when Result == ignored ->
-            #cloudi_crdt_state{vclock = VClockRemote,
-                               vclocks = VClocksRemote,
-                               polog = POLogRemote,
-                               data = DataRemote} = RemoteState,
-            VClockMerged = vclock_merge(VClock, VClockRemote),
-            ok = cloudi_service:subscribe(Dispatcher, ServiceName),
-            {ok, StateNew#cloudi_crdt{remote_state_id = undefined,
-                                      vclock = VClockMerged,
-                                      vclocks = VClocksRemote,
-                                      polog = POLogRemote,
-                                      data = DataRemote}};
-        #timeout_async_active{trans_id = RemoteStateId}
-        when Result == ignored ->
-            % A timeout occurred after attempting to initialize with
-            % remote data after the CloudI service process restarted.
-            erlang:exit(remote_state_timeout),
-            {{error, remote_state_timeout},
-             StateNew#cloudi_crdt{remote_state_id = undefined}};
         #return_async_active{response = {vclock,
                                          NodeIdRemote, VClockRemote}}
         when Result == ok ->
@@ -359,18 +340,9 @@ handle_info(Request,
 
 handle_request(Type, ServiceNameFull, ServiceNameFull,
                _RequestInfo, Request, Timeout, _Priority, TransId, Pid,
-               #cloudi_crdt{service_name_full = ServiceNameFull,
-                            vclock = VClock,
-                            vclocks = VClocks,
-                            polog = POLog,
-                            data = Data} = State,
+               #cloudi_crdt{service_name_full = ServiceNameFull} = State,
                Dispatcher) ->
     {Response, StateNew} = case Request of
-        state ->
-            {#cloudi_crdt_state{vclock = VClock,
-                                vclocks = VClocks,
-                                polog = POLog,
-                                data = Data}, State};
         {operation, NodeIdRemote, VClockRemote, Operation} ->
             event_remote(NodeIdRemote, VClockRemote, Operation, State);
         {vclock, NodeIdRemote, VClockRemote} ->
@@ -453,12 +425,11 @@ keys(Dispatcher,
 %% @end
 %%-------------------------------------------------------------------------
 
--spec new(Dispatcher :: cloudi_service:dispatcher(),
-          Timeout :: cloudi_service:timeout_milliseconds()) ->
+-spec new(Dispatcher :: cloudi_service:dispatcher()) ->
     state().
 
-new(Dispatcher, Timeout) ->
-    new(Dispatcher, Timeout, []).
+new(Dispatcher) ->
+    new(Dispatcher, []).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -467,23 +438,29 @@ new(Dispatcher, Timeout) ->
 %%-------------------------------------------------------------------------
 
 -spec new(Dispatcher :: cloudi_service:dispatcher(),
-          Timeout :: cloudi_service:timeout_milliseconds(),
           Options :: options()) ->
     state().
 
-new(Dispatcher, Timeout, Options)
+new(Dispatcher, Options)
     when is_pid(Dispatcher), is_list(Options) ->
     Defaults = [
         {service_name,                  ?DEFAULT_SERVICE_NAME},
+        {timeout_init,                  ?DEFAULT_TIMEOUT_INIT},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
-    [ServiceName, Retry, RetryDelay] =
+    [ServiceName, TimeoutInit, Retry, RetryDelay] =
         cloudi_proplists:take_values(Defaults, Options),
     true = is_list(ServiceName) andalso is_integer(hd(ServiceName)),
     Prefix = cloudi_service:prefix(Dispatcher),
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern(ServiceNameFull),
+    true = is_integer(TimeoutInit) andalso
+           (TimeoutInit >= 0) andalso (TimeoutInit =< 4294967195),
     Service = cloudi_service:self(Dispatcher),
+    NodeId = node_id(Service),
+    VClock0 = vclock_new(),
+    VClockN = VClock0#{NodeId => 0},
+
     % CloudI CRDT service requests need to be ordered so that a retry
     % that occurs after a failed send does not allow a duplicate of an
     % operation to arrive after the operation has been removed from the POLog
@@ -492,33 +469,17 @@ new(Dispatcher, Timeout, Options)
                               {retry_delay, RetryDelay},
                               {ordered, true},
                               {failures_source_die, true}]),
-    NodeId = node_id(Service),
-    VClock0 = vclock_new(),
-    VClockN = VClock0#{NodeId => 0},
-    RemoteStateId = case cloudi_service:get_pid(Dispatcher,
-                                                ServiceNameFull, limit_min) of
-        {ok, PatternPid} ->
-            case cloudi_service:send_async(Dispatcher, ServiceNameFull, <<>>,
-                                           state, Timeout, undefined,
-                                           PatternPid) of
-                {ok, TransId} ->
-                    TransId;
-                {error, timeout} ->
-                    undefined
-            end;
-        {error, timeout} ->
-            undefined
-    end,
-    if
-        RemoteStateId =:= undefined ->
-            ok = cloudi_service:subscribe(Dispatcher, ServiceName);
-        is_binary(RemoteStateId) ->
-            % initialization is delayed until remote state is received
-            ok
-    end,
-    #cloudi_crdt{service_name = ServiceName,
-                 service_name_full = ServiceNameFull,
-                 remote_state_id = RemoteStateId,
+
+    % It is expected that each connected Distributed Erlang node contains
+    % the same number of configured service processes.
+    {ok, Nodes} = cloudi_service_api:nodes(TimeoutInit),
+    ProcessCount = cloudi_service:process_count(Dispatcher),
+    ProcessCountTotal = (length(Nodes) + 1) * ProcessCount,
+    Service ! {initialize, ProcessCountTotal},
+
+    ok = cloudi_service:subscribe(Dispatcher, ServiceName),
+    #cloudi_crdt{service_name_full = ServiceNameFull,
+                 timeout_init = TimeoutInit,
                  queue = Queue,
                  node_id = NodeId,
                  vclock = VClockN}.
@@ -597,6 +558,33 @@ node_id(Service)
     % if a binary format was used.  The node is added here to make it
     % more obvious for human examination.
     {node(Service), Service}.
+
+-spec initialize(Timeout :: cloudi_service:timeout_value_milliseconds(),
+                 ProcessCountTotal :: pos_integer(),
+                 ServiceNameFull :: cloudi_service:service_name(),
+                 Dispatcher :: cloudi_service:dispatcher()) ->
+    ok | invalid | timeout.
+
+initialize(Timeout, ProcessCountTotal, ServiceNameFull, Dispatcher) ->
+    TimeoutDelta = 500, % milliseconds
+    {ok, PatternPids} = cloudi_service:get_pids(Dispatcher,
+                                                ServiceNameFull, Timeout),
+    ProcessCountCurrent = length(PatternPids) + 1,
+    if
+        ProcessCountCurrent > ProcessCountTotal ->
+            invalid;
+        ProcessCountCurrent == ProcessCountTotal ->
+            ok;
+        Timeout == 0 ->
+            timeout;
+        Timeout < TimeoutDelta ->
+            receive after Timeout -> ok end,
+            initialize(0, ProcessCountTotal, ServiceNameFull, Dispatcher);
+        true ->
+            receive after TimeoutDelta -> ok end,
+            initialize(Timeout - TimeoutDelta,
+                       ProcessCountTotal, ServiceNameFull, Dispatcher)
+    end.
 
 -spec event_local(Operation :: operation_write(),
                   State :: state(),
