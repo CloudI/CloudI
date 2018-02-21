@@ -188,6 +188,8 @@
 
 -type options() ::
     list({service_name, string()} |
+         {clean_vclocks, seconds()} |
+         {clean_vclocks_failure, float() | 1..100} |
          {retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()}).
 -type state() :: #cloudi_crdt{}.
