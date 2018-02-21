@@ -38,6 +38,9 @@
 
 -behaviour(cloudi_service).
 
+%% external interface
+-export([update/1]).
+
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
@@ -56,6 +59,11 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+update(4294967295) ->
+    0;
+update(Count) ->
+    Count + 1.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
@@ -81,12 +89,7 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{mode = isolated,
                                      count = Count0} = State, _Dispatcher) ->
-    CountN = if
-        Count0 == 4294967295 ->
-            0;
-        true ->
-            Count0 + 1
-    end,
+    CountN = update(Count0),
     ?LOG_INFO("count == ~w erlang", [CountN]),
     Response = cloudi_string:format_to_binary("~w", [CountN]),
     {reply, Response, State#state{count = CountN}};
@@ -100,18 +103,14 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
         {ok, CRDTN} ->
             {noreply, State#state{crdt = CRDTN}};
         {ignored, CRDT1} ->
-            {CountN,
-             CRDTN} = case cloudi_crdt:find(Dispatcher, count, CRDT1) of
+            Key = count,
+            {CountN, CRDTN} = case cloudi_crdt:find(Dispatcher, Key, CRDT1) of
                 {ok, Count0} ->
-                    CRDT2 = if
-                        Count0 >= 4294967295 ->
-                            cloudi_crdt:zero(Dispatcher, count, CRDT1);
-                        true ->
-                            cloudi_crdt:incr(Dispatcher, count, CRDT1)
-                    end,
+                    CRDT2 = cloudi_crdt:update(Dispatcher, Key,
+                                               ?MODULE, update, CRDT1),
                     {Count0, CRDT2};
                 error ->
-                    {1, cloudi_crdt:assign(Dispatcher, count, 2, CRDT1)}
+                    {1, cloudi_crdt:assign(Dispatcher, Key, 2, CRDT1)}
             end,
             ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
             Response = cloudi_string:format_to_binary("~w", [CountN]),

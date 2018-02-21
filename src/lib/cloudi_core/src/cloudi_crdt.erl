@@ -100,6 +100,8 @@
          new/2,
          put/4,
          size/2,
+         update/5,
+         update/6,
          values/2,
          zero/3]).
 
@@ -108,22 +110,28 @@
 -type vclocks() :: #{node_id() := vclock()}.
 -type seconds() :: 1 .. 4294967.
 -type milliseconds() :: 1 .. 4294967295.
+-type key() :: any().
+-type value() :: any().
 -type operation_read() ::
-    {find,   Key :: any()} |
-    {fold,   F :: fun((Key :: any(), Value :: any(),
+    {find,   Key :: key()} |
+    {fold,   F :: fun((Key :: key(), Value :: value(),
                        AccIn :: any()) -> AccOut :: any()),
              AccInit :: any()} |
-    {get,    Key :: any()} |
-    {is_key, Key :: any()} |
+    {get,    Key :: key()} |
+    {is_key, Key :: key()} |
     keys |
     size |
     values.
 -type operation_write() ::
-    {assign, Key :: any(), Value :: any()} |
-    {incr,   Key :: any(), Value :: any()} |
-    {decr,   Key :: any(), Value :: any()} |
-    {put,    Key :: any(), Value :: any()} |
-    {clear,  Key :: any()} |
+    {assign, Key :: key(), Value :: value()} |
+    {incr,   Key :: key(), Value :: value()} |
+    {decr,   Key :: key(), Value :: value()} |
+    {update, Key :: key(), ModuleVersion :: list(),
+             Module :: module(), Function :: atom()} |
+    {update, Key :: key(), ModuleVersion :: list(),
+             Module :: module(), Function :: atom(), Argument1 :: any()} |
+    {put,    Key :: key(), Value :: value()} |
+    {clear,  Key :: key()} |
     clear_all.
 
 % The POLog is ordered based on the receive order of the operations
@@ -142,7 +150,7 @@
     normal.
 
 % The POLog data type that contains consistent state (an Erlang map)
--type data() :: #{any() := any()}.
+-type data() :: #{key() := value()}.
 
 -record(cloudi_crdt,
     {
@@ -203,8 +211,8 @@
 %%-------------------------------------------------------------------------
 
 -spec assign(Dispatcher :: cloudi_service:dispatcher(),
-             Key :: any(),
-             Value :: any(),
+             Key :: key(),
+             Value :: value(),
              State :: state()) ->
     state().
 
@@ -233,7 +241,7 @@ clear(Dispatcher, State)
 %%-------------------------------------------------------------------------
 
 -spec clear(Dispatcher :: cloudi_service:dispatcher(),
-            Key :: any(),
+            Key :: key(),
             State :: state()) ->
     state().
 
@@ -248,7 +256,7 @@ clear(Dispatcher, Key, State)
 %%-------------------------------------------------------------------------
 
 -spec decr(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            State :: state()) ->
     state().
 
@@ -262,7 +270,7 @@ decr(Dispatcher, Key, State) ->
 %%-------------------------------------------------------------------------
 
 -spec decr(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            Value :: number(),
            State :: state()) ->
     state().
@@ -278,9 +286,9 @@ decr(Dispatcher, Key, Value, State)
 %%-------------------------------------------------------------------------
 
 -spec find(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            State :: state()) ->
-    {ok, Value :: any()} |
+    {ok, Value :: value()} |
     error.
 
 find(Dispatcher, Key,
@@ -295,7 +303,7 @@ find(Dispatcher, Key,
 %%-------------------------------------------------------------------------
 
 -spec fold(Dispatcher :: cloudi_service:dispatcher(),
-           F :: fun((Key :: any(), Value :: any(),
+           F :: fun((Key :: key(), Value :: value(),
                      AccIn :: any()) -> AccOut :: any()),
            AccInit :: any(),
            State :: state()) ->
@@ -313,9 +321,9 @@ fold(Dispatcher, F, AccInit,
 %%-------------------------------------------------------------------------
 
 -spec get(Dispatcher :: cloudi_service:dispatcher(),
-          Key :: any(),
+          Key :: key(),
           State :: state()) ->
-    Value :: any().
+    Value :: value().
 
 get(Dispatcher, Key,
     #cloudi_crdt{data = Data})
@@ -418,7 +426,7 @@ handle_request(_, _, _, _, _, _, _, _, _, State, _) ->
 %%-------------------------------------------------------------------------
 
 -spec incr(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            State :: state()) ->
     state().
 
@@ -432,7 +440,7 @@ incr(Dispatcher, Key, State) ->
 %%-------------------------------------------------------------------------
 
 -spec incr(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            Value :: number(),
            State :: state()) ->
     state().
@@ -448,7 +456,7 @@ incr(Dispatcher, Key, Value, State)
 %%-------------------------------------------------------------------------
 
 -spec is_key(Dispatcher :: cloudi_service:dispatcher(),
-             Key :: any(),
+             Key :: key(),
              State :: state()) ->
     boolean().
 
@@ -465,7 +473,7 @@ is_key(Dispatcher, Key,
 
 -spec keys(Dispatcher :: cloudi_service:dispatcher(),
            State :: state()) ->
-    list().
+    list(key()).
 
 keys(Dispatcher,
      #cloudi_crdt{data = Data})
@@ -544,8 +552,8 @@ new(Dispatcher, Options)
 %%-------------------------------------------------------------------------
 
 -spec put(Dispatcher :: cloudi_service:dispatcher(),
-          Key :: any(),
-          Value :: any(),
+          Key :: key(),
+          Value :: value(),
           State :: state()) ->
     state().
 
@@ -570,13 +578,66 @@ size(Dispatcher,
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Update a value iff it exists in the CloudI CRDT.===
+%% Function Module:Function/1 must exist with the same version
+%% in every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update(Dispatcher :: cloudi_service:dispatcher(),
+             Key :: key(),
+             Module :: module(),
+             Function :: atom(),
+             State :: state()) ->
+    state().
+
+update(Dispatcher, Key, Module, Function, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 1),
+    event_local({update, Key, ModuleVersion, Module, Function},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value iff it exists in the CloudI CRDT.===
+%% Function Module:Function/2 must exist with the same version
+%% in every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update(Dispatcher :: cloudi_service:dispatcher(),
+             Key :: key(),
+             Module :: module(),
+             Function :: atom(),
+             Argument1 :: any(),
+             State :: state()) ->
+    state().
+
+update(Dispatcher, Key, Module, Function, Argument1, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 2),
+    event_local({update, Key, ModuleVersion, Module, Function, Argument1},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Get all values in the CloudI CRDT.===
 %% @end
 %%-------------------------------------------------------------------------
 
 -spec values(Dispatcher :: cloudi_service:dispatcher(),
              State :: state()) ->
-    list().
+    list(value()).
 
 values(Dispatcher,
        #cloudi_crdt{data = Data})
@@ -590,7 +651,7 @@ values(Dispatcher,
 %%-------------------------------------------------------------------------
 
 -spec zero(Dispatcher :: cloudi_service:dispatcher(),
-           Key :: any(),
+           Key :: key(),
            State :: state()) ->
     state().
 
@@ -611,6 +672,51 @@ node_id(Service)
     % if a binary format was used.  The node is added here to make it
     % more obvious for human examination.
     {node(Service), Service}.
+
+-spec update_local_valid(Module :: module(),
+                         Function :: atom(),
+                         Arity :: non_neg_integer()) ->
+    ModuleVersion :: list().
+
+update_local_valid(Module, Function, Arity) ->
+    case erlang:function_exported(Module, Function, Arity) of
+        true ->
+            % if the module was stripped, an empty list is returned and
+            % the module version will be unable to get checked elsewhere.
+            cloudi_x_reltool_util:module_version(Module);
+        false ->
+            ?LOG_ERROR("function ~w:~w/~w does not exist!",
+                       [Module, Function, Arity]),
+            erlang:exit(badarg)
+    end.
+
+-spec update_remote_valid(ModuleVersion :: list(),
+                          Module :: module(),
+                          Function :: atom(),
+                          Arity :: non_neg_integer()) ->
+    ok.
+
+update_remote_valid([], Module, Function, Arity) ->
+    case erlang:function_exported(Module, Function, Arity) of
+        true ->
+            ok;
+        false ->
+            erlang:exit({crdt_update_module_function_missing,
+                         Module, Function, Arity})
+    end;
+update_remote_valid(ModuleVersion, Module, Function, Arity) ->
+    case erlang:function_exported(Module, Function, Arity) of
+        true ->
+            case cloudi_x_reltool_util:module_version(Module) of
+                ModuleVersion ->
+                    ok;
+                _ ->
+                    erlang:exit({crdt_update_module_version_mismatch, Module})
+            end;
+        false ->
+            erlang:exit({crdt_update_module_function_missing,
+                         Module, Function, Arity})
+    end.
 
 -spec event_local(Operation :: operation_write(),
                   State :: state(),
@@ -1132,6 +1238,13 @@ polog_redundancy_relation({incr, _, _}, _, POLog) ->
     {add, POLog};
 polog_redundancy_relation({decr, _, _}, _, POLog) ->
     {add, POLog};
+polog_redundancy_relation({update, _, _, _, _}, _, POLog) ->
+    % Update may contain any operation that operates on a value,
+    % if a value exists, so it is unable to be redundant
+    % (similar to incr and decr, but more generic).
+    {add, POLog};
+polog_redundancy_relation({update, _, _, _, _, _}, _, POLog) ->
+    {add, POLog};
 polog_redundancy_relation({put, Key, _}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
     polog_redundancy_relation_put(POLog, [], Key, VClock);
@@ -1246,6 +1359,24 @@ write({decr, Key, Value}, Data) ->
                 true ->
                     ValueOld
             end
+        end, Data)
+    catch
+        error:{badkey, Key} ->
+            Data
+    end;
+write({update, Key, ModuleVersion, Module, Function}, Data) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 1),
+    try maps:update_with(Key, fun(ValueOld) ->
+            Module:Function(ValueOld)
+        end, Data)
+    catch
+        error:{badkey, Key} ->
+            Data
+    end;
+write({update, Key, ModuleVersion, Module, Function, Argument1}, Data) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 2),
+    try maps:update_with(Key, fun(ValueOld) ->
+            Module:Function(Argument1, ValueOld)
         end, Data)
     catch
         error:{badkey, Key} ->
