@@ -3,17 +3,16 @@
 %%%
 %%%------------------------------------------------------------------------
 %%% @doc
-%%% ==CPG Groups Handling.==
-%%% Method of using cpg instead of pg2.  The resulting process group
-%%% handling is more scalable and more efficient.  The groups state is
-%%% obtained from the cpg process for a specific scope and is then used with
-%%% the functions provided here, so that contention for the cpg process
-%%% can be avoided.
+%%% ==CPG Data Group Lookups.==
+%%% All functions in this module are for using cached cpg data without
+%%% sending messages to the cpg scope process.  Using this module for
+%%% cpg group lookups is equivalent to the lazy destination refresh
+%%% methods in CloudI.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -34,8 +33,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -84,7 +83,7 @@
 -export_type([state/0]).
 
 -type get_members_return() ::
-    {ok, cpg:name(), list(pid())} |
+    {ok, cpg:name(), nonempty_list(pid())} |
     {error, {no_such_group, cpg:name()}}.
 -type get_pid_error_reason() ::
     {no_process, cpg:name()} |

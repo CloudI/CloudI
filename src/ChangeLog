@@ -4,6 +4,8 @@
 2018-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_crdt:update functions
+    * Improve cloudi_service:get_pids type specification
+    * Update cpg
 
 2018-02-20 Michael Truog   <mjtruog [at] gmail (dot) com>
 

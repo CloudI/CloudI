@@ -509,7 +509,7 @@ get_pid(Dispatcher, [NameC | _] = Name, Timeout)
 
 -spec get_pids(Dispatcher :: dispatcher(),
                Name :: service_name()) ->
-    {ok, PatternPids :: list(pattern_pid())} |
+    {ok, PatternPids :: nonempty_list(pattern_pid())} |
     {error, Reason :: error_reason()}.
 
 get_pids(Dispatcher, [NameC | _] = Name)
@@ -525,7 +525,7 @@ get_pids(Dispatcher, [NameC | _] = Name)
 -spec get_pids(Dispatcher :: dispatcher(),
                Name :: service_name(),
                Timeout :: timeout_milliseconds()) ->
-    {ok, PatternPids :: list(pattern_pid())} |
+    {ok, PatternPids :: nonempty_list(pattern_pid())} |
     {error, Reason :: error_reason()}.
 
 get_pids(Dispatcher, [NameC | _] = Name, undefined)

@@ -580,7 +580,7 @@ size(Dispatcher,
 %% @doc
 %% ===Update a value iff it exists in the CloudI CRDT.===
 %% Function Module:Function/1 must exist with the same version
-%% in every CloudI service process that shares this CloudI CRDT.
+%% for every CloudI service process that shares this CloudI CRDT.
 %% If the function does not execute to return the same result
 %% (when given the same value) for each instance of the CloudI CRDT,
 %% it can create inconsistencies in the Erlang map that is used for
@@ -606,7 +606,7 @@ update(Dispatcher, Key, Module, Function, State)
 %% @doc
 %% ===Update a value iff it exists in the CloudI CRDT.===
 %% Function Module:Function/2 must exist with the same version
-%% in every CloudI service process that shares this CloudI CRDT.
+%% for every CloudI service process that shares this CloudI CRDT.
 %% If the function does not execute to return the same result
 %% (when given the same value) for each instance of the CloudI CRDT,
 %% it can create inconsistencies in the Erlang map that is used for

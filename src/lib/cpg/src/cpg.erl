@@ -7,7 +7,7 @@
 %%% Based on the pg2 module in the Erlang OTP kernel application
 %%% (lib/kernel-x.x.x/src/pg2.erl).
 %%% cpg relies on distributed Erlang for node communication, which means
-%%% a fully connected network topology is created.  With distributed Erlang
+%%% a fully connected network topology is created.  With Distributed Erlang,
 %%% Erlang pids either exist on the local node or a remote node
 %%% (which shares a connection with the local node,
 %%%  so only 1 node hop is necessary in the worst case).
@@ -33,7 +33,7 @@
 %%% %CopyrightEnd%
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
+%%% @copyright 2011-2018 Michael Truog
 %%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
