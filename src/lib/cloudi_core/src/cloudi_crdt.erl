@@ -353,9 +353,6 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
         #return_async_active{response = vclock_updated}
         when Result == ok ->
             {ok, StateNew};
-        #return_async_active{response = bootstrap_done}
-        when Result == ok ->
-            {ok, StateNew};
         _ ->
             {Result, StateNew}
     end.
@@ -1038,7 +1035,7 @@ bootstrap_update_select(UpdateStates, Count,
                                                           SqsSum) ->
                 Diff = VClockAvgValue - VClockAllAvg,
                 Diff * Diff + SqsSum
-            end, 0, VClockAvgL) / Count, 0.5),
+            end, 0, VClockAvgL) / Count, 0.5), % sample stddev
 
             % 50% is 0.67448975019608171 * stddev
             VClockAllAvgThreshold = VClockAllAvg -
