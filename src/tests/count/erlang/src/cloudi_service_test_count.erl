@@ -111,7 +111,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                     end,
                     {Count0, CRDT2};
                 error ->
-                    {1, cloudi_crdt:put(Dispatcher, count, 2, CRDT1)}
+                    {1, cloudi_crdt:assign(Dispatcher, count, 2, CRDT1)}
             end,
             ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
             Response = cloudi_string:format_to_binary("~w", [CountN]),

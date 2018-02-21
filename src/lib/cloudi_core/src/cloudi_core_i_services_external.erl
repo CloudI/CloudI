@@ -1463,11 +1463,11 @@ code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
 
 -ifdef(VERBOSE_STATE).
-format_status(_Opt, [_PDict, _StateName, State]) ->
-    [{data, [{"StateData", State}]}].
+format_status(_Opt, [_PDict, State, _Data]) ->
+    [{data, [{"State", State}]}].
 -else.
 format_status(_Opt,
-              [_PDict, _StateName,
+              [_PDict,
                #state{send_timeouts = SendTimeouts,
                       send_timeout_monitors = SendTimeoutMonitors,
                       recv_timeouts = RecvTimeouts,
@@ -1476,7 +1476,7 @@ format_status(_Opt,
                       cpg_data = Groups,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
-                      options = ConfigOptions} = State]) ->
+                      options = ConfigOptions} = State, _Data]) ->
     NewGroups = case Groups of
         undefined ->
             undefined;

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-02-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Add bootstrap and clean_vclocks functionality to cloudi_crdt
+      so the CloudI service processes that utilize it may
+      restart, start, or fail without affecting its operation
+    * Fix external CloudI service Erlang process viewing with
+      the format_status/2 callback due to gen_fsm/gen_statem difference
+
 2018-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix automake subdirs use for distclean
