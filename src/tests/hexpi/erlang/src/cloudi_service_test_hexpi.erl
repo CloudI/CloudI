@@ -178,12 +178,12 @@ cloudi_service_map_reduce_recv([_, _, Request, _, {_, Pid}],
     NewState = reduce_send(IndexBin, PiResult, ElapsedTime, Pid,
                            State#state{task_size = NewTaskSize},
                            Dispatcher),
-    reduce_done_check(NewState).
+    reduce_done_check(NewState, Dispatcher).
 
 cloudi_service_map_reduce_info(#return_async_active{} = Request,
                                #state{queue = Queue0} = State, Dispatcher) ->
     {ok, QueueN} = cloudi_queue:recv(Dispatcher, Request, Queue0),
-    reduce_done_check(State#state{queue = QueueN});
+    reduce_done_check(State#state{queue = QueueN}, Dispatcher);
 cloudi_service_map_reduce_info(#timeout_async_active{} = Request,
                                #state{queue = Queue0} = State, Dispatcher) ->
     {ok, QueueN} = cloudi_queue:timeout(Dispatcher, Request, Queue0),
@@ -307,11 +307,12 @@ reduce_send(DigitIndex, PiResult, ElapsedTime, Pid,
     end,
     State#state{queue = QueueN}.
 
-reduce_done_check(#state{map_done = false} = State) ->
+reduce_done_check(#state{map_done = false} = State, _) ->
     {ok, State};
 reduce_done_check(#state{map_done = true,
-                         queue = Queue} = State) ->
-    ReduceSize = cloudi_queue:size(Queue),
+                         queue = Queue} = State,
+                  Dispatcher) ->
+    ReduceSize = cloudi_queue:size(Dispatcher, Queue),
     if
         ReduceSize == 0 ->
             {done, State};

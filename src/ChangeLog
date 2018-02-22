@@ -4,7 +4,11 @@
 2018-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_crdt:update functions
+    * Add the cloudi_crdt:byte_size function
     * Improve cloudi_service:get_pids type specification
+    * Add the cloudi_queue:byte_size functions
+    * Change the cloudi_queue:size/1 and cloudi_queue:failures/1
+      functions to cloudi_queue:size/2 and cloudi_queue:failures/2
     * Update cpg
 
 2018-02-20 Michael Truog   <mjtruog [at] gmail (dot) com>

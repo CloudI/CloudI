@@ -83,6 +83,7 @@
 
 %% external interface
 -export([assign/4,
+         byte_size/2,
          clear/2,
          clear/3,
          decr/3,
@@ -158,6 +159,7 @@
         clean_vclocks_interval :: seconds(),
         clean_vclocks_failure :: number(),
         queue :: cloudi_queue:state(),
+        word_size :: pos_integer(),
         node_id :: node_id(),
         node_ids :: list(node_id()),
         vclock :: vclock(),
@@ -219,6 +221,21 @@
 assign(Dispatcher, Key, Value, State)
     when is_pid(Dispatcher) ->
     event_local({assign, Key, Value}, State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI CRDT in bytes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher,
+          #cloudi_crdt{word_size = WordSize} = State)
+    when is_pid(Dispatcher) ->
+    cloudi_x_erlang_term:byte_size(State, WordSize).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -537,10 +554,12 @@ new(Dispatcher, Options)
                               {failures_source_die, true}]),
 
     ok = cloudi_service:subscribe(Dispatcher, ServiceName),
+    WordSize = erlang:system_info(wordsize),
     #cloudi_crdt{service_name_full = ServiceNameFull,
                  clean_vclocks_interval = CleanIntervalSeconds,
                  clean_vclocks_failure = CleanFailure,
                  queue = Queue,
+                 word_size = WordSize,
                  node_id = NodeId,
                  node_ids = [NodeId],
                  vclock = VClockN}.
@@ -836,7 +855,7 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
     VClockRemoteN = vclock_current(NodeIds, VClockRemote0),
     VClock1 = vclock_merge(VClockRemoteN,
                            vclock_increment(NodeId, VClock0)), % receive
-    {QueueNew, VClockN} = case cloudi_queue:size(Queue) of
+    {QueueNew, VClockN} = case cloudi_queue:size(Dispatcher, Queue) of
         0 ->
             % If nothing else is currently being sent,
             % send the current vclock to all the processes.
@@ -892,7 +911,7 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
     VClockRemoteN = vclock_current(NodeIds, VClockRemote0),
     VClock1 = vclock_merge(VClockRemoteN,
                            vclock_increment(NodeId, VClock0)), % receive
-    {QueueNew, VClockN} = case cloudi_queue:size(Queue) of
+    {QueueNew, VClockN} = case cloudi_queue:size(Dispatcher, Queue) of
         0 ->
             % If nothing else is currently being sent,
             % send the current vclock to all the processes.

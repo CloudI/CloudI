@@ -55,7 +55,13 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([failures/1,
+-export([byte_size/2,
+         byte_size/4,
+         byte_size/5,
+         byte_size/6,
+         byte_size/7,
+         byte_size/8,
+         failures/2,
          handle_info/3,
          mcast/4,
          mcast/5,
@@ -74,7 +80,7 @@
          send_id/6,
          send_id/7,
          send_id/8,
-         size/1,
+         size/2,
          timeout/3]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -122,6 +128,7 @@
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         ordered :: boolean(),
+        word_size :: pos_integer(),
         service = undefined :: undefined | pid(),
         validate_request_info :: undefined | fun((any()) -> boolean()),
         validate_request :: undefined | fun((any(), any()) -> boolean()),
@@ -194,14 +201,143 @@
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Return the size of the CloudI queue in bytes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher,
+          #cloudi_queue{word_size = WordSize} = State)
+    when is_pid(Dispatcher) ->
+    cloudi_x_erlang_term:byte_size(State, WordSize).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI queue in bytes with the additional service request added.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                Request :: cloudi_service:request(),
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher, Name, Request, State) ->
+    byte_size(Dispatcher, Name, <<>>, Request,
+              undefined, undefined, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI queue in bytes with the additional service request added.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                Request :: cloudi_service:request(),
+                Timeout :: cloudi_service:timeout_milliseconds(),
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher, Name, Request, Timeout, State) ->
+    byte_size(Dispatcher, Name, <<>>, Request,
+              Timeout, undefined, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI queue in bytes with the additional service request added.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                Request :: cloudi_service:request(),
+                Timeout :: cloudi_service:timeout_milliseconds(),
+                PatternPid :: cloudi_service:pattern_pid() | undefined,
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher, Name, Request, Timeout, PatternPid, State) ->
+    byte_size(Dispatcher, Name, <<>>, Request,
+              Timeout, undefined, PatternPid, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI queue in bytes with the additional service request added.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                RequestInfo :: cloudi_service:request_info(),
+                Request :: cloudi_service:request(),
+                Timeout :: cloudi_service:timeout_milliseconds(),
+                Priority :: cloudi_service:priority(),
+                State :: state()) ->
+    non_neg_integer().
+
+byte_size(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, State) ->
+    byte_size(Dispatcher, Name, RequestInfo, Request,
+              Timeout, Priority, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return the size of the CloudI queue in bytes with the additional service request added.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec byte_size(Dispatcher :: cloudi_service:dispatcher(),
+                Name :: cloudi_service:service_name(),
+                RequestInfo :: cloudi_service:request_info(),
+                Request :: cloudi_service:request(),
+                Timeout :: cloudi_service:timeout_milliseconds(),
+                Priority :: cloudi_service:priority(),
+                PatternPid :: cloudi_service:pattern_pid() | undefined,
+                State :: state()) ->
+    non_neg_integer().
+    
+byte_size(Dispatcher, Name, RequestInfo, Request,
+          Timeout, Priority, PatternPid,
+          #cloudi_queue{word_size = WordSize,
+                        requests = Requests} = State)
+    when is_pid(Dispatcher) ->
+    TransIdTest = <<0:128>>,
+    PatternPidTest = if
+        PatternPid =:= undefined ->
+            {Name, self()};
+        is_tuple(PatternPid) ->
+            PatternPid
+    end,
+    RequestStateTest = #request{name = Name,
+                                request_info = RequestInfo,
+                                request = Request,
+                                timeout = Timeout,
+                                priority = Priority,
+                                id = TransIdTest,
+                                pattern_pid = PatternPidTest,
+                                retry_pattern_pid = false},
+    StateTest = State#cloudi_queue{requests = maps:put(TransIdTest,
+                                                       RequestStateTest,
+                                                       Requests)},
+    cloudi_x_erlang_term:byte_size(StateTest, WordSize).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Return the current number of failures to send and validate.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec failures(State :: state()) ->
+-spec failures(Dispatcher :: cloudi_service:dispatcher(),
+               State :: state()) ->
     non_neg_integer().
 
-failures(#cloudi_queue{failures_source = FailuresSrc}) ->
+failures(Dispatcher,
+         #cloudi_queue{failures_source = FailuresSrc})
+    when is_pid(Dispatcher) ->
     erlang:length(FailuresSrc).
 
 %%-------------------------------------------------------------------------
@@ -396,10 +532,12 @@ new(Options)
     true = (FailuresSrcMaxPeriod =:= infinity) orelse
            (is_integer(FailuresSrcMaxPeriod) andalso
             (FailuresSrcMaxPeriod > 0)),
+    WordSize = erlang:system_info(wordsize),
     #cloudi_queue{
         retry = Retry,
         retry_delay = RetryDelay,
         ordered = Ordered,
+        word_size = WordSize,
         validate_request_info = ValidateRequestInfo1,
         validate_request = ValidateRequest1,
         validate_response_info = ValidateResponseInfo1,
@@ -754,15 +892,18 @@ send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Return the size of the queue.===
+%% ===Return the size of the CloudI queue.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec size(State :: state()) ->
+-spec size(Dispatcher :: cloudi_service:dispatcher(),
+           State :: state()) ->
     non_neg_integer().
 
-size(#cloudi_queue{ordered_requests = OrderedRequests,
-                   requests = Requests}) ->
+size(Dispatcher,
+     #cloudi_queue{ordered_requests = OrderedRequests,
+                   requests = Requests})
+    when is_pid(Dispatcher) ->
     queue:len(OrderedRequests) + maps:size(Requests).
 
 %%-------------------------------------------------------------------------
