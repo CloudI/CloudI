@@ -53,6 +53,12 @@
 
 -include_lib("common_test/include/ct.hrl").
 
+% for features specific to Erlang/OTP version 20.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from CT
 %%%------------------------------------------------------------------------
@@ -182,35 +188,33 @@ t_local_output_1(_Config) ->
     true = string_find(AppName, SyslogDataLine3Str) /= nomatch,
     ok.
 
--compile({nowarn_deprecated_function, {string, str, 2}}).
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 string_find(SearchPattern, String) ->
-    case erlang:function_exported(string, find, 2) of
-        true ->
-            string:find(String, SearchPattern);
-        false ->
-            StringList = if
+    string:find(String, SearchPattern).
+-else.
+string_find(SearchPattern, String) ->
+    StringList = if
+        is_binary(String) ->
+            erlang:binary_to_list(String);
+        is_list(String) ->
+            lists:flatten(String)
+    end,
+    SearchPatternList = if
+        is_binary(SearchPattern) ->
+            erlang:binary_to_list(SearchPattern);
+        is_list(SearchPattern) ->
+            lists:flatten(SearchPattern)
+    end,
+    case string:str(StringList, SearchPatternList) of
+        0 ->
+            nomatch;
+        Index ->
+            Result = lists:nthtail(Index - 1, StringList),
+            if
                 is_binary(String) ->
-                    erlang:binary_to_list(String);
+                    erlang:list_to_binary(Result);
                 is_list(String) ->
-                    lists:flatten(String)
-            end,
-            SearchPatternList = if
-                is_binary(SearchPattern) ->
-                    erlang:binary_to_list(SearchPattern);
-                is_list(SearchPattern) ->
-                    lists:flatten(SearchPattern)
-            end,
-            case string:str(StringList, SearchPatternList) of
-                0 ->
-                    nomatch;
-                Index ->
-                    Result = lists:nthtail(Index - 1, StringList),
-                    if
-                        is_binary(String) ->
-                            erlang:list_to_binary(Result);
-                        is_list(String) ->
-                            Result
-                    end
+                    Result
             end
     end.
-
+-endif.
