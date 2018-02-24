@@ -441,7 +441,7 @@ format_to_binary(L, A) when is_list(L), is_list(A) ->
 
 join(Delimiters, L) when is_binary(Delimiters) ->
     [[_ | H] | T] = [[Delimiters, S] || S <- L],
-    iolist_to_binary([H | T]);
+    unicode:characters_to_binary([H | T]);
 join(Delimiters, L) when is_list(Delimiters) ->
     join_list(L, [], Delimiters).
 
@@ -634,7 +634,7 @@ split(SearchPattern, String)
         is_integer(hd(SearchPattern)) ->
             [erlang:list_to_binary(SearchPattern)];
         is_list(SearchPattern) ->
-            [erlang:iolist_to_binary(S) || S <- SearchPattern]
+            [unicode:characters_to_binary(S) || S <- SearchPattern]
     end,
     binary:split(String, Pattern, [global]).
 -endif.
@@ -642,6 +642,7 @@ split(SearchPattern, String)
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Convert an Erlang term to a binary string.===
+%% Output is a utf8 encoded binary.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -649,7 +650,7 @@ split(SearchPattern, String)
     binary().
 
 term_to_binary(T) ->
-    erlang:iolist_to_binary(io_lib:format("~w", [T])).
+    unicode:characters_to_binary(io_lib:format("~w", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc
