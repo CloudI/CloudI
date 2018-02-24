@@ -817,7 +817,7 @@ trimr(String)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec triml(Characters :: string() | list(string()),
+-spec trimr(Characters :: string() | list(string()),
             String :: string() | binary()) ->
     string() | binary().
 
@@ -903,24 +903,6 @@ beforer_test() ->
     "this-is-all" = beforer($-, "this-is-all-input"),
     ok.
 
-splitl_test() ->
-    {"this-is-all-input", ""} = splitl($/, "this-is-all-input", input),
-    {"", ""} = splitl($/, "this-is-all-input", empty),
-    {"", ""} = splitl($/, "this-is-all-input"),
-    {"this", "is-all-input"} = splitl($-, "this-is-all-input", input),
-    {"this", "is-all-input"} = splitl($-, "this-is-all-input", empty),
-    {"this", "is-all-input"} = splitl($-, "this-is-all-input"),
-    ok.
-
-splitr_test() ->
-    {"", "this-is-all-input"} = splitr($/, "this-is-all-input", input),
-    {"", ""} = splitr($/, "this-is-all-input", empty),
-    {"", ""} = splitr($/, "this-is-all-input"),
-    {"this-is-all", "input"} = splitr($-, "this-is-all-input", input),
-    {"this-is-all", "input"} = splitr($-, "this-is-all-input", empty),
-    {"this-is-all", "input"} = splitr($-, "this-is-all-input"),
-    ok.
-
 findl_test() ->
     "..cd..ef" = findl(".", "ab..cd..ef"),
     <<"..cd..ef">> = findl(".", <<"ab..cd..ef">>),
@@ -949,6 +931,24 @@ split_test() ->
     ["ab","bc","cd"] = split("..", "ab..bc..cd"),
     [<<"ab">>,<<"bc">>,<<"cd">>] = split(<<"..">>, <<"ab..bc..cd">>),
     [<<"ab">>,<<"bc">>,<<>>,<<"cd">>] = split(<<"..">>, <<"ab..bc....cd">>),
+    ok.
+
+splitl_test() ->
+    {"this-is-all-input", ""} = splitl($/, "this-is-all-input", input),
+    {"", ""} = splitl($/, "this-is-all-input", empty),
+    {"", ""} = splitl($/, "this-is-all-input"),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input", input),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input", empty),
+    {"this", "is-all-input"} = splitl($-, "this-is-all-input"),
+    ok.
+
+splitr_test() ->
+    {"", "this-is-all-input"} = splitr($/, "this-is-all-input", input),
+    {"", ""} = splitr($/, "this-is-all-input", empty),
+    {"", ""} = splitr($/, "this-is-all-input"),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input", input),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input", empty),
+    {"this-is-all", "input"} = splitr($-, "this-is-all-input"),
     ok.
 
 -endif.
