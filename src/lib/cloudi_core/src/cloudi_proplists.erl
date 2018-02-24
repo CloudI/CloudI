@@ -62,7 +62,7 @@ delete_all([], List) ->
     List;
 
 delete_all([Key | Keys], List)
-    when is_atom(Key), is_list(List) ->
+    when is_atom(Key) ->
     case lists:keytake(Key, 1, List) of
         {value, _, NewList} ->
             delete_all(Keys, NewList);
@@ -84,7 +84,7 @@ find_any([], _) ->
     false;
 
 find_any([Key | Keys], List)
-    when is_atom(Key), is_list(List) ->
+    when is_atom(Key) ->
     case lists:keyfind(Key, 1, List) of
         {Key, _} ->
             true;
@@ -103,7 +103,7 @@ find_any([Key | Keys], List)
     {list(property()), list(property())}.
 
 partition(Key, List)
-    when is_atom(Key), is_list(List) ->
+    when is_atom(Key) ->
     lists:partition(fun({K, _}) -> K == Key end, List).
 
 %%-------------------------------------------------------------------------
@@ -117,8 +117,7 @@ partition(Key, List)
                   List :: list(property())) ->
     list().
 
-take_values(DefaultList, List)
-    when is_list(DefaultList), is_list(List) ->
+take_values(DefaultList, List) ->
     take_values([], DefaultList, List).
 
 take_values(Result, [], List) ->

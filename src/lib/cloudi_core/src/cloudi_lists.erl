@@ -78,7 +78,7 @@ delete_all(Elem, [H | T]) ->
     list() |
     'false'.
 
-delete_checked(Elem, List) when is_list(List) ->
+delete_checked(Elem, List) ->
     delete_checked(Elem, [], List).
 delete_checked(Elem, L, [Elem | T]) ->
     lists:reverse(L, T);
@@ -98,8 +98,7 @@ delete_checked(_, _, []) ->
             L :: list()) ->
     undefined | pos_integer().
 
-index(Item, L)
-    when is_list(L) ->
+index(Item, L) ->
     index(Item, L, 1).
 
 index(_, [], _) ->
@@ -234,12 +233,12 @@ member_any([Elem | ElemL], [_ | _] = List) ->
          L2 :: list(E),
          E :: any().
 
-split(N, L) when is_integer(N), N >= 0, is_list(L) ->
+split(N, L) when is_integer(N), N >= 0 ->
     split(N, L, []).
 split(0, L2, L1) ->
-    {lists:reverse(L1, []), L2};
+    {lists:reverse(L1), L2};
 split(_, [] = L2, L1) ->
-    {lists:reverse(L1, []), L2};
+    {lists:reverse(L1), L2};
 split(N, [H | L2], L1) ->
     split(N - 1, L2, [H | L1]).
 
@@ -253,8 +252,7 @@ split(N, [H | L2], L1) ->
                   List :: list({any(), any()})) ->
     list().
 
-take_values(DefaultList, List)
-    when is_list(DefaultList), is_list(List) ->
+take_values(DefaultList, List) ->
     take_values([], DefaultList, List).
 
 take_values(Result, [], List) ->
