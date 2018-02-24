@@ -18,10 +18,10 @@
 %%% cloudi_crdt that are configured with the same service name and
 %%% manage the same data.
 %%%
-%%% The only cloudi_crdt function that may be called within
-%%% cloudi_service_init/4 is the new function.  A CloudI service that
-%%% uses cloudi_crdt should have a destination refresh method that is
-%%% immediate.
+%%% The cloudi_crdt functions that may be called within
+%%% cloudi_service_init/4 are events_subscribe/3, events_subscribe/4,
+%%% events_clear/3, new/1 and new/2.  A CloudI service that uses
+%%% cloudi_crdt should have a destination refresh method that is immediate.
 %%%
 %%% The papers related to this implementation of the POLog CRDT are:
 %%%
@@ -88,6 +88,9 @@
          clear/3,
          decr/3,
          decr/4,
+         events_subscribe/3,
+         events_subscribe/4,
+         events_clear/3,
          find/3,
          fold/4,
          get/3,
@@ -153,6 +156,9 @@
 % The POLog data type that contains consistent state (an Erlang map)
 -type data() :: #{key() := value()}.
 
+% Events are changes to data()
+-type events() :: #{key() := list(event_type())}.
+
 -record(cloudi_crdt,
     {
         service_name_full :: cloudi_service:service_name(),
@@ -166,9 +172,11 @@
         vclocks = vclocks_new() :: vclocks(),
         polog_mode = bootstrap :: polog_mode(),
         polog = [] :: polog(),
-        data = #{} :: data()
+        data = #{} :: data(),
+        events = #{} :: events()
     }).
 
+-include("cloudi_crdt.hrl").
 -include("cloudi_service.hrl").
 -include("cloudi_logger.hrl").
 
@@ -196,6 +204,14 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
+-type event_type() ::
+    assign |
+    clear |
+    decr |
+    incr |
+    put |
+    update.
+-define(EVENT_TYPES, [assign, clear, decr, incr, put, update]).
 -type options() ::
     list({service_name, string()} |
          {clean_vclocks, seconds()} |
@@ -203,7 +219,8 @@
          {retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()}).
 -type state() :: #cloudi_crdt{}.
--export_type([options/0,
+-export_type([event_type/0,
+              options/0,
               state/0]).
 
 %%-------------------------------------------------------------------------
@@ -295,6 +312,54 @@ decr(Dispatcher, Key, State) ->
 decr(Dispatcher, Key, Value, State)
     when is_pid(Dispatcher) ->
     event_local({decr, Key, Value}, State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to events from the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec events_subscribe(Dispatcher :: cloudi_service:dispatcher(),
+                       Key :: key(),
+                       State :: state()) ->
+    state().
+
+events_subscribe(Dispatcher, Key, State) ->
+    events_subscribe(Dispatcher, Key, ?EVENT_TYPES, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Subscribe to specific events from the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec events_subscribe(Dispatcher :: cloudi_service:dispatcher(),
+                       Key :: key(),
+                       EventTypes :: list(event_type()),
+                       State :: state()) ->
+    state().
+
+events_subscribe(Dispatcher, Key, EventTypes,
+                 #cloudi_crdt{events = Events} = State)
+    when is_pid(Dispatcher) ->
+    true = cloudi_lists:member_any(EventTypes, ?EVENT_TYPES),
+    State#cloudi_crdt{events = maps:put(Key, lists:usort(EventTypes), Events)}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Clear a subscription to events from the CloudI CRDT.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec events_clear(Dispatcher :: cloudi_service:dispatcher(),
+                   Key :: key(),
+                   State :: state()) ->
+    state().
+
+events_clear(Dispatcher, Key,
+             #cloudi_crdt{events = Events} = State)
+    when is_pid(Dispatcher) ->
+    State#cloudi_crdt{events = maps:remove(Key, Events)}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -796,7 +861,8 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
                           vclocks = VClocks,
                           polog_mode = normal,
                           polog = POLog,
-                          data = Data} = State, _) ->
+                          data = Data,
+                          events = Events} = State, _) ->
     % A remote write operation is received and added to the POLog
     % (from a CloudI service request sent by the broadcast in event_local/3).
     % The current vclock() is provided as a response for this
@@ -811,7 +877,8 @@ event_remote(NodeIdRemote, VClockRemote0, Operation,
                                 vclocks_update(NodeIdRemote, VClockRemoteN,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
-    {POLogNew, DataNew} = polog_stable(POLogNext, Data, VClockMin),
+    {POLogNew, DataNew} = polog_stable(POLogNext, Data,
+                                       VClockMin, Events, NodeId),
     {{vclock, NodeId, VClockN},
      State#cloudi_crdt{vclock = VClockN,
                        vclocks = VClocksNew,
@@ -847,7 +914,8 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
                                 vclocks = VClocks,
                                 polog_mode = normal,
                                 polog = POLog,
-                                data = Data} = State,
+                                data = Data,
+                                events = Events} = State,
                    Dispatcher) ->
     % Update the vclock() from the local operation broadcast response
     % that was provided by event_remote/4.
@@ -872,7 +940,8 @@ event_local_vclock(NodeIdRemote, VClockRemote0,
                                 vclocks_update(NodeIdRemote, VClockRemoteN,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
-    {POLogNew, DataNew} = polog_stable(POLog, Data, VClockMin),
+    {POLogNew, DataNew} = polog_stable(POLog, Data,
+                                       VClockMin, Events, NodeId),
     State#cloudi_crdt{queue = QueueNew,
                       vclock = VClockN,
                       vclocks = VClocksNew,
@@ -900,7 +969,8 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
                                  vclocks = VClocks,
                                  polog_mode = normal,
                                  polog = POLog,
-                                 data = Data} = State,
+                                 data = Data,
+                                 events = Events} = State,
                     Dispatcher) ->
     % The vclock() broadcasted from event_local_vclock/4 updates the
     % the remote CloudI service process here.  The updated vclock() is
@@ -926,7 +996,8 @@ event_remote_vclock(NodeIdRemote, VClockRemote0,
                                 vclocks_update(NodeIdRemote, VClockRemoteN,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
-    {POLogNew, DataNew} = polog_stable(POLog, Data, VClockMin),
+    {POLogNew, DataNew} = polog_stable(POLog, Data,
+                                       VClockMin, Events, NodeId),
     {{vclock_updated, NodeId, VClockN},
      State#cloudi_crdt{queue = QueueNew,
                        vclock = VClockN,
@@ -949,7 +1020,8 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote0,
                                         vclocks = VClocks,
                                         polog_mode = normal,
                                         polog = POLog,
-                                        data = Data} = State) ->
+                                        data = Data,
+                                        events = Events} = State) ->
     % Update the vclock() from the local vclock() broadcast response
     % that was provided by event_remote_vclock/4.
 
@@ -960,7 +1032,8 @@ event_local_vclock_updated(NodeIdRemote, VClockRemote0,
                                 vclocks_update(NodeIdRemote, VClockRemoteN,
                                                VClocks)),
     VClockMin = vclocks_minimum(VClocksNew),
-    {POLogNew, DataNew} = polog_stable(POLog, Data, VClockMin),
+    {POLogNew, DataNew} = polog_stable(POLog, Data,
+                                       VClockMin, Events, NodeId),
     State#cloudi_crdt{vclock = VClockN,
                       vclocks = VClocksNew,
                       polog = POLogNew,
@@ -1199,23 +1272,27 @@ polog_effect(Operation, VClock, POLog0) ->
 
 -spec polog_stable(POLog :: polog(),
                    Data :: data(),
-                   VClockMin :: vclock()) ->
+                   VClockMin :: vclock(),
+                   Events :: events(),
+                   NodeId :: node_id()) ->
     {polog(), data()}.
 
-polog_stable(POLog, Data, VClockMin) ->
-    polog_stable(lists:reverse(POLog), [], Data, VClockMin).
+polog_stable(POLog, Data, VClockMin, Events, NodeId) ->
+    polog_stable(lists:reverse(POLog), [], Data,
+                 VClockMin, Events, NodeId).
 
-polog_stable([], POLogNew, Data, _) ->
+polog_stable([], POLogNew, Data, _, _, _) ->
     {POLogNew, Data};
-polog_stable([{VClock, Operation} = POLogValue | POLogOld], POLogNew,
-             Data, VClockMin) ->
+polog_stable([{VClock, Operation} = POLogValue | POLogOld], POLogNew, Data,
+             VClockMin, Events, {_, Service} = NodeId) ->
     case vclock_less_than(VClock, VClockMin) of
         true ->
             polog_stable(POLogOld, POLogNew,
-                         write(Operation, Data), VClockMin);
+                         write(Operation, Data, Events, Service),
+                         VClockMin, Events, NodeId);
         false ->
-            polog_stable(POLogOld, [POLogValue | POLogNew],
-                         Data, VClockMin)
+            polog_stable(POLogOld, [POLogValue | POLogNew], Data,
+                         VClockMin, Events, NodeId)
     end.
 
 -spec polog_duplicate_operation(VClock :: vclock(),
@@ -1350,18 +1427,27 @@ read(values, Data) ->
     maps:values(Data).
 
 -spec write(Operation :: operation_write(),
-            Data :: data()) ->
+            Data :: data(),
+            Events :: events(),
+            Service :: cloudi_service:source()) ->
     DataNew :: data().
 
-write({assign, Key, Value}, Data) ->
+write({assign, Key, ValueNew},
+      Data, Events, Service) ->
+    event(assign, Key, [Data, ValueNew],
+          Events, Service),
     maps:update_with(Key, fun(ValueOld) ->
         ValueOld
-    end, Value, Data);
-write({incr, Key, Value}, Data) ->
+    end, ValueNew, Data);
+write({incr, Key, Value},
+      Data, Events, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
-                    ValueOld + Value;
+                    ValueNew = ValueOld + Value,
+                    event(incr, Key, [ValueOld, ValueNew],
+                          Events, Service),
+                    ValueNew;
                 true ->
                     ValueOld
             end
@@ -1370,11 +1456,15 @@ write({incr, Key, Value}, Data) ->
         error:{badkey, Key} ->
             Data
     end;
-write({decr, Key, Value}, Data) ->
+write({decr, Key, Value},
+      Data, Events, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
-                    ValueOld - Value;
+                    ValueNew = ValueOld - Value,
+                    event(decr, Key, [ValueOld, ValueNew],
+                          Events, Service),
+                    ValueNew;
                 true ->
                     ValueOld
             end
@@ -1383,30 +1473,117 @@ write({decr, Key, Value}, Data) ->
         error:{badkey, Key} ->
             Data
     end;
-write({update, Key, ModuleVersion, Module, Function}, Data) ->
+write({update, Key, ModuleVersion, Module, Function},
+      Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 1),
     try maps:update_with(Key, fun(ValueOld) ->
-            Module:Function(ValueOld)
+            ValueNew = Module:Function(ValueOld),
+            event(update, Key, [ValueOld, ValueNew],
+                  Events, Service),
+            ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
             Data
     end;
-write({update, Key, ModuleVersion, Module, Function, Argument1}, Data) ->
+write({update, Key, ModuleVersion, Module, Function, Argument1},
+      Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 2),
     try maps:update_with(Key, fun(ValueOld) ->
-            Module:Function(Argument1, ValueOld)
+            ValueNew = Module:Function(Argument1, ValueOld),
+            event(update, Key, [ValueOld, ValueNew],
+                  Events, Service),
+            ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
             Data
     end;
-write({put, Key, Value}, Data) ->
-    maps:put(Key, Value, Data);
-write({clear, Key}, Data) ->
+write({put, Key, ValueNew},
+      Data, Events, Service) ->
+    event(put, Key, [Data, ValueNew],
+          Events, Service),
+    maps:put(Key, ValueNew, Data);
+write({clear, Key},
+      Data, Events, Service) ->
+    event(clear, Key, [Data],
+          Events, Service),
     maps:remove(Key, Data);
-write(clear_all, _) ->
+write(clear_all,
+      Data, Events, Service) ->
+    event(clear, [Data],
+          Events, Service),
     maps:new().
+
+event(EventType, EventData, Events, Service) ->
+    maps:fold(fun(Key, EventTypes, _) ->
+        case lists:member(EventType, EventTypes) of
+            true ->
+                event_send(EventType, Key, EventData, Service);
+            false ->
+                ok
+        end
+    end, ok, Events),
+    ok.
+
+event(EventType, Key, EventData, Events, Service) ->
+    case maps:find(Key, Events) of
+        {ok, EventTypes} ->
+            case lists:member(EventType, EventTypes) of
+                true ->
+                    event_send(EventType, Key, EventData, Service);
+                false ->
+                    ok
+            end;
+        error ->
+            ok
+    end,
+    ok.
+
+event_send(assign, Key, [Data, ValueNew], Service) ->
+    case maps:find(Key, Data) of
+        {ok, _} ->
+            ok;
+        error ->
+            Service ! #crdt_event{type = assign,
+                                  key = Key,
+                                  new = {value, ValueNew}}
+    end;
+event_send(incr, Key, [ValueOld, ValueNew], Service) ->
+    Service ! #crdt_event{type = incr,
+                          key = Key,
+                          old = {value, ValueOld},
+                          new = {value, ValueNew}};
+event_send(decr, Key, [ValueOld, ValueNew], Service) ->
+    Service ! #crdt_event{type = decr,
+                          key = Key,
+                          old = {value, ValueOld},
+                          new = {value, ValueNew}};
+event_send(update, Key, [ValueOld, ValueNew], Service) ->
+    Service ! #crdt_event{type = update,
+                          key = Key,
+                          old = {value, ValueOld},
+                          new = {value, ValueNew}};
+event_send(put, Key, [Data, ValueNew], Service) ->
+    Old = case maps:find(Key, Data) of
+        {ok, Value} ->
+            {value, Value};
+        error ->
+            undefined
+    end,
+    Service ! #crdt_event{type = put,
+                          key = Key,
+                          old = Old,
+                          new = {value, ValueNew}};
+event_send(clear, Key, [Data], Service) ->
+    case maps:find(Key, Data) of
+        {ok, Value} ->
+            Service ! #crdt_event{type = clear,
+                                  key = Key,
+                                  old = {value, Value}};
+        error ->
+            ok
+    end.
 
 -spec clean_vclocks_send(Interval :: milliseconds(),
                          NodeId :: node_id()) ->
@@ -1461,14 +1638,16 @@ clean_vclocks_store(#cloudi_crdt{node_id = NodeId,
                                  vclock = VClock0,
                                  vclocks = VClocks0,
                                  polog = POLog0,
-                                 data = Data0} = State) ->
+                                 data = Data0,
+                                 events = Events} = State) ->
     VClockN = vclock_current(NodeIds, VClock0),
     VClocks1 = vclocks_update(NodeId, VClockN, VClocks0),
     VClocksN = vclocks_current(NodeIds, VClocks1),
     POLog1 = [{vclock_current(NodeIds, VClockPOLog), Operation} ||
               {VClockPOLog, Operation} <- POLog0],
     VClockMin = vclocks_minimum(VClocksN),
-    {POLogN, DataN} = polog_stable(POLog1, Data0, VClockMin),
+    {POLogN, DataN} = polog_stable(POLog1, Data0,
+                                   VClockMin, Events, NodeId),
     State#cloudi_crdt{vclock = VClockN,
                       vclocks = VClocksN,
                       polog = POLogN,
