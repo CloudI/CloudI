@@ -342,7 +342,7 @@ events_subscribe(Dispatcher, Key, State) ->
 events_subscribe(Dispatcher, Key, EventTypes,
                  #cloudi_crdt{events = Events} = State)
     when is_pid(Dispatcher) ->
-    true = cloudi_lists:member_any(EventTypes, ?EVENT_TYPES),
+    true = cloudi_lists:member_all(EventTypes, ?EVENT_TYPES),
     State#cloudi_crdt{events = maps:put(Key, lists:usort(EventTypes), Events)}.
 
 %%-------------------------------------------------------------------------

@@ -5,6 +5,7 @@
 
     * Add events_subscribe/3 events_subscribe/4 events_clear/3 functions
       to cloudi_crdt for providing events to the CloudI service process
+    * Add member_all/2 function to cloudi_lists
 
 2018-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
 

@@ -37,10 +37,13 @@
 -author('mjtruog [at] gmail (dot) com').
 
 %% external interface
--export([delete_all/2, delete_checked/2,
+-export([delete_all/2,
+         delete_checked/2,
          index/2,
          iodata_to_list/1,
-         itera/3, itera2/4,
+         itera/3,
+         itera2/4,
+         member_all/2,
          member_any/2,
          split/2,
          take_values/2]).
@@ -78,7 +81,7 @@ delete_all(Elem, [H | T]) ->
 delete_checked(Elem, List) when is_list(List) ->
     delete_checked(Elem, [], List).
 delete_checked(Elem, L, [Elem | T]) ->
-    lists:reverse(L) ++ T;
+    lists:reverse(L, T);
 delete_checked(Elem, L, [H | T]) ->
     delete_checked(Elem, [H | L], T);
 delete_checked(_, _, []) ->
@@ -178,7 +181,28 @@ itera2(F, Acc0, Acc1, [H | T]) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===lists:member/2 functionality, but with a list of elements.===
+%% ===lists:member/2 functionality, but with a list of elements where all must be present.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec member_all(ElemL :: list(), List :: list()) ->
+    boolean().
+
+member_all([], _) ->
+    true;
+member_all(_, []) ->
+    true;
+member_all([Elem | ElemL], [_ | _] = List) ->
+    case lists:member(Elem, List) of
+        true ->
+            member_all(ElemL, List);
+        false ->
+            false
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===lists:member/2 functionality, but with a list of elements where one must be present.===
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -234,7 +258,7 @@ take_values(DefaultList, List)
     take_values([], DefaultList, List).
 
 take_values(Result, [], List) ->
-    lists:reverse(Result) ++ List;
+    lists:reverse(Result, List);
 
 take_values(Result, [{Key, Default} | DefaultList], List) ->
     case lists:keytake(Key, 1, List) of
@@ -291,6 +315,11 @@ itera2_test() ->
                 {A1, A2}
         end
     end, [], 0, [f, e, d, c, b, a]),
+    ok.
+
+member_all_test() ->
+    true = member_all([a, b], [a, b, c, d]),
+    false = member_all([a, b], [a, c, d]),
     ok.
 
 member_any_test() ->

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2009-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_proplists).
@@ -45,7 +45,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--type tuplelist() :: list({atom(), any()}).
+-type property() :: {atom(), any()}.
+-export_type([property/0]).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -54,7 +55,8 @@
 %%-------------------------------------------------------------------------
 
 -spec delete_all(Keys :: list(atom()),
-                 List :: tuplelist()) -> tuplelist().
+                 List :: list(property())) ->
+    list(property()).
 
 delete_all([], List) ->
     List;
@@ -75,7 +77,8 @@ delete_all([Key | Keys], List)
 %%-------------------------------------------------------------------------
 
 -spec find_any(Keys :: list(atom()),
-               List :: tuplelist()) -> boolean().
+               List :: list(property())) ->
+    boolean().
 
 find_any([], _) ->
     false;
@@ -96,7 +99,8 @@ find_any([Key | Keys], List)
 %%-------------------------------------------------------------------------
 
 -spec partition(Key :: atom(),
-                List :: tuplelist()) -> {tuplelist(), tuplelist()}.
+                List :: list(property())) ->
+    {list(property()), list(property())}.
 
 partition(Key, List)
     when is_atom(Key), is_list(List) ->
@@ -109,15 +113,16 @@ partition(Key, List)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec take_values(DefaultList :: tuplelist(),
-                  List :: tuplelist()) -> list().
+-spec take_values(DefaultList :: list(property()),
+                  List :: list(property())) ->
+    list().
 
 take_values(DefaultList, List)
     when is_list(DefaultList), is_list(List) ->
     take_values([], DefaultList, List).
 
 take_values(Result, [], List) ->
-    lists:reverse(Result) ++ List;
+    lists:reverse(Result, List);
 
 take_values(Result, [{Key, Default} | DefaultList], List)
     when is_atom(Key) ->
