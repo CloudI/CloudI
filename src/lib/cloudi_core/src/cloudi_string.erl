@@ -57,17 +57,20 @@
          join/2,
          list_to_term/1,
          lowercase/1,
+         split/2,
          splitl/2,
          splitl/3,
          splitr/2,
          splitr/3,
-         split/2,
          term_to_binary/1,
          term_to_list/1,
          titlecase/1,
          trim/1,
          trim/2,
-         trim/3,
+         triml/1,
+         triml/2,
+         trimr/1,
+         trimr/2,
          uppercase/1]).
 
 -include("cloudi_core_i_constants.hrl").
@@ -516,6 +519,37 @@ lowercase(String)
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Split the string at all occurrences of the search pattern.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec split(SearchPattern :: string() | binary() | list(string() | binary()),
+            String :: string() | binary()) ->
+    list(string() | binary()).
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+split(SearchPattern, String) ->
+    string:split(String, SearchPattern, all).
+-else.
+split(SearchPattern, String)
+    when is_list(String) ->
+    [erlang:binary_to_list(S)
+     || S <- split(SearchPattern, erlang:list_to_binary(String))];
+split(SearchPattern, String)
+    when is_binary(String) ->
+    Pattern = if
+        is_binary(SearchPattern) ->
+            [SearchPattern];
+        is_integer(hd(SearchPattern)) ->
+            [erlang:list_to_binary(SearchPattern)];
+        is_list(SearchPattern) ->
+            [unicode:characters_to_binary(S) || S <- SearchPattern]
+    end,
+    binary:split(String, Pattern, [global]).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Return the two strings split at the first occurrence of the character, otherwise return an empty string, when traversing left to right.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -610,37 +644,6 @@ splitr_input(L1, L2, Char, [C | Rest], Input) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Split the string at all occurrences of the search pattern.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec split(SearchPattern :: string() | binary() | list(string() | binary()),
-            String :: string() | binary()) ->
-    list(string() | binary()).
-
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-split(SearchPattern, String) ->
-    string:split(String, SearchPattern, all).
--else.
-split(SearchPattern, String)
-    when is_list(String) ->
-    [erlang:binary_to_list(S)
-     || S <- split(SearchPattern, erlang:list_to_binary(String))];
-split(SearchPattern, String)
-    when is_binary(String) ->
-    Pattern = if
-        is_binary(SearchPattern) ->
-            [SearchPattern];
-        is_integer(hd(SearchPattern)) ->
-            [erlang:list_to_binary(SearchPattern)];
-        is_list(SearchPattern) ->
-            [unicode:characters_to_binary(S) || S <- SearchPattern]
-    end,
-    binary:split(String, Pattern, [global]).
--endif.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Convert an Erlang term to a binary string.===
 %% Output is a utf8 encoded binary.
 %% @end
@@ -719,60 +722,121 @@ trim(String)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trim(String :: string() | binary(),
-           Direction :: leading | trailing | both) ->
+-spec trim(Characters :: string() | list(string()),
+           String :: string() | binary()) ->
     string() | binary().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-trim(String, Direction) ->
-    string:trim(String, Direction).
+trim(Characters, String) ->
+    string:trim(String, both, Characters).
 -else.
-trim(String, Direction)
-    when is_list(String) ->
-    DirectionOld = if
-        Direction =:= leading ->
-            left;
-        Direction =:= trailing ->
-            right;
-        Direction =:= both ->
-            both
-    end,
-    string:strip(String, DirectionOld);
-trim(String, Direction)
-    when is_binary(String) ->
-    erlang:list_to_binary(trim(erlang:binary_to_list(String), Direction)).
+trim([Character], String)
+    when is_list(String), is_integer(Character) ->
+    string:strip(String, both, Character);
+trim([Character], String)
+    when is_binary(String), is_integer(Character) ->
+    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
+                                       both, Character)).
 -endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Trim the edges of the string.===
+%% ===Trim the edges of the string from the left.===
 %% @end
 %%-------------------------------------------------------------------------
 
--spec trim(String :: string() | binary(),
-           Direction :: leading | trailing | both,
-           Characters :: string()) ->
+-spec triml(String :: string() | binary()) ->
     string() | binary().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-trim(String, Direction, Characters) ->
-    string:trim(String, Direction, Characters).
+triml(String) ->
+    string:trim(String, leading).
 -else.
-trim(String, Direction, [Character])
+triml(String)
     when is_list(String) ->
-    DirectionOld = if
-        Direction =:= leading ->
-            left;
-        Direction =:= trailing ->
-            right;
-        Direction =:= both ->
-            both
-    end,
-    string:strip(String, DirectionOld, Character);
-trim(String, Direction, Characters)
+    string:strip(String, left);
+triml(String)
     when is_binary(String) ->
-    erlang:list_to_binary(trim(erlang:binary_to_list(String),
-                               Direction, Characters)).
+    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
+                                       left)).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Trim the edges of the string from the left.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec triml(Characters :: string() | list(string()),
+            String :: string() | binary()) ->
+    string() | binary().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+triml(Characters, String) ->
+    string:trim(String, leading, Characters).
+-else.
+triml(Characters, String)
+    when is_list(String) ->
+    triml_list(lists:flatten(Characters), String);
+triml(Characters, String)
+    when is_binary(String) ->
+    erlang:list_to_binary(triml_list(lists:flatten(Characters),
+                                     erlang:binary_to_list(String))).
+
+triml_list([], String) ->
+    String;
+triml_list([H | T], String) ->
+    trimr_list(T, string:strip(String, left, H)).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Trim the edges of the string from the right.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec trimr(String :: string() | binary()) ->
+    string() | binary().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+trimr(String) ->
+    string:trim(String, trailing).
+-else.
+trimr(String)
+    when is_list(String) ->
+    string:strip(String, right);
+trimr(String)
+    when is_binary(String) ->
+    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
+                                       right)).
+-endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Trim the edges of the string from the right.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec triml(Characters :: string() | list(string()),
+            String :: string() | binary()) ->
+    string() | binary().
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+trimr(Characters, String) ->
+    string:trim(String, trailing, Characters).
+-else.
+trimr(Characters, String)
+    when is_list(String) ->
+    trimr_list(lists:flatten(Characters), String);
+trimr(Characters, String)
+    when is_binary(String) ->
+    erlang:list_to_binary(trimr_list(lists:flatten(Characters),
+                                     erlang:binary_to_list(String))).
+
+trimr_list([], String) ->
+    String;
+trimr_list([H | T], String) ->
+    trimr_list(T, string:strip(String, right, H)).
 -endif.
 
 %%-------------------------------------------------------------------------

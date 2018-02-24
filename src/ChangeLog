@@ -6,7 +6,8 @@
     * Get compilation with Erlang/OTP 21 working
     * Add function cloudi_lists:iodata_to_list/1
     * Add functions findl/2 findr/2 join/2 lowercase/1 split/2
-      titlecase/1 trim/1 trim/2 trim/3 uppercase/1 to cloudi_string
+      titlecase/1 trim/1 trim/2 triml/1 triml/2 trimr/1 trimr/2
+      uppercase/1 to cloudi_string
     * Update nodefinder, cgroups, reltool_util, syslog_socket
 
 2018-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
