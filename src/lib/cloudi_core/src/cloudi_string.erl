@@ -649,8 +649,13 @@ split(SearchPattern, String)
 -spec term_to_binary(T :: any()) ->
     binary().
 
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 term_to_binary(T) ->
     unicode:characters_to_binary(io_lib:format("~tw", [T])).
+-else.
+term_to_binary(T) ->
+    unicode:characters_to_binary(io_lib:format("~w", [T])).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -661,8 +666,13 @@ term_to_binary(T) ->
 -spec term_to_list(T :: any()) ->
     string().
 
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 term_to_list(T) ->
     format("~tw", [T]).
+-else.
+term_to_list(T) ->
+    format("~w", [T]).
+-endif.
 
 %%-------------------------------------------------------------------------
 %% @doc
