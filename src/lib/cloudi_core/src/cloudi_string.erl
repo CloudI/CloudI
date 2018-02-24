@@ -73,6 +73,9 @@
          trimr/2,
          uppercase/1]).
 
+% based on unicode_util:whitespace/0
+-define(WHITESPACE, [13,9,10,11,12,13,32,133,8206,8207,8232,8233]).
+
 -include("cloudi_core_i_constants.hrl").
 
 %%%------------------------------------------------------------------------
@@ -708,12 +711,8 @@ titlecase(String) ->
 trim(String) ->
     string:trim(String).
 -else.
-trim(String)
-    when is_list(String) ->
-    string:strip(String);
-trim(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:strip(erlang:binary_to_list(String))).
+trim(String) ->
+    trim(?WHITESPACE, String).
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -757,13 +756,8 @@ trim_list([H | T], String) ->
 triml(String) ->
     string:trim(String, leading).
 -else.
-triml(String)
-    when is_list(String) ->
-    string:strip(String, left);
-triml(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
-                                       left)).
+triml(String) ->
+    triml(?WHITESPACE, String).
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -807,13 +801,8 @@ triml_list([H | T], String) ->
 trimr(String) ->
     string:trim(String, trailing).
 -else.
-trimr(String)
-    when is_list(String) ->
-    string:strip(String, right);
-trimr(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
-                                       right)).
+trimr(String) ->
+    trimr(?WHITESPACE, String).
 -endif.
 
 %%-------------------------------------------------------------------------
