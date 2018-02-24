@@ -730,13 +730,18 @@ trim(String)
 trim(Characters, String) ->
     string:trim(String, both, Characters).
 -else.
-trim([Character], String)
-    when is_list(String), is_integer(Character) ->
-    string:strip(String, both, Character);
-trim([Character], String)
-    when is_binary(String), is_integer(Character) ->
-    erlang:list_to_binary(string:strip(erlang:binary_to_list(String),
-                                       both, Character)).
+trim(Characters, String)
+    when is_list(String) ->
+    trim_list(lists:flatten(Characters), String);
+trim(Characters, String)
+    when is_binary(String) ->
+    erlang:list_to_binary(trim_list(lists:flatten(Characters),
+                                    erlang:binary_to_list(String))).
+
+trim_list([], String) ->
+    String;
+trim_list([H | T], String) ->
+    trim_list(T, string:strip(String, both, H)).
 -endif.
 
 %%-------------------------------------------------------------------------
@@ -786,7 +791,7 @@ triml(Characters, String)
 triml_list([], String) ->
     String;
 triml_list([H | T], String) ->
-    trimr_list(T, string:strip(String, left, H)).
+    triml_list(T, string:strip(String, left, H)).
 -endif.
 
 %%-------------------------------------------------------------------------
