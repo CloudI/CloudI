@@ -951,4 +951,25 @@ splitr_test() ->
     {"this-is-all", "input"} = splitr($-, "this-is-all-input"),
     ok.
 
+trim_test() ->
+    <<"Hello">> = trim(<<"\t  Hello  \n">>),
+    "Hello" = trim("\t  Hello  \n"),
+    <<".Hello.">> = trim(<<".Hello.\n">>),
+    ".Hello." = trim(".Hello.\n"),
+    ok.
+
+triml_test() ->
+    <<"Hello  \n">> = triml(<<"\t  Hello  \n">>),
+    "Hello  \n" = triml("\t  Hello  \n"),
+    <<"Hello.\n">> = triml("\n.", <<".Hello.\n">>),
+    "Hello.\n" = triml("\n.", ".Hello.\n"),
+    ok.
+
+trimr_test() ->
+    <<"\t  Hello">> = trimr(<<"\t  Hello  \n">>),
+    "\t  Hello" = trimr("\t  Hello  \n"),
+    <<".Hello">> = trimr("\n.", <<".Hello.\n">>),
+    ".Hello" = trimr("\n.", ".Hello.\n"),
+    ok.
+
 -endif.
