@@ -431,6 +431,24 @@ format_to_binary(L, A) when is_list(L), is_list(A) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Format a string based on the arguments, stored as a list.===
+%% Output may include unicode characters with a numerical value greater
+%% than 255 (preventing the output from being used directly with
+%% erlang:iolist_to_binary/1)..
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec format_to_list(L :: string(),
+                     A :: list()) ->
+    string().
+
+-compile({inline, [{format_to_list, 2}]}).
+
+format_to_list(L, A) when is_list(L), is_list(A) ->
+    lists:flatten(io_lib:format(L, A)).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Join a list of strings with a string.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -456,24 +474,6 @@ join_list([], Output) ->
     Output;
 join_list([H | T], Output) ->
     join_list(T, [H | Output]).
-
-%%-------------------------------------------------------------------------
-%% @doc
-%% ===Format a string based on the arguments, stored as a list.===
-%% Output may include unicode characters with a numerical value greater
-%% than 255 (preventing the output from being used directly with
-%% erlang:iolist_to_binary/1)..
-%% @end
-%%-------------------------------------------------------------------------
-
--spec format_to_list(L :: string(),
-                     A :: list()) ->
-    string().
-
--compile({inline, [{format_to_list, 2}]}).
-
-format_to_list(L, A) when is_list(L), is_list(A) ->
-    lists:flatten(io_lib:format(L, A)).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -650,7 +650,7 @@ split(SearchPattern, String)
     binary().
 
 term_to_binary(T) ->
-    unicode:characters_to_binary(io_lib:format("~w", [T])).
+    unicode:characters_to_binary(io_lib:format("~tw", [T])).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -662,7 +662,7 @@ term_to_binary(T) ->
     string().
 
 term_to_list(T) ->
-    format("~w", [T]).
+    format("~tw", [T]).
 
 %%-------------------------------------------------------------------------
 %% @doc
