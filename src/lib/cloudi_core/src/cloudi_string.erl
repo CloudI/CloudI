@@ -726,7 +726,7 @@ trim(String, Direction)
         Direction =:= both ->
             both
     end,
-    string:strip(String, Direction);
+    string:strip(String, DirectionOld);
 trim(String, Direction)
     when is_binary(String) ->
     erlang:list_to_binary(trim(erlang:binary_to_list(String), Direction)).
@@ -757,7 +757,7 @@ trim(String, Direction, [Character])
         Direction =:= both ->
             both
     end,
-    string:strip(String, Direction, Character);
+    string:strip(String, DirectionOld, Character);
 trim(String, Direction, Characters)
     when is_binary(String) ->
     erlang:list_to_binary(trim(erlang:binary_to_list(String),

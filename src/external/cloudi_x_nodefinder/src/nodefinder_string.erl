@@ -77,7 +77,7 @@ pad(String, Length) ->
 pad(String, Length)
     when is_list(String) ->
     string:left(String, Length);
-pad(String)
+pad(String, Length)
     when is_binary(String) ->
     erlang:list_to_binary(string:left(erlang:binary_to_list(String),
                                       Length)).
