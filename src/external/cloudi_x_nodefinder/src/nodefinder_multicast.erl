@@ -28,6 +28,7 @@
             connect :: visible | hidden
         }).
 
+-include("nodefinder.hrl").
 -include("nodefinder_logging.hrl").
 
 -define(MULTICAST_MESSAGE_NAME, "ERLANG/NODEFINDER").
@@ -36,15 +37,6 @@
 % how much time synchronization error to handle between nodes
 % (need to have ntpd running when using this source code)
 -define(MULTICAST_MESSAGE_VALID_SECONDS, 300). % 5 minutes
-
-% for features specific to Erlang/OTP version 20.x (and later versions)
--ifdef(ERLANG_OTP_VERSION_18).
--else.
--ifdef(ERLANG_OTP_VERSION_19).
--else.
--define(ERLANG_OTP_VERSION_20_FEATURES, true).
--endif.
--endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions

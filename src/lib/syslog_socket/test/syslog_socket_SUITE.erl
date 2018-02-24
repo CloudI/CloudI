@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2016-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2016-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(syslog_socket_SUITE).
@@ -174,11 +174,43 @@ t_local_output_1(_Config) ->
     SyslogDataLine1Str = erlang:binary_to_list(SyslogDataLine1),
     SyslogDataLine2Str = erlang:binary_to_list(SyslogDataLine2),
     SyslogDataLine3Str = erlang:binary_to_list(SyslogDataLine3),
-    true = string:str(SyslogDataLine1Str, Message) > 0,
-    true = string:str(SyslogDataLine2Str, Message) > 0,
-    true = string:str(SyslogDataLine1Str, MessageId) > 0,
-    true = string:str(SyslogDataLine1Str, AppName) > 0,
-    true = string:str(SyslogDataLine2Str, AppName) > 0,
-    true = string:str(SyslogDataLine3Str, AppName) > 0,
+    true = string_find(Message, SyslogDataLine1Str) /= nomatch,
+    true = string_find(Message, SyslogDataLine2Str) /= nomatch,
+    true = string_find(MessageId, SyslogDataLine1Str) /= nomatch,
+    true = string_find(AppName, SyslogDataLine1Str) /= nomatch,
+    true = string_find(AppName, SyslogDataLine2Str) /= nomatch,
+    true = string_find(AppName, SyslogDataLine3Str) /= nomatch,
     ok.
+
+-compile({nowarn_deprecated_function, {string, str, 2}}).
+string_find(SearchPattern, String) ->
+    case erlang:function_exported(string, find, 2) of
+        true ->
+            string:find(String, SearchPattern);
+        false ->
+            StringList = if
+                is_binary(String) ->
+                    erlang:binary_to_list(String);
+                is_list(String) ->
+                    lists:flatten(String)
+            end,
+            SearchPatternList = if
+                is_binary(SearchPattern) ->
+                    erlang:binary_to_list(SearchPattern);
+                is_list(SearchPattern) ->
+                    lists:flatten(SearchPattern)
+            end,
+            case string:str(StringList, SearchPatternList) of
+                0 ->
+                    nomatch;
+                Index ->
+                    Result = lists:nthtail(Index - 1, StringList),
+                    if
+                        is_binary(String) ->
+                            erlang:list_to_binary(Result);
+                        is_list(String) ->
+                            Result
+                    end
+            end
+    end.
 

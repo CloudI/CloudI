@@ -10,8 +10,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit 41d61f50cd532fff496e9ecde2ea558838fd2811 (v1.7.2)`
-- `Wed Sep 13 11:03:08 PDT 2017`
+- `commit 44ae7fa0619a0e7f321cf6bd3378725845bfc4cb`
+- `Fri Feb 23 18:56:51 PST 2018`
 - `MIT`
 
 `cpg`
@@ -73,8 +73,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 41a5dadcdcee76e543c61b100c69d24295ed7206 (v1.7.2)`
-- `Wed Sep 13 11:03:08 PDT 2017`
+- `commit 177f07097ace7c48c193d49ed21f2a58a19abf30`
+- `Fri Feb 23 17:47:30 PST 2018`
 - `MIT`
 
 `supool`
@@ -91,8 +91,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
-- `commit 4dfaf9e15de41ee70ef319099ba37509880bc81b`
-- `Sat Jan  6 19:25:46 PST 2018`
+- `commit 8a746f2df9c7efbbd4eacd873d5b7a64bbaead86`
+- `Fri Feb 23 20:33:06 PST 2018`
 - `MIT`
 
 `trie`

@@ -6,7 +6,7 @@
 %%%------------------------------------------------------------------------
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,7 @@
 %%%------------------------------------------------------------------------
 
 -author('mjtruog [at] gmail (dot) com').
--vsn("1.7.1").
+-vsn("1.7.3").
 
 -mode(compile).
 
@@ -418,7 +418,8 @@ files_find_dir_src([FilePath | FilePaths], Directory,
         FileExtension == ".erl" ->
             FileNameContents = case lists:prefix("Elixir.", FileName) of
                 true ->
-                    string:to_lower(string:sub_string(FileName, 8));
+                    [_, _, _, _, _, _, _ | FileNameSuffix] = FileName,
+                    lowercase(FileNameSuffix);
                 false ->
                     FileName
             end,
@@ -941,6 +942,15 @@ progress_bar(#progress_bar{} = ProgressBar) ->
     receive
         {progress_bar_increment, I} ->
             progress_bar(progress_bar_increment(I, ProgressBar))
+    end.
+
+-compile({nowarn_deprecated_function, {string, to_lower, 1}}).
+lowercase(String) ->
+    case erlang:function_exported(string, lowercase, 1) of
+        true ->
+            string:lowercase(String);
+        false ->
+            string:to_lower(String)
     end.
 
 exit_code(ExitCode) ->

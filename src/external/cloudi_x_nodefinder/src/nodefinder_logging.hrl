@@ -3,6 +3,6 @@
 
 % include the proper logging macros
 
-%-include("nodefinder_logging_default.hrl").
--include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include("nodefinder_logging_default.hrl").
+%-include_lib("cloudi_core/include/cloudi_logger.hrl").
 

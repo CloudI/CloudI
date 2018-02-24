@@ -34,7 +34,7 @@
 %%%
 %%% @author Tim Fletcher <mail@tfletcher.com>
 %%% @copyright 2012 Tim Fletcher
-%%% @version 1.7.1 {@date} {@time}
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_data).
@@ -125,13 +125,13 @@ params_encode(Params) ->
     Encoded = [{uri_encode(K), uri_encode(V)} || {K, V} <- Params],
     Sorted = lists:sort(Encoded),
     Concatenated = [lists:concat([K, "=", V]) || {K, V} <- Sorted],
-    string:join(Concatenated, "&").
+    cloudi_string:join("&", Concatenated).
 
 uri_normalize(URI) ->
     case http_uri:parse(URI) of
         {ok, {Scheme, UserInfo, Host, Port, Path, _Query}} ->
             uri_normalize(Scheme, UserInfo,
-                          string:to_lower(Host), Port, [Path]);
+                          cloudi_string:lowercase(Host), Port, [Path]);
         {error, _} = Error ->
             Error
     end.
@@ -152,7 +152,7 @@ uri_join(Values) ->
     uri_join(Values, "&").
 
 uri_join(Values, Separator) ->
-    string:join(lists:map(fun uri_encode/1, Values), Separator).
+    cloudi_string:join(Separator, lists:map(fun uri_encode/1, Values)).
 
 uri_encode(Term) when is_integer(Term) ->
     integer_to_list(Term);

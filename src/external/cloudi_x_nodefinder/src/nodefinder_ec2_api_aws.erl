@@ -101,7 +101,7 @@ aws_request4_no_update(Method, Protocol, Host, Port, Path, Params, Service, #aws
     aws_request_form(Method, Protocol, Host, Port, Path, Query, SignedHeaders, Config).
 
 aws_region_from_host(Host) ->
-    case string:tokens(Host, ".") of
+    case nodefinder_string:split(Host, ".") of
         %% the aws endpoint can vary depending on the region
         %% we need to account for that:
         %%  us-west-2: s3.us-west-2.amazonaws.com
@@ -145,7 +145,7 @@ iso_8601_basic_time() ->
 canonical_request(Method, CanonicalURI, QParams, Headers, PayloadHash) ->
     {CanonicalHeaders, SignedHeaders} = canonical_headers(Headers),
     CanonicalQueryString = canonical_query_string(QParams),
-    {[string:to_upper(atom_to_list(Method)), $\n,
+    {[nodefinder_string:uppercase(atom_to_list(Method)), $\n,
       CanonicalURI, $\n,
       CanonicalQueryString, $\n,
       CanonicalHeaders, $\n,
@@ -154,10 +154,10 @@ canonical_request(Method, CanonicalURI, QParams, Headers, PayloadHash) ->
      SignedHeaders}.
 
 canonical_headers(Headers) ->
-    Normalized = [{string:to_lower(Name), trimall(Value)} || {Name, Value} <- Headers],
+    Normalized = [{nodefinder_string:lowercase(Name), trimall(Value)} || {Name, Value} <- Headers],
     Sorted = lists:keysort(1, Normalized),
     Canonical = [[Name, $:, Value, $\n] || {Name, Value} <- Sorted],
-    Signed = string:join([Name || {Name, _} <- Sorted], ";"),
+    Signed = lists:join($;, [Name || {Name, _} <- Sorted]),
     {Canonical, Signed}.
 
 %% @doc calculate canonical query string out of query params and according to v4 documentation
@@ -166,11 +166,12 @@ canonical_query_string([]) ->
 canonical_query_string(Params) ->
     Normalized = [{nodefinder_ec2_api_http:url_encode(Name), nodefinder_ec2_api_http:url_encode(nodefinder_ec2_api_http:value_to_string(Value))} || {Name, Value} <- Params],
     Sorted = lists:keysort(1, Normalized),
-    string:join([case Value of
-                     [] -> [Key, "="];
-                     _ -> [Key, "=", Value]
-                 end
-                 || {Key, Value} <- Sorted, Value =/= none, Value =/= undefined], "&").
+    lists:join($&,
+               [case Value of
+                    [] -> [Key, "="];
+                    _ -> [Key, "=", Value]
+                end
+                || {Key, Value} <- Sorted, Value =/= none, Value =/= undefined]).
 
 trimall(Value) ->
     %% TODO - remove excess internal whitespace in header values
@@ -184,7 +185,7 @@ base16(Data) ->
     io_lib:format("~64.16.0b", [binary:decode_unsigned(Data)]).
 
 credential_scope(Date, Region, Service) ->
-    DateOnly = string:left(Date, 8),
+    DateOnly = nodefinder_string:pad(Date, 8),
     [DateOnly, $/, Region, $/, Service, "/aws4_request"].
 
 to_sign(Date, CredentialScope, Request) ->
@@ -195,7 +196,7 @@ to_sign(Date, CredentialScope, Request) ->
 
 signing_key(Config, Date, Region, Service) ->
     %% TODO cache the signing key so we don't have to recompute for every request
-    DateOnly = string:left(Date, 8),
+    DateOnly = nodefinder_string:pad(Date, 8),
     KDate = sha256_mac( "AWS4" ++ Config#aws_config.secret_access_key, DateOnly),
     KRegion = sha256_mac( KDate, Region),
     KService = sha256_mac( KRegion, Service),

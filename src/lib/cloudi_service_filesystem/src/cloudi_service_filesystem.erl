@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -778,10 +778,11 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 
 request_options(NamePath, #state{files = Files} = State) ->
-    Methods = cloudi_x_trie:fold_match(NamePath ++ "/*", fun(Name, _, L) ->
-        [string:to_upper(cloudi_string:afterr($/, Name)) | L]
+    [_ | Methods] = cloudi_x_trie:fold_match(NamePath ++ "/*",
+                                             fun(Name, _, L) ->
+        [", ", cloudi_string:uppercase(cloudi_string:afterr($/, Name)) | L]
     end, [], Files),
-    Allow = erlang:list_to_binary(string:join(lists:reverse(Methods), ", ")),
+    Allow = erlang:list_to_binary(lists:reverse(Methods)),
     {reply,
      [{<<"allow">>, Allow} |
       contents_ranges_headers(true)], <<>>, State}.

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2013-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_elli_handler).
@@ -165,8 +165,8 @@ handle(Req,
                 Method =:= 'OPTIONS' ->
                     NameIncoming ++ "/options";
                 is_binary(Method) ->
-                    NameIncoming ++
-                    [$/ | string:to_lower(erlang:binary_to_list(Method))]
+                    NameIncoming ++ [$/ |
+                        cloudi_string:lowercase(erlang:binary_to_list(Method))]
             end,
             PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
             PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),

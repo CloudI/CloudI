@@ -44,8 +44,9 @@ make_query_string(Params) ->
   make_query_string(Params, empty_assignment).
 
 make_query_string(Params, EmptyQueryOpt) ->
-    string:join([encode_query_term(Key, Value, EmptyQueryOpt) || {Key, Value} <-
-                  Params, Value =/= none, Value =/= undefined], "&").
+    lists:join($&,
+               [encode_query_term(Key, Value, EmptyQueryOpt) ||
+                {Key, Value} <- Params, Value =/= none, Value =/= undefined]).
 
 %encode_query_term(Key, [], no_assignment) ->
 %  [Key];

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2016-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2016-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2016-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2016-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cgroups).
@@ -61,6 +61,12 @@
                         {path_v2, string()} |
                         {path_mounts, string() | undefined}).
 -export_type([options/0]).
+
+% for features specific to Erlang/OTP version 20.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -388,7 +394,7 @@ new_paths(PathV1, PathV2, undefined) ->
 new_paths(PathV1, PathV2, PathMounts) ->
     case shell("cat \"~s\"", [PathMounts]) of
         {0, Mounts} ->
-            MountsL = string:tokens(shell_output_string(Mounts), "\n"),
+            MountsL = split(shell_output_string(Mounts), "\n"),
             {MountsPathV1,
              MountsPathV2} = new_mounts(MountsL),
             ResultV1 = if
@@ -414,7 +420,7 @@ new_mounts(MountsL) ->
 new_mounts([], PathV1, PathV2) ->
     {PathV1, PathV2};
 new_mounts([Mount | MountsL], PathV1, PathV2) ->
-    case string:tokens(Mount, " ") of
+    case split(Mount, " ") of
         [_, NewPathV1, "cgroup" | _] ->
             new_mounts(MountsL, NewPathV1 ++ "/", PathV2);
         [_, NewPathV2, "cgroup2" | _] ->
@@ -567,12 +573,12 @@ update_parameters(CGroupParameters, 2, CGroupPathFull, Path) ->
     ControlRemoved = ["-" ++ Controller || Controller <- Controllers],
     CGroupSubPathFull = subdirectory(CGroupPathFull),
     case subtree_control_add(CGroupSubPathFull,
-                             string:join(ControlAdded, " "),
+                             lists:join($ , ControlAdded),
                              Path) of
         ok ->
             Result = update_parameters(CGroupParameters, CGroupPathFull),
             case subtree_control_remove(CGroupSubPathFull,
-                                        string:join(ControlRemoved, " "),
+                                        lists:join($ , ControlRemoved),
                                         Path) of
                 ok ->
                     Result;
@@ -694,6 +700,27 @@ strip(Value) ->
     lists:filter(fun(C) ->
         not (C == $  orelse C == $\t orelse C == $\n orelse C == $\r)
     end, Value).
+
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+split(String, SearchPattern) ->
+    string:split(String, SearchPattern, all).
+-else.
+split(String, SearchPattern)
+    when is_list(String) ->
+    [erlang:binary_to_list(S)
+     || S <- split(erlang:list_to_binary(String), SearchPattern)];
+split(String, SearchPattern)
+    when is_binary(String) ->
+    Pattern = if
+        is_binary(SearchPattern) ->
+            [SearchPattern];
+        is_integer(hd(SearchPattern)) ->
+            [erlang:list_to_binary(SearchPattern)];
+        is_list(SearchPattern) ->
+            [erlang:iolist_to_binary(S) || S <- SearchPattern]
+    end,
+    binary:split(String, Pattern, [global]).
+-endif.
 
 cgroup_path_valid([]) ->
     true;

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -469,9 +469,8 @@ start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
     case filename_parse(Filename, EnvironmentLookup) of
         {ok, NewFilename} ->
             case arguments_parse(Arguments, EnvironmentLookup) of
-                {ok, NewArguments} ->
-                    CommandLine = [NewFilename |
-                                   string:tokens(NewArguments, [0])],
+                {ok, NewArguments, ArgumentsList} ->
+                    CommandLine = [NewFilename | ArgumentsList],
                     case chroot(ConfigOptions, EnvironmentLookup) of
                         {ok, Chroot} ->
                             case directory(ConfigOptions, EnvironmentLookup) of
@@ -639,45 +638,50 @@ arguments_parse([32 | Arguments], EnvironmentLookup) ->
 
 arguments_parse(Arguments, EnvironmentLookup) ->
     NewArguments = environment_transform(Arguments, EnvironmentLookup),
-    case arguments_parse([], none, NewArguments) of
-        {ok, _} = Success ->
+    case arguments_parse([], [], [], none, NewArguments) of
+        {ok, _, _} = Success ->
             Success;
         Reason when is_atom(Reason) ->
             {error, {Reason, Arguments}}
     end.
 
-arguments_parse(Output, none, []) ->
-    {ok, lists:reverse(Output)};
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, []) ->
+    {ok,
+     lists:reverse(ArgumentsBinary),
+     lists:reverse([lists:reverse(Argument) | ArgumentsList])};
 
-arguments_parse(_, _, []) ->
+arguments_parse(_, _, _, _, []) ->
     service_external_args_malformed;
 
-arguments_parse(Output, none, [$' | T]) ->
-    arguments_parse(Output, $', T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, [$' | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $', T);
 
-arguments_parse(Output, none, [$" | T]) ->
-    arguments_parse(Output, $", T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, [$" | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $", T);
 
-arguments_parse(Output, none, [$` | T]) ->
-    arguments_parse(Output, $`, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, [$` | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $`, T);
 
-arguments_parse(Output, none, [32 | [32 | _] = T]) ->
-    arguments_parse(Output, none, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument,
+                none, [32 | [32 | _] = T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
-arguments_parse(Output, none, [32 | T]) ->
-    arguments_parse([0 | Output], none, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, [32 | T]) ->
+    arguments_parse([0 | ArgumentsBinary],
+                    [lists:reverse(Argument) | ArgumentsList], [], none, T);
 
-arguments_parse(Output, $', [$' | T]) ->
-    arguments_parse(Output, none, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $', [$' | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
-arguments_parse(Output, $", [$" | T]) ->
-    arguments_parse(Output, none, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $", [$" | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
-arguments_parse(Output, $`, [$` | T]) ->
-    arguments_parse(Output, none, T);
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $`, [$` | T]) ->
+    arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
-arguments_parse(Output, Delim, [H | T]) ->
-    arguments_parse([H | Output], Delim, T).
+arguments_parse(ArgumentsBinary, ArgumentsList, Argument, Delim, [H | T]) ->
+    arguments_parse([H | ArgumentsBinary], ArgumentsList,
+                    [H | Argument], Delim, T).
 
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++

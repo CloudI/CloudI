@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Get compilation with Erlang/OTP 21 working
+    * Add function cloudi_lists:iodata_to_list/1
+    * Add functions findl/2 findr/2 join/2 lowercase/1 split/2
+      titlecase/1 trim/1 trim/2 trim/3 uppercase/1 to cloudi_string
+    * Update nodefinder, cgroups, reltool_util, syslog_socket
+
 2018-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the cloudi_crdt:update functions

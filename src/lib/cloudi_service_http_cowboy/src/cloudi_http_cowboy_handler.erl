@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2012-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2012-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -208,7 +208,7 @@ handle(Req0,
                 true ->
                     % handle custom methods, if they occur
                     NameIncoming ++ [$/ |
-                        string:to_lower(erlang:binary_to_list(Method))]
+                        cloudi_string:lowercase(erlang:binary_to_list(Method))]
             end,
             PeerShort = erlang:list_to_binary(inet_parse:ntoa(ClientIpAddr)),
             PeerLong = cloudi_ip_address:to_binary(ClientIpAddr),

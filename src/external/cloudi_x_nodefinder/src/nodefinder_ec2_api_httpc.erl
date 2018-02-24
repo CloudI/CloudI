@@ -139,7 +139,7 @@ response_hackney({error, _} = Error) ->
     Error.
 
 header_str(Hdrs) ->
-    [{string:to_lower(to_list_string(K)), to_list_string(V)}
+    [{nodefinder_string:lowercase(to_list_string(K)), to_list_string(V)}
      || {K, V} <- Hdrs].
 
 to_list_string(Val) when erlang:is_binary(Val) ->

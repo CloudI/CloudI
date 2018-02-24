@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2009-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_lists).
@@ -39,6 +39,7 @@
 %% external interface
 -export([delete_all/2, delete_checked/2,
          index/2,
+         iodata_to_list/1,
          itera/3, itera2/4,
          member_any/2,
          split/2,
@@ -107,6 +108,39 @@ index(Item, [_ | T], I) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Convert iodata to a list of bytes and return the size of the list.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec iodata_to_list(iodata()) ->
+    {Size :: non_neg_integer(), Bytes :: list(byte())}.
+
+iodata_to_list(IOData)
+    when is_binary(IOData) ->
+    {byte_size(IOData), erlang:binary_to_list(IOData)};
+iodata_to_list(IOData)
+    when is_list(IOData) ->
+    iodata_to_list([], IOData, 0).
+
+iodata_to_list(ListOut, [Binary | IODataIn], Size)
+    when is_binary(Binary) ->
+    iodata_to_list(lists:reverse(erlang:binary_to_list(Binary), ListOut),
+                   IODataIn, Size + byte_size(Binary));
+iodata_to_list(ListOut0, [List | IODataIn], Size0)
+    when is_list(List) ->
+    {SizeN, ListOutN} = iodata_to_list(ListOut0, List, Size0),
+    iodata_to_list(lists:reverse(ListOutN), IODataIn, SizeN);
+iodata_to_list(ListOut, [], Size) ->
+    {Size, lists:reverse(ListOut)};
+iodata_to_list(ListOut, [Byte | IOData], Size)
+    when is_integer(Byte), Byte >= 0, Byte =< 255 ->
+    iodata_to_list([Byte | ListOut], IOData, Size + 1);
+iodata_to_list(ListOut, Byte, Size)
+    when is_integer(Byte), Byte >= 0, Byte =< 255 ->
+    {Size + 1, lists:reverse([Byte | ListOut])}.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Iterate on elements of a list with an accumulator.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -133,7 +167,7 @@ itera(F, Acc, [H | T]) ->
                       {any(), any()}),
              Acc0 :: any(),
              Acc1 :: any(),
-             list()) -> any().
+             list()) -> {any(), any()}.
 
 itera2(_, Acc0, Acc1, []) ->
     {Acc0, Acc1};
@@ -230,6 +264,12 @@ index_test() ->
     4 = index(d, [a, b, c, d, e]),
     undefined = index(f, [a, b, c, d, e]),
     ok.
+
+iodata_to_list_test() ->
+	{10, "abcdefghij"} = iodata_to_list([<<"abc">>, $d, "ef",
+                                         [[$g]], ["hi", $j]]),
+	{10, "abcdefghij"} = iodata_to_list(<<"abcdefghij">>),
+	ok.
 
 itera_test() ->
     [d, e, f] = itera(fun(V, A, Itr) ->

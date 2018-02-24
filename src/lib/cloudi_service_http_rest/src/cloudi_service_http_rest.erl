@@ -190,7 +190,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             is_list(Method), is_integer(hd(Method)) ->
                 Method
         end,
-        MethodString = string:to_upper(MethodString),
+        MethodString = cloudi_string:uppercase(MethodString),
         true = is_list(Path) andalso is_integer(hd(Path))
     end, Handlers0),
     InfoN = cloudi_args_type:function_optional(Info0, 3),
@@ -256,8 +256,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         UseOptionsMethod =:= true ->
             lists:map(fun({Path, MethodList1}) ->
                 MethodListN = lists:umerge(MethodList1, ["OPTIONS"]),
-                Methods = erlang:list_to_binary(string:join(MethodListN,
-                                                            ", ")),
+                Methods = erlang:list_to_binary(lists:join(", ", MethodListN)),
                 HandlerOptions = fun(_, _, _, _, _, _, _, _, _,
                                      OptionsHandlerState, _) ->
                     % content-type is set automatically by HTTP process
@@ -468,7 +467,7 @@ subscribe_paths('CONNECT', Path, Formats, API, Lookup, Dispatcher) ->
     subscribe_path(Formats, Path, "/connect", API, Lookup, Dispatcher);
 subscribe_paths(Method, Path, Formats, API, Lookup, Dispatcher)
     when is_list(Method) ->
-    MethodSuffix = [$/ | string:to_lower(Method)],
+    MethodSuffix = [$/ | cloudi_string:lowercase(Method)],
     subscribe_path(Formats, Path, MethodSuffix, API, Lookup, Dispatcher).
 
 response_info_headers(ResponseInfo0, Name, Format,

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -662,7 +662,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
                                      prefix_length = PrefixLength} = State,
                               _Dispatcher) ->
     RequestStartMicroSec = client_debug_start(DebugLevel),
-    [$/ | Method] = string:to_upper(lists:nthtail(PrefixLength, Name)),
+    [$/ | Method] = cloudi_string:uppercase(lists:nthtail(PrefixLength, Name)),
     HeadersIncoming = headers_request(RequestInfo, InputType),
     {HttpCode,
      HeadersOutgoing,
@@ -723,7 +723,7 @@ headers_request_filter_host(Host) ->
         [HostName] ->
             {HostName, <<"80">>};
         [HostName, PortStr] ->
-            {HostName, strip_whitespace(PortStr)}
+            {HostName, cloudi_string:trim(PortStr)}
     end.
 
 headers_request_filter(Headers0) ->
@@ -882,7 +882,4 @@ result({{ok, Response}, NewAgent}) ->
     {{ok, [], Response}, NewAgent};
 result({{ok, _, _}, _} = Success) ->
     Success.
-
-strip_whitespace(String) when is_binary(String) ->
-    erlang:list_to_binary(string:strip(erlang:binary_to_list(String))).
 

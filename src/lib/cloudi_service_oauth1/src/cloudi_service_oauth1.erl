@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1).
@@ -342,7 +342,7 @@ request("verify*", Name, Pattern, RequestHeaders, Request, Timeout,
         #state{url_host = URLHost,
                host = Host} = State, Dispatcher) ->
     [NextName] = cloudi_service_name:parse(Name, Pattern),
-    Method = string:to_upper(cloudi_string:afterr($/, NextName)),
+    Method = cloudi_string:uppercase(cloudi_string:afterr($/, NextName)),
     case url(Method, RequestHeaders, URLHost, Host, Request) of
         {ok, URL} ->
             case oauth_parameters(Method, RequestHeaders, Request) of
@@ -523,12 +523,7 @@ request_initiate_store(Realm, ConsumerKey, SignatureMethod,
     % provide request token and secret
     TokenRequest = token_request(State),
     TokenRequestSecret = token_request_secret(State),
-    {CallbackURL, CallbackQS} = case string:tokens(Callback, "?") of
-        [CallbackURLValue, CallbackQSValue] ->
-            {CallbackURLValue, CallbackQSValue};
-        [_] ->
-            {Callback, ""}
-    end,
+    {CallbackURL, CallbackQS} = cloudi_string:splitl($?, Callback, input),
     case DatabaseModule:token_request_store(Dispatcher, Database,
                                             Realm, ConsumerKey,
                                             SignatureMethod, ClientSharedSecret,

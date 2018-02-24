@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1_db_riak).
@@ -574,10 +574,9 @@ match_realm(Realm) ->
         Realm =:= null ->
             null;
         is_binary(Realm) ->
-            erlang:list_to_binary(string:to_lower(
-                erlang:binary_to_list(Realm)));
+            cloudi_string:lowercase(Realm);
         is_list(Realm) ->
-            erlang:list_to_binary(string:to_lower(Realm))
+            erlang:list_to_binary(cloudi_string:lowercase(Realm))
     end.
 
 consumer_key(ConsumerKey, Realm) ->

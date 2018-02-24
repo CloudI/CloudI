@@ -376,7 +376,7 @@ process([{'OR', L}], EC2Instances, tag) ->
     [Id || {Id, _} <- orddict:to_list(process_or(L, EC2Tags, tag))].
 
 node_names(Hosts, #state{} = State) ->
-    Name = string:sub_word(erlang:atom_to_list(node()), 1, $@),
+    Name = lists:takewhile(fun(C) -> C /= $@ end, erlang:atom_to_list(node())),
     Nodes = lists:foldl(fun(Host, L) ->
         lists:umerge(L, [erlang:list_to_atom(Name ++ [$@ | Host])])
     end, [], Hosts),
