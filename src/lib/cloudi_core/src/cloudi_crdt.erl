@@ -1515,6 +1515,12 @@ write(clear_all,
           Events, Service),
     maps:new().
 
+-spec event(EventType :: clear,
+            EventData :: list(data()),
+            Events :: events(),
+            Service :: cloudi_service:source()) ->
+    ok.
+
 event(EventType, EventData, Events, Service) ->
     maps:fold(fun(Key, EventTypes, _) ->
         case lists:member(EventType, EventTypes) of
@@ -1524,6 +1530,13 @@ event(EventType, EventData, Events, Service) ->
                 ok
         end
     end, ok, Events),
+    ok.
+
+-spec event(EventType :: event_type(),
+            Key :: key(),
+            EventData :: list(data() | value()),
+            Events :: events(),
+            Service :: cloudi_service:source()) ->
     ok.
 
 event(EventType, Key, EventData, Events, Service) ->
@@ -1539,6 +1552,12 @@ event(EventType, Key, EventData, Events, Service) ->
             ok
     end,
     ok.
+
+-spec event_send(event_type(),
+                 Key :: key(),
+                 EventData :: list(data() | value()),
+                 Service :: cloudi_service:source()) ->
+    any().
 
 event_send(assign, Key, [Data, ValueNew], Service) ->
     case maps:find(Key, Data) of
