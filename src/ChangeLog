@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-02-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Update nodefinder
+
 2018-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add events_subscribe/3 events_subscribe/4 events_clear/3 functions

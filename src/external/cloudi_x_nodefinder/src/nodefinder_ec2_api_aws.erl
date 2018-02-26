@@ -185,7 +185,7 @@ base16(Data) ->
     io_lib:format("~64.16.0b", [binary:decode_unsigned(Data)]).
 
 credential_scope(Date, Region, Service) ->
-    DateOnly = nodefinder_string:pad(Date, 8),
+    DateOnly = lists:sublist(Date, 8),
     [DateOnly, $/, Region, $/, Service, "/aws4_request"].
 
 to_sign(Date, CredentialScope, Request) ->
@@ -196,7 +196,7 @@ to_sign(Date, CredentialScope, Request) ->
 
 signing_key(Config, Date, Region, Service) ->
     %% TODO cache the signing key so we don't have to recompute for every request
-    DateOnly = nodefinder_string:pad(Date, 8),
+    DateOnly = lists:sublist(Date, 8),
     KDate = sha256_mac( "AWS4" ++ Config#aws_config.secret_access_key, DateOnly),
     KRegion = sha256_mac( KDate, Region),
     KService = sha256_mac( KRegion, Service),

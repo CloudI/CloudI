@@ -5,7 +5,6 @@
 
 %% external interface
 -export([lowercase/1,
-         pad/2,
          split/2,
          uppercase/1]).
 
@@ -24,21 +23,6 @@ lowercase(String)
 lowercase(String)
     when is_binary(String) ->
     erlang:list_to_binary(string:to_lower(erlang:binary_to_list(String))).
--endif.
-
--spec uppercase(String :: string() | binary()) ->
-    string() | binary().
-
--ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-uppercase(String) ->
-    string:uppercase(String).
--else.
-uppercase(String)
-    when is_list(String) ->
-    string:to_upper(String);
-uppercase(String)
-    when is_binary(String) ->
-    erlang:list_to_binary(string:to_upper(erlang:binary_to_list(String))).
 -endif.
 
 -spec split(String :: string() | binary(),
@@ -66,21 +50,18 @@ split(String, SearchPattern)
     binary:split(String, Pattern, [global]).
 -endif.
 
--spec pad(String :: string() | binary(),
-          Length :: non_neg_integer()) ->
+-spec uppercase(String :: string() | binary()) ->
     string() | binary().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
-pad(String, Length) ->
-    lists:sublist(lists:flatten(string:pad(String, Length)), Length).
+uppercase(String) ->
+    string:uppercase(String).
 -else.
-pad(String, Length)
+uppercase(String)
     when is_list(String) ->
-    string:left(String, Length);
-pad(String, Length)
+    string:to_upper(String);
+uppercase(String)
     when is_binary(String) ->
-    erlang:list_to_binary(string:left(erlang:binary_to_list(String),
-                                      Length)).
+    erlang:list_to_binary(string:to_upper(erlang:binary_to_list(String))).
 -endif.
-
 
