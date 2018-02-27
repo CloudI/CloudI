@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+# Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -29,7 +29,7 @@ use strict;
 use warnings;
 use 5.010;
 
-$CloudI::API::VERSION = '1.72';
+$CloudI::API::VERSION = '1.73';
 
 use POSIX qw(getenv);
 use IO::Handle;

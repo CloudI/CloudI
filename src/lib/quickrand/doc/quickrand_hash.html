@@ -1,0 +1,142 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module quickrand_hash</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module quickrand_hash</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="Random_Number_Generation_With_Hash_Functions">Random Number Generation With Hash Functions</a></h3><p>   
+The random numbers created by the functions in this module are   
+not meant for cryptographic purposes.</p>.
+<p>Copyright © 2017 Michael Truog</p>
+
+<p><b>Version:</b> 1.7.3 Feb 26 2018 16:37:20
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="Random_Number_Generation_With_Hash_Functions">Random Number Generation With Hash Functions</a></h3><p>   
+The random numbers created by the functions in this module are   
+not meant for cryptographic purposes.</p>
+  
+   <p>Any functions that have a jenkins prefix use Bob Jenkins' lookup3 hashing   
+(lookup3, May 2006).  In my testing, the function jenkins_32 is 4 times   
+slower than erlang:phash2/1 because jenkins_32 is implemented in Erlang.   
+Both the jenkins_32 and jenkins_64 functions execute at a speed similar to   
+crypto:hash(ripemd160,_) with crypto:hash(sha256,_) slightly faster and   
+crypto:hash(sha512,_) slightly slower.</p>
+  
+   <p>Any functions that have a jenkins64 prefix use Bob Jenkins' SpookyHash   
+(SpookyV2, August 5 2012).  In my testing, the function jenkins64_128 is   
+4.5 times slower than crypto:hash(md5,_) which provides the same number   
+of bits, because the jenkins64 functions are implemented in Erlang.</p>
+  
+   All the jenkins prefix functions have been checked with the C++
+   implementations to ensure the same hash value is obtained, though
+   this implementation forces numbers to be interpreted as big-endian.
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#jenkins64_128-1">jenkins64_128/1</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash128.">Bob Jenkins SpookyHashV2 Hash128.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins64_128-2">jenkins64_128/2</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash128.">Bob Jenkins SpookyHashV2 Hash128.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins64_32-1">jenkins64_32/1</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash32.">Bob Jenkins SpookyHashV2 Hash32.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins64_32-2">jenkins64_32/2</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash32.">Bob Jenkins SpookyHashV2 Hash32.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins64_64-1">jenkins64_64/1</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash64.">Bob Jenkins SpookyHashV2 Hash64.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins64_64-2">jenkins64_64/2</a></td><td>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash64.">Bob Jenkins SpookyHashV2 Hash64.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins_32-1">jenkins_32/1</a></td><td>
+  <h4><a name="Bob_Jenkins_lookup3_hashword_for_iodata.">Bob Jenkins lookup3 hashword for iodata.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins_32-2">jenkins_32/2</a></td><td>
+  <h4><a name="Bob_Jenkins_lookup3_hashword_for_iodata.">Bob Jenkins lookup3 hashword for iodata.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins_64-1">jenkins_64/1</a></td><td>
+  <h4><a name="Bob_Jenkins_lookup3_hashword2_for_iodata.">Bob Jenkins lookup3 hashword2 for iodata.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#jenkins_64-2">jenkins_64/2</a></td><td>
+  <h4><a name="Bob_Jenkins_lookup3_hashword2_for_iodata.">Bob Jenkins lookup3 hashword2 for iodata.</a></h4>.</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="jenkins64_128-1">jenkins64_128/1</a></h3>
+<div class="spec">
+<p><tt>jenkins64_128(MessageRaw::iodata()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash128.">Bob Jenkins SpookyHashV2 Hash128.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins64_128-2">jenkins64_128/2</a></h3>
+<div class="spec">
+<p><tt>jenkins64_128(MessageRaw::iodata(), Seed::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash128.">Bob Jenkins SpookyHashV2 Hash128.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins64_32-1">jenkins64_32/1</a></h3>
+<div class="spec">
+<p><tt>jenkins64_32(MessageRaw::iodata()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash32.">Bob Jenkins SpookyHashV2 Hash32.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins64_32-2">jenkins64_32/2</a></h3>
+<div class="spec">
+<p><tt>jenkins64_32(MessageRaw::iodata(), Seed::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash32.">Bob Jenkins SpookyHashV2 Hash32.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins64_64-1">jenkins64_64/1</a></h3>
+<div class="spec">
+<p><tt>jenkins64_64(MessageRaw::iodata()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash64.">Bob Jenkins SpookyHashV2 Hash64.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins64_64-2">jenkins64_64/2</a></h3>
+<div class="spec">
+<p><tt>jenkins64_64(MessageRaw::iodata(), Seed::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_SpookyHashV2_Hash64.">Bob Jenkins SpookyHashV2 Hash64.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins_32-1">jenkins_32/1</a></h3>
+<div class="spec">
+<p><tt>jenkins_32(MessageRaw::iodata()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_lookup3_hashword_for_iodata.">Bob Jenkins lookup3 hashword for iodata.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins_32-2">jenkins_32/2</a></h3>
+<div class="spec">
+<p><tt>jenkins_32(MessageRaw::iodata(), Seed::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_lookup3_hashword_for_iodata.">Bob Jenkins lookup3 hashword for iodata.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins_64-1">jenkins_64/1</a></h3>
+<div class="spec">
+<p><tt>jenkins_64(MessageRaw::iodata()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_lookup3_hashword2_for_iodata.">Bob Jenkins lookup3 hashword2 for iodata.</a></h4>
+</p>
+
+<h3 class="function"><a name="jenkins_64-2">jenkins_64/2</a></h3>
+<div class="spec">
+<p><tt>jenkins_64(MessageRaw::iodata(), Seed::non_neg_integer()) -&gt; non_neg_integer()</tt><br></p>
+</div><p>
+  <h4><a name="Bob_Jenkins_lookup3_hashword2_for_iodata.">Bob Jenkins lookup3 hashword2 for iodata.</a></h4>
+</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Feb 26 2018, 16:37:20.</i></p>
+</body>
+</html>

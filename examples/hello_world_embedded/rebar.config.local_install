@@ -2,6 +2,6 @@
 % ex: set ft=erlang fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 {lib_dirs,
- ["/usr/local/lib/cloudi-1.7.2/lib"]}.
+ ["/usr/local/lib/cloudi-1.7.3/lib"]}.
 {sub_dirs,
  ["apps/hello_world_embedded"]}.

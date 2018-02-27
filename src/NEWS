@@ -1,5 +1,31 @@
 ------------------------------------------------------------------------        
 
+February 27, 2018
+  Version 1.7.3 released.
+  * cloudi_crdt was added to provide an easy way to have replicated
+    state among internal CloudI service processes
+    (implementing a POLog CRDT with an Erlang map,
+     see the Erlang count integration test for example use)
+  * All cloudi_core and internal CloudI service time tracking has
+    switched to monotonic time where it is advantageous
+    (e.g., CloudI service restart times, cloudi_queue, etc.)
+  * A bug preventing dest_list_deny and dest_list_allow from being
+    used for cloudi_service_http_cowboy, cloudi_service_http_elli
+    and cloudi_service_tcp was fixed (cloudi_service_children.hrl bug)
+  * cloudi_queue will now perform a new service name lookup upon a
+    retry if the pattern_pid() was not provided explicitly
+  * The file_size_limit argument was added to cloudi_service_queue
+    with the default value of 128MB
+  * Javascript CloudI API had a busy-wait bug causing excessive CPU
+    consumption which has been fixed
+  * Java 9 support was added
+  * OCaml >= 4.06 support was fixed by including num as a
+    compile-time dependency
+  * CloudI execution now uses a default umask of 0027 which may be
+    set with CLOUDI_UMASK (before the configure script is called)
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 September 13, 2017
   Version 1.7.2 released.
   * Service configuration option request_timeout_adjustment was modified

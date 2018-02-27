@@ -3,4 +3,4 @@
 {modules,[nodefinder,nodefinder_app,nodefinder_ec2,nodefinder_ec2_api,
           nodefinder_ec2_api_aws,nodefinder_ec2_api_http,
           nodefinder_ec2_api_httpc,nodefinder_ec2_api_xml,
-          nodefinder_multicast,nodefinder_sup]}.
+          nodefinder_multicast,nodefinder_string,nodefinder_sup]}.

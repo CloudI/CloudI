@@ -69,7 +69,8 @@ all() ->
 groups() ->
     [{basic_1, [],
       [t_facility_1,
-       t_severity_1]}].
+       t_severity_1,
+       t_local_output_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},

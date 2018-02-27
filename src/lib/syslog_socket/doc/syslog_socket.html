@@ -13,9 +13,9 @@
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
    <h3><a name="Erlang_syslog_Client_Interface">Erlang syslog Client Interface</a></h3>
    A minimal syslog client interface that supports both RFC3164 and RFC5424.
-<p>Copyright © 2016-2017 Michael Truog</p>
+<p>Copyright © 2016-2018 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.2 Sep 12 2017 16:28:35
+<p><b>Version:</b> 1.7.3 Feb 26 2018 16:23:37
   ------------------------------------------------------------------------</p>
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog [at] gmail (dot) com"><tt>mjtruog [at] gmail (dot) com</tt></a>).</p>
@@ -78,12 +78,20 @@
 <tr><td valign="top"><a href="#severity_valid-1">severity_valid/1</a></td><td>
   <h4><a name="Test_the_validity_of_a_syslog_severity_value.">Test the validity of a syslog severity value.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>
-  <h4><a name="Start_a_syslog_socket.">Start a syslog socket.</a></h4>
+  <h4><a name="Start_a_syslog_socket_with_a_link.">Start a syslog socket with a link.</a></h4>
+  Connection is immediate within the new Erlang process.</td></tr>
+<tr><td valign="top"><a href="#start_monitor-1">start_monitor/1</a></td><td>
+  <h4><a name="Start_a_syslog_socket_with_a_monitor.">Start a syslog socket with a monitor.</a></h4>
   Connection is immediate within the new Erlang process.</td></tr>
 <tr><td valign="top"><a href="#stop_link-1">stop_link/1</a></td><td>
-  <h4><a name="Stop_an_existing_syslog_socket_asynchronously.">Stop an existing syslog socket asynchronously.</a></h4>.</td></tr>
+  <h4><a name="Stop_an_existing_syslog_socket_link_asynchronously.">Stop an existing syslog socket link asynchronously.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#stop_link-2">stop_link/2</a></td><td>
-  <h4><a name="Stop_an_existing_syslog_socket_synchronously.">Stop an existing syslog socket synchronously.</a></h4>.</td></tr>
+  <h4><a name="Stop_an_existing_syslog_socket_link_synchronously.">Stop an existing syslog socket link synchronously.</a></h4>.</td></tr>
+<tr><td valign="top"><a href="#stop_monitor-1">stop_monitor/1</a></td><td>
+  <h4><a name="Stop_an_existing_syslog_socket_monitor_asynchronously.">Stop an existing syslog socket monitor asynchronously.</a></h4>
+  The parent process will still receive {'DOWN', _, process, Pid, Info}.</td></tr>
+<tr><td valign="top"><a href="#stop_monitor-2">stop_monitor/2</a></td><td>
+  <h4><a name="Stop_an_existing_syslog_socket_monitor_synchronously.">Stop an existing syslog socket monitor synchronously.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
 </table>
 
@@ -167,21 +175,42 @@
 <div class="spec">
 <p><tt>start_link(Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
 </div><p>
-  <h4><a name="Start_a_syslog_socket.">Start a syslog socket.</a></h4>
+  <h4><a name="Start_a_syslog_socket_with_a_link.">Start a syslog socket with a link.</a></h4>
+  Connection is immediate within the new Erlang process.</p>
+
+<h3 class="function"><a name="start_monitor-1">start_monitor/1</a></h3>
+<div class="spec">
+<p><tt>start_monitor(Options::<a href="#type-options">options()</a>) -&gt; {ok, pid()} | {error, any()}</tt><br></p>
+</div><p>
+  <h4><a name="Start_a_syslog_socket_with_a_monitor.">Start a syslog socket with a monitor.</a></h4>
   Connection is immediate within the new Erlang process.</p>
 
 <h3 class="function"><a name="stop_link-1">stop_link/1</a></h3>
 <div class="spec">
 <p><tt>stop_link(Pid::pid()) -&gt; ok</tt><br></p>
 </div><p>
-  <h4><a name="Stop_an_existing_syslog_socket_asynchronously.">Stop an existing syslog socket asynchronously.</a></h4>
+  <h4><a name="Stop_an_existing_syslog_socket_link_asynchronously.">Stop an existing syslog socket link asynchronously.</a></h4>
 </p>
 
 <h3 class="function"><a name="stop_link-2">stop_link/2</a></h3>
 <div class="spec">
 <p><tt>stop_link(Pid::pid(), Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; ok</tt><br></p>
 </div><p>
-  <h4><a name="Stop_an_existing_syslog_socket_synchronously.">Stop an existing syslog socket synchronously.</a></h4>
+  <h4><a name="Stop_an_existing_syslog_socket_link_synchronously.">Stop an existing syslog socket link synchronously.</a></h4>
+</p>
+
+<h3 class="function"><a name="stop_monitor-1">stop_monitor/1</a></h3>
+<div class="spec">
+<p><tt>stop_monitor(Pid::pid()) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_existing_syslog_socket_monitor_asynchronously.">Stop an existing syslog socket monitor asynchronously.</a></h4>
+  The parent process will still receive {'DOWN', _, process, Pid, Info}.</p>
+
+<h3 class="function"><a name="stop_monitor-2">stop_monitor/2</a></h3>
+<div class="spec">
+<p><tt>stop_monitor(Pid::pid(), Timeout::<a href="#type-timeout_milliseconds">timeout_milliseconds()</a>) -&gt; ok</tt><br></p>
+</div><p>
+  <h4><a name="Stop_an_existing_syslog_socket_monitor_synchronously.">Stop an existing syslog socket monitor synchronously.</a></h4>
 </p>
 
 <h3 class="function"><a name="terminate-2">terminate/2</a></h3>
@@ -191,6 +220,6 @@
 <hr>
 
 <div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
-<p><i>Generated by EDoc, Sep 12 2017, 16:28:36.</i></p>
+<p><i>Generated by EDoc, Feb 26 2018, 16:23:37.</i></p>
 </body>
 </html>

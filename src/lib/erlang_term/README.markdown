@@ -22,8 +22,8 @@ Size information should match the [Erlang Efficiency Guide memory information](h
 * Binary: 3..6 + data
 * List: 1 word + 1 word per element + the size of each element
 * Tuple: 2 words + the size of each element
-* Small Map (N =< 32): 4 words + 2 words per key/value pair + the size of each pair
-* Large Map (N > 32): At least, 2 words + 2 * N words + 2 * log16(N) words + the size of each pair
+* Small Map (N =< 32): 5 words + the size of all keys and values
+* Large Map (N > 32): N * [1.6 .. 1.8] + the size of all keys and values
 * Pid:
   * From local node: 1 word
   * From remote node: 5 words
@@ -38,15 +38,7 @@ Size information should match the [Erlang Efficiency Guide memory information](h
     * From local node: 4 words
     * From remote node: 6 words
 * Fun: 9..13 words + size of environment
-
-Maps use a "flatmap" (a pair of tuples) before switching to a
-Hash Array Mapped Trie (HAMT) implementation after the size becomes larger than
-`MAP_SMALL_MAP_LIMIT` (32).  The upper-limit of a HAMT map is used in ERTS
-(`HASHMAP_ESTIMATED_HEAP_SIZE(SIZE) == (SIZE*3 + (2*SIZE/5)*2)`)
-but the result severely exaggerates the size of a map.  Due to the difficulty
-anticipating the in-memory size of a map, the size is taken directly by using
-`erts_debug:flat_size/1`.  The C macros above may change in the future
-(the macros above are from `erts/emulator/beam/erl_map.h` in Erlang 18.1).
+* Erlang process: 338 words when spawned (includes a heap of 233 words)
 
 License
 -------
