@@ -62,7 +62,7 @@ Please see the [FAQ](http://cloudi.org/faq.html) for more details.
 
 ### Requirements
 
-* `Erlang >= 19.0 (erlang/Ubuntu, erlang/macports)`
+* `Erlang >= 19.3 (erlang/Ubuntu, erlang/macports)`
 * `C++ (g++/Ubuntu, libstdcxx/macports)`
 * `boost >= 1.36.0 (libboost-system-dev+libboost-thread-dev+libboost-dev/Ubuntu, boost/macports)`
 
