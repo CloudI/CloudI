@@ -22,8 +22,7 @@
 
 1.  Get CloudI running (need [./configure help?](http://cloudi.org/faq.html#3_Options)):
 
-        wget --content-disposition \
-            http://sourceforge.net/projects/cloudi/files/latest/download
+        wget https://osdn.net/dl/cloudi/cloudi-1.7.3.tar.gz
         tar zxvf cloudi-1.7.3.tar.gz
         cd cloudi-1.7.3/src
         ./configure
