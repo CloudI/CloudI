@@ -5,13 +5,30 @@ SUBDIRS = external
 instdir = "$(cloudi_prefix)/api/ocaml"
 directinstdir = "$(DESTDIR)$(instdir)"
 nativedir = "$(instdir)"
-native_DATA = erlang.cmi cloudi.cmi erlang.cmx cloudi.cmx
-CLEANFILES = $(native_DATA) erlang.o cloudi.o
+native_DATA = erlang.cmi \
+              cloudi.cmi \
+              cloudi.cma \
+              cloudi.cmxa
+CLEANFILES = $(native_DATA) \
+             erlang.cmo \
+             erlang.cmx \
+             erlang.o \
+             cloudi.cmo \
+             cloudi.cmx \
+             cloudi.a \
+             cloudi.o
 OCAMLDEPS = -I $(builddir)/external/
+SUFFIXES = .mli .ml .cmi .cmx .cmo
 
 .NOTPARALLEL:
 
 all-local: $(native_DATA)
+
+cloudi.cmxa: erlang.cmx erlang.cmi cloudi.cmx cloudi.cmi
+	$(OCAMLOPT) $(OCAMLFLAGS) -a erlang.cmx cloudi.cmx -o $@
+
+cloudi.cma: erlang.cmo erlang.cmi cloudi.cmo cloudi.cmi
+	$(OCAMLC) $(OCAMLFLAGS) -a erlang.cmo cloudi.cmo -o $@
 
 .mli.cmi:
 	$(OCAMLC) $(OCAMLFLAGS) -o $@ $(OCAMLDEPS) -c $<
@@ -19,10 +36,14 @@ all-local: $(native_DATA)
 .ml.cmx:
 	$(OCAMLOPT) $(OCAMLFLAGS) -o $@ $(OCAMLDEPS) -c $<
 
-install-exec-hook: $(native_DATA)
+.ml.cmo:
+	$(OCAMLC) $(OCAMLFLAGS) -o $@ $(OCAMLDEPS) -c $<
+
+install-exec-hook: $(native_DATA) cloudi.a
 	$(MKDIR_P) $(directinstdir)
 	$(INSTALL_DATA) erlang.cmi $(directinstdir)
 	$(INSTALL_DATA) cloudi.cmi $(directinstdir)
-	$(INSTALL_DATA) erlang.cmx $(directinstdir)
-	$(INSTALL_DATA) cloudi.cmx $(directinstdir)
+	$(INSTALL_DATA) cloudi.a $(directinstdir)
+	$(INSTALL_DATA) cloudi.cma $(directinstdir)
+	$(INSTALL_DATA) cloudi.cmxa $(directinstdir)
 
