@@ -75,7 +75,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -106,6 +106,8 @@
          size/2,
          update/5,
          update/6,
+         update_assign/6,
+         update_assign/7,
          values/2,
          zero/3]).
 
@@ -117,25 +119,35 @@
 -type key() :: any().
 -type value() :: any().
 -type operation_read() ::
-    {find,   Key :: key()} |
-    {fold,   F :: fun((Key :: key(), Value :: value(),
-                       AccIn :: any()) -> AccOut :: any()),
-             AccInit :: any()} |
-    {get,    Key :: key()} |
-    {is_key, Key :: key()} |
+    {find,          Key :: key()} |
+    {fold,          F :: fun((Key :: key(), Value :: value(),
+                              AccIn :: any()) -> AccOut :: any()),
+                    AccInit :: any()} |
+    {get,           Key :: key()} |
+    {is_key,        Key :: key()} |
     keys |
     size |
     values.
 -type operation_write() ::
-    {assign, Key :: key(), Value :: value()} |
-    {incr,   Key :: key(), Value :: value()} |
-    {decr,   Key :: key(), Value :: value()} |
-    {update, Key :: key(), ModuleVersion :: list(),
-             Module :: module(), Function :: atom()} |
-    {update, Key :: key(), ModuleVersion :: list(),
-             Module :: module(), Function :: atom(), Argument1 :: any()} |
-    {put,    Key :: key(), Value :: value()} |
-    {clear,  Key :: key()} |
+    {assign,        Key :: key(), Value :: value()} |
+    {incr,          Key :: key(), Value :: value()} |
+    {decr,          Key :: key(), Value :: value()} |
+    {update,        Key :: key(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom()} |
+    {update,        Key :: key(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom(),
+                    Argument1 :: any()} |
+    {update_assign, Key :: key(), Value :: value(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom()} |
+    {update_assign, Key :: key(), Value :: value(),
+                    ModuleVersion :: list(),
+                    Module :: module(), Function :: atom(),
+                    Argument1 :: any()} |
+    {put,           Key :: key(), Value :: value()} |
+    {clear,         Key :: key()} |
     clear_all.
 
 % The POLog is ordered based on the receive order of the operations
@@ -152,6 +164,17 @@
 -type polog_mode() ::
     bootstrap |
     normal.
+
+% cloudi_crdt state from other CloudI service processes that is used to
+% determine when bootstrap mode is done
+-type bootstrap_state() ::
+    {VClockAvg :: float(),
+     NodeId :: node_id(),
+     VClock :: vclock(),
+     VClocks :: vclocks(),
+     POLogMode :: polog_mode(),
+     POLog :: polog(),
+     Data :: data()}.
 
 % The POLog data type that contains consistent state (an Erlang map)
 -type data() :: #{key() := value()}.
@@ -171,6 +194,9 @@
         vclock :: vclock(),
         vclocks = vclocks_new() :: vclocks(),
         polog_mode = bootstrap :: polog_mode(),
+        bootstrap_node_id = undefined :: undefined | node_id(),
+        bootstrap_states = [] :: list(bootstrap_state()),
+        bootstrap_requests = 0 :: non_neg_integer(),
         polog = [] :: polog(),
         data = #{} :: data(),
         events = #{} :: events()
@@ -445,6 +471,17 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
         #return_async_active{response = vclock_updated}
         when Result == ok ->
             {ok, StateNew};
+        #return_async_active{response = {state,
+                                         NodeIdRemote,
+                                         VClockRemote, VClocksRemote,
+                                         POLogModeRemote,
+                                         POLogRemote, DataRemote}}
+        when Result == ok ->
+            {ok, bootstrap_update_finish(NodeIdRemote,
+                                         VClockRemote, VClocksRemote,
+                                         POLogModeRemote,
+                                         POLogRemote, DataRemote,
+                                         StateNew)};
         _ ->
             {Result, StateNew}
     end.
@@ -599,6 +636,7 @@ new(Dispatcher, Options)
     Prefix = cloudi_service:prefix(Dispatcher),
     ServiceNameFull = Prefix ++ ServiceName,
     false = cloudi_x_trie:is_pattern(ServiceNameFull),
+    true = cloudi_service:process_count_min(Dispatcher) > 1,
     true = is_integer(CleanIntervalSeconds) andalso
            (CleanIntervalSeconds >= 1) andalso
            (CleanIntervalSeconds =< 4294967),
@@ -683,7 +721,8 @@ size(Dispatcher,
 update(Dispatcher, Key, Module, Function, State)
     when is_pid(Dispatcher) ->
     ModuleVersion = update_local_valid(Module, Function, 1),
-    event_local({update, Key, ModuleVersion, Module, Function},
+    event_local({update, Key,
+                 ModuleVersion, Module, Function},
                 State, Dispatcher).
 
 %%-------------------------------------------------------------------------
@@ -710,7 +749,65 @@ update(Dispatcher, Key, Module, Function, State)
 update(Dispatcher, Key, Module, Function, Argument1, State)
     when is_pid(Dispatcher) ->
     ModuleVersion = update_local_valid(Module, Function, 2),
-    event_local({update, Key, ModuleVersion, Module, Function, Argument1},
+    event_local({update, Key,
+                 ModuleVersion, Module, Function, Argument1},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or assign a value in the CloudI CRDT.===
+%% Function Module:Function/1 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_assign(Dispatcher :: cloudi_service:dispatcher(),
+                    Key :: key(),
+                    Value :: value(),
+                    Module :: module(),
+                    Function :: atom(),
+                    State :: state()) ->
+    state().
+
+update_assign(Dispatcher, Key, Value, Module, Function, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 1),
+    event_local({update_assign, Key, Value,
+                 ModuleVersion, Module, Function},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or assign a value in the CloudI CRDT.===
+%% Function Module:Function/2 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_assign(Dispatcher :: cloudi_service:dispatcher(),
+                    Key :: key(),
+                    Value :: value(),
+                    Module :: module(),
+                    Function :: atom(),
+                    Argument1 :: any(),
+                    State :: state()) ->
+    state().
+
+update_assign(Dispatcher, Key, Value, Module, Function, Argument1, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 2),
+    event_local({update_assign, Key, Value,
+                 ModuleVersion, Module, Function, Argument1},
                 State, Dispatcher).
 
 %%-------------------------------------------------------------------------
@@ -832,28 +929,28 @@ event_local(Operation,
                    Operation :: operation_write(),
                    State :: state(),
                    Dispatcher :: cloudi_service:dispatcher()) ->
-    {{vclock, node_id(), vclock()}, state()}.
+    {{vclock, node_id(), vclock()} | vclock_updated, state()}.
 
 event_remote(NodeIdRemote, VClockRemote, Operation,
-             #cloudi_crdt{service_name_full = ServiceNameFull,
-                          node_id = NodeId,
-                          polog_mode = bootstrap} = State,
-             Dispatcher) ->
-    StateNew = case bootstrap_local_done(NodeIdRemote, VClockRemote, Operation,
-                                         State, Dispatcher) of
-        {true, StateNext} ->
-            StateNext;
-        {false, #cloudi_crdt{queue = Queue,
-                             vclock = VClock} = StateNext} ->
+            #cloudi_crdt{service_name_full = ServiceNameFull,
+                         node_id = NodeId,
+                         polog_mode = bootstrap} = State, Dispatcher) ->
+    case bootstrap_local_check(NodeIdRemote, VClockRemote, Operation,
+                               State, Dispatcher) of
+        {true, #cloudi_crdt{queue = Queue,
+                            vclock = VClock0} = StateNew} ->
             {ok, QueueNew} = cloudi_queue:
                              mcast(Dispatcher, ServiceNameFull,
-                                   {vclock, NodeId, VClock}, Queue),
-            VClockNext = vclock_increment(NodeId, VClock), % send
-            StateNext#cloudi_crdt{queue = QueueNew,
-                                  vclock = VClockNext}
-    end,
-    #cloudi_crdt{vclock = VClockNew} = StateNew,
-    {{vclock, NodeId, VClockNew}, StateNew};
+                                   {vclock, NodeId, VClock0}, Queue),
+            VClockN = vclock_increment(NodeId, VClock0), % send
+            {{vclock, NodeId, VClockN},
+             StateNew#cloudi_crdt{queue = QueueNew,
+                                  vclock = VClockN}};
+        {false, StateNew} ->
+            % block NodeIdRemote by not incrementing the vclock() until
+            % after the bootstrap POLogMode is checked
+            {vclock_updated, StateNew}
+    end;
 event_remote(NodeIdRemote, VClockRemote0, Operation,
              #cloudi_crdt{node_id = NodeId,
                           node_ids = NodeIds,
@@ -1071,18 +1168,20 @@ bootstrap_local(NodeIdRemote, VClockRemote,
     State#cloudi_crdt{node_ids = lists:umerge(NodeIds, [NodeIdRemote]),
                       vclock = VClockN}.
 
--spec bootstrap_local_done(NodeIdRemote :: node_id(),
-                           VClockRemote :: vclock(),
-                           Operation :: operation_write(),
-                           State :: state(),
-                           Dispatcher :: cloudi_service:dispatcher()) ->
+-spec bootstrap_local_check(NodeIdRemote :: node_id(),
+                            VClockRemote :: vclock(),
+                            Operation :: operation_write(),
+                            State :: state(),
+                            Dispatcher :: cloudi_service:dispatcher()) ->
     {boolean(), state()}.
 
-bootstrap_local_done(NodeIdRemote, VClockRemote, Operation,
-                     #cloudi_crdt{service_name_full = ServiceNameFull,
-                                  node_id = NodeId,
-                                  polog_mode = bootstrap} = State,
-                     Dispatcher) ->
+
+bootstrap_local_check(NodeIdRemote, VClockRemote, Operation,
+                      #cloudi_crdt{service_name_full = ServiceNameFull,
+                                   node_id = NodeId,
+                                   polog_mode = bootstrap,
+                                   bootstrap_node_id = BootstrapNodeId} = State,
+                      Dispatcher) ->
     StateNext = bootstrap_local(NodeIdRemote, VClockRemote, State),
     #cloudi_crdt{node_ids = NodeIdsOld,
                  vclock = VClock0,
@@ -1091,145 +1190,153 @@ bootstrap_local_done(NodeIdRemote, VClockRemote, Operation,
     VClockN = vclock_increment(NodeId, VClock0), % event
     StateNew = StateNext#cloudi_crdt{vclock = VClockN,
                                      polog = POLogNew},
-    case cloudi_service:get_pids(Dispatcher, ServiceNameFull, undefined) of
-        {ok, PatternPids} ->
-            NodeIdsNew = lists:foldl(fun({_, Pid}, NodeIdsNext) ->
-                lists:umerge(NodeIdsNext, [node_id(Pid)])
-            end, [NodeId], PatternPids),
-            BootstrapUpdate = (NodeIdsNew -- NodeIdsOld == []) andalso
-                lists:member(NodeIdRemote, NodeIdsNew),
-            if
-                BootstrapUpdate =:= true ->
-                    bootstrap_update(PatternPids, NodeIdRemote,
-                                     StateNew#cloudi_crdt{
-                                         node_ids = NodeIdsNew},
-                                     Dispatcher);
-                BootstrapUpdate =:= false ->
+    if
+        BootstrapNodeId =:= undefined ->
+            case cloudi_service:get_pids(Dispatcher,
+                                         ServiceNameFull, undefined) of
+                {ok, [_ | _] = PatternPids} ->
+                    NodeIdsNew = lists:foldl(fun({_, Pid}, NodeIdsNext) ->
+                        lists:umerge(NodeIdsNext, [node_id(Pid)])
+                    end, [NodeId], PatternPids),
+                    BootstrapUpdate = (NodeIdsNew -- NodeIdsOld == []) andalso
+                        lists:member(NodeIdRemote, NodeIdsNew),
+                    if
+                        BootstrapUpdate =:= true ->
+                            {false,
+                             bootstrap_update_start(PatternPids, NodeIdRemote,
+                                                    StateNew#cloudi_crdt{
+                                                        node_ids = NodeIdsNew},
+                                                    Dispatcher)};
+                        BootstrapUpdate =:= false ->
+                            % send vclock() updates to allow the
+                            % BootstrapUpdate to become true after the updates
+                            {true, StateNew}
+                    end;
+                {error, timeout} ->
+                    ?LOG_WARN("get_pids timeout", []),
                     {false, StateNew}
             end;
-        {error, timeout} ->
-            ?LOG_WARN("bootstrap_done timeout", []),
+        true ->
             {false, StateNew}
     end.
 
--spec bootstrap_update(PatternPids :: list(cloudi_service:pattern_pid()),
-                       NodeIdRemoteBlocked :: node_id(),
-                       State :: state(),
-                       Dispatcher :: cloudi_service:dispatcher()) ->
-    {boolean(), state()}.
+-spec bootstrap_update_start(PatternPids :: list(cloudi_service:pattern_pid()),
+                             BootstrapNodeId :: node_id(),
+                             State :: state(),
+                             Dispatcher :: cloudi_service:dispatcher()) ->
+    state().
 
-bootstrap_update(PatternPids, NodeIdRemoteBlocked,
-                 #cloudi_crdt{service_name_full = ServiceNameFull,
-                              clean_vclocks_interval = CleanInterval,
-                              node_id = NodeId,
-                              node_ids = NodeIds,
-                              vclock = VClock0,
-                              polog_mode = bootstrap} = State,
-                 Dispatcher) ->
-    case bootstrap_update_get(PatternPids, NodeIdRemoteBlocked, NodeIds,
-                              VClock0, ServiceNameFull, Dispatcher) of
+bootstrap_update_start(PatternPids, BootstrapNodeId, State, Dispatcher) ->
+    bootstrap_update_start(PatternPids, 0, BootstrapNodeId, State, Dispatcher).
+
+bootstrap_update_start([], Count, BootstrapNodeId, State, _) ->
+    State#cloudi_crdt{bootstrap_node_id = BootstrapNodeId,
+                      bootstrap_states = [],
+                      bootstrap_requests = Count};
+bootstrap_update_start([PatternPid | PatternPids], Count, BootstrapNodeId,
+                       #cloudi_crdt{service_name_full = ServiceNameFull,
+                                    queue = Queue} = State, Dispatcher) ->
+    {ok, QueueNew} = cloudi_queue:send(Dispatcher, ServiceNameFull, <<>>,
+                                       state, undefined, undefined,
+                                       PatternPid, Queue),
+    bootstrap_update_start(PatternPids, Count + 1, BootstrapNodeId,
+                           State#cloudi_crdt{queue = QueueNew}, Dispatcher).
+
+-spec bootstrap_update_finish(NodeIdRemote :: node_id(),
+                              VClockRemote :: vclock(),
+                              VClocksRemote :: vclocks(),
+                              POLogModeRemote :: polog_mode(),
+                              POLogRemote :: polog(),
+                              DataRemote :: data(),
+                              State :: state()) ->
+    state().
+
+
+bootstrap_update_finish(NodeIdRemote,
+                        VClockRemote,
+                        VClocksRemote,
+                        POLogModeRemote,
+                        POLogRemote,
+                        DataRemote,
+                        #cloudi_crdt{node_ids = NodeIds,
+                                     polog_mode = bootstrap,
+                                     bootstrap_states = BootstrapStates,
+                                     bootstrap_requests = Count} = State) ->
+    BootstrapStatesNew = [{vclock_average(vclock_current(NodeIds,
+                                                         VClockRemote)),
+                           NodeIdRemote, VClockRemote, VClocksRemote,
+                           POLogModeRemote, POLogRemote, DataRemote} |
+                          BootstrapStates],
+    bootstrap_update_finished(State#cloudi_crdt{
+                                  bootstrap_states = BootstrapStatesNew,
+                                  bootstrap_requests = Count - 1}).
+
+-spec bootstrap_update_finished(State :: state()) ->
+    state().
+
+bootstrap_update_finished(#cloudi_crdt{clean_vclocks_interval = CleanInterval,
+                                       node_id = NodeId,
+                                       node_ids = NodeIds,
+                                       vclock = VClock0,
+                                       bootstrap_node_id = BootstrapNodeId,
+                                       bootstrap_states = BootstrapStates,
+                                       bootstrap_requests = 0} = State) ->
+    StateNext = State#cloudi_crdt{bootstrap_node_id = undefined,
+                                  bootstrap_states = []},
+    case bootstrap_update_result(BootstrapNodeId,
+                                 BootstrapStates,
+                                 vclock_average(vclock_current(NodeIds,
+                                                               VClock0))) of
         bootstrap_done ->
-            % All the CloudI service processes have been started recently
-            % based on all the vclock() integers (so all are effectively
-            % in the bootstrap POLogMode at the same time and will find
-            % agreement on the NodeIds here).
-            StateNew = clean_vclocks_store(State),
+            StateNew = clean_vclocks_store(StateNext),
             ok = clean_vclocks_send(CleanInterval * 1000, NodeId),
-            {true, StateNew#cloudi_crdt{polog_mode = normal}};
+            StateNew#cloudi_crdt{polog_mode = normal};
         {ok, VClockRemote, VClocks, POLog, Data} ->
             % Use CRDT state from the NodeIdRemoteBlocked process.
             VClockN = vclock_merge(VClockRemote,
                                    vclock_increment(NodeId, VClock0)), % event
-            StateNew = clean_vclocks_store(State#cloudi_crdt{vclock = VClockN,
-                                                             vclocks = VClocks,
-                                                             polog = POLog,
-                                                             data = Data}),
+            StateNew = clean_vclocks_store(StateNext#cloudi_crdt{
+                                               vclock = VClockN,
+                                               vclocks = VClocks,
+                                               polog = POLog,
+                                               data = Data}),
             ok = clean_vclocks_send(CleanInterval * 1000, NodeId),
-            {true, StateNew#cloudi_crdt{polog_mode = normal}};
+            StateNew#cloudi_crdt{polog_mode = normal};
         {error, _} ->
-            {false, State}
-    end.
-
--spec bootstrap_update_get(PatternPids :: list(cloudi_service:pattern_pid()),
-                           NodeIdRemoteBlocked :: node_id(),
-                           NodeIds :: list(node_id()),
-                           VClock :: vclock(),
-                           ServiceNameFull :: cloudi_service:service_name(),
-                           Dispatcher :: cloudi_service:dispatcher()) ->
-    bootstrap_done |
-    {ok, vclock(), vclocks(), polog(), data()} |
-    {error, update_invalid | timeout}.
-
-bootstrap_update_get(PatternPids, NodeIdRemoteBlocked, NodeIds,
-                     VClock, ServiceNameFull, Dispatcher) ->
-    bootstrap_update_get(PatternPids, [], 0, NodeIdRemoteBlocked, NodeIds,
-                         VClock, ServiceNameFull, Dispatcher).
-
-bootstrap_update_get([], TransIds, Count, NodeIdRemoteBlocked, NodeIds,
-                     VClock, _, Dispatcher) ->
-    case cloudi_service:recv_asyncs(Dispatcher, TransIds) of
-        {ok, Recvs} ->
-            UpdateStates = [{vclock_average(vclock_current(NodeIds,
-                                                           VClockRemote)),
-                             NodeIdRemote, VClockRemote, VClocksRemote,
-                             POLogModeRemote, POLogRemote, DataRemote}
-                            || {_,
-                                {state,
-                                 NodeIdRemote, VClockRemote, VClocksRemote,
-                                 POLogModeRemote, POLogRemote, DataRemote},
-                                _} <- Recvs],
-            VClockAvg = vclock_average(vclock_current(NodeIds, VClock)),
-            bootstrap_update_select(UpdateStates, Count,
-                                    NodeIdRemoteBlocked, VClockAvg);
-        {error, timeout} = Error ->
-            ?LOG_WARN("bootstrap_update recv_asyncs timeout", []),
-            Error
+            StateNext
     end;
-bootstrap_update_get([PatternPid | PatternPids], TransIds, Count,
-                     NodeIdRemoteBlocked, NodeIds,
-                     VClock, ServiceNameFull, Dispatcher) ->
-    case cloudi_service:send_async(Dispatcher, ServiceNameFull, <<>>,
-                                   state, undefined, undefined, PatternPid) of
-        {ok, TransId} ->
-            bootstrap_update_get(PatternPids,
-                                 [TransId | TransIds], Count + 1,
-                                 NodeIdRemoteBlocked, NodeIds,
-                                 VClock, ServiceNameFull, Dispatcher);
-        {error, timeout} = Error ->
-            ?LOG_WARN("bootstrap_update send_async timeout", []),
-            Error
-    end.
+bootstrap_update_finished(State) ->
+    State.
 
--spec bootstrap_update_select(UpdateStates :: list({float(),
-                                                    node_id(),
-                                                    vclock(), vclocks(),
-                                                    polog_mode(), polog(),
-                                                    data()}),
-                              Count :: non_neg_integer(),
-                              NodeIdRemoteBlocked :: node_id(),
+-spec bootstrap_update_result(BootstrapNodeId :: node_id(),
+                              BootstrapStates :: list(bootstrap_state()),
                               VClockAvg :: float()) ->
     bootstrap_done |
     {ok, vclock(), vclocks(), polog(), data()} |
     {error, update_invalid}.
 
-bootstrap_update_select(UpdateStates, Count,
-                        NodeIdRemoteBlocked, VClockAvg) ->
+bootstrap_update_result(BootstrapNodeId, BootstrapStates, VClockAvg) ->
     VClockAvgL = [VClockAvg |
                   [VClockAvgRemote
-                   || {VClockAvgRemote, _, _, _, _, _, _} <- UpdateStates]],
+                   || {VClockAvgRemote, _, _, _, _, _, _} <- BootstrapStates]],
     AllNewProcesses = lists:all(fun(VClockAvgValue) ->
         % The comparison here uses an arbitrary number based on testing
         % to determine what a new process really is.
-        VClockAvgValue < 80
+        VClockAvgValue < 30
     end, VClockAvgL),
     if
         AllNewProcesses =:= true ->
+            % All the CloudI service processes have been started recently
+            % based on all the vclock() integers (so all are effectively
+            % in the bootstrap POLogMode at the same time and will find
+            % agreement on the NodeIds here).
             bootstrap_done;
         AllNewProcesses =:= false ->
             % The CRDT bootstrap POLogMode is not due to an initial startup
             % of a CloudI service, but is instead due to a restart or the
             % start of a new CloudI service instance.
             % (assumes a normal distribution of vclock() averages exists)
+            Count = length(BootstrapStates),
             VClockAllAvg = lists:sum(VClockAvgL) / (Count + 1),
             VClockAllAvgStdDev = math:pow(lists:foldl(fun(VClockAvgValue,
                                                           SqsSum) ->
@@ -1240,8 +1347,8 @@ bootstrap_update_select(UpdateStates, Count,
             % 50% is 0.67448975019608171 * stddev
             VClockAllAvgThreshold = VClockAllAvg -
                 VClockAllAvgStdDev * 0.67448975019608171,
-            case lists:keyfind(NodeIdRemoteBlocked, 2, UpdateStates) of
-                {VClockAvgRemote, NodeIdRemoteBlocked,
+            case lists:keyfind(BootstrapNodeId, 2, BootstrapStates) of
+                {VClockAvgRemote, BootstrapNodeId,
                  VClockN, VClocksN, normal, POLogN, DataN}
                     when VClockAvgRemote >= VClockAllAvgThreshold ->
                     {ok, VClockN, VClocksN, POLogN, DataN};
@@ -1335,54 +1442,45 @@ polog_redundancy_relation({incr, _, _}, _, POLog) ->
 polog_redundancy_relation({decr, _, _}, _, POLog) ->
     {add, POLog};
 polog_redundancy_relation({update, _, _, _, _}, _, POLog) ->
-    % Update may contain any operation that operates on a value,
+    % update may contain any operation that operates on a value,
     % if a value exists, so it is unable to be redundant
     % (similar to incr and decr, but more generic).
     {add, POLog};
 polog_redundancy_relation({update, _, _, _, _, _}, _, POLog) ->
     {add, POLog};
+polog_redundancy_relation({update_assign, _, _, _, _, _}, _, POLog) ->
+    % update_assign is a combination of update and assign, it is not a put
+    % that replaces a value without depending on previous values, so it is
+    % unable to be redundant
+    % (similar to update and assign when used separately).
+    {add, POLog};
+polog_redundancy_relation({update_assign, _, _, _, _, _, _}, _, POLog) ->
+    {add, POLog};
 polog_redundancy_relation({put, Key, _}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
-    polog_redundancy_relation_put(POLog, [], Key, VClock);
+    polog_redundancy_relation_key(POLog, [], Key, VClock);
 polog_redundancy_relation({clear, Key}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
-    polog_redundancy_relation_clear(POLog, [], Key, VClock);
+    polog_redundancy_relation_key(POLog, [], Key, VClock);
 polog_redundancy_relation(clear_all, VClock, POLog) ->
     polog_redundancy_relation_clear_all(POLog, [], VClock).
 
-polog_redundancy_relation_put([], POLog, _, _) ->
+polog_redundancy_relation_key([], POLog, _, _) ->
     {add, lists:reverse(POLog)};
-polog_redundancy_relation_put([{VClock,
+polog_redundancy_relation_key([{VClock,
                                 {put, Key, _}} | POLogWithout] = POLogWith,
                               POLog, Key, VClockNow) ->
     polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
                                                VClock, VClockNow);
-polog_redundancy_relation_put([{VClock,
+polog_redundancy_relation_key([{VClock,
                                 {clear, Key}} | POLogWithout] = POLogWith,
                               POLog, Key, VClockNow) ->
     polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
                                                VClock, VClockNow);
-polog_redundancy_relation_put([POLogValue | POLogWithout],
+polog_redundancy_relation_key([POLogValue | POLogWithout],
                               POLog, Key, VClockNow) ->
-    polog_redundancy_relation_put(POLogWithout,
+    polog_redundancy_relation_key(POLogWithout,
                                   [POLogValue | POLog], Key, VClockNow).
-
-polog_redundancy_relation_clear([], POLog, _, _) ->
-    {add, lists:reverse(POLog)};
-polog_redundancy_relation_clear([{VClock,
-                                  {put, Key, _}} | POLogWithout] = POLogWith,
-                                POLog, Key, VClockNow) ->
-    polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
-                                               VClock, VClockNow);
-polog_redundancy_relation_clear([{VClock,
-                                  {clear, Key}} | POLogWithout] = POLogWith,
-                                POLog, Key, VClockNow) ->
-    polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
-                                               VClock, VClockNow);
-polog_redundancy_relation_clear([POLogValue | POLogWithout],
-                                POLog, Key, VClockNow) ->
-    polog_redundancy_relation_clear(POLogWithout,
-                                    [POLogValue | POLog], Key, VClockNow).
 
 polog_redundancy_relation_clear_all([], POLog, _) ->
     {add, lists:reverse(POLog)};
@@ -1499,6 +1597,36 @@ write({update, Key, ModuleVersion, Module, Function, Argument1},
         error:{badkey, Key} ->
             Data
     end;
+write({update_assign, Key, Value, ModuleVersion, Module, Function},
+      Data, Events, Service) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 1),
+    try maps:update_with(Key, fun(ValueOld) ->
+            ValueNew = Module:Function(ValueOld),
+            event(update, Key, [ValueOld, ValueNew],
+                  Events, Service),
+            ValueNew
+        end, Data)
+    catch
+        error:{badkey, Key} ->
+            event(assign, Key, [Value],
+                  Events, Service),
+            maps:put(Key, Value, Data)
+    end;
+write({update_assign, Key, Value, ModuleVersion, Module, Function, Argument1},
+      Data, Events, Service) ->
+    ok = update_remote_valid(ModuleVersion, Module, Function, 2),
+    try maps:update_with(Key, fun(ValueOld) ->
+            ValueNew = Module:Function(Argument1, ValueOld),
+            event(update, Key, [ValueOld, ValueNew],
+                  Events, Service),
+            ValueNew
+        end, Data)
+    catch
+        error:{badkey, Key} ->
+            event(assign, Key, [Value],
+                  Events, Service),
+            maps:put(Key, Value, Data)
+    end;
 write({put, Key, ValueNew},
       Data, Events, Service) ->
     event(put, Key, [Data, ValueNew],
@@ -1559,14 +1687,21 @@ event(EventType, Key, EventData, Events, Service) ->
                  Service :: cloudi_service:source()) ->
     any().
 
-event_send(assign, Key, [Data, ValueNew], Service) ->
-    case maps:find(Key, Data) of
-        {ok, _} ->
-            ok;
-        error ->
+event_send(assign, Key, EventData, Service) ->
+    case EventData of
+        [ValueNew] ->
             Service ! #crdt_event{type = assign,
                                   key = Key,
-                                  new = {value, ValueNew}}
+                                  new = {value, ValueNew}};
+        [Data, ValueNew] ->
+            case maps:find(Key, Data) of
+                {ok, _} ->
+                    ok;
+                error ->
+                    Service ! #crdt_event{type = assign,
+                                          key = Key,
+                                          new = {value, ValueNew}}
+            end
     end;
 event_send(incr, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = incr,

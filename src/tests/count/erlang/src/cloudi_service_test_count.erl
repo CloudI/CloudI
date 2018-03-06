@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_count).
@@ -110,11 +110,16 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                                ?MODULE, update, CRDT1),
                     {Count0, CRDT2};
                 error ->
-                    {1, cloudi_crdt:assign(Dispatcher, Key, 2, CRDT1)}
+                    Count0 = 1,
+                    CRDT2 = cloudi_crdt:update_assign(Dispatcher, Key,
+                                                      update(Count0),
+                                                      ?MODULE, update, CRDT1),
+                    {Count0, CRDT2}
             end,
             ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
             Response = cloudi_string:format_to_binary("~w", [CountN]),
-            {reply, Response, State#state{crdt = CRDTN}}
+            {reply, Response, State#state{crdt = CRDTN,
+                                          count = CountN}}
     end.
 
 cloudi_service_handle_info(Request,
