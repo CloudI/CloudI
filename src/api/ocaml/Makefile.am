@@ -6,15 +6,15 @@ instdir = "$(cloudi_prefix)/api/ocaml"
 directinstdir = "$(DESTDIR)$(instdir)"
 nativedir = "$(instdir)"
 native_DATA = erlang.cmi \
+              erlang.cmx \
               cloudi.cmi \
+              cloudi.cmx \
               cloudi.cma \
               cloudi.cmxa
 CLEANFILES = $(native_DATA) \
              erlang.cmo \
-             erlang.cmx \
              erlang.o \
              cloudi.cmo \
-             cloudi.cmx \
              cloudi.a \
              cloudi.o
 OCAMLDEPS = -I $(builddir)/external/
@@ -42,7 +42,9 @@ cloudi.cma: erlang.cmo erlang.cmi cloudi.cmo cloudi.cmi
 install-exec-hook: $(native_DATA) cloudi.a
 	$(MKDIR_P) $(directinstdir)
 	$(INSTALL_DATA) erlang.cmi $(directinstdir)
+	$(INSTALL_DATA) erlang.cmx $(directinstdir)
 	$(INSTALL_DATA) cloudi.cmi $(directinstdir)
+	$(INSTALL_DATA) cloudi.cmx $(directinstdir)
 	$(INSTALL_DATA) cloudi.a $(directinstdir)
 	$(INSTALL_DATA) cloudi.cma $(directinstdir)
 	$(INSTALL_DATA) cloudi.cmxa $(directinstdir)
