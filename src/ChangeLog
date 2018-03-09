@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix OCaml CloudI API cross-module inlining for native compilation
+
 2018-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add the update_assign functions to cloudi_crdt to combine the

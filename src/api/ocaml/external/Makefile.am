@@ -3,16 +3,24 @@
 
 OCAMLDEPS_NUM = \
     arith_flags.cmi \
+    arith_flags.cmx \
     arith_status.cmi \
+    arith_status.cmx \
     big_int.cmi \
+    big_int.cmx \
     int_misc.cmi \
+    int_misc.cmx \
     nat.cmi \
+    nat.cmx \
     num.cmi \
+    num.cmx \
     ratio.cmi \
+    ratio.cmx \
     libnums.a \
     nums.a \
     nums.cmxa \
     nums.cma
+
 CLEANFILES = $(OCAMLDEPS_NUM)
 
 nums.cmxa:
