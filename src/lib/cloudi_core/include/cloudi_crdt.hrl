@@ -32,6 +32,7 @@
 -record(crdt_event,
     {
         type               :: cloudi_crdt:event_type(),
+        id = undefined     :: cloudi_crdt:event_id(),
         key                :: any(),
         old = undefined    :: {value, any()} | undefined,
         new = undefined    :: {value, any()} | undefined

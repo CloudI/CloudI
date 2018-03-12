@@ -48,6 +48,7 @@
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_crdt.hrl").
 
 -record(state,
         {
@@ -78,10 +79,12 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Mode =:= isolated ->
             #state{mode = Mode};
         Mode =:= crdt ->
+            CRDT0 = cloudi_crdt:new(Dispatcher,
+                                    [{retry, 20}, % 5 minutes total
+                                     {retry_delay, 15 * 1000}]), % 15 sec
+            CRDTN = cloudi_crdt:events_subscribe(Dispatcher, count, CRDT0),
             #state{mode = Mode,
-                   crdt = cloudi_crdt:new(Dispatcher,
-                                          [{retry, 20}, % 5 minutes total
-                                           {retry_delay, 15 * 1000}])} % 15 sec
+                   crdt = CRDTN}
     end,
     {ok, State}.
 
@@ -106,14 +109,16 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
             Key = count,
             {CountN, CRDTN} = case cloudi_crdt:find(Dispatcher, Key, CRDT1) of
                 {ok, Count0} ->
-                    CRDT2 = cloudi_crdt:update(Dispatcher, Key,
-                                               ?MODULE, update, CRDT1),
+                    CRDT2 = cloudi_crdt:update_id(Dispatcher, Key,
+                                                  ?MODULE, update,
+                                                  TransId, CRDT1),
                     {Count0, CRDT2};
                 error ->
                     Count0 = 1,
-                    CRDT2 = cloudi_crdt:update_assign(Dispatcher, Key,
-                                                      update(Count0),
-                                                      ?MODULE, update, CRDT1),
+                    CRDT2 = cloudi_crdt:update_assign_id(Dispatcher, Key,
+                                                         update(Count0),
+                                                         ?MODULE, update,
+                                                         TransId, CRDT1),
                     {Count0, CRDT2}
             end,
             ?LOG_INFO("count == ~w erlang (CRDT)", [CountN]),
@@ -122,6 +127,23 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                           count = CountN}}
     end.
 
+cloudi_service_handle_info(#crdt_event{type = EventType,
+                                       id = EventId,
+                                       key = Key,
+                                       old = Old,
+                                       new = New},
+                           #state{mode = crdt} = State, _) ->
+    ValueStr = case {Old, New} of
+        {undefined, {value, ValueNew}} ->
+            io_lib:format("~w new", [ValueNew]);
+        {{value, ValueOld}, undefined} ->
+            io_lib:format("~w old", [ValueOld]);
+        {{value, ValueOld}, {value, ValueNew}} ->
+            io_lib:format("~w -> ~w", [ValueOld, ValueNew])
+    end,
+    ?LOG_TRACE("event type == ~w, id == ~w, key == ~w (~s)",
+               [EventType, EventId, Key, ValueStr]),
+    {noreply, State};
 cloudi_service_handle_info(Request,
                            #state{mode = crdt,
                                   crdt = CRDT0} = State, Dispatcher) ->

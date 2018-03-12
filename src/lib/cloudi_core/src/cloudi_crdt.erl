@@ -83,11 +83,16 @@
 
 %% external interface
 -export([assign/4,
+         assign_id/5,
          byte_size/2,
          clear/2,
          clear/3,
+         clear_id/3,
+         clear_id/4,
          decr/3,
          decr/4,
+         decr_id/4,
+         decr_id/5,
          events_subscribe/3,
          events_subscribe/4,
          events_clear/3,
@@ -98,18 +103,26 @@
          handle_request/11,
          incr/3,
          incr/4,
+         incr_id/4,
+         incr_id/5,
          is_key/3,
          keys/2,
          new/1,
          new/2,
          put/4,
+         put_id/5,
          size/2,
          update/5,
          update/6,
+         update_id/6,
+         update_id/7,
          update_assign/6,
          update_assign/7,
+         update_assign_id/7,
+         update_assign_id/8,
          values/2,
-         zero/3]).
+         zero/3,
+         zero_id/4]).
 
 -type node_id() :: {node(), cloudi_service:source()}.
 -type vclock() :: #{node_id() := non_neg_integer()}.
@@ -129,26 +142,26 @@
     size |
     values.
 -type operation_write() ::
-    {assign,        Key :: key(), Value :: value()} |
-    {incr,          Key :: key(), Value :: value()} |
-    {decr,          Key :: key(), Value :: value()} |
-    {update,        Key :: key(),
+    {assign,        Id :: event_id(), Key :: key(), Value :: value()} |
+    {incr,          Id :: event_id(), Key :: key(), Value :: value()} |
+    {decr,          Id :: event_id(), Key :: key(), Value :: value()} |
+    {update,        Id :: event_id(), Key :: key(),
                     ModuleVersion :: list(),
                     Module :: module(), Function :: atom()} |
-    {update,        Key :: key(),
+    {update,        Id :: event_id(), Key :: key(),
                     ModuleVersion :: list(),
                     Module :: module(), Function :: atom(),
                     Argument1 :: any()} |
-    {update_assign, Key :: key(), Value :: value(),
+    {update_assign, Id :: event_id(), Key :: key(), Value :: value(),
                     ModuleVersion :: list(),
                     Module :: module(), Function :: atom()} |
-    {update_assign, Key :: key(), Value :: value(),
+    {update_assign, Id :: event_id(), Key :: key(), Value :: value(),
                     ModuleVersion :: list(),
                     Module :: module(), Function :: atom(),
                     Argument1 :: any()} |
-    {put,           Key :: key(), Value :: value()} |
-    {clear,         Key :: key()} |
-    clear_all.
+    {put,           Id :: event_id(), Key :: key(), Value :: value()} |
+    {clear,         Id :: event_id(), Key :: key()} |
+    {clear_all,     Id :: event_id()}.
 
 % The POLog is ordered based on the receive order of the operations
 % (newest operation (head) and older operations (tail)),
@@ -238,6 +251,7 @@
     put |
     update.
 -define(EVENT_TYPES, [assign, clear, decr, incr, put, update]).
+-type event_id() :: cloudi:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
          {clean_vclocks, seconds()} |
@@ -246,6 +260,7 @@
          {retry_delay, non_neg_integer()}).
 -type state() :: #cloudi_crdt{}.
 -export_type([event_type/0,
+              event_id/0,
               options/0,
               state/0]).
 
@@ -261,9 +276,25 @@
              State :: state()) ->
     state().
 
-assign(Dispatcher, Key, Value, State)
+assign(Dispatcher, Key, Value, State) ->
+    assign_id(Dispatcher, Key, Value, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Assign a value iff none exists in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec assign_id(Dispatcher :: cloudi_service:dispatcher(),
+                Key :: key(),
+                Value :: value(),
+                Id :: event_id(),
+                State :: state()) ->
+    state().
+
+assign_id(Dispatcher, Key, Value, Id, State)
     when is_pid(Dispatcher) ->
-    event_local({assign, Key, Value}, State, Dispatcher).
+    event_local({assign, Id, Key, Value}, State, Dispatcher).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -290,9 +321,8 @@ byte_size(Dispatcher,
             State :: state()) ->
     state().
 
-clear(Dispatcher, State)
-    when is_pid(Dispatcher) ->
-    event_local(clear_all, State, Dispatcher).
+clear(Dispatcher, State) ->
+    clear_id(Dispatcher, undefined, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -305,9 +335,39 @@ clear(Dispatcher, State)
             State :: state()) ->
     state().
 
-clear(Dispatcher, Key, State)
+clear(Dispatcher, Key, State) ->
+    clear_id(Dispatcher, Key, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Clear the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec clear_id(Dispatcher :: cloudi_service:dispatcher(),
+               Id :: event_id(),
+               State :: state()) ->
+    state().
+
+clear_id(Dispatcher, Id, State)
     when is_pid(Dispatcher) ->
-    event_local({clear, Key}, State, Dispatcher).
+    event_local({clear_all, Id}, State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Clear a key in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec clear_id(Dispatcher :: cloudi_service:dispatcher(),
+               Key :: key(),
+               Id :: event_id(),
+               State :: state()) ->
+    state().
+
+clear_id(Dispatcher, Key, Id, State)
+    when is_pid(Dispatcher) ->
+    event_local({clear, Id, Key}, State, Dispatcher).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -321,7 +381,7 @@ clear(Dispatcher, Key, State)
     state().
 
 decr(Dispatcher, Key, State) ->
-    decr(Dispatcher, Key, 1, State).
+    decr_id(Dispatcher, Key, undefined, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -335,9 +395,40 @@ decr(Dispatcher, Key, State) ->
            State :: state()) ->
     state().
 
-decr(Dispatcher, Key, Value, State)
+decr(Dispatcher, Key, Value, State) ->
+    decr_id(Dispatcher, Key, Value, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Decrement a numerical value by 1 in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec decr_id(Dispatcher :: cloudi_service:dispatcher(),
+              Key :: key(),
+              Id :: event_id(),
+              State :: state()) ->
+    state().
+
+decr_id(Dispatcher, Key, Id, State) ->
+    decr_id(Dispatcher, Key, 1, Id, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Decrement a numerical value in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec decr_id(Dispatcher :: cloudi_service:dispatcher(),
+              Key :: key(),
+              Value :: number(),
+              Id :: event_id(),
+              State :: state()) ->
+    state().
+
+decr_id(Dispatcher, Key, Value, Id, State)
     when is_pid(Dispatcher) ->
-    event_local({decr, Key, Value}, State, Dispatcher).
+    event_local({decr, Id, Key, Value}, State, Dispatcher).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -550,7 +641,7 @@ handle_request(_, _, _, _, _, _, _, _, _, State, _) ->
     state().
 
 incr(Dispatcher, Key, State) ->
-    incr(Dispatcher, Key, 1, State).
+    incr_id(Dispatcher, Key, 1, undefined, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -564,9 +655,40 @@ incr(Dispatcher, Key, State) ->
            State :: state()) ->
     state().
 
-incr(Dispatcher, Key, Value, State)
+incr(Dispatcher, Key, Value, State) ->
+    incr_id(Dispatcher, Key, Value, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Increment a numerical value by 1 in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec incr_id(Dispatcher :: cloudi_service:dispatcher(),
+              Key :: key(),
+              Id :: event_id(),
+              State :: state()) ->
+    state().
+
+incr_id(Dispatcher, Key, Id, State) ->
+    incr_id(Dispatcher, Key, 1, Id, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Increment a numerical value in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec incr_id(Dispatcher :: cloudi_service:dispatcher(),
+              Key :: key(),
+              Value :: number(),
+              Id :: event_id(),
+              State :: state()) ->
+    state().
+
+incr_id(Dispatcher, Key, Value, Id, State)
     when is_pid(Dispatcher) ->
-    event_local({incr, Key, Value}, State, Dispatcher).
+    event_local({incr, Id, Key, Value}, State, Dispatcher).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -679,9 +801,25 @@ new(Dispatcher, Options)
           State :: state()) ->
     state().
 
-put(Dispatcher, Key, Value, State)
+put(Dispatcher, Key, Value, State) ->
+    put_id(Dispatcher, Key, Value, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Put a value into the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec put_id(Dispatcher :: cloudi_service:dispatcher(),
+             Key :: key(),
+             Value :: value(),
+             Id :: event_id(),
+             State :: state()) ->
+    state().
+
+put_id(Dispatcher, Key, Value, Id, State)
     when is_pid(Dispatcher) ->
-    event_local({put, Key, Value}, State, Dispatcher).
+    event_local({put, Id, Key, Value}, State, Dispatcher).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -718,12 +856,9 @@ size(Dispatcher,
              State :: state()) ->
     state().
 
-update(Dispatcher, Key, Module, Function, State)
-    when is_pid(Dispatcher) ->
-    ModuleVersion = update_local_valid(Module, Function, 1),
-    event_local({update, Key,
-                 ModuleVersion, Module, Function},
-                State, Dispatcher).
+update(Dispatcher, Key, Module, Function, State) ->
+    update_id(Dispatcher, Key,
+              Module, Function, undefined, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -746,10 +881,64 @@ update(Dispatcher, Key, Module, Function, State)
              State :: state()) ->
     state().
 
-update(Dispatcher, Key, Module, Function, Argument1, State)
+update(Dispatcher, Key, Module, Function, Argument1, State) ->
+    update_id(Dispatcher, Key,
+              Module, Function, Argument1, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value iff it exists in the CloudI CRDT with an event_id.===
+%% Function Module:Function/1 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_id(Dispatcher :: cloudi_service:dispatcher(),
+                Key :: key(),
+                Module :: module(),
+                Function :: atom(),
+                Id :: event_id(),
+                State :: state()) ->
+    state().
+
+update_id(Dispatcher, Key, Module, Function, Id, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 1),
+    event_local({update, Id, Key,
+                 ModuleVersion, Module, Function},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value iff it exists in the CloudI CRDT with an event_id.===
+%% Function Module:Function/2 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_id(Dispatcher :: cloudi_service:dispatcher(),
+                Key :: key(),
+                Module :: module(),
+                Function :: atom(),
+                Argument1 :: any(),
+                Id :: event_id(),
+                State :: state()) ->
+    state().
+
+update_id(Dispatcher, Key, Module, Function, Argument1, Id, State)
     when is_pid(Dispatcher) ->
     ModuleVersion = update_local_valid(Module, Function, 2),
-    event_local({update, Key,
+    event_local({update, Id, Key,
                  ModuleVersion, Module, Function, Argument1},
                 State, Dispatcher).
 
@@ -774,12 +963,9 @@ update(Dispatcher, Key, Module, Function, Argument1, State)
                     State :: state()) ->
     state().
 
-update_assign(Dispatcher, Key, Value, Module, Function, State)
-    when is_pid(Dispatcher) ->
-    ModuleVersion = update_local_valid(Module, Function, 1),
-    event_local({update_assign, Key, Value,
-                 ModuleVersion, Module, Function},
-                State, Dispatcher).
+update_assign(Dispatcher, Key, Value, Module, Function, State) ->
+    update_assign_id(Dispatcher, Key, Value,
+                     Module, Function, undefined, State).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -803,10 +989,66 @@ update_assign(Dispatcher, Key, Value, Module, Function, State)
                     State :: state()) ->
     state().
 
-update_assign(Dispatcher, Key, Value, Module, Function, Argument1, State)
+update_assign(Dispatcher, Key, Value, Module, Function, Argument1, State) ->
+    update_assign_id(Dispatcher, Key, Value,
+                     Module, Function, Argument1, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or assign a value in the CloudI CRDT with an event_id.===
+%% Function Module:Function/1 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_assign_id(Dispatcher :: cloudi_service:dispatcher(),
+                       Key :: key(),
+                       Value :: value(),
+                       Module :: module(),
+                       Function :: atom(),
+                       Id :: event_id(),
+                       State :: state()) ->
+    state().
+
+update_assign_id(Dispatcher, Key, Value, Module, Function, Id, State)
+    when is_pid(Dispatcher) ->
+    ModuleVersion = update_local_valid(Module, Function, 1),
+    event_local({update_assign, Id, Key, Value,
+                 ModuleVersion, Module, Function},
+                State, Dispatcher).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update a value or assign a value in the CloudI CRDT with an event_id.===
+%% Function Module:Function/2 must exist with the same version
+%% for every CloudI service process that shares this CloudI CRDT.
+%% If the function does not execute to return the same result
+%% (when given the same value) for each instance of the CloudI CRDT,
+%% it can create inconsistencies in the Erlang map that is used for
+%% all read operations
+%% (inconsistencies which would only be resolvable manually).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec update_assign_id(Dispatcher :: cloudi_service:dispatcher(),
+                       Key :: key(),
+                       Value :: value(),
+                       Module :: module(),
+                       Function :: atom(),
+                       Argument1 :: any(),
+                       Id :: event_id(),
+                       State :: state()) ->
+    state().
+
+update_assign_id(Dispatcher, Key, Value, Module, Function, Argument1, Id, State)
     when is_pid(Dispatcher) ->
     ModuleVersion = update_local_valid(Module, Function, 2),
-    event_local({update_assign, Key, Value,
+    event_local({update_assign, Id, Key, Value,
                  ModuleVersion, Module, Function, Argument1},
                 State, Dispatcher).
 
@@ -837,7 +1079,22 @@ values(Dispatcher,
     state().
 
 zero(Dispatcher, Key, State) ->
-    put(Dispatcher, Key, 0, State).
+    zero_id(Dispatcher, Key, undefined, State).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Put a zero value in the CloudI CRDT with an event_id.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec zero_id(Dispatcher :: cloudi_service:dispatcher(),
+              Key :: key(),
+              Id :: event_id(),
+              State :: state()) ->
+    state().
+
+zero_id(Dispatcher, Key, Id, State) ->
+    put_id(Dispatcher, Key, 0, Id, State).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -1426,54 +1683,54 @@ polog_duplicate_operation(VClock, POLog) ->
                                 POLog :: polog()) ->
     {add | ignore, POLogNew :: polog()}.
 
-polog_redundancy_relation({assign, _, _}, _, POLog) ->
+polog_redundancy_relation({assign, _, _, _}, _, POLog) ->
     % assign can not be determined to be redundant because its
     % effect is only determined once state is consistent
     % (any number of put or clear operations may compete to determine
     %  whether an assign operation may succeed at a later point in time).
     {add, POLog};
-polog_redundancy_relation({incr, _, _}, _, POLog) ->
+polog_redundancy_relation({incr, _, _, _}, _, POLog) ->
     % Both incr and decr only mutate existing data and are unable to be
     % redundant, unless there is an incr/decr pair that contain the same
     % Key and Value (or some combination is equivalent to this).
     % The occurrence of redundant incr/decr will be infrequent and it is
     % best to avoid the extra processing a check would require.
     {add, POLog};
-polog_redundancy_relation({decr, _, _}, _, POLog) ->
+polog_redundancy_relation({decr, _, _, _}, _, POLog) ->
     {add, POLog};
-polog_redundancy_relation({update, _, _, _, _}, _, POLog) ->
+polog_redundancy_relation({update, _, _, _, _, _}, _, POLog) ->
     % update may contain any operation that operates on a value,
     % if a value exists, so it is unable to be redundant
     % (similar to incr and decr, but more generic).
     {add, POLog};
-polog_redundancy_relation({update, _, _, _, _, _}, _, POLog) ->
+polog_redundancy_relation({update, _, _, _, _, _, _}, _, POLog) ->
     {add, POLog};
-polog_redundancy_relation({update_assign, _, _, _, _, _}, _, POLog) ->
+polog_redundancy_relation({update_assign, _, _, _, _, _, _}, _, POLog) ->
     % update_assign is a combination of update and assign, it is not a put
     % that replaces a value without depending on previous values, so it is
     % unable to be redundant
     % (similar to update and assign when used separately).
     {add, POLog};
-polog_redundancy_relation({update_assign, _, _, _, _, _, _}, _, POLog) ->
+polog_redundancy_relation({update_assign, _, _, _, _, _, _, _}, _, POLog) ->
     {add, POLog};
-polog_redundancy_relation({put, Key, _}, VClock, POLog) ->
+polog_redundancy_relation({put, _, Key, _}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
     polog_redundancy_relation_key(POLog, [], Key, VClock);
-polog_redundancy_relation({clear, Key}, VClock, POLog) ->
+polog_redundancy_relation({clear, _, Key}, VClock, POLog) ->
     % only removes the first redundant operation to prevent memory growth
     polog_redundancy_relation_key(POLog, [], Key, VClock);
-polog_redundancy_relation(clear_all, VClock, POLog) ->
+polog_redundancy_relation({clear_all, _}, VClock, POLog) ->
     polog_redundancy_relation_clear_all(POLog, [], VClock).
 
 polog_redundancy_relation_key([], POLog, _, _) ->
     {add, lists:reverse(POLog)};
 polog_redundancy_relation_key([{VClock,
-                                {put, Key, _}} | POLogWithout] = POLogWith,
+                                {put, _, Key, _}} | POLogWithout] = POLogWith,
                               POLog, Key, VClockNow) ->
     polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
                                                VClock, VClockNow);
 polog_redundancy_relation_key([{VClock,
-                                {clear, Key}} | POLogWithout] = POLogWith,
+                                {clear, _, Key}} | POLogWithout] = POLogWith,
                               POLog, Key, VClockNow) ->
     polog_redundancy_relation_conflict_resolve(POLogWith, POLogWithout, POLog,
                                                VClock, VClockNow);
@@ -1530,20 +1787,20 @@ read(values, Data) ->
             Service :: cloudi_service:source()) ->
     DataNew :: data().
 
-write({assign, Key, ValueNew},
+write({assign, Id, Key, ValueNew},
       Data, Events, Service) ->
-    event(assign, Key, [Data, ValueNew],
+    event(assign, Id, Key, [Data, ValueNew],
           Events, Service),
     maps:update_with(Key, fun(ValueOld) ->
         ValueOld
     end, ValueNew, Data);
-write({incr, Key, Value},
+write({incr, Id, Key, Value},
       Data, Events, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
                     ValueNew = ValueOld + Value,
-                    event(incr, Key, [ValueOld, ValueNew],
+                    event(incr, Id, Key, [ValueOld, ValueNew],
                           Events, Service),
                     ValueNew;
                 true ->
@@ -1554,13 +1811,13 @@ write({incr, Key, Value},
         error:{badkey, Key} ->
             Data
     end;
-write({decr, Key, Value},
+write({decr, Id, Key, Value},
       Data, Events, Service) ->
     try maps:update_with(Key, fun(ValueOld) ->
             if
                 is_number(ValueOld) ->
                     ValueNew = ValueOld - Value,
-                    event(decr, Key, [ValueOld, ValueNew],
+                    event(decr, Id, Key, [ValueOld, ValueNew],
                           Events, Service),
                     ValueNew;
                 true ->
@@ -1571,12 +1828,12 @@ write({decr, Key, Value},
         error:{badkey, Key} ->
             Data
     end;
-write({update, Key, ModuleVersion, Module, Function},
+write({update, Id, Key, ModuleVersion, Module, Function},
       Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 1),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(ValueOld),
-            event(update, Key, [ValueOld, ValueNew],
+            event(update, Id, Key, [ValueOld, ValueNew],
                   Events, Service),
             ValueNew
         end, Data)
@@ -1584,12 +1841,12 @@ write({update, Key, ModuleVersion, Module, Function},
         error:{badkey, Key} ->
             Data
     end;
-write({update, Key, ModuleVersion, Module, Function, Argument1},
+write({update, Id, Key, ModuleVersion, Module, Function, Argument1},
       Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 2),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(Argument1, ValueOld),
-            event(update, Key, [ValueOld, ValueNew],
+            event(update, Id, Key, [ValueOld, ValueNew],
                   Events, Service),
             ValueNew
         end, Data)
@@ -1597,63 +1854,66 @@ write({update, Key, ModuleVersion, Module, Function, Argument1},
         error:{badkey, Key} ->
             Data
     end;
-write({update_assign, Key, Value, ModuleVersion, Module, Function},
+write({update_assign, Id, Key, Value,
+       ModuleVersion, Module, Function},
       Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 1),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(ValueOld),
-            event(update, Key, [ValueOld, ValueNew],
+            event(update, Id, Key, [ValueOld, ValueNew],
                   Events, Service),
             ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
-            event(assign, Key, [Value],
+            event(assign, Id, Key, [Value],
                   Events, Service),
             maps:put(Key, Value, Data)
     end;
-write({update_assign, Key, Value, ModuleVersion, Module, Function, Argument1},
+write({update_assign, Id, Key, Value,
+       ModuleVersion, Module, Function, Argument1},
       Data, Events, Service) ->
     ok = update_remote_valid(ModuleVersion, Module, Function, 2),
     try maps:update_with(Key, fun(ValueOld) ->
             ValueNew = Module:Function(Argument1, ValueOld),
-            event(update, Key, [ValueOld, ValueNew],
+            event(update, Id, Key, [ValueOld, ValueNew],
                   Events, Service),
             ValueNew
         end, Data)
     catch
         error:{badkey, Key} ->
-            event(assign, Key, [Value],
+            event(assign, Id, Key, [Value],
                   Events, Service),
             maps:put(Key, Value, Data)
     end;
-write({put, Key, ValueNew},
+write({put, Id, Key, ValueNew},
       Data, Events, Service) ->
-    event(put, Key, [Data, ValueNew],
+    event(put, Id, Key, [Data, ValueNew],
           Events, Service),
     maps:put(Key, ValueNew, Data);
-write({clear, Key},
+write({clear, Id, Key},
       Data, Events, Service) ->
-    event(clear, Key, [Data],
+    event(clear, Id, Key, [Data],
           Events, Service),
     maps:remove(Key, Data);
-write(clear_all,
+write({clear_all, Id},
       Data, Events, Service) ->
-    event(clear, [Data],
+    event(clear, Id, [Data],
           Events, Service),
     maps:new().
 
 -spec event(EventType :: clear,
+            EventId :: event_id(),
             EventData :: list(data()),
             Events :: events(),
             Service :: cloudi_service:source()) ->
     ok.
 
-event(EventType, EventData, Events, Service) ->
+event(EventType, EventId, EventData, Events, Service) ->
     maps:fold(fun(Key, EventTypes, _) ->
         case lists:member(EventType, EventTypes) of
             true ->
-                event_send(EventType, Key, EventData, Service);
+                event_send(EventType, EventId, Key, EventData, Service);
             false ->
                 ok
         end
@@ -1661,18 +1921,19 @@ event(EventType, EventData, Events, Service) ->
     ok.
 
 -spec event(EventType :: event_type(),
+            EventId :: event_id(),
             Key :: key(),
             EventData :: list(data() | value()),
             Events :: events(),
             Service :: cloudi_service:source()) ->
     ok.
 
-event(EventType, Key, EventData, Events, Service) ->
+event(EventType, EventId, Key, EventData, Events, Service) ->
     case maps:find(Key, Events) of
         {ok, EventTypes} ->
             case lists:member(EventType, EventTypes) of
                 true ->
-                    event_send(EventType, Key, EventData, Service);
+                    event_send(EventType, EventId, Key, EventData, Service);
                 false ->
                     ok
             end;
@@ -1682,15 +1943,17 @@ event(EventType, Key, EventData, Events, Service) ->
     ok.
 
 -spec event_send(event_type(),
+                 EventId :: event_id(),
                  Key :: key(),
                  EventData :: list(data() | value()),
                  Service :: cloudi_service:source()) ->
     any().
 
-event_send(assign, Key, EventData, Service) ->
+event_send(assign, EventId, Key, EventData, Service) ->
     case EventData of
         [ValueNew] ->
             Service ! #crdt_event{type = assign,
+                                  id = EventId,
                                   key = Key,
                                   new = {value, ValueNew}};
         [Data, ValueNew] ->
@@ -1699,26 +1962,30 @@ event_send(assign, Key, EventData, Service) ->
                     ok;
                 error ->
                     Service ! #crdt_event{type = assign,
+                                          id = EventId,
                                           key = Key,
                                           new = {value, ValueNew}}
             end
     end;
-event_send(incr, Key, [ValueOld, ValueNew], Service) ->
+event_send(incr, EventId, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = incr,
+                          id = EventId,
                           key = Key,
                           old = {value, ValueOld},
                           new = {value, ValueNew}};
-event_send(decr, Key, [ValueOld, ValueNew], Service) ->
+event_send(decr, EventId, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = decr,
+                          id = EventId,
                           key = Key,
                           old = {value, ValueOld},
                           new = {value, ValueNew}};
-event_send(update, Key, [ValueOld, ValueNew], Service) ->
+event_send(update, EventId, Key, [ValueOld, ValueNew], Service) ->
     Service ! #crdt_event{type = update,
+                          id = EventId,
                           key = Key,
                           old = {value, ValueOld},
                           new = {value, ValueNew}};
-event_send(put, Key, [Data, ValueNew], Service) ->
+event_send(put, EventId, Key, [Data, ValueNew], Service) ->
     Old = case maps:find(Key, Data) of
         {ok, Value} ->
             {value, Value};
@@ -1726,13 +1993,15 @@ event_send(put, Key, [Data, ValueNew], Service) ->
             undefined
     end,
     Service ! #crdt_event{type = put,
+                          id = EventId,
                           key = Key,
                           old = Old,
                           new = {value, ValueNew}};
-event_send(clear, Key, [Data], Service) ->
+event_send(clear, EventId, Key, [Data], Service) ->
     case maps:find(Key, Data) of
         {ok, Value} ->
             Service ! #crdt_event{type = clear,
+                                  id = EventId,
                                   key = Key,
                                   old = {value, Value}};
         error ->
