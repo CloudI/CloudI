@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -210,7 +210,8 @@ cloudi_service_handle_info(tick,
                                           TickLength, ProcessIndex),
     tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
-                                   RequestInfo, Request, Dispatcher),
+                                   RequestInfo, Request,
+                                   TickLength, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
                           request_success = 0,
                           request_fail = 0,
@@ -243,7 +244,8 @@ cloudi_service_handle_info({tick, T1},
                         RequestRateComplete, Name, ProcessIndex),
     tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
-                                   RequestInfo, Request, Dispatcher),
+                                   RequestInfo, Request,
+                                   TickLength, Dispatcher),
     {noreply, State#state{request_rate = RequestRateNew,
                           request_success = 0,
                           request_ids = RequestIds}};
@@ -388,7 +390,7 @@ tick_send(TickLength, Service) ->
                       {tick, cloudi_timestamp:microseconds_monotonic()}),
     ok.
 
-tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
+tick_request_send(I, Name, RequestInfo, Request, Timeout, Dispatcher) ->
     RequestInfoData = if
         is_function(RequestInfo) ->
             RequestInfo();
@@ -402,15 +404,15 @@ tick_request_send(I, Name, RequestInfo, Request, Dispatcher) ->
             Request
     end,
     tick_request_send(I, #{}, Name,
-                      RequestInfoData, RequestData, Dispatcher).
+                      RequestInfoData, RequestData, Timeout, Dispatcher).
 
-tick_request_send(0, RequestIds, _, _, _, _) ->
+tick_request_send(0, RequestIds, _, _, _, _, _) ->
     RequestIds;
 tick_request_send(I, RequestIds, Name,
-                  RequestInfo, Request, Dispatcher) ->
+                  RequestInfo, Request, Timeout, Dispatcher) ->
     NewRequestIds = case cloudi_service:send_async_active(Dispatcher, Name,
                                                           RequestInfo, Request,
-                                                          undefined,
+                                                          Timeout,
                                                           undefined) of
         {ok, TransId} ->
             maps:put(TransId, undefined, RequestIds);
@@ -418,7 +420,7 @@ tick_request_send(I, RequestIds, Name,
             RequestIds
     end,
     tick_request_send(I - 1, NewRequestIds, Name,
-                      RequestInfo, Request, Dispatcher).
+                      RequestInfo, Request, Timeout, Dispatcher).
 
 seconds_to_string(Seconds)
     when Seconds > 60 * 60 ->

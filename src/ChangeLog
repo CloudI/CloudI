@@ -6,6 +6,9 @@
     * Add priority_default and priority_default_offset
       arguments to cloudi_crdt
     * Add priority_default argument to cloudi_queue
+    * Use the tick_length argument as the service request timeout
+      in cloudi_service_request_rate to make its configuration
+      simpler and less error-prone
 
 2018-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
 
