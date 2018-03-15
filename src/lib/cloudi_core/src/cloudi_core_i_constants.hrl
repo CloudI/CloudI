@@ -3,7 +3,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at gmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -52,6 +52,11 @@
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).
+
+% if offsets to a priority value are used to create a new priority
+% these macros are helpful for providing both a maximum and a minimum value
+-define(PRIORITY_HIGHER_OFFSET, ?PRIORITY_HIGH * 2 + 1). % negative
+-define(PRIORITY_LOWER_OFFSET,  ?PRIORITY_LOW  * 2 + 1). % positive
 
 % process dictionary keys used by the cloudi_core source code
 -define(SERVICE_ID_PDICT_KEY,      cloudi_service).     % all service processes

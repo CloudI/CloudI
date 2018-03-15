@@ -48,7 +48,7 @@
 %%%
 %%% @author Michael Truog <mjtruog [at] gmail (dot) com>
 %%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_queue).
@@ -83,6 +83,7 @@
          size/2,
          timeout/3]).
 
+-include("cloudi_service.hrl").
 -include("cloudi_core_i_constants.hrl").
 
 -record(request,
@@ -128,6 +129,7 @@
         retry :: non_neg_integer(),
         retry_delay :: non_neg_integer(),
         ordered :: boolean(),
+        priority_default :: cloudi_service:priority(),
         word_size :: pos_integer(),
         service = undefined :: undefined | pid(),
         validate_request_info :: undefined | fun((any()) -> boolean()),
@@ -143,13 +145,15 @@
         requests = #{} :: requests()
     }).
 
--include("cloudi_service.hrl").
-
 -define(DEFAULT_RETRY,                                0). % see below:
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
 -define(DEFAULT_ORDERED,                          false).
+-define(DEFAULT_PRIORITY_DEFAULT,             undefined).
+        % provide a default priority that will be used instead of
+        % the service configuration option priority_default when the
+        % priority is provided as undefined
 -define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
 -define(DEFAULT_VALIDATE_REQUEST,             undefined).
 -define(DEFAULT_VALIDATE_RESPONSE_INFO,       undefined).
@@ -178,6 +182,7 @@
     list({retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()} |
          {ordered, boolean()} |
+         {priority_default, cloudi_service:priority()} |
          {validate_request_info,
           fun((RequestInfo :: cloudi_service:request_info()) -> boolean()) |
           {Module1 :: module(), Function1 :: atom()}} |
@@ -441,6 +446,7 @@ mcast(Dispatcher, Name, RequestInfo, Request, Timeout, Priority,
     end;
 mcast(Dispatcher, Name, RequestInfo, Request, Timeout, Priority,
       #cloudi_queue{ordered = Ordered,
+                    priority_default = PriorityDefault,
                     validate_request_info = RequestInfoF,
                     validate_request = RequestF,
                     failures_source_die = FailuresSrcDie,
@@ -453,7 +459,8 @@ mcast(Dispatcher, Name, RequestInfo, Request, Timeout, Priority,
                   RequestInfo, Request) of
         true ->
             case queue_mcast(Dispatcher, Name, RequestInfo, Request,
-                             Timeout, Priority, Requests, Ordered) of
+                             Timeout, Priority, Requests, Ordered,
+                             PriorityDefault) of
                 {ok, OrderedPending, RequestsNew} ->
                     {ok, State#cloudi_queue{ordered_pending = OrderedPending,
                                             requests = RequestsNew}};
@@ -503,6 +510,7 @@ new(Options)
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY},
         {ordered,                       ?DEFAULT_ORDERED},
+        {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
         {validate_request_info,         ?DEFAULT_VALIDATE_REQUEST_INFO},
         {validate_request,              ?DEFAULT_VALIDATE_REQUEST},
         {validate_response_info,        ?DEFAULT_VALIDATE_RESPONSE_INFO},
@@ -510,7 +518,8 @@ new(Options)
         {failures_source_die,           ?DEFAULT_FAILURES_SOURCE_DIE},
         {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD}],
-    [Retry, RetryDelay, Ordered, ValidateRequestInfo0, ValidateRequest0,
+    [Retry, RetryDelay, Ordered, PriorityDefault,
+     ValidateRequestInfo0, ValidateRequest0,
      ValidateResponseInfo0, ValidateResponse0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod
      ] =
@@ -519,6 +528,10 @@ new(Options)
     true = is_integer(RetryDelay) andalso
            (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
     true = is_boolean(Ordered),
+    true = (PriorityDefault =:= undefined) orelse
+           (is_integer(PriorityDefault) andalso
+            (PriorityDefault >= ?PRIORITY_HIGH) andalso
+            (PriorityDefault =< ?PRIORITY_LOW)),
     ValidateRequestInfo1 = cloudi_args_type:
                            function_optional(ValidateRequestInfo0, 1),
     ValidateRequest1 = cloudi_args_type:
@@ -537,6 +550,7 @@ new(Options)
         retry = Retry,
         retry_delay = RetryDelay,
         ordered = Ordered,
+        priority_default = PriorityDefault,
         word_size = WordSize,
         validate_request_info = ValidateRequestInfo1,
         validate_request = ValidateRequest1,
@@ -848,6 +862,7 @@ send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
     end;
 send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
         #cloudi_queue{ordered = Ordered,
+                      priority_default = PriorityDefault,
                       validate_request_info = RequestInfoF,
                       validate_request = RequestF,
                       failures_source_die = FailuresSrcDie,
@@ -860,7 +875,8 @@ send_id(Dispatcher, Name, RequestInfo, Request, Timeout, Priority, PatternPid,
                   RequestInfo, Request) of
         true ->
             case queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                                  Timeout, Priority, PatternPid) of
+                                  Timeout, Priority, PatternPid,
+                                  PriorityDefault) of
                 {ok, TransId, RequestState} ->
                     OrderedPending = if
                         Ordered =:= true ->
@@ -1000,7 +1016,7 @@ validate(RInfoF, RF, RInfo, R) ->
     validate_f_return(RInfoF(RInfo)) andalso validate_f_return(RF(RInfo, R)).
 
 queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, undefined) ->
+                 Timeout, Priority, undefined, undefined) ->
     case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
         {ok, PatternPid} ->
             case cloudi_service:send_async_active(Dispatcher, Name,
@@ -1024,7 +1040,7 @@ queue_send_first(Dispatcher, Name, RequestInfo, Request,
             Error
     end;
 queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, PatternPid) ->
+                 Timeout, Priority, PatternPid, undefined) ->
     case cloudi_service:send_async_active(Dispatcher, Name,
                                           RequestInfo, Request,
                                           Timeout, Priority,
@@ -1041,10 +1057,19 @@ queue_send_first(Dispatcher, Name, RequestInfo, Request,
             {ok, TransId, RequestState};
         {error, _} = Error ->
             Error
-    end.
-
+    end;
 queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, TransId, undefined) ->
+                 Timeout, undefined, PatternPid, PriorityDefault) ->
+    queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                     Timeout, PriorityDefault, PatternPid, undefined);
+queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                 Timeout, Priority, PatternPid, _) ->
+    queue_send_first(Dispatcher, Name, RequestInfo, Request,
+                     Timeout, Priority, PatternPid, undefined).
+
+queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                         Timeout, Priority, TransId, undefined,
+                         undefined) ->
     case cloudi_service:get_pid(Dispatcher, Name, Timeout) of
         {ok, PatternPid} ->
             case cloudi_service:send_async_active(Dispatcher, Name,
@@ -1067,8 +1092,9 @@ queue_send_first(Dispatcher, Name, RequestInfo, Request,
         {error, _} = Error ->
             Error
     end;
-queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                 Timeout, Priority, TransId, PatternPid) ->
+queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                         Timeout, Priority, TransId, PatternPid,
+                         undefined) ->
     case cloudi_service:send_async_active(Dispatcher, Name,
                                           RequestInfo, Request,
                                           Timeout, Priority,
@@ -1085,7 +1111,18 @@ queue_send_first(Dispatcher, Name, RequestInfo, Request,
             {ok, RequestState};
         {error, _} = Error ->
             Error
-    end.
+    end;
+queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                         Timeout, undefined, TransId, PatternPid,
+                         PriorityDefault) ->
+    queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                             Timeout, PriorityDefault, TransId, PatternPid,
+                             undefined);
+queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                         Timeout, Priority, TransId, PatternPid, _) ->
+    queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                             Timeout, Priority, TransId, PatternPid,
+                             undefined).
 
 queue_send_retry(Dispatcher,
                  #request{name = Name,
@@ -1129,7 +1166,7 @@ queue_send_retry(Dispatcher,
     end.
 
 queue_mcast(Dispatcher, Name, RequestInfo, Request,
-            Timeout, Priority, Requests, Ordered) ->
+            Timeout, Priority, Requests, Ordered, undefined) ->
     case cloudi_service:get_pids(Dispatcher, Name, Timeout) of
         {ok, PatternPids} ->
             queue_mcast(PatternPids, 0,
@@ -1137,7 +1174,15 @@ queue_mcast(Dispatcher, Name, RequestInfo, Request,
                         Timeout, Priority, Requests, Ordered);
         {error, _} = Error ->
             {Error, 0, Requests}
-    end.
+    end;
+queue_mcast(Dispatcher, Name, RequestInfo, Request,
+            Timeout, undefined, Requests, Ordered, PriorityDefault) ->
+    queue_mcast(Dispatcher, Name, RequestInfo, Request,
+                Timeout, PriorityDefault, Requests, Ordered, undefined);
+queue_mcast(Dispatcher, Name, RequestInfo, Request,
+            Timeout, Priority, Requests, Ordered, _) ->
+    queue_mcast(Dispatcher, Name, RequestInfo, Request,
+                Timeout, Priority, Requests, Ordered, undefined).
 
 queue_mcast([], OrderedPending, _, _, _, _, _, _, Requests, _) ->
     {ok, OrderedPending, Requests};
@@ -1222,14 +1267,16 @@ ordered_send(Dispatcher,
                                    id = TransId,
                                    pattern_pid = PatternPid},
              #cloudi_queue{ordered = true,
+                           priority_default = PriorityDefault,
                            failures_source_die = FailuresSrcDie,
                            failures_source_max_count = FailuresSrcMaxCount,
                            failures_source_max_period = FailuresSrcMaxPeriod,
                            failures_source = FailuresSrc,
                            ordered_pending = 0,
                            requests = Requests} = State) ->
-    case queue_send_first(Dispatcher, Name, RequestInfo, Request,
-                          Timeout, Priority, TransId, PatternPid) of
+    case queue_send_first_ordered(Dispatcher, Name, RequestInfo, Request,
+                                  Timeout, Priority, TransId, PatternPid,
+                                  PriorityDefault) of
         {ok, RequestState} ->
             {ok,
              State#cloudi_queue{ordered_pending = 1,
@@ -1252,6 +1299,7 @@ ordered_mcast(Dispatcher,
                                      timeout = Timeout,
                                      priority = Priority},
               #cloudi_queue{ordered = true = Ordered,
+                            priority_default = PriorityDefault,
                             failures_source_die = FailuresSrcDie,
                             failures_source_max_count = FailuresSrcMaxCount,
                             failures_source_max_period = FailuresSrcMaxPeriod,
@@ -1259,7 +1307,8 @@ ordered_mcast(Dispatcher,
                             ordered_pending = 0,
                             requests = Requests} = State) ->
     case queue_mcast(Dispatcher, Name, RequestInfo, Request,
-                     Timeout, Priority, Requests, Ordered) of
+                     Timeout, Priority, Requests, Ordered,
+                     PriorityDefault) of
         {ok, OrderedPending, RequestsNew} ->
             {ok, State#cloudi_queue{ordered_pending = OrderedPending,
                                     requests = RequestsNew}};

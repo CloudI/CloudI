@@ -124,6 +124,11 @@
          zero/3,
          zero_id/4]).
 
+-include("cloudi_crdt.hrl").
+-include("cloudi_service.hrl").
+-include("cloudi_core_i_constants.hrl").
+-include("cloudi_logger.hrl").
+
 -type node_id() :: {node(), cloudi_service:source()}.
 -type vclock() :: #{node_id() := non_neg_integer()}.
 -type vclocks() :: #{node_id() := vclock()}.
@@ -215,10 +220,6 @@
         events = #{} :: events()
     }).
 
--include("cloudi_crdt.hrl").
--include("cloudi_service.hrl").
--include("cloudi_logger.hrl").
-
 -define(DEFAULT_SERVICE_NAME,                    "crdt").
 -define(DEFAULT_CLEAN_VCLOCKS,                       60). % seconds
         % How often to check for the disappearance of CloudI service
@@ -238,6 +239,14 @@
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
+-define(DEFAULT_PRIORITY_DEFAULT,             undefined).
+        % provide a default priority that will be used instead of
+        % the service configuration option priority_default when the
+        % priority is provided as undefined
+-define(DEFAULT_PRIORITY_DEFAULT_OFFSET,      undefined).
+        % provide an offset that is added to the service configuration
+        % option priority_default to set a default priority that will be
+        % used when priority is provided as undefined
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -251,13 +260,16 @@
     put |
     update.
 -define(EVENT_TYPES, [assign, clear, decr, incr, put, update]).
--type event_id() :: cloudi:trans_id() | any().
+-type event_id() :: cloudi_service:trans_id() | any().
 -type options() ::
     list({service_name, string()} |
          {clean_vclocks, seconds()} |
          {clean_vclocks_failure, float() | 1..100} |
          {retry, non_neg_integer()} |
-         {retry_delay, non_neg_integer()}).
+         {retry_delay, non_neg_integer()} |
+         {priority_default, cloudi_service:priority()} |
+         {priority_default_offset,
+          ?PRIORITY_HIGHER_OFFSET..?PRIORITY_LOWER_OFFSET | undefined}).
 -type state() :: #cloudi_crdt{}.
 -export_type([event_type/0,
               event_id/0,
@@ -750,9 +762,11 @@ new(Dispatcher, Options)
         {clean_vclocks,                 ?DEFAULT_CLEAN_VCLOCKS},
         {clean_vclocks_failure,         ?DEFAULT_CLEAN_VCLOCKS_FAILURE},
         {retry,                         ?DEFAULT_RETRY},
-        {retry_delay,                   ?DEFAULT_RETRY_DELAY}],
+        {retry_delay,                   ?DEFAULT_RETRY_DELAY},
+        {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
+        {priority_default_offset,       ?DEFAULT_PRIORITY_DEFAULT_OFFSET}],
     [ServiceName, CleanIntervalSeconds, CleanFailure,
-     Retry, RetryDelay] =
+     Retry, RetryDelay, PriorityDefault0, PriorityDefaultOffset] =
         cloudi_proplists:take_values(Defaults, Options),
     true = is_list(ServiceName) andalso is_integer(hd(ServiceName)),
     Prefix = cloudi_service:prefix(Dispatcher),
@@ -764,6 +778,20 @@ new(Dispatcher, Options)
            (CleanIntervalSeconds =< 4294967),
     true = is_number(CleanFailure) andalso
            (CleanFailure > 0) andalso (CleanFailure =< 100),
+    true = not ((PriorityDefault0 /= undefined) andalso
+                (PriorityDefaultOffset /= undefined)),
+    PriorityDefaultN = if
+        PriorityDefaultOffset =:= undefined ->
+            PriorityDefault0;
+        is_integer(PriorityDefaultOffset),
+        PriorityDefaultOffset >= ?PRIORITY_HIGHER_OFFSET,
+        PriorityDefaultOffset =< ?PRIORITY_LOWER_OFFSET ->
+            PriorityDefault1 = cloudi_service:priority_default(Dispatcher) +
+                               PriorityDefaultOffset,
+            true = (PriorityDefault1 >= ?PRIORITY_HIGH) andalso
+                   (PriorityDefault1 =< ?PRIORITY_LOW),
+			PriorityDefault1
+    end,
     Service = cloudi_service:self(Dispatcher),
     NodeId = node_id(Service),
     VClock0 = vclock_new(),
@@ -776,6 +804,7 @@ new(Dispatcher, Options)
     Queue = cloudi_queue:new([{retry, Retry},
                               {retry_delay, RetryDelay},
                               {ordered, true},
+                              {priority_default, PriorityDefaultN},
                               {failures_source_die, true}]),
 
     ok = cloudi_service:subscribe(Dispatcher, ServiceName),
