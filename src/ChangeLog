@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+
+    * Fix elapsed time for crdt mode in cloudi_service_request_rate
+
 2018-03-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Add timeout_default argument to cloudi_crdt

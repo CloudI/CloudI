@@ -508,7 +508,7 @@ crdt_get_dynamic_elapsed(ProcessCount, CountStableMax, CRDT, Dispatcher) ->
                              CountStableMax, CRDT, Dispatcher).
 
 crdt_get_dynamic_elapsed(ElapsedSum, ProcessCount, ProcessCount, _, _, _) ->
-    ElapsedSum;
+    ElapsedSum / ProcessCount;
 crdt_get_dynamic_elapsed(ElapsedSum, I, ProcessCount,
                          CountStableMax, CRDT, Dispatcher) ->
      case cloudi_crdt:find(Dispatcher, {count_stable, I}, CRDT) of
