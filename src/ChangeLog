@@ -4,6 +4,8 @@
 2018-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
 
     * Fix elapsed time for crdt mode in cloudi_service_request_rate
+    * Add min/max request rate range to crdt mode in
+      cloudi_service_request_rate
 
 2018-03-15 Michael Truog   <mjtruog [at] gmail (dot) com>
 
