@@ -40,12 +40,19 @@
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
+         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_MODE,                 isolated).
+        % The mode determines how results are created.
+        % In 'isolated' mode, each process logs the results
+        % so a manual summary based on the log output is necessary.
+        % In 'crdt' mode, the processes communicate their current
+        % state so a complete summary may be logged as the result.
 -define(DEFAULT_SERVICE_NAME,   "/tests/http_req/erlang.xml/get").
 -define(DEFAULT_REQUEST_INFO,             <<>>).
 -define(DEFAULT_REQUEST,           <<"value", 0,
@@ -83,6 +90,9 @@
     {
         service :: cloudi_service:source(),
         process_index :: non_neg_integer(),
+        process_count :: pos_integer(),
+        mode :: isolated | crdt,
+        crdt :: cloudi_crdt:state(),
         name :: string(),
         request_info :: any(),
         request :: any(),
@@ -105,6 +115,7 @@
 
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
+        {mode,                   ?DEFAULT_MODE},
         {service_name,           ?DEFAULT_SERVICE_NAME},
         {request_info,           ?DEFAULT_REQUEST_INFO},
         {request,                ?DEFAULT_REQUEST},
@@ -113,9 +124,10 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {request_rate,           ?DEFAULT_REQUEST_RATE},
         {tick_length,            ?DEFAULT_TICK_LENGTH},
         {tick_stable_count,      ?DEFAULT_TICK_STABLE_COUNT}],
-    [Name, RequestInfo0, Request0, ResponseInfo0, Response0,
+    [Mode, Name, RequestInfo0, Request0, ResponseInfo0, Response0,
      RequestRate0, TickLength, TickStableCount] =
         cloudi_proplists:take_values(Defaults, Args),
+    true = (Mode =:= isolated) orelse (Mode =:= crdt),
     true = is_list(Name) andalso is_integer(hd(Name)),
     RequestInfoN = if
         is_function(RequestInfo0) ->
@@ -155,9 +167,25 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = is_integer(TickLength) andalso (TickLength >= 1000),
     Service = cloudi_service:self(Dispatcher),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
+    ProcessCount = cloudi_service:process_count(Dispatcher),
+    ProcessCountMin = cloudi_service:process_count_min(Dispatcher),
+    ProcessCountMax = cloudi_service:process_count_max(Dispatcher),
+    true = (ProcessCountMin =:= ProcessCountMax) andalso
+           (ProcessCountMin =:= ProcessCount),
+    CRDT = if
+        Mode =:= isolated ->
+            undefined;
+        Mode =:= crdt ->
+            cloudi_crdt:new(Dispatcher,
+                            [{timeout_default, TickLength * 6},
+                             {priority_default_offset, -1}])
+    end,
     tick_start(Service),
     {ok, #state{service = Service,
                 process_index = ProcessIndex,
+                process_count = ProcessCount,
+                mode = Mode,
+                crdt = CRDT,
                 name = Name,
                 request_info = RequestInfoN,
                 request = RequestN,
@@ -169,33 +197,16 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 request_ids = #{},
                 tick_length = TickLength}}.
 
-cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
-                                                response = Response,
-                                                trans_id = TransId},
-                           #state{response_info = ValidateResponseInfo,
-                                  response = ValidateResponse,
-                                  request_success = RequestSuccess,
-                                  request_fail = RequestFail,
-                                  request_ids = RequestIds} = State,
-                           _Dispatcher) ->
-    case maps:find(TransId, RequestIds) of
-        {ok, _} ->
-            case validate(ValidateResponseInfo, ValidateResponse,
-                          ResponseInfo, Response) of
-                true ->
-                    {noreply,
-                     State#state{request_success = RequestSuccess + 1}};
-                false ->
-                    {noreply,
-                     State#state{request_fail = RequestFail + 1}}
-            end;
-        error ->
-            {noreply, State}
-    end;
-cloudi_service_handle_info(#timeout_async_active{},
-                           #state{} = State,
-                           _Dispatcher) ->
-    {noreply, State};
+cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, TransId, Pid,
+                              #state{mode = crdt,
+                                     crdt = CRDT0} = State, Dispatcher) ->
+    {ok, CRDTN} = cloudi_crdt:handle_request(Type, Name, Pattern,
+                                             RequestInfo, Request,
+                                             Timeout, Priority, TransId, Pid,
+                                             CRDT0, Dispatcher),
+    {noreply, State#state{crdt = CRDTN}}.
+
 cloudi_service_handle_info(tick,
                            #state{service = Service,
                                   process_index = ProcessIndex,
@@ -219,6 +230,9 @@ cloudi_service_handle_info(tick,
 cloudi_service_handle_info({tick, T1},
                            #state{service = Service,
                                   process_index = ProcessIndex,
+                                  process_count = ProcessCount,
+                                  mode = Mode,
+                                  crdt = CRDT0,
                                   name = Name,
                                   request_info = RequestInfo,
                                   request = Request,
@@ -240,20 +254,38 @@ cloudi_service_handle_info({tick, T1},
     {RequestCount,
      RequestRateNew} = request_count_sent(RequestRate, RequestRateComplete,
                                           TickLength, ProcessIndex),
-    request_rate_output(RequestRateNew, Elapsed,
-                        RequestRateComplete, Name, ProcessIndex),
+    CRDTN = if
+        Mode =:= isolated ->
+            isolated_output(RequestRateNew, RequestRateComplete,
+                            Elapsed, Name, ProcessIndex),
+            undefined;
+        Mode =:= crdt ->
+            crdt_output(RequestRateNew, RequestRateComplete,
+                        Elapsed, Name, ProcessIndex, ProcessCount,
+                        CRDT0, Dispatcher)
+    end,
     tick_send(TickLength, Service),
     RequestIds = tick_request_send(RequestCount, Name,
                                    RequestInfo, Request,
                                    TickLength, Dispatcher),
-    {noreply, State#state{request_rate = RequestRateNew,
+    {noreply, State#state{crdt = CRDTN,
+                          request_rate = RequestRateNew,
                           request_success = 0,
                           request_ids = RequestIds}};
-cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+cloudi_service_handle_info(Request,
+                           #state{mode = isolated} = State, _Dispatcher) ->
+    {noreply, request_count_recv(Request, State)};
+cloudi_service_handle_info(Request,
+                           #state{mode = crdt,
+                                  crdt = CRDT0} = State, Dispatcher) ->
+    case cloudi_crdt:handle_info(Request, CRDT0, Dispatcher) of
+        {ok, CRDTN} ->
+            {noreply, State#state{crdt = CRDTN}};
+        {ignored, CRDTN} ->
+            {noreply, request_count_recv(Request, State#state{crdt = CRDTN})}
+    end.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ?LOG_INFO("terminate request_rate erlang", []),
     ok.
 
@@ -355,8 +387,31 @@ request_count_sent(#dynamic{count_stable_max = CountStableMax,
 request_count_sent(RequestRate, _, TickLength, _) ->
     {request_count_sent(RequestRate, TickLength), RequestRate}.
 
-request_rate_output_log(RequestRate, Elapsed,
-                        RequestRateComplete, Name, ProcessIndex) ->
+request_count_recv(#return_async_active{response_info = ResponseInfo,
+                                        response = Response,
+                                        trans_id = TransId},
+                   #state{response_info = ValidateResponseInfo,
+                          response = ValidateResponse,
+                          request_success = RequestSuccess,
+                          request_fail = RequestFail,
+                          request_ids = RequestIds} = State) ->
+    case maps:find(TransId, RequestIds) of
+        {ok, _} ->
+            case validate(ValidateResponseInfo, ValidateResponse,
+                          ResponseInfo, Response) of
+                true ->
+                    State#state{request_success = RequestSuccess + 1};
+                false ->
+                    State#state{request_fail = RequestFail + 1}
+            end;
+        error ->
+            State
+    end;
+request_count_recv(#timeout_async_active{}, #state{} = State) ->
+    State.
+
+isolated_output_log(RequestRate, RequestRateComplete,
+                    Elapsed, Name, ProcessIndex) ->
     ?LOG_INFO("~3.. w: ~.1f requests/second~n"
               "(to ~s,~n"
               " stable during ~s,~n"
@@ -365,21 +420,134 @@ request_rate_output_log(RequestRate, Elapsed,
                erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
                seconds_to_string(Elapsed), RequestRate]).
 
-request_rate_output(#dynamic{count_stable_max = CountStableMax,
-                             count_stable = CountStable,
-                             request_rate_stable = RequestRateStable},
-                    Elapsed, RequestRateComplete, Name, ProcessIndex) ->
+isolated_output(#dynamic{count_stable_max = CountStableMax,
+                         count_stable = CountStable,
+                         request_rate_stable = RequestRateStable},
+                RequestRateComplete, Elapsed, Name, ProcessIndex) ->
     if
         CountStable == CountStableMax ->
-            request_rate_output_log(RequestRateStable, Elapsed * CountStable,
-                                    RequestRateComplete, Name, ProcessIndex);
+            isolated_output_log(RequestRateStable, RequestRateComplete,
+                                Elapsed * CountStable, Name, ProcessIndex);
         true ->
             ok
     end;
-request_rate_output(RequestRate, Elapsed,
-                    RequestRateComplete, Name, ProcessIndex) ->
-    request_rate_output_log(RequestRate, Elapsed,
-                            RequestRateComplete, Name, ProcessIndex).
+isolated_output(RequestRate, RequestRateComplete,
+                Elapsed, Name, ProcessIndex) ->
+    isolated_output_log(RequestRate, RequestRateComplete,
+                        Elapsed, Name, ProcessIndex).
+
+crdt_output_log(undefined, _, _, _, _) ->
+    ok;
+crdt_output_log(Elapsed, Name, ProcessCount, CRDT, Dispatcher) ->
+    case crdt_get_request_rates(ProcessCount, CRDT, Dispatcher) of
+        {RequestRate, RequestRateComplete} ->
+            ?LOG_INFO("~w processes at ~.1f requests/second~n"
+                      "(to ~s,~n"
+                      " stable during ~s,~n"
+                      " sent ~w requests/second)",
+                      [ProcessCount,
+                       erlang:round(RequestRateComplete * 10.0) / 10.0, Name,
+                       seconds_to_string(Elapsed), RequestRate]);
+        undefined ->
+            ok
+    end.
+
+crdt_output(#dynamic{count_stable_max = CountStableMax,
+                     count_stable = CountStable,
+                     request_rate_stable = RequestRateStable},
+            RequestRateComplete, Elapsed, Name, ProcessIndex, ProcessCount,
+            CRDT0, Dispatcher) ->
+    CountStableKey = {count_stable, ProcessIndex},
+    ElapsedKey = {elapsed, ProcessIndex},
+    RequestRateKey = {request_rate, ProcessIndex},
+    RequestRateCompleteKey = {request_rate_complete, ProcessIndex},
+    CRDT1 = if
+        CountStable == 0 ->
+            cloudi_crdt:put(Dispatcher, ElapsedKey, Elapsed, CRDT0);
+        true ->
+            cloudi_crdt:incr(Dispatcher, ElapsedKey, Elapsed, CRDT0)
+    end,
+    CRDT2 = cloudi_crdt:put(Dispatcher, CountStableKey,
+                            CountStable, CRDT1),
+    CRDT3 = cloudi_crdt:put(Dispatcher, RequestRateKey,
+                            RequestRateStable, CRDT2),
+    CRDTN = cloudi_crdt:put(Dispatcher, RequestRateCompleteKey,
+                            RequestRateComplete, CRDT3),
+    if
+        ProcessIndex == 0,
+        CountStable >= CountStableMax ->
+            ElapsedTotal = crdt_get_dynamic_elapsed(ProcessCount,
+                                                    CountStableMax,
+                                                    CRDTN, Dispatcher),
+            crdt_output_log(ElapsedTotal, Name, ProcessCount,
+                            CRDTN, Dispatcher);
+        true ->
+            ok
+    end,
+    CRDTN;
+crdt_output(RequestRate, RequestRateComplete,
+            Elapsed, Name, ProcessIndex, ProcessCount,
+            CRDT0, Dispatcher) ->
+    RequestRateKey = {request_rate, ProcessIndex},
+    RequestRateCompleteKey = {request_rate_complete, ProcessIndex},
+    CRDT1 = cloudi_crdt:put(Dispatcher, RequestRateKey,
+                            RequestRate, CRDT0),
+    CRDTN = cloudi_crdt:put(Dispatcher, RequestRateCompleteKey,
+                            RequestRateComplete, CRDT1),
+    if
+        ProcessIndex == 0 ->
+            crdt_output_log(Elapsed, Name, ProcessCount,
+                            CRDTN, Dispatcher);
+        true ->
+            ok
+    end,
+    CRDTN.
+
+crdt_get_dynamic_elapsed(ProcessCount, CountStableMax, CRDT, Dispatcher) ->
+    crdt_get_dynamic_elapsed(0, 0, ProcessCount,
+                             CountStableMax, CRDT, Dispatcher).
+
+crdt_get_dynamic_elapsed(ElapsedSum, ProcessCount, ProcessCount, _, _, _) ->
+    ElapsedSum;
+crdt_get_dynamic_elapsed(ElapsedSum, I, ProcessCount,
+                         CountStableMax, CRDT, Dispatcher) ->
+     case cloudi_crdt:find(Dispatcher, {count_stable, I}, CRDT) of
+        {ok, CountStableI}
+            when CountStableI >= CountStableMax ->
+            ElapsedI = cloudi_crdt:get(Dispatcher, {elapsed, I}, CRDT),
+            crdt_get_dynamic_elapsed(ElapsedSum + ElapsedI,
+                                     I + 1, ProcessCount,
+                                     CountStableMax, CRDT, Dispatcher);
+        _ ->
+            undefined
+    end.
+
+crdt_get_request_rates(ProcessCount, CRDT, Dispatcher) ->
+    crdt_get_request_rates(0, 0, 0, ProcessCount, CRDT, Dispatcher).
+
+crdt_get_request_rates(RequestRateSum, RequestRateCompleteSum,
+                       ProcessCount, ProcessCount, _, _) ->
+    {RequestRateSum, RequestRateCompleteSum};
+crdt_get_request_rates(RequestRateSum, RequestRateCompleteSum,
+                       I, ProcessCount, CRDT, Dispatcher) ->
+     RequestRateKey = {request_rate, I},
+     RequestRateCompleteKey = {request_rate_complete, I},
+     case cloudi_crdt:find(Dispatcher, RequestRateKey, CRDT) of
+        {ok, RequestRateI} ->
+            case cloudi_crdt:find(Dispatcher, RequestRateCompleteKey, CRDT) of
+                {ok, RequestRateCompleteI} ->
+                    crdt_get_request_rates(RequestRateSum +
+                                           RequestRateI,
+                                           RequestRateCompleteSum +
+                                           RequestRateCompleteI,
+                                           I + 1, ProcessCount,
+                                           CRDT, Dispatcher);
+                _ ->
+                    undefined
+            end;
+        _ ->
+            undefined
+    end.
 
 tick_start(Service) ->
     erlang:send_after(500, Service, tick),

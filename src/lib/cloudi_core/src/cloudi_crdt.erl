@@ -239,6 +239,10 @@
         % a retry doesn't count as a failure, until it fails completely
         % (i.e., hit the max retry count or send returns an error)
 -define(DEFAULT_RETRY_DELAY,                          0). % milliseconds
+-define(DEFAULT_TIMEOUT_DEFAULT,              undefined).
+        % provide a default timeout that will be used instead of
+        % the timeout_async service configuration value when the
+        % timeout is provided as undefined
 -define(DEFAULT_PRIORITY_DEFAULT,             undefined).
         % provide a default priority that will be used instead of
         % the service configuration option priority_default when the
@@ -267,6 +271,7 @@
          {clean_vclocks_failure, float() | 1..100} |
          {retry, non_neg_integer()} |
          {retry_delay, non_neg_integer()} |
+         {timeout_default, cloudi_service:timeout_milliseconds()} |
          {priority_default, cloudi_service:priority()} |
          {priority_default_offset,
           ?PRIORITY_HIGHER_OFFSET..?PRIORITY_LOWER_OFFSET | undefined}).
@@ -763,10 +768,12 @@ new(Dispatcher, Options)
         {clean_vclocks_failure,         ?DEFAULT_CLEAN_VCLOCKS_FAILURE},
         {retry,                         ?DEFAULT_RETRY},
         {retry_delay,                   ?DEFAULT_RETRY_DELAY},
+        {timeout_default,               ?DEFAULT_TIMEOUT_DEFAULT},
         {priority_default,              ?DEFAULT_PRIORITY_DEFAULT},
         {priority_default_offset,       ?DEFAULT_PRIORITY_DEFAULT_OFFSET}],
     [ServiceName, CleanIntervalSeconds, CleanFailure,
-     Retry, RetryDelay, PriorityDefault0, PriorityDefaultOffset] =
+     Retry, RetryDelay, TimeoutDefault,
+     PriorityDefault0, PriorityDefaultOffset] =
         cloudi_proplists:take_values(Defaults, Options),
     true = is_list(ServiceName) andalso is_integer(hd(ServiceName)),
     Prefix = cloudi_service:prefix(Dispatcher),
@@ -804,6 +811,7 @@ new(Dispatcher, Options)
     Queue = cloudi_queue:new([{retry, Retry},
                               {retry_delay, RetryDelay},
                               {ordered, true},
+                              {timeout_default, TimeoutDefault},
                               {priority_default, PriorityDefaultN},
                               {failures_source_die, true}]),
 
