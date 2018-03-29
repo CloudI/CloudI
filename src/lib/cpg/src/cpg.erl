@@ -32,13 +32,13 @@
 %%%
 %%% %CopyrightEnd%
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
 %%% @version 1.7.3 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
--author('mjtruog [at] gmail (dot) com').
+-author('mjtruog at protonmail dot com').
 
 -behaviour(gen_server).
 

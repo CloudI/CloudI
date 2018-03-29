@@ -6,7 +6,7 @@ homepage:            https://github.com/CloudI/CloudI/
 license:             MIT
 license-file:        ../../../LICENSE
 author:              Michael Truog
-maintainer:          mjtruog@gmail.com
+maintainer:          mjtruog@protonmail.com
 copyright:           2017 Michael Truog
 category:            Foreign
 stability:           provisional

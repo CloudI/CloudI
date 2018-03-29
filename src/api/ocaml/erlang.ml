@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at gmail dot com>
+  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -1017,7 +1017,7 @@ let register_printers () =
 
   MIT LICENSE (of tests below)
 
-  Copyright (c) 2017 Michael Truog <mjtruog at gmail dot com>
+  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
   Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 
   Permission is hereby granted, free of charge, to any person obtaining a

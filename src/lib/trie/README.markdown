@@ -12,7 +12,7 @@ The btrie data structure was added because many people wanted a quick associativ
 Author
 ------
 
-Michael Truog (mjtruog [at] gmail (dot) com)
+Michael Truog (mjtruog at protonmail dot com)
 
 License
 -------

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,13 +29,13 @@
 %%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 %%% DEALINGS IN THE SOFTWARE.
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2017 Michael Truog
 %%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_erlang).
--author('mjtruog [at] gmail (dot) com').
+-author('mjtruog at protonmail dot com').
 
 %% external interface
 -export([basic_update/0,

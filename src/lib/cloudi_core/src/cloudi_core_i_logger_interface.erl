@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,13 +30,13 @@
 %%% FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 %%% DEALINGS IN THE SOFTWARE.
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2017 Michael Truog
 %%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger_interface).
--author('mjtruog [at] gmail (dot) com').
+-author('mjtruog at protonmail dot com').
 -export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
          fatal_sync/6, error_sync/6, warn_sync/6,
          info_sync/6, debug_sync/6, trace_sync/6,

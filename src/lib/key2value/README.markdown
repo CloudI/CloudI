@@ -10,7 +10,7 @@ would be used when 2 different key values need to refer to the same value
 Author
 ------
 
-Michael Truog (mjtruog [at] gmail (dot) com)
+Michael Truog (mjtruog at protonmail dot com)
 
 License
 -------

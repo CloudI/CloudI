@@ -3,7 +3,7 @@
  *
  * BSD LICENSE
  *
- * Copyright (c) 2011, Michael Truog <mjtruog at gmail dot com>
+ * Copyright (c) 2011, Michael Truog <mjtruog at protonmail dot com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

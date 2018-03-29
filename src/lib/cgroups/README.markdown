@@ -35,7 +35,7 @@ then delete the cgroup path after moving the OS pid back to the root cgroup.
 Author
 ------
 
-Michael Truog (mjtruog [at] gmail (dot) com)
+Michael Truog (mjtruog at protonmail dot com)
 
 License
 -------

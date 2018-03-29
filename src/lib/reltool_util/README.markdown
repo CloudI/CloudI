@@ -36,7 +36,7 @@ part of a build process like `rebar eunit` or `rebar ct`).
 Author
 ------
 
-Michael Truog (mjtruog [at] gmail (dot) com)
+Michael Truog (mjtruog at protonmail dot com)
 
 License
 -------

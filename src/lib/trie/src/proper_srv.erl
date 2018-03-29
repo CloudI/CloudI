@@ -6,7 +6,7 @@
 %%% Test the dict API functions on an ordered collection.
 %%% @end
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012 Michael Truog
 %%%------------------------------------------------------------------------
 

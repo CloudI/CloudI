@@ -13,7 +13,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at gmail dot com>
+%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -51,13 +51,13 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%
-%%% @author Michael Truog <mjtruog [at] gmail (dot) com>
+%%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2017 Michael Truog
 %%% @version 1.7.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(pqueue4).
--author('mjtruog [at] gmail (dot) com').
+-author('mjtruog at protonmail dot com').
 
 %% external interface
 -export([filter/2,         % O(N)

@@ -1,20 +1,24 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
-2018-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change my email address from gmail to protonmail
+
+2018-03-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix elapsed time for crdt mode in cloudi_service_request_rate
     * Add average, minimum, maximum request rate range to
       cloudi_service_request_rate results
 
-2018-03-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout_default argument to cloudi_crdt
     * Add timeout_default argument to cloudi_queue
     * Add mode argument to cloudi_service_request_rate with a new
       crdt mode that shares the request rate status among the processes
 
-2018-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add priority_default and priority_default_offset
       arguments to cloudi_crdt
@@ -23,7 +27,7 @@
       in cloudi_service_request_rate to make its configuration
       simpler and less error-prone
 
-2018-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_crdt:event_id() as a parameter passed to any of the
       cloudi_crdt write operations which is set in the crdt_event record
@@ -32,11 +36,11 @@
     * Modify the Erlang count integration test to use
       cloudi_crdt:events_subscribe
 
-2018-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix OCaml CloudI API cross-module inlining for native compilation
 
-2018-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the update_assign functions to cloudi_crdt to combine the
       functionality of an update with an assign to ensure either occurs
@@ -44,31 +48,31 @@
       (Change the bootstrap check so it allows state data requests
        asynchronously so there isn't a messaging deadlock causing a retry)
 
-2018-03-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix OCaml CloudI API installation to use archives
       (both native and bytecode)
 
-2018-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Switched release management from sourceforge.net to osdn.net
       because SourceForge has had an outage for more than 78 hours
 
-2018-02-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-27 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.7.3 released
 
-2018-02-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Update nodefinder
 
-2018-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add events_subscribe/3 events_subscribe/4 events_clear/3 functions
       to cloudi_crdt for providing events to the CloudI service process
     * Add member_all/2 function to cloudi_lists
 
-2018-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Get compilation with Erlang/OTP 21 working
     * Add function cloudi_lists:iodata_to_list/1
@@ -77,7 +81,7 @@
       uppercase/1 to cloudi_string
     * Update nodefinder, cgroups, reltool_util, syslog_socket
 
-2018-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the cloudi_crdt:update functions
     * Add the cloudi_crdt:byte_size function
@@ -87,7 +91,7 @@
       functions to cloudi_queue:size/2 and cloudi_queue:failures/2
     * Update cpg
 
-2018-02-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add bootstrap and clean_vclocks functionality to cloudi_crdt
       so the CloudI service processes that utilize it may
@@ -95,7 +99,7 @@
     * Fix external CloudI service Erlang process viewing with
       the format_status/2 callback due to gen_fsm/gen_statem difference
 
-2018-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-02-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix automake subdirs use for distclean
     * Fix minimum Erlang/OTP version (it is now 19.3)
@@ -106,41 +110,41 @@
     * Add cloudi_crdt usage in the Erlang count integration test
       (when the count test is ran with the mode argument as crdt)
 
-2018-01-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_http_rest cloudi_service_init failure handling
 
-2018-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add check to cause an internal or external service to crash
       if the CloudI API functions subscribe/subscribe_count/unsubscribe 
       are passed a pattern that includes the character sequence "**"
 
-2018-01-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Update the Erlang Binary Term Format for
       Go/Javascript/Perl/PHP/Python/Ruby to encode
       nil/undefined/undef/NULL/None as an undefined Erlang atom
 
-2018-01-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix logging syslog handling to ensure misconfigured syslog
       settings will not cause a crash if the settings are set
       dynamically and add log output with the error information
     * Update syslog_socket
 
-2018-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Javascript CloudI API to no longer have a busy-wait
       problem when blocking on poll
 
-2018-01-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2018-01-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix multicast node discovery to not crash on udp errors
       (e.g., enetunreach)
     * Update nodefinder, cpg
 
-2017-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Add file_size_limit argument to cloudi_service_queue so the
       file will always stay below the file_size_limit value
@@ -151,7 +155,7 @@
        (if the response size is less than or equal to the request size
         this is never a problem because the space is reused))
 
-2017-12-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix OCaml 4.06 support by relying fully on
       OCaml num as an external dependency
@@ -159,7 +163,7 @@
       (with Main-Class entries) to allow file descriptor creation
       from an integer using reflection
 
-2017-12-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Java 9 CloudI API Integer constructor deprecation error
     * Add OCaml num as an external dependency of the OCaml CloudI API
@@ -167,13 +171,13 @@
     * Update the NOTICE file
       (now sorted with programming language to match external/README.markdown)
 
-2017-12-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a default umask for CloudI execution as 0027
     * Add the CLOUDI_UMASK configure variable to set the umask
       for CloudI execution to something other than the default
 
-2017-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Change all the pid_options service configuration options to
       default to {message_queue_data, on_heap} based on testing
@@ -182,7 +186,7 @@
       command line argument
     * Add public_key to the dialyzer.plt file generated
 
-2017-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Switch CloudI service restart times to use monotonic time
     * Switch cloudi_queue to use monotonic time
@@ -195,12 +199,12 @@
     * Add cloudi_timestamp functions seconds_filter_monotonic/3,
       uptime_days/0, uptime_months/0, uptime_years/0
 
-2017-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add package name to Java CloudI API for Java 9
     * Update nodefinder
 
-2017-12-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug where the dest_list_deny and dest_list_allow were not checked
       with service requests that were sent using the functions within
@@ -209,39 +213,39 @@
        cloudi_service_http_elli, cloudi_service_http_cowboy and
        cloudi_service_tcp)
 
-2017-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_timestamp types
     * Add log_execution_time argument to cloudi_service_map_reduce
 
-2017-12-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix optional integration tests configuration use of configure prefix
     * Fix python quickstart for python 3 use
 
-2017-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-12-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the cloudi_service_monitoring aspect functions so they will
       not cause an exception if the cloudi_service_monitoring_cloudi
       module is reloaded
 
-2017-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-11-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow cloudi_queue to do a service name lookup for a retry if
       the pattern_pid() was not provided to the initial cloudi_queue send
 
-2017-11-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-11-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add retry_delay option to cloudi_queue
 
-2017-10-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-10-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the transaction id v1 UUID to have a node id created from
       the lookup3 Bob Jenkins hash function
       (it remains 16 bits for the node hash and 32 bits for the pid hash)
     * Update uuid and quickrand
 
-2017-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-10-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_queue functions failures, recv_id, send_id and size
     * Fix the hexpi integration test termination to
@@ -249,14 +253,14 @@
     * Change nodejs nice setting to 19 in integration tests configuration
       due to its extreme CPU use without yield when idle
 
-2017-10-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-10-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix monitor message leaks
     * Fix optional programming language integration test configuration
       scope name to reflect "test_" prefix that was added to test names
     * Update cpg and varpool
 
-2017-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_null to provide a null response
       (noreply does not provide a null response)
@@ -265,16 +269,16 @@
     * Fix websockets integration test for Python 3
     * Add cloudi_service_null to both default configuration files
 
-2017-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-13 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.7.2 released
 
-2017-09-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Update exometer_core
     * Update hackney
 
-2017-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Move the Erlang integration tests to have a prefix of
       cloudi_service_test_ instead of cloudi_service_
@@ -282,23 +286,23 @@
       CloudI release
     * Add cloudi_service_null to be the equivalent of /dev/null
 
-2017-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the default version of Python to 3
     * Add update of timeout_async and timeout_sync to
       cloudi_service_http_cowboy and cloudi_service_http_elli
 
-2017-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Update quickrand
 
-2017-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the service configuration option response_timeout_immediate_max
       when request_name_lookup is set to async and a lookup timeout occurs
     * Fix cloudi_queue:send when PatternPid is provided as undefined
 
-2017-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-09-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix release script to always succeed with stop (for openrc-run)
     * Improve configure script rebar check
@@ -312,30 +316,30 @@
       CLOUDI_ARG_NODE_COOKIE to the configure script for modifying the
       vm.args file used in the CloudI release
 
-2017-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix automake build of Erlang source code for parallel use
 
-2017-08-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Finished improving the automake build of Java source code
     * Fix the install step of the Haskell integration tests
 
-2017-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Reduce the release script functionality to the core necessary and
       add default values for all erl and epmd environment variables
     * Fix Java CloudI API compilation for parallel make
 
-2017-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the runtime current working directory to the log directory
 
-2017-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Change log_time_offset log output to seconds with nanoseconds precision
 
-2017-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Service configuration option request_timeout_adjustment was modified to
       use Erlang monotonic time so timeout adjustments are not impacted by any
@@ -346,7 +350,7 @@
       cloudi_service_http_elli now use Erlang monotonic time when reporting
       the time a request takes in the log output
 
-2017-08-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Handle erlang:deprecated_time_unit() in Erlang/OTP 20
       for future compatibility
@@ -358,18 +362,18 @@
        the Erlang system time which gets adjusted to match the OS system time,
        every minute rougbly, when necessary)
 
-2017-08-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-08-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Update Travis build configuration to use
       g++-6 clang-4.0 python-3.6 ruby-2.4.0
 
-2017-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Update the release scripts for use without autoconf/automake in the
       examples hello_world_reltool and hello_world_embedded
     * Fix installation/runtime permissions for root usage
 
-2017-07-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Do not use Erlang/OTP rb (report browser) files (log_mf_h)
       to avoid creating the extra log files
@@ -377,17 +381,17 @@
        based on https://bugs.erlang.org/browse/ERL-101)
     * Do not allow overriding run_erl env variables in the release script
 
-2017-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the test command to the release script to provide the
       current status as the script exit status value (currently only 0 or 1)
     * Always remove the pid file in the release script when stop is done
 
-2017-07-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Update syslog_socket
 
-2017-07-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Rewrite nodetool script to simplify the release script
     * Add CLOUDI_PID_FILE as a configure environment variable
@@ -396,46 +400,46 @@
     * Now limit the number of atoms the nodetool script may add to the
       running node to 2*251 (MAX_ATOMS is set to 251 in nodetool)
 
-2017-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-07-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify release scripts with configuration values assigned
 
-2017-06-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add fixes for cloudi_service_filesystem tests to use TMPDIR
 
-2017-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_timestamp:uptime functions
 
-2017-06-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Go CloudI API 32bit support
     * Fix Python/C CloudI API compilation when Python 3 is requested
       (previously was compiling/linking with Python 2)
 
-2017-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add pointer handling comment to C http_req test
 
-2017-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-07 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.7.1 released
 
-2017-06-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix internal services_remove use with automatic_loading == true
       (the default) so all modules are marked as old before purge
     * Do not log error when duo_mode enabled service is stopped or restarted
 
-2017-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-06-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Changed the included Erlang services from dict to maps usage
     * Performed manual-update for generated source files
     * Update backward-cpp
     * Added Haskell CloudI API source code documentation
 
-2017-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Changed license from BSD-4-Clause to MIT
     * Haskell CloudI API 1.7.0 package has a bug
@@ -444,43 +448,43 @@
       (https://github.com/CloudI/CloudI) that is fixed by
       https://github.com/CloudI/cloudi_api_haskell/commit/6cb7bf2b7797a0e922cd89a65fa8d367e2e052fb#diff-92a7fa4cc96701cc12a30c282ce7f2eaL846
 
-2017-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Travis builds/tests with both gcc and clang
 
-2017-05-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Use maps in cloudi_core helper modules
     * Remove older compatibility code for maps/dict/queue
     * Update trie
 
-2017-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix erlang:get_stacktrace/0 usage with Erlang/OTP 20.0
     * Use maps in cloudi_core call paths that impact performance
     * Update key2value and keys1value
 
-2017-05-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Update quickrand
 
-2017-05-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Using the CloudI API functions send_sync or recv_async during the
       service's initialization previously returned an error, but will now
       cause the service to crash, to pursue fail-fast operation and to keep
       the effect the same for both internal and external services
 
-2017-05-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Update msgpack
 
-2017-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Removed the internal cloudi_core_i_logger:current_function/0 function
       since the FUNCTION_NAME macro now exists
 
-2017-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-05-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for Erlang/OTP 20.0 support
         * epgsql_wg support was removed from cloudi_service_db_pgsql due to
@@ -495,7 +499,7 @@
        for pids and other types that store an atom)
     * Updated the cloudi executable used in the Erlang examples
 
-2017-04-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix chroot and directory service configuration options
       validation of absolute paths
@@ -503,28 +507,28 @@
     * Fix usage of the owner service configuration option
       when it is used with the chroot service configuration option
 
-2017-04-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Python CloudI API compatibility with Python v3
       (incompatibility was added in CloudI 1.7.0)
     * Add request_rate integration test throughput data for 1.7.1
 
-2017-04-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
 
-2017-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix validation of chroot and directory service configuration options
       to work properly together and require absolute paths
     * Update cpg
 
-2017-04-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Add Erlang map type specification usage
     * Update cpg
 
-2017-04-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the chroot service configuration option to change the
       current working directory to / if the directory
@@ -539,27 +543,27 @@
        permissions should be used for controlling the OS process
        attributes before the exec occurs)
 
-2017-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-04-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the chroot service configuration option for external services
     * Fix C++ compilation warnings
 
-2017-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve reltool configuration for examples
       (nodefinder optional dependencies are not added to the release
        automatically to keep the example release minimal)
     * Update nodefinder
 
-2017-03-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-29 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.7.0 released
 
-2017-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve count_process_dynamic logging
 
-2017-03-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve Ruby CloudI API socket recv logic
     * Improve Python CloudI API socket recv logic
@@ -571,7 +575,7 @@
     * Improve Java CloudI API socket recv logic
     * Update quickrand
 
-2017-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove the CloudI API helper function
       request_http_qs_parse so only the helper function
@@ -579,57 +583,57 @@
       (Erlang requires using cloudi_request_info:key_value_parse/1 instead of
        cloudi_request:http_qs_parse/1)
 
-2017-03-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Update quickrand
     * Add the messaging integration test in Haskell
     * Improve the OCaml messaging integration test
     * The Haskell CloudI API is now tested
 
-2017-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the count integration test in Haskell
     * Add the msg_size integration test in Haskell
     * Add the null integration test in Haskell
     * Updated the CloudI API README
 
-2017-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the remaining core logic to Haskell CloudI API
     * Add Forward return values to both the OCaml and Haskell CloudI APIs
       to be similar to the Erlang CloudI API return values
     * Complete the http_req integration test in Haskell
 
-2017-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve OCaml CloudI API internal type usage
     * Add basic callback logic to Haskell CloudI API beginnings
       (currently requires GHC >= 7.10.3)
 
-2017-03-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the Haskell CloudI API beginning to initialize/terminate properly
 
-2017-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the beginnings of the http_req Haskell integration test
     * Improve Go and Ocaml integration tests makefiles
 
-2017-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the beginnings of the Haskell CloudI API
 
-2017-03-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve OCaml CloudI API callback type usage
     * Remove files duplicated in src/external/
     * Update NOTICE file
 
-2017-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve OCaml CloudI API poll timeout handling
 
-2017-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-11 Michael Truog   <mjtruog at gmail dot com>
 
     * C, Go, OCaml CloudI API change
       (breaks previous use of the C CloudI API) to keep state data
@@ -646,25 +650,25 @@
           (C, Erlang, Go, OCaml, Haskell (not added yet))
     * Add the count integration test
 
-2017-03-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Update quickrand, uuid
 
-2017-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-03-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add module, line, function_name, function_arity information to
       cloudi_logger_hut (CloudI/HUT) logging integration
 
-2017-02-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve type specification
     * Make hut application env settings explicit
 
-2017-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add lager integration in cloudi_logger_lager module
 
-2017-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Update exometer and exometer_core dependencies for
       cloudi_service_monitoring
@@ -684,7 +688,7 @@
     * Fix folsom usage of old random module to survive removal
       (in Erlang/OTP 20.0 release)
 
-2017-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the CloudI Service API logging_stdout_set functionality
       to output all log data to stdout
@@ -692,30 +696,30 @@
     * cloudi_service_api:aspect_log_f() now uses iodata for the LogMessage
     * Improve service configuration format written to log to avoid column limit
 
-2017-02-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the messaging integration test in OCaml
     * The OCaml CloudI API is now tested
     * Record backtrace in OCaml integration tests
 
-2017-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-21 Michael Truog   <mjtruog at gmail dot com>
 
     * OCaml CloudI API now is working with the http_req integration test
     * Add the null integration test in OCaml
     * Add the msg_size integration test in OCaml
 
-2017-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the beginnings of the OCaml CloudI API
 
-2017-02-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the default buffer_size value for external service configuration
       from 16384 to 65536 to match Linux localhost MTU setting
       (http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=0cf833aefaa85bbfce3ff70485e5534e09254773)
     * Add buffer_size 65536 usage in Go CloudI API erlang.TermToBinary code
 
-2017-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the Go CloudI API to use the cloudi.Source type for the
       erlang.OtpErlangPid type, simplifying package import usage
@@ -724,7 +728,7 @@
       {type, internal} may be used without specifying the module
       (if the service ID is not "")
 
-2017-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the Perl, PHP, Python, and Ruby CloudI APIs so count_process_dynamic
       usage is not able to cause external service processes to become
@@ -737,7 +741,7 @@
         * (default priority value)
         * (request_timeout_adjustment service configuration option value)
 
-2017-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the messaging integration test in Go
     * Remove extra nextTick calls within the Javascript CloudI API
@@ -750,18 +754,18 @@
     * The Go CloudI API is now tested with Go 1.7.5 and all is well
     * Add SubscribeCount test to http_req Go integration test
 
-2017-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the null integration test in Go
     * Add the msg_size integration test in Go
     * Now Go errors that use cloudi.StackError have a stack trace in output
       with generic output functions cloudi.ErrorWrite and cloudi.ErrorExit
 
-2017-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Go CloudI API now is working with the http_req integration test
 
-2017-02-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Updates to the Erlang binary term format encoding used in the
       CloudI API implementations for Javascript, Perl, PHP, Python, Ruby
@@ -770,7 +774,7 @@
     * The beginnings of a Go CloudI API has been added,
       but is not yet usable (will allow integration tests to be added)
 
-2017-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-02-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes to ensure logging from CloudI in Erlang source code is logging
       data as UTF8 (now modules, function names, nodes, log file paths and
@@ -781,16 +785,16 @@
       unicode formatting arguments
     * cloudi_service_api:aspect_log_f() type changed to use utf8 log message
 
-2017-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Mark hello_world3 example for removal
       (details at https://github.com/CloudI/CloudI/issues/201)
 
-2017-01-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-11 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.6.0 released
 
-2017-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug with external services not using the
       response_timeout_immediate_max service configuration option value
@@ -806,7 +810,7 @@
       options request_timeout_immediate_max, response_timeout_immediate_max,
       restart_delay, monkey_latency
 
-2017-01-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow limit_min or limit_max to be used for timeout_init,
       timeout_async, timeout_sync in the service configuration
@@ -822,7 +826,7 @@
     * Remove cloudi_service_api functions deprecated since v1.3.3 release
     * Remove cloudi_service functions deprecated since v1.3.3 release
 
-2017-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-07 Michael Truog   <mjtruog at gmail dot com>
 
     * The Erlang cloudi_service and cloudi modules now use the atom
       limit_min instead of immediate for the timeout value, to represent
@@ -839,7 +843,7 @@
       (4294967195 milliseconds with the current macro definitions,
        i.e., 49.7 days)
 
-2017-01-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Ensure all CloudI API implementations can handle a null object return
       value, if the concept of null exists in the programming language
@@ -851,17 +855,17 @@
        which have stdout/stderr unbuffered so the output is
        logged as quickly as possible)
 
-2017-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2017-01-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Update supool
       (Now all process dictionary use (in Erlang source code)
        within CloudI is minimal, only done when completely necessary)
 
-2016-12-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add additional syslog logging configuration options
 
-2016-12-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the syslog_socket pure Erlang syslog interface
     * Remove the cloudi_x_syslog port driver
@@ -874,7 +878,7 @@
       (strictly based on RFC3164 and RFC5424) instead of the custom
       facility values defined by cloudi_x_syslog
 
-2016-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove CloudI Erlang/OTP version macro checks for before 19.x
       to remove the cloudi_core_i_socket NIF and accumulated preprocessor checks
@@ -883,14 +887,14 @@
        cloudi_x_syslog when syslog usage is enabled)
     * Add linear options to the restart_delay service configuration option
 
-2016-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CloudILogger Elixir module to the cloudi_core Erlang application
     * Fix CloudILogger Elixir usage of function/arity data
     * Update the Elixir.HelloWorld1 example based on the changes
     * Update reltool_util
 
-2016-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Require Erlang/OTP 19.x or higher
     * Switch to always logging the function name and arity due to EEP45
@@ -898,7 +902,7 @@
     * Update reltool_util
     * Fix old rebar2 package compile issue
 
-2016-12-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the name of the service configuration option
       terminate_delay to restart_delay, to avoid being misleading
@@ -907,12 +911,12 @@
     * Add request_pid and info_pid metrics for internal services to
       cloudi_service_monitoring
 
-2016-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve validation of the service configuration options
       terminate_delay, count_process_dynamic and monkey_latency
 
-2016-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add terminate_delay service configuration option to allow a
       service instance to delay a restart
@@ -926,66 +930,66 @@
     * Fix service configuration option timeout_terminate value output
       in log output of the service configuration
 
-2016-12-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add count result to cloudi_timestamp:seconds_filter/3 return value
 
-2016-12-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-12-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Make Erlang file module use more efficient with additional usage of
       the raw option and pwrite
 
-2016-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Avoid deprecated std::auto_ptr in C++11
 
-2016-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix to avoid triggering SYN flooding protection in
       newer Linux kernel versions
       (e.g., 4.4.0-47 used with Ubuntu 16.04.1)
     * Improve error log output
 
-2016-11-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve external service startup time
     * Minor integration test fix
 
-2016-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
     * Update trie
 
-2016-11-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Make OS time more efficient in cloudi_timestamp
 
-2016-11-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
 
-2016-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
 
-2016-11-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add missing syntax_tools dependency due to merl usage
 
-2016-11-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-11-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve external service port deserialize
 
-2016-10-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve max_heap_size type specification
 
-2016-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Update locally modified m4 macros after submitting the changes to
       the GNU Autoconf Archive
 
-2016-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-08 Michael Truog   <mjtruog at gmail dot com>
 
     * m4/ax_check_class.m4 and m4/ax_prog_java_works.m4
       had uuencoded java class files which were removed
@@ -993,22 +997,22 @@
        they match the commented code, but the reliance on
        binary data isn't necessary or helpful for future use)
 
-2016-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-07 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.5.4 released
     * Revert ax_boost_thread.m4 update due to it requiring local changes
       in the past and breaking integration test compilation on some platforms
 
-2016-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add request_rate testing with and without the use of cloudi_service_queue
       to look at the request rate with persistence of transactions
 
-2016-10-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cgroups
 
-2016-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix internal CloudI service bug storing service state when
       both service requests and info messages are queued
@@ -1016,19 +1020,19 @@
     * Refactor CloudI service source code to avoid duplicating
       state record field data as separate function arguments
 
-2016-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve handling of a request timeout in cloudi_service_queue
       when using both mode by always having an empty response sent after
       the timeout of the request expires (including when retries are not used)
 
-2016-10-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-10-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve handling of a request timeout in cloudi_service_queue
       when using both mode after a retry
     * Add cloudi_trans_id:microseconds/0 function
 
-2016-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Make significant improvements to cloudi_service_queue
         * Prevent any incomplete write from creating corrupt data
@@ -1036,7 +1040,7 @@
         * Added retry_delay service argument for destinations that
           are infrequently available
 
-2016-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix starting a CloudI service with a script or boot file
         * reltool fix in 19.0 changed application load order
@@ -1044,38 +1048,38 @@
     * Improve the Erlang usage examples
     * Update reltool_util
 
-2016-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add logging_set CloudI Service API function
     * Update varpool
     * Fixes for dialyzer in cloudi_core repo
 
-2016-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cgroup and nice service configuration options
     * Add cgroups Erlang application as a cloudi_core dependency
 
-2016-09-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Update GEPD dependency with commit/tag/file specifics
 
-2016-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Update backward-cpp (not updating macro check yet for configure script)
       (backward-cpp claims arm support now)
     * Update external autoconf macros
 
-2016-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix old configuration entries
 
-2016-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-15 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.5.3 released
     * Update Python Erlang Binary Term Format source code to
       handle Erlang maps nested as keys in a map
 
-2016-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-09-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Next release will be 1.5.3 instead of 1.5.2 due to dependency updates
     * Update nodefinder and remove dependencies that are no longer necessary
@@ -1086,12 +1090,12 @@
       to match the last maven package version
     * Fix Java CloudI API javadoc comments
 
-2016-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix autoconf Erlang version check to work with github versions, like
       "18.3.4.1" (with 2 or more separate patch numbers instead of 1)
 
-2016-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix CloudI Service API services_update timeout bug
     * Change CloudI Service API services_update to use a gradual
@@ -1104,7 +1108,7 @@
       external service update automatically get a null response after the
       update is done
 
-2016-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix CloudI Service API services_update for external services
       so that unsubscribe automatically occurs on all subscriptions
@@ -1112,20 +1116,20 @@
       if a new OS process is spawned due to the update
     * Update cpg
 
-2016-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Update trie
     * Update pqueue
 
-2016-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Change Java CloudI API List return types to not be abstract
 
-2016-08-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix final keyword usage in Java CloudI API
 
-2016-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_timestamp functions seconds_os/0,
       milliseconds_os/0, microseconds_os/0
@@ -1133,82 +1137,82 @@
     * Improve request_timeout_adjustment logic
     * Improve quickstart markdown format
 
-2016-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add Java 8 method reference support to the Java CloudI API
     * Improve the constant usage within the Java CloudI API
 
-2016-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add arity checking in the Java CloudI API subscribe function
 
-2016-08-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add Java CloudI API timestamp accessor for ISO8601 SQL variation
     * Add Java CloudI API timestamp accessor for a microseconds integer value
 
-2016-08-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-08-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add Java CloudI API accessors on the TransId class to get
       the timestamp when the service request was created
 
-2016-07-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-07-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow internal CloudI services to optionally use the callbacks
       cloudi_service_handle_request/11 and
       cloudi_service_handle_info/3
     * Update pqueue
 
-2016-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-07-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlcloud
 
-2016-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-07-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify logger module creation
 
-2016-06-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add directory external service configuration option to set the 
       current working directory for the external service OS process
 
-2016-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-26 Michael Truog   <mjtruog at gmail dot com>
 
     * No longer use the dynamic_compile dependency in the cloudi_core logger
       (instead rely on merl)
     * Switch to requiring Erlang >= 18.0 due to merl in syntax_tools
     * Update proper
 
-2016-06-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the Java CloudI API TransId class publicly accessible and
       add a conversion to a UUID object
     * Java CloudI API standard streams now use UTF8
     * Fix owner service configuration option usage
 
-2016-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Update mimetypes
 
-2016-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add string UUID formatting for the services_update result in
       cloudi_service_api_requests
     * Update cpg README
 
-2016-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve cloudi_service_api:aspect_log_f() type
     * Add define specifically for cloudi_core_i_socket usage
 
-2016-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add aspects_log_before and aspects_log_after logging configuration
       in cloudi_core
     * Add aspects_log_before and aspects_log_after logging support in
       cloudi_service_monitoring
 
-2016-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add dispatcher_pid_options and init_pid_options
       service configuration options to services_add and services_update
@@ -1219,7 +1223,7 @@
       with count_process > 1
     * Improve Erlang NIF compilation
 
-2016-06-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add monkey_latency, monkey_chaos, aspects_init_after,
       aspects_request_before, aspects_request_after,
@@ -1236,7 +1240,7 @@
       (so the options do not affect the dispatcher process)
     * Update varpool, reltool_util
 
-2016-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-06-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix dest_list_deny and dest_list_allow expansion in services_update
     * Improve Erlang term reuse in the source code
@@ -1251,33 +1255,33 @@
     * Add -deprecated attribute usage in the
       cloudi_service and cloudi_service_api Erlang modules
 
-2016-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Add preliminary service configuration update with services_update
     * Add dest_refresh, dest_list_deny, dest_list_allow to services_update
     * Allow timeout_init for internal services with services_update
 
-2016-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add some options parsing for services_update input
 
-2016-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CloudI Service API services_update external service functionality
     * Fix text_pairs format for HTTP GET query strings in
       cloudi_service_http_cowboy and cloudi_service_http_elli
 
-2016-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix aspect function validation
     * Update key2value
 
-2016-05-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix services_update modules_unload
     * Update reltool_util
 
-2016-05-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CT test of services_update
     * Change services_update to not load the module of an
@@ -1288,13 +1292,13 @@
     * Add sync configuration option for services_update
     * Fix services_update when using sync == false with module_state assigned
 
-2016-05-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CloudI Service API services_update function
       (currently, only for updating internal services)
     * Update trie, reltool_util
 
-2016-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove unmaintained example services and their dependencies:
         * cloudi_service_db
@@ -1305,7 +1309,7 @@
     * Add SWIG interface file example for generating SWIG bindings based
       on the C CloudI API file with api/c/cloudi.i
 
-2016-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Dialyzer warning fixes with Erlang/OTP 19.0 for
       included CloudI services
@@ -1320,52 +1324,52 @@
     * Update uuid, elli, msgpack, proper, emysql
     * Switch to requiring Erlang >= 17.5 due to msgpack
 
-2016-05-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Changes for Erlang/OTP 19.0 support:
         * Update erlcloud, jsx, uuid, quickrand
         * Add eini as a dependency of erlcloud
         * Fix cloudi_core dialyzer warnings
 
-2016-05-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-05-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Add eunit tests to cloudi_lists
     * Add cloudi_lists:split/2 and improve cloudi_lists:delete_all/2
 
-2016-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-04-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve handling of node discovery timeouts
     * Improve handling of internal cloudi_core timeouts
 
-2016-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-04-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a progress bar to the scope script
       (which puts the external Erlang dependencies into the
        names prefixed with 'cloudi_x_')
 
-2016-04-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-04-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Ensure init failure is logged synchronously for startup
     * Improve cloudi_service_init/4 exception handling
 
-2016-04-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-04-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add async interface functions to cloudi_service_http_client
       (head_async, get_async, put_async, post_async,
        trace_async, options_async, delete_async)
 
-2016-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-03-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Make cloudi_service_monitoring:update_or_create/4 work outside of
       a service process
 
-2016-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-03-12 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI now does not use the random Erlang/OTP module with
       Erlang/OTP >= 18.0 due to it being removed in Erlang/OTP 20
     * Update uuid, varpool, quickrand
 
-2016-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-03-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_trans_id:microseconds/1 and cloudi_timestamp:microseconds/0
       (using cloudi_trans_id:microseconds/1 is preferred in a CloudI service
@@ -1373,11 +1377,11 @@
        and the function call is more efficient)
     * Add to cloudi_service_monitoring doc
 
-2016-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-02-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Minor fixes for cloudi_service monitoring
 
-2016-01-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-01-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the service indentifier used in metric names by
       cloudi_service_monitoring from the hexadecimal ServiceId UUID to
@@ -1392,7 +1396,7 @@
           with the same TYPE and FILENAME
     * Add cloudi_lists:index/2
 
-2016-01-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-01-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add configuration argument http_clock_skew_max to
       cloudi_service_filesystem for tolerating HTTP datetime differences
@@ -1401,7 +1405,7 @@
       to determine the provided datetime is invalid
       (default setting is 300 seconds)
 
-2016-01-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-01-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Change Travis compilation to use 18.2.1 for the 18.x compilation
     * Use only LOG_ERROR_SYNC in cloudi_args_type due to its usage during
@@ -1413,14 +1417,14 @@
     * Fix cloudi_args_type:service_name_pattern_suffix/2
     * Update trie
 
-2016-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-01-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the automatic addition of the HTTP header content-disposition
       to be more limited in cloudi_service_http_cowboy
     * Change the default for the set_content_disposition in
       cloudi_service_http_rest to be false
 
-2016-01-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2016-01-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Change cloudi_service_http_cowboy websocket_output
       configuration argument default to (always be) binary (to simplify)
@@ -1432,19 +1436,19 @@
     * Add more validation on {{M, F}} service configuration
       argument function values
 
-2015-12-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-23 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.5.1 released
     * Update elli
     * Compilation fix for 32bit OpenBSD
 
-2015-12-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the Javascript CloudI API for using
       node.js versions greater than v0.12.1
     * Add 1.5.1 request_rate test results
 
-2015-12-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Modify cloudi_service_monitoring to provide incoming and outgoing
       request data with separate metrics
@@ -1452,21 +1456,21 @@
     * Fix build errors on ppc64
     * Add 1.5.1 loadtest information
 
-2015-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_children.hrl, changing the interface and usage in
       cloudi_service_http_cowboy, cloudi_service_http_elli, and
       cloudi_service_tcp
     * Make the cloudi_service_monitoring queued_requests_size more accurate
 
-2015-12-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Make cloudi_service_monitoring track reductions as a total count while
       providing the metric as a change during the interval in a spiral
     * Add cloudi_timestamp:milliseconds/0 and
       simplify cloudi_timestamp:seconds/0
 
-2015-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Split cloudi_service_monitoring service process metric names based
       on whether the service is internal or external, to show either
@@ -1480,7 +1484,7 @@
     * Fix system message handling on duo_mode process
     * Update pqueue
 
-2015-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_monitoring with dependencies
       (exometer, exometer_core, folsom, bear, setup, parse_trans)
@@ -1495,12 +1499,12 @@
     * Update key2value
     * Simplify rebar usage within autoconf/automake
 
-2015-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Add configuration checks for nodes_set
       reconnect_start and reconnect_delay
 
-2015-12-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add configuration validation to make sure
       dest_list_deny and dest_list_allow are undefined
@@ -1509,12 +1513,12 @@
       (make sure all scopes are started after cloudi_core has set
        the nodes_set listen type)
 
-2015-12-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix logger flooding check to avoid prematurely triggering the
       flooding prevention for a single process
 
-2015-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-12-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add support for X-HTTP-Method-Override header values in
       cloudi_service_http_elli and cloudi_service_http_cowboy
@@ -1523,7 +1527,7 @@
         * values can be iolists
         * keys must be of length 1 or greater
 
-2015-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-11-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_filesystem redirect configuration argument to
       permanently redirect existing file paths to similar service names
@@ -1542,7 +1546,7 @@
         * Adds support for using the size of binaries nested in maps
         * Fixes the improper list size
 
-2015-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-11-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add multicast discovery interface address configuration option
     * Add cloudi_args_type module for validating function arguments
@@ -1557,7 +1561,7 @@
       function name/arity is not provided
     * Update trie, nodefinder (and fix dependency modelines)
 
-2015-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-11-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Changes to abide by EEP45
         * FUNCTION macro was changed to FUNCTION_NAME
@@ -1567,7 +1571,7 @@
       function data easy
     * Fix lager metadata pid to be a string to match the lager parse transform
 
-2015-11-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-11-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:monitor/2 for monitoring
       Erlang processes in an Erlang CloudI service
@@ -1580,11 +1584,11 @@
 
     * Update erlang_term to fix improper list size check
 
-2015-10-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-10-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add comment to cloudi_service_http_rest
 
-2015-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-10-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add query_get_format configuration argument to both
       cloudi_service_http_cowboy and cloudi_service_http_elli
@@ -1593,36 +1597,36 @@
     * Update backward-cpp
     * Add basic comments to cloudi_service_http_rest
 
-2015-10-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-10-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix false negative from dialyzer when CLOUDI_CORE_STANDALONE is defined
 
-2015-09-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweak hello_world5 example type spec
 
-2015-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Use newer msgpack spec for string format
 
-2015-09-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add type specification macros for cloudi_service_http_rest with a new
       cloudi_service_http_rest.hrl file
 
-2015-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more details to the hello_world5 example.
     * Update the other examples to have reltool.config comments and modelines
     * Fix Elixir.HelloWorld1 example
 
-2015-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_trans_id for Erlang usage of the
       CloudI service request transaction id
     * Update uuid
 
-2015-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Update trie
     * Fix parameter parsing due to pattern matching with the
@@ -1630,45 +1634,45 @@
       cloudi_service_name:parse/2 (now "*/" will parse "//" AND "///")
     * Handle bad parameters as a crash in cloudi_service_http_rest
 
-2015-09-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix URL parameter errors in cloudi_service_http_rest
 
-2015-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix application_name service configuration option usage when
       automatic_loading is false
 
-2015-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more comments to the hello_world5 example
 
-2015-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add terminate, debug and debug_level configuration arguments to
       cloudi_service_http_rest
     * Improve example hello_world5
     * Fix README file
 
-2015-09-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add msgpack as a supported content-type
     * Add eunit tests to cloudi_string
     * Add cloudi_service_http_rest to simplify REST API function creation
 
-2015-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix installation path bug
     * Update examples description
 
-2015-09-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-09-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix examples so that the 1.4.0 cloudi_service behaviour interface
       is used
     * Fix service application header file usage of cloudi_service behaviour
     * Update pgsql
 
-2015-08-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the compression configuration argument to cloudi_service_queue
       to provide a zlib compression level
@@ -1681,7 +1685,7 @@
       from the socket
     * Update pqueue and improve pqueue4 type specification
 
-2015-08-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:duo_mode/1 to test whether the service
       is configured with the duo_mode service configuration option
@@ -1697,19 +1701,19 @@
     * Add debug and debug_level configuration arguments to cloudi_service_tcp
     * Fix usage of cloudi_service deprecated functions
 
-2015-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CloudI services that were previously not included in the
       installation: cloudi_service_db_cassandra_cql,
       cloudi_service_db_riak, cloudi_service_oauth1
 
-2015-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add common notification format for cloudi_service_db_pgsql:
         * {notify_ok, Pid, Channel :: binary(), Payload :: binary()} and
           {notify_error, Message :: binary()}
 
-2015-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Update key2value, keys1value, uuid, cpg
     * Update syslog as cloudi_x_syslog
@@ -1722,11 +1726,11 @@
       single place within the internal CloudI source code
     * Add better type specifications for internal CloudI service logic data
 
-2015-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Make a configuration error log as fatal
 
-2015-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add synchronous logging macros: LOG_FATAL_SYNC,
       LOG_ERROR_SYNC, LOG_WARN_SYNC, LOG_INFO_SYNC, LOG_DEBUG_SYNC,
@@ -1734,7 +1738,7 @@
         * Add usage of the synchronous logging macros for restarts and stops
           of service instances
 
-2015-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-08-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Erlang 18.0 bug with erlang:cancel_timer/2 usage
     * Add supool and varpool as cloudi_core dependencies
@@ -1756,32 +1760,32 @@
       etokyotyrant (medici) being under the Erlang Public License and
       abandoned (Tokyo Tyrant usage should migrate to Kyoto Tycoon)
 
-2015-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-07-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Add FUNCTION_ARITY macro to cloudi_logger.hrl
 
-2015-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-07-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bugs with lazy destination refresh method usage in the cloudi module
 
-2015-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-07-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Add "+C multi_time_warp" to the Erlang/OTP command line arguments
       when 18.0 or higher is used for CloudI configuration
 
-2015-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Change usage of erlang:cancel_timer/1 to erlang:cancel_timer/2 for
       Erlang >= 18.0, when the time remaining is not used for service
       request timeout adjustment
 
-2015-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the read configuration argument to cloudi_service_filesystem
       (to allow explicitly specifying the files to read from a directory
        and the segment of the file to read)
 
-2015-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Resolve file modeline differences
     * Add a minimal CloudI configuration file to use when the
@@ -1796,7 +1800,7 @@
 
     * Add the CloudI dashboard
 
-2015-06-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix service configuration option request_timeout_immediate_max usage
       in combination with queue_limit, queue_size, and/or rate_request_max 
@@ -1805,16 +1809,16 @@
 
     * Fix vim modified flag at opening file
 
-2015-06-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix node.js detection for v0.12 usage of 'nodejs' binary
 
-2015-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify the conversion from Erlang types to msgpack types
       (in cloudi_response:external_format/2)
 
-2015-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-06-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the rate_request_max service configuration option
 
@@ -1822,7 +1826,7 @@
 
     * Fix 'make install DESTDIR=pkgdir/'
 
-2015-05-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-05-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove the old service name paths from cloudi_service_api_requests
       (along with adding more error handling)
@@ -1833,22 +1837,22 @@
       cloudi_service_db_tokyotyrant
       (will add again once better drivers are used)
 
-2015-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-05-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix owner service configuration option issue due to the
       environment variable transform
 
-2015-05-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-05-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow the owner service configuration option to use
       environment variables (within the user/group strings)
 
-2015-05-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-05-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the owner service configuration option for external services
       (to set the OS user and/or OS group for any OS processes spawned)
 
-2015-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-05-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add request_info, response_info, and response configuration
       arguments to cloudi_service_request_rate to make it more flexible
@@ -1856,29 +1860,29 @@
     * Add a priority option to the request_pid_options and info_pid_options
       service configuration options (for internal services)
 
-2015-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Small updates due to version change
 
-2015-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-12 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.5.0 released
 
-2015-04-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix limit service configuration option bug
       (resource limits on OS processes are now tested/working)
 
-2015-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the CloudI Service API nodes_set timestamp_type option 'warp'
       (requires at least Erlang 18)
 
-2015-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_future and cloudi_service_future to provide Futures
 
-2015-04-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-04-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Erlang 18.0 compatibility fixes
         * cloudi module now returns a 2 element tuple with the 1st element
@@ -1894,47 +1898,47 @@
     * Update uuid
     * Change ERLANG_OTP_VER_ erlc prefix defines to ERLANG_OTP_VERSION_
 
-2015-03-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add resource limits on OS processes used for external services
 
-2015-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix integration test problems due to unicode stdout/stderr fix in
       the Python CloudI API and Python/C CloudI API
       (now the unbuffered stdout/stderr works with Python 3)
 
-2015-03-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Initial changes for resource limits on OS processes used for
       external services
 
-2015-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix unicode stdout/stderr usage with the Python CloudI API
 
-2015-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Change cloudi_service_hexpi to use cloudi_queue
     * Add more verification digits to the hexpi test
 
-2015-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve the hexpi test (avoid task timeouts after task size converges)
     * cloudi_service_map_reduce behaviour change with function
       cloudi_service_map_reduce_new changing from arity 4 to 5
     * Add cloudi_queue data structure
 
-2015-03-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-03-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Update nodefinder
     * Improve the hexpi test
 
-2015-02-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Update nodefinder
 
-2015-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix write_truncate and write_append in cloudi_service_filesystem
       so they find existing files when using HTTP method
@@ -1943,20 +1947,20 @@
       with byte ranges that go outside the existing file boundary
       (gaps are filled with null characters)
 
-2015-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout usage to cloudi_service_map_reduce for slow disk storage
 
-2015-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Java 7 raw type warning in Java CloudI API
 
-2015-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_validate CT tests
     * Fix cloudi_service_validate
 
-2015-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add validation and failure handling to cloudi_service_quorum
     * Fix cloudi_service_validate
@@ -1965,64 +1969,64 @@
     * Add request validation and source failure handling
       to cloudi_service_router
 
-2015-02-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Finalize configuration of cloudi_service_validate
 
-2015-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Split cloudi_service_validate failures into
       source and destination failures
 
-2015-02-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_validate for the validation of service request data
       to a single destination (optionally, terminating the source of failures)
 
-2015-02-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-02-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweak node up/down log line format for info list
 
-2015-01-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-01-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:suffix/2 and cloudi_service_name:suffix/2 for
       simpler access to the suffix of a service name or service name pattern
 
-2015-01-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-01-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix macro name in cloudi_service_http_cowboy and cloudi_service_http_elli
 
-2015-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2015-01-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Depend only on the https://github.com/CloudI/loadtests/ repository
       for loadtest results
     * Fix configure script so that it errors when perl, php, or node.js
       is not found when the programming language is enabled
 
-2014-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-20 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.4.0 released
 
-2014-12-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the loadtest results summary for 1.4.0
 
-2014-12-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Added tsung_data.py script output for all loadtest results
     * Compressed all loadtest results together for better compression and
       easier handling within the git repository
 
-2014-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the tsung_data.py script for getting exact latency extremes from
       tsung.log files
 
-2014-12-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Perl CloudI API destructor bug
 
-2014-12-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix http_req C executable compilation
     * Tested with Fedora 20 on ppc64
@@ -2031,7 +2035,7 @@
        --disable-php-support --disable-ruby-support
        --with-integration-tests-ran=no)
 
-2014-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Enforce TIMEOUT_TERMINATE_MIN based on MaxT setting during configuration
     * Add compatibility for FreeBSD 8.3 on amd64
@@ -2045,7 +2049,7 @@
        --disable-php-support --disable-ruby-support --disable-java-support 
        --with-integration-tests-ran=no)
 
-2014-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlasticsearch
     * Fix C++ backtrace compilation configuration
@@ -2053,19 +2057,19 @@
     * Split configure flag --with-integration-tests into both
       --with-integration-tests and --with-integration-tests-ran
 
-2014-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlcloud and nodefinder after testing tag and security group
       selection with changes for erlcloud 0.9.1
     * Fix CloudI Service API nodes_set discovery update of parameters
     * Fix CloudI Service API nodes_get discovery ec2 output of host
 
-2014-12-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-12-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Make erlcloud use httpc instead of lhttpc to keep the errors returned
       consistent
 
-2014-11-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug stopping the node discovery method
     * Fix CloudI Service API service_subscriptions function to handle
@@ -2073,58 +2077,58 @@
     * Fix CloudI Service API services_search function to search within
       non-default scopes
 
-2014-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix 1.3.3 bug with count_process_dynamic creating service processes
       that have a termination timeout which is not set internally,
       causing CloudI to crash when the new service processes
       attempt to terminate
 
-2014-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bad socket handling during external service termination
 
-2014-11-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Log the termination reason when a service is killed after
       the termination timeout is exceeded
     * Fix a bug throwing the TerminateException in the Perl CloudI API
 
-2014-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add remaining fixes for JavaScript CloudI API
     * Add a javascript version of the messaging integration test
 
-2014-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix large sends in the JavaScript CloudI API
     * Add a javascript version of the msg_size integration test
 
-2014-11-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix return/forward usage in the JavaScript CloudI API
     * Fix large receives in the JavaScript CloudI API
 
-2014-11-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add JavaScript/node.js CloudI API
         * return/forward function calls do not yet work due to exception usage
     * Add a javascript version of the http_req integration test
 
-2014-11-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Bring the cloudi_service_http_elli functionality to be equivalent to
       cloudi_service_http_cowboy, except for multipart requests and
       websockets usage (which currently require cloudi_service_http_cowboy)
     * Remove elli_websocket
 
-2014-11-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Update elli
     * Add elli_websocket as a dependency for cloudi_service_http_elli
     * Update cowboy
 
-2014-11-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve the efficiency of header and query string encoding in
       cloudi_service_http_cowboy and cloudi_service_http_elli
@@ -2132,12 +2136,12 @@
           reverse order when using the external format, but now the
           value order is the same as the query string order
 
-2014-11-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Perl CloudI API mcast_async return value
     * Add Perl messaging integration test
 
-2014-11-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for the Perl CloudI API and the Perl http_req integration test
     * Fix CloudI C/C++ API functions cloudi_info_key_value_parse,
@@ -2145,7 +2149,7 @@
       and CloudI::API::info_key_value_parse
     * Add Perl msg_size integration test
 
-2014-11-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-11-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug with websocket_protocol usage of cloudi_service_http_cowboy
       to make sure a response arriving from the websocket after a timeout
@@ -2154,7 +2158,7 @@
     * Fix the default send_sync timeout value for both
       the PHP CloudI API and the Python CloudI API
 
-2014-10-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_api_requests to use new jsx functions
     * Update quickrand with fix
@@ -2166,18 +2170,18 @@
     * Remove cloudi_service_work_manager since it is no longer needed
     * Add support for Solaris/Illumos
 
-2014-10-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout argument to the poll function in the Java CloudI API
     * Make the PHP CloudI API cause asserts to exit to keep all the
       external programming language behavior consistent
 
-2014-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout argument to the poll function in the PHP CloudI API
     * Fix request_info parsing in the PHP CloudI API
 
-2014-10-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout argument to the poll function in both
       the Python CloudI API and the Ruby CloudI API
@@ -2185,25 +2189,25 @@
     * Fix request_timeout_adjustment usage with the (pure) Python CloudI API
       to use the proper time units
 
-2014-10-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the assertions in the Java messaging integration test
 
-2014-10-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Get Java assertions turned on for the integration tests
 
-2014-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a fix for new Java CloudI API buffer usage
 
-2014-10-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug in java messaging integration test
     * Improve Java CloudI API buffer usage
     * Fix bug due to external service logging change (on 2014-10-20)
 
-2014-10-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve the exception handling in the Java, PHP, Python and Ruby
       CloudI API implementations
@@ -2212,52 +2216,52 @@
       the external service CloudI API
     * Fix remaining PHP CloudI API bugs
 
-2014-10-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the PHP messaging test
     * Fix various PHP CloudI API errors
     * Fix bug when external services log stdout or stderr data
       that contains a ~ character
 
-2014-10-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the PHP CloudI API
     * Add the PHP http_req test
 
-2014-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Resolve minor problems with the Python and Ruby CloudI APIs
 
-2014-10-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add validation to all external service Erlang term data received from
       the external service CloudI API with range checking and type checking
 
-2014-10-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more CT tests for cloudi_service_filesystem
     * Make cloudi_service_filesystem generate etags that are always unique
       (i.e., more unique than the modification datetime)
 
-2014-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add files_size to the cloudi_service_filesystem configuration arguments
       to limit the memory consumption of a single service process
       (providing an absolute limit on the amount of binary data cached in kB)
 
-2014-10-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Update dynamic_compile
     * Fix Ruby Erlang Binary Term Format encoding bug
 
-2014-10-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the 1.4.0 cloudi_service behaviour changes
       (use the CLOUDI_SERVICE_OLD to ignore the changes)
         * cloudi_service_init arity 3 -> 4 (for Timeout)
         * cloudi_service_terminate arity 2 -> 3 (for Timeout)
 
-2014-10-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve boost_thread linking
     * Fix --with-integration-tests usage
@@ -2266,7 +2270,7 @@
     * Provide configure script output for the enabled CloudI APIs and
       whether the integration tests will be included
 
-2014-10-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more usage of the enable/disable configure switches for
       programming language support
@@ -2275,32 +2279,32 @@
     * Improve the timeout on the cloudi_service_queue CT test
     * Improve the timeout on the cloudi_service_quorum CT test
 
-2014-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add logging metadata in a way that is lager-compatible
     * Remove the flood integration tests since the functionality is replaced
       and improved in the request_rate test
     * Add enable/disable configure switches for programming language support
 
-2014-10-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve cowboy integration in cloudi_service_http_cowboy
     * Fix cloudi_service_filesystem byterange read bug
 
-2014-10-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Update nodefinder
 
-2014-10-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-10-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for Erlang 17.3 changes
     * Update pqueue
 
-2014-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-30 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.3.3 (beta) released
 
-2014-09-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlang_term
     * Add a script to update mimetypes based on file extensions and use it
@@ -2312,35 +2316,35 @@
     * Update cloudi_service_api_requests to make the new URL paths provide
       string UUIDs so the output is more intuitive
 
-2014-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow the service configuration option queue_limit to be 0
     * Add the missing queue_size cloudi_service_api types entries
 
-2014-09-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlang_term
     * Fix rebar to have output during CT execution pauses so that Travis
       doesn't kill the build during the testing phase
 
-2014-09-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add queue_size service configuration option for both internal and
       external services so a kilobyte limit can be used for the size of a
       service queue
     * Add the erlang_term dependency
 
-2014-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix event consumption based on more testing
     * Fix http and http_req integration tests for Python 3
 
-2014-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix all external CloudI API implementations to consume events both
       before and after CloudI API message responses
 
-2014-09-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add timeout_initialize and timeout_terminate as getter functions in
       each external CloudI API implementation
@@ -2354,7 +2358,7 @@
           function call (the terminate_exception object provides the
           termination timeout value)
 
-2014-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Modify aspects_init_after and aspects_terminate_before to add a
       timeout parameter
@@ -2366,7 +2370,7 @@
     * Add configuration validation to catch unexpected
       configuration sections
 
-2014-09-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for cloudi_service_db_mysql
     * Add CT tests to cloudi_service_db_mysql based on
@@ -2385,12 +2389,12 @@
     * Reformat cloudi_service_db_riak source code
     * Add asserts to the cloudi_service_msg_size integration test
 
-2014-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add file notifications to cloudi_service_filesystem append and truncate
     * Add --with-python-version to configure script
 
-2014-09-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Change RUN_ERL_LOG_ALIVE_MINUTES amd
       RUN_ERL_LOG_ACTIVITY_MINUTES back to the defaults due to unexpected
@@ -2401,7 +2405,7 @@
     * Fix cloudi_service_filesystem CT test error and
       reduce the CT test timeout
 
-2014-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug with incoming service request queue length not being accurate
       after timeouts
@@ -2410,7 +2414,7 @@
       improve the performance of an overloaded service process
     * Update pqueue
 
-2014-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve fix (done on 8/31) to make cloudi_service_init/3 completion
       and aspects_init_after completion a requirement before an internal
@@ -2442,39 +2446,39 @@
       cloudi_service_init/3 in a way that prevents future updates
     * Update cpg
 
-2014-09-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Changes for the Python CloudI API to work with Python version 3
       (for both the pure-python cloudi module and
        the Python/C++ cloudi_c module)
     * Update all the integration tests to work with Python version 3
 
-2014-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Make sure the Erlang Binary Term Format encoding in Python
       supports Python v3
     * Fixes to make sure everything is ok with the Ruby and Python
       Erlang Binary Term Format encoding/decoding
 
-2014-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add tests for the Erlang Binary Term Format encoding in Ruby
 
-2014-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add tests for the Erlang Binary Term Format encoding in Python
 
-2014-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CT tests for cloudi_service_filesystem
     * Fix cloudi_service_filesystem based on CT tests
 
-2014-09-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add write append support to cloudi_service_filesystem for POST requests
       (with ranges allowed for file insertions)
 
-2014-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-09-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add range request support for cloudi_service_filesystem GET requests
     * Add write truncate support to cloudi_service_filesystem for PUT requests
@@ -2483,14 +2487,14 @@
       legacy logging formatter used in the default configuration
       (just so the new version generates the same log output by default)
 
-2014-08-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for cloudi_service_db_mysql
     * Switch to get internal service self pid from supervisor, fixes bug if
       an internal service consumes messages in the cloudi_service_init/3
       (messages not related to its source code)
 
-2014-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the closure of old websockets synchronous when
       cloudi_service_http_cowboy has websocket_name_unique set to true
@@ -2498,7 +2502,7 @@
       internal service module, to make sure the last removal is what removes
       the application dependencies when automatic_loading is true
 
-2014-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the external service logging output to
       use STDOUT as a module name for the stdout stream and to
@@ -2509,7 +2513,7 @@
       the service processes to terminate before removing the application
       dependencies (bugfix)
 
-2014-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the subscribe_count function to the CloudI API for checking
       if a subscription on a service name pattern has occurred and
@@ -2518,14 +2522,14 @@
       service process (now N subscribes can be undone by N unsubscribes)
     * Update cpg
 
-2014-08-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CloudI Service API functions to get the current configuration:
         * cloudi_service_api:acl/1
         * cloudi_service_api:nodes_get/1
         * cloudi_service_api:logging/1
 
-2014-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix old format for erlang terms in
       cloudi_service_api_requests (the new format changes broke it)
@@ -2533,13 +2537,13 @@
     * Add the option of starting a service with a release boot file
     * Add the boot file startup to the hello_world1 example
 
-2014-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Small fixes for logging formatters usage
     * Move stdout/stderr external service logging output to the
       cloudi_core_i_services_external module
 
-2014-08-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Small fixes for various logging test-cases
       (testing the logging formatters still remains)
@@ -2548,7 +2552,7 @@
       represents a websocket service name
     * Fix cloudi_service_http_cowboy usage of non-default scope
 
-2014-08-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Update the CloudI Service API to provide the following logging functions:
         * cloudi_service_api:logging_file_set/2
@@ -2560,35 +2564,35 @@
         * cloudi_service_api:loglevel_set/2
         * cloudi_service_api:log_redirect/2
 
-2014-08-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes to log formatters to allow multiple instances of the same
       output module
     * Add the cloudi_service_api:log_formatters/2 function to the
       CloudI Service API
 
-2014-08-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add lager backend integration
 
-2014-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add lager formatter integration
 
-2014-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_http_cowboy websocket_connect_sync race condition
     * Update key2value
     * Add keys1value dependency
 
-2014-08-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the service configuration option request_name_lookup to provide a way
       to change service name lookup failure behavior
       (usable as cloudi module context configuration too)
     * Switch to using the new endpoints in cloudi_service_api_requests
 
-2014-08-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cowboy, cowlib, and ranch so it is at 1.0
     * cloudi_service_http_cowboy changes:
@@ -2600,23 +2604,23 @@
         * Changed recv_timeout to default to 5000 ms instead of 30000 ms,
           to match the cowboy default
 
-2014-08-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add separate endpoints for cloudi_service_api_requests that provide
       content-type hints as file extensions with a better hierarchy
     * Add defaults for the tuple configuration format in cloudi_service_api.hrl
     * Add a basic test for cloudi_service_http_client and fixed various bugs
 
-2014-08-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Move some common functions into cloudi_core,
       creating cloudi_response_info
 
-2014-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add initial cloudi_service_http_client
 
-2014-08-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweak ERLANG_OTP_VER* autoconf discovery to utilize the 17.1.*
       OTP_VERSION file which might be installed
@@ -2625,13 +2629,13 @@
     * Make Travis do all the regression/unit tests with the
       available databases enabled after a successful build (before an install)
 
-2014-08-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-08-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Move the cloudi_core_i_configurator:concurrency/1 function
       to cloudi_concurrency:count/1 so that it can be used easily by
       internal services
 
-2014-07-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Split functionality not related to usage of the Dispatcher in
       the cloudi_service module into separate modules to make it easier for
@@ -2648,30 +2652,30 @@
       erlang source code
     * Updated the Elixir.HelloWorld1 example to use the CloudILogger.ex module
 
-2014-07-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove configuration arguments request_start and request_end from
       cloudi_service_oauth1 so that the service configuration options
       aspects_request_before and aspects_request_after can be used instead
 
-2014-07-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add Elixir example
     * Fix cloudi_service_http_cowboy bug with output set to internal
 
-2014-07-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow cloudi_service_api functions to take binary or string data
       for uuids, to make the interface a bit simpler
     * Make sure count_process_dynamic updates each service process with
       the new count_process value after it is adjusted
 
-2014-07-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix service configuration option request_timeout_adjustment with
       aspects_request_before or aspects_request_after in external services
 
-2014-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Make sure the cloudi_service_terminate/2 execution limit is equal to
       MaxT/MaxR - 100 (enforced by a brutal_kill from cloudi_services_monitor,
@@ -2680,12 +2684,12 @@
       services with format_status/2
     * Fixes for aspects
 
-2014-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Make cloudi_service_queue and cloudi_service_quorum CT tests
       consistently pass without the potential for random failures
 
-2014-07-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add automatic_loading to external service configuration options
       (now both internal and external services can use automatic_loading
@@ -2693,25 +2697,25 @@
     * Make automatic_loading control the loading of modules that contain
       aspect functions (for checking that the aspect function exists)
 
-2014-07-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_core aspects test
     * Alter service configuration option aspects_init_after for
       external services to provide the command line as a list of strings
     * Add aspect testing to the msg_size tests
 
-2014-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow AOP (Aspect-Oriented Programming) functionality as
       service configuration options on both external and internal services
 
-2014-07-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the epgsql driver to cloudi_service_db_pgsql
     * Add AOP (Aspect-Oriented Programming) functionality as
       service configuration options for internal services
 
-2014-07-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_core test after update problem
     * Make sure all arguments for example services are present in the
@@ -2720,20 +2724,20 @@
       services that would have problems with a pattern for a service prefix
     * cloudi_service_oauth1 fixes
 
-2014-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-07-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweak cloudi_service_http_cowboy so websocket service requests that cause
       a connection close do not send data when the data is a null binary
     * Update pqueue
     * Make service processes start in-order from 0 to N-1
 
-2014-06-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug with cloudi_service_init/3 callback function exceptions
       causing a possible crash of cloudi_service_monitor
     * Add the beginning of cloudi_core CT tests
 
-2014-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for cloudi_service_oauth1 to match HTTP input
     * Fixes to cloudi_service_http_cowboy and cloudi_service_http_elli to
@@ -2741,12 +2745,12 @@
       for GET query strings that are passed as a tuple list
       (instead of the 'external' text encoding with \0 delimiters format)
 
-2014-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix application membership of CloudI internal services by having
       the group_leader set properly
 
-2014-06-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add request_start and request_end to cloudi_service_oauth1
 
@@ -2754,7 +2758,7 @@
 
     * Update cloudi_service_db_cassandra_cql
 
-2014-06-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_db_oauth1
     * Add cloudi_service_db_riak
@@ -2763,17 +2767,17 @@
 
     * Add cloudi_service_db_cassandra_cql
 
-2014-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix {<<"connection">>, <<"close">>} RequestInfo/ResponseInfo usage in
       cloudi_service_http_cowboy so all websocket usage works as expected
 
-2014-06-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add websocket_output configuration argument to
       cloudi_service_http_cowboy
 
-2014-06-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for closing a connection in the response of a websocket_connect
       in cloudi_service_http_cowboy
@@ -2781,11 +2785,11 @@
     * Fix the python CloudI API cloudi_c.mcast_async return for no destinations
     * Update cpg
 
-2014-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-06-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the service request response to a websocket connection close
 
-2014-05-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-31 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.3.2 (beta) released
     * Update erlang_cassandra and erlasticsearch (ES >= 1.x)
@@ -2793,7 +2797,7 @@
     * Fix lager and goldrush dependencies
     * Update documentation
 
-2014-05-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a test to the cloudi_service_db_pgsql ct test
 
@@ -2801,11 +2805,11 @@
 
     * Fix the service application include file type spec
 
-2014-05-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Improvement for websocket_subscriptions in cloudi_service_http_cowboy
 
-2014-05-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the websocket_subscriptions configuration parameter to
       cloudi_service_http_cowboy
@@ -2816,7 +2820,7 @@
 
     * Add javadocs comments to the Java CloudI API
 
-2014-05-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_api functions service_subscriptions/2 and
       services_search/2 for services that use duo_mode set to true
@@ -2824,11 +2828,11 @@
       execution time limit enforcement
     * Fix cloudi_service_http_cowboy bug during cloudi_service_init validation
 
-2014-05-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix for websocket_protocol in cloudi_service_http_cowboy
 
-2014-05-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the websocket_protocol configuration option to
       cloudi_service_http_cowboy for avoiding blocking on a response to an
@@ -2838,7 +2842,7 @@
       WebSocket and provides a unique identifier with the protocol details
       inside the function.
 
-2014-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Update documentation
 
@@ -2846,7 +2850,7 @@
 
     * Add nonempty_list to cloudi_service_api typespecs
 
-2014-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add use_websockets == exclusively for cloudi_service_http_cowboy to limit
       usage of a port to websockets-only
@@ -2860,23 +2864,23 @@
       (websocket_connect_async/websocket_connect_sync) in
       cloudi_service_http_cowboy
 
-2014-05-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Update semiocast pgsql driver
     * Make cloudi_service_db_pgsql crash on unsupported types
 
-2014-05-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add debug output to cloudi_service_db_pgsql
     * Simplify cloudi_service_db_pgsql
     * Fix CLOUDI_CORE_STANDALONE cloudi_core dialyzer error
 
-2014-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add another cloudi_service_db_pgsql test case to show driver differences
     * Update reltool_util
 
-2014-05-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Cleanup cloudi_service_db_pgsql
         * Move the old epgsql wg driver modules/application/header
@@ -2889,61 +2893,61 @@
           output format
     * Update uuid
 
-2014-05-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve the error return types for the modules:
       cloudi, cloudi_service and cloudi_service_api
     * Fix a cloudi_service_init error for recv_asyncs function calls
 
-2014-05-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-05-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Add application dependencies to the release manually which
       reltool fails to find (syntax_tools, cloudi_x_lager, cloudi_x_goldrush)
     * Update the Erlang Binary Term Format for the new types in 17.0
 
-2014-04-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix automatic stopping of an internal service's application when
       the application_name service configuration option is used
     * Add more logging output when a service is stopped
 
-2014-04-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
     * Fix error on CLOUDI_CORE_STANDALONE external service configuration
 
-2014-04-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
     * Simplify FUNCTION macro
 
-2014-04-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the 17.0 dict:dict() type usage more specific
 
-2014-04-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the Erlang/OTP release configure check on OSX
 
-2014-04-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlasticsearch
 
-2014-04-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve type changes for Erlang/OTP 17.0 compilation
       (17.0rc1 will not be supported due to inconsistencies with 17.0)
 
-2014-04-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Fixes for Erlang/OTP 17.0 compilation
 
-2014-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add service name pattern support to cloudi_service_router
     * Fix the run_erl logging settings for the erlang.log.? files
 
-2014-04-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add url-path RequestInfo parameter to cloudi_service_http_elli
     * Add cloudi_service_filesystem initialization configuration for
@@ -2953,7 +2957,7 @@
       initialization configuration to provide simpler
       file-based initialization for dependent services
 
-2014-04-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add url-path RequestInfo parameter so that
       service name parsing isn't necessary
@@ -2962,32 +2966,32 @@
       notify_all, notify_one, notify_clear to receive
       file update notifications
 
-2014-04-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-04-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Update syslog dependency source
 
-2014-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add process_index, process_count, process_count_max, and
       process_count_min to all CloudI API implementations
 
-2014-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix ec2 discovery groups/tags validation for syntax additions
 
-2014-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Update nodefinder to add support for boolean expressions when using
       ec2 with tags and/or groups
     * Enforce a minimum node reconnect time based
       on the configured net_kernel:connecttime/0
 
-2014-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_api:nodes_set/2 for dynamically configuring
       CloudI nodes configuration
 
-2014-03-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more flexible nodes configuration
     * Update nodefinder (a rewrite) and remove the older nodefinder cruft
@@ -3000,44 +3004,44 @@
     * Make configuration changes to the listen and connect nodes configuration
       options reset the configuration of cpg and nodefinder
 
-2014-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify cloudi_services_monitor log messages
     * Provide configuration format within log at start-time
     * Fix configuration removal when MaxR is met
     * Update uuid
 
-2014-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CT tests for cloudi_service_queue
     * Add a constraint based on testing for NextName in
       cloudi_service_queue both fault_isolation mode
 
-2014-02-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix external service validation done during OS process spawn
     * Add websocket_ping to cloudi_service_http_cowboy
     * Add cache to cloudi_service_filesystem
       (so HTTP cache controls can be used when the cached files are refreshed)
 
-2014-02-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix LinuxMint compilation issues
 
-2014-02-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add fault_isolation argument to cloudi_service_queue
     * Add cloudi_service:send_async_active/8 for manually specifying the
       transaction id used in the service request
 
-2014-02-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_queue for persistent queuing of
       service requests
     * Add retries to cloudi_service_queue
     * Simplify the default configuration
 
-2014-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweak syslog integration
     * Allow SSL files for cloudi_service_http_cowboy to be configured with
@@ -3045,11 +3049,11 @@
       (separate SSL files can not yet be specified until Erlang/OTP changes
        (http://erlang.org/pipermail/erlang-questions/2013-October/075814.html))
 
-2014-02-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add syslog logging support
 
-2014-02-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-02-02 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.3.1 (beta) released
     * Update cpg, key2value, pqueue, quickrand, reltool_util, service,
@@ -3059,7 +3063,7 @@
       cloudi_service_http_elli
     * Fixed cloudi_service_filesystem
 
-2014-01-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:environment_lookup/0,
       cloudi_service:environment_transform/1, and
@@ -3068,14 +3072,14 @@
       to use environment variables
     * Update edoc documentation
 
-2014-01-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the cloudi_service_api:priority() type
     * Add the service Erlang application with an autoconf commandline option
       to exclude it (for if it would cause a module name conflict)
     * Add the hello_world5 example
 
-2014-01-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add source-address and source-port to the RequestInfo provided by
       cloudi_service_http_cowboy to provide the same format as
@@ -3083,12 +3087,12 @@
     * Add service-name to the RequestInfo provided by
       cloudi_service_http_cowboy for websocket initiated service requests
 
-2014-01-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:source_subscriptions/2 for determining the current
       subscriptions a service request source has
 
-2014-01-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow the cloudi_service_http_cowboy websocket_connect request
       to provide a response
@@ -3096,7 +3100,7 @@
       a CloudI service request has provided {<<"connection">>, <<"close">>}
       in the ResponseInfo data
 
-2014-01-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add ResponseInfo connection/close support in cloudi_service_tcp
     * Add packet_buffer_recv_size, packet_buffer_send_size, and
@@ -3104,14 +3108,14 @@
     * Make sure destination_connect can provide a response in
       cloudi_service_tcp
 
-2014-01-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the C/C++ CloudI API include all processing time in the
       poll timeout value, when a poll timeout value is provided
     * Add destination_connect and destination_disconnect arguments to
       cloudi_service_tcp
 
-2014-01-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_quorum tests
     * Fix monkey_chaos bug for probability_request
@@ -3122,11 +3126,11 @@
     * Update reltool_util
     * Update v3 ZeroMQ to 3.2.4
 
-2014-01-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the add_prefix argument to cloudi_service_router
 
-2014-01-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-13 Michael Truog   <mjtruog at gmail dot com>
 
     * When an external service is using the request_timeout_adjustment
       send a null response if the timeout was exceeded, to prevent extra
@@ -3135,13 +3139,13 @@
     * Fix cloudi_service_quorum absolute integer requirement
     * Add cloudi_service_router
 
-2014-01-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix performance issues that have been creeping into
       cloudi_service_http_cowboy and apply the same fixes to
       cloudi_service_http_elli and cloudi_service_tcp
 
-2014-01-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Make {error, _} results from the cloudi module consistent with the
       {error, _} results from the cloudi_service module
@@ -3159,7 +3163,7 @@
     * Add cloudi_service:context_options/1 for creating cloudi:new/1 options
       based on the current service configuration (for child Erlang pids)
 
-2014-01-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the refresh option to cloudi_service_filesystem to refresh
       the cached filesystem data at a specific interval in seconds
@@ -3167,7 +3171,7 @@
     * Add cloudi_service:key_value_erase/3
     * Fix cloudi_service_http_cowboy file attachment names
 
-2014-01-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:key_value_find/2 to provide an generic interface
       for accessing the RequestInfo key/value pairs
@@ -3176,29 +3180,29 @@
       release problems
     * Update dynamic_compile
 
-2014-01-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2014-01-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_quorum timeout bug
     * Make cloudi_service_quorum handle Byzantine service request failures
       (by default)
 
-2013-12-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Update jsx (no more dialyzer errors, yay!)
 
-2013-12-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix floating point usage of count_process and count_thread > 1.0 so that
       floor is used (not ceil!)
 
-2013-12-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Update erlang_cassandra
     * Fix the termination of service processes when count_process_dynamic
       ramps-down a service instance
     * Add cloudi:trans_id_age/1
 
-2013-12-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the count_process_dynamic service configuration option for
       dynamically adjusting the number of processes used for a single
@@ -3207,7 +3211,7 @@
     * Add the rate-based hibernate service configuration option for internal
       services (a list of options for conditional hibernation)
 
-2013-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_http_cowboy:close/1 for forcing a cowboy
       connection to close
@@ -3216,7 +3220,7 @@
     * Have cloudi_service_http_cowboy always add the peer port number to the
       RequestInfo with the key <<"peer-port">>
 
-2013-12-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the cloudi_service_map_reduce:cloudi_service_map_reduce_new/3
       callback functionality to be more useful for algorithm initialization
@@ -3225,7 +3229,7 @@
     * Add binary usage to cloudi_service_db_pgsql internal usage and simplify
       internal usage
 
-2013-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-04 Michael Truog   <mjtruog at gmail dot com>
 
     * cloudi_service_http_cowboy support added for outgoing (CloudI->websocket)
       service requests iolist usage
@@ -3237,18 +3241,18 @@
       to make sure iolists are allowed into cowboy when
       'output' is configured as 'external' or 'internal'
 
-2013-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:timeout_max/1 and cloudi:timeout_max/1 functions
     * Update edoc documentation
 
-2013-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-12-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the TIMEOUT_MAX constant and the TIMEOUT_MAX_ERLANG constant
       with configuration validation usage
     * Add the response_timeout_immediate_max service configuration option
 
-2013-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix ProcessCount and ThreadCount when greater than 1.0 so that it
       uses ceil (previously it was sometimes ceil+1)
@@ -3258,12 +3262,12 @@
     * Terminate the cloudi_service_map_reduce service after all
       requests have successfully returned
 
-2013-11-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix timer usage within internal services, during the
       cloudi_service_init/3 function execution
 
-2013-11-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add backward-cpp integration alongside booster/backtrace.h for
       providing the execution backtrace from the C++ CloudI API
@@ -3275,11 +3279,11 @@
     * Add boost::exception integration to provide more information after the
       abnormal termination of a C++ CloudI API service request
 
-2013-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add booster/backtrace.h usage to the C/C++ CloudI API
 
-2013-11-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Add recv_asyncs to the cloudi_service module and the cloudi module
       for internal services, but not to external services due to the
@@ -3287,7 +3291,7 @@
     * Fix a few small differences between the cloudi module and the
       cloudi_service module with recv_async timeout handling of undefined
 
-2013-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix a small difference between the cloudi module and
       the cloudi_service module with how PatternPid can be undefined
@@ -3295,27 +3299,27 @@
       destination_refresh_lazy/1 to the modules cloudi and cloudi_service
       so interfaces can check before sending, if necessary
 
-2013-11-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add lager and goldrush as dependencies of erlang_cassandra
 
-2013-11-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Update trie
 
-2013-11-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a synchronous mode to the cloudi_logger to prevent
       excessive memory consumption and system death
 
-2013-11-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix service request and info message queuing when
       cloudi_service_init/3 is executed and duo_mode is true
     * Add the request_timeout_immediate_max service configuration option
       to provide destination monitoring for long timeout values
 
-2013-11-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cowboy to 0.9.0
     * Fix some type errors
@@ -3323,35 +3327,35 @@
     * Fix the CloudI release so no included CloudI services
       have their Erlang application dependencies started automatically
 
-2013-11-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_handle_info/3 exception stacktrace logging
     * Fix cloudi_service_map_reduce resend on first few messages
 
-2013-11-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Make sure the cloudi module has all the types
     * Update cpg
     * Add the CloudI Service API function service_subscriptions/2
 
-2013-11-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add default cloudi_core configuration
 
-2013-11-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-11-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add automatic handling of the lazy destination refresh method
       cpg messages within the cloudi module (using
       the cloudi:destinations_refresh/2 function is still the best way
       of having recent service name destination data)
 
-2013-10-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the cloudi_x_ scope script operation for source code repo updates
       within a built repository
     * Update reltool_util and uuid
 
-2013-10-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi:mcast_async function call
     * Update cpg
@@ -3359,14 +3363,14 @@
     * Add the automatic_loading service configuration option so the
       automatic loading used for internal services can be turned off
 
-2013-10-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix a potential inconsistency between the CloudI repo and the
       cloudi_core repo (with CLOUDI_CORE_STANDALONE defined) by changing the
       {cpg_data, Groups} message in cpg to {cloudi_cpg_data, Groups}
     * Add proplist service configuration format
 
-2013-10-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Split cloudi_core and the internal services into separate respositories
       (at https://github.com/CloudI/)
@@ -3376,7 +3380,7 @@
     * Provide a function for updating the destination refresh lookup data
       in the cloudi module, so lazy destination refresh methods can be used
 
-2013-10-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-18 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.3.0 (beta) released
     * Update cpg, key2value, pqueue, reltool_util, uuid after version bump
@@ -3386,12 +3390,12 @@
     * Migrate elasticsearch version from 1.3 to 1.4
     * Added support for mapping and aliases
 
-2013-10-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Dialyzer fixes, turn all dialyzer warnings on
     * Update reltool_util
 
-2013-10-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the cloudi_service:mcast_async_active function variations along with
       cloudi_service:mcast_async_passive functions to mirror what is already
@@ -3399,13 +3403,13 @@
     * Add cloudi_service_quorum for seeking quorum among running services
       for a service request
 
-2013-10-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Use the mac address set in the cloudi_core application env for
       uuid (v1) generator creation
     * Update uuid
 
-2013-10-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-10-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bug reported by Anton Ryabkov:
       an unsubscribe of an exact match for a service name was not removing
@@ -3415,7 +3419,7 @@
       removes entries when no services are subscribed to the service name, so
       there is no problem with the service name pattern match.
 
-2013-09-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Separate the cloudi_services_internal, cloudi_services_databases, and
       cloudi_services_messaging Erlang applications into a single
@@ -3428,7 +3432,7 @@
       specify an Erlang application name that doesn't need to be the
       CloudI service module name
 
-2013-09-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the monkey_latency and monkey_chaos service configuration
       options for providing any service configuration a way to change
@@ -3440,11 +3444,11 @@
     * Update erlasticsearch to take json docs
     * Update jsx to 1.4.3
 
-2013-09-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Update uuid
 
-2013-09-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the cloudi module use the cloudi_service module interface if a
       Dispatcher pid is provided instead of a Context record
@@ -3453,60 +3457,60 @@
     * Convert all the internal services to use the cloudi module for
       external interface functions
 
-2013-09-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix JSON RPC errors with CloudI Service API
     * Fix the CloudI Service API run.py test
     * Fix cloudi_service_api:nodes_add/2 and cloudi_service_api:nodes_remove/2
 
-2013-09-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service_db to store with the Key equal to the TransId of
       the service request
 
-2013-09-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the cloudi_service_http_cowboy multipart support generic
 
-2013-09-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow configuration data to be present in the application env entry
       to bypass a filesystem file and be fed configuration directly
     * Fix some nested timeout errors to prevent outer timeout termination
 
-2013-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-14 Michael Truog   <mjtruog at gmail dot com>
 
     * cloudi_service_http_cowboy multipart fixes
     * Add cloudi_service:service_name_parse_with_suffix/2
 
-2013-09-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-13 Michael Truog   <mjtruog at gmail dot com>
 
     * For cloudi_service_http_cowboy, a service request timeout using
       405 responses gets an empty "allow" HTTP header
     * Add non-standard HTTP header request info entries for
       tracking a multipart sequence of service requests
 
-2013-09-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Add CLOUDI_CONFIGURE_ARGS env variable for rebar usage
     * Add cloudi_service:return/2 and cloudi_service:return/3 to make
       internal service return calls easier
     * Add multipart support to cloudi_service_http_cowboy
 
-2013-09-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi:timeout_milliseconds() and cloudi:priority()
     * Fixes for cloudi_service_db
     * Edoc documentation updated
 
-2013-09-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the scope script parallel to speedup the initial
       build process
     * Add initial version of cloudi_service_db, a simple in-memory database
     * Update trie
 
-2013-09-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add support for update-deps of CloudI as a rebar dependency
     * Add an options list to cloudi_service_zeromq
@@ -3518,7 +3522,7 @@
     * Add endian configuration to cloudi_service_zeromq
       for ZeroMQ service request metadata size integer encoding
 
-2013-09-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify the rebar integration by removing the version number from
       the installation path prefix when a configuration command line argument
@@ -3527,7 +3531,7 @@
     * Fix type problem in cloudi_service_db_cassandra
     * Make the configure script ZeroMQ path detection expect default cases
 
-2013-09-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-09-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Move makefile "clean-configure" target to utilize the distclean target
     * Tweak example hello_world3 so that ERL_LIBS is not used
@@ -3536,11 +3540,11 @@
 
     * Merge cassandra database integration
 
-2013-08-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix bugs in cloudi_service_tcp
 
-2013-08-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the cloudi_ip_address module for fixed width string representations
     * Fix a bug when using self() within cloudi_service_init/3 when duo_mode
@@ -3548,11 +3552,11 @@
       cloudi_service_init/3)
     * Fix a bug in cloudi_service_udp
 
-2013-08-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service_tcp and cloudi_service_udp
 
-2013-08-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_service:request_info_key_value_new/1
     * Fix service requests that only provide ResponseInfo
@@ -3561,59 +3565,59 @@
       cloudi_service_http_cowboy
     * Fix cloudi_service_map_reduce failure result
 
-2013-08-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix SSL bug in cloudi_service_http_cowboy
     * Fix process kill handling, for delayed cleanup of dead services
 
-2013-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow cloudi_service_map_reduce to use Erlang applications named the
       same as the map reduce module
 
-2013-08-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add set_x_forwarded_for as a configuration parameter for
       cloudi_service_http_cowboy
     * Switch the argument order on cloudi_service:service_name_parse/2 to
       match the cloudi_service_handle_request/11 argument order
 
-2013-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add content_types_accepted as a configuration parameter for
       cloudi_service_http_cowboy
     * Add "status" key usage from ResponseInfo within
       cloudi_service_http_cowboy
 
-2013-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the CloudI Service API services_add function to return the
       newly created service_ids
     * Add status_code_timeout as a configuration parameter for
       cloudi_service_http_cowboy
 
-2013-08-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-09 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.5 (beta) released
 
-2013-08-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Provide a readable format for the CloudI Service API output of
       services and services_search when returning a service's service options
 
-2013-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-08-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Move cloudi_core startup of cloudi_services_internal,
       cloudi_services_databases, and cloudi_services_messaging into the
       cloudi_core configuration sequence
     * Do not use the /tmp/cloudi path
 
-2013-07-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Simplify CloudI Erlang release
     * Fix configure sequence, so it remains decoupled from application startup
 
-2013-07-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add get_pids function to the internal service CloudI API
       (the cloudi_service module)
@@ -3628,7 +3632,7 @@
     * Add internal service module "hibernate" option to the
       service configuration options
 
-2013-07-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Substitute Erlang VM shell environmental variables in
       ExecutableFilePath, ExecutableCommandLineArguments, and
@@ -3636,7 +3640,7 @@
     * Update cpg and reltool_util
     * Add listen parameter to cloudi_service_db_pgsql
 
-2013-07-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-22 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi module retry of service requests and context checking
     * Add cloudi_logger.hrl FUNCTION macro
@@ -3651,31 +3655,31 @@
     * Make cloudi_service_db_pgsql_SUITE execution conditional so that
       postgres configuration isn't required
 
-2013-07-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add "build" ZeroMQ option value
     * Add cloudi_service:service_name_parse/2 to make it simpler to utilize
       service name patterns
 
-2013-07-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add eunit/ct integration for handling unit tests
     * Add PropEr as a dependency for running tests
     * Add a basic uninstall makefile target
 
-2013-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cpg timeout usage to internal and external services so that the
       service request timeout provides an absolute limit for
       any service name lookup
     * Update cpg
 
-2013-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix Java http_req test
     * Fix reltool_util:modules_purged/2 functionality
 
-2013-07-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add all the warnings previously excluded in the rebar_src.config.in file
     * Fix the various warnings within the external dependencies
@@ -3683,13 +3687,13 @@
     * Fix autoconf macros so that AC_LANG_CALL is no longer used to fix
       ZeroMQ library detection (and GMP library detection)
 
-2013-07-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Add service prefix configuration validation
     * Add ACL configuration validation
     * Update uuid
 
-2013-07-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add type specifications to the cloudi module and the
       cloudi_service module, for use with Erlang CloudI services
@@ -3700,7 +3704,7 @@
 
     * Merge elasticsearch database integration
 
-2013-07-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the build system so that it can use an external rebar executable
       specified by the configuration
@@ -3712,18 +3716,18 @@
 
     * Fix emysql source file encoding for R17
 
-2013-07-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-07-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix for internal services so that the terminate function is always called
     * Fix queuing on websocket connection for outgoing service requests
 
-2013-06-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-29 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the CloudI Service API automatically discover its functions
       from the exports of the module cloudi_service_api within
       cloudi_service_api_requests
 
-2013-06-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add websocket_timeout and use_client_ip_prefix
       configuration options to the cloudi_service_http_cowboy service
@@ -3732,13 +3736,13 @@
     * Add the CloudI Service API function services_search for searching
       services based on a service name
 
-2013-06-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the elli HTTP server for comparison
       (performance shows that cowboy should be used instead)
     * Fix the makefile issue with configuration files
 
-2013-06-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Outgoing websocket service requests now use the list output_type
       (output configuration setting) to provide text requests instead of binary
@@ -3748,7 +3752,7 @@
     * Do not clobber the configuration files when the
       installation occurs twice
 
-2013-06-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-20 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.4 (beta) released
     * Fix local protocol option for external services
@@ -3756,19 +3760,19 @@
     * Add fixes for R16B01 usage
     * Update uuid, nodefinder, emysql, ranch, cowboy
 
-2013-06-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Small fixes for dialyzer and type specs
     * Make some release tweaks and add the hello_world2 example
 
-2013-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Allow service requests to websocket connections if their connect
       URL matches the HTTP service prefix configuration value
     * Make the websockets testing test service requests to websocket
       connections
 
-2013-06-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Update cpg
     * Add cloudi_service_api module documentation
@@ -3777,30 +3781,30 @@
     * Fix retry service name lookup and timeout timers within an
       internal service, during the init function execution
 
-2013-06-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Add separate cloudi_service_api module to cloudi_core application
       to provide a central interface module for the CloudI Service API
     * Add websockets support to cloudi_service_http_cowboy
     * Update cowboy to 0.8.5 and ranch to 0.8.3
 
-2013-06-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-08 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.3 (beta) released
 
-2013-06-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix services_remove CloudI Service API functions so that modules are
       purged when they are no longer necessary
       (after unnecessary Erlang applications have been stopped)
     * Update reltool_util
 
-2013-06-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove some dead Erlang code from cloudi_core
     * Fix minor C++ syntax warnings
 
-2013-06-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the require Erlang version R16 since no one has mentioned needing
       R15 support (and it is easier using the new reltool source code)
@@ -3809,36 +3813,36 @@
        option, probably due to the Erlang bug with schedulers locking up
        within NIFs... the problem occurs when a NIF thread hits an accept())
 
-2013-06-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Update jsx
     * Fix dialyzer errors
 
-2013-06-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-06-01 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.2 (beta) released
     * Add loadtest results
     * Make "local" the default protocol for external services
 
-2013-05-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add service UUID to internal startup arguments
     * Add loadtest README CPU frequency information
 
-2013-05-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add local protocol option to provide tcp unix domain socket support
     * Fix external service send/receive buffer setting (was larger before)
     * Update reltool_util
 
-2013-05-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Update uuid with fixes to variant bits
       (external usage of the v1 UUIDs is fixed)
     * Fix the cpg_data:get_remote_members/3 and cpg_data:get_local_members/3
       argument order bug
 
-2013-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the "cloudi_x_" prefix to all CloudI external Erlang dependencies
       with an automatic script, during the build process, to provide a scope
@@ -3847,7 +3851,7 @@
     * Update cpg
     * Update reltool_util
 
-2013-05-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix problems with the database services linking within the
       CloudI service init function.  This fix affects all internal services,
@@ -3855,7 +3859,7 @@
       and the supplied Dispatcher variable is actually a short-lived
       proxy Erlang process utilizing the same process state.
 
-2013-05-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix all the external CloudI API implementations so that their
       usage of the request_timeout_adjustment service option does not require
@@ -3869,7 +3873,7 @@
     * Remove the erroneous function cloudi_service:mcast_async/5
     * Update cpg
 
-2013-05-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Start to add deployment examples for creating internal services
     * Update pqueue application based on (deployment) feedback
@@ -3877,7 +3881,7 @@
     * Updates to release generation
     * Update reltool_util
 
-2013-05-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-05-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add a more flexible interal service configuration that provides
       better support for OTP applications and allows OTP release loading
@@ -3886,24 +3890,24 @@
       fix requests that don't reference a running service)
     * Move key2value.erl into a separate application
 
-2013-03-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-30 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.1 (beta) released
     * Updated documentation
     * Add loadtest results
 
-2013-03-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix external service init timeout bug
 
-2013-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove the cowboy_old (v0.6.2) application since the latency
       problems in v1.2.0 were determined to be internal
       (the latency problems are now solved with previous commits)
     * Fix some Erlang process exit conditions
 
-2013-03-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix latency due to the request_timeout_adjustment changes in the
       C/C++ CloudI API due to exception handling overhead
@@ -3919,16 +3923,16 @@
       changes due to their inherent latency, while the Python_C implementation
       naturally gets the changes to the C/C++ CloudI API
 
-2013-03-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Improve performance so that it is closer to v1.1.0 performance
     * Fix remaining duo_mode errors
 
-2013-03-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix duo_mode issues related to termination and info messages
 
-2013-03-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Add duo_mode as a way of separating send and receive options for an
       internal service, to reduce latency (i.e., provide a non-default mode
@@ -3936,7 +3940,7 @@
       service functionality from pre-v1.2.0 releases)
     * Update erlzmq2 dependency
 
-2013-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Provide better cowboy integration to reduce request latency
     * Add the service configuration options to control the Erlang process
@@ -3948,24 +3952,24 @@
     * Update cowboy to 0.8.2 and ranch to 0.6.2
     * Improve quickrand and cpg random number usage
 
-2013-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the pqueue and quickrand applications as dependencies
     * Add the external dynamic_compile application
     * Remove the misultin application references
 
-2013-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cowboy 0.6.1 back into CloudI as cowboy_old
       (cowboy 0.8.0 remains, but has trouble managing high socket counts,
        e.g. 20k concurrent connections)
 
-2013-02-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-19 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.2.0 (beta) released
     * Update the documentation (added Quick Start and API documentation)
 
-2013-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Add service configuration option request_timeout_adjustment
     * Reduce internal service logic latency
@@ -3977,23 +3981,23 @@
       destination refresh methods usage by mcast_async
     * Add better error checking to cpg
 
-2013-02-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweaks in an attempt to appease the dialyzer
     * Add edoc and type spec information to cloudi_service
 
-2013-02-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Add more validation of timeouts and priorities
 
-2013-02-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the C/C++, Java, and Ruby CloudI API to make sure
       unsubscribe only removes a single instance of the service name pattern
     * Update edoc documentation
     * Fix cowboy content types integration for 0.8.0
 
-2013-02-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Remove misultin integration due to its usage of parameterized modules
     * Update cloudi_service_http_cowboy with better cowboy integration
@@ -4002,12 +4006,12 @@
     * Update rebar to 2.1.0-pre
     * Fix for services restart on failure
 
-2013-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add quick start guide to doc/README.markdown
     * Change the configuration to use ZeroMQ version 3 by default
 
-2013-02-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix erlzmq2 based on recent changes by adding the
       {active_pid, pid()} option to erlzmq2:socket/2
@@ -4025,7 +4029,7 @@
        used by modules implementing a cloudi_service behavior)
     * Fix cloudi_core OTP application dependencies
 
-2013-02-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix cloudi_service timeout usage bugs so that the
       timeout is more accurate
@@ -4035,19 +4039,19 @@
     * Make the messaging tests stricter
     * Update ZeroMQ v3 to (stable) 3.2.2 (v2 is still (stable) 2.2.0)
 
-2013-02-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Update edoc documentation
     * Change all references of "job" to "service" to avoid confusion
     * Fix ACL atom usage bug
     * Fix CloudI Job API output
 
-2013-02-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-04 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.1.1 (beta) released
     * Updated jsx dependency
 
-2013-02-01 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-02-01 Michael Truog   <mjtruog at gmail dot com>
 
     * Use patterns for ACLs instead of prefixes
       (patterns like service subscriptions with "*")
@@ -4057,7 +4061,7 @@
       immediate_remote, and lazy_remote
     * Update cpg and trie dependencies
 
-2013-01-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2013-01-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix service message queuing during initialization for
       external services
@@ -4066,80 +4070,80 @@
     * tarball raw loadtest results so they are not part of
       source code analysis
 
-2012-12-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-12-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Update the uuid implementation, so all CloudI uuids can be used
       within other systems (e.g., any databases using v1 UUIDs)
     * Update the Java CloudI API to use jinterface-1.5.6
     * Tested with Erlang R15B03, no problems with the current tests
 
-2012-11-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-11-03 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.1.0 (beta) updated
       (cloudi_core Erlang application dependencies cause a startup
        problem which is not normally apparent with the default configuration)
 
-2012-11-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-11-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add loglevel-based apply macro functionality to CloudI logging
     * Fix small dialyzer issues in cowboy integration
     * Added more summary data based on loadtest results
 
-2012-10-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-30 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.1.0 (beta) released
 
-2012-10-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add loadtest results
 
-2012-10-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Finalize configuration and compilation fixes
     * Added fixes to the ZeroMQ configuration and the erlzmq compilation
     * Fix clock_gettime configuration check
 
-2012-10-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix configuration and compilation on OSX
 
-2012-10-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Documentation updates
 
-2012-10-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-10-06 Michael Truog   <mjtruog at gmail dot com>
 
     * Create a separate cloudi_core application to provide
       better encapsulation of the core CloudI functionality
     * Add the CloudI Map-Reduce Service/Behaviour and
       use it to simplify the hexpi test
 
-2012-09-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-09-16 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cowboy http server integration
     * Fix http use of misultin with Content-Disposition
     * Fix external request_info requirement (binary-only)
 
-2012-09-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-09-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix python threading issues with the Python CloudI API C++ integration
     * Add the recv_async consume parameter to the
       Python CloudI API C++ integration
     * Add the python_c variation of the messaging test
 
-2012-09-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-09-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Rename some Erlang modules to be more intuitive
     * Fix bug in the python/python_c http_req test
     * Fix bug in the ZeroMQ test
 
-2012-08-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-08-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the consume parameter to the recv_async CloudI API function
     * Resolve some case issues in the CloudI API function parameters
     * Fix messaging test errors and make messaging an infinite test
 
-2012-08-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-08-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix exception handling within the callback functions of the
       Python CloudI API C++ integration
@@ -4151,40 +4155,40 @@
     * Fix list conversion to binary in Python API erlang.py
     * Add unit tests (string, list to binary) in Python API erlang.py
 
-2012-08-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-08-14 Michael Truog   <mjtruog at gmail dot com>
 
     * Added better thread handling and callback usage to the
       Python CloudI API C++ integration
 
-2012-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-08-13 Michael Truog   <mjtruog at gmail dot com>
 
     * Complete Python CloudI API C++ integration
 
-2012-08-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-08-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add function objects to the C++ CloudI API
     * Fix python CloudI API c integration linking issues
     * Fix various build issues related the the C/C++ CloudI API
 
-2012-07-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-07-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Update python CloudI API for python version 3
 
-2012-07-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-07-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cpg, uuid, and trie applications instead of using modules within
       the CloudI application (this includes making cpg more abstract based on
       the list_pg source code)
 
-2012-07-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-07-11 Michael Truog   <mjtruog at gmail dot com>
 
     * Tweaks to list_pg to support external usage
 
-2012-07-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-07-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add nodefinder configuration for further testing
 
-2012-07-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-07-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix the ZeroMQ CloudI job termination so that sockets are always closed
     * Fix an error in the ZeroMQ tests configuration
@@ -4196,42 +4200,42 @@
     * Make cloudi_pool_sup startup synchronous to prevent any problems with
       supervisor dependencies (at the same supervisor level)
 
-2012-06-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-06-24 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 1.0.0 (beta) released
     * Add loadtest of http_req test to show language performance with
       20k connections and 1 OS process
     * Improvements to cloudi_job_http to handle heavy load
 
-2012-06-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-06-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Update uuid and switch to os:timestamp/0 to time HTTP requests
 
-2012-06-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-06-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix/Improvements for AWS deployment
 
-2012-05-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-05-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Updated FAQ
     * Add the virtual host option ("use_host_prefix") to cloudi_job_http
 
-2012-05-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-05-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Update uuid, so that newer MAC addresses are not an issue
 
-2012-04-19 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-19 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix a few unsigned constants in the C/C++ CloudI API and the msg_size test
     * Get CloudI building with Travis (http://travis-ci.org/#!/okeuday/CloudI)
 
-2012-04-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-14 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.2.0rc2 (beta) released
     * Fix bug with erlang CloudI API forward operations
     * Improve ruby erlang binary term format encoding, string concatenation
 
-2012-04-12 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-12 Michael Truog   <mjtruog at gmail dot com>
 
     * Prevent cloudi_logger from having problems with erroneous argument lists
       and excessive data within an argument list
@@ -4239,23 +4243,23 @@
     * Fix erlang CloudI API operations within the cloudi_job_handle_request/11
       function that exclude the Job pid from service name lookup results
 
-2012-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add erlang version of the messaging test
     * Fix cloudi_job_init/3 synchronous usage of Dispatcher with the cloudi_job
       functions (i.e., the Erlang CloudI API)
 
-2012-04-07 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-07 Michael Truog   <mjtruog at gmail dot com>
 
     * Add java version of the messaging test
     * Fix java CloudI API isTimeout functions
 
-2012-04-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-04-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add ways to avoid std::string creation within the C++ CloudI API
     * Fix a bug within the C/C++ CloudI API (buffer overwrite)
 
-2012-03-31 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-31 Michael Truog   <mjtruog at gmail dot com>
 
     * Add c++ version of the messaging test
     * Add ruby version of the messaging test
@@ -4263,30 +4267,30 @@
     * Fix various problems with the ruby CloudI API
       (now it is the same as the python interface)
 
-2012-03-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-28 Michael Truog   <mjtruog at gmail dot com>
 
     * Add messaging test sequence2 to python messaging test
     * Fix python mcast_async bug
 
-2012-03-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix messaging test
     * Fix python recv_async bug
     * Prevent erroneous CloudI logger input from crashing the logging process
 
-2012-03-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-26 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.2.0rc1 (beta) released
     * Add "messaging" (i.e., internal CloudI messaging) test
 
-2012-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-24 Michael Truog   <mjtruog at gmail dot com>
 
     * Update jsx to 1.0
     * Refactor complexities within list_pg
     * Fix Erlang version detection for R15B
     * Update http://cloudi.org with css theme switcher for print mode
 
-2012-03-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Use trie:find_match/2 instead of trie:find/2 within the list_pg_data
       module to provide pattern matching with service name strings
@@ -4302,13 +4306,13 @@
     * Rename cloudi_job_sup.erl to cloudi_dispatcher_sup.erl to avoid the
       cloudi_job_ prefix because of the cloudi_job behavior usage
 
-2012-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Rename cloudi_job_dispatcher.erl to cloudi_dispatcher.erl to avoid the
       cloudi_job_ prefix because of the cloudi_job behavior usage
     * Provide better seeding for random:uniform/1
 
-2012-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-02-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add service options for optional parameters that control
       typical service defaults for: priority_default, queue_limit,
@@ -4331,21 +4335,21 @@
         tuple2.erl -> cloudi_tuple.erl
     * Update pqueue4 code
 
-2012-02-18 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-02-18 Michael Truog   <mjtruog at gmail dot com>
 
     * Update zeromq to 2.1.11 and erlzmq2
     * Update jsx to 1.0rc1
     * Update misultin to 0.9f
     * Update trie and uuid code
 
-2012-01-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-01-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix a race condition within the usage of the hexpi thread pool
     * Prevent external services from receiving messages prematurely
     * Changes to make sure a failed send to an external service's OS pid
       causes the service to terminate
 
-2012-01-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-01-15 Michael Truog   <mjtruog at gmail dot com>
 
     * Add priority queuing to Erlang services
     * Add timeout events to remove any requests that remain within the
@@ -4361,7 +4365,7 @@
       log redirect configuration)
     * Delay node reconnect attempts to allow for normal startup time
 
-2012-01-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2012-01-05 Michael Truog   <mjtruog at gmail dot com>
 
     * Add floating point number usage for process and thread counts, so that
       it represents a ceil for numbers > 1.0 or a round for numbers < 1.0
@@ -4371,11 +4375,11 @@
       when necessary, within the CloudI API
     * Add the ability to redirect log output to a different Erlang node
 
-2011-12-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-11 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.9 (alpha) released
 
-2011-12-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-09 Michael Truog   <mjtruog at gmail dot com>
 
     * Add C++ CloudI API interface, based on the C CloudI API and integrated
       with the hexpi test
@@ -4386,28 +4390,28 @@
       invalid input exceptions within the CloudI API implementations
     * Add interface to restart a job through the CloudI Job API
 
-2011-12-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-04 Michael Truog   <mjtruog at gmail dot com>
 
     * Change the external job configuration to not rely on command-line
       arguments to avoid replicating configuration values
       (instead use automatically assigned environmental variables,
        managed by the CloudI API source code)
 
-2011-12-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-03 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the python and ruby variations on the msg_size test
     * Increase the C/C++ message buffer size to 2GB (from 4MB),
       to match the current tcp packet encoding limitation
     * Move cloudi_job_misultin to be cloudi_job_http
 
-2011-12-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-02 Michael Truog   <mjtruog at gmail dot com>
 
     * Add java msg_size test and make the java socket handling more robust
     * Catch cloudi_job Erlang module timeout exceptions and return as the
       expected error timeout return value
     * Add request_info parsing (expected to always be key/value pairs)
 
-2011-11-30 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-11-30 Michael Truog   <mjtruog at gmail dot com>
 
     * Change external tcp job handling to utilize a 4 byte header
       (so the max total message size possible for tcp jobs becomes 2GB, but
@@ -4420,169 +4424,169 @@
     * Fix stderr/stdout stream buffering in the Java CloudI API
     * Add the ability to forward with new job state within an Erlang CloudI job
 
-2011-11-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-11-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Add code path add/remove/get operations to the CloudI Job API, to provide
       an easy way for the code paths to be modified before an internal job is
       started in a directory CloudI's code server isn't aware of.
 
-2011-11-26 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-11-26 Michael Truog   <mjtruog at gmail dot com>
 
     * Add the erlang variation to the http_req test
     * Add HTTP headers to the request_info
     * Add loglevel_set to the CloudI Job API, to dynamically change the loglevel
     * Fix a JSON-RPC protocol version problem
 
-2011-11-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-11-25 Michael Truog   <mjtruog at gmail dot com>
 
     * Add priorities to CloudI messages
     * Add both request_info and response_info to CloudI messages (not yet used)
     * Fix a bug with C/C++ CloudI API data handling
 
-2011-11-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-11-20 Michael Truog   <mjtruog at gmail dot com>
 
     * Make the CloudI logger work with logrotate without special configuration
     * Prevent any services from flooding the CloudI logger
     * Fix ACL allow/deny for complex destinations
     * Make HTTP method suffixes on service destinations on by default
 
-2011-09-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-09-06 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.8 (alpha) released
 
-2011-08-28 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-08-28 Michael Truog   <mjtruog at gmail dot com>
 
     * http_req test now includes Java, Ruby, Python implementations
       (in addition to the C implementation)
     * C/C++, Java, Python, Ruby CloudI API includes the
       request_http_qs_parse function for storing the parsed HTTP query string
 
-2011-08-16 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-08-16 Michael Truog   <mjtruog at gmail dot com>
 
     * http_req C test now handles query strings
     * All requests and responses now have a terminating null ('\0')
       character that is not included in their length, so that it is
       easier to use C string functions without errors
 
-2011-08-13 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-08-13 Michael Truog   <mjtruog at gmail dot com>
 
     * rebar/reltool bug fixed for Erlang R14B03
 
-2011-06-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-06-23 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.7 (alpha) released
     * autoconf build system bug fixed
     * Updated FAQ documentation
 
-2011-05-14 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-05-14 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.6 (alpha) released
     * autoconf/automake/rebar build system fixed in many ways
     * Add FAQ documentation and more source code comments
 
-2011-04-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-04-25 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.5 (alpha) released
     * build system fixes
 
-2011-04-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-04-23 Michael Truog   <mjtruog at gmail dot com>
 
     * Job API jobs_remove() now takes UUIDs and
       jobs() returns tuples with the UUID as the key
     * message UUIDs now include the distributed Erlang node name
 
-2011-04-15 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-04-15 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.4 (alpha) released
     * Job API tested with JSON-RPC and Erlang formats over HTTP
     * Add python Job API JSON-RPC source code
     * Add python test of the Job API
 
-2011-04-08 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-04-08 Michael Truog   <mjtruog at gmail dot com>
 
     * Add jsx
     * Update misultin and erlzmq
     * Add the flood test
     * Fix possible API encoding errors
 
-2011-03-29 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-29 Michael Truog   <mjtruog at gmail dot com>
 
     * various bugfixes
     * CloudI version 0.1.3 (alpha) released
 
-2011-03-27 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-27 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix erlzmq problems, switch to R14B02 for erlzmq/ZeroMQ testing
     * Improve cloudi_job_zeromq
     * Fix Erlang service API (cloudi_job) bugs
 
-2011-03-24 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-24 Michael Truog   <mjtruog at gmail dot com>
 
     * ZeroMQ autoconf integration to provide erlzmq2
     * Add cloudi_job_zeromq service for ZeroMQ bridge
     * Add send_async_active API calls to Erlang CloudI API
       (with send_async_passive == send_async) to avoid blocking
 
-2011-03-21 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-21 Michael Truog   <mjtruog at gmail dot com>
 
     * Fix installation problems
     * CloudI version 0.1.2 (alpha) re-released
 
-2011-03-20 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-20 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.2 (alpha) released
     * list_pg and list_pg_data improvements/bugfixes
     * Node reconnects work properly
 
-2011-03-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-17 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_job_api service for dynamic configuration
     * Add cloudi_job_filesystem service for caching static files
     * Add UDP keepalive mechanism for external processes
     * various bugfixes
 
-2011-03-10 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-10 Michael Truog   <mjtruog at gmail dot com>
 
     * Add cloudi_job_timers for sending messages on timers
     * Add simple HTTP request test with one OS process, no threads
     * Convert python erlang ei encoding to ruby to remove erlectricity
 
-2011-03-06 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-06 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.1 (alpha) released, packaged
 
-2011-03-05 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-05 Michael Truog   <mjtruog at gmail dot com>
 
     * add ruby API and ruby service for http test
 
-2011-03-04 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-04 Michael Truog   <mjtruog at gmail dot com>
 
     * add ruby/gem build integration
     * add ruby erlectricity integration, API in-progress
     * fix major bugs with overloading external processes and
       file descriptor blocking reading at allocation boundaries
 
-2011-03-03 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-03 Michael Truog   <mjtruog at gmail dot com>
 
     * add mcast_async API function
 
-2011-03-02 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-03-02 Michael Truog   <mjtruog at gmail dot com>
 
     * make install now works using autoconf/automake/rebar
     * configure files now included
     * version 0.1.0 package created
 
-2011-02-25 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-25 Michael Truog   <mjtruog at gmail dot com>
 
     * tests/http now includes a java service implementation
     * the java API is functional after some bugfixes and changing the jar
     * various bugfixes
 
-2011-02-23 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-23 Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.0 (alpha) released
 
-2011-02-22 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-22 Michael Truog   <mjtruog at gmail dot com>
 
     * hexpi test created with previous hexidecimal pi generation test, but
       now structured with services.
@@ -4591,18 +4595,18 @@
       previous configuration
     * node connection management added
 
-2011-02-17 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-17 Michael Truog   <mjtruog at gmail dot com>
 
     * misultin now accepts incoming requests and can handle compressed requests
     * simple tests exist to use curl for misultin and a python test service
     * C API added
 
-2011-02-11 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-11 Michael Truog   <mjtruog at gmail dot com>
 
     * pgsql, mysql, TokyoTyrant, couchdb, memcached data modules converted
       to the cloudi_job behavior, though the binary responses need work
 
-2011-02-09 Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-02-09 Michael Truog   <mjtruog at gmail dot com>
 
     * python API added with BSD licensed encoding for Erlang term
     * java API added using jinterface encoding
@@ -4611,12 +4615,12 @@
       (exists as module list_pg, later it becomes cpg)
     * rebar and autoconf build integration added
 
-2011-12-.. Michael Truog   <mjtruog [at] gmail (dot) com>
+2011-12-.. Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.1.0 (alpha) rewrite started
     * trie implementation created
 
-2010-04-10	Michael Truog	<mjtruog [at] gmail (dot) com>
+2010-04-10	Michael Truog	<mjtruog at gmail dot com>
 
     * CloudI version 0.0.10 (alpha)
         * add a JSON RPC server for the Cloudi API function calls
@@ -4627,7 +4631,7 @@
         * update referenced Erlang version to R13B02
           (to reflect the version currently deployed by faxien)
 
-2010-03-06    Michael Truog   <mjtruog [at] gmail (dot) com>
+2010-03-06    Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.0.9 (alpha)
         * bug fixes
@@ -4646,7 +4650,7 @@
         * make gcc and boost versions build configuration items
         * update g++ to 4.4.2 and boost to 1.42
 
-2009-10-29    Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-29    Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.0.8 (alpha)
         * add CouchDB database module
@@ -4656,7 +4660,7 @@
           The combination of the workInstance with the id will be unique
           for all work processed by the work module within a Cloudi instance.
 
-2009-10-14    Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-14    Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.0.7 (alpha)
         * add Tokyo Tyrant database module
@@ -4670,7 +4674,7 @@
           Erlang work module that created the work
           (in the same order the work was created)
 
-2009-10-10    Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-10    Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.0.6 (alpha)
         * cleanup other parts of the WorkerController code in the
@@ -4681,7 +4685,7 @@
         * automatically download g++ and boost from mirrors instead
           of requiring their presence within the source repository
 
-2009-10-09    Michael Truog   <mjtruog [at] gmail (dot) com>
+2009-10-09    Michael Truog   <mjtruog at gmail dot com>
 
     * CloudI version 0.0.5 (alpha)
         * make the cloud_worker_port process thread pool stable
@@ -4700,7 +4704,7 @@
           libc malloc
         * update g++ to 4.4.1 and boost to 1.40
 
-2009-10-03    Michael Truog    <mjtruog [at] gmail (dot) com>
+2009-10-03    Michael Truog    <mjtruog at gmail dot com>
 
     * CloudI version 0.0.4 (alpha)
         * shortnames are currently the only supported node names
@@ -4711,7 +4715,7 @@
           commands can be issued as an Erlang tuple passed as a list
           (for the query text)
 
-2009-09-29    Michael Truog    <mjtruog [at] gmail (dot) com>
+2009-09-29    Michael Truog    <mjtruog at gmail dot com>
 
     * CloudI version 0.0.3 (alpha)
         * fix logger so that remote nodes can log properly
@@ -4720,7 +4724,7 @@
           if the controlling VM exists
         * use monitors for remote nodes and remote processes
 
-2009-09-24    Michael Truog    <mjtruog [at] gmail (dot) com>
+2009-09-24    Michael Truog    <mjtruog at gmail dot com>
 
     * CloudI version 0.0.2 (alpha)
         * added arguments to work modules
@@ -4729,7 +4733,7 @@
         * cleaned up the cloud_worker_nodes and cloud_worker_scheduler
         * fix thread stop timeout problem in cloud_worker_port
 
-2009-09-01    Michael Truog    <mjtruog [at] gmail (dot) com>
+2009-09-01    Michael Truog    <mjtruog at gmail dot com>
 
     * initial public release of CloudI version 0.0.1 (alpha)
 
