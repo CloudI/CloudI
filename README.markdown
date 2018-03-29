@@ -1,4 +1,4 @@
-# [CloudI 1.7.3](http://cloudi.org)
+# [CloudI 1.7.3](https://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
@@ -56,7 +56,7 @@ system scalability within CloudI.
 
 ### Where should I find more information?
 
-Please see the [FAQ](http://cloudi.org/faq.html) for more details.
+Please see the [FAQ](https://cloudi.org/faq.html) for more details.
 
 ## INSTALLATION
 
@@ -107,7 +107,7 @@ Optional (default="no"):
 
 ### Building
 
-For configuration options, see [FAQ: 3.2 - Installation Options](http://cloudi.org/faq.html#3_Options).
+For configuration options, see [FAQ: 3.2 - Installation Options](https://cloudi.org/faq.html#3_Options).
 
     ./configure
     make
@@ -127,7 +127,7 @@ To stop CloudI:
 
 ## INTEGRATION
 
-See the [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#readme) or the [API documentation](http://cloudi.org/api.html#1_Intro)
+See the [Quick Start Guide](https://github.com/CloudI/CloudI/tree/master/doc#readme) or the [API documentation](https://cloudi.org/api.html#1_Intro)
 
 Integration points:
 

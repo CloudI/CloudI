@@ -193,7 +193,7 @@ are considered invalid and will likely contain request latency spikes.
 [`loadtest/results_v1_0_0/201206_20k_10kreqs/`](https://github.com/CloudI/loadtests/raw/master/tests/http_req/loadtest/results_v1_0_0/201206_tsung_output.tar.bz2):
 * 20,000 concurrent connections open
 * 10,000 requests/second maintained for 10 minutes
-* each supported programming language tested separately to determine [cumulative latency due to load](http://cloudi.org/faq.html#5_LoadTesting)
+* each supported programming language tested separately to determine [cumulative latency due to load](https://cloudi.org/faq.html#5_LoadTesting)
 * used `Ubuntu 12.04 LTS (GNU/Linux 3.2.0-20-generic x86_64)` with `Erlang R15B01`
 
 ## INFORMATION

@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -27,9 +27,9 @@
 
  -}
 
--- | Haskell <http://cloudi.org/api.html#1_Intro CloudI API>.
+-- | Haskell <https://cloudi.org/api.html#1_Intro CloudI API>.
 -- Example usage is available in the
--- <http://cloudi.org/tutorials.html#cloudi_examples integration tests>.
+-- <https://cloudi.org/tutorials.html#cloudi_examples integration tests>.
 
 module Foreign.CloudI
     ( Instance.RequestType(..)

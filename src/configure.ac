@@ -2,7 +2,7 @@
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
 AC_INIT([CloudI], [1.7.3], [mjtruog at protonmail dot com],
-        [cloudi], [http://cloudi.org/])
+        [cloudi], [https://cloudi.org/])
 AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 
 # paths to check for installations that are not standard but typically used

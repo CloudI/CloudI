@@ -73,7 +73,7 @@ June 7, 2017
   * All CloudI source code is under a MIT license instead of a
     BSD-style license to make reuse simpler and to be GPL-compatible
   * The chroot external service configuration option was added
-    (http://cloudi.org/api.html#2_services_add_config_opts)
+    (https://cloudi.org/api.html#2_services_add_config_opts)
   * The order external service configuration options are applied
     changed from owner, limit, nice, directory
     to chroot, limit, nice, owner, directory which means that the
@@ -102,9 +102,9 @@ March 29, 2017
       state objects have the two arguments (State, API) after the
       common arguments.
       The C examples have been updated to show the changes
-      (http://cloudi.org/tutorials.html#cloudi_examples).
+      (https://cloudi.org/tutorials.html#cloudi_examples).
       More function argument discussion is at
-      http://cloudi.org/faq.html#1_Reactive
+      https://cloudi.org/faq.html#1_Reactive
     * The CloudI API implementations had the function
       request_http_qs_parse name change to info_key_value_parse
   * The Go CloudI API was added
@@ -120,7 +120,7 @@ March 29, 2017
     allow all CloudI logging to be sent to stdout
   * The count integration test was added to show how thread local
     state works in all supported programming languages
-    (http://cloudi.org/tutorials.html#cloudi_examples).
+    (https://cloudi.org/tutorials.html#cloudi_examples).
   * A bug with CloudI Service API services_update usage on
     external services was fixed, to allow the service configuration
     values: timeout_async, timeout_sync, and the service configuration
@@ -158,16 +158,16 @@ January 11, 2017
       had their meaning change to rely on a greater than or equal to
       comparison instead of a greater than comparison, though the same
       default behavior is preserved with this change
-      (http://cloudi.org/api.html#2_services_add_config_opts)
+      (https://cloudi.org/api.html#2_services_add_config_opts)
   * Now cloudi_core doesn't use any port drivers or NIFs except what is
     provided within Erlang/OTP, and process dictionary use is minimal
   * The Elixir module CloudILogger is now included in the cloudi_core
     Erlang application to simplify usage of CloudI in Elixir source code
   * Bugs related to CloudI logging syslog integration have been fixed and
     more options for syslog use have been added
-    (http://cloudi.org/api.html#2_logging_syslog_set has more information)
+    (https://cloudi.org/api.html#2_logging_syslog_set has more information)
   * The restart_delay service configuration option was added
-    (http://cloudi.org/api.html#2_services_add_config_opts_restart_delay)
+    (https://cloudi.org/api.html#2_services_add_config_opts_restart_delay)
   * CloudI service restarts have been made synchronous to ensure all
     termination has completed before initialization of new processes begins
     (to improve reliable management of global state during a restart)
@@ -179,8 +179,8 @@ January 11, 2017
   * All CloudI API implementations now handle a null return value as a response
     to create a null response, if the programming language has a concept of
     null (for more information, see the null integration test
-    http://cloudi.org/tutorials.html#cloudi_examples and/or read about
-    a null response at http://cloudi.org/faq.html#4_Null)
+    https://cloudi.org/tutorials.html#cloudi_examples and/or read about
+    a null response at https://cloudi.org/faq.html#4_Null)
   * All CloudI API implementations now put stdout and stderr into unbuffered
     mode to ensure CloudI service output is logged as quickly as possible
   * Bugs were fixed and other improvements were added
@@ -195,7 +195,7 @@ October 7, 2016
      always saved previously under these conditions)
   * Request rate testing was done both with and without the persistence
     of service request data (using cloudi_service_queue in destination mode)
-    as described at http://cloudi.org/faq.html#5_LoadTesting
+    as described at https://cloudi.org/faq.html#5_LoadTesting
   * The 'nice' and 'cgroup' service configuration options were added for
     external services
   * The logging_set CloudI Service API function was added to allow
@@ -211,14 +211,14 @@ September 15, 2016
     with internal services and OS process restarts with external services
     while CloudI ensures service requests are not lost and service request
     handlers are not interrupted in any of the service processes or threads
-    (see http://cloudi.org/api.html#2_services_update for more information)
+    (see https://cloudi.org/api.html#2_services_update for more information)
   * A Java user tutorial has been added based on the work of Bruce Kissinger
-    (http://cloudi.org/tutorial_java.html)
+    (https://cloudi.org/tutorial_java.html)
   * The Java CloudI API can now use method references with Java 8
   * New service configuration options were added or improved:
     'directory', 'dispatcher_pid_options', 'init_pid_options',
     'request_pid_options', 'info_pid_options'
-    (http://cloudi.org/api.html#2_services_add has more information)
+    (https://cloudi.org/api.html#2_services_add has more information)
   * Many of the database services were removed with their dependencies,
     from the main repository due to service development demonstrating that
     failures remain isolated when using a database client locally within a
@@ -252,7 +252,7 @@ December 23, 2015
   * The CloudI logging output now has an entry for the function/arity info
     which is captured in Elixir and can be provided in Erlang (until EEP45)
   * Javascript CloudI API now works properly with node.js version > 0.12.1
-  * Loadtests were ran (http://cloudi.org/faq.html#5_LoadTesting)
+  * Loadtests were ran (https://cloudi.org/faq.html#5_LoadTesting)
   * Bugs were fixed and other improvements were added
     (see the ChangeLog for more detail)
 
@@ -278,7 +278,7 @@ April 12, 2015
         main documentation
   * External services can now set OS process resource limits with the
     'limit' service configuration option
-    (http://cloudi.org/api.html#2_services_add_config_opts_limit)
+    (https://cloudi.org/api.html#2_services_add_config_opts_limit)
   * A few new CloudI data structures:
     cloudi_queue, cloudi_future, cloudi_service_future
     (cloudi_queue can handle service request validation, failures, and retries
@@ -301,8 +301,8 @@ December 20, 2014
   * JavaScript/node.js, PHP and Perl are now supported programming languages
     with their own CloudI API implementations
   * A Quick Start now has intros for all supported programming languages
-    (http://cloudi.org/#quick_start)
-  * Loadtests were ran (http://cloudi.org/faq.html#5_LoadTesting)
+    (https://cloudi.org/#quick_start)
+  * Loadtests were ran (https://cloudi.org/faq.html#5_LoadTesting)
   * Various bugs were fixed
 
 September 30, 2014
@@ -340,7 +340,7 @@ September 30, 2014
     so a series of Erlang (or Elixir) functions can be executed
     before and/or after a cloudi_service behaviour function is executed and
     possibly modify the service state (for both internal and external services)
-    (http://cloudi.org/api.html#2_services_add_config_opts_aspects_init_after)
+    (https://cloudi.org/api.html#2_services_add_config_opts_aspects_init_after)
   * Service initialization and termination are now enforced to be synchronous
     as described here (for both internal and external services):
     * initialization must be completed before the next service in a sequence
@@ -349,7 +349,7 @@ September 30, 2014
       termination timeout defined by slightly less than MaxT/MaxR
       (clamped to [1..60] seconds)
   * lager formatters and lager backends are now supported as described at
-    http://cloudi.org/api.html#2_logging_formatters_set
+    https://cloudi.org/api.html#2_logging_formatters_set
   * cassandra CQL support was added by Irina Guberman
     (as cloudi_service_db_cassandra_cql)
   * Added Riak support with the cloudi_service_db_riak service
@@ -375,7 +375,7 @@ May 31, 2014
     * EC2 node discovery now works as expected, selecting based on
       tags and/or security groups
     * Allow node connections to be hidden for more complex network topologies
-    (see http://cloudi.org/api.html#2_nodes_set)
+    (see https://cloudi.org/api.html#2_nodes_set)
   * Add cloudi_service_queue for persistent queuing of service requests
     with CT tests
   * Add cloudi_service_filesystem file update notification service requests

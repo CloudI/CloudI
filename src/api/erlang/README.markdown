@@ -4,5 +4,5 @@ Using the Erlang CloudI API relies on the [`cloudi_service`](https://github.com/
 behaviour which is a module loaded by the `cloudi_core` Erlang application
 (i.e., it is always available within the Erlang VM when CloudI is running).
 
-Please see the [API documentation](http://cloudi.org/api.html) for more details.
+Please see the [API documentation](https://cloudi.org/api.html) for more details.
 

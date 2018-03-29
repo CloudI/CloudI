@@ -19,8 +19,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 8f8a1a73ea9633c4827774c90fd0437697094f0b (v1.7.3)`
-- `Tue Feb 27 10:22:17 PST 2018`
+- `commit 62de77792e2e03b33dea6c5a471924ed8419e18e`
+- `Thu Mar 29 10:48:37 PDT 2018`
 - `MIT`
 
 `erlang_term`

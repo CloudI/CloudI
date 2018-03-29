@@ -12,7 +12,7 @@
 <body>
 
 <div id="header">
-<a href="http://cloudi.org/">
+<a href="https://cloudi.org/">
 Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="images/cloud.png" />
 </a>
 </div>
@@ -24,8 +24,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="http://sourceforge.net/projects/cloudi/files/latest/download" target="_blank">Download</a></li>
-    <li><a href="https://github.com/CloudI/CloudI/tree/master#readme">Source</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.3.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
 </div>
@@ -33,7 +33,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="content">
   <h1>Frequently Asked Questions</h1>
   <center><h3>version 1.7.3<br />
-              last updated on February 27<sup>th</sup> 2018</h3></center>
+              last updated on March 29<sup>th</sup> 2018</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -491,7 +491,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>Integration Development</li>
       <li>Operations Maintenance</li>
     </ul>
-    Contact <a href="mailto:mjtruog@protonmail.com">Michael Truog</a>
+    Contact <a href="mailto:mjtruog at protonmail dot com">Michael Truog</a>
     if you are interested in commercial CloudI support.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
@@ -521,7 +521,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <a name="1_WhoDevelops"></a>
   <h3>1.9 - Who develops CloudI?</h3>
   <p class="paragraph">
-    <a href="mailto:mjtruog@protonmail.com">Michael Truog</a>
+    <a href="mailto:mjtruog at protonmail dot com">Michael Truog</a>
     <a href="https://github.com/CloudI/CloudI/blob/master/src/AUTHORS" target="_blank">and others</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
@@ -721,7 +721,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     programming languages while objects are not).
   </p>
   <p class="paragraph">
-    When a <a href="http://cloudi.org/api.html#1_subscribe">subscribe</a>d
+    When a <a href="api.html#1_subscribe">subscribe</a>d
     callback function is called with the CloudI service request data,
     the individual values are the most recent values.  For example, the
     timeout parameter in the service request is automatically decremented
@@ -730,16 +730,16 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     identify the service request, and the source process identifier that
     may receive the service request response, though all other parameters
     can be changed with a call to
-    <a href="http://cloudi.org/api.html#1_forward">forward</a> the service
+    <a href="api.html#1_forward">forward</a> the service
     request to a new callback function execution.  For example,
     the service name pattern may automatically change with a new
     callback function execution even if the same service name is used for
     the forward, due to the dynamic nature of service name pattern
     subscriptions.  The execution time spent within the callback function
     is automatically decremented from the timeout value used for the
-    <a href="http://cloudi.org/api.html#1_return">return</a>
-    or <a href="http://cloudi.org/api.html#1_forward">forward</a>
-    if the <a href="http://cloudi.org/api.html#2_services_add_config_opts">'request_timeout_adjustment' service configuration option</a>
+    <a href="api.html#1_return">return</a>
+    or <a href="api.html#1_forward">forward</a>
+    if the <a href="api.html#2_services_add_config_opts">'request_timeout_adjustment' service configuration option</a>
     is set to true (and the timeout value is not manually modified).
   </p>
   <p class="paragraph">
@@ -753,7 +753,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
     commercial support for a private product, contact
-    <a href="mailto:mjtruog@protonmail.com">Michael Truog</a>.
+    <a href="mailto:mjtruog at protonmail dot com">Michael Truog</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -765,7 +765,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   Main Web Site:
   </td><td>
-  <a href="http://cloudi.org">http://cloudi.org</a>
+  <a href="https://cloudi.org">https://cloudi.org</a>
   </td></tr><tr><td>
   Source Code:
   </td><td>
@@ -773,7 +773,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Releases:
   </td><td>
-  <a href="http://sourceforge.net/projects/cloudi/files/" target="_blank">http://sourceforge.net/projects/cloudi/files/</a>
+  <a href="https://osdn.net/pkg/cloudi/cloudi" target="_blank">https://osdn.net/pkg/cloudi/cloudi</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -799,7 +799,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   IRC Server:
   </td><td>
-  <a href="http://freenode.net/irc_servers.shtml" target="_blank">irc.freenode.net</a>
+  <a href="http://freenode.net/" target="_blank">irc.freenode.net</a>
   </td></tr><tr><td>
   Chat Room:
   </td><td>
@@ -816,7 +816,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </td></tr><tr><td>
   Releases:
   </td><td>
-  <a href="http://sourceforge.net/api/file/index/project-id/281423/mtime/desc/limit/20/rss" target="_blank">http://sourceforge.net/api/file/index/project-id/281423/mtime/desc/limit/20/rss</a>
+  <a href="https://osdn.net/projects/cloudi/releases/rss" target="_blank">https://osdn.net/projects/cloudi/releases/rss</a>
   </td></tr></table>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -898,7 +898,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">online form</a>.
     If you are unable to provide information about the problem publicly,
     specify the information is private in an email to
-    <a href="mailto:mjtruog@protonmail.com">Michael Truog</a>.
+    <a href="mailto:mjtruog at protonmail dot com">Michael Truog</a>.
   </p>
   <div class="top"><a href="#2_contents">Top</a></div>
 
@@ -969,7 +969,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     reported by
     <a href="https://github.com/CloudI/CloudI/issues/new" target="_blank">opening an issue</a>
     or contacting
-    <a href="mailto:mjtruog@protonmail.com">the project creator</a>. All
+    <a href="mailto:mjtruog at protonmail dot com">the project creator</a>. All
     complaints will be reviewed and investigated and will result in a
     response that is deemed necessary and appropriate to the circumstances.
     The project team is obligated to maintain confidentiality with regard to
@@ -1812,7 +1812,7 @@ sudo cloudi stop
     services that are normally not present:
     <ul>
       <li>A Microservice abstraction for simpler <a href="http://en.wikipedia.org/wiki/Service_oriented_architecture" target="_blank">Service Oriented Architecture (SOA)</a> development (Erlang processes are considered "Nanoservices").</li>
-      <li>Any service can <a href="http://cloudi.org/api.html#2_services_update" target="_blank">easily be updated</a> without downtime (<a href="http://erlang.org/doc/design_principles/appup_cookbook.html" target="_blank">Erlang/OTP upgrades</a> require large amounts of ad-hoc development for upgrades).</li>
+      <li>Any service can <a href="api.html#2_services_update" target="_blank">easily be updated</a> without downtime (<a href="http://erlang.org/doc/design_principles/appup_cookbook.html" target="_blank">Erlang/OTP upgrades</a> require large amounts of ad-hoc development for upgrades).</li>
       <li>Protocol agnostic transactional communication with a small consistent API (i.e., the <a href="api.html#Service" target="_blank">CloudI API</a>).</li>
       <li>Each external service thread uses its own <a href="api.html#Service" target="_blank">CloudI API</a> object with a separate connection to the Erlang VM which avoids any contention that is normally seen with Erlang ports, Erlang cnodes and Erlang jinterface usage.</li>
       <li>All services are managed with fault tolerance constraints, in the same way as Erlang/OTP supervisors.</li>

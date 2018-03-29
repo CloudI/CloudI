@@ -73,5 +73,5 @@ CloudI Service API usage examples:
 * [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/path.py) (Add to the Erlang code search path)
 * [Python](https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/run.py) (Add/Remove nodes, Add/Remove ACL entries, Start/Stop services)
 
-Please see the [CloudI Service API documentation](http://cloudi.org/api.html#CloudI)
+Please see the [CloudI Service API documentation](https://cloudi.org/api.html#CloudI)
 for more details.

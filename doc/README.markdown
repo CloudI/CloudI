@@ -20,7 +20,7 @@
     * **(Ubuntu)** `sudo apt-get install wget curl`
     * **(OSX)**    `sudo port install wget curl`
 
-1.  Get CloudI running (need [./configure help?](http://cloudi.org/faq.html#3_Options)):
+1.  Get CloudI running (need [./configure help?](https://cloudi.org/faq.html#3_Options)):
 
         wget https://osdn.net/dl/cloudi/cloudi-1.7.3.tar.gz
         tar zxvf cloudi-1.7.3.tar.gz
@@ -125,8 +125,8 @@
     ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
-    described in the [services_add documentation](http://cloudi.org/api.html#2_services_add).
-    More complex C [examples are listed here](http://cloudi.org/faq.html#6_C).
+    described in the [services_add documentation](https://cloudi.org/api.html#2_services_add).
+    More complex C [examples are listed here](https://cloudi.org/faq.html#6_C).
 
 ### C++
 
@@ -225,8 +225,8 @@
     ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
-    described in the [services_add documentation](http://cloudi.org/api.html#2_services_add).
-    More complex C++ [examples are listed here](http://cloudi.org/faq.html#6_C).
+    described in the [services_add documentation](https://cloudi.org/api.html#2_services_add).
+    More complex C++ [examples are listed here](https://cloudi.org/faq.html#6_C).
 
 ### Elixir
 
@@ -334,7 +334,7 @@
     If an error occurred with a curl command it would be displayed
     in the shell.
     The available service configuration parameters are described in
-    the [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    the [services_add documentation](https://cloudi.org/api.html#2_services_add).
 
 ### Erlang
 
@@ -429,8 +429,8 @@
     (i.e., CloudI runtime usage with Erlang) see the
     [examples in the source code repository](https://github.com/CloudI/CloudI/tree/develop/examples).
     The available service configuration parameters are described in
-    the [services_add documentation](http://cloudi.org/api.html#2_services_add).
-    More complex Erlang [examples are listed here](http://cloudi.org/faq.html#6_Erlang).
+    the [services_add documentation](https://cloudi.org/api.html#2_services_add).
+    More complex Erlang [examples are listed here](https://cloudi.org/faq.html#6_Erlang).
 
 ### Go
 
@@ -525,8 +525,8 @@
     ERROR entry within the /usr/local/var/log/cloudi/cloudi.log file.
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
-    described in the [services_add documentation](http://cloudi.org/api.html#2_services_add).
-    More complex Go [examples are listed here](http://cloudi.org/faq.html#6_Go).
+    described in the [services_add documentation](https://cloudi.org/api.html#2_services_add).
+    More complex Go [examples are listed here](https://cloudi.org/faq.html#6_Go).
 
 ### Java
 
@@ -667,9 +667,9 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex Java
-    [examples are listed here](http://cloudi.org/faq.html#6_Java).
+    [examples are listed here](https://cloudi.org/faq.html#6_Java).
 
 ### JavaScript
 
@@ -752,9 +752,9 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex JavaScript
-    [examples are listed here](http://cloudi.org/faq.html#6_JavaScript).
+    [examples are listed here](https://cloudi.org/faq.html#6_JavaScript).
 
 ### Perl
 
@@ -837,9 +837,9 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex Perl
-    [examples are listed here](http://cloudi.org/faq.html#6_Perl).
+    [examples are listed here](https://cloudi.org/faq.html#6_Perl).
 
 ### PHP
 
@@ -928,9 +928,9 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex PHP
-    [examples are listed here](http://cloudi.org/faq.html#6_PHP).
+    [examples are listed here](https://cloudi.org/faq.html#6_PHP).
 
 ### Python
 
@@ -1003,9 +1003,9 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex Python
-    [examples are listed here](http://cloudi.org/faq.html#6_Python).
+    [examples are listed here](https://cloudi.org/faq.html#6_Python).
 
 ### Ruby
 
@@ -1094,7 +1094,7 @@
     If an error occurred with a curl command it would be displayed
     in the shell.  The available service configuration parameters are
     described in the
-    [services_add documentation](http://cloudi.org/api.html#2_services_add).
+    [services_add documentation](https://cloudi.org/api.html#2_services_add).
     More complex Ruby
-    [examples are listed here](http://cloudi.org/faq.html#6_Ruby).
+    [examples are listed here](https://cloudi.org/faq.html#6_Ruby).
 

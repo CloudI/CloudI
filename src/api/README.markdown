@@ -44,7 +44,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 
 ### Examples exist within the integration tests:
 
-#### [C/C++](http://cloudi.org/faq.html#6_C)
+#### [C/C++](https://cloudi.org/faq.html#6_C)
 
 * [`src/tests/count` (C, no threads) Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/c/main.c)
 * [`src/tests/http_req` (C, no threads) Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/c/main.c)
@@ -53,7 +53,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/null` (C, no threads) Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/c/main.c)
 * [`src/tests/hexpi` (C++, threads) Hexadecimal PI Test](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/cxx/main.cpp)
 
-#### [Erlang](http://cloudi.org/faq.html#6_Erlang)
+#### [Erlang](https://cloudi.org/faq.html#6_Erlang)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/erlang/src/cloudi_service_test_count.erl)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/erlang/src/cloudi_service_test_http_req.erl)
@@ -62,7 +62,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/erlang/src/cloudi_service_test_null.erl)
 * [Hexadecimal PI Fault-Tolerant Map/Reduce Test](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/erlang/src/cloudi_service_test_hexpi.erl)
 
-#### [Go](http://cloudi.org/faq.html#6_Go)
+#### [Go](https://cloudi.org/faq.html#6_Go)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/gopath/src/count_go/main.go)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/gopath/src/http_req_go/main.go)
@@ -70,7 +70,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/gopath/src/messaging_go/main.go)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/gopath/src/null_go/main.go)
 
-#### [Haskell](http://cloudi.org/faq.html#6_Haskell)
+#### [Haskell](https://cloudi.org/faq.html#6_Haskell)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/haskell/Main.hs)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/haskell/Main.hs)
@@ -78,7 +78,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/haskell/Main.hs)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/haskell/Main.hs)
 
-#### [Java](http://cloudi.org/faq.html#6_Java)
+#### [Java](https://cloudi.org/faq.html#6_Java)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/java/org/cloudi/tests/count/Task.java)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/java/org/cloudi/tests/http_req/Task.java)
@@ -86,7 +86,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/java/org/cloudi/tests/messaging/Task.java)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/java/org/cloudi/tests/null_/Task.java)
 
-#### [Javascript](http://cloudi.org/faq.html#6_JavaScript)
+#### [Javascript](https://cloudi.org/faq.html#6_JavaScript)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.js)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.js)
@@ -94,7 +94,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.js)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.js)
 
-#### [OCaml](http://cloudi.org/faq.html#6_OCaml)
+#### [OCaml](https://cloudi.org/faq.html#6_OCaml)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/ocaml/main.ml)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/ocaml/main.ml)
@@ -102,7 +102,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/ocaml/main.ml)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/ocaml/main.ml)
 
-#### [Perl](http://cloudi.org/faq.html#6_Perl)
+#### [Perl](https://cloudi.org/faq.html#6_Perl)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.pl)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.pl)
@@ -110,7 +110,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/MessagingTask.pm)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.pl)
 
-#### [PHP](http://cloudi.org/faq.html#6_PHP)
+#### [PHP](https://cloudi.org/faq.html#6_PHP)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.php)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.php)
@@ -118,7 +118,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.php)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.php)
 
-#### [Python](http://cloudi.org/faq.html#6_Python)
+#### [Python](https://cloudi.org/faq.html#6_Python)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.py)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.py)
@@ -126,7 +126,7 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.py)
 
-#### [Ruby](http://cloudi.org/faq.html#6_Ruby)
+#### [Ruby](https://cloudi.org/faq.html#6_Ruby)
 
 * [`src/tests/count` Basic Count Test](https://github.com/CloudI/CloudI/blob/master/src/tests/count/count.rb)
 * [`src/tests/http_req` Basic HTTP Request Test](https://github.com/CloudI/CloudI/blob/master/src/tests/http_req/http_req.rb)
@@ -134,6 +134,6 @@ SWIG could be used to create a CloudI API for Lua, R, D, etc.
 * [`src/tests/messaging` Basic Messaging Test](https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.rb)
 * [`src/tests/null` Basic Null Response Test](https://github.com/CloudI/CloudI/blob/master/src/tests/null/null.rb)
 
-Please see the [CloudI API documentation](http://cloudi.org/api.html#Service)
+Please see the [CloudI API documentation](https://cloudi.org/api.html#Service)
 for more details.
 
