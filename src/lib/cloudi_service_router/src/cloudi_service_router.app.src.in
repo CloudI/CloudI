@@ -5,9 +5,15 @@
   [{description, "CloudI Router Service"},
    {vsn, "@VERSION@"},
    {modules, [
-        cloudi_service_router
+        cloudi_service_router,
+        cloudi_service_router_client,
+        cloudi_service_router_ssh_client,
+        cloudi_service_router_ssh_server
         ]},
    {registered, []},
+   {included_applications, [
+        ssh
+        ]},
    {applications, [
         cloudi_x_quickrand,
         cloudi_x_trie,

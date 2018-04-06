@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-04-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add ssh connectivity to cloudi_service_router
+
 2018-03-29 Michael Truog   <mjtruog at protonmail dot com>
 
     * Switch cloudi.org links from http to https

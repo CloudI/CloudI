@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -49,6 +49,11 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
+-define(DEFAULT_SSH,                          undefined).
+        % Enable a ssh server to receiving remote service requests.
+        % The user_dir and system_dir are required options.
+        % The ip option and port option will likely need to be set
+        % based on your network configuration.
 -define(DEFAULT_ADD_PREFIX,                        true). % to destinations
 -define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
 -define(DEFAULT_VALIDATE_REQUEST,             undefined).
@@ -63,12 +68,19 @@
         % to accumulate a failure count indefinitely.
 
 % destinations configuration arguments
+-define(DEFAULT_REMOTE,                       undefined).
+        % Should the service request be routed to a remote host?
+        % Takes a list of options, with only the host_name option
+        % required.  The only value for the type option is currently ssh,
+        % so using remote with a list of options require that ssh was
+        % configured with its list of options (that are used as defaults here).
 -define(DEFAULT_MODE,                       round_robin).
 -define(DEFAULT_PARAMETERS_ALLOWED,                true).
 -define(DEFAULT_PARAMETERS_STRICT_MATCHING,        true).
 
 -record(destination,
     {
+        remote :: undefined | cloudi_service_router_client:state(),
         mode = ?DEFAULT_MODE :: random | round_robin,
         service_names = [] :: list(string()),
         index = 1 :: pos_integer(),
@@ -82,6 +94,7 @@
 
 -record(state,
     {
+        ssh :: undefined | cloudi_service_router_ssh_server:state(),
         validate_request_info :: undefined | fun((any()) -> boolean()),
         validate_request :: undefined | fun((any(), any()) -> boolean()),
         failures_source_die :: boolean(),
@@ -103,6 +116,7 @@
 
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
+        {ssh,                           ?DEFAULT_SSH},
         {add_prefix,                    ?DEFAULT_ADD_PREFIX},
         {validate_request_info,         ?DEFAULT_VALIDATE_REQUEST_INFO},
         {validate_request,              ?DEFAULT_VALIDATE_REQUEST},
@@ -110,10 +124,11 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {failures_source_max_count,     ?DEFAULT_FAILURES_SOURCE_MAX_COUNT},
         {failures_source_max_period,    ?DEFAULT_FAILURES_SOURCE_MAX_PERIOD},
         {destinations,                  []}],
-    [AddPrefix,
+    [SSHOptions, AddPrefix,
      ValidateRequestInfo0, ValidateRequest0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
      DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
+    SSH = cloudi_service_router_ssh_server:new(SSHOptions, Dispatcher),
     true = is_boolean(AddPrefix),
     ValidateRequestInfo1 = cloudi_args_type:
                            function_optional(ValidateRequestInfo0, 1),
@@ -127,11 +142,12 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_list(DestinationsL) andalso
            (erlang:length(DestinationsL) > 0),
     ConfigDefaults = [
-        {mode,                       ?DEFAULT_MODE},
-        {parameters_allowed,         ?DEFAULT_PARAMETERS_ALLOWED},
-        {parameters_strict_matching, ?DEFAULT_PARAMETERS_STRICT_MATCHING},
-        {parameters_selected,        []},
-        {service_names,              []}],
+        {remote,                        ?DEFAULT_REMOTE},
+        {mode,                          ?DEFAULT_MODE},
+        {parameters_allowed,            ?DEFAULT_PARAMETERS_ALLOWED},
+        {parameters_strict_matching,    ?DEFAULT_PARAMETERS_STRICT_MATCHING},
+        {parameters_selected,           []},
+        {service_names,                 []}],
     Destinations = lists:foldl(fun({PatternSuffix, L}, D) ->
         cloudi_service:subscribe(Dispatcher, PatternSuffix),
         case L of
@@ -145,11 +161,13 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 cloudi_x_trie:store(Prefix ++ PatternSuffix,
                                     #destination{service_names = Names}, D);
             [_ | _] ->
-                [Mode,
+                [RemoteOptions,
+                 Mode,
                  ParametersAllowed,
                  ParametersStrictMatching,
                  ParametersSelected,
                  Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
+                Remote = cloudi_service_router_client:new(RemoteOptions, SSH),
                 true = is_atom(Mode) andalso
                        ((Mode =:= random) orelse
                         (Mode =:= round_robin)),
@@ -174,7 +192,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                         ((ParametersAllowed =:= false) andalso
                          (lists:any(fun cloudi_x_trie:is_pattern/1,
                                     Names1) =:= false))),
-                Destination = #destination{mode = Mode,
+                Destination = #destination{remote = Remote,
+                                           mode = Mode,
                                            parameters_allowed =
                                                ParametersAllowed,
                                            parameters_strict_matching =
@@ -186,15 +205,16 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 cloudi_x_trie:store(Prefix ++ PatternSuffix, Destination, D)
         end
     end, cloudi_x_trie:new(), DestinationsL),
-    {ok, #state{validate_request_info = ValidateRequestInfo1,
+    {ok, #state{ssh = SSH,
+                validate_request_info = ValidateRequestInfo1,
                 validate_request = ValidateRequest1,
                 failures_source_die = FailuresSrcDie,
                 failures_source_max_count = FailuresSrcMaxCount,
                 failures_source_max_period = FailuresSrcMaxPeriod,
                 destinations = Destinations}}.
 
-cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
-                              Timeout, Priority, _TransId, SrcPid,
+cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+                              Timeout, Priority, TransId, SrcPid,
                               #state{validate_request_info = RequestInfoF,
                                      validate_request = RequestF,
                                      destinations = Destinations} = State,
@@ -205,8 +225,7 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             case cloudi_x_trie:find(Pattern, Destinations) of
                 {ok, #destination{} = Destination} ->
                     {NextName, NewDestination} = destination_pick(Destination),
-                    Parameters = cloudi_service_name:parse(Name,
-                                                                   Pattern),
+                    Parameters = cloudi_service_name:parse(Name, Pattern),
                     case name_parameters(NextName, Parameters,
                                          NewDestination) of
                         {ok, NewName} ->
@@ -214,9 +233,12 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
                                               store(Pattern,
                                                     NewDestination,
                                                     Destinations),
-                            {forward, NewName, RequestInfo, Request,
-                             Timeout, Priority,
-                             State#state{destinations = NewDestinations}};
+                            forward(Type, Name, Pattern, NewName,
+                                    RequestInfo, Request,
+                                    Timeout, Priority, TransId, SrcPid,
+                                    NewDestination,
+                                    State#state{
+                                        destinations = NewDestinations});
                         {error, Reason} ->
                             ?LOG_ERROR("(~p -> ~p) error: ~p",
                                        [Name, NextName, Reason]),
@@ -245,7 +267,9 @@ cloudi_service_handle_info(Request, State, _Dispatcher) ->
     ?LOG_WARN("Unknown info \"~p\"", [Request]),
     {noreply, State}.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{ssh = SSH}) ->
+    ok = cloudi_service_router_ssh_server:destroy(SSH),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -284,7 +308,24 @@ name_parameters(Pattern, Parameters,
                              parameters_selected =
                                  ParametersSelected}) ->
     cloudi_service_name:new(Pattern, Parameters, ParametersSelected,
-                                    ParametersStrictMatching).
+                            ParametersStrictMatching).
+
+forward(_, _, _, NewName, RequestInfo, Request,
+        Timeout, Priority, _, _,
+        #destination{remote = undefined}, State) ->
+    {forward, NewName, RequestInfo, Request, Timeout, Priority, State};
+forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+        Timeout, Priority, TransId, SrcPid,
+        #destination{remote = Remote}, State) ->
+    Forward = cloudi_service_router_client:
+              forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+                      Timeout, Priority, TransId, SrcPid, Remote),
+    if
+        Forward =:= ok ->
+            {noreply, State};
+        Forward =:= timeout ->
+            {reply, <<>>, State}
+    end.
 
 validate_f_return(Value) when is_boolean(Value) ->
     Value.
