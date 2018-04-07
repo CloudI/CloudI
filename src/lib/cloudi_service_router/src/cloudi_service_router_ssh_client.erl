@@ -53,12 +53,12 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_service_router_ssh.hrl").
 
--define(DEFAULT_HOST_NAME,                    undefined).
--define(DEFAULT_USER,                         "${USER}").
--define(DEFAULT_PASSWORD,                            "").
--define(DEFAULT_DSA_PASSPHRASE,               undefined).
--define(DEFAULT_RSA_PASSPHRASE,               undefined).
--define(DEFAULT_ECDSA_PASSPHRASE,             undefined).
+-define(DEFAULT_HOST_NAME,              undefined).
+-define(DEFAULT_USER,                   "${USER}").
+-define(DEFAULT_PASSWORD,                      "").
+-define(DEFAULT_DSA_PASSPHRASE,         undefined).
+-define(DEFAULT_RSA_PASSPHRASE,         undefined).
+-define(DEFAULT_ECDSA_PASSPHRASE,       undefined).
 
 % XXX switch to the opaque types when ssh_connection functions get fixed
 -type connection_handle() :: {ssh:ssh_connection_ref() | pid(),
@@ -74,6 +74,7 @@
         host_name :: string(),
         port :: pos_integer(),
         options :: list(),
+        compression :: 0..9,
         handle = undefined :: undefined | connection_handle()
     }).
 
@@ -133,6 +134,8 @@ new(Options, EnvironmentLookup, SSH)
          cloudi_service_router_ssh_server:config_port(SSH)},
         {inet,
          cloudi_service_router_ssh_server:config_inet(SSH)},
+        {compression,
+         cloudi_service_router_ssh_server:config_compression(SSH)},
         {user_dir,
          cloudi_service_router_ssh_server:config_user_dir(SSH)},
         {system_dir,
@@ -142,11 +145,13 @@ new(Options, EnvironmentLookup, SSH)
         {dsa_passphrase,                ?DEFAULT_DSA_PASSPHRASE},
         {rsa_passphrase,                ?DEFAULT_RSA_PASSPHRASE},
         {ecdsa_passphrase,              ?DEFAULT_ECDSA_PASSPHRASE}],
-    [HostNameRaw, Port, Inet, UserDirRaw, SystemDirRaw,
+    [HostNameRaw, Port, Inet, Compression, UserDirRaw, SystemDirRaw,
      UserRaw, PasswordRaw, DSAPassphraseRaw, RSAPassphraseRaw,
      ECDSAPassphraseRaw] = cloudi_proplists:take_values(Defaults, Options),
     true = is_list(HostNameRaw) andalso is_integer(hd(HostNameRaw)),
     true = is_integer(Port) andalso (Port > 0),
+    true = is_integer(Compression) andalso
+           (Compression >= 0) andalso (Compression =< 9),
     true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
     true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
     true = is_list(UserRaw) andalso is_integer(hd(UserRaw)),
@@ -206,7 +211,8 @@ new(Options, EnvironmentLookup, SSH)
     ok = ssh:start(),
 
     {ok, Pid} = gen_server:start_link(?MODULE,
-                                      [HostName, Port, ClientOptionsN], []),
+                                      [HostName, Port, ClientOptionsN,
+                                       Compression], []),
     #ssh_client{process = Pid}.
 
 %%%------------------------------------------------------------------------
@@ -233,10 +239,11 @@ silently_accept_hosts(_PeerName, FingerPrint, SystemDir) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([HostName, Port, ClientOptions]) ->
+init([HostName, Port, ClientOptions, Compression]) ->
     {ok, #ssh_client_connection{host_name = HostName,
                                 port = Port,
-                                options = ClientOptions}}.
+                                options = ClientOptions,
+                                compression = Compression}}.
 
 handle_call({forward,
              Type, Name, Pattern, NewName, RequestInfo, Request,
@@ -316,9 +323,9 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
         {ok, Connection} ->
             case ssh_connection:session_channel(Connection, infinity) of
                 {ok, ChannelId} ->
-                    SubSystem = ?SSH_SUBSYSTEM,
+                    Subsystem = ?SSH_SUBSYSTEM,
                     case ssh_connection:subsystem(Connection, ChannelId,
-                                                  SubSystem, infinity) of
+                                                  Subsystem, infinity) of
                         success ->
                             ConnectTime =
                                 cloudi_timestamp:milliseconds_monotonic() - 
@@ -338,29 +345,30 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                                                handle = ConnectionHandle});
                         failure ->
                             ?LOG_DEBUG("subsystem(~s) ~s:~w failure",
-                                       [SubSystem, HostName, Port]),
+                                       [Subsystem, HostName, Port]),
                             ok = ssh_connection:close(Connection, ChannelId),
                             {timeout, State};
                         {error, Reason} ->
-                            ?LOG_DEBUG("subsystem(~s) ~s:~w error: ~p",
-                                       [SubSystem, HostName, Port, Reason]),
+                            ?LOG_DEBUG("subsystem(~s) ~s:~w error: ~w",
+                                       [Subsystem, HostName, Port, Reason]),
                             ok = ssh_connection:close(Connection, ChannelId),
                             {timeout, State}
                     end;
                 {error, Reason} ->
                     ok = ssh:close(Connection),
-                    ?LOG_DEBUG("channel ~s:~w error: ~p",
+                    ?LOG_DEBUG("channel ~s:~w error: ~w",
                                [HostName, Port, Reason]),
                     {timeout, State}
             end;
         {error, Reason} ->
-            ?LOG_DEBUG("connect ~s:~w error: ~p",
+            ?LOG_DEBUG("connect ~s:~w error: ~w",
                        [HostName, Port, Reason]),
             {timeout, State}
     end;
 handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                Timeout, Priority, TransId, Source,
                #ssh_client_connection{
+                   compression = Compression,
                    handle = {Connection, ChannelId}} = State) ->
     ForwardType = if
         Type =:= 'send_async' ->
@@ -371,7 +379,8 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
     DataOutDecoded = {ForwardType, Name, Pattern, NewName,
                       RequestInfo, Request,
                       Timeout, Priority, TransId, Source},
-    DataOut = erlang:term_to_binary(DataOutDecoded),
+    DataOut = erlang:term_to_binary(DataOutDecoded,
+                                    [{compressed, Compression}]),
     case ssh_connection:send(Connection, ChannelId,
                              DataOut, Timeout) of
         ok ->

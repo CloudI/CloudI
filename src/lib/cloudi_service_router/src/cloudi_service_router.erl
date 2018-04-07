@@ -49,7 +49,7 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
--define(DEFAULT_SSH,                          undefined).
+-define(DEFAULT_SSH,                    undefined).
         % Enable a ssh server for receiving remote service requests.
         % The user_dir and system_dir options are required options.
         % The ip option and port option will likely need to be set
@@ -64,13 +64,13 @@
         % (user_dir could be the path to ${HOME}/.ssh and
         %  system_dir could be /etc/ssh
         %  if permissions and configuration files are correct there)
--define(DEFAULT_ADD_PREFIX,                        true). % to destinations
--define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
--define(DEFAULT_VALIDATE_REQUEST,             undefined).
--define(DEFAULT_FAILURES_SOURCE_DIE,              false).
--define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,            2). % see below:
+-define(DEFAULT_ADD_PREFIX,                  true). % to destinations
+-define(DEFAULT_VALIDATE_REQUEST_INFO,  undefined).
+-define(DEFAULT_VALIDATE_REQUEST,       undefined).
+-define(DEFAULT_FAILURES_SOURCE_DIE,        false).
+-define(DEFAULT_FAILURES_SOURCE_MAX_COUNT,      2). % see below:
         % (similar to the MaxR configuration value for services)
--define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,          60). % seconds, see below:
+-define(DEFAULT_FAILURES_SOURCE_MAX_PERIOD,    60). % seconds, see below:
         % (similar to the MaxT configuration value for services)
         % If you want the source service to eventually fail,
         % use the service's MaxT/MaxR as the failures_source_max_period value
@@ -78,14 +78,14 @@
         % to accumulate a failure count indefinitely.
 
 % destinations configuration arguments
--define(DEFAULT_REMOTE,                       undefined).
+-define(DEFAULT_REMOTE,                 undefined).
         % Should the service request be routed to a remote host?
         % Takes a list of options, with only the host_name option required.
         % Defaults are taken from the ssh server configuration,
         % if it was configured.
--define(DEFAULT_MODE,                       round_robin).
--define(DEFAULT_PARAMETERS_ALLOWED,                true).
--define(DEFAULT_PARAMETERS_STRICT_MATCHING,        true).
+-define(DEFAULT_MODE,                 round_robin).
+-define(DEFAULT_PARAMETERS_ALLOWED,          true).
+-define(DEFAULT_PARAMETERS_STRICT_MATCHING,  true).
 
 -record(destination,
     {

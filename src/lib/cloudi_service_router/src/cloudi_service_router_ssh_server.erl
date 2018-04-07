@@ -39,7 +39,8 @@
 -behaviour(ssh_daemon_channel).
 
 %% external interface
--export([config_inet/1,
+-export([config_compression/1,
+         config_inet/1,
          config_port/1,
          config_system_dir/1,
          config_user_dir/1,
@@ -52,11 +53,21 @@
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 -include("cloudi_service_router_ssh.hrl").
 
--define(DEFAULT_IP,                         {127,0,0,1}). % interface ip address
--define(DEFAULT_PORT,                              4368).
--define(DEFAULT_INET,                         undefined).
--define(DEFAULT_USER_DIR,                     undefined).
--define(DEFAULT_SYSTEM_DIR,                   undefined).
+-define(DEFAULT_IP,                   {127,0,0,1}). % interface ip address
+-define(DEFAULT_PORT,                        4368).
+-define(DEFAULT_INET,                   undefined).
+-define(DEFAULT_COMPRESSION,                    0). % zlib compression 0..9
+-define(DEFAULT_USER_DIR,               undefined).
+-define(DEFAULT_SYSTEM_DIR,             undefined).
+-define(DEFAULT_USER_PASSWORDS,         undefined).
+        % If passwords are used, after the public key check fails,
+        % the password must have an entry in this list, for the appropriate
+        % user.  Environment variables may be used for the username and the
+        % password, so it is necessary to use "\\$" to represent a "$" symbol
+        % if it is present in the password.
+        %
+        % Example:
+        % [{"${USER}", "badpassword"}]
 
 % XXX switch to the opaque types when ssh_connection functions get fixed
 -type connection_handle() :: {ssh:ssh_connection_ref() | pid(),
@@ -64,6 +75,7 @@
 
 -record(ssh_server,
     {
+        config_compression :: 0..9,
         config_inet :: inet | inet6 | undefined,
         config_port :: pos_integer(),
         config_system_dir :: string(),
@@ -74,6 +86,7 @@
 -record(ssh_server_connection,
     {
         dispatcher :: cloudi_service:dispatcher(),
+        compression :: 0..9,
         handle = undefined :: undefined | connection_handle()
     }).
 
@@ -89,6 +102,14 @@
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
+
+-spec config_compression(#ssh_server{} | undefined) ->
+    0..9.
+
+config_compression(undefined) ->
+    ?DEFAULT_COMPRESSION;
+config_compression(#ssh_server{config_compression = Compression}) ->
+    Compression.
 
 -spec config_inet(#ssh_server{} | undefined) ->
     inet | inet6 | undefined.
@@ -146,18 +167,23 @@ new(Options, EnvironmentLookup, Dispatcher)
         {ip,                            ?DEFAULT_IP},
         {port,                          ?DEFAULT_PORT},
         {inet,                          ?DEFAULT_INET},
+        {compression,                   ?DEFAULT_COMPRESSION},
         {user_dir,                      ?DEFAULT_USER_DIR},
-        {system_dir,                    ?DEFAULT_SYSTEM_DIR}],
-    [IP, Port, Inet, UserDirRaw, SystemDirRaw
+        {system_dir,                    ?DEFAULT_SYSTEM_DIR},
+        {user_passwords,                ?DEFAULT_USER_PASSWORDS}],
+    [IP, Port, Inet, Compression, UserDirRaw, SystemDirRaw, UserPasswordsRaw
      ] = cloudi_proplists:take_values(Defaults, Options),
     true = is_tuple(IP) orelse (IP =:= any) orelse (IP =:= loopback),
     true = is_integer(Port) andalso (Port > 0),
+    true = is_integer(Compression) andalso
+           (Compression >= 0) andalso (Compression =< 9),
     true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
     true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
     UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
     SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
 
-    State = #ssh_server{config_inet = Inet,
+    State = #ssh_server{config_compression = Compression,
+                        config_inet = Inet,
                         config_port = Port,
                         config_system_dir = SystemDirRaw,
                         config_user_dir = UserDirRaw},
@@ -173,14 +199,28 @@ new(Options, EnvironmentLookup, Dispatcher)
                 Inet =:= undefined ->
                     []
             end,
+            DaemonOptions1 = if
+                UserPasswordsRaw =:= undefined ->
+                    DaemonOptions0;
+                is_list(UserPasswordsRaw) ->
+                    [{user_passwords,
+                      [{cloudi_environment:transform(UserRaw,
+                                                     EnvironmentLookup),
+                        cloudi_environment:transform(PasswordRaw,
+                                                     EnvironmentLookup)}
+                       || {UserRaw, PasswordRaw} <- UserPasswordsRaw]} |
+                     DaemonOptions0]
+
+            end,
             DaemonOptionsN = [{auth_methods, "publickey,password"},
                               {user_dir, UserDir},
-                              {system_dir, SystemDir} | DaemonOptions0],
-            ServiceDispatcher = cloudi_service:dispatcher(Dispatcher),
+                              {system_dir, SystemDir} | DaemonOptions1],
+            SubsystemArgs = [cloudi_service:dispatcher(Dispatcher),
+                             Compression],
             {ok, Pid} = ssh:daemon(IP, Port,
                                    [{subsystems,
                                      [{?SSH_SUBSYSTEM,
-                                       {?MODULE, [ServiceDispatcher]}}]} |
+                                       {?MODULE, SubsystemArgs}}]} |
                                     DaemonOptionsN]),
             State#ssh_server{process = Pid};
         _ ->
@@ -191,13 +231,15 @@ new(Options, EnvironmentLookup, Dispatcher)
 %%% Callback functions from ssh_daemon_channel
 %%%------------------------------------------------------------------------
 
-init([Dispatcher]) ->
-    {ok, #ssh_server_connection{dispatcher = Dispatcher}}.
+init([Dispatcher, Compression]) ->
+    {ok, #ssh_server_connection{dispatcher = Dispatcher,
+                                compression = Compression}}.
 
 handle_ssh_msg({ssh_cm, Connection,
                 {data, ChannelId, 0, DataIn}},
                #ssh_server_connection{
                    dispatcher = Dispatcher,
+                   compression = Compression,
                    handle = {Connection, ChannelId}} = State) ->
     try erlang:binary_to_term(DataIn) of
         {ForwardType, Name, Pattern, NextName, RequestInfo, Request,
@@ -232,7 +274,8 @@ handle_ssh_msg({ssh_cm, Connection,
                              Name, Pattern, <<>>, <<>>, 0, TransId, Source}
                     end
             end,
-            DataOut = erlang:term_to_binary(DataOutDecoded),
+            DataOut = erlang:term_to_binary(DataOutDecoded,
+                                            [{compressed, Compression}]),
             case ssh_connection:send(Connection, ChannelId, DataOut) of
                 ok ->
                     {ok, State};
