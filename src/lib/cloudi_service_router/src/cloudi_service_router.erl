@@ -151,8 +151,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (FailuresSrcMaxPeriod =:= infinity) orelse
            (is_integer(FailuresSrcMaxPeriod) andalso
             (FailuresSrcMaxPeriod > 0)),
-    true = is_list(DestinationsL) andalso
-           (erlang:length(DestinationsL) > 0),
+    true = is_list(DestinationsL),
     ConfigDefaults = [
         {remote,                        ?DEFAULT_REMOTE},
         {mode,                          ?DEFAULT_MODE},

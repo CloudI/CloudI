@@ -54,7 +54,11 @@
 -include("cloudi_service_router_ssh.hrl").
 
 -define(DEFAULT_HOST_NAME,                    undefined).
+-define(DEFAULT_USER,                         "${USER}").
 -define(DEFAULT_PASSWORD,                            "").
+-define(DEFAULT_DSA_PASSPHRASE,               undefined).
+-define(DEFAULT_RSA_PASSPHRASE,               undefined).
+-define(DEFAULT_ECDSA_PASSPHRASE,             undefined).
 
 % XXX switch to the opaque types when ssh_connection functions get fixed
 -type connection_handle() :: {ssh:ssh_connection_ref() | pid(),
@@ -133,17 +137,24 @@ new(Options, EnvironmentLookup, SSH)
          cloudi_service_router_ssh_server:config_user_dir(SSH)},
         {system_dir,
          cloudi_service_router_ssh_server:config_system_dir(SSH)},
-        {password,                      ?DEFAULT_PASSWORD}],
+        {user,                          ?DEFAULT_USER},
+        {password,                      ?DEFAULT_PASSWORD},
+        {dsa_passphrase,                ?DEFAULT_DSA_PASSPHRASE},
+        {rsa_passphrase,                ?DEFAULT_RSA_PASSPHRASE},
+        {ecdsa_passphrase,              ?DEFAULT_ECDSA_PASSPHRASE}],
     [HostNameRaw, Port, Inet, UserDirRaw, SystemDirRaw,
-     PasswordRaw] = cloudi_proplists:take_values(Defaults, Options),
+     UserRaw, PasswordRaw, DSAPassphraseRaw, RSAPassphraseRaw,
+     ECDSAPassphraseRaw] = cloudi_proplists:take_values(Defaults, Options),
     true = is_list(HostNameRaw) andalso is_integer(hd(HostNameRaw)),
     true = is_integer(Port) andalso (Port > 0),
     true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
     true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
-    true = is_list(PasswordRaw) andalso is_integer(hd(PasswordRaw)),
+    true = is_list(UserRaw) andalso is_integer(hd(UserRaw)),
+    true = is_list(PasswordRaw),
     HostName = cloudi_environment:transform(HostNameRaw, EnvironmentLookup),
     UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
     SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
+    User = cloudi_environment:transform(UserRaw, EnvironmentLookup),
     Password = cloudi_environment:transform(PasswordRaw, EnvironmentLookup),
     ClientOptions0 = if
         Inet =:= inet; Inet =:= inet6 ->
@@ -151,12 +162,44 @@ new(Options, EnvironmentLookup, SSH)
         Inet =:= undefined ->
             []
     end,
+    ClientOptions1 = if
+        DSAPassphraseRaw =:= undefined ->
+            ClientOptions0;
+        is_list(DSAPassphraseRaw) andalso
+        is_integer(hd(DSAPassphraseRaw)) ->
+            [{dsa_pass_phrase,
+              cloudi_environment:
+              transform(DSAPassphraseRaw, EnvironmentLookup)} |
+             ClientOptions0]
+    end,
+    ClientOptions2 = if
+        RSAPassphraseRaw =:= undefined ->
+            ClientOptions1;
+        is_list(RSAPassphraseRaw) andalso
+        is_integer(hd(RSAPassphraseRaw)) ->
+            [{rsa_pass_phrase,
+              cloudi_environment:
+              transform(RSAPassphraseRaw, EnvironmentLookup)} |
+             ClientOptions1]
+    end,
+    ClientOptions3 = if
+        ECDSAPassphraseRaw =:= undefined ->
+            ClientOptions2;
+        is_list(ECDSAPassphraseRaw) andalso
+        is_integer(hd(ECDSAPassphraseRaw)) ->
+            [{ecdsa_pass_phrase,
+              cloudi_environment:
+              transform(ECDSAPassphraseRaw, EnvironmentLookup)} |
+             ClientOptions2]
+    end,
     SilentlyAcceptHostsF = fun(PeerName, FingerPrint) ->
         ?MODULE:silently_accept_hosts(PeerName, FingerPrint, SystemDir)
     end,
-    ClientOptionsN = [{user_dir, UserDir},
+    ClientOptionsN = [{user_interaction, false},
+                      {user_dir, UserDir},
                       {silently_accept_hosts, SilentlyAcceptHostsF},
-                      {password, Password} | ClientOptions0],
+                      {user, User},
+                      {password, Password} | ClientOptions3],
 
     % The ssh application and its dependencies are only started
     % if they are necessary for the cloudi_service_router processes
@@ -177,9 +220,14 @@ new(Options, EnvironmentLookup, SSH)
 
 silently_accept_hosts(_PeerName, FingerPrint, SystemDir) ->
     KeyFileName = filename:join(SystemDir, "ssh_host_rsa_key.pub"),
-    {ok, KeyData} = file:read_file(KeyFileName),
-    [{Key, _}] = public_key:ssh_decode(KeyData, public_key),
-    public_key:ssh_hostkey_fingerprint(Key) == FingerPrint.
+    case filelib:is_file(KeyFileName) of
+        true ->
+            {ok, KeyData} = file:read_file(KeyFileName),
+            [{Key, _}] = public_key:ssh_decode(KeyData, public_key),
+            public_key:ssh_hostkey_fingerprint(Key) == FingerPrint;
+        false ->
+            false
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -199,13 +247,43 @@ handle_call({forward,
                                 Timeout, Priority, TransId, Source, State),
     {reply, Reply, NewState};
 handle_call(Request, _, State) ->
-    {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown call \"~w\"~n", [Request]), State}.
 
 handle_cast(Request, State) ->
-    {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown cast \"~w\"~n", [Request]), State}.
 
+handle_info({ssh_cm, Connection,
+             {closed, ChannelId}},
+            #ssh_client_connection{handle = {Connection, ChannelId}} = State) ->
+    {noreply, State#ssh_client_connection{handle = undefined}};
+handle_info({ssh_cm, Connection,
+             {data, ChannelId, 0, DataIn}},
+            #ssh_client_connection{handle = {Connection, ChannelId}} = State) ->
+    try erlang:binary_to_term(DataIn) of
+        {ReturnType,
+         _NewName, _NewPattern, _ResponseInfo, _Response,
+         _NewTimeout, _TransId, Source} = DataInDecoded
+        when ReturnType =:= 'cloudi_service_return_async' orelse
+             ReturnType =:= 'cloudi_service_return_sync' ->
+            Source ! DataInDecoded,
+            ssh_connection:adjust_window(Connection, ChannelId,
+                                         byte_size(DataIn)),
+            {noreply, State}
+    catch
+        error:badarg ->
+            ssh_connection:close(Connection, ChannelId),
+            ?LOG_ERROR("received invalid data, connection closed", []),
+            {noreply, State#ssh_client_connection{handle = undefined}}
+    end;
+handle_info({ssh_cm, Connection,
+             {data, ChannelId, 1, DataIn}},
+            #ssh_client_connection{handle = {Connection, ChannelId}} = State) ->
+    ?LOG_ERROR("~s", [DataIn]),
+    {noreply, State};
+handle_info({ssh_cm, _, _}, State) ->
+    {noreply, State};
 handle_info(Request, State) ->
-    {stop, cloudi_string:format("Unknown info \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"~n", [Request]), State}.
 
 terminate(_, #ssh_client_connection{handle = ConnectionHandle}) ->
     case ConnectionHandle of
@@ -226,6 +304,60 @@ code_change(_, State, _) ->
 handle_forward(_, _, _, _, _, _, Timeout, _, _, _, State)
     when Timeout < ?TIMEOUT_SEND_MIN ->
     {timeout, State};
+handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+               Timeout, Priority, TransId, Source,
+               #ssh_client_connection{
+                   host_name = HostName,
+                   port = Port,
+                   options = Options,
+                   handle = undefined} = State) ->
+    ConnectTimeStart = cloudi_timestamp:milliseconds_monotonic(),
+    case ssh:connect(HostName, Port, Options) of
+        {ok, Connection} ->
+            case ssh_connection:session_channel(Connection, infinity) of
+                {ok, ChannelId} ->
+                    SubSystem = ?SSH_SUBSYSTEM,
+                    case ssh_connection:subsystem(Connection, ChannelId,
+                                                  SubSystem, infinity) of
+                        success ->
+                            ConnectTime =
+                                cloudi_timestamp:milliseconds_monotonic() - 
+                                ConnectTimeStart,
+                            NewTimeout = if
+                                ConnectTime >= Timeout ->
+                                    0;
+                                true ->
+                                    Timeout - ConnectTime
+                            end,
+                            ConnectionHandle = {Connection, ChannelId},
+                            handle_forward(Type, Name, Pattern, NewName,
+                                           RequestInfo, Request,
+                                           NewTimeout, Priority,
+                                           TransId, Source,
+                                           State#ssh_client_connection{
+                                               handle = ConnectionHandle});
+                        failure ->
+                            ?LOG_DEBUG("subsystem(~s) ~s:~w failure",
+                                       [SubSystem, HostName, Port]),
+                            ok = ssh_connection:close(Connection, ChannelId),
+                            {timeout, State};
+                        {error, Reason} ->
+                            ?LOG_DEBUG("subsystem(~s) ~s:~w error: ~p",
+                                       [SubSystem, HostName, Port, Reason]),
+                            ok = ssh_connection:close(Connection, ChannelId),
+                            {timeout, State}
+                    end;
+                {error, Reason} ->
+                    ok = ssh:close(Connection),
+                    ?LOG_DEBUG("channel ~s:~w error: ~p",
+                               [HostName, Port, Reason]),
+                    {timeout, State}
+            end;
+        {error, Reason} ->
+            ?LOG_DEBUG("connect ~s:~w error: ~p",
+                       [HostName, Port, Reason]),
+            {timeout, State}
+    end;
 handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                Timeout, Priority, TransId, Source,
                #ssh_client_connection{
@@ -254,52 +386,6 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
             end,
             {timeout, NewState};
         {error, closed} ->
-            handle_forward(Type, Name, Pattern, NewName,
-                           RequestInfo, Request,
-                           Timeout, Priority, TransId, Source,
-                           State#ssh_client_connection{handle = undefined})
-    end;
-handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
-               Timeout, Priority, TransId, Source,
-               #ssh_client_connection{
-                   host_name = HostName,
-                   port = Port,
-                   options = Options,
-                   handle = undefined} = State) ->
-    case ssh:connect(HostName, Port, Options) of
-        {ok, Connection} ->
-            case ssh_connection:session_channel(Connection, infinity) of
-                {ok, ChannelId} ->
-                    SubSystem = ?SSH_SUBSYSTEM,
-                    case ssh_connection:subsystem(Connection, ChannelId,
-                                                  SubSystem, infinity) of
-                        success ->
-                            ConnectionHandle = {Connection, ChannelId},
-                            handle_forward(Type, Name, Pattern, NewName,
-                                           RequestInfo, Request,
-                                           Timeout, Priority, TransId, Source,
-                                           State#ssh_client_connection{
-                                               handle = ConnectionHandle});
-                        failure ->
-                            ?LOG_DEBUG("subsystem(~s) ~s:~w failure",
-                                       [SubSystem, HostName, Port]),
-                            ok = ssh_connection:close(Connection, ChannelId),
-                            {timeout, State};
-                        {error, Reason} ->
-                            ?LOG_DEBUG("subsystem(~s) ~s:~w error: ~p",
-                                       [SubSystem, HostName, Port, Reason]),
-                            ok = ssh_connection:close(Connection, ChannelId),
-                            {timeout, State}
-                    end;
-                {error, Reason} ->
-                    ok = ssh:close(Connection),
-                    ?LOG_DEBUG("channel ~s:~w error: ~p",
-                               [HostName, Port, Reason]),
-                    {timeout, State}
-            end;
-        {error, Reason} ->
-            ?LOG_DEBUG("connect ~s:~w error: ~p",
-                       [HostName, Port, Reason]),
-            {timeout, State}
+            {timeout, State#ssh_client_connection{handle = undefined}}
     end.
 

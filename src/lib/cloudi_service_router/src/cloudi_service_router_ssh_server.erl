@@ -173,12 +173,14 @@ new(Options, EnvironmentLookup, Dispatcher)
                 Inet =:= undefined ->
                     []
             end,
-            DaemonOptionsN = [{user_dir, UserDir},
+            DaemonOptionsN = [{auth_methods, "publickey,password"},
+                              {user_dir, UserDir},
                               {system_dir, SystemDir} | DaemonOptions0],
+            ServiceDispatcher = cloudi_service:dispatcher(Dispatcher),
             {ok, Pid} = ssh:daemon(IP, Port,
                                    [{subsystems,
                                      [{?SSH_SUBSYSTEM,
-                                       {?MODULE, [Dispatcher]}}]} |
+                                       {?MODULE, [ServiceDispatcher]}}]} |
                                     DaemonOptionsN]),
             State#ssh_server{process = Pid};
         _ ->
@@ -235,7 +237,7 @@ handle_ssh_msg({ssh_cm, Connection,
                 ok ->
                     {ok, State};
                 {error, Reason} ->
-                    ?LOG_DEBUG("channel ~w", [Reason]),
+                    ?LOG_DEBUG("send error: ~w", [Reason]),
                     {stop, ChannelId, State}
             end
     catch
