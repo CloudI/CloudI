@@ -50,10 +50,20 @@
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(DEFAULT_SSH,                          undefined).
-        % Enable a ssh server to receiving remote service requests.
-        % The user_dir and system_dir are required options.
+        % Enable a ssh server for receiving remote service requests.
+        % The user_dir and system_dir options are required options.
         % The ip option and port option will likely need to be set
         % based on your network configuration.
+        %
+        % Example setup from scratch may be like:
+        % $ ssh-keygen -t rsa -f system_dir/ssh_host_rsa_key
+        % $ ssh-keygen -t rsa -f user_dir/id_rsa
+        % $ cat user_dir/id_rsa.pub >> user_dir/authorized_keys
+        % $ chmod 600 user_dir/authorized_keys
+        %
+        % (user_dir could be the path to ${HOME}/.ssh and
+        %  system_dir could be /etc/ssh
+        %  if permissions and configuration files are correct there)
 -define(DEFAULT_ADD_PREFIX,                        true). % to destinations
 -define(DEFAULT_VALIDATE_REQUEST_INFO,        undefined).
 -define(DEFAULT_VALIDATE_REQUEST,             undefined).
@@ -70,10 +80,9 @@
 % destinations configuration arguments
 -define(DEFAULT_REMOTE,                       undefined).
         % Should the service request be routed to a remote host?
-        % Takes a list of options, with only the host_name option
-        % required.  The only value for the type option is currently ssh,
-        % so using remote with a list of options require that ssh was
-        % configured with its list of options (that are used as defaults here).
+        % Takes a list of options, with only the host_name option required.
+        % Defaults are taken from the ssh server configuration,
+        % if it was configured.
 -define(DEFAULT_MODE,                       round_robin).
 -define(DEFAULT_PARAMETERS_ALLOWED,                true).
 -define(DEFAULT_PARAMETERS_STRICT_MATCHING,        true).
@@ -128,7 +137,10 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      ValidateRequestInfo0, ValidateRequest0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
      DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
-    SSH = cloudi_service_router_ssh_server:new(SSHOptions, Dispatcher),
+    EnvironmentLookup = cloudi_environment:lookup(),
+    SSH = cloudi_service_router_ssh_server:new(SSHOptions,
+                                               EnvironmentLookup,
+                                               Dispatcher),
     true = is_boolean(AddPrefix),
     ValidateRequestInfo1 = cloudi_args_type:
                            function_optional(ValidateRequestInfo0, 1),
@@ -167,7 +179,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                  ParametersStrictMatching,
                  ParametersSelected,
                  Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
-                Remote = cloudi_service_router_client:new(RemoteOptions, SSH),
+                Remote = cloudi_service_router_client:new(RemoteOptions,
+                                                          EnvironmentLookup,
+                                                          SSH),
                 true = is_atom(Mode) andalso
                        ((Mode =:= random) orelse
                         (Mode =:= round_robin)),

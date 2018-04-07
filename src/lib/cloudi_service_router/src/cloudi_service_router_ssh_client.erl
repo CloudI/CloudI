@@ -40,7 +40,7 @@
 
 %% external interface
 -export([forward/11,
-         new/2]).
+         new/3]).
 
 %% internal callbacks
 -export([silently_accept_hosts/3]).
@@ -117,10 +117,11 @@ forward(Type, Name, Pattern, NewName, RequestInfo, Request,
     end.
 
 -spec new(Options :: options(),
-          SSH :: cloudi_service_router_ssh_server:state()) ->
+          EnvironmentLookup :: cloudi_environment:lookup(),
+          SSH :: cloudi_service_router_ssh_server:state() | undefined) ->
     state() | undefined.
 
-new(Options, SSH)
+new(Options, EnvironmentLookup, SSH)
     when is_list(Options) ->
     Defaults = [
         {host_name,                     ?DEFAULT_HOST_NAME},
@@ -133,13 +134,17 @@ new(Options, SSH)
         {system_dir,
          cloudi_service_router_ssh_server:config_system_dir(SSH)},
         {password,                      ?DEFAULT_PASSWORD}],
-    [HostName, Port, Inet, UserDir, SystemDir,
-     Password] = cloudi_proplists:take_values(Defaults, Options),
-    true = is_list(HostName) andalso is_integer(hd(HostName)),
+    [HostNameRaw, Port, Inet, UserDirRaw, SystemDirRaw,
+     PasswordRaw] = cloudi_proplists:take_values(Defaults, Options),
+    true = is_list(HostNameRaw) andalso is_integer(hd(HostNameRaw)),
     true = is_integer(Port) andalso (Port > 0),
-    true = is_list(UserDir) andalso is_integer(hd(UserDir)),
-    true = is_list(SystemDir) andalso is_integer(hd(SystemDir)),
-    true = is_list(Password) andalso is_integer(hd(Password)),
+    true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
+    true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
+    true = is_list(PasswordRaw) andalso is_integer(hd(PasswordRaw)),
+    HostName = cloudi_environment:transform(HostNameRaw, EnvironmentLookup),
+    UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
+    SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
+    Password = cloudi_environment:transform(PasswordRaw, EnvironmentLookup),
     ClientOptions0 = if
         Inet =:= inet; Inet =:= inet6 ->
             [{inet, Inet}];
@@ -152,6 +157,11 @@ new(Options, SSH)
     ClientOptionsN = [{user_dir, UserDir},
                       {silently_accept_hosts, SilentlyAcceptHostsF},
                       {password, Password} | ClientOptions0],
+
+    % The ssh application and its dependencies are only started
+    % if they are necessary for the cloudi_service_router processes
+    ok = ssh:start(),
+
     {ok, Pid} = gen_server:start_link(?MODULE,
                                       [HostName, Port, ClientOptionsN], []),
     #ssh_client{process = Pid}.

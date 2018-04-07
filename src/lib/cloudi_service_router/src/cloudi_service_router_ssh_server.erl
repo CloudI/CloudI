@@ -44,7 +44,7 @@
          config_system_dir/1,
          config_user_dir/1,
          destroy/1,
-         new/2]).
+         new/3]).
 
 %% ssh_daemon_channel callbacks
 -export([init/1, handle_ssh_msg/2, handle_msg/2, terminate/2]).
@@ -90,27 +90,35 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec config_inet(#ssh_server{}) ->
+-spec config_inet(#ssh_server{} | undefined) ->
     inet | inet6 | undefined.
 
+config_inet(undefined) ->
+    ?DEFAULT_INET;
 config_inet(#ssh_server{config_inet = Inet}) ->
     Inet.
 
--spec config_port(#ssh_server{}) ->
+-spec config_port(#ssh_server{} | undefined) ->
     pos_integer().
 
+config_port(undefined) ->
+    ?DEFAULT_PORT;
 config_port(#ssh_server{config_port = Port}) ->
     Port.
 
--spec config_system_dir(#ssh_server{}) ->
-    string().
+-spec config_system_dir(#ssh_server{} | undefined) ->
+    string() | undefined.
 
+config_system_dir(undefined) ->
+    ?DEFAULT_SYSTEM_DIR;
 config_system_dir(#ssh_server{config_system_dir = SystemDir}) ->
     SystemDir.
 
--spec config_user_dir(#ssh_server{}) ->
-    string().
+-spec config_user_dir(#ssh_server{} | undefined) ->
+    string() | undefined.
 
+config_user_dir(undefined) ->
+    ?DEFAULT_USER_DIR;
 config_user_dir(#ssh_server{config_user_dir = UserDir}) ->
     UserDir.
 
@@ -126,12 +134,13 @@ destroy(#ssh_server{process = Pid}) ->
     ok.
 
 -spec new(Options :: options() | undefined,
+          EnvironmentLookup :: cloudi_environment:lookup(),
           Dispatcher :: cloudi_service:dispatcher()) ->
     state() | undefined.
 
-new(undefined, _) ->
+new(undefined, _, _) ->
     undefined;
-new(Options, Dispatcher)
+new(Options, EnvironmentLookup, Dispatcher)
     when is_list(Options) ->
     Defaults = [
         {ip,                            ?DEFAULT_IP},
@@ -139,23 +148,25 @@ new(Options, Dispatcher)
         {inet,                          ?DEFAULT_INET},
         {user_dir,                      ?DEFAULT_USER_DIR},
         {system_dir,                    ?DEFAULT_SYSTEM_DIR}],
-    [IP, Port, Inet,
-     UserDir, SystemDir] = cloudi_proplists:take_values(Defaults, Options),
+    [IP, Port, Inet, UserDirRaw, SystemDirRaw
+     ] = cloudi_proplists:take_values(Defaults, Options),
     true = is_tuple(IP) orelse (IP =:= any) orelse (IP =:= loopback),
     true = is_integer(Port) andalso (Port > 0),
-    true = is_list(UserDir) andalso is_integer(hd(UserDir)),
-    true = is_list(SystemDir) andalso is_integer(hd(SystemDir)),
-
-    % The ssh application and its dependencies are only started
-    % if they are necessary for the cloudi_service_router
-    ok = ssh:start(),
+    true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
+    true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
+    UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
+    SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
 
     State = #ssh_server{config_inet = Inet,
                         config_port = Port,
-                        config_system_dir = SystemDir,
-                        config_user_dir = UserDir},
+                        config_system_dir = SystemDirRaw,
+                        config_user_dir = UserDirRaw},
     case cloudi_service:process_index(Dispatcher) of
         0 ->
+            % The ssh application and its dependencies are only started
+            % if they are necessary for the cloudi_service_router processes
+            ok = ssh:start(),
+
             DaemonOptions0 = if
                 Inet =:= inet; Inet =:= inet6 ->
                     [{inet, Inet}];

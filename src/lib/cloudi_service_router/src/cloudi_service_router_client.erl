@@ -38,7 +38,7 @@
 
 %% external interface
 -export([forward/11,
-         new/2]).
+         new/3]).
 
 -define(DEFAULT_TYPE,                               ssh).
 
@@ -74,20 +74,21 @@ forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                                              TransId, Source, State).
 
 -spec new(Options :: options() | undefined,
+          EnvironmentLookup :: cloudi_environment:lookup(),
           SSH :: cloudi_service_router_ssh_server:state() | undefined) ->
     state() | undefined.
 
-new(undefined, _) ->
+new(undefined, _, _) ->
     undefined;
-new(Options, SSH)
+new(Options, EnvironmentLookup, SSH)
     when is_list(Options) ->
     Defaults = [
         {type,                          ?DEFAULT_TYPE}],
     [Type | OptionsRest] = cloudi_proplists:take_values(Defaults, Options),
     if
         Type =:= ssh ->
-            true = SSH /= undefined,
-            cloudi_service_router_ssh_client:new(OptionsRest, SSH)
+            cloudi_service_router_ssh_client:new(OptionsRest,
+                                                 EnvironmentLookup, SSH)
     end.
 
 %%%------------------------------------------------------------------------
