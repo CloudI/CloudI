@@ -12,7 +12,8 @@
       (This is different from Erlang/OTP behaviours
        (they do not call terminate/2 if init/1 had an exception)
        because it allows easy handling of external state at termination,
-       if any was partially initialized.)
+       if any was partially initialized and to be consistent with
+       external services (execution after poll is termination).)
     * Fix removal of pretty-printing of the cloudi_service_api_requests
       response (which changed in the 1.7.3 release when fixing unicode
       support in the cloudi_string module)
