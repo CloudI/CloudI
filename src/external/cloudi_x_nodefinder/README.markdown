@@ -35,7 +35,7 @@ Build
 Example
 -------
 
-**LAN multicast**
+**LAN multicast (requires that ntpd is running)**
 
     $ erl -sname foo1@localhost -pz ebin/
     (foo1@localhost)1> application:ensure_all_started(nodefinder).

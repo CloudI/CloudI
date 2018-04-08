@@ -25,14 +25,18 @@
             address :: inet:ip_address(),
             port :: inet:port_number(),
             timeout :: pos_integer(), % seconds
-            connect :: visible | hidden
+            connect :: visible | hidden,
+            node :: binary(),
+            key_v4 :: binary(),
+            key_v3 :: binary(),
+            key_v2 :: binary()
         }).
 
 -include("nodefinder.hrl").
 -include("nodefinder_logging.hrl").
 
 -define(MULTICAST_MESSAGE_NAME, "ERLANG/NODEFINDER").
--define(MULTICAST_MESSAGE_PROTOCOL_VERSION, "3").
+-define(MULTICAST_MESSAGE_PROTOCOL_VERSION, "4").
 
 % how much time synchronization error to handle between nodes
 % (need to have ntpd running when using this source code)
@@ -72,7 +76,11 @@ init([Interface, Address, Port, TTL, TimeoutSeconds]) ->
                    address = Address,
                    port = Port,
                    timeout = TimeoutSeconds,
-                   connect = Connect},
+                   connect = Connect,
+                   node = erlang:atom_to_binary(node(), utf8),
+                   key_v4 = key_v4(),
+                   key_v3 = key_v3(),
+                   key_v2 = key_v2()},
     ok = send_discover(State),
     {ok, State}.
 
@@ -112,11 +120,12 @@ code_change(_OldVsn, State, _Extra) ->
 
 send_discover(#state{socket_send = SocketSend,
                      address = Address,
-                     port = Port}) ->
-    NodeBin = erlang:atom_to_binary(node(), utf8),
-    Seconds = seconds_v3(),
+                     port = Port,
+                     node = NodeBin,
+                     key_v4 = KeyV4}) ->
+    Seconds = seconds_v4(),
     SecondsBin = <<Seconds:64>>,
-    Identifier = identifier_v3([SecondsBin, NodeBin]),
+    Identifier = identifier_v4([SecondsBin, NodeBin], KeyV4),
     Message = <<?MULTICAST_MESSAGE_NAME " "
                 ?MULTICAST_MESSAGE_PROTOCOL_VERSION " ",
                 Identifier:32/binary, " ",
@@ -137,8 +146,35 @@ process_packet(<<?MULTICAST_MESSAGE_NAME " "
                  SecondsBin:8/binary, " ",
                  NodeBin/binary>>, IP,
                #state{timeout = Timeout,
-                      connect = Connect}) -> 
-    IdentifierExpected = identifier_v3([SecondsBin, NodeBin]),
+                      connect = Connect,
+                      key_v4 = KeyV4}) ->
+    IdentifierExpected = identifier_v4([SecondsBin, NodeBin], KeyV4),
+    if
+        Identifier /= IdentifierExpected ->
+            ok; % ignored, different cookie
+        true ->
+            <<Seconds:64>> = SecondsBin,
+            Delta = seconds_v4() - Seconds,
+            if
+                Delta >= (-1 * ?MULTICAST_MESSAGE_VALID_SECONDS),
+                Delta < Timeout ->
+                    Node = erlang:binary_to_atom(NodeBin, utf8),
+                    connect_node(Connect, Node);
+                true ->
+                    ?LOG_WARN("expired multicast from ~s (~p)",
+                              [NodeBin, IP])
+            end
+    end,
+    ok;
+process_packet(<<"ERLANG/NODEFINDER 3 ",
+                 Identifier:32/binary, " ",
+                 SecondsBin:8/binary, " ",
+                 NodeBin/binary>>, IP,
+               #state{timeout = Timeout,
+                      connect = Connect,
+                      key_v3 = KeyV3}) ->
+    % nodefinder 1.7.3 support
+    IdentifierExpected = identifier_v3([SecondsBin, NodeBin], KeyV3),
     if
         Identifier /= IdentifierExpected ->
             ok; % ignored, different cookie
@@ -161,9 +197,10 @@ process_packet(<<"DISCOVERV2 ",
                  SecondsBin:8/binary, " ",
                  NodeBin/binary>>, IP,
                #state{timeout = Timeout,
-                      connect = Connect}) -> 
+                      connect = Connect,
+                      key_v2 = KeyV2}) ->
     % nodefinder =< 1.7.2 support
-    IdentifierExpected = identifier_v2([SecondsBin, NodeBin]),
+    IdentifierExpected = identifier_v2([SecondsBin, NodeBin], KeyV2),
     if
         Identifier /= IdentifierExpected ->
             ok; % ignored, different cookie
@@ -184,13 +221,26 @@ process_packet(<<"DISCOVERV2 ",
 process_packet(_Packet, _IP, _State) -> 
     ok.
 
-identifier_v3(Message) ->
-    Key = crypto:hash(sha256, erlang:term_to_binary(erlang:get_cookie())),
-    crypto:hmac(sha256, Key, Message).
+identifier_v4(Message, KeyV4) ->
+    crypto:hmac(sha256, KeyV4, Message).
 
-identifier_v2(Message) ->
-    Key = crypto:hash(sha, erlang:term_to_binary(erlang:get_cookie())),
-    crypto:hmac(sha, Key, Message).
+identifier_v3(Message, KeyV3) ->
+    crypto:hmac(sha256, KeyV3, Message).
+
+identifier_v2(Message, KeyV2) ->
+    crypto:hmac(sha, KeyV2, Message).
+
+key_v4() ->
+    crypto:hash(sha256, erlang:atom_to_binary(erlang:get_cookie(), utf8)).
+
+key_v3() ->
+    crypto:hash(sha256, erlang:term_to_binary(erlang:get_cookie())).
+
+key_v2() ->
+    crypto:hash(sha, erlang:term_to_binary(erlang:get_cookie())).
+
+seconds_v4() ->
+    seconds_v3().
 
 -ifdef(ERLANG_OTP_VERSION_20_FEATURES).
 seconds_v3() ->

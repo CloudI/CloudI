@@ -1,3 +1,6 @@
+=Version 1.7.4=
+  * multicast protocol change to v4
+
 =Version 1.7.3=
   * multicast protocol change to v3
 
