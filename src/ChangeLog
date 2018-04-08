@@ -16,6 +16,7 @@
     * Fix removal of pretty-printing of the cloudi_service_api_requests
       response (which changed in the 1.7.3 release when fixing unicode
       support in the cloudi_string module)
+    * Update cpg, supool
 
 2018-04-06 Michael Truog   <mjtruog at protonmail dot com>
 
