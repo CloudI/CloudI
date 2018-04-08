@@ -333,12 +333,23 @@ applications_set(Listen, Connect, TimestampType) ->
 monitor_nodes(Flag, Listen) ->
     net_kernel:monitor_nodes(Flag, [{node_type, Listen}, nodedown_reason]).
 
+discovery_start_args(ec2_discover, StartA) ->
+    [EC2AccessKeyId, EC2SecretAccessKey,
+     EC2Host, EC2Groups, EC2Tags] = StartA,
+    Lookup = cloudi_environment:lookup(),
+    [cloudi_environment:transform(EC2AccessKeyId, Lookup),
+     cloudi_environment:transform(EC2SecretAccessKey, Lookup),
+     cloudi_environment:transform(EC2Host, Lookup),
+     EC2Groups, EC2Tags];
+discovery_start_args(_, StartA) ->
+    StartA.
+
 discovery_start(undefined) ->
     ok;
 discovery_start(#config_nodes_discovery{module = Module,
                                         start_f = StartF,
                                         start_a = StartA}) ->
-    case erlang:apply(Module, StartF, StartA) of
+    case erlang:apply(Module, StartF, discovery_start_args(StartF, StartA)) of
         {ok, _} ->
             ok;
         {error, Reason} ->
