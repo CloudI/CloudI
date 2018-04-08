@@ -5,6 +5,7 @@
 
     * Require service requests using a cloudi_service_router ssh
       connection to have a timeout of at least FORWARD_DELTA
+    * Update nodefinder
 
 2018-04-07 Michael Truog   <mjtruog at protonmail dot com>
 

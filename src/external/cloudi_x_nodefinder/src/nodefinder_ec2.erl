@@ -163,15 +163,15 @@ handle_call(discover, _From, State) ->
             {stop, Error, {error, discover_failed}, State}
     end;
 handle_call(Request, _From, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown call \"~w\"", [Request])),
      error, State}.
 
 handle_cast(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown cast \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown cast \"~w\"", [Request])),
      State}.
 
 handle_info(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown info \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown info \"~w\"", [Request])),
      State}.
 
 terminate(_Reason, #state{}) ->
