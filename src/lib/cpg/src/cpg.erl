@@ -34,7 +34,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -2932,7 +2932,7 @@ handle_call({get_remote_newest_pid, GroupName, Exclude}, _,
     {reply, cpg_data:get_remote_newest_pid(GroupName, Exclude, Groups), State};
 
 handle_call(Request, _, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown call \"~w\"", [Request])),
      error, State}.
 
 %% @private
@@ -3038,7 +3038,7 @@ handle_cast({remove_leave_callback, GroupName, F},
     {noreply, State#state{callbacks = NewCallbacks}};
 
 handle_cast(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown cast \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown cast \"~w\"", [Request])),
      State}.
 
 %% @private
@@ -3080,7 +3080,7 @@ handle_info({cpg_data, From},
     {noreply, State};
 
 handle_info(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown info \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown info \"~w\"", [Request])),
      State}.
 
 %% @private

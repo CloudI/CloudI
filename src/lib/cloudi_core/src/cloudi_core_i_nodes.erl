@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -212,7 +212,7 @@ handle_call(nodes, _,
     {reply, {ok, Nodes}, State};
 
 handle_call(Request, _, State) ->
-    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+    {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
 handle_cast({logging_redirect_set, NodeLogger},
@@ -253,7 +253,7 @@ handle_cast({logging_redirect_set, NodeLogger},
     end;
 
 handle_cast(Request, State) ->
-    {stop, cloudi_string:format("Unknown cast \"~p\"", [Request]), State}.
+    {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({nodeup, Node, InfoList},
             #state{nodes_alive = NodesAlive,
@@ -311,7 +311,7 @@ handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
     {noreply, State};
 
 handle_info(Request, State) ->
-    {stop, cloudi_string:format("Unknown info \"~p\"", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
 terminate(_, #state{discovery = Discovery}) ->
     discovery_stop(Discovery),

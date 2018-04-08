@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -865,13 +865,11 @@ handle_call({get_status, Timeout}, _,
     hibernate_check({reply, Result, State});
 
 handle_call(Request, _, State) ->
-    ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+    {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
 handle_cast(Request, State) ->
-    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
-    hibernate_check({noreply, State}).
+    {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({'cloudi_service_request_success', RequestResponse,
              NewServiceState},
@@ -1951,7 +1949,7 @@ handle_info(Request, #state{duo_mode_pid = DuoModePid} = State) ->
         is_pid(DuoModePid) ->
             % should never happen, but random code could
             % send random messages to the dispatcher Erlang process
-            ?LOG_ERROR("Unknown info \"~p\"", [Request]),
+            ?LOG_ERROR("Unknown info \"~w\"", [Request]),
             hibernate_check({noreply, State})
     end.
 

@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2013-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -258,8 +258,7 @@ cloudi_service_handle_info({update, UpdateDelaySeconds},
                       {update, UpdateDelaySeconds}),
     {noreply, State#state{handler_state = NewHandlerState}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
 cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;

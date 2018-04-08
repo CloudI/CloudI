@@ -12,7 +12,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -33,8 +33,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_init).
@@ -147,15 +147,15 @@ handle_call(Request, From, #state{service_state = InternalState} = State) ->
 handle_cast(Request, #state{service_state = InternalState} = State) ->
     case cloudi_core_i_services_internal:
          handle_cast(Request, InternalState) of
-        {noreply, NewInternalState} ->
-            {noreply,
-             State#state{service_state = NewInternalState}};
-        {noreply, NewInternalState, Timeout} ->
-            {noreply,
-             State#state{service_state = NewInternalState}, Timeout}%;
-        %{stop, Reason, NewInternalState} ->
-        %    {stop, Reason,
-        %     State#state{service_state = NewInternalState}}
+        %{noreply, NewInternalState} ->
+        %    {noreply,
+        %     State#state{service_state = NewInternalState}};
+        %{noreply, NewInternalState, Timeout} ->
+        %    {noreply,
+        %     State#state{service_state = NewInternalState}, Timeout};
+        {stop, Reason, NewInternalState} ->
+            {stop, Reason,
+             State#state{service_state = NewInternalState}}
     end.
 
 handle_info('cloudi_service_init_timeout', State) ->

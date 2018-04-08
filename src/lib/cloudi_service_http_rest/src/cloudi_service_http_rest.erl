@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -408,7 +408,7 @@ cloudi_service_handle_info(Request,
                            Dispatcher) ->
     if
         InfoF =:= undefined ->
-            ?LOG_WARN("Unknown info \"~p\"", [Request]),
+            ?LOG_WARN("Unknown info \"~w\"", [Request]),
             {noreply, State};
         true ->
             case InfoF(Request, StateAPI, Dispatcher) of

@@ -148,9 +148,11 @@ cloudi_service_handle_info(Request,
                            #state{mode = crdt,
                                   crdt = CRDT0} = State, Dispatcher) ->
     {ok, CRDTN} = cloudi_crdt:handle_info(Request, CRDT0, Dispatcher),
-    {noreply, State#state{crdt = CRDTN}}.
+    {noreply, State#state{crdt = CRDTN}};
+cloudi_service_handle_info(Request, State, _Dispatcher) ->
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ?LOG_INFO("terminate count erlang", []),
     ok.
 

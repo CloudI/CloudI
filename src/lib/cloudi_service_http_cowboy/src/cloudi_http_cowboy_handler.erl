@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy_handler).
@@ -104,7 +104,7 @@ init(_Transport, Req0,
                     {ok, Req1, State}
             end;
         {Upgrade, Req1} ->
-            ?LOG_ERROR("Unknown protocol: ~p", [Upgrade]),
+            ?LOG_ERROR("Unknown protocol: ~w", [Upgrade]),
             {shutdown, Req1, State}
     end;
 init(_Transport, Req,

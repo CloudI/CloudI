@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -219,10 +219,9 @@ cloudi_service_handle_info(increment,
                            #state{count = Count} = State, _Dispatcher) ->
     {noreply, State#state{count = Count + 2}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    {stop, {unexpected_info, Request}, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-cloudi_service_terminate(_Reason, _Timeout,
-                         undefined) ->
+cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     % cloudi_service_init/3 caused an exception
     ok;
 cloudi_service_terminate(terminate_sleep_test_1, _Timeout,

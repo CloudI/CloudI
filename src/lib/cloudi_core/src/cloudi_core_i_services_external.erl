@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -360,7 +360,7 @@ init([Protocol, SocketPath,
 
 handle_event(EventType, EventContent, StateName, State) ->
     Event = {EventType, EventContent},
-    ?LOG_WARN("Unknown event \"~p\"", [Event]),
+    ?LOG_WARN("Unknown event \"~w\"", [Event]),
     {stop, {StateName, undefined_event, Event}, State}.
 
 % incoming messages (from the port socket)

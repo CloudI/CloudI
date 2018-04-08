@@ -277,9 +277,10 @@ cloudi_service_handle_info({'DOWN', _MonitorRef, process, Pid, _Info},
     {noreply, State#state{failures_source = NewFailuresSrc}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
+cloudi_service_terminate(_Reason, _Timeout, undefined) ->
+    ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{ssh = SSH}) ->
     ok = cloudi_service_router_ssh_server:destroy(SSH),

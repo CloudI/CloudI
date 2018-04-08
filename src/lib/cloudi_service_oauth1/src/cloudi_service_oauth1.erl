@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_oauth1).
@@ -252,10 +252,9 @@ cloudi_service_handle_info({tokens_clean, TokensClean} = Request,
                       Request),
     {noreply, State};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------

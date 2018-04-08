@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -327,8 +327,7 @@ handle_call({pids, ServiceId}, _,
     end;
 
 handle_call(Request, _, State) ->
-    ?LOG_WARN("Unknown call \"~p\"", [Request]),
-    {stop, cloudi_string:format("Unknown call \"~p\"", [Request]),
+    {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
 handle_cast({Direction,
@@ -369,8 +368,7 @@ handle_cast({terminate_kill, Pid, Reason},
     end;
 
 handle_cast(Request, State) ->
-    ?LOG_WARN("Unknown cast \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({changes, ServiceId},
             #state{services = Services,
@@ -494,8 +492,7 @@ handle_info({ReplyRef, _}, State) when is_reference(ReplyRef) ->
     {noreply, State};
 
 handle_info(Request, State) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
 terminate(_, _) ->
     ok.

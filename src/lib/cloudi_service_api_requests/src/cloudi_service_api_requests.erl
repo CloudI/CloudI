@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -44,7 +44,6 @@
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
          cloudi_service_handle_request/11,
-         cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
@@ -105,11 +104,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
     end,
     {reply, Response, State}.
 
-cloudi_service_handle_info(Request, State, _) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
-
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------
@@ -219,9 +214,9 @@ cloudi_service_api_call(Method, Input, Timeout) ->
     cloudi_service_api:Method(Input, Timeout).
 
 cloudi_service_api_result({ok, Result}, erlang_string) ->
-    cloudi_string:term_to_binary(Result);
+    cloudi_string:format_to_binary("~p", [Result]);
 cloudi_service_api_result(Result, erlang_string) ->
-    cloudi_string:term_to_binary(Result).
+    cloudi_string:format_to_binary("~p", [Result]).
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).

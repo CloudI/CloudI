@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -418,9 +418,10 @@ cloudi_service_handle_info(socket_closed,
     {noreply, State#state{connection_count = ConnectionCount - 1}};
 
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
+cloudi_service_terminate(_Reason, _Timeout, undefined) ->
+    ok;
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{listener = Listener}) ->
     catch gen_tcp:close(Listener),

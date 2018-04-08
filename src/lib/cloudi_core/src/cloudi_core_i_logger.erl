@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -563,7 +563,7 @@ handle_call({Level, Timestamp, Node, Pid,
             {stop, Reason, ok, StateNext}
     end;
 handle_call(Request, _, State) ->
-    {stop, cloudi_string:format("Unknown call \"~p\"~n", [Request]),
+    {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
 handle_cast({set, LoggingConfig}, State) ->
@@ -654,7 +654,7 @@ handle_cast({Level, Timestamp, Node, Pid,
             {stop, Reason, StateNext}
     end;
 handle_cast(Request, State) ->
-    {stop, cloudi_string:format("Unknown cast \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({'DOWN', _, process, Process, Info},
             #state{syslog = Syslog} = State) ->
@@ -704,7 +704,7 @@ handle_info({'CHANGE', Monitor, time_offset, clock_service, TimeOffset},
             {stop, Reason, StateNew}
     end;
 handle_info(Request, State) ->
-    {stop, cloudi_string:format("Unknown info \"~p\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
 terminate(_, #state{fd = Fd,
                     stdout = StdoutPort,

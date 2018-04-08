@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2012-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_messaging_sequence1).
@@ -147,7 +147,7 @@ cloudi_service_handle_request(_Type, _Name, Pattern, _RequestInfo, Request,
             {reply, Request, State}
     end.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ?LOG_INFO("terminate messaging 1 erlang", []),
     ok.
 

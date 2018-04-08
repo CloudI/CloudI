@@ -19,8 +19,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 62de77792e2e03b33dea6c5a471924ed8419e18e`
-- `Thu Mar 29 10:48:37 PDT 2018`
+- `commit 82c49007c12ff294b9ba908ad77e1be37dd2374b`
+- `Sat Apr  7 17:03:52 PDT 2018`
 - `MIT`
 
 `erlang_term`
@@ -82,8 +82,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
-- `commit 9bc80fe09e26bf6a6e2516712ae82c6b3752b04e (v1.7.3)`
-- `Tue Feb 27 10:22:17 PST 2018`
+- `commit b6722c356a608498c038a2923a067641a65f17ba`
+- `Sat Apr  7 17:03:52 PDT 2018`
 - `MIT`
 
 `syslog_socket`

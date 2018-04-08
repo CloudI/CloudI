@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2017-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_node_monitor).
@@ -115,7 +115,7 @@ handle_call(died, {Client, _},
     {stop, normal, maps:keys(Monitors), State};
 
 handle_call(Request, _, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown call \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown call \"~w\"", [Request])),
      error, State}.
 
 handle_cast({add, Pid},
@@ -140,14 +140,14 @@ handle_cast({remove, Pid},
     end;
 
 handle_cast(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown cast \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown cast \"~w\"", [Request])),
      State}.
 
 handle_info({'DOWN', _, process, _, _} = DOWN, State) ->
     {noreply, monitors_send(DOWN, [], State)};
 
 handle_info(Request, State) ->
-    {stop, lists:flatten(io_lib:format("Unknown info \"~p\"", [Request])),
+    {stop, lists:flatten(io_lib:format("Unknown info \"~w\"", [Request])),
      State}.
 
 terminate(_, #state{}) ->

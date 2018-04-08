@@ -88,7 +88,7 @@
               options/0]).
 
 -define(TIMEOUT_DELTA, 100). % milliseconds
--define(TIMEOUT_SEND_MIN, 1000). % milliseconds
+-define(TIMEOUT_SEND_MIN, 10). % milliseconds
 -define(TIMEOUT_RECONNECT_MIN, 5000). % milliseconds
 
 %%%------------------------------------------------------------------------
@@ -254,10 +254,10 @@ handle_call({forward,
                                 Timeout, Priority, TransId, Source, State),
     {reply, Reply, NewState};
 handle_call(Request, _, State) ->
-    {stop, cloudi_string:format("Unknown call \"~w\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown call \"~w\"", [Request]), State}.
 
 handle_cast(Request, State) ->
-    {stop, cloudi_string:format("Unknown cast \"~w\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
 
 handle_info({ssh_cm, Connection,
              {closed, ChannelId}},
@@ -290,7 +290,7 @@ handle_info({ssh_cm, Connection,
 handle_info({ssh_cm, _, _}, State) ->
     {noreply, State};
 handle_info(Request, State) ->
-    {stop, cloudi_string:format("Unknown info \"~w\"~n", [Request]), State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
 terminate(_, #ssh_client_connection{handle = ConnectionHandle}) ->
     case ConnectionHandle of

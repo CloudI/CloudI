@@ -102,10 +102,9 @@ cloudi_service_handle_info({test, 1},
                                          <<?REQUEST1>>, undefined, undefined),
     {noreply, State#state{trans_ids = [Id0, Id1 | TransIds]}};
 cloudi_service_handle_info(Request, State, _Dispatcher) ->
-    ?LOG_WARN("Unknown info \"~p\"", [Request]),
-    {noreply, State}.
+    {stop, cloudi_string:format("Unknown info \"~w\"", [Request]), State}.
 
-cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
+cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
 
 %%%------------------------------------------------------------------------
