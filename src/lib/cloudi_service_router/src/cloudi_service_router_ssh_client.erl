@@ -88,7 +88,7 @@
               options/0]).
 
 -define(TIMEOUT_DELTA, 100). % milliseconds
--define(TIMEOUT_SEND_MIN, 10). % milliseconds
+-define(TIMEOUT_SEND_MIN, 100). % milliseconds (>= FORWARD_DELTA)
 -define(TIMEOUT_RECONNECT_MIN, 5000). % milliseconds
 
 %%%------------------------------------------------------------------------
