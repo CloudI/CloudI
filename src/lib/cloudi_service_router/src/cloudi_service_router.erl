@@ -137,9 +137,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
      ValidateRequestInfo0, ValidateRequest0,
      FailuresSrcDie, FailuresSrcMaxCount, FailuresSrcMaxPeriod,
      DestinationsL] = cloudi_proplists:take_values(Defaults, Args),
-    EnvironmentLookup = cloudi_environment:lookup(),
+    Environment = cloudi_environment:lookup(),
     SSH = cloudi_service_router_ssh_server:new(SSHOptions,
-                                               EnvironmentLookup,
+                                               Environment,
                                                Dispatcher),
     true = is_boolean(AddPrefix),
     ValidateRequestInfo1 = cloudi_args_type:
@@ -179,7 +179,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                  ParametersSelected,
                  Names0] = cloudi_proplists:take_values(ConfigDefaults, L),
                 Remote = cloudi_service_router_client:new(RemoteOptions,
-                                                          EnvironmentLookup,
+                                                          Environment,
                                                           SSH),
                 true = is_atom(Mode) andalso
                        ((Mode =:= random) orelse

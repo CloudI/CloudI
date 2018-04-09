@@ -122,11 +122,11 @@ forward(Type, Name, Pattern, NewName, RequestInfo, Request,
     end.
 
 -spec new(Options :: options(),
-          EnvironmentLookup :: cloudi_environment:lookup(),
+          Environment :: cloudi_environment:lookup(),
           SSH :: cloudi_service_router_ssh_server:state() | undefined) ->
     state() | undefined.
 
-new(Options, EnvironmentLookup, SSH)
+new(Options, Environment, SSH)
     when is_list(Options) ->
     Defaults = [
         {host_name,                     ?DEFAULT_HOST_NAME},
@@ -156,11 +156,11 @@ new(Options, EnvironmentLookup, SSH)
     true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
     true = is_list(UserRaw) andalso is_integer(hd(UserRaw)),
     true = is_list(PasswordRaw),
-    HostName = cloudi_environment:transform(HostNameRaw, EnvironmentLookup),
-    UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
-    SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
-    User = cloudi_environment:transform(UserRaw, EnvironmentLookup),
-    Password = cloudi_environment:transform(PasswordRaw, EnvironmentLookup),
+    HostName = cloudi_environment:transform(HostNameRaw, Environment),
+    UserDir = cloudi_environment:transform(UserDirRaw, Environment),
+    SystemDir = cloudi_environment:transform(SystemDirRaw, Environment),
+    User = cloudi_environment:transform(UserRaw, Environment),
+    Password = cloudi_environment:transform(PasswordRaw, Environment),
     ClientOptions0 = if
         Inet =:= inet; Inet =:= inet6 ->
             [{inet, Inet}];
@@ -173,8 +173,7 @@ new(Options, EnvironmentLookup, SSH)
         is_list(DSAPassphraseRaw) andalso
         is_integer(hd(DSAPassphraseRaw)) ->
             [{dsa_pass_phrase,
-              cloudi_environment:
-              transform(DSAPassphraseRaw, EnvironmentLookup)} |
+              cloudi_environment:transform(DSAPassphraseRaw, Environment)} |
              ClientOptions0]
     end,
     ClientOptions2 = if
@@ -183,8 +182,7 @@ new(Options, EnvironmentLookup, SSH)
         is_list(RSAPassphraseRaw) andalso
         is_integer(hd(RSAPassphraseRaw)) ->
             [{rsa_pass_phrase,
-              cloudi_environment:
-              transform(RSAPassphraseRaw, EnvironmentLookup)} |
+              cloudi_environment:transform(RSAPassphraseRaw, Environment)} |
              ClientOptions1]
     end,
     ClientOptions3 = if
@@ -193,8 +191,7 @@ new(Options, EnvironmentLookup, SSH)
         is_list(ECDSAPassphraseRaw) andalso
         is_integer(hd(ECDSAPassphraseRaw)) ->
             [{ecdsa_pass_phrase,
-              cloudi_environment:
-              transform(ECDSAPassphraseRaw, EnvironmentLookup)} |
+              cloudi_environment:transform(ECDSAPassphraseRaw, Environment)} |
              ClientOptions2]
     end,
     SilentlyAcceptHostsF = fun(PeerName, FingerPrint) ->

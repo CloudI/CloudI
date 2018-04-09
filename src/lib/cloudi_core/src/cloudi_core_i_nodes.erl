@@ -336,10 +336,10 @@ monitor_nodes(Flag, Listen) ->
 discovery_start_args(ec2_discover, StartA) ->
     [EC2AccessKeyId, EC2SecretAccessKey,
      EC2Host, EC2Groups, EC2Tags] = StartA,
-    Lookup = cloudi_environment:lookup(),
-    [cloudi_environment:transform(EC2AccessKeyId, Lookup),
-     cloudi_environment:transform(EC2SecretAccessKey, Lookup),
-     cloudi_environment:transform(EC2Host, Lookup),
+    Environment = cloudi_environment:lookup(),
+    [cloudi_environment:transform(EC2AccessKeyId, Environment),
+     cloudi_environment:transform(EC2SecretAccessKey, Environment),
+     cloudi_environment:transform(EC2Host, Environment),
      EC2Groups, EC2Tags];
 discovery_start_args(_, StartA) ->
     StartA.

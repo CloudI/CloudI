@@ -118,6 +118,15 @@
         % (if the response size is less than or equal to the request size
         %  this is never a problem because the space is reused)
 -define(DEFAULT_COMPRESSION,                    0). % zlib compression 0..9
+-define(DEFAULT_CHECKSUM,               undefined).
+        % Add a checksum to each data chunk in the queue file.
+        % A checksum is not used on the whole queue file.
+        % This is not necessary if your filesystem already
+        % uses checksums (e.g., Btrfs (crc32 variation) and ZFS (sha256)).
+        % Without a checksum it isn't possible to be sure the
+        % data on disk isn't corrupt (once it is recovered after a crash).
+        % Valid values are:
+        % crc32, md5, ripemd160, sha, sha224, sha256, sha384, sha512
 -define(DEFAULT_RETRY,                          0).
 -define(DEFAULT_RETRY_DELAY,                    0). % milliseconds
 -define(DEFAULT_FAULT_ISOLATION,      destination). % | both
@@ -187,10 +196,11 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {file,                         ?DEFAULT_FILE},
         {file_size_limit,   ?DEFAULT_FILE_SIZE_LIMIT},
         {compression,           ?DEFAULT_COMPRESSION},
+        {checksum,                 ?DEFAULT_CHECKSUM},
         {retry,                       ?DEFAULT_RETRY},
         {retry_delay,           ?DEFAULT_RETRY_DELAY},
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
-    [FilePath, FileSizeLimit, Compression, Retry, RetryDelay,
+    [FilePath, FileSizeLimit, Compression, Checksum, Retry, RetryDelay,
      Mode] = cloudi_proplists:take_values(Defaults, Args),
     false = cloudi_x_trie:is_pattern(Prefix),
     true = is_list(FilePath) andalso is_integer(hd(FilePath)),
@@ -198,6 +208,11 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
            (FileSizeLimit >= 1) andalso (FileSizeLimit =< 18014398509481983),
     true = is_integer(Compression) andalso
            (Compression >= 0) andalso (Compression =< 9),
+    true = (Checksum =:= undefined) orelse
+           (Checksum =:= crc32) orelse (Checksum =:= md5) orelse
+           (Checksum =:= ripemd160) orelse (Checksum =:= sha) orelse
+           (Checksum =:= sha224) orelse (Checksum =:= sha256) orelse
+           (Checksum =:= sha384) orelse (Checksum =:= sha512),
     true = is_integer(Retry) andalso (Retry >= 0),
     true = is_integer(RetryDelay) andalso
            (RetryDelay >= 0) andalso (RetryDelay =< 4294967295),
@@ -216,6 +231,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Logging = cloudi_write_ahead_logging:new(QueueFilePath,
                                              FileSizeLimit * 1024,
                                              Compression,
+                                             Checksum,
                                              RetryF),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{service = Service,

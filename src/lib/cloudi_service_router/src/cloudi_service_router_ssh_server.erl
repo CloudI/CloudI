@@ -155,13 +155,13 @@ destroy(#ssh_server{process = Pid}) ->
     ok.
 
 -spec new(Options :: options() | undefined,
-          EnvironmentLookup :: cloudi_environment:lookup(),
+          Environment :: cloudi_environment:lookup(),
           Dispatcher :: cloudi_service:dispatcher()) ->
     state() | undefined.
 
 new(undefined, _, _) ->
     undefined;
-new(Options, EnvironmentLookup, Dispatcher)
+new(Options, Environment, Dispatcher)
     when is_list(Options) ->
     Defaults = [
         {ip,                            ?DEFAULT_IP},
@@ -179,8 +179,8 @@ new(Options, EnvironmentLookup, Dispatcher)
            (Compression >= 0) andalso (Compression =< 9),
     true = is_list(UserDirRaw) andalso is_integer(hd(UserDirRaw)),
     true = is_list(SystemDirRaw) andalso is_integer(hd(SystemDirRaw)),
-    UserDir = cloudi_environment:transform(UserDirRaw, EnvironmentLookup),
-    SystemDir = cloudi_environment:transform(SystemDirRaw, EnvironmentLookup),
+    UserDir = cloudi_environment:transform(UserDirRaw, Environment),
+    SystemDir = cloudi_environment:transform(SystemDirRaw, Environment),
 
     State = #ssh_server{config_compression = Compression,
                         config_inet = Inet,
@@ -204,10 +204,8 @@ new(Options, EnvironmentLookup, Dispatcher)
                     DaemonOptions0;
                 is_list(UserPasswordsRaw) ->
                     [{user_passwords,
-                      [{cloudi_environment:transform(UserRaw,
-                                                     EnvironmentLookup),
-                        cloudi_environment:transform(PasswordRaw,
-                                                     EnvironmentLookup)}
+                      [{cloudi_environment:transform(UserRaw, Environment),
+                        cloudi_environment:transform(PasswordRaw, Environment)}
                        || {UserRaw, PasswordRaw} <- UserPasswordsRaw]} |
                      DaemonOptions0]
 

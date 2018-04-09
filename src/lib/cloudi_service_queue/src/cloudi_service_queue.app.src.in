@@ -11,6 +11,7 @@
    {registered, []},
    {applications, [
         cloudi_core,
+        crypto,
         stdlib,
         kernel
         ]}]}.

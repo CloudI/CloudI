@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-04-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the checksum argument to cloudi_service_queue so a
+      checksum may be stored with each data chunk
+
 2018-04-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Require service requests using a cloudi_service_router ssh

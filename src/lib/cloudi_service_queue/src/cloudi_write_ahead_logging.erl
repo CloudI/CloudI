@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_write_ahead_logging).
@@ -47,15 +47,19 @@
          store_end/3,
          store_fail/2,
          store_start/2,
-         new/4,
+         new/5,
          update/3]).
 
-% overhead: chunk_size, chunk_size_used
--define(CHUNK_OVERHEAD, 8 + 8).
+% overhead: chunk_size, chunk_size_used, checksum_size
+-define(CHUNK_OVERHEAD(ChecksumSize), 8 + 8 + ChecksumSize).
 % use 64 bit offsets/sizes
 -define(MAX_64BITS, 18446744073709551615).
 -type non_neg_integer_64bit() :: 0..?MAX_64BITS.
 -type pos_integer_64bit() :: 1..?MAX_64BITS.
+-type checksum_algorithms() :: crc32 |
+                               % crypto hash_algorithms() type
+                               md5 | ripemd160 |
+                               sha | sha224 | sha256 | sha384 | sha512.
 
 -record(chunk,
     {
@@ -70,6 +74,8 @@
         file :: string(),
         file_size_limit :: pos_integer_64bit(), % bytes
         compression :: 0..9, % zlib compression level
+        checksum :: undefined | checksum_algorithms(),
+        checksum_size :: pos_integer_64bit(), % bytes
         position :: non_neg_integer(),
         chunks :: #{cloudi_service:trans_id() := #chunk{}},
         chunks_free :: list(#chunk{}) % ordered
@@ -183,6 +189,8 @@ store_start(ChunkRequest,
             #state{file = FilePath,
                    file_size_limit = FileSizeLimit,
                    compression = Compression,
+                   checksum = Checksum,
+                   checksum_size = ChecksumSize,
                    position = Position,
                    chunks_free = ChunksFree} = State) ->
     {ok, Fd} = file_open_tmp(FilePath),
@@ -191,12 +199,13 @@ store_start(ChunkRequest,
     ChunkSizeUsed = erlang:byte_size(ChunkData),
     case chunk_free_check(ChunksFree, ChunkSizeUsed) of
         false
-            when Position + (?CHUNK_OVERHEAD + ChunkSizeUsed) > FileSizeLimit ->
+            when Position + ?CHUNK_OVERHEAD(ChecksumSize) + ChunkSizeUsed >
+                 FileSizeLimit ->
             full;
         false ->
             ChunkSize = ChunkSizeUsed,
-            NewPosition = chunk_write(ChunkSize, ChunkSizeUsed,
-                                      ChunkData, Position, Fd),
+            NewPosition = chunk_write(ChunkSize, ChunkSizeUsed, ChunkData,
+                                      Checksum, ChecksumSize, Position, Fd),
             ok = file_close_tmp(FilePath, Fd),
             NewChunk = #chunk{size = ChunkSize,
                               position = Position,
@@ -204,8 +213,8 @@ store_start(ChunkRequest,
             {NewChunk, State#state{position = NewPosition}};
         {#chunk{size = ChunkSize,
                 position = ChunkPosition} = ChunkFree, NewChunksFree} ->
-            chunk_write(ChunkSize, ChunkSizeUsed,
-                        ChunkData, ChunkPosition, Fd),
+            chunk_write(ChunkSize, ChunkSizeUsed, ChunkData,
+                        Checksum, ChecksumSize, ChunkPosition, Fd),
             ok = file_close_tmp(FilePath, Fd),
             NewChunk = ChunkFree#chunk{request = ChunkRequest},
             {NewChunk, State#state{chunks_free = NewChunksFree}}
@@ -214,23 +223,27 @@ store_start(ChunkRequest,
 -spec new(FilePath :: string(),
           FileSizeLimit :: 1024..?MAX_64BITS,
           Compression :: 0..9,
+          Checksum :: undefined | checksum_algorithms(),
           RetryF :: retry_function()) ->
     #state{}.
 
-new(FilePath, FileSizeLimit, Compression, RetryF)
+new(FilePath, FileSizeLimit, Compression, Checksum, RetryF)
     when is_integer(FileSizeLimit),
          FileSizeLimit >= 1024, FileSizeLimit =< ?MAX_64BITS,
          is_integer(Compression), Compression >= 0, Compression =< 9,
          is_function(RetryF, 2) ->
     {ok, Fd} = file_open_copy(FilePath),
+    ChecksumSize = checksum_size(Checksum),
     {ok,
      Position,
      Chunks,
-     ChunksFree} = chunks_recover(#{}, [], Fd, RetryF),
+     ChunksFree} = chunks_recover(Checksum, ChecksumSize, #{}, [], Fd, RetryF),
     ok = file_close_tmp(FilePath, Fd),
     #state{file = FilePath,
            file_size_limit = FileSizeLimit,
            compression = Compression,
+           checksum = Checksum,
+           checksum_size = ChecksumSize,
            position = Position,
            chunks = Chunks,
            chunks_free = ChunksFree}.
@@ -243,6 +256,8 @@ new(FilePath, FileSizeLimit, Compression, RetryF)
 update(ChunkId, UpdateF,
        #state{file = FilePath,
               compression = Compression,
+              checksum = Checksum,
+              checksum_size = ChecksumSize,
               chunks = Chunks} = State) ->
     Chunk = maps:get(ChunkId, Chunks),
     #chunk{request = ChunkRequest} = Chunk,
@@ -268,7 +283,9 @@ update(ChunkId, UpdateF,
                     %  file_size_limit here)
                     NewChunkSize = NewChunkSizeUsed,
                     NewPosition = chunk_write(NewChunkSize, NewChunkSizeUsed,
-                                              NewChunkData, Position, Fd),
+                                              NewChunkData,
+                                              Checksum, ChecksumSize,
+                                              Position, Fd),
                     NewChunk = #chunk{size = NewChunkSize,
                                       position = Position,
                                       request = NewChunkRequest},
@@ -278,7 +295,8 @@ update(ChunkId, UpdateF,
                 {#chunk{size = ChunkSize,
                         position = ChunkPosition} = ChunkFree, NewChunksFree} ->
                     chunk_write(ChunkSize, NewChunkSizeUsed,
-                                NewChunkData, ChunkPosition, Fd),
+                                NewChunkData, Checksum, ChecksumSize,
+                                ChunkPosition, Fd),
                     NewChunk = ChunkFree#chunk{request = NewChunkRequest},
                     NewChunks = maps:put(NewChunkId, NewChunk, Chunks),
                     NextState#state{chunks = NewChunks,
@@ -317,40 +335,46 @@ file_close_tmp(FilePath, Fd) ->
                         {FilePath ++ ?FILE_EXTENSION_TMP, [raw]}),
     ok.
 
-chunk_write(ChunkSize, ChunkSizeUsed, ChunkData, Position, Fd) ->
+chunk_write(ChunkSize, ChunkSizeUsed, ChunkData,
+            Checksum, ChecksumSize, Position, Fd) ->
+    ChunkChecksum = checksum(Checksum, ChunkData),
     ChunkSizeZero = (ChunkSize - ChunkSizeUsed),
     ok = file:pwrite(Fd, Position,
                      <<ChunkSize:64/unsigned-integer-big,
                        ChunkSizeUsed:64/unsigned-integer-big,
+                       ChunkChecksum/binary,
                        ChunkData/binary,
                        0:(ChunkSizeZero * 8)>>),
-    Position + ?CHUNK_OVERHEAD + ChunkSize.
+    Position + ?CHUNK_OVERHEAD(ChecksumSize) + ChunkSize.
 
-chunk_erase_last(ChunkSize, Position, Fd) ->
+chunk_erase_last(ChunkSize, ChecksumSize, Position, Fd) ->
     ok = file:pwrite(Fd, Position,
                      <<0:64,
                        0:64,
+                       0:(ChecksumSize * 8),
                        0:(ChunkSize * 8)>>),
     ok.
 
-chunk_free(ChunkSize, Position, Fd) ->
+chunk_free(ChunkSize, ChecksumSize, Position, Fd) ->
     ok = file:pwrite(Fd, Position,
                      <<ChunkSize:64/unsigned-integer-big,
                        0:64,
+                       0:(ChecksumSize * 8),
                        0:(ChunkSize * 8)>>),
     ok.
 
 erase_chunk(#chunk{size = ChunkSize,
                    position = ChunkPosition} = Chunk,
             Fd,
-            #state{position = Position,
+            #state{checksum_size = ChecksumSize,
+                   position = Position,
                    chunks_free = ChunksFree} = State) ->
     if
-        (ChunkPosition + ?CHUNK_OVERHEAD + ChunkSize) == Position ->
-            chunk_erase_last(ChunkSize, ChunkPosition, Fd),
+        ChunkPosition + ?CHUNK_OVERHEAD(ChecksumSize) + ChunkSize == Position ->
+            chunk_erase_last(ChunkSize, ChecksumSize, ChunkPosition, Fd),
             State#state{position = ChunkPosition};
         true ->
-            chunk_free(ChunkSize, ChunkPosition, Fd),
+            chunk_free(ChunkSize, ChecksumSize, ChunkPosition, Fd),
             ChunkFree = Chunk#chunk{request = undefined,
                                     retries = 0},
             State#state{chunks_free = lists:umerge(ChunksFree, [ChunkFree])}
@@ -367,75 +391,98 @@ chunk_free_check([#chunk{size = ChunkSize} = Chunk | ChunksFree], L, Size)
 chunk_free_check([Chunk | ChunksFree], L, Size) ->
     chunk_free_check(ChunksFree, [Chunk | L], Size).
 
-chunk_recover_free(Position, ChunkSize, Chunks, ChunksFree, Fd, RetryF) ->
-    NewPosition = Position + ?CHUNK_OVERHEAD + ChunkSize,
+chunk_recover_free(Position, ChunkSize, Checksum, ChecksumSize,
+                   Chunks, ChunksFree, Fd, RetryF) ->
+    NewPosition = Position + ?CHUNK_OVERHEAD(ChecksumSize) + ChunkSize,
     ChunkFree = #chunk{size = ChunkSize,
                        position = Position,
                        request = undefined},
-    chunks_recover(NewPosition, Chunks,
+    chunks_recover(NewPosition, Checksum, ChecksumSize, Chunks,
                    lists:umerge(ChunksFree, [ChunkFree]),
                    Fd, RetryF).
 
-chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
+chunk_recover_used(Position, ChunkSize, ChunkSizeUsed, Checksum, ChecksumSize,
                    Chunks, ChunksFree, Fd, RetryF) ->
-    case file:read(Fd, ChunkSizeUsed) of
-        {ok, ChunkData} ->
-            ChunkRequest = erlang:binary_to_term(ChunkData),
-            case RetryF(ChunkRequest, true) of
-                {error, timeout} ->
-                    ok = chunk_free(ChunkSize, Position, Fd),
-                    chunk_recover_free(Position, ChunkSize,
-                                       Chunks, ChunksFree, Fd, RetryF);
-                {ok, ChunkId} when ChunkSize == ChunkSizeUsed ->
-                    NewPosition = Position + ?CHUNK_OVERHEAD + ChunkSize,
-                    Chunk = #chunk{size = ChunkSize,
-                                   position = Position,
-                                   request = ChunkRequest},
-                    chunks_recover(NewPosition,
-                                   maps:put(ChunkId, Chunk, Chunks),
-                                   ChunksFree, Fd, RetryF);
-                {ok, ChunkId} ->
-                    ChunkEnd = (ChunkSize - ChunkSizeUsed),
-                    case file:position(Fd, {cur, ChunkEnd}) of
-                        {ok, NewPosition} ->
+    case file:read(Fd, ChecksumSize + ChunkSizeUsed) of
+        {ok, <<ChunkChecksum:ChecksumSize/binary,
+               ChunkData/binary>>} ->
+            ChecksumValid = ChunkChecksum == checksum(Checksum, ChunkData),
+            if
+                ChecksumValid =:= true ->
+                    ChunkRequest = erlang:binary_to_term(ChunkData),
+                    case RetryF(ChunkRequest, true) of
+                        {error, timeout} ->
+                            ok = chunk_free(ChunkSize, ChecksumSize,
+                                            Position, Fd),
+                            chunk_recover_free(Position, ChunkSize,
+                                               Checksum, ChecksumSize,
+                                               Chunks, ChunksFree, Fd, RetryF);
+                        {ok, ChunkId} when ChunkSize == ChunkSizeUsed ->
+                            NewPosition = Position +
+                                          ?CHUNK_OVERHEAD(ChecksumSize) +
+                                          ChunkSize,
                             Chunk = #chunk{size = ChunkSize,
                                            position = Position,
                                            request = ChunkRequest},
                             chunks_recover(NewPosition,
+                                           Checksum, ChecksumSize,
                                            maps:put(ChunkId, Chunk, Chunks),
                                            ChunksFree, Fd, RetryF);
-                        {error, Reason} ->
-                            {error, {chunk_corrupt, Reason}}
-                    end
+                        {ok, ChunkId} ->
+                            ChunkEnd = (ChunkSize - ChunkSizeUsed),
+                            case file:position(Fd, {cur, ChunkEnd}) of
+                                {ok, NewPosition} ->
+                                    Chunk = #chunk{size = ChunkSize,
+                                                   position = Position,
+                                                   request = ChunkRequest},
+                                    chunks_recover(NewPosition,
+                                                   Checksum, ChecksumSize,
+                                                   maps:put(ChunkId, Chunk,
+                                                            Chunks),
+                                                   ChunksFree, Fd, RetryF);
+                                {error, Reason} ->
+                                    {error, {chunk_corrupt, Reason}}
+                            end
+                    end;
+                ChecksumValid =:= false ->
+                    {error, chunk_checksum_failed}
             end;
         {error, Reason} ->
             {error, {chunk_size_used_invalid, Reason}}
     end.
 
-chunk_recover(Position, ChunkSize, Chunks, ChunksFree, Fd, RetryF) ->
+chunk_recover(Position, ChunkSize, Checksum, ChecksumSize,
+              Chunks, ChunksFree, Fd, RetryF) ->
     case file:read(Fd, 8) of
         {error, Reason} ->
             {error, {chunk_used_size_invalid, Reason}};
         eof ->
             {error, {chunk_used_size_missing, eof}};
         {ok, <<0:64>>} ->
-            case file:position(Fd, {cur, ChunkSize}) of
+            case file:position(Fd, {cur, ChecksumSize + ChunkSize}) of
                 {ok, _} ->
                     chunk_recover_free(Position, ChunkSize,
+                                       Checksum, ChecksumSize,
                                        Chunks, ChunksFree, Fd, RetryF);
                 {error, Reason} ->
                     {error, {chunk_corrupt, Reason}}
             end;
         {ok, <<ChunkSizeUsed:64/unsigned-integer-big>>} ->
-            true = (ChunkSize >= ChunkSizeUsed),
-            chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
-                               Chunks, ChunksFree, Fd, RetryF)
+            if
+                ChunkSize >= ChunkSizeUsed ->
+                    chunk_recover_used(Position, ChunkSize, ChunkSizeUsed,
+                                       Checksum, ChecksumSize,
+                                       Chunks, ChunksFree, Fd, RetryF);
+                true ->
+                    {error, chunk_size_corrupt}
+            end
     end.
 
-chunks_recover(Chunks, ChunksFree, Fd, RetryF) ->
-    chunks_recover(0, Chunks, ChunksFree, Fd, RetryF).
+chunks_recover(Checksum, ChecksumSize, Chunks, ChunksFree, Fd, RetryF) ->
+    chunks_recover(0, Checksum, ChecksumSize, Chunks, ChunksFree, Fd, RetryF).
 
-chunks_recover(Position, Chunks, ChunksFree, Fd, RetryF) ->
+chunks_recover(Position, Checksum, ChecksumSize,
+               Chunks, ChunksFree, Fd, RetryF) ->
     case file:read(Fd, 8) of
         {error, Reason} ->
             {error, {chunk_size_missing, Reason}};
@@ -444,7 +491,48 @@ chunks_recover(Position, Chunks, ChunksFree, Fd, RetryF) ->
         {ok, <<0:64>>} ->
             {ok, Position, Chunks, ChunksFree};
         {ok, <<ChunkSize:64/unsigned-integer-big>>} ->
-            chunk_recover(Position, ChunkSize,
+            chunk_recover(Position, ChunkSize, Checksum, ChecksumSize,
                           Chunks, ChunksFree, Fd, RetryF)
     end.
+
+checksum_size(undefined) ->
+    0;
+checksum_size(crc32) ->
+    4;
+checksum_size(md5) ->
+    16;
+checksum_size(ripemd160) ->
+    20;
+checksum_size(sha) ->
+    20;
+checksum_size(sha224) ->
+    28;
+checksum_size(sha256) ->
+    32;
+checksum_size(sha384) ->
+    48;
+checksum_size(sha512) ->
+    64.
+
+checksum(undefined, _) ->
+    <<>>;
+checksum(crc32, Data) ->
+    I = erlang:crc32(Data), % CRC-32 IEEE 802.3 style
+    <<I:32/big-unsigned-integer>>;
+checksum(ChecksumType, Data) ->
+    crypto:hash(ChecksumType, Data).
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+checksum_size_test() ->
+    Data = <<"The quick brown fox jumps over the lazy dog">>,
+    Checksums = [undefined, crc32, md5, ripemd160,
+                 sha, sha224, sha256, sha384, sha512],
+    true = lists:all(fun(Checksum) ->
+        checksum_size(Checksum) == byte_size(checksum(Checksum, Data))
+    end, Checksums),
+    ok.
+
+-endif.
 
