@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,16 +24,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Websockets Integration Test with Python/C
+"""
 
-import sys, threading, time, traceback
-from cloudi_c import API, terminate_exception
+from __future__ import print_function
+import sys
+import threading
+import time
+import traceback
+from cloudi_c import API, TerminateException
 
-class Task(threading.Thread):
+class _Task(threading.Thread):
     def __init__(self, api):
         threading.Thread.__init__(self)
         self.__api = api
 
     def run(self):
+        # pylint: disable=bare-except
         try:
             self.__api.subscribe('bounce/get', self.__request)
             self.__api.subscribe('bounce/delay', self.__delay)
@@ -43,8 +51,8 @@ class Task(threading.Thread):
                                  self.__disconnect)
 
             result = self.__api.poll()
-            assert result == False
-        except terminate_exception:
+            assert result is False
+        except TerminateException:
             pass
         except:
             traceback.print_exc(file=sys.stderr)
@@ -52,6 +60,8 @@ class Task(threading.Thread):
 
     def __connect(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
         assert request == b'CONNECT'
         print('connect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
@@ -59,6 +69,8 @@ class Task(threading.Thread):
 
     def __disconnect(self, request_type, name, pattern, request_info, request,
                      timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
         assert request == b'DISCONNECT'
         print('disconnect: %s' %
               str(self.__api.info_key_value_parse(request_info)))
@@ -66,6 +78,9 @@ class Task(threading.Thread):
 
     def __request(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
+
         # send the request to self
         self.__api.send_async(self.__api.prefix() + 'bounce/delay',
                               request)
@@ -73,6 +88,8 @@ class Task(threading.Thread):
 
     def __delay(self, request_type, name, pattern, request_info, request,
                 timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
         time.sleep(1.0)
         assert name[-6:] == '/delay'
         trans_ids = self.__api.mcast_async(name[:-6] + '/websocket',
@@ -82,16 +99,20 @@ class Task(threading.Thread):
             print('websockets: (no websockets connected?)')
         else:
             for check in trans_ids:
-                (tmp, response, tmp) = self.__api.recv_async(trans_id=check)
+                (_, response, _) = self.__api.recv_async(trans_id=check)
                 print('websockets: %s' % str(response))
 
-if __name__ == '__main__':
+def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
-    
-    threads = [Task(API(i)) for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+
+    threads = [_Task(API(thread_index))
+               for thread_index in range(thread_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+if __name__ == '__main__':
+    _main()
 

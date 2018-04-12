@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -25,20 +25,31 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Erlang Binary Term Format Encoding/Decoding Tests
+"""
 
-import sys, os
+import sys
+import os
 sys.path.append(
     os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-1]
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ).split(os.path.sep)[:-1]
     )
 )
 import unittest
 import erlang
+try:
+    import coverage
+except ImportError:
+    coverage = None
 
 # many of the test cases were adapted
 # from erlport (https://github.com/hdima/erlport)
 # to make the tests more exhaustive
+
+# pylint: disable=missing-docstring
 
 class AtomTestCase(unittest.TestCase):
     def test_atom(self):
@@ -46,7 +57,7 @@ class AtomTestCase(unittest.TestCase):
         self.assertEqual(erlang.OtpErlangAtom, type(atom1))
         self.assertEqual(erlang.OtpErlangAtom('test'), atom1)
         self.assertEqual("OtpErlangAtom('test')", repr(atom1))
-        self.assertTrue(type(atom1) is erlang.OtpErlangAtom)
+        self.assertTrue(isinstance(atom1, erlang.OtpErlangAtom))
         atom2 = erlang.OtpErlangAtom('test2')
         atom1_new = erlang.OtpErlangAtom('test')
         self.assertFalse(atom1 is atom2)
@@ -63,20 +74,20 @@ class AtomTestCase(unittest.TestCase):
 class ListTestCase(unittest.TestCase):
     def test_list(self):
         lst = erlang.OtpErlangList([116, 101, 115, 116])
-        self.assertTrue(type(lst) is erlang.OtpErlangList)
+        self.assertTrue(isinstance(lst, erlang.OtpErlangList))
         self.assertEqual(erlang.OtpErlangList([116, 101, 115, 116]), lst)
         self.assertEqual([116, 101, 115, 116], lst.value)
-        self.assertEqual('OtpErlangList([116, 101, 115, 116],'
-                                       'improper=False)', repr(lst))
+        self.assertEqual('OtpErlangList([116, 101, 115, 116],improper=False)',
+                         repr(lst))
 
 class ImproperListTestCase(unittest.TestCase):
     def test_improper_list(self):
         lst = erlang.OtpErlangList([1, 2, 3, 4], improper=True)
-        self.assertTrue(type(lst) is erlang.OtpErlangList)
+        self.assertTrue(isinstance(lst, erlang.OtpErlangList))
         self.assertEqual([1, 2, 3, 4], lst.value)
         self.assertEqual(4, lst.value[-1])
-        self.assertEqual('OtpErlangList([1, 2, 3, 4],'
-                                       'improper=True)', repr(lst))
+        self.assertEqual('OtpErlangList([1, 2, 3, 4],improper=True)',
+                         repr(lst))
     def test_comparison(self):
         lst = erlang.OtpErlangList([1, 2, 3, 4], improper=True)
         self.assertEqual(lst, lst)
@@ -92,6 +103,7 @@ class ImproperListTestCase(unittest.TestCase):
                           erlang.OtpErlangList("invalid", improper=True))
 
 class DecodeTestCase(unittest.TestCase):
+    # pylint: disable=invalid-name
     def test_binary_to_term(self):
         self.assertRaises(erlang.ParseException,
                           erlang.binary_to_term, b'')
@@ -149,7 +161,7 @@ class DecodeTestCase(unittest.TestCase):
         self.assertRaises(erlang.ParseException,
                           erlang.binary_to_term, b'\x83l\0\0\0\0k')
         lst = erlang.binary_to_term(b'\x83l\0\0\0\1jd\0\4tail')
-        self.assertEqual(erlang.OtpErlangList, type(lst))
+        self.assertEqual(isinstance(lst, erlang.OtpErlangList), True)
         self.assertEqual([[], erlang.OtpErlangAtom(b'tail')], lst.value)
         self.assertEqual(True, lst.improper)
     def test_binary_to_term_small_tuple(self):
@@ -271,12 +283,16 @@ class DecodeTestCase(unittest.TestCase):
             erlang.ParseException, erlang.binary_to_term,
             b'\x83P\0\0\0\x16\x78\xda\xcb\x66\x10\x49\xc1\2\0\x5d\x60\x08\x50'
         )
-        self.assertEqual(b'd' * 20,
-            erlang.binary_to_term(b'\x83P\0\0\0\x17\x78\xda\xcb\x66'
-                                  b'\x10\x49\xc1\2\0\x5d\x60\x08\x50')
+        self.assertEqual(
+            b'd' * 20,
+            erlang.binary_to_term(
+                b'\x83P\0\0\0\x17\x78\xda\xcb\x66'
+                b'\x10\x49\xc1\2\0\x5d\x60\x08\x50'
+            )
         )
 
 class EncodeTestCase(unittest.TestCase):
+    # pylint: disable=invalid-name
     def test_term_to_binary_tuple(self):
         self.assertEqual(b'\x83h\0', erlang.term_to_binary(()))
         self.assertEqual(b'\x83h\2h\0h\0', erlang.term_to_binary(((), ())))
@@ -289,21 +305,23 @@ class EncodeTestCase(unittest.TestCase):
     def test_term_to_binary_string_list(self):
         self.assertEqual(b'\x83j', erlang.term_to_binary(''))
         self.assertEqual(b'\x83k\0\1\0', erlang.term_to_binary('\0'))
-        s = (b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r'
-             b'\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a'
-             b'\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>'
-             b'?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopq'
-             b'rstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88'
-             b'\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95'
-             b'\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2'
-             b'\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf'
-             b'\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc'
-             b'\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9'
-             b'\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6'
-             b'\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3'
-             b'\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0'
-             b'\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff')
-        self.assertEqual(b'\x83k\1\0' + s, erlang.term_to_binary(s))
+        value = (
+            b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r'
+            b'\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a'
+            b'\x1b\x1c\x1d\x1e\x1f !"#$%&\'()*+,-./0123456789:;<=>'
+            b'?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopq'
+            b'rstuvwxyz{|}~\x7f\x80\x81\x82\x83\x84\x85\x86\x87\x88'
+            b'\x89\x8a\x8b\x8c\x8d\x8e\x8f\x90\x91\x92\x93\x94\x95'
+            b'\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f\xa0\xa1\xa2'
+            b'\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf'
+            b'\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc'
+            b'\xbd\xbe\xbf\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9'
+            b'\xca\xcb\xcc\xcd\xce\xcf\xd0\xd1\xd2\xd3\xd4\xd5\xd6'
+            b'\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf\xe0\xe1\xe2\xe3'
+            b'\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef\xf0'
+            b'\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff'
+        )
+        self.assertEqual(b'\x83k\1\0' + value, erlang.term_to_binary(value))
     def test_term_to_binary_list_basic(self):
         self.assertEqual(b'\x83\x6A', erlang.term_to_binary([]))
         self.assertEqual(b'\x83\x6C\x00\x00\x00\x01\x6A\x6A',
@@ -330,7 +348,7 @@ class EncodeTestCase(unittest.TestCase):
                          erlang.term_to_binary([-257]))
         self.assertEqual(b'\x83\x6C\x00\x00\x00\x01\x62\x80\x00\x00\x00\x6A',
                          erlang.term_to_binary([-2147483648]))
-        self.assertEqual(   
+        self.assertEqual(
             b'\x83\x6C\x00\x00\x00\x01\x6E\x04\x01\x01\x00\x00\x80\x6A',
             erlang.term_to_binary([-2147483649])
         )
@@ -357,22 +375,25 @@ class EncodeTestCase(unittest.TestCase):
         self.assertEqual(b'\x83l\0\0\0\1jj', erlang.term_to_binary([[]]))
         self.assertEqual(b'\x83l\0\0\0\5jjjjjj',
                          erlang.term_to_binary([[], [], [], [], []]))
-        self.assertEqual(b'\x83l\0\0\0\5jjjjjj',
+        self.assertEqual(
+            b'\x83l\0\0\0\5jjjjjj',
             erlang.term_to_binary(erlang.OtpErlangList([
                 erlang.OtpErlangList([]),
                 erlang.OtpErlangList([]),
                 erlang.OtpErlangList([]),
                 erlang.OtpErlangList([]),
-                erlang.OtpErlangList([])]
-            ))
+                erlang.OtpErlangList([])
+            ]))
         )
     def test_term_to_binary_improper_list(self):
-        self.assertEqual(b'\x83l\0\0\0\1h\0h\0',
+        self.assertEqual(
+            b'\x83l\0\0\0\1h\0h\0',
             erlang.term_to_binary(
                 erlang.OtpErlangList([(), ()], improper=True)
             )
         )
-        self.assertEqual(b'\x83l\0\0\0\1a\0a\1',
+        self.assertEqual(
+            b'\x83l\0\0\0\1a\0a\1',
             erlang.term_to_binary(
                 erlang.OtpErlangList([0, 1], improper=True)
             )
@@ -384,7 +405,8 @@ class EncodeTestCase(unittest.TestCase):
                          erlang.term_to_binary(b'\x00\xc3\xbf'))
         self.assertEqual(b'\x83k\0\2\xc4\x80',
                          erlang.term_to_binary(b'\xc4\x80'))
-        self.assertEqual(b'\x83k\0\x08\xd1\x82\xd0\xb5\xd1\x81\xd1\x82',
+        self.assertEqual(
+            b'\x83k\0\x08\xd1\x82\xd0\xb5\xd1\x81\xd1\x82',
             erlang.term_to_binary(b'\xd1\x82\xd0\xb5\xd1\x81\xd1\x82')
         )
         # becomes a list of small integers
@@ -395,7 +417,8 @@ class EncodeTestCase(unittest.TestCase):
     def test_term_to_binary_atom(self):
         self.assertEqual(b'\x83s\0',
                          erlang.term_to_binary(erlang.OtpErlangAtom(b'')))
-        self.assertEqual(b'\x83s\4test',
+        self.assertEqual(
+            b'\x83s\4test',
             erlang.term_to_binary(erlang.OtpErlangAtom(b'test'))
         )
     def test_term_to_binary_string_basic(self):
@@ -496,12 +519,7 @@ def get_suite():
     suite.addTests(load(EncodeTestCase))
     return suite
 
-if __name__ == '__main__':
-    try:
-        import coverage
-    except ImportError:
-        coverage = None
-
+def main():
     if coverage is None:
         unittest.main()
     else:
@@ -514,3 +532,5 @@ if __name__ == '__main__':
         cov.report(morfs=modules, show_missing=False)
         cov.html_report(morfs=modules, directory='.cover')
 
+if __name__ == '__main__':
+    main()

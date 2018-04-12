@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,29 +24,33 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Runtime CloudI Service API Integration Test
+"""
 
-import sys, os
-
+import sys
+import os
 sys.path.append(
     os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-2] + ['service_api', 'python']
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ).split(os.path.sep)[:-2] + ['service_api', 'python']
     )
 )
+import urllib2
+from cloudi_service_api import CloudI
 
-import time, urllib2
-
-if __name__ == '__main__':
-    from cloudi_service_api import CloudI
+def _main():
     obj = CloudI()
-    assert(obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok')
-    assert(obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok')
-    assert(obj.nodes_remove(
-        '[foobar1@hostX, foobar2@hostY]'
-    ) == '{error,{node_not_found,foobar1@hostX}}')
+    assert obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok'
+    assert obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok'
+    assert (
+        obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') ==
+        '{error,{node_not_found,foobar1@hostX}}'
+    )
 
-    assert(obj.acl_remove('[all]') == 'ok')
-    assert(obj.acl_add('[{all, [database, tests]}]') == 'ok')
+    assert obj.acl_remove('[all]') == 'ok'
+    assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
 
     # start extra instances of the http_req test
     services_added = obj.services_add("""\
@@ -59,22 +63,35 @@ if __name__ == '__main__':
  [{prefix, "/json_rpc/4/"},
   {module, cloudi_service_test_http_req}]]
 """)
-    assert(type(services_added) == list) # returns the list of new ServiceIds
-    assert(len(services_added) == 4)
+    assert isinstance(services_added, list) # returns the list of new ServiceIds
+    assert len(services_added) == 4
 
     url = 'http://localhost:6464'
-    assert('<http_test><value>5</value></http_test>' ==
-           urllib2.urlopen(url + '/json_rpc/1/erlang.xml?value=5').read())
-    assert('<http_test><value>6</value></http_test>' ==
-           urllib2.urlopen(url + '/json_rpc/2/erlang.xml?value=6').read())
-    assert('<http_test><value>7</value></http_test>' ==
-           urllib2.urlopen(url + '/json_rpc/3/erlang.xml?value=7').read())
-    assert('<http_test><value>8</value></http_test>' ==
-           urllib2.urlopen(url + '/json_rpc/4/erlang.xml?value=8').read())
+    assert (
+        urllib2.urlopen(url + '/json_rpc/1/erlang.xml?value=5').read() ==
+        '<http_test><value>5</value></http_test>'
+    )
+    assert (
+        urllib2.urlopen(url + '/json_rpc/2/erlang.xml?value=6').read() ==
+        '<http_test><value>6</value></http_test>'
+    )
+    assert (
+        urllib2.urlopen(url + '/json_rpc/3/erlang.xml?value=7').read() ==
+        '<http_test><value>7</value></http_test>'
+    )
+    assert (
+        urllib2.urlopen(url + '/json_rpc/4/erlang.xml?value=8').read() ==
+        '<http_test><value>8</value></http_test>'
+    )
 
     # remove the extra instances of the http_req test
-    assert(obj.services_remove('["%s", "%s", "%s", "%s"]' % (
-        services_added[0], services_added[1],
-        services_added[2], services_added[3],
-    )) == 'ok')
+    assert (
+        obj.services_remove('["%s", "%s", "%s", "%s"]' % (
+            services_added[0], services_added[1],
+            services_added[2], services_added[3],
+        )) == 'ok'
+    )
+
+if __name__ == '__main__':
+    _main()
 

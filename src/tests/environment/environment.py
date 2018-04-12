@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,28 +24,37 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Environment Integration Test with Python/C
+"""
 
-import sys, os, threading, time, traceback
-from cloudi_c import API, terminate_exception
+from __future__ import print_function
+import sys
+import os
+import threading
+import traceback
+from cloudi_c import API, TerminateException
 
-class Task(threading.Thread):
+class _Task(threading.Thread):
     def __init__(self, api):
         threading.Thread.__init__(self)
         self.__api = api
 
     def run(self):
+        # pylint: disable=bare-except
         try:
             self.__check_environment()
             # idle service with no subscriptions
             result = self.__api.poll()
-            assert result == False
-        except terminate_exception:
+            assert result is False
+        except TerminateException:
             pass
         except:
             traceback.print_exc(file=sys.stderr)
         print('terminate environment python_c')
 
     def __check_environment(self):
+        # pylint: disable=no-self-use
         user = os.environ.get('USER')
         assert user is not None
         assert os.environ[user] == 'user'
@@ -55,13 +64,16 @@ class Task(threading.Thread):
         assert os.environ['USER_D'] == 'user_$'
         assert os.environ['USER_'] == 'user_'
 
-if __name__ == '__main__':
+def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
-    
-    threads = [Task(API(i)) for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
 
+    threads = [_Task(API(thread_index))
+               for thread_index in range(thread_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+if __name__ == '__main__':
+    _main()

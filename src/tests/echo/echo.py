@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,24 +24,31 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Echo Integration Test with Python/C
+"""
 
-import sys, threading, traceback
-from cloudi_c import API, terminate_exception
+from __future__ import print_function
+import sys
+import threading
+import traceback
+from cloudi_c import API, TerminateException
 
-class Task(threading.Thread):
+class _Task(threading.Thread):
     def __init__(self, api):
         threading.Thread.__init__(self)
         self.__api = api
 
     def run(self):
+        # pylint: disable=bare-except
         try:
             self.__api.subscribe('echo/put', self.__request)
             self.__api.subscribe('echo/post', self.__request)
             self.__api.subscribe('echo/get', self.__request)
 
             result = self.__api.poll()
-            assert result == False
-        except terminate_exception:
+            assert result is False
+        except TerminateException:
             pass
         except:
             traceback.print_exc(file=sys.stderr)
@@ -49,6 +56,9 @@ class Task(threading.Thread):
 
     def __request(self, request_type, name, pattern, request_info, request,
                   timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
+        # pylint: disable=no-self-use
         if request == '':
             return 'echo'
         else:
@@ -58,13 +68,17 @@ class Task(threading.Thread):
             else:
                 return (request_info, request)
 
-if __name__ == '__main__':
+def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
-    
-    threads = [Task(API(i)) for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+
+    threads = [_Task(API(thread_index))
+               for thread_index in range(thread_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+if __name__ == '__main__':
+    _main()
 

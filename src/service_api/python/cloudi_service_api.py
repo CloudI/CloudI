@@ -1,18 +1,22 @@
 #-*-Mode:python;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=python fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
+"""
+CloudI Service API <https://cloudi.org/api.html#2_Intro>.
+"""
 
-import sys, os
-_absolute_path = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
+# pylint: disable=wrong-import-position
+import sys
+import os
+_ROOT_PATH = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
 sys.path.extend([
-    os.path.sep.join(_absolute_path + ['jsonrpclib']),
-    os.path.sep.join(_absolute_path[:-2] + ['api', 'python']),
+    os.path.sep.join(_ROOT_PATH + ['jsonrpclib']),
+    os.path.sep.join(_ROOT_PATH[:-2] + ['api', 'python']),
 ])
-
 import jsonrpclib
 import erlang
-import struct
 
 class _ServiceDescription(object):
+    # pylint: disable=too-few-public-methods
     def __init__(self, *args):
         self.__args = args
 
@@ -20,8 +24,13 @@ class _ServiceDescription(object):
         return str(self.__args)
 
 class CloudI(object):
+    """
+    CloudI Service API object (communicating with JSON-RPC)
+    """
+    # pylint: disable=too-few-public-methods
+
     # initialize with configuration file defaults
-    def __init__(self, host = 'localhost', port = 6464):
+    def __init__(self, host='localhost', port=6464):
         address = 'http://%s:%d/cloudi/api/rpc.json' % (host, port)
         self.__server = jsonrpclib.Server(address)
 
@@ -42,15 +51,15 @@ class CloudI(object):
             for uuid_string, service_configuration in erlang.consult(raw)
         ]
 
-    def __services_add(self, L):
-        raw = self.__server.services_add(L)
+    def __services_add(self, id_list):
+        raw = self.__server.services_add(id_list)
         return [
             uuid_string
             for uuid_string in erlang.consult(raw)
         ]
 
-    def __services_search(self, L):
-        raw = self.__server.services_search(L)
+    def __services_search(self, id_list):
+        raw = self.__server.services_search(id_list)
         return [
             (uuid_string,
              _ServiceDescription(*service_configuration))

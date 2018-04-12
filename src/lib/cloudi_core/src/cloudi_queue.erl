@@ -22,6 +22,14 @@
 %%%
 %%% Only one instance of cloudi_queue is necessary within a service's state
 %%% due to the transaction id being globally unique.
+%%%
+%%% If retries are enabled (by default, no retries are attempted), it is
+%%% possible that a service request will be delivered more than once
+%%% (e.g., if the service request is processed but the response is not
+%%%  sent before a timeout occurs).  Each retry sends a service request
+%%% with the same transaction id, so it may be used to detect a duplicate
+%%% receive (or a separate unique id could be used from within the
+%%% RequestInfo or Request data) by checking and modifying service state.
 %%% @end
 %%%
 %%% MIT License

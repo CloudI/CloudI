@@ -291,6 +291,33 @@ api-python-test:
 api-ruby-test:
 	$(RUBY) $(top_srcdir)/api/ruby/tests/erlang_tests.rb
 
+pylint:
+	$(PYLINT) -rn --min-similarity-lines=40 \
+              $(top_srcdir)/api/python/cloudi.py \
+              $(top_srcdir)/api/python/cloudi_c.py \
+              $(top_srcdir)/api/python/erlang.py \
+              $(top_srcdir)/api/python/tests/erlang_tests.py \
+              $(top_srcdir)/service_api/python/cloudi_service_api.py \
+              $(top_srcdir)/tests/count/count.py \
+              $(top_srcdir)/tests/count/count_c.py \
+              $(top_srcdir)/tests/echo/echo.py \
+              $(top_srcdir)/tests/environment/environment.py \
+              $(top_srcdir)/tests/http/http.py \
+              $(top_srcdir)/tests/http_req/http_req.py \
+              $(top_srcdir)/tests/http_req/http_req_c.py \
+              $(top_srcdir)/tests/messaging/messaging.py \
+              $(top_srcdir)/tests/messaging/messaging_c.py \
+              $(top_srcdir)/tests/msg_size/msg_size.py \
+              $(top_srcdir)/tests/msg_size/msg_size_c.py \
+              $(top_srcdir)/tests/null/null.py \
+              $(top_srcdir)/tests/null/null_c.py \
+              $(top_srcdir)/tests/service_api/logging_off.py \
+              $(top_srcdir)/tests/service_api/logging_on.py \
+              $(top_srcdir)/tests/service_api/path.py \
+              $(top_srcdir)/tests/service_api/run.py \
+              $(top_srcdir)/tests/websockets/websockets.py \
+              $(top_srcdir)/tests/zeromq/run.py
+
 ct: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct)

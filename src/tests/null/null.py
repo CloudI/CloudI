@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,11 +24,20 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Null Integration Test with Python
+"""
 
-import sys, threading, types, traceback
-from cloudi import API, terminate_exception
+from __future__ import print_function
+import sys
+import threading
+import traceback
+from cloudi import API, TerminateException
 
 class Task(threading.Thread):
+    """
+    null thread task
+    """
     def __init__(self, api, name, exception):
         threading.Thread.__init__(self)
         self.__api = api
@@ -36,30 +45,39 @@ class Task(threading.Thread):
         self.__terminate_exception = exception
 
     def run(self):
+        """
+        run the null thread
+        """
+        # pylint: disable=bare-except
         try:
-            self.__api.subscribe(self.__name + '/get', self.request)
+            self.__api.subscribe(self.__name + '/get', self.__request)
 
             result = self.__api.poll()
-            assert result == False
+            assert result is False
         except self.__terminate_exception:
             pass
         except:
             traceback.print_exc(file=sys.stderr)
         print('terminate null %s' % self.__name)
 
-    def request(self, request_type, name, pattern, request_info, request,
-                timeout, priority, trans_id, pid):
+    def __request(self, request_type, name, pattern, request_info, request,
+                  timeout, priority, trans_id, pid):
+        # pylint: disable=unused-argument
+        # pylint: disable=too-many-arguments
         print('null %s' % self.__name)
         return None
 
-if __name__ == '__main__':
+def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
-    
-    threads = [Task(API(i), 'python', terminate_exception)
-               for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+
+    threads = [Task(API(thread_index), 'python', TerminateException)
+               for thread_index in range(thread_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+if __name__ == '__main__':
+    _main()
 

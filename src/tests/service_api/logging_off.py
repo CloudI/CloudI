@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,21 +24,27 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Logging Off CloudI Service API Integration Test
+"""
 
-import sys, os
-
+from __future__ import print_function
+import sys
+import os
 sys.path.append(
     os.path.sep.join(
-        os.path.dirname(os.path.abspath(__file__))
-               .split(os.path.sep)[:-2] + ['service_api', 'python']
+        os.path.dirname(
+            os.path.abspath(__file__)
+        ).split(os.path.sep)[:-2] + ['service_api', 'python']
     )
 )
+from cloudi_service_api import CloudI
 
-import time
+def _main():
+    obj = CloudI()
+    assert obj.logging_level_set('off') == 'ok'
+    print('logging turned off')
 
 if __name__ == '__main__':
-    from cloudi_service_api import CloudI
-    obj = CloudI()
-    assert(obj.logging_level_set('off') == 'ok')
-    print('logging turned off')
+    _main()
 

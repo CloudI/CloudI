@@ -532,6 +532,7 @@ if test "x$PYTHON_VERSION_REQUIRED" = "x2"; then
     AX_PROG_PYTHON_VERSION([2.7.0],
         [AX_PYTHON_C],
         [AC_MSG_ERROR([Python >= 2.7.0 not found])])
+    AC_PATH_PROGS([PYLINT],[pylint2 pylint])
 elif test "x$PYTHON_VERSION_REQUIRED" = "x3"; then
     AS_IF([test "x$PYTHON_DEBUG" == "xno"],
         [AC_PATH_PROGS([PYTHON],[python3 python3.2 python])],
@@ -539,6 +540,7 @@ elif test "x$PYTHON_VERSION_REQUIRED" = "x3"; then
     AX_PROG_PYTHON_VERSION([3.0.0],
         [AX_PYTHON_C],
         [AC_MSG_ERROR([Python >= 3.0.0 not found])])
+    AC_PATH_PROGS([PYLINT],[pylint3 pylint])
 fi
 AM_CONDITIONAL([PYTHON_SUPPORT], [true])
 else

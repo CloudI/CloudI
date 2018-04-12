@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -24,18 +24,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
+"""
+Null Integration Test with Python/C
+"""
 
-from cloudi_c import API, terminate_exception
+from cloudi_c import API, TerminateException
 from null import Task
 
-if __name__ == '__main__':
+def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
-    
-    threads = [Task(API(i), 'python_c', terminate_exception)
-               for i in range(thread_count)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+
+    threads = [Task(API(thread_index), 'python_c', TerminateException)
+               for thread_index in range(thread_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+if __name__ == '__main__':
+    _main()
 

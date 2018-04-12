@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -618,13 +618,13 @@ class callback : public CloudI::API::function_object_c
                 }
                 char const * exception_name = exception->tp_name;
                 bool const return_sync_exception =
-                    (::strcmp(exception_name, "return_sync_exception") == 0);
+                    (::strcmp(exception_name, "ReturnSyncException") == 0);
                 bool const return_async_exception =
-                    (::strcmp(exception_name, "return_async_exception") == 0);
+                    (::strcmp(exception_name, "ReturnAsyncException") == 0);
                 bool const forward_sync_exception =
-                    (::strcmp(exception_name, "forward_sync_exception") == 0);
+                    (::strcmp(exception_name, "ForwardSyncException") == 0);
                 bool const forward_async_exception =
-                    (::strcmp(exception_name, "forward_async_exception") == 0);
+                    (::strcmp(exception_name, "ForwardAsyncException") == 0);
                 bool exception_invalid = false;
                 if (request_type == CloudI::API::SYNC &&
                     return_sync_exception)
