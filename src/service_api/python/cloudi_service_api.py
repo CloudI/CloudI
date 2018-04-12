@@ -7,10 +7,10 @@ CloudI Service API <https://cloudi.org/api.html#2_Intro>.
 # pylint: disable=wrong-import-position
 import sys
 import os
-_ROOT_PATH = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
+_FILE_DIRECTORY = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
 sys.path.extend([
-    os.path.sep.join(_ROOT_PATH + ['jsonrpclib']),
-    os.path.sep.join(_ROOT_PATH[:-2] + ['api', 'python']),
+    os.path.sep.join(_FILE_DIRECTORY + ['jsonrpclib']),
+    os.path.sep.join(_FILE_DIRECTORY[:-2] + ['api', 'python']),
 ])
 import jsonrpclib
 import erlang
