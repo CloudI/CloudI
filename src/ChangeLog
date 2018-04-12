@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-04-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve Python 3 support in the Python CloudI API
+      by avoiding a failure when checking string types
+
 2018-04-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update all the Python source code based on pylint
