@@ -527,6 +527,7 @@ class EncodeTestCase < Test::Unit::TestCase
     def test_term_to_binary_boolean
         assert_equal("\x83s\4true", Erlang::term_to_binary(true))
         assert_equal("\x83s\5false", Erlang::term_to_binary(false))
+        assert_equal("\x83s\x09undefined", Erlang::term_to_binary(nil))
     end
     def test_term_to_binary_short_integer
         assert_equal("\x83a\0", Erlang::term_to_binary(0))
