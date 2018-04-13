@@ -318,6 +318,18 @@ pylint:
               $(top_srcdir)/tests/websockets/websockets.py \
               $(top_srcdir)/tests/zeromq/run.py
 
+linter-ruby:
+	$(RUBY) -wc \
+            $(top_srcdir)/api/ruby/erlang.rb \
+            $(top_srcdir)/api/ruby/cloudi.rb \
+            $(top_srcdir)/api/ruby/tests/erlang_tests.rb \
+            $(top_srcdir)/tests/count/count.rb \
+            $(top_srcdir)/tests/http/http.rb \
+            $(top_srcdir)/tests/http_req/http_req.rb \
+            $(top_srcdir)/tests/msg_size/msg_size.rb \
+            $(top_srcdir)/tests/messaging/messaging.rb \
+            $(top_srcdir)/tests/null/null.rb
+
 ct: all
 	(cd $(top_srcdir) && \
      $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct)

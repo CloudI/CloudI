@@ -402,7 +402,7 @@ module Erlang
             i = result[0]; tail = result[1]
             if tail.kind_of?(OtpErlangList) == false or tail.value != []
                 tmp.push(tail)
-                tmp = OtpErlangList.new(tmp, improper=true)
+                tmp = OtpErlangList.new(tmp, true)
             else
                 tmp = OtpErlangList.new(tmp)
             end
@@ -436,14 +436,14 @@ module Erlang
         elsif tag == TAG_EXPORT_EXT
             old_i = i
             result = binary_to_atom(i, data)
-            i = result[0]; name_module = result[1]
+            i = result[0]#; name_module = result[1]
             result = binary_to_atom(i, data)
-            i = result[0]; function = result[1]
+            i = result[0]#; function = result[1]
             if data[i].ord != TAG_SMALL_INTEGER_EXT
                 raise ParseException, 'invalid small integer tag', caller
             end
             i += 1
-            arity = data[i].ord
+            #arity = data[i].ord
             i += 1
             return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
         elsif tag == TAG_NEW_REFERENCE_EXT
@@ -485,18 +485,18 @@ module Erlang
             return [i, pairs]
         elsif tag == TAG_FUN_EXT
             old_i = i
-            numfree = data[i,4].unpack('N')[0]
+            #numfree = data[i,4].unpack('N')[0]
             i += 4
             result = binary_to_pid(i, data)
-            i = result[0]; pid = result[1]
+            i = result[0]#; pid = result[1]
             result = binary_to_atom(i, data)
-            i = result[0]; name_module = result[1]
+            i = result[0]#; name_module = result[1]
             result = binary_to_integer(i, data)
-            i = result[0]; index = result[1]
+            i = result[0]#; index = result[1]
             result = binary_to_integer(i, data)
-            i = result[0]; uniq = result[1]
+            i = result[0]#; uniq = result[1]
             result = binary_to_term_sequence(i, numfree, data)
-            i = result[0]; free = result[1]
+            i = result[0]#; free = result[1]
             return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
         elsif tag == TAG_ATOM_UTF8_EXT
             j = data[i,2].unpack('n')[0]

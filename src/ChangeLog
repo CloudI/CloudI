@@ -5,6 +5,7 @@
 
     * Improve Python 3 support in the Python CloudI API
       by avoiding a failure when checking string types
+    * Update Ruby source code based on ruby linter
 
 2018-04-11 Michael Truog   <mjtruog at protonmail dot com>
 
