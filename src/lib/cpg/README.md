@@ -1,10 +1,8 @@
-CPG ([CloudI](https://cloudi.org) Process Groups)
-================================================
+# CPG ([CloudI](https://cloudi.org) Process Groups)
 
 [![Build Status](https://secure.travis-ci.org/okeuday/cpg.png?branch=master)](http://travis-ci.org/okeuday/cpg)
 
-Purpose
--------
+## Purpose
 
 CPG provides a process group interface that is similar to the pg2 module
 within Erlang OTP.  The pg2 module is used internally by
@@ -18,13 +16,13 @@ The cpg interface was created to avoid some problems with pg2 while pursuing
 better availability and partition tolerance.  pg2 utilizes ets (global
 key/value storage in Erlang which requires internal memory locking,
 which limits scalability) but cpg uses internal process memory
-(see the **Design** section for more information).  By default,
+(see the [Design](#design) section for more information).  By default,
 cpg utilizes Erlang strings for group names (list of integers) and provides
 the ability to set a pattern string as a group name.  A pattern string
 is a string that includes the`"*"`wildcard character (equivalent to ".+"
 regex while`"**"`is forbidden).  When a group name is a pattern string,
 a process can be retrieved by matching the pattern.  To change the behavior
-to be compatible with pg2 usage (or gproc), see the **Usage** section below.
+to be compatible with pg2 usage (or gproc), see the [Usage](#usage) section below.
 
 The cpg interface provides more error checking than the pg2 module, and it
 allows the user to obtain the groups state so that group name lookups do not
@@ -34,7 +32,7 @@ By avoiding a message to the cpg scope process, contention for the single
 process message queue can be avoided.
 
 The process group solutions for Erlang discussed here depend on
-the distributed Erlang functionality, provided natively by Erlang OTP.
+the distributed Erlang functionality, provided natively by Erlang/OTP.
 The distributed Erlang functionality automatically creates a fully-connected
 network topology and is only meant for a Local Area Network (LAN).
 Since a fully-connected network topology is created that requires a
@@ -45,8 +43,7 @@ means these process group solutions are only targeting a cluster of Erlang
 nodes, given the constraints of distributed Erlang and a fully-connected
 network topology.
 
-Design
-------
+## Design
 
 cpg is a Commutative/Convergent Replicated Data-Type (CRDT) that uses
 node ownership of Erlang processes to ensure a set of keys has
@@ -70,29 +67,36 @@ cpg Erlang process on the remote node then performs a merge operation to
 make sure the count of each Erlang pid is consistent with the internal
 cpg state it received.
 
-The CRDT functionality in cpg may look similar to a PN-Set due to tracking
-all the Erlang pids and the count of how many times they have been added.
-However, the consistency of the internal cpg state relies on serialized
-mutability on the local node (naturally, due to a single Erlang process
-owning the internal cpg data) before the operation is sent to the remote nodes
-(for join or leave function calls that operate as a CmRDT).
+The CRDT functionality in cpg is most similar to the
+[POLog (Partially Ordered Log of operations)](#references)
+though the cpg approach would instead be called an
+"Ordered Log of operations" because it is depending on Erlang messaging on
+a local node to have causal ordering (no vclocks are necessary to establish
+causality on the local node with the cpg scope Erlang process message queue
+providing an "Ordered Log of operations").  After a cpg operation
+completes successfully on the local node, it is sent to all remote nodes which
+act as read-only views of the local node.
 
-Build
------
+The cpg scope process on the local node enforces causality by existing as the
+only read/write store of the local process memberships (i.e., serialized
+mutability similar to a mutex lock) while the remote nodes obtain the
+process memberships as soon as possible.  If a remote node is down due to a
+netsplit, it will obtain the local node's state once it reconnects as
+described above.
+
+## Build
 
     rebar get-deps
     rebar compile
 
-Usage
------
+## Usage
 
 If you need non-string (not a list of integers) group names
 (e.g., when replacing gproc), you can change the cpg application
 `group_storage` env setting by providing a module name that provides a
 dict module interface (or just set to `dict`).
 
-Example
--------
+## Example
 
     $ erl -sname cpg@localhost -pz ebin/ -pz deps/*/ebin/
     
@@ -117,7 +121,7 @@ as an atom which is used to locally register a cpg Erlang process using
 `start_link/1`.  For a given cpg scope, any Erlang process can join or leave
 a group.  The group name is a string (list of integers) due to the default
 usage of the trie data structure, but that can be changed
-(see the **Usage** section above).  If the scope is not specified, the default
+(see the [Usage](#usage) section above).  If the scope is not specified, the default
 scope is used: `cpg_default_scope`.
 
 In the example, both the process group "Hello" and the process group "World!"
@@ -132,20 +136,22 @@ to change the probability of returning a particular Erlang process, when
 only a single process is requested from the cpg interface (e.g., from
 the `get_closest_pid` function).
     
-Tests
------
+## Tests
 
     rebar get-deps
     rebar compile
     ERL_LIBS="/path/to/proper" rebar eunit
 
-Author
-------
+## Author
 
 Michael Truog (mjtruog at protonmail dot com)
 
-License
--------
+## License
 
 MIT License
+
+## References
+
+1. Carlos Baquero, Paulo Sérgio Almeida, Ali Shoker.  Making operation-based crdts operation-based. In Proceedings of the First Workshop on Principles and Practice of Eventual Consistency, page 7. ACM, 2014. [http://haslab.uminho.pt/ashoker/files/opbaseddais14.pdf](http://haslab.uminho.pt/ashoker/files/opbaseddais14.pdf)
+1. Carlos Baquero, Paulo Sérgio Almeida, Ali Shoker.  Pure Operation-Based Replicated Data Types. 2017. [https://arxiv.org/abs/1710.04469](https://arxiv.org/abs/1710.04469)
 

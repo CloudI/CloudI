@@ -288,10 +288,10 @@ index_test() ->
     ok.
 
 iodata_to_list_test() ->
-	{10, "abcdefghij"} = iodata_to_list([<<"abc">>, $d, "ef",
+    {10, "abcdefghij"} = iodata_to_list([<<"abc">>, $d, "ef",
                                          [[$g]], ["hi", $j]]),
-	{10, "abcdefghij"} = iodata_to_list(<<"abcdefghij">>),
-	ok.
+    {10, "abcdefghij"} = iodata_to_list(<<"abcdefghij">>),
+    ok.
 
 itera_test() ->
     [d, e, f] = itera(fun(V, A, Itr) ->

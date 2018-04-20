@@ -797,7 +797,7 @@ new(Dispatcher, Options)
                                PriorityDefaultOffset,
             true = (PriorityDefault1 >= ?PRIORITY_HIGH) andalso
                    (PriorityDefault1 =< ?PRIORITY_LOW),
-			PriorityDefault1
+            PriorityDefault1
     end,
     Service = cloudi_service:self(Dispatcher),
     NodeId = node_id(Service),
