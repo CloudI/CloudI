@@ -211,6 +211,7 @@ new(Options, Environment, Dispatcher)
 
             end,
             DaemonOptionsN = [{auth_methods, "publickey,password"},
+                              {ssh_cli, no_cli},
                               {user_dir, UserDir},
                               {system_dir, SystemDir} | DaemonOptions1],
             SubsystemArgs = [cloudi_service:dispatcher(Dispatcher),
