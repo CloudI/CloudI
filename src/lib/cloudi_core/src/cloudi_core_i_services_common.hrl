@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -488,9 +488,9 @@ aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
         {ok, NewServiceState} ->
             aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [Aspect, ErrorType, Error, erlang:get_stacktrace()]),
+                       [Aspect, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end;
 aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
@@ -498,9 +498,9 @@ aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
         {ok, NewServiceState} ->
             aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
-                       [F, ErrorType, Error, erlang:get_stacktrace()]),
+                       [F, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end.
 

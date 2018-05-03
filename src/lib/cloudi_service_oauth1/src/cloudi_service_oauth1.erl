@@ -108,6 +108,25 @@
         prefix_length :: pos_integer()
     }).
 
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-ifdef(ERLANG_OTP_VERSION_20).
+-else.
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -423,10 +442,10 @@ oauth_verify(Signature, Method, URL, Params,
             % invalid oauth_signature
             false
     catch
-        _:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             % implementation error?
-            ?LOG_ERROR("oauth error: ~p~n ~p",
-                       [Error, erlang:get_stacktrace()]),
+            ?LOG_ERROR("oauth failed ~p ~p~n ~p",
+                       [ErrorType, Error, ErrorStackTrace]),
             false
     end.
 

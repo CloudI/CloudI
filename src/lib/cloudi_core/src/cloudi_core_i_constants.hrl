@@ -29,12 +29,23 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % for features specific to Erlang/OTP version 20.x (and later versions)
--ifdef(ERLANG_OTP_VERSION_18).
--else.
 -ifdef(ERLANG_OTP_VERSION_19).
 -else.
 -define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_20).
+-else.
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
 -endif.
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
 -endif.
 
 % for using cloudi_core as an isolated Erlang application

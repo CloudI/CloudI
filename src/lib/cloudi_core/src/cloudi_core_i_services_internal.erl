@@ -1875,11 +1875,10 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
     Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
                                             DispatcherProxy)
     catch
-        ErrorType:Error ->
-            Stack = erlang:get_stacktrace(),
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR_SYNC("init ~p ~p~n~p",
-                            [ErrorType, Error, Stack]),
-            {stop, {ErrorType, {Error, Stack}}}
+                            [ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}}}
     end,
     {NewProcessDictionary,
      #state{options = ConfigOptions} = NextState} =
@@ -2440,9 +2439,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        ErrorType:Error ->
+                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                             {'cloudi_service_request_failure',
-                             ErrorType, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, ErrorStackTrace,
                              NewServiceState}
                     end;
                 {'cloudi_service_request_success',
@@ -2478,9 +2477,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        ErrorType:Error ->
+                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                             {'cloudi_service_request_failure',
-                             ErrorType, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, ErrorStackTrace,
                              NewServiceState}
                     end;
                 {'cloudi_service_request_success',
@@ -2502,9 +2501,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
                             {'cloudi_service_request_failure',
                              stop, Reason, undefined, FinalServiceState}
                     catch
-                        ErrorType:Error ->
+                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                             {'cloudi_service_request_failure',
-                             ErrorType, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, ErrorStackTrace,
                              NewServiceState}
                     end;
                 {'cloudi_service_request_failure', _, _, _, _} = Error ->
@@ -2514,9 +2513,9 @@ handle_module_request(Type, Name, Pattern, RequestInfo, Request,
             {'cloudi_service_request_failure',
              stop, Reason, undefined, NextServiceState}
     catch
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             {'cloudi_service_request_failure',
-             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
 handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
@@ -2570,9 +2569,9 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
                  NextTimeout < 0 ->
             try erlang:exit(badarg)
             catch
-                exit:badarg ->
+                ?STACKTRACE(exit, badarg, ErrorStackTrace)
                     {'cloudi_service_request_failure',
-                     exit, badarg, erlang:get_stacktrace(), NewServiceState}
+                     exit, badarg, ErrorStackTrace, NewServiceState}
             end;
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
@@ -2661,9 +2660,9 @@ handle_module_request_f('send_async', Name, Pattern, RequestInfo, Request,
               NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             {'cloudi_service_request_failure',
-             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, ErrorStackTrace, ServiceState}
     end;
 
 handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
@@ -2717,9 +2716,9 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
                  NextTimeout < 0 ->
             try erlang:exit(badarg)
             catch
-                exit:badarg ->
+                ?STACKTRACE(exit, badarg, ErrorStackTrace)
                     {'cloudi_service_request_failure',
-                     exit, badarg, erlang:get_stacktrace(), NewServiceState}
+                     exit, badarg, ErrorStackTrace, NewServiceState}
             end;
         {forward, NextName, NextRequestInfo, NextRequest,
                   NextTimeout, NextPriority, NewServiceState} ->
@@ -2808,9 +2807,9 @@ handle_module_request_f('send_sync', Name, Pattern, RequestInfo, Request,
               NextName, NextRequestInfo, NextRequest,
               NextTimeout, NextPriority, TransId, Source},
              ServiceState};
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             {'cloudi_service_request_failure',
-             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
 handle_module_info(Request, ServiceState, Dispatcher, Module,
@@ -2836,26 +2835,26 @@ handle_module_info(Request, ServiceState, Dispatcher, Module,
                              stop, Reason, undefined,
                              FinalServiceState}
                     catch
-                        ErrorType:Error ->
+                        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                             {'cloudi_service_info_failure',
-                             ErrorType, Error, erlang:get_stacktrace(),
+                             ErrorType, Error, ErrorStackTrace,
                              NewServiceState}
                     end;
                 {stop, Reason, NewServiceState} ->
                     {'cloudi_service_info_failure',
                      stop, Reason, undefined, NewServiceState}
             catch
-                ErrorType:Error ->
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     {'cloudi_service_info_failure',
-                     ErrorType, Error, erlang:get_stacktrace(), ServiceState}
+                     ErrorType, Error, ErrorStackTrace, ServiceState}
             end;
         {stop, Reason, NextServiceState} ->
             {'cloudi_service_info_failure',
              stop, Reason, undefined, NextServiceState}
     catch
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             {'cloudi_service_info_failure',
-             ErrorType, Error, erlang:get_stacktrace(), ServiceState}
+             ErrorType, Error, ErrorStackTrace, ServiceState}
     end.
 
 send_async_active_timeout_start(Timeout, TransId, Pid,
@@ -3414,11 +3413,10 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
             Result = try Module:cloudi_service_init(Args, Prefix, Timeout,
                                                     DispatcherProxy)
             catch
-                ErrorType:Error ->
-                    Stack = erlang:get_stacktrace(),
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     ?LOG_ERROR_SYNC("init ~p ~p~n~p",
-                                    [ErrorType, Error, Stack]),
-                    {stop, {ErrorType, {Error, Stack}}}
+                                    [ErrorType, Error, ErrorStackTrace]),
+                    {stop, {ErrorType, {Error, ErrorStackTrace}}}
             end,
             {NewDispatcherProcessDictionary,
              #state{recv_timeouts = RecvTimeouts,

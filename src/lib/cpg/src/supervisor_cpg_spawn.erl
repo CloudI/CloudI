@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2013-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(supervisor_cpg_spawn).
@@ -370,15 +370,5 @@ extract_child(#state_nomad{pid = Pid,
 
 -spec timestamp() -> erlang:timestamp().
 
--ifdef(ERLANG_OTP_VERSION_16).
-timestamp() ->
-    erlang:now().
--else.
--ifdef(ERLANG_OTP_VERSION_17).
-timestamp() ->
-    erlang:now().
--else. % necessary for Erlang >= 18.0
 timestamp() ->
     erlang:timestamp().
--endif.
--endif.

@@ -999,11 +999,11 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
                     MetaData, LogMessage),
     try Formatter:format(Msg, FormatterConfig)
     catch
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ErrorMessage = cloudi_string:
                            format_to_binary("formatter(~p) ~p ~p~n~p",
                                             [Formatter, ErrorType, Error,
-                                             erlang:get_stacktrace()]),
+                                             ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
                          Module, Line, Function, Arity,
                          MetaData, LogMessage),
@@ -1035,11 +1035,11 @@ log_message_formatter_call(Level, Timestamp, Node, Pid,
             format_line(Level, Timestamp, Node, Pid,
                         Module, Line, Function, Arity,
                         MetaData, LogMessage);
-        ErrorType:Error ->
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ErrorMessage = cloudi_string:
                            format_to_binary("output(~p) ~p ~p~n~p",
                                             [Output, ErrorType, Error,
-                                             erlang:get_stacktrace()]),
+                                             ErrorStackTrace]),
             [format_line(Level, Timestamp, Node, Pid,
                          Module, Line, Function, Arity,
                          MetaData, LogMessage),

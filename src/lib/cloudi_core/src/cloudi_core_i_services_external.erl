@@ -673,10 +673,10 @@ handle_event(EventType, EventContent, StateName, State) ->
              State#state{service_state = NewServiceState,
                          request_data = undefined}}
     catch
-        ErrorType:Error ->
-            Stack = erlang:get_stacktrace(),
-            ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-            {stop, {ErrorType, {Error, Stack}},
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("request ~p ~p~n~p",
+                       [ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
     end;
 
@@ -768,10 +768,10 @@ handle_event(EventType, EventContent, StateName, State) ->
              State#state{service_state = NewServiceState,
                          request_data = undefined}}
     catch
-        ErrorType:Error ->
-            Stack = erlang:get_stacktrace(),
-            ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-            {stop, {ErrorType, {Error, Stack}},
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("request ~p ~p~n~p",
+                       [ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
     end;
 
@@ -836,10 +836,10 @@ handle_event(EventType, EventContent, StateName, State) ->
              State#state{service_state = NewServiceState,
                          request_data = undefined}}
     catch
-        ErrorType:Error ->
-            Stack = erlang:get_stacktrace(),
-            ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-            {stop, {ErrorType, {Error, Stack}},
+        ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+            ?LOG_ERROR("request ~p ~p~n~p",
+                       [ErrorType, Error, ErrorStackTrace]),
+            {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
     end;
 
@@ -1089,10 +1089,10 @@ handle_event(EventType, EventContent, StateName, State) ->
                      State#state{service_state = NewServiceState,
                                  options = NewConfigOptions}}
             catch
-                ErrorType:Error ->
-                    Stack = erlang:get_stacktrace(),
-                    ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-                    {stop, {ErrorType, {Error, Stack}},
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+                    ?LOG_ERROR("request ~p ~p~n~p",
+                               [ErrorType, Error, ErrorStackTrace]),
+                    {stop, {ErrorType, {Error, ErrorStackTrace}},
                      State#state{options = NewConfigOptions}}
             end;
         RateRequestOk =:= false ->
@@ -2052,10 +2052,10 @@ process_queue(#state{dispatcher = Dispatcher,
                     State#state{service_state = NewServiceState,
                                 options = NewConfigOptions}
             catch
-                ErrorType:Error ->
-                    Stack = erlang:get_stacktrace(),
-                    ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-                    Reason = {ErrorType, {Error, Stack}},
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+                    ?LOG_ERROR("request ~p ~p~n~p",
+                               [ErrorType, Error, ErrorStackTrace]),
+                    Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
                     State#state{options = NewConfigOptions}
             end;
@@ -2105,10 +2105,10 @@ process_queue(#state{dispatcher = Dispatcher,
                     State#state{service_state = NewServiceState,
                                 options = NewConfigOptions}
             catch
-                ErrorType:Error ->
-                    Stack = erlang:get_stacktrace(),
-                    ?LOG_ERROR("request ~p ~p~n~p", [ErrorType, Error, Stack]),
-                    Reason = {ErrorType, {Error, Stack}},
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+                    ?LOG_ERROR("request ~p ~p~n~p",
+                               [ErrorType, Error, ErrorStackTrace]),
+                    Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
                     State#state{options = NewConfigOptions}
             end

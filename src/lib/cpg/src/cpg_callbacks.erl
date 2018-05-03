@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_callbacks).
@@ -53,6 +53,25 @@
     }).
 
 -include("cpg_logging.hrl").
+
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-ifdef(ERLANG_OTP_VERSION_20).
+-else.
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -181,9 +200,9 @@ notify(GroupName, GroupPid, Reason, {DictI, FsData}) ->
             lists:foreach(fun(F) ->
                 try notify_f(F, GroupName, GroupPid, Reason)
                 catch
-                    Type:Error ->
-                        ?LOG_ERROR("callback ~p: ~p~n~p",
-                                   [Type, Error, erlang:get_stacktrace()])
+                    ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
+                        ?LOG_ERROR("callback failed ~p ~p~n~p",
+                                   [ErrorType, Error, ErrorStackTrace])
                 end
             end, L);
         error ->

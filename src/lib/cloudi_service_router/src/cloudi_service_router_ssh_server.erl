@@ -69,9 +69,8 @@
         % Example:
         % [{"${USER}", "badpassword"}]
 
-% XXX switch to the opaque types when ssh_connection functions get fixed
--type connection_handle() :: {ssh:ssh_connection_ref() | pid(),
-                              ssh:ssh_channel_id() | pos_integer()}.
+-type connection_handle() :: {ssh:connection_ref(),
+                              ssh:channel_id()}.
 
 -record(ssh_server,
     {
@@ -80,7 +79,7 @@
         config_port :: pos_integer(),
         config_system_dir :: string(),
         config_user_dir :: string(),
-        process = undefined :: undefined | pid()
+        process = undefined :: undefined | ssh:daemon_ref()
     }).
 
 -record(ssh_server_connection,
