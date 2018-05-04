@@ -4,6 +4,8 @@
 2018-05-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 21.0 compatibility
+        * Switch from sasl to kernel logger
+          (uses "erlang_kernel.log" file instead of "sasl.log")
 
 2018-04-25 Michael Truog   <mjtruog at protonmail dot com>
 
