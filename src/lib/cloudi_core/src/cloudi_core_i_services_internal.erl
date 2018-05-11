@@ -41,7 +41,7 @@
 -behaviour(gen_server).
 
 %% external interface
--export([start_link/16,
+-export([start_link/19,
          get_status/1,
          get_status/2]).
 
@@ -221,8 +221,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(ProcessIndex, ProcessCount, GroupLeader,
-           Module, Args, Timeout, [PrefixC | _] = Prefix,
+start_link(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
+           GroupLeader, Module, Args, Timeout, [PrefixC | _] = Prefix,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
            #config_service_options{
@@ -230,9 +230,11 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
                dispatcher_pid_options = PidOptions} = ConfigOptions, ID,
            Parent)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_integer(TimeStart), is_integer(Restarts),
          is_atom(Module), is_list(Args), is_integer(Timeout),
-         is_integer(PrefixC), is_integer(TimeoutAsync), is_integer(TimeoutSync),
-         is_integer(TimeoutTerm), is_pid(Parent)  ->
+         is_integer(PrefixC),
+         is_integer(TimeoutAsync), is_integer(TimeoutSync),
+         is_integer(TimeoutTerm), is_pid(Parent) ->
     true = (DestRefresh =:= immediate_closest) orelse
            (DestRefresh =:= lazy_closest) orelse
            (DestRefresh =:= immediate_furthest) orelse
@@ -251,8 +253,9 @@ start_link(ProcessIndex, ProcessCount, GroupLeader,
     case cloudi_x_cpg:scope_exists(Scope) of
         ok ->
             gen_server:start_link(?MODULE,
-                                  [ProcessIndex, ProcessCount, GroupLeader,
-                                   Module, Args, Timeout, Prefix,
+                                  [ProcessIndex, ProcessCount,
+                                   TimeStart, TimeRestart, Restarts,
+                                   GroupLeader, Module, Args, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, TimeoutTerm,
                                    DestRefresh, DestDeny, DestAllow,
                                    ConfigOptions, ID, Parent],
@@ -273,8 +276,8 @@ get_status(Dispatcher, Timeout) ->
 %%% Callback functions from gen_server
 %%%------------------------------------------------------------------------
 
-init([ProcessIndex, ProcessCount, GroupLeader,
-      Module, Args, Timeout, Prefix,
+init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
+      GroupLeader, Module, Args, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, TimeoutTerm,
       DestRefresh, DestDeny, DestAllow,
       #config_service_options{
@@ -282,7 +285,9 @@ init([ProcessIndex, ProcessCount, GroupLeader,
           info_pid_options = InfoPidOptions,
           duo_mode = DuoMode} = ConfigOptions, ID, Parent]) ->
     ok = spawn_opt_options_after(PidOptions),
+    Uptime = {TimeStart, TimeRestart, Restarts},
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+    erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
     erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
     Dispatcher = self(),
     if
@@ -298,6 +303,7 @@ init([ProcessIndex, ProcessCount, GroupLeader,
         DuoMode =:= true ->
             spawn_opt_proc_lib(fun() ->
                 erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+                erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
                 erlang:put(?SERVICE_FILE_PDICT_KEY, Module),
                 duo_mode_loop_init(#state_duo{duo_mode_pid = self(),
                                               queued_word_size = WordSize,

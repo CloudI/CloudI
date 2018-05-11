@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external_sup).
@@ -40,7 +40,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/17]).
+         create_external/20]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -62,14 +62,15 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_external(Protocol, SocketPath,
-                ThreadIndex, ProcessIndex, ProcessCount,
+create_external(Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
+                TimeStart, TimeRestart, Restarts,
                 CommandLine, BufferSize, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, TimeoutTerm,
                 DestRefresh, DestDeny, DestAllow,
                 ConfigOptions, ID)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_integer(TimeStart), is_integer(Restarts),
          is_list(CommandLine),
          is_integer(BufferSize), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync),
@@ -95,6 +96,7 @@ create_external(Protocol, SocketPath,
     case supervisor:start_child(?MODULE,
                                 [Protocol, SocketPath,
                                  ThreadIndex, ProcessIndex, ProcessCount,
+                                 TimeStart, TimeRestart, Restarts,
                                  CommandLine, BufferSize, Timeout, Prefix,
                                  TimeoutSync, TimeoutAsync, TimeoutTerm,
                                  DestRefresh, DestDeny, DestAllow,

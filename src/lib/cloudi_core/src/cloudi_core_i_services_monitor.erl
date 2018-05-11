@@ -79,6 +79,9 @@
         % due to the overwrite of #service{} for the key1 ServiceId value
         pids :: list(pid()),
         monitor :: undefined | reference(),
+        time_start :: integer(),
+        time_restart :: undefined | integer(),
+        restart_count_total :: non_neg_integer(),
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(cloudi_timestamp:seconds_monotonic()),
         timeout_term :: cloudi_service_api:timeout_terminate_milliseconds(),
@@ -148,7 +151,8 @@ monitor(M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
          is_binary(ServiceId), byte_size(ServiceId) == 16 ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {monitor, M, F, A,
-                                 ProcessIndex, CountProcess, CountThread, Scope,
+                                 ProcessIndex, CountProcess,
+                                 CountThread, Scope,
                                  TimeoutTerm, RestartDelay, MaxR, MaxT,
                                  ServiceId},
                                 Timeout)).
@@ -222,13 +226,20 @@ init([]) ->
 handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
              TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
-    case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
+    TimeStart = erlang:monotonic_time(),
+    TimeRestart = undefined,
+    Restarts = 0,
+    case erlang:apply(M, F, [ProcessIndex, CountProcess,
+                             TimeStart, TimeRestart,
+                             Restarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             Pids = [Pid],
             NewServices = cloudi_x_key2value:store(ServiceId, Pid,
                 new_service_process(M, F, A,
-                                    ProcessIndex, CountProcess, CountThread,
-                                    Scope, Pids, erlang:monitor(process, Pid),
+                                    ProcessIndex, CountProcess,
+                                    CountThread, Scope, Pids,
+                                    erlang:monitor(process, Pid),
+                                    TimeStart, TimeRestart, Restarts,
                                     TimeoutTerm, RestartDelay,
                                     MaxR, MaxT), Services),
             {reply, {ok, Pids}, State#state{services = NewServices}};
@@ -236,8 +247,10 @@ handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
             NewServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     new_service_process(M, F, A,
-                                        ProcessIndex, CountProcess, CountThread,
-                                        Scope, Pids, erlang:monitor(process, P),
+                                        ProcessIndex, CountProcess,
+                                        CountThread, Scope, Pids,
+                                        erlang:monitor(process, P),
+                                        TimeStart, TimeRestart, Restarts,
                                         TimeoutTerm, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
@@ -562,12 +575,18 @@ restart_stage3(#service{service_m = M,
                         service_a = A,
                         process_index = ProcessIndex,
                         count_process = CountProcess,
+                        time_start = TimeStart,
+                        restart_count_total = 0,
                         restart_count = 0,
                         restart_times = []} = Service,
                Services, State, ServiceId, OldPid) ->
     % first restart
-    SecondsNow = cloudi_timestamp:seconds_monotonic(),
-    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
+    TimeRestart = erlang:monotonic_time(),
+    SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
+    Restarts = RestartCount = 1,
+    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess,
+                                           TimeStart, TimeRestart,
+                                           Restarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now ~p)~n"
@@ -576,7 +595,9 @@ restart_stage3(#service{service_m = M,
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
                                 monitor = erlang:monitor(process, Pid),
-                                restart_count = 1,
+                                time_restart = TimeRestart,
+                                restart_count_total = Restarts,
+                                restart_count = RestartCount,
                                 restart_times = [SecondsNow]}, Services),
             ok = initialize(Pids),
             NextServices;
@@ -588,7 +609,9 @@ restart_stage3(#service{service_m = M,
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
                                     monitor = erlang:monitor(process, P),
-                                    restart_count = 1,
+                                    time_restart = TimeRestart,
+                                    restart_count_total = Restarts,
+                                    restart_count = RestartCount,
                                     restart_times = [SecondsNow]}, D)
             end, Services, Pids),
             ok = initialize(Pids),
@@ -597,7 +620,9 @@ restart_stage3(#service{service_m = M,
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
             restart_stage2_async(Service#service{
-                                     restart_count = 1,
+                                     time_restart = TimeRestart,
+                                     restart_count_total = Restarts,
+                                     restart_count = RestartCount,
                                      restart_times = [SecondsNow]},
                                  ServiceId, OldPid),
             Services
@@ -618,8 +643,9 @@ restart_stage3(#service{restart_count = RestartCount,
                                                                   MaxT),
     if
         NewRestartCount < RestartCount ->
-            restart_stage3(Service#service{restart_count = NewRestartCount,
-                                           restart_times = NewRestartTimes},
+            restart_stage3(Service#service{
+                               restart_count = NewRestartCount,
+                               restart_times = NewRestartTimes},
                            Services, State, ServiceId, OldPid);
         true ->
             ?LOG_WARN_SYNC("max restarts (MaxR = ~p, MaxT = ~p seconds) ~p~n"
@@ -632,14 +658,20 @@ restart_stage3(#service{service_m = M,
                         service_a = A,
                         process_index = ProcessIndex,
                         count_process = CountProcess,
+                        time_start = TimeStart,
+                        restart_count_total = Restarts,
                         restart_count = RestartCount,
                         restart_times = RestartTimes} = Service,
                Services, State, ServiceId, OldPid) ->
     % typical restart scenario
-    SecondsNow = cloudi_timestamp:seconds_monotonic(),
+    TimeRestart = erlang:monotonic_time(),
+    SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
+    NewRestarts = Restarts + 1,
     R = RestartCount + 1,
-    T = erlang:max(SecondsNow - lists:min(RestartTimes), 0),
-    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
+    T = SecondsNow - lists:min(RestartTimes),
+    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess,
+                                           TimeStart, TimeRestart,
+                                           NewRestarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart "
                            "(R = ~p, T = ~p elapsed seconds)~n"
@@ -650,6 +682,8 @@ restart_stage3(#service{service_m = M,
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
                                 monitor = erlang:monitor(process, Pid),
+                                time_restart = TimeRestart,
+                                restart_count_total = NewRestarts,
                                 restart_count = R,
                                 restart_times = [SecondsNow |
                                                  RestartTimes]},
@@ -666,6 +700,8 @@ restart_stage3(#service{service_m = M,
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
                                     monitor = erlang:monitor(process, P),
+                                    time_restart = TimeRestart,
+                                    restart_count_total = NewRestarts,
                                     restart_count = R,
                                     restart_times = [SecondsNow |
                                                      RestartTimes]}, D)
@@ -676,6 +712,8 @@ restart_stage3(#service{service_m = M,
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
             restart_stage2_async(Service#service{
+                                     time_restart = TimeRestart,
+                                     restart_count_total = NewRestarts,
                                      restart_count = R,
                                      restart_times = [SecondsNow |
                                                       RestartTimes]},
@@ -798,19 +836,26 @@ pids_increase_loop(Count, ProcessIndex,
                             count_process = CountProcess,
                             count_thread = CountThread,
                             scope = Scope,
+                            time_start = TimeStart,
+                            time_restart = TimeRestart,
+                            restart_count_total = Restarts,
                             timeout_term = TimeoutTerm,
                             restart_delay = RestartDelay,
                             max_r = MaxR,
                             max_t = MaxT} = Service, ServiceId, Services) ->
-    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess | A]) of
+    NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess,
+                                           TimeStart, TimeRestart,
+                                           Restarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_INFO("~p -> ~p (count_process_dynamic)",
                       [service_id(ServiceId), Pid]),
             Pids = [Pid],
             NextServices = cloudi_x_key2value:store(ServiceId, Pid,
                 new_service_process(M, F, A,
-                                    ProcessIndex, CountProcess, CountThread,
-                                    Scope, Pids, erlang:monitor(process, Pid),
+                                    ProcessIndex, CountProcess,
+                                    CountThread, Scope, Pids,
+                                    erlang:monitor(process, Pid),
+                                    TimeStart, TimeRestart, Restarts,
                                     TimeoutTerm, RestartDelay,
                                     MaxR, MaxT), Services),
             ok = initialize(Pids),
@@ -821,8 +866,10 @@ pids_increase_loop(Count, ProcessIndex,
             NextServices = lists:foldl(fun(P, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     new_service_process(M, F, A,
-                                        ProcessIndex, CountProcess, CountThread,
-                                        Scope, Pids, erlang:monitor(process, P),
+                                        ProcessIndex, CountProcess,
+                                        CountThread, Scope, Pids,
+                                        erlang:monitor(process, P),
+                                        TimeStart, TimeRestart, Restarts,
                                         TimeoutTerm, RestartDelay,
                                         MaxR, MaxT), D)
             end, Services, Pids),
@@ -1215,8 +1262,8 @@ service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
 new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
-                    Scope, Pids, MonitorRef, TimeoutTerm, RestartDelay,
-                    MaxR, MaxT) ->
+                    Scope, Pids, MonitorRef, TimeStart, TimeRestart, Restarts,
+                    TimeoutTerm, RestartDelay, MaxR, MaxT) ->
     #service{service_m = M,
              service_f = F,
              service_a = A,
@@ -1226,6 +1273,9 @@ new_service_process(M, F, A, ProcessIndex, CountProcess, CountThread,
              scope = Scope,
              pids = Pids,
              monitor = MonitorRef,
+             time_start = TimeStart,
+             time_restart = TimeRestart,
+             restart_count_total = Restarts,
              timeout_term = TimeoutTerm,
              restart_delay = RestartDelay,
              max_r = MaxR,

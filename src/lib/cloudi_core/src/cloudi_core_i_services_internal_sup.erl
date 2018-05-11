@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_sup).
@@ -40,7 +40,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/15,
+         create_internal/18,
          create_internal_done/3]).
 
 %% supervisor callbacks
@@ -63,12 +63,14 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_internal(ProcessIndex, ProcessCount, GroupLeader,
-                Module, Args, Timeout, Prefix,
+create_internal(ProcessIndex, ProcessCount,
+                TimeStart, TimeRestart, Restarts,
+                GroupLeader, Module, Args, Timeout, Prefix,
                 TimeoutSync, TimeoutAsync, TimeoutTerm,
                 DestRefresh, DestDeny, DestAllow,
                 ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_integer(TimeStart), is_integer(Restarts),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
          is_integer(TimeoutSync), is_integer(TimeoutAsync),
          is_integer(TimeoutTerm) ->
@@ -87,9 +89,10 @@ create_internal(ProcessIndex, ProcessCount, GroupLeader,
            (DestRefresh == immediate_oldest) orelse
            (DestRefresh == lazy_oldest) orelse
            (DestRefresh == none),
-    case supervisor:start_child(?MODULE, [ProcessIndex,
-                                          ProcessCount, GroupLeader,
-                                          Module, Args, Timeout, Prefix,
+    case supervisor:start_child(?MODULE, [ProcessIndex, ProcessCount,
+                                          TimeStart, TimeRestart, Restarts,
+                                          GroupLeader, Module, Args,
+                                          Timeout, Prefix,
                                           TimeoutSync, TimeoutAsync,
                                           TimeoutTerm,
                                           DestRefresh, DestDeny, DestAllow,

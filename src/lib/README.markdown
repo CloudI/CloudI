@@ -109,8 +109,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit aadf1be200d318f2fdf2f996b58852a4a49244f0 (v1.7.3)`
-- `Tue Feb 27 10:22:17 PST 2018`
+- `commit 27219e393d22b11f3e7ac3ebb1a1858e5bab7aef`
+- `Thu May 10 23:52:44 PDT 2018`
 - `MIT`
 
 `varpool`

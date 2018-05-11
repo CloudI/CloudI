@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-10 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add service uptime information to all long-lived
+      Erlang service processes with the process dictionary
+      key cloudi_service_uptime
+    * Fix external service crash information format output
+      (format_status/2 in erlang crash log)
+    * Update uuid
+
 2018-05-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 21.0 compatibility

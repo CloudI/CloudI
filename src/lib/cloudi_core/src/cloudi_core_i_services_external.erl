@@ -41,7 +41,7 @@
 -behaviour(gen_statem).
 
 %% external interface
--export([start_link/17,
+-export([start_link/20,
          port/2,
          stdout/2,
          stderr/2,
@@ -224,8 +224,8 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
-start_link(Protocol, SocketPath,
-           ThreadIndex, ProcessIndex, ProcessCount,
+start_link(Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
+           TimeStart, TimeRestart, Restarts,
            CommandLine, BufferSize, Timeout, [PrefixC | _] = Prefix,
            TimeoutAsync, TimeoutSync, TimeoutTerm,
            DestRefresh, DestDeny, DestAllow,
@@ -234,6 +234,7 @@ start_link(Protocol, SocketPath,
                dispatcher_pid_options = PidOptions} = ConfigOptions, ID)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
+         is_integer(TimeStart), is_integer(Restarts),
          is_list(CommandLine),
          is_integer(BufferSize), is_integer(Timeout), is_integer(PrefixC),
          is_integer(TimeoutAsync), is_integer(TimeoutSync),
@@ -261,6 +262,7 @@ start_link(Protocol, SocketPath,
             gen_statem:start_link(?MODULE,
                                   [Protocol, SocketPath,
                                    ThreadIndex, ProcessIndex, ProcessCount,
+                                   TimeStart, TimeRestart, Restarts,
                                    CommandLine, BufferSize, Timeout, Prefix,
                                    TimeoutAsync, TimeoutSync, TimeoutTerm,
                                    DestRefresh, DestDeny, DestAllow,
@@ -301,8 +303,8 @@ get_status(Dispatcher, Timeout) ->
 
 callback_mode() -> state_functions.
 
-init([Protocol, SocketPath,
-      ThreadIndex, ProcessIndex, ProcessCount,
+init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
+      TimeStart, TimeRestart, Restarts,
       CommandLine, BufferSize, Timeout, Prefix,
       TimeoutAsync, TimeoutSync, TimeoutTerm,
       DestRefresh, DestDeny, DestAllow,
@@ -312,7 +314,9 @@ init([Protocol, SocketPath,
          Protocol =:= udp;
          Protocol =:= local ->
     ok = spawn_opt_options_after(PidOptions),
+    Uptime = {TimeStart, TimeRestart, Restarts},
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
+    erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
     erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
     Dispatcher = self(),
     InitTimer = erlang:send_after(Timeout, Dispatcher,
@@ -1463,11 +1467,11 @@ code_change(_, StateName, State, _) ->
     {ok, StateName, State}.
 
 -ifdef(VERBOSE_STATE).
-format_status(_Opt, [_PDict, State, _Data]) ->
+format_status(_Opt, [_PDict, _StateName, State]) ->
     [{data, [{"State", State}]}].
 -else.
 format_status(_Opt,
-              [_PDict,
+              [_PDict, _StateName,
                #state{send_timeouts = SendTimeouts,
                       send_timeout_monitors = SendTimeoutMonitors,
                       recv_timeouts = RecvTimeouts,
@@ -1476,7 +1480,7 @@ format_status(_Opt,
                       cpg_data = Groups,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
-                      options = ConfigOptions} = State, _Data]) ->
+                      options = ConfigOptions} = State]) ->
     NewGroups = case Groups of
         undefined ->
             undefined;
@@ -1496,7 +1500,7 @@ format_status(_Opt,
             cloudi_x_trie:to_list(DestAllow)
     end,
     NewConfigOptions = cloudi_core_i_configuration:
-                       services_format_options_internal(ConfigOptions),
+                       services_format_options_external(ConfigOptions),
     [{data,
       [{"State",
         State#state{send_timeouts = maps:to_list(SendTimeouts),

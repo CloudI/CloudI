@@ -19,7 +19,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -40,8 +40,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -888,6 +888,8 @@ string_to_uuid(N01, N02, N03, N04, N05, N06, N07, N08,
 -spec is_uuid(any()) ->
     boolean().
 
+is_uuid(<<0:128>>) ->
+    true;
 is_uuid(<<_:48,
           Version:4/unsigned-integer,
           _:12,
@@ -991,6 +993,7 @@ mac_address() ->
     ok.
 
 test() ->
+    true = uuid:is_uuid(<<0:128>>),
     % version 1 tests
     % uuidgen -t ; date
     % "Fri Dec  7 19:13:58 PST 2012"

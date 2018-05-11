@@ -70,9 +70,11 @@
 -define(PRIORITY_LOWER_OFFSET,  ?PRIORITY_LOW  * 2 + 1). % positive
 
 % process dictionary keys used by the cloudi_core source code
--define(SERVICE_ID_PDICT_KEY,      cloudi_service).     % all service processes
--define(SERVICE_FILE_PDICT_KEY,    cloudi_service_file).% all service processes
--define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger).      % all logging processes
+% (set in all service processes)
+-define(SERVICE_ID_PDICT_KEY,      cloudi_service).
+-define(SERVICE_UPTIME_PDICT_KEY,  cloudi_service_uptime).
+-define(SERVICE_FILE_PDICT_KEY,    cloudi_service_file).
+-define(LOGGER_FLOODING_PDICT_KEY, cloudi_logger). % all logging processes
 
 % create the locally registered name for a cpg scope
 % (in a way that does not cause conflict with custom cpg scopes)
