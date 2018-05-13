@@ -184,7 +184,9 @@ cloudi_service_api_call(services = Method, Timeout) ->
 cloudi_service_api_call(Method, Timeout) ->
     cloudi_service_api:Method(Timeout).
 
-cloudi_service_api_call(services_search = Method, Input, Timeout) ->
+cloudi_service_api_call(Method, Input, Timeout)
+    when Method =:= services_search;
+         Method =:= services_status ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, L} ->
             {ok, [{service_id(UUID), Data} ||

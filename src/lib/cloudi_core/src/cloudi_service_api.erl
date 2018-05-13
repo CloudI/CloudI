@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.2 {@date} {@time}
+%%% @copyright 2011-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -47,6 +47,7 @@
          services_restart/2,
          services_update/2,
          services_search/2,
+         services_status/2,
          services/1,
          nodes_set/2,
          nodes_get/1,
@@ -547,11 +548,27 @@
                   {options, service_options_internal() |
                             service_options_external()}).
 -type service() :: #internal{} | #external{}.
+-type service_status_internal() ::
+    nonempty_list({count_process, pos_integer()} |
+                  {uptime_total, float()} |
+                  {uptime_running, float()} |
+                  {uptime_restarts, non_neg_integer()}).
+-type service_status_external() ::
+    nonempty_list({count_process, pos_integer()} |
+                  {count_thread, pos_integer()} |
+                  {uptime_total, float()} |
+                  {uptime_running, float()} |
+                  {uptime_restarts, non_neg_integer()}).
+-type service_status() ::
+    service_status_internal() | service_status_external().
 -export_type([service_id/0,
               service_internal/0,
               service_external/0,
+              service_proplist/0,
               service/0,
-              service_proplist/0]).
+              service_status_internal/0,
+              service_status_external/0,
+              service_status/0]).
 
 -type module_version() :: list(any()).
 -type module_state_internal_f() ::
@@ -761,7 +778,7 @@
 -type loglevel() :: loglevel_on() | off.
 -type loglevel_on() :: fatal | error | warn | info | debug | trace.
 -type logging_syslog_identity() :: nonempty_string().
--type logging_syslog_facility() :: 
+-type logging_syslog_facility() ::
     kernel | user | mail | daemon | auth0 | syslog |
     print | news | uucp | clock0 | auth1 | ftp | ntp |
     auth2 | auth3 | clock1 | local0 | local1 | local2 |
@@ -841,7 +858,7 @@
 %% @end
 %%-------------------------------------------------------------------------
 
--spec acl_add(L :: nonempty_list({atom(), acl()}), 
+-spec acl_add(L :: nonempty_list({atom(), acl()}),
               Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -998,7 +1015,7 @@ services_remove([_ | _] = L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_restart(L :: nonempty_list(binary() | string()), 
+-spec services_restart(L :: nonempty_list(binary() | string()),
                        Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -1094,6 +1111,32 @@ services_search(Name, Timeout)
     catch
         exit:badarg ->
             {error, service_name_invalid}
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List the current status of specific services.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_status(L :: nonempty_list(binary() | string()),
+                      Timeout :: api_timeout_milliseconds()) ->
+    {ok, nonempty_list({service_id(), service_status()})} |
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} |
+     {service_not_found, any()}}.
+
+services_status([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    case service_ids_convert(L) of
+        {ok, ServiceIdsValid} ->
+            cloudi_core_i_services_monitor:status(ServiceIdsValid, Timeout);
+        {error, _} = Error ->
+            Error
     end.
 
 %%-------------------------------------------------------------------------
@@ -1433,7 +1476,7 @@ code_path_add(Dir, Timeout)
 %% @doc
 %% ===Remove a directory from the CloudI Erlang VM code server's search paths.===
 %% This doesn't impact any running services, only services that will be
-%% started in the future. 
+%% started in the future.
 %% @end
 %%-------------------------------------------------------------------------
 

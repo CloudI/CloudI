@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-13 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the CloudI Service API function services_status to provide the
+      runtime status of any services at a single point in time
+      (it returns dynamic service state information: the number
+       of processes/threads, the uptime in hours and the number of restarts)
+
 2018-05-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add service uptime information to all long-lived

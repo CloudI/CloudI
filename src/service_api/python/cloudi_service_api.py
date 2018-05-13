@@ -41,6 +41,8 @@ class CloudI(object):
             return self.__services_add
         elif name == 'services_search':
             return self.__services_search
+        elif name == 'services_status':
+            return self.__services_status
         return self.__server.__getattr__(name)
 
     def __services(self):
@@ -65,4 +67,8 @@ class CloudI(object):
              _ServiceDescription(*service_configuration))
             for uuid_string, service_configuration in erlang.consult(raw)
         ]
+
+    def __services_status(self, id_list):
+        raw = self.__server.services_status(id_list)
+        return erlang.consult(raw)
 

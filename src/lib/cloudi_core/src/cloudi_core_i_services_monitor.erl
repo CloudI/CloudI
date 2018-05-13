@@ -49,6 +49,7 @@
          restart/2,
          update/2,
          search/2,
+         status/2,
          pids/2,
          increase/5,
          decrease/5,
@@ -187,6 +188,11 @@ update(UpdatePlan, Timeout) ->
 search([_ | _] = PidList, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {search, PidList},
+                                Timeout)).
+
+status([_ | _] = ServiceIdList, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {status, ServiceIdList},
                                 Timeout)).
 
 pids(ServiceId, Timeout)
@@ -329,6 +335,11 @@ handle_call({search, PidList}, _,
         end
     end, [], PidList),
     {reply, {ok, lists:reverse(ServiceIdList)}, State};
+
+handle_call({status, ServiceIdList}, _,
+            #state{services = Services} = State) ->
+    TimeNow = erlang:monotonic_time(),
+    {reply, service_ids_status(ServiceIdList, TimeNow, Services), State};
 
 handle_call({pids, ServiceId}, _,
             #state{services = Services} = State) ->
@@ -628,7 +639,7 @@ restart_stage3(#service{service_m = M,
             Services
     end,
     {true, State#state{services = NewServices}};
-    
+
 restart_stage3(#service{restart_count = RestartCount,
                         restart_times = RestartTimes,
                         max_r = MaxR,
@@ -1015,6 +1026,57 @@ service_id_pids(ServiceId, Services) ->
             {ok, PidsOrderedN};
         error ->
             {error, not_found}
+    end.
+
+service_ids_status(ServiceIdList, TimeNow, Services) ->
+    service_ids_status(ServiceIdList, [], TimeNow, Services).
+
+service_ids_status([], StatusList, _, _) ->
+    {ok, lists:reverse(StatusList)};
+service_ids_status([ServiceId | ServiceIdList], StatusList,
+                   TimeNow, Services) ->
+    case service_id_status(ServiceId, TimeNow, Services) of
+        {ok, Status} ->
+            service_ids_status(ServiceIdList,
+                               [{ServiceId, Status} | StatusList],
+                               TimeNow, Services);
+        {error, _} = Error ->
+            Error
+    end.
+
+service_id_status(ServiceId, TimeNow, Services) ->
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {_, #service{service_f = StartType,
+                          count_process = CountProcess,
+                          count_thread = CountThread,
+                          time_start = TimeStart,
+                          time_restart = TimeRestart,
+                          restart_count_total = Restarts}}} ->
+            TimeRunning = if
+                TimeRestart =:= undefined ->
+                    TimeStart;
+                is_integer(TimeRestart) ->
+                    TimeRestart
+            end,
+            HoursTotal = cloudi_timestamp:
+                         convert(TimeNow - TimeStart,
+                                 native, second) / ?SECONDS_IN_HOUR,
+            HoursRunning = cloudi_timestamp:
+                           convert(TimeNow - TimeRunning,
+                                   native, second) / ?SECONDS_IN_HOUR,
+            Status0 = [{uptime_total, HoursTotal},
+                       {uptime_running, HoursRunning},
+                       {uptime_restarts, Restarts}],
+            StatusN = if
+                StartType =:= start_internal ->
+                    [{count_process, CountProcess} | Status0];
+                StartType =:= start_external ->
+                    [{count_process, CountProcess},
+                     {count_thread, CountThread} | Status0]
+            end,
+            {ok, StatusN};
+        error ->
+            {error, {service_not_found, ServiceId}}
     end.
 
 update_start(PidList, UpdatePlan) ->

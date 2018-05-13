@@ -119,6 +119,9 @@
 %  should have a maximum of TIMEOUT_MAX_ERLANG)
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
+% Unable to improve this value
+-define(SECONDS_IN_HOUR, (60 * 60)).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Safe to tune without causing major internal problems                       %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
