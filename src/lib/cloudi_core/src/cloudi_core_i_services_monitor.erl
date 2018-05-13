@@ -1052,18 +1052,13 @@ service_id_status(ServiceId, TimeNow, Services) ->
                           time_start = TimeStart,
                           time_restart = TimeRestart,
                           restart_count_total = Restarts}}} ->
-            TimeRunning = if
+            HoursTotal = native_time_diff_to_string(TimeNow - TimeStart),
+            HoursRunning = if
                 TimeRestart =:= undefined ->
-                    TimeStart;
+                    HoursTotal;
                 is_integer(TimeRestart) ->
-                    TimeRestart
+                    native_time_diff_to_string(TimeNow - TimeRestart)
             end,
-            HoursTotal = cloudi_timestamp:
-                         convert(TimeNow - TimeStart,
-                                 native, second) / ?SECONDS_IN_HOUR,
-            HoursRunning = cloudi_timestamp:
-                           convert(TimeNow - TimeRunning,
-                                   native, second) / ?SECONDS_IN_HOUR,
             Status0 = [{uptime_total, HoursTotal},
                        {uptime_running, HoursRunning},
                        {uptime_restarts, Restarts}],
@@ -1319,6 +1314,16 @@ update_after(UpdateSuccess, PidList, ResultsSuccess,
     update_unload_module(ModulesUnload, CodePathsRemove),
     ok = update_reload_start(UpdatePlan),
     NewServices.
+
+native_time_diff_to_string(T) ->
+    TotalNanoSeconds = cloudi_timestamp:convert(T, native, nanosecond),
+    TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
+    NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    lists:flatten([erlang:integer_to_list(TotalHours), " hours ",
+                   erlang:integer_to_list(Seconds), " seconds ",
+                   erlang:integer_to_list(NanoSeconds), " nanoseconds"]).
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
