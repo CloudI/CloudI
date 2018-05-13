@@ -1061,7 +1061,7 @@ service_id_status(ServiceId, TimeNow, Services) ->
             end,
             Status0 = [{uptime_total, HoursTotal},
                        {uptime_running, HoursRunning},
-                       {uptime_restarts, Restarts}],
+                       {uptime_restarts, erlang:integer_to_list(Restarts)}],
             StatusN = if
                 StartType =:= start_internal ->
                     [{count_process, CountProcess} | Status0];
