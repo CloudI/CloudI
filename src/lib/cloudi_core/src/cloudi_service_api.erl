@@ -550,15 +550,15 @@
 -type service() :: #internal{} | #external{}.
 -type service_status_internal() ::
     nonempty_list({count_process, pos_integer()} |
-                  {uptime_total, float()} |
-                  {uptime_running, float()} |
-                  {uptime_restarts, non_neg_integer()}).
+                  {uptime_total, nonempty_string()} |
+                  {uptime_running, nonempty_string()} |
+                  {uptime_restarts, nonempty_string()}).
 -type service_status_external() ::
     nonempty_list({count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
-                  {uptime_total, float()} |
-                  {uptime_running, float()} |
-                  {uptime_restarts, non_neg_integer()}).
+                  {uptime_total, nonempty_string()} |
+                  {uptime_running, nonempty_string()} |
+                  {uptime_restarts, nonempty_string()}).
 -type service_status() ::
     service_status_internal() | service_status_external().
 -export_type([service_id/0,
