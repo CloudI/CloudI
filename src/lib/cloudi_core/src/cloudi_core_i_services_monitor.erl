@@ -1052,16 +1052,34 @@ service_id_status(ServiceId, TimeNow, Services) ->
                           time_start = TimeStart,
                           time_restart = TimeRestart,
                           restart_count_total = Restarts}}} ->
-            HoursTotal = native_time_diff_to_string(TimeNow - TimeStart),
-            HoursRunning = if
+            TimeDiffTotal = TimeNow - TimeStart,
+            TimeDiffRunning = if
                 TimeRestart =:= undefined ->
-                    HoursTotal;
+                    TimeDiffTotal;
                 is_integer(TimeRestart) ->
-                    native_time_diff_to_string(TimeNow - TimeRestart)
+                    TimeNow - TimeRestart
             end,
-            Status0 = [{uptime_total, HoursTotal},
-                       {uptime_running, HoursRunning},
-                       {uptime_restarts, erlang:integer_to_list(Restarts)}],
+            NanoSecondsTotal = cloudi_timestamp:
+                               convert(TimeDiffTotal, native, nanosecond),
+            NanoSecondsRunning = cloudi_timestamp:
+                                 convert(TimeDiffRunning, native, nanosecond),
+            UptimeTotal = nanoseconds_to_string(NanoSecondsTotal),
+            UptimeRunning = nanoseconds_to_string(NanoSecondsRunning),
+            AvailabilityDay =
+                nanoseconds_to_availability_day(NanoSecondsRunning),
+            AvailabilityWeek =
+                nanoseconds_to_availability_week(NanoSecondsRunning),
+            AvailabilityMonth =
+                nanoseconds_to_availability_month(NanoSecondsRunning),
+            AvailabilityYear =
+                nanoseconds_to_availability_year(NanoSecondsRunning),
+            Status0 = [{uptime_total, UptimeTotal},
+                       {uptime_running, UptimeRunning},
+                       {uptime_restarts, erlang:integer_to_list(Restarts)},
+                       {availability_day, AvailabilityDay},
+                       {availability_week, AvailabilityWeek},
+                       {availability_month, AvailabilityMonth},
+                       {availability_year, AvailabilityYear}],
             StatusN = if
                 StartType =:= start_internal ->
                     [{count_process, CountProcess} | Status0];
@@ -1315,8 +1333,7 @@ update_after(UpdateSuccess, PidList, ResultsSuccess,
     ok = update_reload_start(UpdatePlan),
     NewServices.
 
-native_time_diff_to_string(T) ->
-    TotalNanoSeconds = cloudi_timestamp:convert(T, native, nanosecond),
+nanoseconds_to_string(TotalNanoSeconds) ->
     TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
     NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
     TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
@@ -1324,6 +1341,226 @@ native_time_diff_to_string(T) ->
     lists:flatten([erlang:integer_to_list(TotalHours), " hours ",
                    erlang:integer_to_list(Seconds), " seconds ",
                    erlang:integer_to_list(NanoSeconds), " nanoseconds"]).
+
+nanoseconds_to_availability_day(TotalNanoSeconds) ->
+    AvailabilityDay = TotalNanoSeconds /
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY),
+    availability_to_string(AvailabilityDay).
+
+nanoseconds_to_availability_week(TotalNanoSeconds) ->
+    AvailabilityWeek = TotalNanoSeconds /
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_WEEK),
+    availability_to_string(AvailabilityWeek).
+
+nanoseconds_to_availability_month(TotalNanoSeconds) ->
+    AvailabilityMonth = TotalNanoSeconds /
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_MONTH),
+    availability_to_string(AvailabilityMonth).
+
+nanoseconds_to_availability_year(TotalNanoSeconds) ->
+    AvailabilityYear = TotalNanoSeconds /
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_YEAR),
+    availability_to_string(AvailabilityYear).
+
+% avoid erlang:float_to_list precision problems
+% and keep the formatting efficient
+availability_to_string(Availability)
+    when Availability < 0.25 ->
+    "0 %";
+availability_to_string(Availability)
+    when Availability < 0.5 ->
+    "25 %";
+availability_to_string(Availability)
+    when Availability < 2 / 3 ->
+    "50 %";
+availability_to_string(Availability)
+    when Availability < 0.75 ->
+    "66.6 %";
+availability_to_string(Availability)
+    when Availability < 0.9 ->
+    "75 %";
+availability_to_string(Availability)
+    when Availability < 0.99 ->
+    if % 1 nine
+        Availability < 0.91 ->
+            "90 %";
+        Availability < 0.92 ->
+            "91 %";
+        Availability < 0.93 ->
+            "92 %";
+        Availability < 0.94 ->
+            "93 %";
+        Availability < 0.95 ->
+            "94 %";
+        Availability < 0.96 ->
+            "95 %";
+        Availability < 0.97 ->
+            "96 %";
+        Availability < 0.98 ->
+            "97 %";
+        true ->
+            "98 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.999 ->
+    if % 2 nines
+        Availability < 0.991 ->
+            "99.0 %";
+        Availability < 0.992 ->
+            "99.1 %";
+        Availability < 0.993 ->
+            "99.2 %";
+        Availability < 0.994 ->
+            "99.3 %";
+        Availability < 0.995 ->
+            "99.4 %";
+        Availability < 0.996 ->
+            "99.5 %";
+        Availability < 0.997 ->
+            "99.6 %";
+        Availability < 0.998 ->
+            "99.7 %";
+        true ->
+            "99.8 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.9999 ->
+    if % 3 nines
+        Availability < 0.9991 ->
+            "99.9 %";
+        Availability < 0.9992 ->
+            "99.91 %";
+        Availability < 0.9993 ->
+            "99.92 %";
+        Availability < 0.9994 ->
+            "99.93 %";
+        Availability < 0.9995 ->
+            "99.94 %";
+        Availability < 0.9996 ->
+            "99.95 %";
+        Availability < 0.9997 ->
+            "99.96 %";
+        Availability < 0.9998 ->
+            "99.97 %";
+        true ->
+            "99.98 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.99999 ->
+    if % 4 nines
+        Availability < 0.99991 ->
+            "99.99 %";
+        Availability < 0.99992 ->
+            "99.991 %";
+        Availability < 0.99993 ->
+            "99.992 %";
+        Availability < 0.99994 ->
+            "99.993 %";
+        Availability < 0.99995 ->
+            "99.994 %";
+        Availability < 0.99996 ->
+            "99.995 %";
+        Availability < 0.99997 ->
+            "99.996 %";
+        Availability < 0.99998 ->
+            "99.997 %";
+        true ->
+            "99.998 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.999999 ->
+    if % 5 nines
+        Availability < 0.999991 ->
+            "99.999 %";
+        Availability < 0.999992 ->
+            "99.9991 %";
+        Availability < 0.999993 ->
+            "99.9992 %";
+        Availability < 0.999994 ->
+            "99.9993 %";
+        Availability < 0.999995 ->
+            "99.9994 %";
+        Availability < 0.999996 ->
+            "99.9995 %";
+        Availability < 0.999997 ->
+            "99.9996 %";
+        Availability < 0.999998 ->
+            "99.9997 %";
+        true ->
+            "99.9998 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.9999999 ->
+    if % 6 nines
+        Availability < 0.9999991 ->
+            "99.9999 %";
+        Availability < 0.9999992 ->
+            "99.99991 %";
+        Availability < 0.9999993 ->
+            "99.99992 %";
+        Availability < 0.9999994 ->
+            "99.99993 %";
+        Availability < 0.9999995 ->
+            "99.99994 %";
+        Availability < 0.9999996 ->
+            "99.99995 %";
+        Availability < 0.9999997 ->
+            "99.99996 %";
+        Availability < 0.9999998 ->
+            "99.99997 %";
+        true ->
+            "99.99998 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.99999999 ->
+    if % 7 nines
+        Availability < 0.99999991 ->
+            "99.99999 %";
+        Availability < 0.99999992 ->
+            "99.999991 %";
+        Availability < 0.99999993 ->
+            "99.999992 %";
+        Availability < 0.99999994 ->
+            "99.999993 %";
+        Availability < 0.99999995 ->
+            "99.999994 %";
+        Availability < 0.99999996 ->
+            "99.999995 %";
+        Availability < 0.99999997 ->
+            "99.999996 %";
+        Availability < 0.99999998 ->
+            "99.999997 %";
+        true ->
+            "99.999998 %"
+    end;
+availability_to_string(Availability)
+    when Availability < 0.999999999 ->
+    if % 8 nines
+        Availability < 0.999999991 ->
+            "99.999999 %";
+        Availability < 0.999999992 ->
+            "99.9999991 %";
+        Availability < 0.999999993 ->
+            "99.9999992 %";
+        Availability < 0.999999994 ->
+            "99.9999993 %";
+        Availability < 0.999999995 ->
+            "99.9999994 %";
+        Availability < 0.999999996 ->
+            "99.9999995 %";
+        Availability < 0.999999997 ->
+            "99.9999996 %";
+        Availability < 0.999999998 ->
+            "99.9999997 %";
+        true ->
+            "99.9999998 %"
+    end;
+availability_to_string(_) ->
+    "99.9999999 %". % 9 nines
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).

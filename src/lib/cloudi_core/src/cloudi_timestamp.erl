@@ -480,7 +480,7 @@ uptime(TimeUnit)
     float().
 
 uptime_days() ->
-    uptime(second) / (?SECONDS_IN_HOUR * 24).
+    uptime(second) / (?SECONDS_IN_HOUR * ?HOURS_IN_DAY).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -492,7 +492,7 @@ uptime_days() ->
     float().
 
 uptime_months() ->
-    uptime_days() / (365.25 / 12).
+    uptime_days() / ?DAYS_IN_MONTH.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -504,7 +504,7 @@ uptime_months() ->
     float().
 
 uptime_years() ->
-    uptime_days() / 365.25.
+    uptime_days() / ?DAYS_IN_YEAR.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

@@ -120,6 +120,10 @@
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
 % Unable to improve these values
+-define(DAYS_IN_YEAR, 365.25).
+-define(DAYS_IN_MONTH, (?DAYS_IN_YEAR / 12)).
+-define(DAYS_IN_WEEK, 7).
+-define(HOURS_IN_DAY, 24).
 -define(SECONDS_IN_HOUR, (60 * 60)).
 -define(NANOSECONDS_IN_SECOND, 1000000000).
 
