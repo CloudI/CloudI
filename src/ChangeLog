@@ -5,6 +5,12 @@
 
     * Add availability information to the CloudI Service API
       function services_status based on the uptime_running value
+    * Fix the cloudi_core_i_configurator module to use infinity timeouts
+      when modifying the CloudI configuration, so it isn't possible to
+      have a timeout exception in the middle of adding or removing
+      services (i.e., a timeout exception that causes a state
+      inconsistency, it is still possible for the cloudi_core_i_configurator
+      function call to timeout)
 
 2018-05-13 Michael Truog   <mjtruog at protonmail dot com>
 

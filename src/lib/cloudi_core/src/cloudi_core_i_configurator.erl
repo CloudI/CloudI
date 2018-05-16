@@ -136,18 +136,14 @@ configure() ->
 
 acl_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {acl_add, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {acl_add, L}, Timeout)).
 
 acl_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {acl_remove, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {acl_remove, L}, Timeout)).
 
 acl(Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {acl,
-                                 timeout_decr(Timeout)}, Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE, acl, Timeout)).
 
 service_subscriptions(ServiceId, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -156,23 +152,19 @@ service_subscriptions(ServiceId, Timeout) ->
 
 services_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services_add, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {services_add, L}, Timeout)).
 
 services_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services_remove, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {services_remove, L}, Timeout)).
 
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services_restart, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {services_restart, L}, Timeout)).
 
 services_update(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services_update, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {services_update, L}, Timeout)).
 
 services_search(Scope, ServiceName, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -180,68 +172,52 @@ services_search(Scope, ServiceName, Timeout) ->
                                  timeout_decr(Timeout)}, Timeout)).
 
 services(Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {services,
-                                 timeout_decr(Timeout)}, Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE, services, Timeout)).
 
 nodes_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {nodes_set, L, local,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {nodes_set, L, local}, Timeout)).
 
 nodes_get(Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {nodes_get,
-                                 timeout_decr(Timeout)}, Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE, nodes_get, Timeout)).
 
 nodes_add(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {nodes_add, L, local,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {nodes_add, L, local}, Timeout)).
 nodes_remove(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {nodes_remove, L, local,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {nodes_remove, L, local}, Timeout)).
 
 logging_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_set, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_set, L}, Timeout)).
 
 logging_file_set(FilePath, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_file_set, FilePath,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_file_set, FilePath}, Timeout)).
 
 logging_stdout_set(Stdout, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_stdout_set, Stdout,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_stdout_set, Stdout}, Timeout)).
 
 logging_level_set(Level, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_level_set, Level,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_level_set, Level}, Timeout)).
 
 logging_syslog_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_syslog_set, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_syslog_set, L}, Timeout)).
 
 logging_formatters_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_formatters_set, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_formatters_set, L}, Timeout)).
 
 logging_redirect_set(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging_redirect_set, L,
-                                 timeout_decr(Timeout)}, Timeout)).
+                                {logging_redirect_set, L}, Timeout)).
 
 logging(Timeout) ->
-    ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {logging,
-                                 timeout_decr(Timeout)}, Timeout)).
+    ?CATCH_EXIT(gen_server:call(?MODULE, logging, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -361,7 +337,7 @@ handle_call(configure, _, State) ->
     self() ! configure,
     {reply, ok, State};
 
-handle_call({acl_add, L, _}, _,
+handle_call({acl_add, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:acl_add(L, Config) of
         {ok, NewConfig} ->
@@ -370,7 +346,7 @@ handle_call({acl_add, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({acl_remove, L, _}, _,
+handle_call({acl_remove, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:acl_remove(L, Config) of
         {ok, NewConfig} ->
@@ -379,7 +355,7 @@ handle_call({acl_remove, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({acl, _}, _,
+handle_call(acl, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:acl(Config)}, State};
 
@@ -393,36 +369,36 @@ handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
             {reply, Error, State}
     end;
 
-handle_call({services_add, L, Timeout}, _,
+handle_call({services_add, L}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_core_i_configuration:services_add(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_add(L, Config, infinity) of
         {ok, IDs, NewConfig} ->
             {reply, {ok, IDs}, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
 
-handle_call({services_remove, L, Timeout}, _,
+handle_call({services_remove, L}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_core_i_configuration:services_remove(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_remove(L, Config, infinity) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
 
-handle_call({services_restart, L, Timeout}, _,
+handle_call({services_restart, L}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_core_i_configuration:services_restart(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_restart(L, Config, infinity) of
         {ok, NewConfig} ->
             {reply, ok, State#state{configuration = NewConfig}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
 
-handle_call({services_update, L, Timeout}, _,
+handle_call({services_update, L}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_core_i_configuration:services_update(L, Config, Timeout) of
+    case cloudi_core_i_configuration:services_update(L, Config, infinity) of
         {ok, Result, NewConfig} ->
             {reply, Result, State#state{configuration = NewConfig}};
         {error, _} = Error ->
@@ -448,24 +424,24 @@ handle_call({services_search, Scope, ServiceName, Timeout}, _,
             {reply, {ok, []}, State}
     end;
 
-handle_call({services, _}, _,
+handle_call(services, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:services(Config)}, State};
 
-handle_call({nodes_set, _, _, _} = Request, _, State) ->
+handle_call({nodes_set, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
-handle_call({nodes_get, _}, _,
+handle_call(nodes_get, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:nodes_get(Config)}, State};
 
-handle_call({nodes_add, _, _, _} = Request, _, State) ->
+handle_call({nodes_add, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
-handle_call({nodes_remove, _, _, _} = Request, _, State) ->
+handle_call({nodes_remove, _, _} = Request, _, State) ->
     nodes_call(Request, State);
 
-handle_call({logging_set, L, _}, _,
+handle_call({logging_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_set(L, Config) of
         {ok, #config{logging = LoggingConfig} = NewConfig} ->
@@ -479,7 +455,7 @@ handle_call({logging_set, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({logging_file_set, FilePath, _}, _,
+handle_call({logging_file_set, FilePath}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     case cloudi_core_i_logger:file_set(FilePath) of
@@ -492,7 +468,7 @@ handle_call({logging_file_set, FilePath, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({logging_stdout_set, Stdout, _}, _,
+handle_call({logging_stdout_set, Stdout}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:stdout_set(Stdout),
@@ -501,7 +477,7 @@ handle_call({logging_stdout_set, Stdout, _}, _,
                         stdout = Stdout}},
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({logging_level_set, Level, _}, _,
+handle_call({logging_level_set, Level}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:level_set(Level),
@@ -510,7 +486,7 @@ handle_call({logging_level_set, Level, _}, _,
                         level = Level}},
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({logging_syslog_set, L, _}, _,
+handle_call({logging_syslog_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_syslog_set(L, Config) of
         {ok, #config{logging = #config_logging{
@@ -521,7 +497,7 @@ handle_call({logging_syslog_set, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({logging_formatters_set, L, _}, _,
+handle_call({logging_formatters_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_formatters_set(L, Config) of
         {ok, #config{logging = #config_logging{
@@ -532,7 +508,7 @@ handle_call({logging_formatters_set, L, _}, _,
             {reply, Error, State}
     end;
 
-handle_call({logging_redirect_set, Node, _}, _,
+handle_call({logging_redirect_set, Node}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:redirect_set(Node),
@@ -541,7 +517,7 @@ handle_call({logging_redirect_set, Node, _}, _,
                         redirect = Node}},
     {reply, ok, State#state{configuration = NewConfig}};
 
-handle_call({logging, _}, _,
+handle_call(logging, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
 
@@ -1164,9 +1140,9 @@ nodes_call_remote_result_replies([{_, ok} | Replies], Output) ->
 nodes_call_remote_result_replies([{_, _} = Error | Replies], Output) ->
     nodes_call_remote_result_replies(Replies, [Error | Output]).
 
-nodes_call_remote({_, _, remote, _}, _) ->
+nodes_call_remote({_, _, remote}, _) ->
     ok;
-nodes_call_remote({F, L, local, Timeout}, Connect) ->
+nodes_call_remote({F, L, local}, Connect) ->
     Nodes = if
         Connect =:= visible ->
             nodes();
@@ -1175,18 +1151,17 @@ nodes_call_remote({F, L, local, Timeout}, Connect) ->
     end,
     nodes_call_remote_result(global:trans({{?MODULE, L}, self()}, fun() ->
         gen_server:multi_call(Nodes, ?MODULE,
-                              {F, L, remote,
-                               timeout_decr(Timeout)}, Timeout)
+                              {F, L, remote}, infinity)
     end)).
 
-nodes_call({F, L, _, Timeout} = Request,
+nodes_call({F, L, _} = Request,
            #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:F(L, Config) of
         {ok, Config} ->
             {reply, ok, State};
         {ok, #config{nodes = #config_nodes{connect = Connect}} = NewConfig} ->
             Result = nodes_call_remote(Request, Connect),
-            case cloudi_core_i_nodes:reconfigure(NewConfig, Timeout) of
+            case cloudi_core_i_nodes:reconfigure(NewConfig, infinity) of
                 ok ->
                     {reply, Result, State#state{configuration = NewConfig}};
                 {error, _} = Error ->
