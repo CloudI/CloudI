@@ -1372,8 +1372,11 @@ availability_to_string(Availability)
     when Availability < 0.25 ->
     "0 %";
 availability_to_string(Availability)
-    when Availability < 0.5 ->
+    when Availability < 1 / 3 ->
     "25 %";
+availability_to_string(Availability)
+    when Availability < 0.5 ->
+    "33.3 %";
 availability_to_string(Availability)
     when Availability < 2 / 3 ->
     "50 %";

@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add 33.3% availability level to the CloudI Service API
+      function services_status
+
 2018-05-15 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add availability information to the CloudI Service API
