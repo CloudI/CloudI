@@ -552,13 +552,21 @@
     nonempty_list({count_process, pos_integer()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
-                  {uptime_restarts, nonempty_string()}).
+                  {uptime_restarts, nonempty_string()} |
+                  {availability_day, nonempty_string()} |
+                  {availability_week, nonempty_string()} |
+                  {availability_month, nonempty_string()} |
+                  {availability_year, nonempty_string()}).
 -type service_status_external() ::
     nonempty_list({count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
-                  {uptime_restarts, nonempty_string()}).
+                  {uptime_restarts, nonempty_string()} |
+                  {availability_day, nonempty_string()} |
+                  {availability_week, nonempty_string()} |
+                  {availability_month, nonempty_string()} |
+                  {availability_year, nonempty_string()}).
 -type service_status() ::
     service_status_internal() | service_status_external().
 -export_type([service_id/0,
