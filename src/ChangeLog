@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix restart_count_total bug with recent uptime additions
+
 2018-05-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add 33.3% availability level to the CloudI Service API

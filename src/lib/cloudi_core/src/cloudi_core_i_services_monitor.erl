@@ -587,17 +587,18 @@ restart_stage3(#service{service_m = M,
                         process_index = ProcessIndex,
                         count_process = CountProcess,
                         time_start = TimeStart,
-                        restart_count_total = 0,
+                        restart_count_total = Restarts,
                         restart_count = 0,
                         restart_times = []} = Service,
                Services, State, ServiceId, OldPid) ->
     % first restart
     TimeRestart = erlang:monotonic_time(),
     SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
-    Restarts = RestartCount = 1,
+    NewRestarts = Restarts + 1,
+    RestartCount = 1,
     NewServices = case erlang:apply(M, F, [ProcessIndex, CountProcess,
                                            TimeStart, TimeRestart,
-                                           Restarts | A]) of
+                                           NewRestarts | A]) of
         {ok, Pid} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now ~p)~n"
@@ -607,7 +608,7 @@ restart_stage3(#service{service_m = M,
                 Service#service{pids = Pids,
                                 monitor = erlang:monitor(process, Pid),
                                 time_restart = TimeRestart,
-                                restart_count_total = Restarts,
+                                restart_count_total = NewRestarts,
                                 restart_count = RestartCount,
                                 restart_times = [SecondsNow]}, Services),
             ok = initialize(Pids),
@@ -621,7 +622,7 @@ restart_stage3(#service{service_m = M,
                     Service#service{pids = Pids,
                                     monitor = erlang:monitor(process, P),
                                     time_restart = TimeRestart,
-                                    restart_count_total = Restarts,
+                                    restart_count_total = NewRestarts,
                                     restart_count = RestartCount,
                                     restart_times = [SecondsNow]}, D)
             end, Services, Pids),
@@ -632,7 +633,7 @@ restart_stage3(#service{service_m = M,
                             [Error, service_id(ServiceId)]),
             restart_stage2_async(Service#service{
                                      time_restart = TimeRestart,
-                                     restart_count_total = Restarts,
+                                     restart_count_total = NewRestarts,
                                      restart_count = RestartCount,
                                      restart_times = [SecondsNow]},
                                  ServiceId, OldPid),
