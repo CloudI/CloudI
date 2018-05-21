@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2009-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -948,7 +948,8 @@ services_format_options_external(Options) ->
         Options#config_service_options.timeout_terminate /=
         Defaults#config_service_options.timeout_terminate ->
             [{timeout_terminate,
-              Options#config_service_options.timeout_terminate} |
+              ?LIMIT_FORMAT(Options#config_service_options.timeout_terminate,
+                            ?TIMEOUT_TERMINATE_MIN, ?TIMEOUT_TERMINATE_MAX)} |
              OptionsList12];
         true ->
             OptionsList12

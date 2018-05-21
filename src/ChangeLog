@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-21 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change the CloudI Service API function services_status by
+      splitting the availability values into running values
+      (representing uptime_running) and updated values
+      (uptime_running minus any elapsed time during updates)
+    * Fix timeout_terminate limit_min/limit_max presence in
+      the view of a service's configuration
+
 2018-05-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix restart_count_total bug with recent uptime additions

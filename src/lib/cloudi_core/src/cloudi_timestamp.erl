@@ -74,6 +74,7 @@
 -type milliseconds_monotonic() :: integer().
 -type microseconds_monotonic() :: integer().
 -type nanoseconds_monotonic() :: integer().
+-type native_monotonic() :: integer().
 -export_type([time_unit/0,
               seconds_epoch/0,
               milliseconds_epoch/0,
@@ -82,7 +83,8 @@
               seconds_monotonic/0,
               milliseconds_monotonic/0,
               microseconds_monotonic/0,
-              nanoseconds_monotonic/0]).
+              nanoseconds_monotonic/0,
+              native_monotonic/0]).
 
 -include("cloudi_core_i_constants.hrl").
 
