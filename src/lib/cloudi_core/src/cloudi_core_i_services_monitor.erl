@@ -540,8 +540,13 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-restart(Service, Services, State, ServiceId, OldPid) ->
-    restart_stage1(Service, Services, State, ServiceId, OldPid).
+restart(Service, Services,
+        #state{update_times = UpdateTimes} = State,
+        ServiceId, OldPid) ->
+    UpdateTimesNew = maps:remove(ServiceId, UpdateTimes),
+    restart_stage1(Service, Services,
+                   State#state{update_times = UpdateTimesNew},
+                   ServiceId, OldPid).
 
 restart_stage1(#service{pids = Pids} = Service,
                Services, State, ServiceId, OldPid) ->
