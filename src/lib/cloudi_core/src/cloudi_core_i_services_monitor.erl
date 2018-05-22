@@ -1437,7 +1437,7 @@ nanoseconds_to_availability_day_updated(NanoSecondsRunning,
     NativeDay = cloudi_timestamp:
                 convert(NanoSecondsDay, nanosecond, native),
     NanoSecondsDowntime = nanoseconds_downtime(UpdateTimeList,
-                                               NativeDay, TimeNow),
+                                               TimeNow - NativeDay),
     AvailabilityDay = (erlang:min(NanoSecondsRunning, NanoSecondsDay) -
         NanoSecondsDowntime) / NanoSecondsDay,
     availability_to_string(AvailabilityDay).
@@ -1449,7 +1449,7 @@ nanoseconds_to_availability_week_updated(NanoSecondsRunning,
     NativeWeek = cloudi_timestamp:
                  convert(NanoSecondsWeek, nanosecond, native),
     NanoSecondsDowntime = nanoseconds_downtime(UpdateTimeList,
-                                               NativeWeek, TimeNow),
+                                               TimeNow - NativeWeek),
     AvailabilityWeek = (erlang:min(NanoSecondsRunning, NanoSecondsWeek) -
         NanoSecondsDowntime) / NanoSecondsWeek,
     availability_to_string(AvailabilityWeek).
@@ -1462,7 +1462,7 @@ nanoseconds_to_availability_month_updated(NanoSecondsRunning,
                   convert(cloudi_math:ceil(NanoSecondsMonth),
                           nanosecond, native),
     NanoSecondsDowntime = nanoseconds_downtime(UpdateTimeList,
-                                               NativeMonth, TimeNow),
+                                               TimeNow - NativeMonth),
     AvailabilityMonth = (erlang:min(NanoSecondsRunning, NanoSecondsMonth) -
         NanoSecondsDowntime) / NanoSecondsMonth,
     availability_to_string(AvailabilityMonth).
@@ -1475,19 +1475,17 @@ nanoseconds_to_availability_year_updated(NanoSecondsRunning,
                  convert(cloudi_math:ceil(NanoSecondsYear),
                          nanosecond, native),
     NanoSecondsDowntime = nanoseconds_downtime(UpdateTimeList,
-                                               NativeYear, TimeNow),
+                                               TimeNow - NativeYear),
     AvailabilityYear = (erlang:min(NanoSecondsRunning, NanoSecondsYear) -
         NanoSecondsDowntime) / NanoSecondsYear,
     availability_to_string(AvailabilityYear).
 
-nanoseconds_downtime(UpdateTimeList, NativePeriod, TimeNow) ->
-    nanoseconds_downtime(UpdateTimeList, 0, NativePeriod, TimeNow).
+nanoseconds_downtime(UpdateTimeList, T) ->
+    nanoseconds_downtime(UpdateTimeList, 0, T).
 
-nanoseconds_downtime([], NanoSecondsDowntime, _, _) ->
+nanoseconds_downtime([], NanoSecondsDowntime, _) ->
     NanoSecondsDowntime;
-nanoseconds_downtime([{T0, T1} | UpdateTimeList], NanoSecondsDowntime,
-                     NativePeriod, TimeNow) ->
-    T = TimeNow - NativePeriod,
+nanoseconds_downtime([{T0, T1} | UpdateTimeList], NanoSecondsDowntime, T) ->
     NanoSecondsDowntimeNew = if
         T0 >= T ->
             cloudi_timestamp:
@@ -1498,8 +1496,7 @@ nanoseconds_downtime([{T0, T1} | UpdateTimeList], NanoSecondsDowntime,
         true ->
             NanoSecondsDowntime
     end,
-    nanoseconds_downtime(UpdateTimeList, NanoSecondsDowntimeNew,
-                         NativePeriod, TimeNow).
+    nanoseconds_downtime(UpdateTimeList, NanoSecondsDowntimeNew, T).
 
 % avoid erlang:float_to_list precision problems
 % and keep the formatting efficient
