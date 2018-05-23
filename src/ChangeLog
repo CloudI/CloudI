@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-22 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix bug with CloudI Service API function services_update that
+      prevented the command-line argument from being updated for its
+      use when calling the aspects_init_after functions
+      (i.e., after the update causes a new OS process to start)
+
 2018-05-21 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change the CloudI Service API function services_status by

@@ -1490,7 +1490,7 @@ nanoseconds_downtime([{T0, T1} | UpdateTimeList], NanoSecondsDowntime, T) ->
         T0 >= T ->
             cloudi_timestamp:
             convert(T1 - T0, native, nanosecond) + NanoSecondsDowntime;
-        T1 >= T ->
+        T1 > T ->
             cloudi_timestamp:
             convert(T1 - T, native, nanosecond) + NanoSecondsDowntime;
         true ->

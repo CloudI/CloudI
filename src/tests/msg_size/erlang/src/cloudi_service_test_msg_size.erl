@@ -68,7 +68,11 @@
 
 % for external services
 aspect_init(CommandLine, _, _, undefined) ->
-    {ok, #state{service = CommandLine}}.
+    {ok, #state{service = CommandLine}};
+aspect_init(CommandLine, _, _, #state{} = State) ->
+    % an update occurred to get to this function clause
+    % when a new OS process is initialized with older state data
+    {ok, State#state{service = CommandLine}}.
 
 % for external services
 aspect_request(_, _, _, _, _, _, _, TransId, _,

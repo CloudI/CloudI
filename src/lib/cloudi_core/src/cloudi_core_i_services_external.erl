@@ -1431,10 +1431,10 @@ handle_event(EventType, EventContent, StateName, State) ->
             {keep_state, process_update(NewState)}
     end;
 
-'HANDLE'(info, {'cloudi_service_update_state', CommandLine}, _) ->
+'HANDLE'(info, {'cloudi_service_update_state', CommandLine}, State) ->
     % state updates when #config_service_update{spawn_os_process = true}
     erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),
-    keep_state_and_data;
+    {keep_state, State#state{command_line = CommandLine}};
 
 'HANDLE'(info, {'DOWN', _MonitorRef, process, Pid, _Info}, State) ->
     {_, NewState} = send_timeout_dead(Pid, State),
