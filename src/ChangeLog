@@ -7,6 +7,8 @@
       prevented the command-line argument from being updated for its
       use when calling the aspects_init_after functions
       (i.e., after the update causes a new OS process to start)
+    * Fix bug with CloudI Service API function services_search when
+      a scope is provided that doesn't exist
 
 2018-05-21 Michael Truog   <mjtruog at protonmail dot com>
 

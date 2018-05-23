@@ -106,10 +106,13 @@
 -type error_reason_service_update() ::
     {service_internal_update_failed |
      service_external_update_failed, any()}.
+-type error_reason_services_search() ::
+    service_scope_invalid.
 -export_type([error_reason_service_start/0,
               error_reason_service_stop/0,
               error_reason_service_restart/0,
-              error_reason_service_update/0]).
+              error_reason_service_update/0,
+              error_reason_services_search/0]).
 
 -record(state,
     {
@@ -407,7 +410,7 @@ handle_call({services_update, L}, _,
 
 handle_call({services_search, Scope, ServiceName, Timeout}, _,
             #state{configuration = Config} = State) ->
-    case cloudi_x_cpg:get_local_members(Scope, ServiceName, Timeout) of
+    try cloudi_x_cpg:get_local_members(Scope, ServiceName, Timeout) of
         {ok, _, PidList} ->
             case cloudi_core_i_services_monitor:search(PidList, Timeout) of
                 {ok, []} ->
@@ -422,6 +425,11 @@ handle_call({services_search, Scope, ServiceName, Timeout}, _,
             end;
         {error, _} ->
             {reply, {ok, []}, State}
+    catch
+        exit:{timeout, _} ->
+            {reply, {error, timeout}, State};
+        exit:{noproc, _} ->
+            {reply, {error, service_scope_invalid}, State}
     end;
 
 handle_call(services, _,

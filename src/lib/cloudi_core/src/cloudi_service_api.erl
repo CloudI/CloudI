@@ -1105,7 +1105,8 @@ services_update([_ | _] = L, Timeout)
               {service_id(), service_external()})} |
     {error,
      timeout | noproc |
-     service_name_invalid}.
+     service_name_invalid |
+     cloudi_core_i_configuration:error_reason_services_search()}.
 
 services_search(Name, Timeout)
     when ((is_integer(Timeout) andalso

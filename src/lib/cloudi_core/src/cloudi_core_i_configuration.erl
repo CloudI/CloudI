@@ -278,6 +278,8 @@
     cloudi_core_i_configurator:error_reason_service_restart().
 -type error_reason_services_update() ::
     error_reason_services_update_configuration().
+-type error_reason_services_search() ::
+    cloudi_core_i_configurator:error_reason_services_search().
 -type error_reason_nodes_add() ::
     error_reason_nodes_add_configuration().
 -type error_reason_nodes_remove() ::
@@ -296,6 +298,7 @@
               error_reason_services_remove/0,
               error_reason_services_restart/0,
               error_reason_services_update/0,
+              error_reason_services_search/0,
               error_reason_nodes_add/0,
               error_reason_nodes_remove/0,
               error_reason_nodes_set/0,
