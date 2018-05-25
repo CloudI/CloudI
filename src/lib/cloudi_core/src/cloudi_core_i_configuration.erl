@@ -46,6 +46,7 @@
          services_restart/3,
          services_update/3,
          services_search/2,
+         service_ids/1,
          services/1,
          service_format/1,
          services_format_options_internal/1,
@@ -602,6 +603,23 @@ services_search([ID | _] = Value, Config)
     lists:filter(fun({CheckID, _}) ->
         lists:member(CheckID, Value)
     end, services(Config)).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Return a list of all the configured service UUIDs.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec service_ids(#config{}) ->
+    list(cloudi_service_api:service_id()).
+
+service_ids(#config{services = Services}) ->
+    [begin
+        case Service of
+            #config_service_internal{uuid = ID} -> ID;
+            #config_service_external{uuid = ID} -> ID
+        end
+     end || Service <- Services].
 
 %%-------------------------------------------------------------------------
 %% @doc

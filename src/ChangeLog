@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Allow the CloudI Service API function services_status to return
+      all service status information when an empty list is used
+
 2018-05-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix bug with CloudI Service API function services_update that

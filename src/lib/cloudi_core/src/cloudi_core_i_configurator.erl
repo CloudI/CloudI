@@ -51,6 +51,7 @@
          services_restart/2,
          services_update/2,
          services_search/3,
+         service_ids/1,
          services/1,
          nodes_set/2,
          nodes_get/1,
@@ -173,6 +174,9 @@ services_search(Scope, ServiceName, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_search, Scope, ServiceName,
                                  timeout_decr(Timeout)}, Timeout)).
+
+service_ids(Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE, service_ids, Timeout)).
 
 services(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, services, Timeout)).
@@ -431,6 +435,10 @@ handle_call({services_search, Scope, ServiceName, Timeout}, _,
         exit:{noproc, _} ->
             {reply, {error, service_scope_invalid}, State}
     end;
+
+handle_call(service_ids, _,
+            #state{configuration = Config} = State) ->
+    {reply, {ok, cloudi_core_i_configuration:service_ids(Config)}, State};
 
 handle_call(services, _,
             #state{configuration = Config} = State) ->

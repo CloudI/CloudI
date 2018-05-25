@@ -1136,7 +1136,7 @@ services_search(Name, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec services_status(L :: nonempty_list(binary() | string()),
+-spec services_status(L :: list(binary() | string()),
                       Timeout :: api_timeout_milliseconds()) ->
     {ok, nonempty_list({service_id(), service_status()})} |
     {error,
@@ -1144,12 +1144,19 @@ services_search(Name, Timeout)
      {service_id_invalid, any()} |
      {service_not_found, any()}}.
 
-services_status([_ | _] = L, Timeout)
-    when ((is_integer(Timeout) andalso
+services_status(L, Timeout)
+    when is_list(L),
+         ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
-    case service_ids_convert(L) of
+    ServiceIdsResult = case service_ids_convert(L) of
+        {ok, []} ->
+            cloudi_core_i_configurator:service_ids(Timeout);
+        ServiceIdsResultValue ->
+            ServiceIdsResultValue
+    end,
+    case ServiceIdsResult of
         {ok, ServiceIdsValid} ->
             cloudi_core_i_services_monitor:status(ServiceIdsValid, Timeout);
         {error, _} = Error ->
