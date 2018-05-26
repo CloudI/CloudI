@@ -553,6 +553,14 @@
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
                   {uptime_restarts, nonempty_string()} |
+                  {downtime_day_restarting, nonempty_string()} |
+                  {downtime_day_updating, nonempty_string()} |
+                  {downtime_week_restarting, nonempty_string()} |
+                  {downtime_week_updating, nonempty_string()} |
+                  {downtime_month_restarting, nonempty_string()} |
+                  {downtime_month_updating, nonempty_string()} |
+                  {downtime_year_restarting, nonempty_string()} |
+                  {downtime_year_updating, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |
@@ -567,6 +575,14 @@
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
                   {uptime_restarts, nonempty_string()} |
+                  {downtime_day_restarting, nonempty_string()} |
+                  {downtime_day_updating, nonempty_string()} |
+                  {downtime_week_restarting, nonempty_string()} |
+                  {downtime_week_updating, nonempty_string()} |
+                  {downtime_month_restarting, nonempty_string()} |
+                  {downtime_month_updating, nonempty_string()} |
+                  {downtime_year_restarting, nonempty_string()} |
+                  {downtime_year_updating, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |

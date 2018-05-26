@@ -327,6 +327,9 @@ service_initialized_process(Pid)
     ?MODULE ! {service_initialized_process, Pid},
     ok.
 
+-spec service_dead(ID :: binary()) ->
+    ok.
+
 service_dead(ID)
     when is_binary(ID) ->
     gen_server:cast(?MODULE, {service_dead, ID}).

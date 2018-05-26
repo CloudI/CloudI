@@ -5,6 +5,8 @@
 
     * Allow the CloudI Service API function services_status to return
       all service status information when an empty list is used
+    * Add the downtime spent restarting and updating to the
+      CloudI Service API function services_status
 
 2018-05-22 Michael Truog   <mjtruog at protonmail dot com>
 
