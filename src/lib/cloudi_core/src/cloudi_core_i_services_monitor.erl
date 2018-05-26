@@ -1313,63 +1313,63 @@ service_id_status(ServiceId, TimeNow,
             Status11 = if
                 TimeRunning =< TimeMonthStart,
                 NanoSecondsYearUpdating > 0 ->
-                    [{downtime_year_updating,
+                    [{interrupt_year_updating,
                       nanoseconds_to_string(NanoSecondsYearUpdating)} |
                      Status10];
                 NanoSecondsYearUpdating =:= 0 ->
                     Status10
             end,
             Status12 = if
+                TimeRunning =< TimeWeekStart,
+                NanoSecondsMonthUpdating > 0 ->
+                    [{interrupt_month_updating,
+                      nanoseconds_to_string(NanoSecondsMonthUpdating)} |
+                     Status11];
+                NanoSecondsMonthUpdating =:= 0 ->
+                    Status11
+            end,
+            Status13 = if
+                TimeRunning =< TimeDayStart,
+                NanoSecondsWeekUpdating > 0 ->
+                    [{interrupt_week_updating,
+                      nanoseconds_to_string(NanoSecondsWeekUpdating)} |
+                     Status12];
+                NanoSecondsWeekUpdating =:= 0 ->
+                    Status12
+            end,
+            Status14 = if
+                NanoSecondsDayUpdating > 0 ->
+                    [{interrupt_day_updating,
+                      nanoseconds_to_string(NanoSecondsDayUpdating)} |
+                     Status13];
+                NanoSecondsDayUpdating =:= 0 ->
+                    Status13
+            end,
+            Status15 = if
                 TimeStart =< TimeMonthStart,
                 NanoSecondsYearRestarting > 0 ->
                     [{downtime_year_restarting,
                       nanoseconds_to_string(NanoSecondsYearRestarting)} |
-                     Status11];
+                     Status14];
                 NanoSecondsYearRestarting =:= 0 ->
-                    Status11
+                    Status14
             end,
-            Status13 = if
-                TimeRunning =< TimeWeekStart,
-                NanoSecondsMonthUpdating > 0 ->
-                    [{downtime_month_updating,
-                      nanoseconds_to_string(NanoSecondsMonthUpdating)} |
-                     Status12];
-                NanoSecondsMonthUpdating =:= 0 ->
-                    Status12
-            end,
-            Status14 = if
+            Status16 = if
                 TimeStart =< TimeWeekStart,
                 NanoSecondsMonthRestarting > 0 ->
                     [{downtime_month_restarting,
                       nanoseconds_to_string(NanoSecondsMonthRestarting)} |
-                     Status13];
+                     Status15];
                 NanoSecondsMonthRestarting =:= 0 ->
-                    Status13
+                    Status15
             end,
-            Status15 = if
-                TimeRunning =< TimeDayStart,
-                NanoSecondsWeekUpdating > 0 ->
-                    [{downtime_week_updating,
-                      nanoseconds_to_string(NanoSecondsWeekUpdating)} |
-                     Status14];
-                NanoSecondsWeekUpdating =:= 0 ->
-                    Status14
-            end,
-            Status16 = if
+            Status17 = if
                 TimeStart =< TimeDayStart,
                 NanoSecondsWeekRestarting > 0 ->
                     [{downtime_week_restarting,
                       nanoseconds_to_string(NanoSecondsWeekRestarting)} |
-                     Status15];
-                NanoSecondsWeekRestarting =:= 0 ->
-                    Status15
-            end,
-            Status17 = if
-                NanoSecondsDayUpdating > 0 ->
-                    [{downtime_day_updating,
-                      nanoseconds_to_string(NanoSecondsDayUpdating)} |
                      Status16];
-                NanoSecondsDayUpdating =:= 0 ->
+                NanoSecondsWeekRestarting =:= 0 ->
                     Status16
             end,
             Status18 = if

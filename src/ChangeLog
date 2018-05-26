@@ -10,6 +10,10 @@
       more minimal based on the values currently available
     * Fix the CloudI Service API function services_status downtime due to
       updating so it properly considers the availability time period
+    * In the CloudI Service API function services_status output,
+      use the term "interrupt" instead of "downtime" for the amount
+      of time spent updating, since that is more correct
+      (processing queued messages is paused during the update)
 
 2018-05-25 Michael Truog   <mjtruog at protonmail dot com>
 
