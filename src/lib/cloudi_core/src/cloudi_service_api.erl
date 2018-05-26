@@ -561,12 +561,16 @@
                   {downtime_month_updating, nonempty_string()} |
                   {downtime_year_restarting, nonempty_string()} |
                   {downtime_year_updating, nonempty_string()} |
+                  {availability_day_total, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
+                  {availability_week_total, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |
                   {availability_week_updated, nonempty_string()} |
+                  {availability_month_total, nonempty_string()} |
                   {availability_month_running, nonempty_string()} |
                   {availability_month_updated, nonempty_string()} |
+                  {availability_year_total, nonempty_string()} |
                   {availability_year_running, nonempty_string()} |
                   {availability_year_updated, nonempty_string()}).
 -type service_status_external() ::
@@ -583,12 +587,16 @@
                   {downtime_month_updating, nonempty_string()} |
                   {downtime_year_restarting, nonempty_string()} |
                   {downtime_year_updating, nonempty_string()} |
+                  {availability_day_total, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
+                  {availability_week_total, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |
                   {availability_week_updated, nonempty_string()} |
+                  {availability_month_total, nonempty_string()} |
                   {availability_month_running, nonempty_string()} |
                   {availability_month_updated, nonempty_string()} |
+                  {availability_year_total, nonempty_string()} |
                   {availability_year_running, nonempty_string()} |
                   {availability_year_updated, nonempty_string()}).
 -type service_status() ::

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the total availability to the CloudI Service API function
+      services_status by only excluding the restarting time during each
+      time period
+    * Make the CloudI Service API function services_status return format
+      more minimal based on the values currently available
+
 2018-05-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Allow the CloudI Service API function services_status to return

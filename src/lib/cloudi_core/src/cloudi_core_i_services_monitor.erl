@@ -64,9 +64,6 @@
 -include("cloudi_core_i_constants.hrl").
 -include("cloudi_core_i_configuration.hrl").
 
--define(CATCH_EXIT(F),
-        try F catch exit:{Reason, _} -> {error, Reason} end).
-
 -record(service,
     {
         service_m :: cloudi_core_i_spawn,
@@ -146,6 +143,37 @@
         service_id :: cloudi_service_api:service_id(),
         service :: #service{}
     }).
+
+-define(CATCH_EXIT(F),
+        try F catch exit:{Reason, _} -> {error, Reason} end).
+
+-define(NANOSECONDS_IN_DAY,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY)).
+-define(NANOSECONDS_IN_WEEK,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_WEEK)).
+-define(NANOSECONDS_IN_MONTH,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_MONTH)).
+-define(NANOSECONDS_IN_YEAR,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_YEAR)).
+
+-define(NATIVE_TIME_IN_DAY,
+        cloudi_timestamp:
+        convert(?NANOSECONDS_IN_DAY, nanosecond, native)).
+-define(NATIVE_TIME_IN_WEEK,
+        cloudi_timestamp:
+        convert(?NANOSECONDS_IN_WEEK, nanosecond, native)).
+-define(NATIVE_TIME_IN_MONTH,
+        cloudi_timestamp:
+        convert(cloudi_math:ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
+-define(NATIVE_TIME_IN_YEAR,
+        cloudi_timestamp:
+        convert(cloudi_math:ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
+
+-define(AVAILABILITY_ZERO, "0 %").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -1179,71 +1207,170 @@ service_id_status(ServiceId, TimeNow,
                 nanoseconds_downtime_year(DurationRestartList, TimeNow),
             NanoSecondsYearUpdating =
                 nanoseconds_downtime_year(DurationUpdateList, TimeNow),
-            DowntimeDayRestarting =
-                nanoseconds_to_string(NanoSecondsDayRestarting),
-            DowntimeDayUpdating =
-                nanoseconds_to_string(NanoSecondsDayUpdating),
-            DowntimeWeekRestarting =
-                nanoseconds_to_string(NanoSecondsWeekRestarting),
-            DowntimeWeekUpdating =
-                nanoseconds_to_string(NanoSecondsWeekUpdating),
-            DowntimeMonthRestarting =
-                nanoseconds_to_string(NanoSecondsMonthRestarting),
-            DowntimeMonthUpdating =
-                nanoseconds_to_string(NanoSecondsMonthUpdating),
-            DowntimeYearRestarting =
-                nanoseconds_to_string(NanoSecondsYearRestarting),
-            DowntimeYearUpdating =
-                nanoseconds_to_string(NanoSecondsYearUpdating),
-            AvailabilityDayRunning =
-                nanoseconds_to_availability_day_running(NanoSecondsRunning),
-            AvailabilityDayUpdated =
-                nanoseconds_to_availability_day_updated(
-                    NanoSecondsRunning,
-                    NanoSecondsDayUpdating),
-            AvailabilityWeekRunning =
-                nanoseconds_to_availability_week_running(NanoSecondsRunning),
-            AvailabilityWeekUpdated =
-                nanoseconds_to_availability_week_updated(
-                    NanoSecondsRunning,
-                    NanoSecondsWeekUpdating),
-            AvailabilityMonthRunning =
-                nanoseconds_to_availability_month_running(NanoSecondsRunning),
-            AvailabilityMonthUpdated =
-                nanoseconds_to_availability_month_updated(
-                    NanoSecondsRunning,
-                    NanoSecondsMonthUpdating),
-            AvailabilityYearRunning =
-                nanoseconds_to_availability_year_running(NanoSecondsRunning),
-            AvailabilityYearUpdated =
-                nanoseconds_to_availability_year_updated(
-                    NanoSecondsRunning,
-                    NanoSecondsYearUpdating),
-            Status0 = [{uptime_total, UptimeTotal},
-                       {uptime_running, UptimeRunning},
-                       {uptime_restarts, erlang:integer_to_list(Restarts)},
-                       {downtime_day_restarting, DowntimeDayRestarting},
-                       {downtime_day_updating, DowntimeDayUpdating},
-                       {downtime_week_restarting, DowntimeWeekRestarting},
-                       {downtime_week_updating, DowntimeWeekUpdating},
-                       {downtime_month_restarting, DowntimeMonthRestarting},
-                       {downtime_month_updating, DowntimeMonthUpdating},
-                       {downtime_year_restarting, DowntimeYearRestarting},
-                       {downtime_year_updating, DowntimeYearUpdating},
-                       {availability_day_running, AvailabilityDayRunning},
-                       {availability_day_updated, AvailabilityDayUpdated},
-                       {availability_week_running, AvailabilityWeekRunning},
-                       {availability_week_updated, AvailabilityWeekUpdated},
-                       {availability_month_running, AvailabilityMonthRunning},
-                       {availability_month_updated, AvailabilityMonthUpdated},
-                       {availability_year_running, AvailabilityYearRunning},
-                       {availability_year_updated, AvailabilityYearUpdated}],
+            Status0 = [],
+            Status1 = case nanoseconds_to_availability_year_without(
+                               NanoSecondsRunning,
+                               NanoSecondsYearUpdating) of
+                ?AVAILABILITY_ZERO ->
+                    Status0;
+                AvailabilityYearUpdated ->
+                    [{availability_year_updated,
+                      AvailabilityYearUpdated} | Status0]
+            end,
+            Status2 = case nanoseconds_to_availability_year_running(
+                               NanoSecondsRunning) of
+                ?AVAILABILITY_ZERO ->
+                    Status1;
+                AvailabilityYearRunning ->
+                    [{availability_year_running,
+                      AvailabilityYearRunning} | Status1]
+            end,
+            Status3 = case nanoseconds_to_availability_year_without(
+                               NanoSecondsRunning,
+                               NanoSecondsYearRestarting) of
+                ?AVAILABILITY_ZERO ->
+                    Status2;
+                AvailabilityYearTotal ->
+                    [{availability_year_total,
+                      AvailabilityYearTotal} | Status2]
+            end,
+            Status4 = case nanoseconds_to_availability_month_without(
+                               NanoSecondsRunning,
+                               NanoSecondsMonthUpdating) of
+                ?AVAILABILITY_ZERO ->
+                    Status3;
+                AvailabilityMonthUpdated ->
+                    [{availability_month_updated,
+                      AvailabilityMonthUpdated} | Status3]
+            end,
+            Status5 = case nanoseconds_to_availability_month_running(
+                               NanoSecondsRunning) of
+                ?AVAILABILITY_ZERO ->
+                    Status4;
+                AvailabilityMonthRunning ->
+                    [{availability_month_running,
+                      AvailabilityMonthRunning} | Status4]
+            end,
+            Status6 = case nanoseconds_to_availability_month_without(
+                               NanoSecondsRunning,
+                               NanoSecondsMonthRestarting) of
+                ?AVAILABILITY_ZERO ->
+                    Status5;
+                AvailabilityMonthTotal ->
+                    [{availability_month_total,
+                      AvailabilityMonthTotal} | Status5]
+            end,
+            Status7 = case nanoseconds_to_availability_week_without(
+                               NanoSecondsRunning,
+                               NanoSecondsWeekUpdating) of
+                ?AVAILABILITY_ZERO ->
+                    Status6;
+                AvailabilityWeekUpdated ->
+                    [{availability_week_updated,
+                      AvailabilityWeekUpdated} | Status6]
+            end,
+            Status8 = case nanoseconds_to_availability_week_running(
+                               NanoSecondsRunning) of
+                ?AVAILABILITY_ZERO ->
+                    Status7;
+                AvailabilityWeekRunning ->
+                    [{availability_week_running,
+                      AvailabilityWeekRunning} | Status7]
+            end,
+            Status9 = case nanoseconds_to_availability_week_without(
+                               NanoSecondsRunning,
+                               NanoSecondsWeekRestarting) of
+                ?AVAILABILITY_ZERO ->
+                    Status8;
+                AvailabilityWeekTotal ->
+                    [{availability_week_total,
+                      AvailabilityWeekTotal} | Status8]
+            end,
+            Status10 = [{availability_day_total,
+                         nanoseconds_to_availability_day_without(
+                             NanoSecondsRunning,
+                             NanoSecondsDayRestarting)},
+                        {availability_day_running,
+                         nanoseconds_to_availability_day_running(
+                             NanoSecondsRunning)},
+                        {availability_day_updated,
+                         nanoseconds_to_availability_day_without(
+                             NanoSecondsRunning,
+                             NanoSecondsDayUpdating)} | Status9],
+            Status11 = if
+                NanoSecondsYearUpdating > 0 ->
+                    [{downtime_year_updating,
+                      nanoseconds_to_string(NanoSecondsYearUpdating)} |
+                     Status10];
+                NanoSecondsYearUpdating =:= 0 ->
+                    Status10
+            end,
+            Status12 = if
+                NanoSecondsYearRestarting > 0 ->
+                    [{downtime_year_restarting,
+                      nanoseconds_to_string(NanoSecondsYearRestarting)} |
+                     Status11];
+                NanoSecondsYearRestarting =:= 0 ->
+                    Status11
+            end,
+            Status13 = if
+                NanoSecondsMonthUpdating > 0 ->
+                    [{downtime_month_updating,
+                      nanoseconds_to_string(NanoSecondsMonthUpdating)} |
+                     Status12];
+                NanoSecondsMonthUpdating =:= 0 ->
+                    Status12
+            end,
+            Status14 = if
+                NanoSecondsMonthRestarting > 0 ->
+                    [{downtime_month_restarting,
+                      nanoseconds_to_string(NanoSecondsMonthRestarting)} |
+                     Status13];
+                NanoSecondsMonthRestarting =:= 0 ->
+                    Status13
+            end,
+            Status15 = if
+                NanoSecondsWeekUpdating > 0 ->
+                    [{downtime_week_updating,
+                      nanoseconds_to_string(NanoSecondsWeekUpdating)} |
+                     Status14];
+                NanoSecondsWeekUpdating =:= 0 ->
+                    Status14
+            end,
+            Status16 = if
+                NanoSecondsWeekRestarting > 0 ->
+                    [{downtime_week_restarting,
+                      nanoseconds_to_string(NanoSecondsWeekRestarting)} |
+                     Status15];
+                NanoSecondsWeekRestarting =:= 0 ->
+                    Status15
+            end,
+            Status17 = if
+                NanoSecondsDayUpdating > 0 ->
+                    [{downtime_day_updating,
+                      nanoseconds_to_string(NanoSecondsDayUpdating)} |
+                     Status16];
+                NanoSecondsDayUpdating =:= 0 ->
+                    Status16
+            end,
+            Status18 = if
+                NanoSecondsDayRestarting > 0 ->
+                    [{downtime_day_restarting,
+                      nanoseconds_to_string(NanoSecondsDayRestarting)} |
+                     Status17];
+                NanoSecondsDayRestarting =:= 0 ->
+                    Status17
+            end,
+            Status19 = [{uptime_total, UptimeTotal},
+                        {uptime_running, UptimeRunning},
+                        {uptime_restarts,
+                         erlang:integer_to_list(Restarts)} | Status18],
             StatusN = if
                 StartType =:= start_internal ->
-                    [{count_process, CountProcess} | Status0];
+                    [{count_process, CountProcess} | Status19];
                 StartType =:= start_external ->
                     [{count_process, CountProcess},
-                     {count_thread, CountThread} | Status0]
+                     {count_thread, CountThread} | Status19]
             end,
             {ok, StatusN};
         error ->
@@ -1500,12 +1627,8 @@ duration_clear(DurationList, _) ->
     lists:reverse(DurationList).
 
 duration_store(ServiceIdList, {_, T1} = Duration, DurationLookup) ->
-    NanoSecondsYear = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_YEAR,
-    NativeYear = cloudi_timestamp:
-                 convert(cloudi_math:ceil(NanoSecondsYear),
-                         nanosecond, native),
-    duration_store(ServiceIdList, T1 - NativeYear, Duration, DurationLookup).
+    duration_store(ServiceIdList, T1 - ?NATIVE_TIME_IN_YEAR,
+                   Duration, DurationLookup).
 
 duration_store([], _, _, DurationLookup) ->
     DurationLookup;
@@ -1526,90 +1649,56 @@ nanoseconds_to_string(TotalNanoSeconds) ->
                    erlang:integer_to_list(NanoSeconds), " nanoseconds"]).
 
 nanoseconds_to_availability_day_running(NanoSecondsRunning) ->
-    NanoSecondsDay = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY,
-    AvailabilityDay = NanoSecondsRunning / NanoSecondsDay,
-    availability_to_string(AvailabilityDay).
+    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_DAY).
 
 nanoseconds_to_availability_week_running(NanoSecondsRunning) ->
-    NanoSecondsWeek = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_WEEK,
-    AvailabilityWeek = NanoSecondsRunning / NanoSecondsWeek,
-    availability_to_string(AvailabilityWeek).
+    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_WEEK).
 
 nanoseconds_to_availability_month_running(NanoSecondsRunning) ->
-    NanoSecondsMonth = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_MONTH,
-    AvailabilityMonth = NanoSecondsRunning / NanoSecondsMonth,
-    availability_to_string(AvailabilityMonth).
+    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_MONTH).
 
 nanoseconds_to_availability_year_running(NanoSecondsRunning) ->
-    NanoSecondsYear = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_YEAR,
-    AvailabilityYear = NanoSecondsRunning / NanoSecondsYear,
-    availability_to_string(AvailabilityYear).
+    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_YEAR).
 
-nanoseconds_to_availability_day_updated(NanoSecondsRunning,
-                                        NanoSecondsDayUpdating) ->
-    NanoSecondsDay = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY,
+nanoseconds_to_availability_day_without(NanoSecondsRunning,
+                                        NanoSecondsDayWithout) ->
+    NanoSecondsDay = ?NANOSECONDS_IN_DAY,
     AvailabilityDay = (erlang:min(NanoSecondsRunning, NanoSecondsDay) -
-        NanoSecondsDayUpdating) / NanoSecondsDay,
+        NanoSecondsDayWithout) / NanoSecondsDay,
     availability_to_string(AvailabilityDay).
 
-nanoseconds_to_availability_week_updated(NanoSecondsRunning,
-                                         NanoSecondsWeekUpdating) ->
-    NanoSecondsWeek = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_WEEK,
+nanoseconds_to_availability_week_without(NanoSecondsRunning,
+                                         NanoSecondsWeekWithout) ->
+    NanoSecondsWeek = ?NANOSECONDS_IN_WEEK,
     AvailabilityWeek = (erlang:min(NanoSecondsRunning, NanoSecondsWeek) -
-        NanoSecondsWeekUpdating) / NanoSecondsWeek,
+        NanoSecondsWeekWithout) / NanoSecondsWeek,
     availability_to_string(AvailabilityWeek).
 
-nanoseconds_to_availability_month_updated(NanoSecondsRunning,
-                                          NanoSecondsMonthUpdating) ->
-    NanoSecondsMonth = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_MONTH,
+nanoseconds_to_availability_month_without(NanoSecondsRunning,
+                                          NanoSecondsMonthWithout) ->
+    NanoSecondsMonth = ?NANOSECONDS_IN_MONTH,
     AvailabilityMonth = (erlang:min(NanoSecondsRunning, NanoSecondsMonth) -
-        NanoSecondsMonthUpdating) / NanoSecondsMonth,
+        NanoSecondsMonthWithout) / NanoSecondsMonth,
     availability_to_string(AvailabilityMonth).
 
-nanoseconds_to_availability_year_updated(NanoSecondsRunning,
-                                         NanoSecondsYearUpdating) ->
-    NanoSecondsYear = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_YEAR,
+nanoseconds_to_availability_year_without(NanoSecondsRunning,
+                                         NanoSecondsYearWithout) ->
+    NanoSecondsYear = ?NANOSECONDS_IN_YEAR,
     AvailabilityYear = (erlang:min(NanoSecondsRunning, NanoSecondsYear) -
-        NanoSecondsYearUpdating) / NanoSecondsYear,
+        NanoSecondsYearWithout) / NanoSecondsYear,
     availability_to_string(AvailabilityYear).
 
 nanoseconds_downtime_day(DurationList, TimeNow) ->
-    NanoSecondsDay = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY,
-    NativeDay = cloudi_timestamp:
-                convert(NanoSecondsDay, nanosecond, native),
-    nanoseconds_downtime(DurationList, TimeNow - NativeDay).
+    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_DAY).
 
 nanoseconds_downtime_week(DurationList, TimeNow) ->
-    NanoSecondsWeek = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_WEEK,
-    NativeWeek = cloudi_timestamp:
-                 convert(NanoSecondsWeek, nanosecond, native),
-    nanoseconds_downtime(DurationList, TimeNow - NativeWeek).
+    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_WEEK).
 
 nanoseconds_downtime_month(DurationList, TimeNow) ->
-    NanoSecondsMonth = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_MONTH,
-    NativeMonth = cloudi_timestamp:
-                  convert(cloudi_math:ceil(NanoSecondsMonth),
-                          nanosecond, native),
-    nanoseconds_downtime(DurationList, TimeNow - NativeMonth).
+    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_MONTH).
 
 nanoseconds_downtime_year(DurationList, TimeNow) ->
-    NanoSecondsYear = ?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-        ?HOURS_IN_DAY * ?DAYS_IN_YEAR,
-    NativeYear = cloudi_timestamp:
-                 convert(cloudi_math:ceil(NanoSecondsYear),
-                         nanosecond, native),
-    nanoseconds_downtime(DurationList, TimeNow - NativeYear).
+    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_YEAR).
 
 nanoseconds_downtime(DurationList, T) ->
     nanoseconds_downtime(DurationList, 0, T).
@@ -1633,7 +1722,7 @@ nanoseconds_downtime([{T0, T1} | DurationList], NanoSecondsDowntime, T) ->
 % and keep the formatting efficient
 availability_to_string(Availability)
     when Availability < 0.25 ->
-    "0 %";
+    ?AVAILABILITY_ZERO;
 availability_to_string(Availability)
     when Availability < 1 / 3 ->
     "25 %";
