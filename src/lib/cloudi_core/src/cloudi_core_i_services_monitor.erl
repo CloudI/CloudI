@@ -1178,18 +1178,18 @@ service_id_status(ServiceId, TimeNow,
                           restart_count_total = Restarts}}} ->
             DurationUpdateList = maps:get(ServiceId, DurationsUpdating, []),
             DurationRestartList = maps:get(ServiceId, DurationsRestarting, []),
-            TimeDiffTotal = TimeNow - TimeStart,
             TimeRunning = if
                 TimeRestart =:= undefined ->
                     TimeStart;
                 is_integer(TimeRestart) ->
                     TimeRestart
             end,
-            TimeDiffRunning = TimeNow - TimeRunning,
             NanoSecondsTotal = cloudi_timestamp:
-                               convert(TimeDiffTotal, native, nanosecond),
+                               convert(TimeNow - TimeStart,
+                                       native, nanosecond),
             NanoSecondsRunning = cloudi_timestamp:
-                                 convert(TimeDiffRunning, native, nanosecond),
+                                 convert(TimeNow - TimeRunning,
+                                         native, nanosecond),
             UptimeTotal = nanoseconds_to_string(NanoSecondsTotal),
             UptimeRunning = nanoseconds_to_string(NanoSecondsRunning),
             NanoSecondsDayRestarting =
@@ -1720,20 +1720,18 @@ nanoseconds_downtime_year(DurationList, TimePast, TimeNow) ->
 nanoseconds_downtime(DurationList, T) ->
     nanoseconds_downtime(DurationList, 0, T).
 
-nanoseconds_downtime([], NanoSecondsDowntime, _) ->
-    NanoSecondsDowntime;
-nanoseconds_downtime([{T0, T1} | DurationList], NanoSecondsDowntime, T) ->
-    NanoSecondsDowntimeNew = if
+nanoseconds_downtime([], NativeDowntime, _) ->
+    cloudi_timestamp:convert(NativeDowntime, native, nanosecond);
+nanoseconds_downtime([{T0, T1} | DurationList], NativeDowntime, T) ->
+    NativeDowntimeNew = if
         T0 >= T ->
-            cloudi_timestamp:
-            convert(T1 - T0, native, nanosecond) + NanoSecondsDowntime;
+            NativeDowntime + (T1 - T0);
         T1 > T ->
-            cloudi_timestamp:
-            convert(T1 - T, native, nanosecond) + NanoSecondsDowntime;
+            NativeDowntime + (T1 - T);
         true ->
-            NanoSecondsDowntime
+            NativeDowntime
     end,
-    nanoseconds_downtime(DurationList, NanoSecondsDowntimeNew, T).
+    nanoseconds_downtime(DurationList, NativeDowntimeNew, T).
 
 % avoid erlang:float_to_list precision problems
 % and keep the formatting efficient
