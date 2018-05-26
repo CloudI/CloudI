@@ -1179,12 +1179,13 @@ service_id_status(ServiceId, TimeNow,
             DurationUpdateList = maps:get(ServiceId, DurationsUpdating, []),
             DurationRestartList = maps:get(ServiceId, DurationsRestarting, []),
             TimeDiffTotal = TimeNow - TimeStart,
-            TimeDiffRunning = if
+            TimeRunning = if
                 TimeRestart =:= undefined ->
-                    TimeDiffTotal;
+                    TimeStart;
                 is_integer(TimeRestart) ->
-                    TimeNow - TimeRestart
+                    TimeRestart
             end,
+            TimeDiffRunning = TimeNow - TimeRunning,
             NanoSecondsTotal = cloudi_timestamp:
                                convert(TimeDiffTotal, native, nanosecond),
             NanoSecondsRunning = cloudi_timestamp:
@@ -1192,21 +1193,29 @@ service_id_status(ServiceId, TimeNow,
             UptimeTotal = nanoseconds_to_string(NanoSecondsTotal),
             UptimeRunning = nanoseconds_to_string(NanoSecondsRunning),
             NanoSecondsDayRestarting =
-                nanoseconds_downtime_day(DurationRestartList, TimeNow),
+                nanoseconds_downtime_day(DurationRestartList,
+                                         TimeStart, TimeNow),
             NanoSecondsDayUpdating =
-                nanoseconds_downtime_day(DurationUpdateList, TimeNow),
+                nanoseconds_downtime_day(DurationUpdateList,
+                                         TimeRunning, TimeNow),
             NanoSecondsWeekRestarting =
-                nanoseconds_downtime_week(DurationRestartList, TimeNow),
+                nanoseconds_downtime_week(DurationRestartList,
+                                          TimeStart, TimeNow),
             NanoSecondsWeekUpdating =
-                nanoseconds_downtime_week(DurationUpdateList, TimeNow),
+                nanoseconds_downtime_week(DurationUpdateList,
+                                          TimeRunning, TimeNow),
             NanoSecondsMonthRestarting =
-                nanoseconds_downtime_month(DurationRestartList, TimeNow),
+                nanoseconds_downtime_month(DurationRestartList,
+                                           TimeStart, TimeNow),
             NanoSecondsMonthUpdating =
-                nanoseconds_downtime_month(DurationUpdateList, TimeNow),
+                nanoseconds_downtime_month(DurationUpdateList,
+                                           TimeRunning, TimeNow),
             NanoSecondsYearRestarting =
-                nanoseconds_downtime_year(DurationRestartList, TimeNow),
+                nanoseconds_downtime_year(DurationRestartList,
+                                          TimeStart, TimeNow),
             NanoSecondsYearUpdating =
-                nanoseconds_downtime_year(DurationUpdateList, TimeNow),
+                nanoseconds_downtime_year(DurationUpdateList,
+                                          TimeRunning, TimeNow),
             Status0 = [],
             Status1 = case nanoseconds_to_availability_year_without(
                                NanoSecondsRunning,
@@ -1688,17 +1697,25 @@ nanoseconds_to_availability_year_without(NanoSecondsRunning,
         NanoSecondsYearWithout) / NanoSecondsYear,
     availability_to_string(AvailabilityYear).
 
-nanoseconds_downtime_day(DurationList, TimeNow) ->
-    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_DAY).
+nanoseconds_downtime_day(DurationList, TimePast, TimeNow) ->
+    nanoseconds_downtime(DurationList,
+                         erlang:max(TimePast,
+                                    TimeNow - ?NATIVE_TIME_IN_DAY)).
 
-nanoseconds_downtime_week(DurationList, TimeNow) ->
-    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_WEEK).
+nanoseconds_downtime_week(DurationList, TimePast, TimeNow) ->
+    nanoseconds_downtime(DurationList,
+                         erlang:max(TimePast,
+                                    TimeNow - ?NATIVE_TIME_IN_WEEK)).
 
-nanoseconds_downtime_month(DurationList, TimeNow) ->
-    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_MONTH).
+nanoseconds_downtime_month(DurationList, TimePast, TimeNow) ->
+    nanoseconds_downtime(DurationList,
+                         erlang:max(TimePast,
+                                    TimeNow - ?NATIVE_TIME_IN_MONTH)).
 
-nanoseconds_downtime_year(DurationList, TimeNow) ->
-    nanoseconds_downtime(DurationList, TimeNow - ?NATIVE_TIME_IN_YEAR).
+nanoseconds_downtime_year(DurationList, TimePast, TimeNow) ->
+    nanoseconds_downtime(DurationList,
+                         erlang:max(TimePast,
+                                    TimeNow - ?NATIVE_TIME_IN_YEAR)).
 
 nanoseconds_downtime(DurationList, T) ->
     nanoseconds_downtime(DurationList, 0, T).
