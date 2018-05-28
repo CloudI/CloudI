@@ -1198,28 +1198,28 @@ service_id_status(ServiceId, TimeNow,
             TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
             NanoSecondsDayRestarting =
                 nanoseconds_downtime(DurationRestartList,
-                                     erlang:max(TimeDayStart, TimeStart)),
+                                     TimeDayStart),
             NanoSecondsDayUpdating =
                 nanoseconds_downtime(DurationUpdateList,
-                                     erlang:max(TimeDayStart, TimeRunning)),
+                                     TimeDayStart),
             NanoSecondsWeekRestarting =
                 nanoseconds_downtime(DurationRestartList,
-                                     erlang:max(TimeWeekStart, TimeStart)),
+                                     TimeWeekStart),
             NanoSecondsWeekUpdating =
                 nanoseconds_downtime(DurationUpdateList,
-                                     erlang:max(TimeWeekStart, TimeRunning)),
+                                     TimeWeekStart),
             NanoSecondsMonthRestarting =
                 nanoseconds_downtime(DurationRestartList,
-                                     erlang:max(TimeMonthStart, TimeStart)),
+                                     TimeMonthStart),
             NanoSecondsMonthUpdating =
                 nanoseconds_downtime(DurationUpdateList,
-                                     erlang:max(TimeMonthStart, TimeRunning)),
+                                     TimeMonthStart),
             NanoSecondsYearRestarting =
                 nanoseconds_downtime(DurationRestartList,
-                                     erlang:max(TimeYearStart, TimeStart)),
+                                     TimeYearStart),
             NanoSecondsYearUpdating =
                 nanoseconds_downtime(DurationUpdateList,
-                                     erlang:max(TimeYearStart, TimeRunning)),
+                                     TimeYearStart),
             Status0 = [],
             Status1 = case nanoseconds_to_availability_year_without(
                                NanoSecondsRunning,
@@ -1239,7 +1239,7 @@ service_id_status(ServiceId, TimeNow,
                       AvailabilityYearRunning} | Status1]
             end,
             Status3 = case nanoseconds_to_availability_year_without(
-                               NanoSecondsRunning,
+                               NanoSecondsTotal,
                                NanoSecondsYearRestarting) of
                 ?AVAILABILITY_ZERO ->
                     Status2;
@@ -1265,7 +1265,7 @@ service_id_status(ServiceId, TimeNow,
                       AvailabilityMonthRunning} | Status4]
             end,
             Status6 = case nanoseconds_to_availability_month_without(
-                               NanoSecondsRunning,
+                               NanoSecondsTotal,
                                NanoSecondsMonthRestarting) of
                 ?AVAILABILITY_ZERO ->
                     Status5;
@@ -1291,7 +1291,7 @@ service_id_status(ServiceId, TimeNow,
                       AvailabilityWeekRunning} | Status7]
             end,
             Status9 = case nanoseconds_to_availability_week_without(
-                               NanoSecondsRunning,
+                               NanoSecondsTotal,
                                NanoSecondsWeekRestarting) of
                 ?AVAILABILITY_ZERO ->
                     Status8;
@@ -1301,7 +1301,7 @@ service_id_status(ServiceId, TimeNow,
             end,
             Status10 = [{availability_day_total,
                          nanoseconds_to_availability_day_without(
-                             NanoSecondsRunning,
+                             NanoSecondsTotal,
                              NanoSecondsDayRestarting)},
                         {availability_day_running,
                          nanoseconds_to_availability_day_running(

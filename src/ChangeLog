@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fixed the CloudI Service API function services_status output
+      related to the availability of the total uptime
+
 2018-05-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the total availability to the CloudI Service API function
