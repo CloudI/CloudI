@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-29 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Modified the CloudI Service API function services_status output
+      to retain downtime for smaller time period after past downtime
+      even if there is no recent downtime
+      (at least 3 time periods remain visible).
+
 2018-05-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fixed the CloudI Service API function services_status output

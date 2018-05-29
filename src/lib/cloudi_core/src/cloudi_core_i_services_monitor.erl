@@ -1322,7 +1322,8 @@ service_id_status(ServiceId, TimeNow,
             end,
             Status12 = if
                 TimeRunning =< TimeWeekStart,
-                NanoSecondsMonthUpdating > 0 ->
+                NanoSecondsMonthUpdating > 0 orelse
+                NanoSecondsYearUpdating > 0 ->
                     [{interrupt_month_updating,
                       nanoseconds_to_string(NanoSecondsMonthUpdating)} |
                      Status11];
@@ -1331,7 +1332,9 @@ service_id_status(ServiceId, TimeNow,
             end,
             Status13 = if
                 TimeRunning =< TimeDayStart,
-                NanoSecondsWeekUpdating > 0 ->
+                NanoSecondsWeekUpdating > 0 orelse
+                NanoSecondsMonthUpdating > 0 orelse
+                NanoSecondsYearUpdating > 0 ->
                     [{interrupt_week_updating,
                       nanoseconds_to_string(NanoSecondsWeekUpdating)} |
                      Status12];
@@ -1339,7 +1342,9 @@ service_id_status(ServiceId, TimeNow,
                     Status12
             end,
             Status14 = if
-                NanoSecondsDayUpdating > 0 ->
+                NanoSecondsDayUpdating > 0 orelse
+                NanoSecondsWeekUpdating > 0 orelse
+                NanoSecondsMonthUpdating > 0 ->
                     [{interrupt_day_updating,
                       nanoseconds_to_string(NanoSecondsDayUpdating)} |
                      Status13];
@@ -1357,7 +1362,8 @@ service_id_status(ServiceId, TimeNow,
             end,
             Status16 = if
                 TimeStart =< TimeWeekStart,
-                NanoSecondsMonthRestarting > 0 ->
+                NanoSecondsMonthRestarting > 0 orelse
+                NanoSecondsYearRestarting > 0 ->
                     [{downtime_month_restarting,
                       nanoseconds_to_string(NanoSecondsMonthRestarting)} |
                      Status15];
@@ -1366,7 +1372,9 @@ service_id_status(ServiceId, TimeNow,
             end,
             Status17 = if
                 TimeStart =< TimeDayStart,
-                NanoSecondsWeekRestarting > 0 ->
+                NanoSecondsWeekRestarting > 0 orelse
+                NanoSecondsMonthRestarting > 0 orelse
+                NanoSecondsYearRestarting > 0 ->
                     [{downtime_week_restarting,
                       nanoseconds_to_string(NanoSecondsWeekRestarting)} |
                      Status16];
@@ -1374,7 +1382,9 @@ service_id_status(ServiceId, TimeNow,
                     Status16
             end,
             Status18 = if
-                NanoSecondsDayRestarting > 0 ->
+                NanoSecondsDayRestarting > 0 orelse
+                NanoSecondsWeekRestarting > 0 orelse
+                NanoSecondsMonthRestarting > 0 ->
                     [{downtime_day_restarting,
                       nanoseconds_to_string(NanoSecondsDayRestarting)} |
                      Status17];
