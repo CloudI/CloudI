@@ -1149,18 +1149,30 @@ service_id_pids(ServiceId, Services) ->
 
 service_ids_status(ServiceIdList, TimeNow,
                    DurationsUpdating, DurationsRestarting, Services) ->
+    TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
+    TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
+    TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
+    TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
     service_ids_status(ServiceIdList, [], TimeNow,
+                       TimeDayStart, TimeWeekStart,
+                       TimeMonthStart, TimeYearStart,
                        DurationsUpdating, DurationsRestarting, Services).
 
-service_ids_status([], StatusList, _, _, _, _) ->
+service_ids_status([], StatusList, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
+                   TimeDayStart, TimeWeekStart,
+                   TimeMonthStart, TimeYearStart,
                    DurationsUpdating, DurationsRestarting, Services) ->
     case service_id_status(ServiceId, TimeNow,
+                           TimeDayStart, TimeWeekStart,
+                           TimeMonthStart, TimeYearStart,
                            DurationsUpdating, DurationsRestarting, Services) of
         {ok, Status} ->
             service_ids_status(ServiceIdList,
                                [{ServiceId, Status} | StatusList], TimeNow,
+                               TimeDayStart, TimeWeekStart,
+                               TimeMonthStart, TimeYearStart,
                                DurationsUpdating, DurationsRestarting,
                                Services);
         {error, _} = Error ->
@@ -1168,6 +1180,7 @@ service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
     end.
 
 service_id_status(ServiceId, TimeNow,
+                  TimeDayStart, TimeWeekStart, TimeMonthStart, TimeYearStart,
                   DurationsUpdating, DurationsRestarting, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {_, #service{service_f = StartType,
@@ -1192,34 +1205,22 @@ service_id_status(ServiceId, TimeNow,
                                          native, nanosecond),
             UptimeTotal = nanoseconds_to_string(NanoSecondsTotal),
             UptimeRunning = nanoseconds_to_string(NanoSecondsRunning),
-            TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
-            TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
-            TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
-            TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
             NanoSecondsDayRestarting =
-                nanoseconds_downtime(DurationRestartList,
-                                     TimeDayStart),
+                nanoseconds_downtime(DurationRestartList, TimeDayStart),
             NanoSecondsDayUpdating =
-                nanoseconds_downtime(DurationUpdateList,
-                                     TimeDayStart),
+                nanoseconds_downtime(DurationUpdateList, TimeDayStart),
             NanoSecondsWeekRestarting =
-                nanoseconds_downtime(DurationRestartList,
-                                     TimeWeekStart),
+                nanoseconds_downtime(DurationRestartList, TimeWeekStart),
             NanoSecondsWeekUpdating =
-                nanoseconds_downtime(DurationUpdateList,
-                                     TimeWeekStart),
+                nanoseconds_downtime(DurationUpdateList, TimeWeekStart),
             NanoSecondsMonthRestarting =
-                nanoseconds_downtime(DurationRestartList,
-                                     TimeMonthStart),
+                nanoseconds_downtime(DurationRestartList, TimeMonthStart),
             NanoSecondsMonthUpdating =
-                nanoseconds_downtime(DurationUpdateList,
-                                     TimeMonthStart),
+                nanoseconds_downtime(DurationUpdateList, TimeMonthStart),
             NanoSecondsYearRestarting =
-                nanoseconds_downtime(DurationRestartList,
-                                     TimeYearStart),
+                nanoseconds_downtime(DurationRestartList, TimeYearStart),
             NanoSecondsYearUpdating =
-                nanoseconds_downtime(DurationUpdateList,
-                                     TimeYearStart),
+                nanoseconds_downtime(DurationUpdateList, TimeYearStart),
             Status0 = [],
             Status1 = case nanoseconds_to_availability_year_without(
                                NanoSecondsRunning,
