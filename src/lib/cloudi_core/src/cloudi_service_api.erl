@@ -45,9 +45,9 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
-         services_update/2,
          services_search/2,
          services_status/2,
+         services_update/2,
          services/1,
          nodes_set/2,
          nodes_get/1,
@@ -58,8 +58,8 @@
          nodes/1,
          logging_set/2,
          logging_file_set/2,
-         logging_stdout_set/2,
          logging_level_set/2,
+         logging_stdout_set/2,
          logging_syslog_set/2,
          logging_formatters_set/2,
          logging_redirect_set/2,
@@ -1078,40 +1078,6 @@ services_restart([_ | _] = L, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Update service instances.===
-%% Update service instances without losing service requests and other
-%% service-specific data within the Erlang VM.
-%% @end
-%%-------------------------------------------------------------------------
-
--spec services_update(L :: nonempty_list({string() | binary(),
-                                          service_update_plan()}),
-                      Timeout :: api_timeout_milliseconds()) ->
-    {ok, ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
-    {error,
-     {ServiceIdsSetError :: nonempty_list(service_id()),
-      Reason :: {service_internal_update_failed |
-                 service_external_update_failed, any()}},
-     ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
-    {error,
-     timeout | noproc |
-     {service_id_invalid, any()} |
-     cloudi_core_i_configuration:error_reason_services_update()}.
-
-services_update([_ | _] = L, Timeout)
-    when ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
-          (Timeout =:= infinity)) ->
-    case service_ids_convert_update(L) of
-        {ok, NewL} ->
-            cloudi_core_i_configurator:services_update(NewL, Timeout);
-        {error, _} = Error ->
-            Error
-    end.
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Search service instances for matches on the provided service name.===
 %% Multiple services may be returned for a single service name.  Only service
 %% instances on the local Erlang node are searched.  Service names that match
@@ -1183,6 +1149,40 @@ services_status(L, Timeout)
     case ServiceIdsResult of
         {ok, ServiceIdsValid} ->
             cloudi_core_i_services_monitor:status(ServiceIdsValid, Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Update service instances.===
+%% Update service instances without losing service requests and other
+%% service-specific data within the Erlang VM.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_update(L :: nonempty_list({string() | binary(),
+                                          service_update_plan()}),
+                      Timeout :: api_timeout_milliseconds()) ->
+    {ok, ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
+    {error,
+     {ServiceIdsSetError :: nonempty_list(service_id()),
+      Reason :: {service_internal_update_failed |
+                 service_external_update_failed, any()}},
+     ServiceIdsSetsSuccess :: nonempty_list(nonempty_list(service_id()))} |
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} |
+     cloudi_core_i_configuration:error_reason_services_update()}.
+
+services_update([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    case service_ids_convert_update(L) of
+        {ok, NewL} ->
+            cloudi_core_i_configurator:services_update(NewL, Timeout);
         {error, _} = Error ->
             Error
     end.
@@ -1374,24 +1374,6 @@ logging_file_set(FilePath, Timeout)
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Modify the current log stdout usage.===
-%% @end
-%%-------------------------------------------------------------------------
-
--spec logging_stdout_set(Stdout :: boolean(),
-                         Timeout :: api_timeout_milliseconds()) ->
-    ok.
-
-logging_stdout_set(Stdout, Timeout)
-    when is_boolean(Stdout),
-         ((is_integer(Timeout) andalso
-           (Timeout > ?TIMEOUT_DELTA) andalso
-           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
-          (Timeout =:= infinity)) ->
-    cloudi_core_i_configurator:logging_stdout_set(Stdout, Timeout).
-
-%%-------------------------------------------------------------------------
-%% @doc
 %% ===Modify the current loglevel.===
 %% CloudI uses asynchronous logging with flow control (backpressure
 %% handling) to prevent misbehaving services from causing instability.
@@ -1412,6 +1394,24 @@ logging_level_set(Level, Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_configurator:logging_level_set(Level, Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Modify the current log stdout usage.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec logging_stdout_set(Stdout :: boolean(),
+                         Timeout :: api_timeout_milliseconds()) ->
+    ok.
+
+logging_stdout_set(Stdout, Timeout)
+    when is_boolean(Stdout),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_configurator:logging_stdout_set(Stdout, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc
