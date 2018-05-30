@@ -10,15 +10,13 @@
     {net_ticktime, 60},
     % Erlang/OTP 21.0 kernel logger
     {logger_level, debug},
-    {logger_dest,
+    {error_logger,
      % filesync_repeat_interval default is 5000 milliseconds
      {file, "erlang_kernel.log", [raw, append]}},
     {logger_sasl_compatible, false},
-    {logger_log_progress, true},
+    {logger_progress_reports, log}
     % wait for fix at https://github.com/erlang/otp/pull/1804
-    %{logger_format_depth, unlimited},
-    %{logger_max_size, unlimited},
-    {logger_utc, true}
+    %{error_logger_format_depth, unlimited}
   ]},
  {sasl, [
     % deprecated by Erlang/OTP 21.0 kernel logger

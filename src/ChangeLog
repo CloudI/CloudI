@@ -5,6 +5,7 @@
 
     * Fix the function order in the cloudi_service_api module
       so it matches the API documentation
+    * Fix kernel logger configuration based on Erlang/OTP 21-rc2
 
 2018-05-29 Michael Truog   <mjtruog at protonmail dot com>
 
