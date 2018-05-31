@@ -12,7 +12,8 @@
     {logger_level, debug},
     {error_logger,
      % filesync_repeat_interval default is 5000 milliseconds
-     {file, "erlang_kernel.log", [raw, append]}},
+     %{file, "erlang_kernel.log", [raw, append]}} Erlang/OTP 21.0 config
+     {file, "erlang_kernel.log"}}, % Erlang/OTP < 21.0 config
     {logger_sasl_compatible, false},
     {logger_progress_reports, log}
     % wait for fix at https://github.com/erlang/otp/pull/1804

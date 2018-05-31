@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-05-31 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Make kernel logger configuration backwards compatible
+
 2018-05-30 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix the function order in the cloudi_service_api module
