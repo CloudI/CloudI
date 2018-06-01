@@ -314,7 +314,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
          Protocol =:= udp;
          Protocol =:= local ->
     ok = spawn_opt_options_after(PidOptions),
-    Uptime = {TimeStart, TimeRestart, Restarts},
+    Uptime = uptime(TimeStart, TimeRestart, Restarts),
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
     erlang:put(?SERVICE_FILE_PDICT_KEY, hd(CommandLine)),

@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Set the service process dictionary uptime to use a
+      nanoseconds offset from the node start time to allow
+      the values to be compared in a unit of time
+    * Fix cloudi_service_api_requests so it can handle
+      module reloading
+
 2018-05-31 Michael Truog   <mjtruog at protonmail dot com>
 
     * Make kernel logger configuration backwards compatible

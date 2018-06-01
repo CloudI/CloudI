@@ -285,7 +285,7 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
           info_pid_options = InfoPidOptions,
           duo_mode = DuoMode} = ConfigOptions, ID, Parent]) ->
     ok = spawn_opt_options_after(PidOptions),
-    Uptime = {TimeStart, TimeRestart, Restarts},
+    Uptime = uptime(TimeStart, TimeRestart, Restarts),
     erlang:put(?SERVICE_ID_PDICT_KEY, ID),
     erlang:put(?SERVICE_UPTIME_PDICT_KEY, Uptime),
     erlang:put(?SERVICE_FILE_PDICT_KEY, Module),

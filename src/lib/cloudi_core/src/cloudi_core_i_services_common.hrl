@@ -42,6 +42,19 @@
           [{cancel_timer_async, 1},
            {request_timeout_adjustment_f, 1}]}).
 
+uptime(TimeStart, TimeRestart, Restarts) ->
+    TimeSystemStart = erlang:system_info(start_time),
+    NanoSecondsStart = cloudi_timestamp:convert(TimeStart - TimeSystemStart,
+                                                native, nanosecond),
+    NanoSecondsRestart = if
+        TimeRestart =:= undefined ->
+            undefined;
+        is_integer(TimeRestart) ->
+            cloudi_timestamp:convert(TimeRestart - TimeSystemStart,
+                                     native, nanosecond)
+    end,
+    {NanoSecondsStart, NanoSecondsRestart, Restarts}.
+
 destination_allowed([], _, _) ->
     false;
 
