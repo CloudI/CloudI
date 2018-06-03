@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_string).
@@ -63,7 +63,9 @@
          splitr/2,
          splitr/3,
          term_to_binary/1,
+         term_to_binary_compact/1,
          term_to_list/1,
+         term_to_list_compact/1,
          titlecase/1,
          trim/1,
          trim/2,
@@ -75,6 +77,8 @@
 
 % based on unicode_util:whitespace/0
 -define(WHITESPACE, [13,9,10,11,12,13,32,133,8206,8207,8232,8233]).
+% keep output in a single line when using ~p (printable) formatting
+-define(COMPACT_LIMIT, "1000000000000").
 
 -include("cloudi_core_i_constants.hrl").
 
@@ -418,6 +422,8 @@ findr(SearchPattern, String) ->
              A :: list()) ->
     string().
 
+-compile({inline, [{format, 2}]}).
+
 format(L, A) ->
     format_to_list(L, A).
 
@@ -665,6 +671,19 @@ term_to_binary(T) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Convert an Erlang term to a compact binary string.===
+%% Output is a utf8 encoded binary.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec term_to_binary_compact(T :: any()) ->
+    binary().
+
+term_to_binary_compact(T) ->
+    unicode:characters_to_binary(io_lib:format("~" ?COMPACT_LIMIT "p", [T])).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Convert an Erlang term to a string.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -679,6 +698,18 @@ term_to_list(T) ->
 term_to_list(T) ->
     format("~w", [T]).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Convert an Erlang term to a compact string.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec term_to_list_compact(T :: any()) ->
+    string().
+
+term_to_list_compact(T) ->
+    format("~" ?COMPACT_LIMIT "p", [T]).
 
 %%-------------------------------------------------------------------------
 %% @doc

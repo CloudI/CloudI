@@ -47,6 +47,7 @@
          cloudi_service_terminate/3]).
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("cloudi_core/include/cloudi_service_api.hrl").
 
 -record(state,
     {
@@ -55,6 +56,7 @@
     }).
 
 -define(FORMAT_ERLANG, "erl").
+-define(FORMAT_JSON, "json").
  
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -76,10 +78,11 @@ cloudi_service_init([], Prefix, _Timeout, Dispatcher) ->
                 "/post"
         end,
         MethodName = erlang:atom_to_list(Method),
-        Format = ?FORMAT_ERLANG,
-        FormatName = "rpc/" ++ MethodName ++ "." ++ Format,
-        cloudi_service:subscribe(Dispatcher, FormatName),
-        cloudi_service:subscribe(Dispatcher, FormatName ++ FormatSuffix),
+        lists:foreach(fun(Format) ->
+            FormatName = "rpc/" ++ MethodName ++ "." ++ Format,
+            cloudi_service:subscribe(Dispatcher, FormatName),
+            cloudi_service:subscribe(Dispatcher, FormatName ++ FormatSuffix)
+        end, [?FORMAT_ERLANG, ?FORMAT_JSON]),
         cloudi_x_trie:store(MethodName, F, Functions)
     end, cloudi_x_trie:new(), Exports),
     % service names for JSON-RPC are:
@@ -113,7 +116,9 @@ format_rpc(MethodFormat, Request, Timeout,
     {Method, Arity} = cloudi_x_trie:fetch(MethodName, Functions),
     case Format of
         ?FORMAT_ERLANG ->
-            format_erlang_call(Method, Arity, Request, Timeout)
+            format_erlang_call(Method, Arity, Request, Timeout);
+        ?FORMAT_JSON ->
+            format_json_call(Method, Arity, Request, Timeout)
     end.
 
 format_erlang_call(_, _, Request, _)
@@ -122,17 +127,40 @@ format_erlang_call(_, _, Request, _)
 format_erlang_call(Method, 1, _, Timeout) ->
     try cloudi_service_api_call(Method, Timeout) of
         Result ->
-            cloudi_service_api_result(Result, erlang_string)
+            convert_term_to_erlang(Result)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
             <<>>
     end;
 format_erlang_call(Method, 2, Request, Timeout) ->
-    Arg1 = cloudi_string:binary_to_term(Request),
+    Arg1 = convert_erlang_to_term(Request),
     try cloudi_service_api_call(Method, Arg1, Timeout) of
         Result ->
-            cloudi_service_api_result(Result, erlang_string)
+            convert_term_to_erlang(Result)
+    catch
+        ErrorType:Error ->
+            ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
+            <<>>
+    end.
+
+format_json_call(_, _, Request, _)
+    when not is_binary(Request) ->
+    <<>>;
+format_json_call(Method, 1, _, Timeout) ->
+    try cloudi_service_api_call(Method, Timeout) of
+        Result ->
+            convert_term_to_json(Result, Method, true)
+    catch
+        ErrorType:Error ->
+            ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
+            <<>>
+    end;
+format_json_call(Method, 2, Request, Timeout) ->
+    Arg1 = convert_json_to_term(Request, Method),
+    try cloudi_service_api_call(Method, Arg1, Timeout) of
+        Result ->
+            convert_term_to_json(Result, Method, true)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
@@ -173,7 +201,7 @@ format_json_rpc_call(Method, 1, _, Timeout, Id) ->
     try cloudi_service_api_call(Method, Timeout) of
         Result ->
             cloudi_json_rpc:response_to_json(
-                cloudi_service_api_result(Result, erlang_string), Id)
+                convert_term_to_json(Result, Method, false), Id)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
@@ -184,11 +212,11 @@ format_json_rpc_call(_, 2, Param, _, Id)
     cloudi_json_rpc:response_to_json(null, 3,
                                      <<"invalid_param">>, Id);
 format_json_rpc_call(Method, 2, Param, Timeout, Id) ->
-    Arg1 = cloudi_string:binary_to_term(Param),
+    Arg1 = convert_erlang_to_term(Param),
     try cloudi_service_api_call(Method, Arg1, Timeout) of
         Result ->
             cloudi_json_rpc:response_to_json(
-                cloudi_service_api_result(Result, erlang_string), Id)
+                convert_term_to_json(Result, Method, false), Id)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
@@ -237,13 +265,324 @@ cloudi_service_api_call(services_update = Method, Input, Timeout) ->
 cloudi_service_api_call(Method, Input, Timeout) ->
     cloudi_service_api:Method(Input, Timeout).
 
-cloudi_service_api_result({ok, Result}, Format) ->
-    response(Result, Format);
-cloudi_service_api_result(Result, Format) ->
-    response(Result, Format).
-
-response(Result, erlang_string) ->
-    cloudi_string:format_to_binary("~p", [Result]).
-
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
+
+convert_erlang_to_term(Request) ->
+    cloudi_string:binary_to_term(Request).
+
+convert_term_to_erlang({ok, Result}) ->
+    convert_term_to_erlang_string(Result);
+convert_term_to_erlang(Result) ->
+    convert_term_to_erlang_string(Result).
+
+convert_term_to_erlang_string(Result) ->
+    cloudi_string:format_to_binary("~p", [Result]).
+
+convert_json_to_term(_Request, Method)
+    when Method =:= acl_add ->
+    invalid; %XXX
+convert_json_to_term(Request, Method)
+    when Method =:= acl_remove ->
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_atoms_existing(List);
+        _ ->
+            invalid
+    end;
+convert_json_to_term(Request, Method)
+    when Method =:= service_subscriptions ->
+    case json_decode(Request) of
+        Binary when is_binary(Binary) ->
+            erlang:binary_to_list(Binary);
+        _ ->
+            invalid
+    end;
+convert_json_to_term(_Request, Method)
+    when Method =:= services_add ->
+    invalid; %XXX
+convert_json_to_term(Request, Method)
+    when Method =:= services_remove;
+         Method =:= services_restart;
+         Method =:= services_status ->
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_strings(List);
+        _ ->
+            invalid
+    end;
+convert_json_to_term(_Request, Method)
+    when Method =:= services_search ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= services_update ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= nodes_set ->
+    invalid; %XXX
+convert_json_to_term(Request, Method)
+    when Method =:= nodes_add;
+         Method =:= nodes_remove ->
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_atoms(List);
+        _ ->
+            invalid
+    end;
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_file_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_level_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_stdout_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_syslog_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_formatters_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= logging_redirect_set ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= code_path_add ->
+    invalid; %XXX
+convert_json_to_term(_Request, Method)
+    when Method =:= code_path_remove ->
+    invalid. %XXX
+
+convert_json_to_term_strings([]) ->
+    [];
+convert_json_to_term_strings([H | L])
+    when is_binary(H) ->
+    [erlang:binary_to_list(H) |
+     convert_json_to_term_strings(L)];
+convert_json_to_term_strings([_ | _]) ->
+    invalid.
+
+convert_json_to_term_atoms_existing([]) ->
+    [];
+convert_json_to_term_atoms_existing([H | L])
+    when is_binary(H) ->
+    [erlang:binary_to_existing_atom(H, utf8) |
+     convert_json_to_term_atoms_existing(L)];
+convert_json_to_term_atoms_existing([_ | _]) ->
+    invalid.
+
+convert_json_to_term_atoms([]) ->
+    [];
+convert_json_to_term_atoms([H | L])
+    when is_binary(H) ->
+    [erlang:binary_to_atom(H, utf8) |
+     convert_json_to_term_atoms(L)];
+convert_json_to_term_atoms([_ | _]) ->
+    invalid.
+
+convert_term_to_json(ok, _, Space) ->
+    json_encode([{<<"success">>, true}], Space);
+convert_term_to_json({error, Reason}, _, Space) ->
+    ReasonBinary = cloudi_string:term_to_binary_compact(Reason),
+    json_encode([{<<"success">>, false},
+                 {<<"error">>, ReasonBinary}], Space);
+convert_term_to_json({error, {ErrorL, Reason}, SuccessL},
+                     services_update, Space) ->
+    ReasonBinary = cloudi_string:term_to_binary_compact(Reason),
+    json_encode([{<<"success">>, false},
+                 {<<"success_ids">>,
+                  convert_term_to_json_strings(SuccessL)},
+                 {<<"error">>, ReasonBinary},
+                 {<<"error_ids">>,
+                  convert_term_to_json_strings(ErrorL)}], Space);
+convert_term_to_json({ok, Services}, Method, Space)
+    when Method =:= services;
+         Method =:= services_search ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  [convert_term_to_json_service(Service, Id)
+                   || {Id, Service} <- Services]}], Space);
+convert_term_to_json({ok, Statuses}, services_status = Method, Space) ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  [[{<<"id">>, erlang:list_to_binary(Id)} |
+                    convert_term_to_json_options(Status)]
+                   || {Id, Status} <- Statuses]}], Space);
+convert_term_to_json({ok, SuccessL}, Method, Space)
+    when Method =:= services_add;
+         Method =:= services_update;
+         Method =:= code_path ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  convert_term_to_json_strings(SuccessL)}], Space);
+convert_term_to_json({ok, SuccessL}, Method, Space)
+    when Method =:= nodes;
+         Method =:= nodes_alive;
+         Method =:= nodes_dead ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  convert_term_to_json_atoms(SuccessL)}], Space);
+convert_term_to_json({ok, Options}, Method, Space)
+    when Method =:= acl;
+         Method =:= nodes_get;
+         Method =:= logging ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  convert_term_to_json_options(Options)}], Space).
+
+convert_term_to_json_service(#internal{prefix = Prefix,
+                                       module = Module,
+                                       args = Args,
+                                       dest_refresh = DestRefresh,
+                                       timeout_init = TimeoutInit,
+                                       timeout_async = TimeoutAsync,
+                                       timeout_sync = TimeoutSync,
+                                       dest_list_deny = DestListDeny,
+                                       dest_list_allow = DestListAllow,
+                                       count_process = CountProcess,
+                                       max_r = MaxR,
+                                       max_t = MaxT,
+                                       options = Options}, Id) ->
+    Service0 = [{<<"count_process">>, CountProcess},
+                {<<"max_r">>, MaxR},
+                {<<"max_t">>, MaxT},
+                {<<"options">>, convert_term_to_json_options(Options)}],
+    Service1 = if
+        DestListAllow =:= undefined ->
+            Service0;
+        is_list(DestListAllow) ->
+            [{<<"dest_list_allow">>,
+              [erlang:list_to_binary(DestAllow)
+               || DestAllow <- DestListAllow]} | Service0]
+    end,
+    Service2 = if
+        DestListDeny =:= undefined ->
+            Service1;
+        is_list(DestListDeny) ->
+            [{<<"dest_list_deny">>,
+              [erlang:list_to_binary(DestDeny)
+               || DestDeny <- DestListDeny]} | Service1]
+    end,
+    Service3 = [{<<"timeout_init">>, TimeoutInit},
+                {<<"timeout_async">>, TimeoutAsync},
+                {<<"timeout_sync">>, TimeoutSync} | Service2],
+    ServiceN = if
+        DestRefresh =:= none ->
+            Service3;
+        is_atom(DestRefresh) ->
+            [{<<"dest_refresh">>,
+              erlang:atom_to_binary(DestRefresh, utf8)} | Service3]
+    end,
+    [{<<"id">>, erlang:list_to_binary(Id)},
+     {<<"prefix">>, erlang:list_to_binary(Prefix)},
+     {<<"module">>, erlang:atom_to_binary(Module, utf8)},
+     {<<"args">>, convert_term_to_json_options(Args)} | ServiceN];
+convert_term_to_json_service(#external{prefix = Prefix,
+                                       file_path = FilePath,
+                                       args = Args,
+                                       env = Env,
+                                       dest_refresh = DestRefresh,
+                                       protocol = Protocol,
+                                       buffer_size = BufferSize,
+                                       timeout_init = TimeoutInit,
+                                       timeout_async = TimeoutAsync,
+                                       timeout_sync = TimeoutSync,
+                                       dest_list_deny = DestListDeny,
+                                       dest_list_allow = DestListAllow,
+                                       count_process = CountProcess,
+                                       count_thread = CountThread,
+                                       max_r = MaxR,
+                                       max_t = MaxT,
+                                       options = Options}, Id) ->
+    Service0 = [{<<"count_process">>, CountProcess},
+                {<<"count_thread">>, CountThread},
+                {<<"max_r">>, MaxR},
+                {<<"max_t">>, MaxT},
+                {<<"options">>, convert_term_to_json_options(Options)}],
+    Service1 = if
+        DestListAllow =:= undefined ->
+            Service0;
+        is_list(DestListAllow) ->
+            [{<<"dest_list_allow">>,
+              [erlang:list_to_binary(DestAllow)
+               || DestAllow <- DestListAllow]} | Service0]
+    end,
+    Service2 = if
+        DestListDeny =:= undefined ->
+            Service1;
+        is_list(DestListDeny) ->
+            [{<<"dest_list_deny">>,
+              [erlang:list_to_binary(DestDeny)
+               || DestDeny <- DestListDeny]} | Service1]
+    end,
+    Service3 = [{<<"protocol">>, erlang:atom_to_binary(Protocol, utf8)},
+                {<<"buffer_size">>, BufferSize},
+                {<<"timeout_init">>, TimeoutInit},
+                {<<"timeout_async">>, TimeoutAsync},
+                {<<"timeout_sync">>, TimeoutSync} | Service2],
+    ServiceN = if
+        DestRefresh =:= none ->
+            Service3;
+        is_atom(DestRefresh) ->
+            [{<<"dest_refresh">>,
+              erlang:atom_to_binary(DestRefresh, utf8)} | Service3]
+    end,
+    [{<<"id">>, erlang:list_to_binary(Id)},
+     {<<"prefix">>, erlang:list_to_binary(Prefix)},
+     {<<"file_path">>, erlang:list_to_binary(FilePath)},
+     {<<"args">>, erlang:list_to_binary(Args)},
+     {<<"env">>,
+      [erlang:list_to_binary(Key ++ "=" ++ Value)
+       || {Key, Value} <- Env]} | ServiceN].
+
+convert_term_to_json_option([{Key, _} | _] = Value)
+    when is_atom(Key) ->
+    convert_term_to_json_options(Value);
+convert_term_to_json_option([H | _] = Value)
+    when is_integer(H), H > 0 ->
+    erlang:list_to_binary(Value);
+convert_term_to_json_option([[H | _] | _] = Value)
+    when is_integer(H), H > 0 ->
+    convert_term_to_json_strings(Value);
+convert_term_to_json_option([A | _] = Value)
+    when is_atom(A) ->
+    convert_term_to_json_atoms(Value);
+convert_term_to_json_option([] = Value) ->
+    Value;
+convert_term_to_json_option([_ | _] = Value) ->
+    cloudi_string:term_to_binary_compact(Value);
+convert_term_to_json_option(Value)
+    when is_number(Value) ->
+    Value;
+convert_term_to_json_option(Value)
+    when is_atom(Value) ->
+    erlang:atom_to_binary(Value, utf8);
+convert_term_to_json_option(Value)
+    when is_tuple(Value); is_map(Value) ->
+    cloudi_string:term_to_binary_compact(Value).
+
+convert_term_to_json_options(Options) ->
+    [{erlang:atom_to_binary(Key, utf8),
+      convert_term_to_json_option(Value)} || {Key, Value} <- Options].
+         
+convert_term_to_json_strings(L) ->
+    [erlang:list_to_binary(S) || S <- L].
+
+convert_term_to_json_atoms(L) ->
+    [erlang:atom_to_binary(A, utf8) || A <- L].
+
+json_encode(Term, true) ->
+    cloudi_x_jsx:encode(Term, [{indent, 1}]);
+json_encode(Term, false) ->
+    cloudi_x_jsx:encode(Term).
+
+json_decode(Binary) ->
+    cloudi_x_jsx:decode(Binary).
+
