@@ -1,9 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the remaining changes for JSON support in
+      cloudi_service_api_requests
+
 2018-06-02 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Add json as a supported format of cloudi_service_api_requests
+    * Add JSON as a supported format of cloudi_service_api_requests
     * Switch the JSON-RPC support in cloudi_service_api_requests to
       use JSON text for the request/response instead of erlang terms
     * Add the functions cloudi_string:term_to_binary_compact/1 and

@@ -337,12 +337,14 @@ convert_json_to_term(Request, Method)
         _ ->
             invalid
     end;
-convert_json_to_term(_Request, Method)
+convert_json_to_term(Request, Method)
     when Method =:= services_update ->
-    invalid; %XXX
-convert_json_to_term(_Request, Method)
-    when Method =:= nodes_set ->
-    invalid; %XXX
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_updates(List);
+        _ ->
+            invalid
+    end;
 convert_json_to_term(Request, Method)
     when Method =:= nodes_add;
          Method =:= nodes_remove ->
@@ -352,9 +354,6 @@ convert_json_to_term(Request, Method)
         _ ->
             invalid
     end;
-convert_json_to_term(_Request, Method)
-    when Method =:= logging_set ->
-    invalid; %XXX
 convert_json_to_term(Request, Method)
     when Method =:= logging_level_set;
          Method =:= logging_stdout_set ->
@@ -364,12 +363,17 @@ convert_json_to_term(Request, Method)
         _ ->
             invalid
     end;
-convert_json_to_term(_Request, Method)
-    when Method =:= logging_syslog_set ->
-    invalid; %XXX
-convert_json_to_term(_Request, Method)
-    when Method =:= logging_formatters_set ->
-    invalid; %XXX
+convert_json_to_term(Request, Method)
+    when Method =:= nodes_set;
+         Method =:= logging_set;
+         Method =:= logging_syslog_set;
+         Method =:= logging_formatters_set ->
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_options(List);
+        _ ->
+            invalid
+    end;
 convert_json_to_term(Request, Method)
     when Method =:= logging_redirect_set ->
     case json_decode(Request) of
@@ -487,11 +491,45 @@ convert_json_to_term_service([{<<"options">>, OptionsL} | Service], L) ->
         is_binary(OptionsL) ->
             cloudi_string:binary_to_term(OptionsL);
         is_list(OptionsL) ->
-            OptionsL %XXX
+            convert_json_to_term_options(OptionsL)
     end,
     convert_json_to_term_service(Service, [{options, Options} | L]);
 convert_json_to_term_service([Unknown | Service], L) ->
     convert_json_to_term_service(Service, [Unknown | L]).
+
+convert_json_to_term_updates([]) ->
+    [];
+convert_json_to_term_updates([{ServiceId, Options} | Update]) ->
+    [{erlang:binary_to_list(ServiceId),
+      convert_json_to_term_options(Options)} |
+     convert_json_to_term_updates(Update)].
+
+convert_json_to_term_options([]) ->
+    [];
+convert_json_to_term_options([{Key, Value} | Options]) ->
+    [{erlang:binary_to_existing_atom(Key, utf8),
+      convert_json_to_term_option(Value)} |
+     convert_json_to_term_options(Options)].
+
+convert_json_to_term_option(<<"#{", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_option(<<"[", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_option(<<"{", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_option(<<"\"", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_option(<<"\'", _/binary>> = Value) ->
+    cloudi_string:binary_to_term(Value);
+convert_json_to_term_option(Value)
+    when is_binary(Value) ->
+    erlang:binary_to_list(Value);
+convert_json_to_term_option(Value)
+    when is_number(Value); is_boolean(Value) ->
+    Value;
+convert_json_to_term_option(Value)
+    when is_list(Value) ->
+    convert_json_to_term_options(Value).
 
 convert_json_to_term_strings([]) ->
     [];
@@ -701,15 +739,24 @@ convert_term_to_json_option(Value)
     when is_tuple(Value); is_map(Value) ->
     cloudi_string:term_to_binary_compact(Value).
 
-convert_term_to_json_options(Options) ->
+convert_term_to_json_options([]) ->
+    [];
+convert_term_to_json_options([{Key, Value} | Options]) ->
     [{erlang:atom_to_binary(Key, utf8),
-      convert_term_to_json_option(Value)} || {Key, Value} <- Options].
+      convert_term_to_json_option(Value)} |
+     convert_term_to_json_options(Options)].
          
-convert_term_to_json_strings(L) ->
-    [erlang:list_to_binary(S) || S <- L].
+convert_term_to_json_strings([]) ->
+    [];
+convert_term_to_json_strings([S | L]) ->
+    [erlang:list_to_binary(S) |
+     convert_term_to_json_strings(L)].
 
-convert_term_to_json_atoms(L) ->
-    [erlang:atom_to_binary(A, utf8) || A <- L].
+convert_term_to_json_atoms([]) ->
+    [];
+convert_term_to_json_atoms([A | L]) ->
+    [erlang:atom_to_binary(A, utf8) |
+     convert_term_to_json_atoms(L)].
 
 json_encode(Term, true) ->
     cloudi_x_jsx:encode(Term, [{indent, 1}]);
