@@ -519,7 +519,7 @@ convert_json_to_term_option(<<"{", _/binary>> = Value) ->
     cloudi_string:binary_to_term(Value);
 convert_json_to_term_option(<<"\"", _/binary>> = Value) ->
     cloudi_string:binary_to_term(Value);
-convert_json_to_term_option(<<"\'", _/binary>> = Value) ->
+convert_json_to_term_option(<<"'", _/binary>> = Value) ->
     cloudi_string:binary_to_term(Value);
 convert_json_to_term_option(Value)
     when is_binary(Value) ->
