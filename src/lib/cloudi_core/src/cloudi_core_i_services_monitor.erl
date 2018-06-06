@@ -632,7 +632,7 @@ code_change(_, State, _) ->
 initialize_wait(Pids) ->
     MonitorPids = [{erlang:monitor(process, Pid), Pid} || Pid <- Pids],
     ok = initialize(Pids),
-    initialize_wait_pids(MonitorPids, undefined).
+    {initialize_wait_pids(MonitorPids, undefined), MonitorPids}.
 
 initialize_wait_pids([], Time) ->
     if
@@ -644,7 +644,6 @@ initialize_wait_pids([], Time) ->
 initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
     receive
         {initialized_process, Pid, TimeInitialized} ->
-            erlang:demonitor(MonitorRef, [flush]),
             TimeNew = if
                 Time =:= undefined ->
                     TimeInitialized;
@@ -652,11 +651,8 @@ initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
                     erlang:max(Time, TimeInitialized)
             end,
             initialize_wait_pids(MonitorPids, TimeNew);
-        {'DOWN', MonitorRef, process, Pid, _} ->
-            % failure reason will be returned by cloudi_core_i_configurator
-            % if the initialization occurred due to a services_start
-            % (otherwise it will be logged by the main monitor used
-            %  by the cloudi_core_i_services_monitor process)
+        {'DOWN', MonitorRef, process, Pid, _} = DOWN ->
+            self() ! DOWN,
             initialize_wait_pids(MonitorPids, Time)
     end.
 
@@ -758,13 +754,13 @@ restart_stage3(#service{service_m = M,
                            "                   (~p is now ~p)~n"
                            " ~p", [OldPid, Pid, service_id(ServiceId)]),
             Pids = [Pid],
-            TimeInitialized = initialize_wait(Pids),
+            {TimeInitialized, [{MonitorRef, Pid}]} = initialize_wait(Pids),
             DurationsNew = duration_store([ServiceId],
                                           {TimeTerminate, TimeInitialized},
                                           Durations),
             ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
-                                monitor = erlang:monitor(process, Pid),
+                                monitor = MonitorRef,
                                 time_restart = TimeInitialized,
                                 restart_count_total = RestartsNew,
                                 restart_count = RestartCount,
@@ -775,19 +771,19 @@ restart_stage3(#service{service_m = M,
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now one of ~p)~n"
                            " ~p", [OldPid, Pids, service_id(ServiceId)]),
-            TimeInitialized = initialize_wait(Pids),
+            {TimeInitialized, MonitorPids} = initialize_wait(Pids),
             DurationsNew = duration_store([ServiceId],
                                           {TimeTerminate, TimeInitialized},
                                           Durations),
-            ServicesNew = lists:foldl(fun(P, D) ->
+            ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
-                                    monitor = erlang:monitor(process, P),
+                                    monitor = MonitorRef,
                                     time_restart = TimeInitialized,
                                     restart_count_total = RestartsNew,
                                     restart_count = RestartCount,
                                     restart_times = RestartTimes}, D)
-            end, Services, Pids),
+            end, Services, MonitorPids),
             {true, State#state{services = ServicesNew,
                                durations_restarting = DurationsNew}};
         {error, _} = Error ->
@@ -854,13 +850,13 @@ restart_stage3(#service{service_m = M,
                            " ~p", [R, T, OldPid, Pid,
                                    service_id(ServiceId)]),
             Pids = [Pid],
-            TimeInitialized = initialize_wait(Pids),
+            {TimeInitialized, [{MonitorRef, Pid}]} = initialize_wait(Pids),
             DurationsNew = duration_store([ServiceId],
                                           {TimeTerminate, TimeInitialized},
                                           Durations),
             ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
-                                monitor = erlang:monitor(process, Pid),
+                                monitor = MonitorRef,
                                 time_restart = TimeInitialized,
                                 restart_count_total = RestartsNew,
                                 restart_count = R,
@@ -873,19 +869,19 @@ restart_stage3(#service{service_m = M,
                            "                   (~p is now one of ~p)~n"
                            " ~p", [R, T, OldPid, Pids,
                                    service_id(ServiceId)]),
-            TimeInitialized = initialize_wait(Pids),
+            {TimeInitialized, MonitorPids} = initialize_wait(Pids),
             DurationsNew = duration_store([ServiceId],
                                           {TimeTerminate, TimeInitialized},
                                           Durations),
-            ServicesNew = lists:foldl(fun(P, D) ->
+            ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
-                                    monitor = erlang:monitor(process, P),
+                                    monitor = MonitorRef,
                                     time_restart = TimeInitialized,
                                     restart_count_total = RestartsNew,
                                     restart_count = R,
                                     restart_times = RestartTimesNew}, D)
-            end, Services, Pids),
+            end, Services, MonitorPids),
             {true, State#state{services = ServicesNew,
                                durations_restarting = DurationsNew}};
         {error, _} = Error ->

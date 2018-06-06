@@ -257,7 +257,7 @@ all() ->
      {group, cloudi_modules_1}].
 
 groups() ->
-    [{service_internal_1, [],
+    [{service_internal_1, [sequence],
       [t_service_internal_sync_1,
        t_service_internal_sync_2,
        t_service_internal_sync_3,
@@ -271,7 +271,7 @@ groups() ->
        t_service_internal_terminate_4,
        t_service_internal_update_1,
        t_service_internal_log_1]},
-     {cloudi_modules_1, [],
+     {cloudi_modules_1, [parallel],
       [t_cloudi_args_type_1,
        t_cloudi_service_name_1]}].
 
@@ -589,6 +589,7 @@ t_service_internal_async_1(_Config) ->
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
+         {max_r, 0},
          {options, [{automatic_loading, false}]}]
         ], infinity),
     {{ok, TransId2},
@@ -613,6 +614,7 @@ t_service_internal_async_1(_Config) ->
         [{prefix, ?SERVICE_PREFIX1},
          {module, ?MODULE},
          {args, [{mode, init_send_async_recv}]},
+         {max_r, 0},
          {options, [{automatic_loading, false}]}]
         ], infinity),
     ok.
