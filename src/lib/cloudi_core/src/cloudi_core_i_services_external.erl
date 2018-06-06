@@ -437,8 +437,8 @@ handle_event(EventType, EventContent, StateName, State) ->
     case aspects_init(Aspects, CommandLine, Prefix, Timeout,
                       ServiceState) of
         {ok, NewServiceState} ->
-            ok = cloudi_core_i_configurator:
-                 service_initialized_process(Dispatcher),
+            ok = cloudi_core_i_services_monitor:
+                 initialized_process(Dispatcher),
             if
                 Subscriptions == [] ->
                     ok;

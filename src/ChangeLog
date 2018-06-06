@@ -3,9 +3,13 @@
 
 2018-06-06 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Improve the accuracy of the time used for the start of a
+    * Improve the accuracy of the time used for the start/end of a
       restart for the data used by the CloudI Service API
       function services_status
+        * Now the CloudI Service API services_status function tracks
+          restarting downtime as a time period that begins
+          immediately before the service termination starts and ends
+          immediately after the service initialization is finished
 
 2018-06-04 Michael Truog   <mjtruog at protonmail dot com>
 

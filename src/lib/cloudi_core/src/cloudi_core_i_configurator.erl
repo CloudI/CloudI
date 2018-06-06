@@ -572,7 +572,7 @@ handle_info(configure,
     end;
 
 handle_info({service_initialized_process, _}, State) ->
-    % a service process has initialized after a restart occurred
+    % a service process has initialized due to count_process_dynamic
     % (nothing to do, handled by cloudi_core_i_services_monitor)
     {noreply, State};
 

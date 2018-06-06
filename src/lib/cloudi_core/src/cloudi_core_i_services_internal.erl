@@ -1901,8 +1901,8 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                               ServiceState, Dispatcher) of
                 {ok, NewServiceState} ->
                     erlang:process_flag(trap_exit, true),
-                    ok = cloudi_core_i_configurator:
-                         service_initialized_process(Dispatcher),
+                    ok = cloudi_core_i_services_monitor:
+                         initialized_process(Dispatcher),
                     NewState = NextState#state{service_state = NewServiceState,
                                                options = NewConfigOptions},
                     {noreply, process_queues(NewState)};
@@ -3462,8 +3462,8 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                             Dispatcher ! {'cloudi_service_init_state',
                                           NewDispatcherProcessDictionary,
                                           NewDispatcherState},
-                            ok = cloudi_core_i_configurator:
-                                 service_initialized_process(DuoModePid),
+                            ok = cloudi_core_i_services_monitor:
+                                 initialized_process(DuoModePid),
                             NewState = NextState#state_duo{
                                            service_state = NewServiceState},
                             FinalState = duo_process_queues(NewState),
