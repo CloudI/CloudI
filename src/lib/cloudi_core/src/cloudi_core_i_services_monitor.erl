@@ -77,8 +77,12 @@
         % due to the overwrite of #service{} for the key1 ServiceId value
         pids :: list(pid()),
         monitor :: undefined | reference(),
-        time_start :: integer(),
-        time_restart :: undefined | integer(),
+        time_start
+            :: cloudi_timestamp:native_monotonic(),
+        time_restart
+            :: undefined | cloudi_timestamp:native_monotonic(),
+        time_terminate = undefined
+            :: undefined | cloudi_timestamp:native_monotonic(),
         restart_count_total :: non_neg_integer(),
         restart_count = 0 :: non_neg_integer(),
         restart_times = [] :: list(cloudi_timestamp:seconds_monotonic()),
@@ -279,8 +283,9 @@ decrease(Pid, Period, RateCurrent, RateMin, CountProcessMin)
 
 terminate_kill(Pid, Reason)
     when is_pid(Pid) ->
+    TimeTerminate = cloudi_timestamp:native_monotonic(),
     ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                {terminate_kill, Pid, Reason})).
+                                {terminate_kill, Pid, Reason, TimeTerminate})).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -292,7 +297,7 @@ init([]) ->
 handle_call({monitor, M, F, A, ProcessIndex, CountProcess, CountThread, Scope,
              TimeoutTerm, RestartDelay, MaxR, MaxT, ServiceId}, _,
             #state{services = Services} = State) ->
-    TimeStart = erlang:monotonic_time(),
+    TimeStart = cloudi_timestamp:native_monotonic(),
     TimeRestart = undefined,
     Restarts = 0,
     case erlang:apply(M, F, [ProcessIndex, CountProcess,
@@ -355,7 +360,7 @@ handle_call({update,
                    durations_updating = Durations} = State) ->
     case service_ids_pids(ServiceIdList, Services) of
         {ok, PidList0} ->
-            T0 = erlang:monotonic_time(),
+            T0 = cloudi_timestamp:native_monotonic(),
             {Reply, StateNew} = case update_start(PidList0, UpdatePlan) of
                 {[], PidListN} ->
                     Results0 = update_before(UpdatePlan),
@@ -377,7 +382,7 @@ handle_call({update,
                     {[], ResultsError} = update_results(ResultsN),
                     {{error, ResultsError}, State}
             end,
-            T1 = erlang:monotonic_time(),
+            T1 = cloudi_timestamp:native_monotonic(),
             DurationsNew = duration_store(ServiceIdList, {T0, T1}, Durations),
             {reply, Reply, StateNew#state{durations_updating = DurationsNew}};
         {error, Reason} ->
@@ -405,7 +410,7 @@ handle_call({status, ServiceIdList}, _,
             #state{services = Services,
                    durations_updating = DurationsUpdating,
                    durations_restarting = DurationsRestarting} = State) ->
-    TimeNow = erlang:monotonic_time(),
+    TimeNow = cloudi_timestamp:native_monotonic(),
     Reply = service_ids_status(ServiceIdList, TimeNow,
                                DurationsUpdating, DurationsRestarting,
                                Services),
@@ -450,13 +455,15 @@ handle_cast({Direction,
             {noreply, State}
     end;
 
-handle_cast({terminate_kill, Pid, Reason},
+handle_cast({terminate_kill, Pid, Reason, TimeTerminate},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
             ok = terminate_kill_enforce(self(), Reason, Pid,
                                         ServiceId, Service),
-            {noreply, State};
+            ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
+                Service#service{time_terminate = TimeTerminate}, Services),
+            {noreply, State#state{services = ServicesNew}};
         error ->
             {noreply, State}
     end;
@@ -608,14 +615,20 @@ code_change(_, State, _) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-restart(Service, Services,
+restart(#service{time_terminate = TimeTerminate} = Service, Services,
         #state{durations_updating = DurationsUpdating} = State,
         ServiceId, OldPid) ->
-    TimeTerminate = erlang:monotonic_time(),
+    TimeTerminateNew = if
+        TimeTerminate =:= undefined ->
+            % service initialization did not complete
+            cloudi_timestamp:native_monotonic();
+        is_integer(TimeTerminate) ->
+            TimeTerminate
+    end,
     DurationsUpdatingNew = maps:remove(ServiceId, DurationsUpdating),
-    restart_stage1(Service, Services,
+    restart_stage1(Service#service{time_terminate = undefined}, Services,
                    State#state{durations_updating = DurationsUpdatingNew},
-                   ServiceId, TimeTerminate, OldPid).
+                   ServiceId, TimeTerminateNew, OldPid).
 
 restart_stage1(#service{pids = Pids} = Service,
                Services, State, ServiceId, TimeTerminate, OldPid) ->
@@ -688,7 +701,7 @@ restart_stage3(#service{service_m = M,
                #state{durations_restarting = Durations} = State,
                ServiceId, TimeTerminate, OldPid) ->
     % first restart
-    TimeRestart = erlang:monotonic_time(),
+    TimeRestart = cloudi_timestamp:native_monotonic(),
     SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
     RestartTimes = [SecondsNow],
     RestartsNew = Restarts + 1,
@@ -781,7 +794,7 @@ restart_stage3(#service{service_m = M,
                #state{durations_restarting = Durations} = State,
                ServiceId, TimeTerminate, OldPid) ->
     % typical restart scenario
-    TimeRestart = erlang:monotonic_time(),
+    TimeRestart = cloudi_timestamp:native_monotonic(),
     SecondsNow = cloudi_timestamp:convert(TimeRestart, native, second),
     RestartTimesNew = [SecondsNow | RestartTimes],
     RestartsNew = Restarts + 1,

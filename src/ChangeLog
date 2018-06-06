@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the accuracy of the time used for the start of a
+      restart for the data used by the CloudI Service API
+      function services_status
+
 2018-06-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the remaining changes for JSON support in

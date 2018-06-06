@@ -166,7 +166,7 @@ native() ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec native_monotonic() -> integer().
+-spec native_monotonic() -> native_monotonic().
 
 native_monotonic() ->
     erlang:monotonic_time().
@@ -469,7 +469,7 @@ uptime() ->
 uptime(TimeUnit)
     when TimeUnit =:= second; TimeUnit =:= millisecond;
          TimeUnit =:= microsecond; TimeUnit =:= nanosecond ->
-    Value = erlang:monotonic_time() - erlang:system_info(start_time),
+    Value = native_monotonic() - erlang:system_info(start_time),
     convert(Value, native, TimeUnit).
 
 %%-------------------------------------------------------------------------
