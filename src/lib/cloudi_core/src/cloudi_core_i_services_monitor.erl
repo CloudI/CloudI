@@ -656,13 +656,20 @@ initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
             initialize_wait_pids(MonitorPids, Time)
     end.
 
-restart(#service{time_terminate = TimeTerminate} = Service, Services,
+restart(#service{time_start = TimeStart,
+                 time_restart = TimeRestart,
+                 time_terminate = TimeTerminate} = Service, Services,
         #state{durations_updating = DurationsUpdating} = State,
         ServiceId, OldPid) ->
     TimeTerminateNew = if
         TimeTerminate =:= undefined ->
             % service initialization did not complete
-            cloudi_timestamp:native_monotonic();
+            if
+                TimeRestart =:= undefined ->
+                    TimeStart;
+                is_integer(TimeRestart) ->
+                    TimeRestart
+            end;
         is_integer(TimeTerminate) ->
             TimeTerminate
     end,
