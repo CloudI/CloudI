@@ -101,14 +101,12 @@ Optional (default="no"):
   * Use the "--enable-haskell-support" configure flag to enable
 * `OCaml >= 4.03.0`
   * Use the "--enable-ocaml-support" configure flag to enable
-* `ZeroMQ >= 3.x.x or 2.x.x`
-  * `uuid-dev (uuid-dev/Ubuntu, ossp-uuid/macports)`
-  * Use the "--with-zeromq" configure flag to enable
 
 ### Building
 
 For configuration options, see [FAQ: 3.2 - Installation Options](https://cloudi.org/faq.html#3_Options).
 
+    cd src
     ./configure
     make
     sudo make install
@@ -133,20 +131,20 @@ Integration points:
 
 * CloudI API (See [`src/api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
 * HTTP with [`cloudi_service_http_cowboy`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
-* ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_zeromq/src/cloudi_service_zeromq.erl)
 * OAuth v1 with [`cloudi_service_oauth1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.erl)
 * TCP with [`cloudi_service_tcp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_tcp/src/cloudi_service_tcp.erl)
 * UDP with [`cloudi_service_udp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_udp/src/cloudi_service_udp.erl)
 * Supported databases (included)
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
   * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
-* Supported databases (excluded)
+* Internal Services Excluded from this Repository
   * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/cloudi_service_db_elasticsearch)
   * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/cloudi_service_db_cassandra) or [`cloudi_service_db_cassandra_cql`](https://github.com/CloudI/cloudi_service_db_cassandra_cql)
   * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/CloudI/cloudi_service_db_couchdb)
   * memcached with [`cloudi_service_db_memcached`](https://github.com/CloudI/cloudi_service_db_memcached)
   * Riak with [`cloudi_service_db_riak`](https://github.com/CloudI/cloudi_service_db_riak)
   * TokyoTyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/cloudi_service_db_tokyotyrant)
+  * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/cloudi_service_zeromq)
 
 Dynamic Configuration and Monitoring:
 

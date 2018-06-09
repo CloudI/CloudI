@@ -3,17 +3,7 @@ External Dependencies
 
 All CloudI Erlang dependencies are moved to exist with a `"cloudi_x_"`
 prefix to avoid any conflicts when CloudI shares the Erlang VM with other
-applications that may share common dependencies (`erlzmq2` is the only
-exception due to its C integration).
-
-C `zeromq/v?/zeromq`
---------------------
-`ZeroMQ 2.2.0 and 3.2.4`
-
-- `http://download.zeromq.org/zeromq-2.2.0.tar.gz`
-- `http://download.zeromq.org/zeromq-3.2.4.tar.gz`
-- `Fri Jan 17 11:48:27 PST 2014`
-- `LGPL` (requires explicit enable from configure)
+applications that may share common dependencies.
 
 C++ `backward-cpp`
 ------------------
@@ -289,16 +279,6 @@ Erlang `unicode_util_compat`
 - `commit 38d7bc105f51159e8ea3279c40121db9db1e652f (0.3.1)`
 - `Tue Sep 12 13:35:26 PDT 2017`
 - `Apache License 2.0`
-
-Erlang `zeromq/v?/erlzmq`
--------------------------
-`ZeroMQ (http://www.zeromq.org/) Erlang Driver`
-
-- `https://github.com/okeuday/erlzmq2 (branch master and 3.x)`
-- `commit 9171c69d94b2af72dbe74cfce8f4b61266026e33` (master)
-- `commit e75f3c8cdf050fc08c00a184d91c4bcbace7c683` (3.x)
-- `Mon Mar 11 12:52:17 PDT 2013`
-- `BSD`
 
 Haskell `binary`
 ----------------

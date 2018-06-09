@@ -611,10 +611,6 @@ if test "x$want_integration_tests" = "xyes" -a \
 AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 fi
 
-# ZeroMQ dependency
-AX_ZEROMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
-AX_ZEROMQ_ERLZMQ($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
-
 if test "x$integration_tests_ran" = "xtrue" ; then
     CLOUDI_CONF="cloudi_tests.conf"
 else
@@ -686,7 +682,6 @@ AC_CONFIG_FILES([
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
-    lib/cloudi_service_zeromq/src/cloudi_service_zeromq.app.src
     api/Makefile
     api/c/Makefile
     api/erlang/Makefile
@@ -801,7 +796,6 @@ AC_CONFIG_FILES([
     tests/null/ocaml/Makefile
     tests/service_api/Makefile
     tests/websockets/Makefile
-    tests/zeromq/Makefile
     ])
 AC_OUTPUT
 

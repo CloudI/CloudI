@@ -5,7 +5,7 @@ if CXX_SUPPORT
     CXX_SUBDIR = hexpi
 endif
 if PYTHON_SUPPORT
-    PYTHON_SUBDIR = service_api zeromq
+    PYTHON_SUBDIR = service_api
 endif
 if PYTHON_C_SUPPORT
     PYTHON_C_SUBDIR = echo environment websockets

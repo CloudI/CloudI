@@ -3,8 +3,7 @@
 
 {lib_dirs,
  ["lib",
-  "external"
-  @ZEROMQ_ERLZMQ_PATH@]}.
+  "external"]}.
 {sub_dirs,
  ["lib/cloudi_core",
   "lib/cloudi_service_api_requests",
@@ -26,7 +25,6 @@
   "lib/cloudi_service_tcp",
   "lib/cloudi_service_udp",
   "lib/cloudi_service_validate",
-  "lib/cloudi_service_zeromq",
   "lib/cgroups",
   "lib/cpg",
   "lib/erlang_term",

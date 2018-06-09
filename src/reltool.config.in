@@ -83,7 +83,6 @@
    [
     "lib",
     "external"
-    @ZEROMQ_ERLZMQ_PATH@
    ]},
   % application startup for release generation
   {rel, "cloudi", "@CLOUDI_CORE_RELEASE_VERSION@",

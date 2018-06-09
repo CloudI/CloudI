@@ -25,7 +25,6 @@
   "lib/cloudi_service_tcp",
   "lib/cloudi_service_udp",
   "lib/cloudi_service_validate",
-  "lib/cloudi_service_zeromq",
   % external dependencies: parse transformations
   "external/cloudi_x_parse_trans",
   % external dependencies

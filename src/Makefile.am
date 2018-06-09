@@ -27,7 +27,6 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_tcp/src \
      -d $(top_srcdir)/lib/cloudi_service_udp/src \
      -d $(top_srcdir)/lib/cloudi_service_validate/src \
-     -d $(top_srcdir)/lib/cloudi_service_zeromq/src \
      -d $(top_srcdir)/lib/cgroups/src \
      -d $(top_srcdir)/lib/cpg/src \
      -d $(top_srcdir)/lib/cpg/test \
@@ -118,12 +117,6 @@ rel/files/app.config: rel/files/app.config.in
 
 rebar-directories-compile:
 	$(top_srcdir)/rebar_dirs.sh create $(abs_top_srcdir) $(abs_top_builddir)
-	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
-        $(MKDIR_P) external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
-        cd $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
-            test ! -e erlzmq && \
-            $(LN_S) $(abs_top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq || exit 0; \
-     fi)
 	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
         test ! -e cloudi_os_spawn_vsn_1 && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || exit 0)
@@ -152,11 +145,6 @@ rebar-clean:
 
 rebar-directories-clean: rebar-clean
 	$(top_srcdir)/rebar_dirs.sh destroy $(abs_top_srcdir) $(abs_top_builddir)
-	(if test "x$(ZEROMQ_VERSION_MAJOR)" != "x"; then : ; \
-       test -d external/zeromq/v$(ZEROMQ_VERSION_MAJOR) && \
-       rm -f $(top_builddir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq \
-             || exit 0; \
-     fi)
 	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 && \
 	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || \
 	 exit 0)
@@ -201,11 +189,6 @@ distclean-local: rebar-directories-distclean \
 
 rebar-directories-distclean:
 	rm -f $(top_srcdir)/external/rebar/ebin/*.beam
-	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/zeromq && \
-     make distclean || exit 0)
-	(cd $(top_srcdir)/external/zeromq/v$(ZEROMQ_VERSION_MAJOR)/erlzmq && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
-     exit 0)
 	test -e $(top_builddir)/rebar && rm -f $(top_builddir)/rebar || exit 0
 
 erlang-applications-scope-remove:
@@ -236,7 +219,6 @@ dialyze: all \
               lib/cloudi_service_tcp/ebin/ \
               lib/cloudi_service_udp/ebin/ \
               lib/cloudi_service_validate/ebin/ \
-              lib/cloudi_service_zeromq/ebin/ \
               lib/cgroups/ebin/ \
               lib/cpg/ebin/ \
               lib/erlang_term/ebin/ \
@@ -315,8 +297,7 @@ pylint:
               $(top_srcdir)/tests/service_api/logging_on.py \
               $(top_srcdir)/tests/service_api/path.py \
               $(top_srcdir)/tests/service_api/run.py \
-              $(top_srcdir)/tests/websockets/websockets.py \
-              $(top_srcdir)/tests/zeromq/run.py
+              $(top_srcdir)/tests/websockets/websockets.py
 
 linter-ruby:
 	$(RUBY) -wc \

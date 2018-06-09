@@ -26,7 +26,6 @@ REBAR_DIRS="\
     lib/cloudi_service_tcp \
     lib/cloudi_service_udp \
     lib/cloudi_service_validate \
-    lib/cloudi_service_zeromq \
     external/cloudi_x_bear \
     external/cloudi_x_certifi \
     external/cloudi_x_cowboy \

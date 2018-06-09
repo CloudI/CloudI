@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Remove ZeroMQ support from this repository
+      (it continues to exist at
+       https://github.com/CloudI/cloudi_service_zeromq)
+        * If cloudi_service_zeromq was being used for CloudI
+          node connections, it is best to switch to using the SSH
+          connectivity in cloudi_service_router
+
 2018-06-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the accuracy of the time used for the start/end of a
