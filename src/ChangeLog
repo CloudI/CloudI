@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the Erlang implementation of the binary_pairs format
+      (for RequestInfo/ResponseInfo key/value data)
+
 2018-06-09 Michael Truog   <mjtruog at protonmail dot com>
 
     * Remove ZeroMQ support from this repository
