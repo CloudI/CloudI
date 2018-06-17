@@ -42,11 +42,14 @@
 %%% The amount of time the service request is persisted is always limited by
 %%% the timeout of the service request.  Tracking the time taken by a
 %%% service request depends on the Erlang VM time-keeping being dependable
-%%% which depends on the OS time-keeping not varying wildly
-%%% (otherwise service requests may timeout quicker due to the system time
-%%%  moving into the future).  If the fault_isolation service argument is
-%%% set to 'both', the original service request timeout value will be used
-%%% for the service request send to the destination and the service request
+%%% which depends on the OS time-keeping not varying wildly, if
+%%% fault_isolation is set to 'both' and an Erlang VM restart causes an old
+%%% queue file to be used (the new Erlang VM OS process will use the
+%%% new OS time to determine if service requests in the old queue file have
+%%% timed-out based on each service request timeout value).
+%%% If the fault_isolation service argument is set to 'both',
+%%% the original service request timeout value will be used for the
+%%% service request send to the destination and the service request
 %%% send containing the response.
 %%%
 %%% If the retry service argument is set higher than 0, any retry attempts
@@ -60,10 +63,11 @@
 %%% (i.e., without depending on the timeout elapsing locally, despite the
 %%%  timeout being a small value), it is common to set the service
 %%% configuration options request_timeout_immediate_max and
-%%% response_timeout_immediate_max to 0.  If the retry_delay service argument
-%%% is used, setting the request_name_lookup service configuration option to
-%%% async is best if the service request destinations are expected to rarely
-%%% be present (i.e., only appear when anticipating the receive of data).
+%%% response_timeout_immediate_max to 'limit_min'.  If the retry_delay
+%%% service argument is used, setting the request_name_lookup
+%%% service configuration option to async is best if the service request
+%%% destinations are expected to rarely be present
+%%% (i.e., only appear when anticipating the receive of data).
 %%% @end
 %%%
 %%% MIT License
@@ -125,6 +129,8 @@
         % uses checksums (e.g., Btrfs (crc32 variation) and ZFS (sha256)).
         % Without a checksum it isn't possible to be sure the
         % data on disk isn't corrupt (once it is recovered after a crash).
+        % All disk writes are done as atomic actions with rename use,
+        % so corruption would be due to an OS failure or hardware failure.
         % Valid values are:
         % crc32, md5, ripemd160, sha, sha224, sha256, sha384, sha512
 -define(DEFAULT_RETRY,                          0).
