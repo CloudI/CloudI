@@ -1731,11 +1731,14 @@ duration_store([ServiceId | ServiceIdList], T, Duration, DurationLookup) ->
     duration_store(ServiceIdList, T, Duration, DurationLookupNew).
 
 nanoseconds_to_string(TotalNanoSeconds) ->
-    TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
     NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
-    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
     Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
-    lists:flatten([erlang:integer_to_list(TotalHours), " hours ",
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    lists:flatten([erlang:integer_to_list(TotalDays), " days ",
+                   erlang:integer_to_list(Hours), " hours ",
                    erlang:integer_to_list(Seconds), " seconds ",
                    erlang:integer_to_list(NanoSeconds), " nanoseconds"]).
 

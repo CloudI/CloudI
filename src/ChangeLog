@@ -4,6 +4,8 @@
 2018-06-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add more comments to cloudi_service_queue
+    * Change CloudI Service API services_status time duration
+      strings to provide hours
 
 2018-06-11 Michael Truog   <mjtruog at protonmail dot com>
 
