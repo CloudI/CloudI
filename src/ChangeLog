@@ -1,11 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change CloudI Service API services_status time duration
+      strings to omit large 0 durations and to use singular units
+
 2018-06-16 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add more comments to cloudi_service_queue
     * Change CloudI Service API services_status time duration
-      strings to provide hours
+      strings to provide days
 
 2018-06-11 Michael Truog   <mjtruog at protonmail dot com>
 

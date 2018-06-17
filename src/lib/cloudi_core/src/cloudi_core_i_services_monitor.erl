@@ -1730,6 +1730,11 @@ duration_store([ServiceId | ServiceIdList], T, Duration, DurationLookup) ->
     DurationLookupNew = maps:put(ServiceId, DurationListNew, DurationLookup),
     duration_store(ServiceIdList, T, Duration, DurationLookupNew).
 
+time_value_to_list(1, Label) ->
+    ["1 ", Label];
+time_value_to_list(I, Label) ->
+    [erlang:integer_to_list(I), $ , Label, $s].
+
 nanoseconds_to_string(TotalNanoSeconds) ->
     NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
     TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
@@ -1737,10 +1742,22 @@ nanoseconds_to_string(TotalNanoSeconds) ->
     TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
     Hours = TotalHours rem ?HOURS_IN_DAY,
     TotalDays = TotalHours div ?HOURS_IN_DAY,
-    lists:flatten([erlang:integer_to_list(TotalDays), " days ",
-                   erlang:integer_to_list(Hours), " hours ",
-                   erlang:integer_to_list(Seconds), " seconds ",
-                   erlang:integer_to_list(NanoSeconds), " nanoseconds"]).
+    if
+        TotalDays > 0 ->
+            lists:flatten([time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Hours > 0 ->
+            lists:flatten([time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Seconds > 0 ->
+            lists:flatten([time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        true ->
+            lists:flatten(time_value_to_list(NanoSeconds, "nanosecond"))
+    end.
 
 nanoseconds_to_availability_day_running(NanoSecondsRunning) ->
     availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_DAY).
