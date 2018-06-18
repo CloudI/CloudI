@@ -396,7 +396,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     when Protocol =:= tcp; Protocol =:= local ->
     {stop, {?FUNCTION_NAME, inet_async, Error}};
 
-'CONNECT'(info, initialize, State) ->
+'CONNECT'(info, cloudi_service_init_begin, State) ->
     {keep_state, State#state{initialize = true}};
 
 'CONNECT'(info, EventContent, State) ->
@@ -409,7 +409,7 @@ handle_event(EventType, EventContent, StateName, State) ->
 'INIT_WAIT'({call, From}, port, #state{port = Port}) ->
     {keep_state_and_data, {reply, From, Port}};
 
-'INIT_WAIT'(info, initialize, State) ->
+'INIT_WAIT'(info, cloudi_service_init_begin, State) ->
     connection_init(State#state{initialize = true});
 
 'INIT_WAIT'(info, EventContent, State) ->

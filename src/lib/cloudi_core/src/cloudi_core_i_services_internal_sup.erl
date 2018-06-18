@@ -46,6 +46,12 @@
 %% supervisor callbacks
 -export([init/1]).
 
+-record(cloudi_service_process_start,
+    {
+        dispatcher :: cloudi_service:dispatcher(),
+        service :: cloudi_service:source()
+    }).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -112,7 +118,8 @@ create_internal(ProcessIndex, ProcessCount,
 
 create_internal_done(Parent, Dispatcher, ReceiverPid)
     when is_pid(Parent), is_pid(Dispatcher), is_pid(ReceiverPid) ->
-    Parent ! {self, Dispatcher, ReceiverPid},
+    Parent ! #cloudi_service_process_start{dispatcher = Dispatcher,
+                                           service = ReceiverPid},
     ok.
 
 %%%------------------------------------------------------------------------
@@ -133,14 +140,14 @@ init([]) ->
 %%%------------------------------------------------------------------------
 
 result(Dispatcher) ->
-    % must not call cloudi_service:self/1 due to the possibility
-    % that external source code (called within cloudi_service_init/4)
-    % will consume any incoming messages it doesn't understand
-    % (e.g., in the source code doing a start_link)
     MonitorRef = erlang:monitor(process, Dispatcher),
     receive
-        {self, Dispatcher, Service} ->
+        #cloudi_service_process_start{dispatcher = Dispatcher,
+                                      service = Service} ->
             % sent before cloudi_service_init/4 via create_internal_done/3
+            % after the Erlang process is ready for
+            % cloudi_service_init_begin from
+            % cloudi_core_i_services_monitor:initialize/1
             erlang:demonitor(MonitorRef, [flush]),
             {ok, Service};
         {'DOWN', MonitorRef, process, Dispatcher, Info} ->

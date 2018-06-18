@@ -125,6 +125,12 @@
               list({increase | decrease, number(), number(), number()})}
     }).
 
+-record(cloudi_service_init_end,
+    {
+        pid :: pid(),
+        time_initialized :: cloudi_timestamp:native_monotonic()
+    }).
+
 -record(restart_stage2,
     {
         pid :: pid(),
@@ -230,7 +236,7 @@ initialize([]) ->
     ok;
 initialize([Pid | Pids])
     when is_pid(Pid) ->
-    Pid ! initialize,
+    Pid ! cloudi_service_init_begin,
     initialize(Pids).
 
 -spec initialized_process(Pid :: pid()) ->
@@ -239,7 +245,8 @@ initialize([Pid | Pids])
 initialized_process(Pid)
     when is_pid(Pid) ->
     TimeInitialized = cloudi_timestamp:native_monotonic(),
-    ?MODULE ! {initialized_process, Pid, TimeInitialized},
+    ?MODULE !  #cloudi_service_init_end{pid = Pid,
+                                        time_initialized = TimeInitialized},
     ok.
 
 shutdown(ServiceId, Timeout)
@@ -607,7 +614,7 @@ handle_info(#kill{reason = Reason,
     ok = terminate_kill_enforce_now(Reason, Pid, ServiceId, Service),
     {noreply, State};
 
-handle_info({initialized_process, Pid, _}, State) ->
+handle_info(#cloudi_service_init_end{pid = Pid}, State) ->
     ok = cloudi_core_i_configurator:service_initialized_process(Pid),
     {noreply, State};
 
@@ -643,7 +650,8 @@ initialize_wait_pids([], Time) ->
     end;
 initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
     receive
-        {initialized_process, Pid, TimeInitialized} ->
+        #cloudi_service_init_end{pid = Pid,
+                                 time_initialized = TimeInitialized} ->
             TimeNew = if
                 Time =:= undefined ->
                     TimeInitialized;

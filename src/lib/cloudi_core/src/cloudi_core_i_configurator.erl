@@ -955,7 +955,8 @@ service_start_wait(Pids, Service) ->
     % and pass the error reason as a return value of the configure/2 function
     % or the cloudi_service_api:services_add/2 function when a service
     % starts for the first time
-    % (restarts require cloudi_core_i_services_monitor to send 'initialize')
+    % (restarts require cloudi_core_i_services_monitor to
+    %  call cloudi_core_i_services_monitor:initialize/1)
     lists:foreach(fun(P) ->
         ok = cloudi_core_i_services_monitor:initialize(P)
     end, Pids),

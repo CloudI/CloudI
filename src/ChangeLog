@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve critical CloudI service startup messages and comments
+
 2018-06-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change CloudI Service API services_status time duration

@@ -349,7 +349,8 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                    State},
     % no process dictionary or state modifications below
 
-    % send after 'cloudi_service_init_execute' to avoid race with initialize/1
+    % send after 'cloudi_service_init_execute' to avoid race with
+    % cloudi_core_i_services_monitor:initialize/1
     ok = cloudi_core_i_services_internal_sup:
          create_internal_done(Parent, Dispatcher, ReceiverPid),
 
@@ -2059,7 +2060,7 @@ format_status(_Opt,
 
 initialize_wait(Timeout) ->
     receive
-        initialize ->
+        cloudi_service_init_begin ->
             ok
     after
         Timeout ->
