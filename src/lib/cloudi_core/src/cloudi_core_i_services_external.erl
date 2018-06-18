@@ -124,8 +124,9 @@
         protocol = undefined :: undefined | tcp | udp | local,
         % (13) external thread connection port
         port = undefined :: undefined | non_neg_integer(),
-        % (14) wait for cloudi_core_i_services_monitor to send initialize when
-        % all of the service instance processes have been spawned
+        % (14) wait for cloudi_core_i_services_monitor:initialize/1 to send
+        % cloudi_service_init_begin when all of the service instance
+        % processes have been spawned
         initialize = false :: boolean(),
         % (15) udp incoming data port
         incoming_port = undefined :: undefined | inet:port_number(),
