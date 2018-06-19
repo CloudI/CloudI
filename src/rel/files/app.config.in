@@ -15,8 +15,7 @@
      %{file, "erlang_kernel.log", [raw, append]}} % Erlang/OTP >= 21.0 config
      {file, "erlang_kernel.log"}}, % Erlang/OTP < 21.0 config
     %{error_logger_format_depth, unlimited}, % Erlang/OTP >= 21.0 config
-    {logger_sasl_compatible, false},
-    {logger_progress_reports, log}
+    {logger_sasl_compatible, false}
   ]},
  {sasl, [
     % deprecated by Erlang/OTP 21.0 kernel logger
