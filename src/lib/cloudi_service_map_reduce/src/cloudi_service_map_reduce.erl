@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2012-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -67,8 +67,9 @@
         map_requests :: #{cloudi_service:trans_id() := map_send_args()}
     }).
 
--record(init,
+-record(init_begin,
     {
+        service :: pid(),
         prefix :: string(),
         timeout :: cloudi_service_api:timeout_initialize_value_milliseconds(),
         time_start :: cloudi_timestamp:seconds_monotonic(),
@@ -76,6 +77,12 @@
         map_reduce_module :: module(),
         map_reduce_args :: list(),
         concurrency :: number()
+    }).
+
+-record(init_end,
+    {
+        state :: undefined | #state{},
+        error = undefined :: any()
     }).
 
 %%%------------------------------------------------------------------------
@@ -153,13 +160,15 @@ cloudi_service_init(Args, Prefix, Timeout, _Dispatcher) ->
             ok = cloudi_x_reltool_util:module_loaded(MapReduceModule)
     end,
     % cloudi_service_init/4 is always executed by the service process
-    self() !  #init{prefix = Prefix,
-                    timeout = Timeout,
-                    time_start = TimeStart,
-                    log_execution_time = LogExecutionTime,
-                    map_reduce_module = MapReduceModule,
-                    map_reduce_args = MapReduceArgs,
-                    concurrency = Concurrency},
+    Service = self(),
+    Service !  #init_begin{service = Service,
+                           prefix = Prefix,
+                           timeout = Timeout,
+                           time_start = TimeStart,
+                           log_execution_time = LogExecutionTime,
+                           map_reduce_module = MapReduceModule,
+                           map_reduce_args = MapReduceArgs,
+                           concurrency = Concurrency},
     {ok, undefined}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
@@ -167,39 +176,34 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.
 
-cloudi_service_handle_info(#init{prefix = Prefix,
-                                 timeout = Timeout,
-                                 time_start = TimeStart,
-                                 log_execution_time = LogExecutionTime,
-                                 map_reduce_module = MapReduceModule,
-                                 map_reduce_args = MapReduceArgs,
-                                 concurrency = Concurrency},
+cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
                            undefined, Dispatcher) ->
-    % cloudi_service_map_reduce_new/3 execution occurs outside of
-    % cloudi_service_init/3 to allow send_sync and recv_sync function calls
+    % cloudi_service_map_reduce_new/5 execution occurs outside of
+    % cloudi_service_init/4 to allow send_sync and recv_async function calls
     % because no Erlang process linking/spawning/etc. should be occurring,
-    % only algorithmic initialization
-    MapCount = cloudi_concurrency:count(Concurrency),
-    case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArgs,
-                                                       MapCount,
-                                                       Prefix,
-                                                       Timeout,
-                                                       Dispatcher) of
-        {ok, MapReduceState} ->
-            case map_send(MapCount, #{}, Dispatcher,
-                          MapReduceModule, MapReduceState) of
-                {ok, MapRequests, NewMapReduceState} ->
-                    {noreply, #state{time_start = TimeStart,
-                                     log_execution_time = LogExecutionTime,
-                                     map_reduce_module = MapReduceModule,
-                                     map_reduce_state = NewMapReduceState,
-                                     map_count = MapCount,
-                                     map_requests = MapRequests}};
-                {error, _} = Error ->
-                    {stop, Error, undefined}
-            end;
-        {error, _} = Error ->
-            {stop, Error, undefined}
+    % only algorithmic initialization.  Initialization is done in a temporary
+    % process so there is no blocking problem (with send_sync or recv_async)
+    % if duo_mode == true.  No timeout is enforced on
+    % cloudi_service_map_reduce_new/5 execution.
+    _ = erlang:spawn_link(fun() ->
+        case init(InitBegin, Dispatcher) of
+            {noreply, State} ->
+                Service ! #init_end{state = State};
+            {stop, Reason, State} when Reason /= undefined ->
+                Service ! #init_end{state = State,
+                                    error = Reason}
+        end
+    end),
+    {noreply, undefined};
+
+cloudi_service_handle_info(#init_end{state = State,
+                                     error = Error},
+                           undefined, _Dispatcher) ->
+    if
+        Error =:= undefined ->
+            {noreply, State};
+        true ->
+            {stop, Error, State}
     end;
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
@@ -292,6 +296,37 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+init(#init_begin{prefix = Prefix,
+                 timeout = Timeout,
+                 time_start = TimeStart,
+                 log_execution_time = LogExecutionTime,
+                 map_reduce_module = MapReduceModule,
+                 map_reduce_args = MapReduceArgs,
+                 concurrency = Concurrency},
+     Dispatcher) ->
+    MapCount = cloudi_concurrency:count(Concurrency),
+    case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArgs,
+                                                       MapCount,
+                                                       Prefix,
+                                                       Timeout,
+                                                       Dispatcher) of
+        {ok, MapReduceState} ->
+            case map_send(MapCount, #{}, Dispatcher,
+                          MapReduceModule, MapReduceState) of
+                {ok, MapRequests, NewMapReduceState} ->
+                    {noreply, #state{time_start = TimeStart,
+                                     log_execution_time = LogExecutionTime,
+                                     map_reduce_module = MapReduceModule,
+                                     map_reduce_state = NewMapReduceState,
+                                     map_count = MapCount,
+                                     map_requests = MapRequests}};
+                {error, _} = Error ->
+                    {stop, Error, undefined}
+            end;
+        {error, _} = Error ->
+            {stop, Error, undefined}
+    end.
 
 map_send(MapRequests, Dispatcher, MapReduceModule, MapReduceState) ->
     map_send(1, MapRequests, Dispatcher, MapReduceModule, MapReduceState).

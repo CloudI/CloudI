@@ -403,7 +403,9 @@
         % the default for pre-v1.2.0 internal services.  the second process
         % is used in place of the info_pid and the process' message queue
         % is used directly (so info_pid_uses must be set to infinity when
-        % duo_mode is true).
+        % duo_mode is true).  cloudi_service_handle_info/3 must not contain
+        % a call to cloudi_service:send_sync or cloudi_service:recv_async
+        % if duo_mode is true.  Instead, use cloudi_service:send_async_active.
         duo_mode = false
             :: boolean(),
         % should a mostly idle service hibernate automatically to conserve

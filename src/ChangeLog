@@ -4,6 +4,8 @@
 2018-06-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Final changes to Erlang/OTP 21.0 logger configuration
+    * Fix problem with cloudi_service_map_reduce use with the
+      service configuration option duo_mode == true
 
 2018-06-18 Michael Truog   <mjtruog at protonmail dot com>
 

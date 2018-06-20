@@ -92,7 +92,7 @@
         process_index :: non_neg_integer(),
         process_count :: pos_integer(),
         mode :: isolated | crdt,
-        crdt :: cloudi_crdt:state(),
+        crdt :: cloudi_crdt:state() | undefined,
         name :: string(),
         request_info :: any(),
         request :: any(),
