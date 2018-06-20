@@ -192,7 +192,8 @@ cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
             {stop, Reason, State} when Reason /= undefined ->
                 Service ! #init_end{state = State,
                                     error = Reason}
-        end
+        end,
+        true = erlang:unlink(Service)
     end),
     {noreply, undefined};
 
