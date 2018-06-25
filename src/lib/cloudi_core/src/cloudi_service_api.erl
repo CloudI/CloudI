@@ -879,10 +879,10 @@
               logging_proplist/0]).
 
 -type code_status() ::
-    nonempty_list({build_machine, string()} |
-                  {build_kernel_version, string()} |
-                  {build_operating_system, string()} |
-                  {build_erlang_otp_release, string()} |
+    nonempty_list({build_machine, nonempty_string()} |
+                  {build_kernel_version, nonempty_string()} |
+                  {build_operating_system, nonempty_string()} |
+                  {build_erlang_otp_release, nonempty_string()} |
                   {runtime_erlang_erts_version, nonempty_string()} |
                   {runtime_erlang_kernel_version, nonempty_string()} |
                   {runtime_erlang_stdlib_version, nonempty_string()} |
@@ -892,9 +892,9 @@
                   {runtime_machine_processors, pos_integer()} |
                   {runtime_total, nonempty_string()} |
                   {runtime_changes,
-                   nonempty_list({type, internal | external} |
-                                 {file_age, nonempty_string()} |
-                                 {file_path, nonempty_string()})}).
+                   list(nonempty_list({type, internal | external} |
+                                      {file_age, nonempty_string()} |
+                                      {file_path, nonempty_string()}))}).
 -export_type([code_status/0]).
 
 %%%------------------------------------------------------------------------
