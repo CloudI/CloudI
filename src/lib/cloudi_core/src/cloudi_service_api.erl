@@ -1607,7 +1607,7 @@ code_status(Timeout)
     TimeNative = cloudi_timestamp:native_monotonic(),
     RuntimeTotal = cloudi_timestamp:
                    convert(TimeNative - erlang:system_info(start_time),
-                           native, nanosecond),
+                           native, second),
     SecondsNow = cloudi_timestamp:
                  convert(TimeNative + erlang:time_offset(),
                          native, second),
@@ -1615,7 +1615,7 @@ code_status(Timeout)
         {ok, RuntimeChanges} ->
             Status = cloudi_environment:status() ++
                 [{runtime_total,
-                  cloudi_timestamp:nanoseconds_to_string(RuntimeTotal)},
+                  cloudi_timestamp:seconds_to_string(RuntimeTotal)},
                  {runtime_changes,
                   RuntimeChanges}],
             {ok, Status};

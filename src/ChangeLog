@@ -10,6 +10,7 @@
       cloudi_service_api_requests providing JSON-RPC with
       JSON data instead of Erlang terms
     * Update jsonrpclib (now Python 3 is supported)
+    * Fix cloudi_service_map_reduce startup after last change
 
 2018-06-19 Michael Truog   <mjtruog at protonmail dot com>
 
