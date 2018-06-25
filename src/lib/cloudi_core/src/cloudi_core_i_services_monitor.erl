@@ -1272,8 +1272,10 @@ service_id_status(ServiceId, TimeNow,
             NanoSecondsRunning = cloudi_timestamp:
                                  convert(TimeNow - TimeRunning,
                                          native, nanosecond),
-            UptimeTotal = nanoseconds_to_string(NanoSecondsTotal),
-            UptimeRunning = nanoseconds_to_string(NanoSecondsRunning),
+            UptimeTotal = cloudi_timestamp:
+                          nanoseconds_to_string(NanoSecondsTotal),
+            UptimeRunning = cloudi_timestamp:
+                            nanoseconds_to_string(NanoSecondsRunning),
             NanoSecondsDayRestarting =
                 nanoseconds_downtime(DurationRestartList, TimeDayStart),
             NanoSecondsDayUpdating =
@@ -1384,6 +1386,7 @@ service_id_status(ServiceId, TimeNow,
                 TimeRunning =< TimeMonthStart,
                 NanoSecondsYearUpdating > 0 ->
                     [{interrupt_year_updating,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsYearUpdating)} |
                      Status10];
                 true ->
@@ -1394,6 +1397,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthUpdating > 0 orelse
                 NanoSecondsYearUpdating > 0 ->
                     [{interrupt_month_updating,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsMonthUpdating)} |
                      Status11];
                 true ->
@@ -1405,6 +1409,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthUpdating > 0 orelse
                 NanoSecondsYearUpdating > 0 ->
                     [{interrupt_week_updating,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsWeekUpdating)} |
                      Status12];
                 true ->
@@ -1415,6 +1420,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsWeekUpdating > 0 orelse
                 NanoSecondsMonthUpdating > 0 ->
                     [{interrupt_day_updating,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsDayUpdating)} |
                      Status13];
                 true ->
@@ -1424,6 +1430,7 @@ service_id_status(ServiceId, TimeNow,
                 TimeStart =< TimeMonthStart,
                 NanoSecondsYearRestarting > 0 ->
                     [{downtime_year_restarting,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsYearRestarting)} |
                      Status14];
                 true ->
@@ -1434,6 +1441,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthRestarting > 0 orelse
                 NanoSecondsYearRestarting > 0 ->
                     [{downtime_month_restarting,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsMonthRestarting)} |
                      Status15];
                 true ->
@@ -1445,6 +1453,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsMonthRestarting > 0 orelse
                 NanoSecondsYearRestarting > 0 ->
                     [{downtime_week_restarting,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsWeekRestarting)} |
                      Status16];
                 true ->
@@ -1455,6 +1464,7 @@ service_id_status(ServiceId, TimeNow,
                 NanoSecondsWeekRestarting > 0 orelse
                 NanoSecondsMonthRestarting > 0 ->
                     [{downtime_day_restarting,
+                      cloudi_timestamp:
                       nanoseconds_to_string(NanoSecondsDayRestarting)} |
                      Status17];
                 true ->
@@ -1737,35 +1747,6 @@ duration_store([ServiceId | ServiceIdList], T, Duration, DurationLookup) ->
         duration_clear(lists:reverse(DurationList), T)],
     DurationLookupNew = maps:put(ServiceId, DurationListNew, DurationLookup),
     duration_store(ServiceIdList, T, Duration, DurationLookupNew).
-
-time_value_to_list(1, Label) ->
-    ["1 ", Label];
-time_value_to_list(I, Label) ->
-    [erlang:integer_to_list(I), $ , Label, $s].
-
-nanoseconds_to_string(TotalNanoSeconds) ->
-    NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
-    TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
-    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
-    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
-    Hours = TotalHours rem ?HOURS_IN_DAY,
-    TotalDays = TotalHours div ?HOURS_IN_DAY,
-    if
-        TotalDays > 0 ->
-            lists:flatten([time_value_to_list(TotalDays, "day"), $ ,
-                           time_value_to_list(Hours, "hour"), $ ,
-                           time_value_to_list(Seconds, "second"), $ ,
-                           time_value_to_list(NanoSeconds, "nanosecond")]);
-        Hours > 0 ->
-            lists:flatten([time_value_to_list(Hours, "hour"), $ ,
-                           time_value_to_list(Seconds, "second"), $ ,
-                           time_value_to_list(NanoSeconds, "nanosecond")]);
-        Seconds > 0 ->
-            lists:flatten([time_value_to_list(Seconds, "second"), $ ,
-                           time_value_to_list(NanoSeconds, "nanosecond")]);
-        true ->
-            lists:flatten(time_value_to_list(NanoSeconds, "nanosecond"))
-    end.
 
 nanoseconds_to_availability_day_running(NanoSecondsRunning) ->
     availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_DAY).

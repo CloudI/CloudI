@@ -66,7 +66,8 @@
          logging/1,
          code_path_add/2,
          code_path_remove/2,
-         code_path/1]).
+         code_path/1,
+         code_status/1]).
 
 -include("cloudi_service_api.hrl").
 -include("cloudi_core_i_constants.hrl").
@@ -877,6 +878,25 @@
               logging_formatters_set_proplist/0,
               logging_proplist/0]).
 
+-type code_status() ::
+    nonempty_list({build_machine, string()} |
+                  {build_kernel_version, string()} |
+                  {build_operating_system, string()} |
+                  {build_erlang_otp_release, string()} |
+                  {runtime_erlang_erts_version, nonempty_string()} |
+                  {runtime_erlang_kernel_version, nonempty_string()} |
+                  {runtime_erlang_stdlib_version, nonempty_string()} |
+                  {runtime_erlang_sasl_version, nonempty_string()} |
+                  {runtime_erlang_compiler_version, nonempty_string()} |
+                  {runtime_cloudi_version, nonempty_string()} |
+                  {runtime_machine_processors, pos_integer()} |
+                  {runtime_total, nonempty_string()} |
+                  {runtime_changes,
+                   nonempty_list({type, internal | external} |
+                                 {file_age, nonempty_string()} |
+                                 {file_path, nonempty_string()})}).
+-export_type([code_status/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -1563,6 +1583,45 @@ code_path(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     {ok, code:get_path()}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Provide the current CloudI Erlang VM code status.===
+%% Both build and runtime information is provided with the
+%% service files changed after CloudI was started
+%% (probably due to service updates).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec code_status(Timeout :: api_timeout_milliseconds()) ->
+    {ok, code_status()} |
+    {error,
+     timeout | noproc |
+     cloudi_core_i_configuration:error_reason_code_status()}.
+
+code_status(Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    TimeNative = cloudi_timestamp:native_monotonic(),
+    RuntimeTotal = cloudi_timestamp:
+                   convert(TimeNative - erlang:system_info(start_time),
+                           native, nanosecond),
+    SecondsNow = cloudi_timestamp:
+                 convert(TimeNative + erlang:time_offset(),
+                         native, second),
+    case cloudi_core_i_configurator:code_status(SecondsNow, Timeout) of
+        {ok, RuntimeChanges} ->
+            Status = cloudi_environment:status() ++
+                [{runtime_total,
+                  cloudi_timestamp:nanoseconds_to_string(RuntimeTotal)},
+                 {runtime_changes,
+                  RuntimeChanges}],
+            {ok, Status};
+        {error, _} = Error ->
+            Error
+    end.
 
 %%%------------------------------------------------------------------------
 %%% Private functions

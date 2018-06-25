@@ -65,6 +65,7 @@
          logging_formatters_set/2,
          logging_redirect_set/2,
          logging/1,
+         code_status/2,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -81,6 +82,7 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
+-include_lib("kernel/include/file.hrl").
 
 -type error_reason_service_start() ::
     {service_internal_module_invalid |
@@ -109,15 +111,18 @@
      service_external_update_failed, any()}.
 -type error_reason_services_search() ::
     service_scope_invalid.
+-type error_reason_code_status() ::
+    {file, {file:filename(), file:posix() | badarg}}.
 -export_type([error_reason_service_start/0,
               error_reason_service_stop/0,
               error_reason_service_restart/0,
               error_reason_service_update/0,
-              error_reason_services_search/0]).
+              error_reason_services_search/0,
+              error_reason_code_status/0]).
 
 -record(state,
     {
-        configuration
+        configuration :: #config{}
     }).
 
 -define(CATCH_EXIT(F),
@@ -225,6 +230,10 @@ logging_redirect_set(L, Timeout) ->
 
 logging(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, logging, Timeout)).
+
+code_status(SecondsNow, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {code_status, SecondsNow}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -540,6 +549,11 @@ handle_call(logging, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
 
+handle_call({code_status, SecondsNow}, _,
+            #state{configuration = Config} = State) ->
+    #config{services = Services} = Config,
+    {reply, code_status_files(Services, SecondsNow), State};
+
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
@@ -547,11 +561,11 @@ handle_call(Request, _, State) ->
 handle_cast({service_dead, ID}, #state{configuration = Config} = State) ->
     #config{services = Services} = Config,
     NewServices = lists:filter(fun(Service) ->
-        if
-            is_record(Service, config_service_internal) ->
-                Service#config_service_internal.uuid /= ID;
-            is_record(Service, config_service_external) ->
-                Service#config_service_external.uuid /= ID
+        case Service of
+            #config_service_internal{uuid = InternalID} ->
+                InternalID /= ID;
+            #config_service_external{uuid = ExternalID} ->
+                ExternalID /= ID
         end
     end, Services),
     NewConfig = Config#config{services = NewServices},
@@ -1216,4 +1230,67 @@ service_format(Service) ->
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
+
+code_status_files(Services, SecondsNow) ->
+    {file, FilePathCloudI} = code:is_loaded(?MODULE),
+    case read_file_info(FilePathCloudI) of
+        {ok, #file_info{mtime = ChangeTime}} ->
+            code_status_files(Services, [], ChangeTime, SecondsNow);
+        {error, Reason} ->
+            {error, {file, {FilePathCloudI, Reason}}}
+    end.
+
+code_status_files([], ChangedFiles, _, _) ->
+    {ok,
+     [[{type, Type},
+       {file_age, cloudi_timestamp:seconds_to_string(SecondsElapsed)},
+       {file_path, FilePath}]
+      || {SecondsElapsed, Type, FilePath} <- ChangedFiles]};
+code_status_files([Service | Services], ChangedFiles,
+                  ChangeTime, SecondsNow) ->
+    {Type, FilePath} = case Service of
+        #config_service_internal{file_path = FilePathValue}
+        when FilePathValue /= undefined ->
+            {internal, FilePathValue};
+        #config_service_internal{module = Module} ->
+            {file, FilePathValue} = code:is_loaded(Module),
+            {internal, FilePathValue};
+        #config_service_external{file_path = FilePathValue} ->
+            {external, FilePathValue}
+    end,
+    case read_file_info(FilePath) of
+        {ok, #file_info{mtime = MTime}} ->
+            ServicesNew = code_status_files_filter(Services, Service),
+            if
+                MTime > ChangeTime ->
+                    ChangedFile = {SecondsNow - MTime, Type, FilePath},
+                    code_status_files(ServicesNew,
+                                      lists:umerge(ChangedFiles,
+                                                   [ChangedFile]),
+                                      ChangeTime, SecondsNow);
+                true ->
+                    code_status_files(ServicesNew, ChangedFiles,
+                                      ChangeTime, SecondsNow)
+            end;
+        {error, Reason} ->
+            {error, {file, {FilePath, Reason}}}
+    end.
+
+code_status_files_filter([], _) ->
+    [];
+code_status_files_filter([#config_service_internal{module = Module,
+                                                   file_path = FilePath} |
+                          Services],
+                         #config_service_internal{module = Module,
+                                                  file_path = FilePath} = S) ->
+    code_status_files_filter(Services, S);
+code_status_files_filter([#config_service_external{file_path = FilePath} |
+                          Services],
+                         #config_service_external{file_path = FilePath} = S) ->
+    code_status_files_filter(Services, S);
+code_status_files_filter([Service | Services], S) ->
+    [Service | code_status_files_filter(Services, S)].
+
+read_file_info(FilePath) ->
+    file:read_file_info(FilePath, [raw, {time, posix}]).
 

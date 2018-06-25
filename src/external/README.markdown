@@ -407,9 +407,9 @@ Python `jsonrpclib`
 -------------------
 `Python JSON-RPC library`
 
-- `https://github.com/joshmarshall/jsonrpclib`
+- `https://github.com/tcalmant/jsonrpclib/`
 - `repository location: src/service_api/python/jsonrpclib/`
-- `commit efcf5eee0e12ef8a148c`
-- `Tue Apr 12 18:07:44 PDT 2011`
+- `commit a8fac9cee4e11dc29fa22ce82dca3cbde6bcd309 (v0.3.1)`
+- `Mon Jun 25 11:52:30 PDT 2018`
 - `Apache License 2.0`
 

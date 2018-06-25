@@ -419,6 +419,9 @@ convert_json_to_term_service([{<<"prefix">>, PrefixBinary} | Service], L) ->
     convert_json_to_term_service(Service, [{prefix, Prefix} | L]);
 convert_json_to_term_service([{<<"module">>, ModuleBinary} | Service], L) ->
     Module = case erlang:binary_to_list(ModuleBinary) of
+        [$' | ModuleName0] ->
+            [$' | ModuleNameN] = lists:reverse(ModuleName0),
+            erlang:list_to_atom(lists:reverse(ModuleNameN));
         [$" | FileName0] ->
             [$" | FileNameN] = lists:reverse(FileName0),
             lists:reverse(FileNameN);

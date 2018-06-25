@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-06-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the CloudI Service API function code_status to
+      provide build and runtime information
+      (including service files that have changed since startup)
+    * Fix CloudI Service API tests to rely on
+      cloudi_service_api_requests providing JSON-RPC with
+      JSON data instead of Erlang terms
+    * Update jsonrpclib (now Python 3 is supported)
+
 2018-06-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Final changes to Erlang/OTP 21.0 logger configuration

@@ -31,7 +31,7 @@ hackney              Benoît Chesneau <benoitc@e-engura.org>
 hut                  Tino Breddin
 idna                 Benoît Chesneau <benoitc@e-engura.org>
 jinterface           Ericsson's OTP Team
-jsonlib              Josh Marshall
+jsonrpclib           Josh Marshall
 jsx                  Alisdair Sullivan <alisdairsullivan@yahoo.ca>
 metrics              Benoitît Chesneau <bchesneau@gmail.com>
 mimerl               Benoitît Chesneau <benoc@benoitcnetwork.eu>

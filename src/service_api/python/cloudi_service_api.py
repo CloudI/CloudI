@@ -35,40 +35,4 @@ class CloudI(object):
         self.__server = jsonrpclib.Server(address)
 
     def __getattr__(self, name):
-        if name == 'services':
-            return self.__services
-        elif name == 'services_add':
-            return self.__services_add
-        elif name == 'services_search':
-            return self.__services_search
-        elif name == 'services_status':
-            return self.__services_status
         return self.__server.__getattr__(name)
-
-    def __services(self):
-        raw = self.__server.services()
-        return [
-            (uuid_string,
-             _ServiceDescription(*service_configuration))
-            for uuid_string, service_configuration in erlang.consult(raw)
-        ]
-
-    def __services_add(self, id_list):
-        raw = self.__server.services_add(id_list)
-        return [
-            uuid_string
-            for uuid_string in erlang.consult(raw)
-        ]
-
-    def __services_search(self, id_list):
-        raw = self.__server.services_search(id_list)
-        return [
-            (uuid_string,
-             _ServiceDescription(*service_configuration))
-            for uuid_string, service_configuration in erlang.consult(raw)
-        ]
-
-    def __services_status(self, id_list):
-        raw = self.__server.services_status(id_list)
-        return erlang.consult(raw)
-

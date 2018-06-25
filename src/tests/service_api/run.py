@@ -37,59 +37,76 @@ sys.path.append(
         ).split(os.path.sep)[:-2] + ['service_api', 'python']
     )
 )
-import urllib2
+import json
+if int(sys.version[0]) >= 3:
+    from urllib.request import urlopen
+else:
+    from urllib2 import urlopen
 from cloudi_service_api import CloudI
 
 def _main():
     obj = CloudI()
-    assert obj.nodes_add('[foobar1@hostX, foobar2@hostY]') == 'ok'
-    assert obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') == 'ok'
     assert (
-        obj.nodes_remove('[foobar1@hostX, foobar2@hostY]') ==
-        '{error,{node_not_found,foobar1@hostX}}'
+        obj.nodes_add('["foobar1@hostX", "foobar2@hostY"]') ==
+        '{"success":true}'
+    )
+    assert (
+        obj.nodes_remove('["foobar1@hostX", "foobar2@hostY"]') ==
+        '{"success":true}'
+    )
+    assert (
+        obj.nodes_remove('["foobar1@hostX", "foobar2@hostY"]') ==
+        '{"success":false,"error":"{node_not_found,foobar1@hostX}"}'
     )
 
-    assert obj.acl_remove('[all]') == 'ok'
-    assert obj.acl_add('[{all, [database, tests]}]') == 'ok'
+    assert obj.acl_remove('["all"]') == '{"success":true}'
+    assert (
+        obj.acl_add('{"\'all\'": ["\'database\'", "\'tests\'"]}') ==
+        '{"success":true}'
+    )
 
     # start extra instances of the http_req test
     services_added = obj.services_add("""\
-[[{prefix, "/json_rpc/1/"},
-  {module, cloudi_service_test_http_req}],
- [{prefix, "/json_rpc/2/"},
-  {module, cloudi_service_test_http_req}],
- [{prefix, "/json_rpc/3/"},
-  {module, cloudi_service_test_http_req}],
- [{prefix, "/json_rpc/4/"},
-  {module, cloudi_service_test_http_req}]]
+[{"prefix": "/json_rpc/1/",
+  "module": "'cloudi_service_test_http_req'"},
+ {"prefix": "/json_rpc/2/",
+  "module": "'cloudi_service_test_http_req'"},
+ {"prefix": "/json_rpc/3/",
+  "module": "'cloudi_service_test_http_req'"},
+ {"prefix": "/json_rpc/4/",
+  "module": "'cloudi_service_test_http_req'"}]
 """)
-    assert isinstance(services_added, list) # returns the list of new ServiceIds
-    assert len(services_added) == 4
+    if int(sys.version[0]) >= 3:
+        assert isinstance(services_added, str)
+    else:
+        assert isinstance(services_added, unicode)
+    response = json.loads(services_added)
+    assert response['success']
+    assert len(response['services_add']) == 4
 
     url = 'http://localhost:6464'
     assert (
-        urllib2.urlopen(url + '/json_rpc/1/erlang.xml?value=5').read() ==
-        '<http_test><value>5</value></http_test>'
+        urlopen(url + '/json_rpc/1/erlang.xml?value=5').read() ==
+        b'<http_test><value>5</value></http_test>'
     )
     assert (
-        urllib2.urlopen(url + '/json_rpc/2/erlang.xml?value=6').read() ==
-        '<http_test><value>6</value></http_test>'
+        urlopen(url + '/json_rpc/2/erlang.xml?value=6').read() ==
+        b'<http_test><value>6</value></http_test>'
     )
     assert (
-        urllib2.urlopen(url + '/json_rpc/3/erlang.xml?value=7').read() ==
-        '<http_test><value>7</value></http_test>'
+        urlopen(url + '/json_rpc/3/erlang.xml?value=7').read() ==
+        b'<http_test><value>7</value></http_test>'
     )
     assert (
-        urllib2.urlopen(url + '/json_rpc/4/erlang.xml?value=8').read() ==
-        '<http_test><value>8</value></http_test>'
+        urlopen(url + '/json_rpc/4/erlang.xml?value=8').read() ==
+        b'<http_test><value>8</value></http_test>'
     )
 
     # remove the extra instances of the http_req test
     assert (
-        obj.services_remove('["%s", "%s", "%s", "%s"]' % (
-            services_added[0], services_added[1],
-            services_added[2], services_added[3],
-        )) == 'ok'
+        obj.services_remove(
+            '["%s", "%s", "%s", "%s"]' % tuple(response['services_add'])
+        ) == '{"success":true}'
     )
 
 if __name__ == '__main__':

@@ -293,6 +293,8 @@
     error_reason_logging_syslog_set_configuration().
 -type error_reason_logging_formatters_set() ::
     error_reason_logging_formatters_set_configuration().
+-type error_reason_code_status() ::
+    cloudi_core_i_configurator:error_reason_code_status().
 -export_type([error_reason_acl_add/0,
               error_reason_acl_remove/0,
               error_reason_services_add/0,
@@ -305,7 +307,8 @@
               error_reason_nodes_set/0,
               error_reason_logging_set/0,
               error_reason_logging_syslog_set/0,
-              error_reason_logging_formatters_set/0]).
+              error_reason_logging_formatters_set/0,
+              error_reason_code_status/0]).
 -type error_reason_new() ::
     error_reason_acl_add_configuration() |
     error_reason_services_add_configuration() |

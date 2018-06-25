@@ -45,6 +45,7 @@
          seconds/0,
          seconds_monotonic/0,
          seconds_os/0,
+         seconds_to_string/1,
          milliseconds/0,
          milliseconds_monotonic/0,
          milliseconds_os/0,
@@ -54,6 +55,7 @@
          nanoseconds/0,
          nanoseconds_monotonic/0,
          nanoseconds_os/0,
+         nanoseconds_to_string/1,
          seconds_filter/3,
          seconds_filter_monotonic/3,
          uptime/0,
@@ -237,6 +239,32 @@ seconds_os() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Format a seconds duration as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_to_string(TotalSeconds :: non_neg_integer()) ->
+    nonempty_string().
+
+seconds_to_string(TotalSeconds) ->
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second")]);
+        Hours > 0 ->
+            lists:flatten([time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second")]);
+        true ->
+            lists:flatten(time_value_to_list(Seconds, "second"))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Milliseconds since the UNIX epoch.===
 %% (The UNIX epoch is 1970-01-01T00:00:00)
 %% @end
@@ -390,6 +418,39 @@ nanoseconds_os() ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Format a nanoseconds duration as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nanoseconds_to_string(TotalNanoSeconds :: non_neg_integer()) ->
+    nonempty_string().
+
+nanoseconds_to_string(TotalNanoSeconds) ->
+    NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
+    TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Hours > 0 ->
+            lists:flatten([time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Seconds > 0 ->
+            lists:flatten([time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        true ->
+            lists:flatten(time_value_to_list(NanoSeconds, "nanosecond"))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Filter a list of seconds since the UNIX epoch.===
 %% The list is not ordered.
 %% @end
@@ -511,4 +572,9 @@ uptime_years() ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+time_value_to_list(1, Label) ->
+    ["1 ", Label];
+time_value_to_list(I, Label) ->
+    [erlang:integer_to_list(I), $ , Label, $s].
 

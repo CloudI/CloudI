@@ -5,6 +5,11 @@ AC_INIT([CloudI], [1.7.3], [mjtruog at protonmail dot com],
         [cloudi], [https://cloudi.org/])
 AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 
+# build-time information
+AC_SUBST(BUILD_MACHINE, [`uname -m`])
+AC_SUBST(BUILD_KERNEL_VERSION, [`uname -srv`])
+AC_SUBST(BUILD_OPERATING_SYSTEM, [`uname -o`])
+
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
 PATHS_NONSYSTEM_INC=""
@@ -572,7 +577,7 @@ AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 AC_SUBST([ERLC_OPTS],
-         ["-DERLANG_OTP_VERSION_${ERLANG_OTP_VER} -DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"])
+         ["-DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"])
 if test "$ERLANG_OTP_VER_MAJOR" -ge 18 ; then
 ERL_OPTS="+C multi_time_warp +c true"
 else
@@ -663,6 +668,7 @@ AC_CONFIG_FILES([
     lib/cloudi_core/Makefile
     lib/cloudi_core/cxx_src/Makefile
     lib/cloudi_core/src/cloudi_core.app.src
+    lib/cloudi_core/src/cloudi_environment.hrl
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src

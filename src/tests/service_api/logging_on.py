@@ -42,7 +42,7 @@ from cloudi_service_api import CloudI
 
 def _main():
     obj = CloudI()
-    assert obj.logging_level_set('trace') == 'ok'
+    assert obj.logging_level_set('"trace"') == '{"success":true}'
     print('logging turned on')
 
 if __name__ == '__main__':

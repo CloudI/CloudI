@@ -41,7 +41,7 @@ from cloudi_service_api import CloudI
 
 def _main():
     obj = CloudI()
-    assert obj.code_path_add('"/foo/bar"') == '{error,bad_directory}'
+    assert obj.code_path_add('"/foo/bar"') == '{"success":false,"error":"bad_directory"}'
 
 if __name__ == '__main__':
     _main()

@@ -42,7 +42,7 @@ from cloudi_service_api import CloudI
 
 def _main():
     obj = CloudI()
-    assert obj.logging_level_set('off') == 'ok'
+    assert obj.logging_level_set('"off"') == '{"success":true}'
     print('logging turned off')
 
 if __name__ == '__main__':
