@@ -117,6 +117,9 @@ rel/files/app.config: rel/files/app.config.in
 
 rebar-directories-compile:
 	$(top_srcdir)/rebar_dirs.sh create $(abs_top_srcdir) $(abs_top_builddir)
+	(cd $(top_srcdir)/lib/cloudi_core/src && \
+        test ! -e cloudi_environment.hrl && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
         test ! -e cloudi_os_spawn_vsn_1 && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || exit 0)
@@ -145,6 +148,9 @@ rebar-clean:
 
 rebar-directories-clean: rebar-clean
 	$(top_srcdir)/rebar_dirs.sh destroy $(abs_top_srcdir) $(abs_top_builddir)
+	(test -h $(top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl && \
+	 rm $(top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl || \
+	 exit 0)
 	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 && \
 	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || \
 	 exit 0)
