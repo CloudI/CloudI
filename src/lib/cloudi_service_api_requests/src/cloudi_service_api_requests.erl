@@ -606,7 +606,8 @@ convert_term_to_json({ok, SuccessL}, Method, Space)
 convert_term_to_json({ok, Options}, Method, Space)
     when Method =:= acl;
          Method =:= nodes_get;
-         Method =:= logging ->
+         Method =:= logging;
+         Method =:= code_status ->
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8),
                   convert_term_to_json_options(Options)}], Space).
@@ -716,9 +717,15 @@ convert_term_to_json_service(#external{prefix = Prefix,
       [erlang:list_to_binary(Key ++ "=" ++ Value)
        || {Key, Value} <- Env]} | ServiceN].
 
+convert_term_to_json_option([] = Value) ->
+    Value;
 convert_term_to_json_option([{Key, _} | _] = Value)
     when is_atom(Key) ->
     convert_term_to_json_options(Value);
+convert_term_to_json_option([[{Key, _} | _] | _] = Value)
+    when is_atom(Key) ->
+    [convert_term_to_json_options(Options)
+     || Options <- Value];
 convert_term_to_json_option([H | _] = Value)
     when is_integer(H), H > 0 ->
     erlang:list_to_binary(Value);
@@ -728,8 +735,6 @@ convert_term_to_json_option([[H | _] | _] = Value)
 convert_term_to_json_option([A | _] = Value)
     when is_atom(A) ->
     convert_term_to_json_atoms(Value);
-convert_term_to_json_option([] = Value) ->
-    Value;
 convert_term_to_json_option([_ | _] = Value) ->
     cloudi_string:term_to_binary_compact(Value);
 convert_term_to_json_option(Value)
