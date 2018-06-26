@@ -78,7 +78,11 @@
 % based on unicode_util:whitespace/0
 -define(WHITESPACE, [13,9,10,11,12,13,32,133,8206,8207,8232,8233]).
 % keep output in a single line when using ~p (printable) formatting
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(COMPACT_LIMIT, "0").
+-else.
 -define(COMPACT_LIMIT, "1000000000000").
+-endif.
 
 -include("cloudi_core_i_constants.hrl").
 
