@@ -85,6 +85,8 @@
         error = undefined :: any()
     }).
 
+-define(INFO_RETRY_INTERVAL, 500). % milliseconds
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -209,7 +211,8 @@ cloudi_service_handle_info(#init_end{state = State,
 
 cloudi_service_handle_info(Request, undefined, Dispatcher) ->
     % waiting for #init_end{} still
-    cloudi_service:self(Dispatcher) ! Request,
+    erlang:send_after(?INFO_RETRY_INTERVAL,
+                      cloudi_service:self(Dispatcher), Request),
     {noreply, undefined};
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
