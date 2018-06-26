@@ -1239,8 +1239,9 @@ code_status_files([], ChangedFiles, _, _) ->
     {ok,
      [[{type, Type},
        {file_age, cloudi_timestamp:seconds_to_string(SecondsElapsed)},
-       {file_path, FilePath}]
-      || {SecondsElapsed, Type, FilePath} <- ChangedFiles]};
+       {file_path, FilePath},
+       {service_ids, IDs}]
+      || {SecondsElapsed, Type, FilePath, IDs} <- ChangedFiles]};
 code_status_files([Service | Services], ChangedFiles,
                   SecondsStart, SecondsNow) ->
     {Type, FilePath} = case Service of
@@ -1255,10 +1256,10 @@ code_status_files([Service | Services], ChangedFiles,
     end,
     case read_file_info(FilePath) of
         {ok, #file_info{mtime = MTime}} ->
-            ServicesNew = code_status_files_filter(Services, Service),
+            {IDs, ServicesNew} = code_status_files_filter(Services, Service),
             if
                 MTime > SecondsStart ->
-                    ChangedFile = {SecondsNow - MTime, Type, FilePath},
+                    ChangedFile = {SecondsNow - MTime, Type, FilePath, IDs},
                     code_status_files(ServicesNew,
                                       lists:umerge(ChangedFiles,
                                                    [ChangedFile]),
@@ -1271,20 +1272,31 @@ code_status_files([Service | Services], ChangedFiles,
             {error, {file, {FilePath, Reason}}}
     end.
 
-code_status_files_filter([], _) ->
-    [];
+code_status_files_filter(Services, S) ->
+    code_status_files_filter(Services, [], [], S).
+
+code_status_files_filter([], IDs, ServicesOut, S) ->
+    ID = case S of
+        #config_service_internal{uuid = IDValue} ->
+            IDValue;
+        #config_service_external{uuid = IDValue} ->
+            IDValue
+    end,
+    {[ID | lists:reverse(IDs)], lists:reverse(ServicesOut)};
 code_status_files_filter([#config_service_internal{module = Module,
-                                                   file_path = FilePath} |
-                          Services],
+                                                   file_path = FilePath,
+                                                   uuid = ID} |
+                          ServicesIn], IDs, ServicesOut,
                          #config_service_internal{module = Module,
                                                   file_path = FilePath} = S) ->
-    code_status_files_filter(Services, S);
-code_status_files_filter([#config_service_external{file_path = FilePath} |
-                          Services],
+    code_status_files_filter(ServicesIn, [ID | IDs], ServicesOut, S);
+code_status_files_filter([#config_service_external{file_path = FilePath,
+                                                   uuid = ID} |
+                          ServicesIn], IDs, ServicesOut,
                          #config_service_external{file_path = FilePath} = S) ->
-    code_status_files_filter(Services, S);
-code_status_files_filter([Service | Services], S) ->
-    [Service | code_status_files_filter(Services, S)].
+    code_status_files_filter(ServicesIn, [ID | IDs], ServicesOut, S);
+code_status_files_filter([Service | ServicesIn], IDs, ServicesOut, S) ->
+    code_status_files_filter(ServicesIn, IDs, [Service | ServicesOut], S).
 
 read_file_info(FilePath) ->
     file:read_file_info(FilePath, [raw, {time, posix}]).

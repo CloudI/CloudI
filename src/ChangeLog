@@ -5,6 +5,8 @@
 
     * Add delay for cloudi_service_map_reduce info messages
       that occur before initialization is complete
+    * Add service_ids list to CloudI Service API code_status
+      response within the runtime_changes data
 
 2018-06-25 Michael Truog   <mjtruog at protonmail dot com>
 

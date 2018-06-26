@@ -894,7 +894,9 @@
                   {runtime_changes,
                    list(nonempty_list({type, internal | external} |
                                       {file_age, nonempty_string()} |
-                                      {file_path, nonempty_string()}))}).
+                                      {file_path, nonempty_string()} |
+                                      {service_ids,
+                                       nonempty_list(service_id())}))}).
 -export_type([code_status/0]).
 
 %%%------------------------------------------------------------------------

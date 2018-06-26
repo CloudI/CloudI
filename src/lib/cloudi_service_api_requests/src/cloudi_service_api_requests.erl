@@ -226,8 +226,25 @@ format_json_rpc_call(Method, 2, Param, Timeout, Id) ->
 cloudi_service_api_call(services = Method, Timeout) ->
     case cloudi_service_api:Method(Timeout) of
         {ok, L} ->
-            {ok, [{service_id(UUID), Data} ||
-                  {UUID, Data} <- L]};
+            {ok, [{service_id(ID), Data} ||
+                  {ID, Data} <- L]};
+        {error, _} = Error ->
+            Error
+    end;
+cloudi_service_api_call(code_status = Method, Timeout) ->
+    case cloudi_service_api:Method(Timeout) of
+        {ok, Status} ->
+            {runtime_changes,
+             RuntimeChanges} = lists:keyfind(runtime_changes, 1, Status),
+            RuntimeChangesNew = lists:map(fun(RuntimeChange) ->
+                {service_ids,
+                 IDs} = lists:keyfind(service_ids, 1, RuntimeChange),
+                lists:keyreplace(service_ids, 1, RuntimeChange,
+                                 {service_ids, [service_id(ID) || ID <- IDs]})
+            end, RuntimeChanges),
+            StatusNew = lists:keyreplace(runtime_changes, 1, Status,
+                                         {runtime_changes, RuntimeChangesNew}),
+            {ok, StatusNew};
         {error, _} = Error ->
             Error
     end;
@@ -239,26 +256,26 @@ cloudi_service_api_call(Method, Input, Timeout)
          Method =:= services_status ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, L} ->
-            {ok, [{service_id(UUID), Data} ||
-                  {UUID, Data} <- L]};
+            {ok, [{service_id(ID), Data} ||
+                  {ID, Data} <- L]};
         {error, _} = Error ->
             Error
     end;
 cloudi_service_api_call(services_add = Method, Input, Timeout) ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, L} ->
-            {ok, [service_id(UUID) || UUID <- L]};
+            {ok, [service_id(ID) || ID <- L]};
         {error, _} = Error ->
             Error
     end;
 cloudi_service_api_call(services_update = Method, Input, Timeout) ->
     case cloudi_service_api:Method(Input, Timeout) of
         {ok, SuccessSet} ->
-            {ok, [[service_id(UUID) || UUID <- L] || L <- SuccessSet]};
+            {ok, [[service_id(ID) || ID <- L] || L <- SuccessSet]};
         {error, {ErrorL, Reason}, SuccessSet} ->
             {error,
-             {[service_id(UUID) || UUID <- ErrorL], Reason},
-             [[service_id(UUID) || UUID <- L] || L <- SuccessSet]};
+             {[service_id(ID) || ID <- ErrorL], Reason},
+             [[service_id(ID) || ID <- L] || L <- SuccessSet]};
         {error, _} = Error ->
             Error
     end;
