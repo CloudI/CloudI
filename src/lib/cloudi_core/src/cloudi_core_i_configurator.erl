@@ -1233,14 +1233,7 @@ service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
 code_status_files(Services, SecondsStart, SecondsNow) ->
-    {file, FilePathCloudI} = code:is_loaded(?MODULE),
-    case read_file_info(FilePathCloudI) of
-        {ok, #file_info{mtime = MTime}} ->
-            ChangeTime = erlang:max(MTime, SecondsStart),
-            code_status_files(Services, [], ChangeTime, SecondsNow);
-        {error, Reason} ->
-            {error, {file, {FilePathCloudI, Reason}}}
-    end.
+    code_status_files(Services, [], SecondsStart, SecondsNow).
 
 code_status_files([], ChangedFiles, _, _) ->
     {ok,
@@ -1249,7 +1242,7 @@ code_status_files([], ChangedFiles, _, _) ->
        {file_path, FilePath}]
       || {SecondsElapsed, Type, FilePath} <- ChangedFiles]};
 code_status_files([Service | Services], ChangedFiles,
-                  ChangeTime, SecondsNow) ->
+                  SecondsStart, SecondsNow) ->
     {Type, FilePath} = case Service of
         #config_service_internal{file_path = FilePathValue}
         when FilePathValue /= undefined ->
@@ -1264,15 +1257,15 @@ code_status_files([Service | Services], ChangedFiles,
         {ok, #file_info{mtime = MTime}} ->
             ServicesNew = code_status_files_filter(Services, Service),
             if
-                MTime > ChangeTime ->
+                MTime > SecondsStart ->
                     ChangedFile = {SecondsNow - MTime, Type, FilePath},
                     code_status_files(ServicesNew,
                                       lists:umerge(ChangedFiles,
                                                    [ChangedFile]),
-                                      ChangeTime, SecondsNow);
+                                      SecondsStart, SecondsNow);
                 true ->
                     code_status_files(ServicesNew, ChangedFiles,
-                                      ChangeTime, SecondsNow)
+                                      SecondsStart, SecondsNow)
             end;
         {error, Reason} ->
             {error, {file, {FilePath, Reason}}}
