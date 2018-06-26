@@ -65,7 +65,7 @@
          logging_formatters_set/2,
          logging_redirect_set/2,
          logging/1,
-         code_status/2,
+         code_status/3,
          service_start/2,
          service_stop/3,
          service_restart/2,
@@ -231,9 +231,10 @@ logging_redirect_set(L, Timeout) ->
 logging(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, logging, Timeout)).
 
-code_status(SecondsNow, Timeout) ->
+code_status(SecondsStart, SecondsNow, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
-                                {code_status, SecondsNow}, Timeout)).
+                                {code_status,
+                                 SecondsStart, SecondsNow}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -549,10 +550,10 @@ handle_call(logging, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
 
-handle_call({code_status, SecondsNow}, _,
+handle_call({code_status, SecondsStart, SecondsNow}, _,
             #state{configuration = Config} = State) ->
     #config{services = Services} = Config,
-    {reply, code_status_files(Services, SecondsNow), State};
+    {reply, code_status_files(Services, SecondsStart, SecondsNow), State};
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
@@ -1231,10 +1232,11 @@ service_format(Service) ->
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).
 
-code_status_files(Services, SecondsNow) ->
+code_status_files(Services, SecondsStart, SecondsNow) ->
     {file, FilePathCloudI} = code:is_loaded(?MODULE),
     case read_file_info(FilePathCloudI) of
-        {ok, #file_info{mtime = ChangeTime}} ->
+        {ok, #file_info{mtime = MTime}} ->
+            ChangeTime = erlang:max(MTime, SecondsStart),
             code_status_files(Services, [], ChangeTime, SecondsNow);
         {error, Reason} ->
             {error, {file, {FilePathCloudI, Reason}}}

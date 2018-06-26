@@ -1611,7 +1611,9 @@ code_status(Timeout)
     SecondsNow = cloudi_timestamp:
                  convert(TimeNative + erlang:time_offset(),
                          native, second),
-    case cloudi_core_i_configurator:code_status(SecondsNow, Timeout) of
+    SecondsStart = SecondsNow - RuntimeTotal,
+    case cloudi_core_i_configurator:code_status(SecondsStart, SecondsNow,
+                                                Timeout) of
         {ok, RuntimeChanges} ->
             Status = cloudi_environment:status() ++
                 [{runtime_total,
