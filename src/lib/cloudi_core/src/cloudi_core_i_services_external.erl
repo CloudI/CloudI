@@ -124,8 +124,8 @@
         protocol = undefined :: undefined | tcp | udp | local,
         % (13) external thread connection port
         port = undefined :: undefined | non_neg_integer(),
-        % (14) wait for cloudi_core_i_services_monitor:initialize/1 to send
-        % cloudi_service_init_begin when all of the service instance
+        % (14) wait for cloudi_core_i_services_monitor:process_init_begin/1
+        % to send cloudi_service_init_begin when all of the service instance
         % processes have been spawned
         initialize = false :: boolean(),
         % (15) udp incoming data port
@@ -439,7 +439,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                       ServiceState) of
         {ok, NewServiceState} ->
             ok = cloudi_core_i_services_monitor:
-                 initialized_process(Dispatcher),
+                 process_init_end(Dispatcher),
             if
                 Subscriptions == [] ->
                     ok;
@@ -1459,7 +1459,8 @@ terminate(Reason, _,
                  service_state = ServiceState,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}} = State) ->
-    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher, Reason),
+    _ = cloudi_core_i_services_monitor:
+        process_terminate_begin(Dispatcher, Reason),
     {ok, _} = aspects_terminate(Aspects, Reason, TimeoutTerm, ServiceState),
     ok = socket_close(Reason, socket_data_from_state(State)),
     ok.

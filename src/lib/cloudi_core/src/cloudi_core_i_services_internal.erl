@@ -350,9 +350,9 @@ init([ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
     % no process dictionary or state modifications below
 
     % send after 'cloudi_service_init_execute' to avoid race with
-    % cloudi_core_i_services_monitor:initialize/1
+    % cloudi_core_i_services_monitor:process_init_begin/1
     ok = cloudi_core_i_services_internal_sup:
-         create_internal_done(Parent, Dispatcher, ReceiverPid),
+         process_started(Parent, Dispatcher, ReceiverPid),
 
     #config_service_options{
         dest_refresh_start = Delay,
@@ -1903,7 +1903,7 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                 {ok, NewServiceState} ->
                     erlang:process_flag(trap_exit, true),
                     ok = cloudi_core_i_services_monitor:
-                         initialized_process(Dispatcher),
+                         process_init_end(Dispatcher),
                     NewState = NextState#state{service_state = NewServiceState,
                                                options = NewConfigOptions},
                     {noreply, process_queues(NewState)};
@@ -1967,7 +1967,8 @@ terminate(Reason,
                  duo_mode_pid = undefined,
                  options = #config_service_options{
                      aspects_terminate_before = Aspects}}) ->
-    _ = cloudi_core_i_services_monitor:terminate_kill(Dispatcher, Reason),
+    _ = cloudi_core_i_services_monitor:
+        process_terminate_begin(Dispatcher, Reason),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, NewServiceState),
@@ -3464,7 +3465,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                                           NewDispatcherProcessDictionary,
                                           NewDispatcherState},
                             ok = cloudi_core_i_services_monitor:
-                                 initialized_process(DuoModePid),
+                                 process_init_end(DuoModePid),
                             NewState = NextState#state_duo{
                                            service_state = NewServiceState},
                             FinalState = duo_process_queues(NewState),
@@ -3543,7 +3544,8 @@ duo_mode_loop_terminate(Reason,
                                    timeout_term = TimeoutTerm,
                                    options = #config_service_options{
                                        aspects_terminate_before = Aspects}}) ->
-    _ = cloudi_core_i_services_monitor:terminate_kill(DuoModePid, Reason),
+    _ = cloudi_core_i_services_monitor:
+        process_terminate_begin(DuoModePid, Reason),
     {ok, NewServiceState} = aspects_terminate(Aspects, Reason, TimeoutTerm,
                                               ServiceState),
     _ = Module:cloudi_service_terminate(Reason, TimeoutTerm, NewServiceState),

@@ -40,7 +40,7 @@
 
 %% external interface
 -export([start_link/0,
-         create_external/20]).
+         process_start/20]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -62,12 +62,12 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_external(Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
-                TimeStart, TimeRestart, Restarts,
-                CommandLine, BufferSize, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync, TimeoutTerm,
-                DestRefresh, DestDeny, DestAllow,
-                ConfigOptions, ID)
+process_start(Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
+              TimeStart, TimeRestart, Restarts,
+              CommandLine, BufferSize, Timeout, Prefix,
+              TimeoutSync, TimeoutAsync, TimeoutTerm,
+              DestRefresh, DestDeny, DestAllow,
+              ConfigOptions, ID)
     when is_atom(Protocol), is_list(SocketPath), is_integer(ThreadIndex),
          is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(TimeStart), is_integer(Restarts),

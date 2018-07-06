@@ -40,8 +40,8 @@
 
 %% external interface
 -export([start_link/0,
-         create_internal/18,
-         create_internal_done/3]).
+         process_start/18,
+         process_started/3]).
 
 %% supervisor callbacks
 -export([init/1]).
@@ -69,12 +69,12 @@ start_link() ->
 %% @end
 %%-------------------------------------------------------------------------
 
-create_internal(ProcessIndex, ProcessCount,
-                TimeStart, TimeRestart, Restarts,
-                GroupLeader, Module, Args, Timeout, Prefix,
-                TimeoutSync, TimeoutAsync, TimeoutTerm,
-                DestRefresh, DestDeny, DestAllow,
-                ConfigOptions, ID)
+process_start(ProcessIndex, ProcessCount,
+              TimeStart, TimeRestart, Restarts,
+              GroupLeader, Module, Args, Timeout, Prefix,
+              TimeoutSync, TimeoutAsync, TimeoutTerm,
+              DestRefresh, DestDeny, DestAllow,
+              ConfigOptions, ID)
     when is_integer(ProcessIndex), is_integer(ProcessCount),
          is_integer(TimeStart), is_integer(Restarts),
          is_atom(Module), is_list(Args), is_integer(Timeout), is_list(Prefix),
@@ -116,7 +116,7 @@ create_internal(ProcessIndex, ProcessCount,
 %% @end
 %%-------------------------------------------------------------------------
 
-create_internal_done(Parent, Dispatcher, ReceiverPid)
+process_started(Parent, Dispatcher, ReceiverPid)
     when is_pid(Parent), is_pid(Dispatcher), is_pid(ReceiverPid) ->
     Parent ! #cloudi_service_process_start{dispatcher = Dispatcher,
                                            service = ReceiverPid},
@@ -144,10 +144,9 @@ result(Dispatcher) ->
     receive
         #cloudi_service_process_start{dispatcher = Dispatcher,
                                       service = Service} ->
-            % sent before cloudi_service_init/4 via create_internal_done/3
-            % after the Erlang process is ready for
-            % cloudi_service_init_begin from
-            % cloudi_core_i_services_monitor:initialize/1
+            % sent before cloudi_service_init/4 via process_started/3
+            % after the Erlang process is ready for cloudi_service_init_begin
+            % from cloudi_core_i_services_monitor:process_init_begin/1
             erlang:demonitor(MonitorRef, [flush]),
             {ok, Service};
         {'DOWN', MonitorRef, process, Dispatcher, Info} ->

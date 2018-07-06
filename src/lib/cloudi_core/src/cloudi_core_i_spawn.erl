@@ -50,8 +50,10 @@
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
 
--define(CREATE_INTERNAL, cloudi_core_i_services_internal_sup:create_internal).
--define(CREATE_EXTERNAL, cloudi_core_i_services_external_sup:create_external).
+-define(PROCESS_START_INTERNAL,
+        cloudi_core_i_services_internal_sup:process_start).
+-define(PROCESS_START_EXTERNAL,
+        cloudi_core_i_services_external_sup:process_start).
 
 % environmental variables used by CloudI API initialization
 -define(ENVIRONMENT_THREAD_COUNT,  "CLOUDI_API_INIT_THREAD_COUNT").
@@ -126,12 +128,13 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         {ok, NewTimeout} ->
             % Erlang application startup is asynchronous, so wait for the
             % module to be loaded or timeout
-            ?CREATE_INTERNAL(ProcessIndex, ProcessCount,
-                             TimeStart, TimeRestart, Restarts,
-                             GroupLeader, Module, Args, NewTimeout, Prefix,
-                             TimeoutAsync, TimeoutSync, TimeoutTerm,
-                             DestRefresh, DestDeny, DestAllow,
-                             ConfigOptions, ID);
+            ?PROCESS_START_INTERNAL(ProcessIndex, ProcessCount,
+                                    TimeStart, TimeRestart, Restarts,
+                                    GroupLeader, Module, Args,
+                                    NewTimeout, Prefix,
+                                    TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                    DestRefresh, DestDeny, DestAllow,
+                                    ConfigOptions, ID);
         {error, Reason} ->
             ?LOG_ERROR("loading ~p failed: ~p", [Module, Reason]),
             {error, {service_internal_module_not_loaded, Module}}
@@ -511,14 +514,15 @@ start_external_thread(I, Pids, Ports, ThreadsPerProcess,
                       Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
                       DestRefresh, DestDeny, DestAllow,
                       ConfigOptions, ID) ->
-    case ?CREATE_EXTERNAL(Protocol, SocketPath,
-                          I + ThreadsPerProcess * ProcessIndex,
-                          ProcessIndex, ProcessCount,
-                          TimeStart, TimeRestart, Restarts,
-                          CommandLine, BufferSize, Timeout,
-                          Prefix, TimeoutAsync, TimeoutSync, TimeoutTerm,
-                          DestRefresh, DestDeny, DestAllow,
-                          ConfigOptions, ID) of
+    case ?PROCESS_START_EXTERNAL(Protocol, SocketPath,
+                                 I + ThreadsPerProcess * ProcessIndex,
+                                 ProcessIndex, ProcessCount,
+                                 TimeStart, TimeRestart, Restarts,
+                                 CommandLine, BufferSize,
+                                 Timeout, Prefix,
+                                 TimeoutAsync, TimeoutSync, TimeoutTerm,
+                                 DestRefresh, DestDeny, DestAllow,
+                                 ConfigOptions, ID) of
         {ok, Pid, Port} ->
             start_external_thread(I + 1, [Pid | Pids], [Port | Ports],
                                   ThreadsPerProcess,

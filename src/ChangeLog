@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve (internal cloudi_core) message names and function names
+      related to CloudI service initialization and termination
+
 2018-06-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add delay for cloudi_service_map_reduce info messages

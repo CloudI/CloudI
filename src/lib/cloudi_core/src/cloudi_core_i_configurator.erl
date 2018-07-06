@@ -71,8 +71,8 @@
          service_restart/2,
          service_update/2,
          service_update_external/5,
-         service_initialized_process/1,
-         service_dead/1]).
+         service_process_init_end/1,
+         service_terminated/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -332,17 +332,17 @@ service_update_external(Pids, Ports, Arguments,
     service_update_external(0, Pids, Ports, Arguments,
                             CountThread, CountProcess).
 
-service_initialized_process(Pid)
+service_process_init_end(Pid)
     when is_pid(Pid) ->
-    ?MODULE ! {service_initialized_process, Pid},
+    ?MODULE ! {cloudi_service_init_end, Pid},
     ok.
 
--spec service_dead(ID :: binary()) ->
+-spec service_terminated(ID :: binary()) ->
     ok.
 
-service_dead(ID)
+service_terminated(ID)
     when is_binary(ID) ->
-    gen_server:cast(?MODULE, {service_dead, ID}).
+    gen_server:cast(?MODULE, {service_terminated, ID}).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server
@@ -559,7 +559,8 @@ handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),
      error, State}.
 
-handle_cast({service_dead, ID}, #state{configuration = Config} = State) ->
+handle_cast({service_terminated, ID},
+            #state{configuration = Config} = State) ->
     #config{services = Services} = Config,
     NewServices = lists:filter(fun(Service) ->
         case Service of
@@ -586,7 +587,7 @@ handle_info(configure,
             {stop, Error, State}
     end;
 
-handle_info({service_initialized_process, _}, State) ->
+handle_info({cloudi_service_init_end, _}, State) ->
     % a service process has initialized due to count_process_dynamic
     % (nothing to do, handled by cloudi_core_i_services_monitor)
     {noreply, State};
@@ -932,7 +933,7 @@ service_start_wait_pid([], Error) ->
     Error;
 service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
     receive
-        {service_initialized_process, Pid} ->
+        {cloudi_service_init_end, Pid} ->
             erlang:demonitor(MonitorRef, [flush]),
             % at this point:
             % - if it is an internal service process:
@@ -971,10 +972,8 @@ service_start_wait(Pids, Service) ->
     % or the cloudi_service_api:services_add/2 function when a service
     % starts for the first time
     % (restarts require cloudi_core_i_services_monitor to
-    %  call cloudi_core_i_services_monitor:initialize/1)
-    lists:foreach(fun(P) ->
-        ok = cloudi_core_i_services_monitor:initialize(P)
-    end, Pids),
+    %  call cloudi_core_i_services_monitor:process_init_begin/1)
+    ok = cloudi_core_i_services_monitor:process_init_begin(Pids),
     service_start_wait_pids(MonitorPids, undefined, Service).
 
 service_start_internal(CountProcess, Pids, Service, _, CountProcess, _) ->
