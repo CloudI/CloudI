@@ -72,6 +72,16 @@ var packUint32big = function packUint32big (value) {
                        (value >>> 8) & 0xff,
                        value & 0xff]);
 };
+var nodejs = process.versions['node'].split('.').map(s => parseInt(s));
+var nodejsVersionAfter = function nodejsVersionAfter (s) {
+    var v = s.split('.').map(s => parseInt(s));
+    for (var i = 0; i < v.length; i++) {
+        if (nodejs[i] > v[i]) {
+            return true;
+        }
+    }
+    return false;
+};
 
 var InvalidInputException = function InvalidInputException () {
     var error = new Error('Invalid Input');
@@ -203,7 +213,7 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    if (process.versions['node'].split('.').map(s => parseInt(s)) > [0,12,1]) {
+    if (nodejsVersionAfter('0.12.1')) {
         API._s_in = new net.Socket({fd: (thread_index + 3),
                                     readable: true,
                                     writable: true});

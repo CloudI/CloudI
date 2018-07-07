@@ -4,6 +4,7 @@
 2018-07-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Javascript CloudI API termination by closing its socket
+    * Fix Javascript CloudI API version check for compatibility
 
 2018-07-06 Michael Truog   <mjtruog at protonmail dot com>
 
