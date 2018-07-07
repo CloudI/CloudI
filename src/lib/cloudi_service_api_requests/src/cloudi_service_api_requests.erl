@@ -675,7 +675,7 @@ convert_term_to_json_service(#internal{prefix = Prefix,
     [{<<"id">>, erlang:list_to_binary(Id)},
      {<<"prefix">>, erlang:list_to_binary(Prefix)},
      {<<"module">>, erlang:atom_to_binary(Module, utf8)},
-     {<<"args">>, convert_term_to_json_options(Args)} | ServiceN];
+     {<<"args">>, cloudi_string:term_to_binary_compact(Args)} | ServiceN];
 convert_term_to_json_service(#external{prefix = Prefix,
                                        file_path = FilePath,
                                        args = Args,
@@ -770,7 +770,7 @@ convert_term_to_json_options([{Key, Value} | Options]) ->
     [{erlang:atom_to_binary(Key, utf8),
       convert_term_to_json_option(Value)} |
      convert_term_to_json_options(Options)].
-         
+
 convert_term_to_json_strings([]) ->
     [];
 convert_term_to_json_strings([S | L]) ->

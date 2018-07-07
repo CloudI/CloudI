@@ -147,6 +147,13 @@
         service :: #service{}
     }).
 
+-record(cloudi_service_terminate_begin,
+    {
+        reason :: any(),
+        pid :: pid(),
+        time_terminate :: cloudi_timestamp:native_monotonic()
+    }).
+
 -record(cloudi_service_terminate_end,
     {
         reason :: any(),
@@ -252,12 +259,18 @@ process_init_end(Pid)
                                         time_initialized = TimeInitialized},
     ok.
 
+-spec process_terminate_begin(Pid :: pid(),
+                              Reason :: any()) ->
+    ok | {error, any()}.
+
 process_terminate_begin(Pid, Reason)
     when is_pid(Pid) ->
     TimeTerminate = cloudi_timestamp:native_monotonic(),
     ?CATCH_EXIT(gen_server:cast(?MODULE,
-                                {cloudi_service_terminate_begin,
-                                 Pid, Reason, TimeTerminate})).
+                                #cloudi_service_terminate_begin{
+                                    reason = Reason,
+                                    pid = Pid,
+                                    time_terminate = TimeTerminate})).
 
 shutdown(ServiceId, Timeout)
     when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
@@ -356,7 +369,8 @@ handle_call({shutdown, ServiceId}, _,
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, #service{} = Service}} ->
             ServicesNew = terminate_service(Pids, undefined, Service,
-                                            Services, ServiceId, undefined),
+                                            Services, ServiceId,
+                                            undefined, true),
             {reply, {ok, Pids}, State#state{services = ServicesNew}};
         error ->
             {reply, {error, not_found}, State}
@@ -476,12 +490,15 @@ handle_cast({Direction,
             {noreply, State}
     end;
 
-handle_cast({cloudi_service_terminate_begin, Pid, Reason, TimeTerminate},
+handle_cast(#cloudi_service_terminate_begin{
+                reason = Reason,
+                pid = Pid,
+                time_terminate = TimeTerminate},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            ok = terminate_end_enforce(self(), Reason, Pid,
-                                       ServiceId, Service),
+            ok = terminate_end_enforce(TimeTerminate, self(),
+                                       Reason, Pid, ServiceId, Service),
             ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{time_terminate = TimeTerminate}, Services),
             {noreply, State#state{services = ServicesNew}};
@@ -529,7 +546,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, shutdown},
             ?LOG_INFO_SYNC("Service pid ~p shutdown~n ~p",
                            [Pid, service_id(ServiceId)]),
             ServicesNew = terminate_service(Pids, undefined, Service,
-                                            Services, ServiceId, Pid),
+                                            Services, ServiceId, Pid, false),
             {noreply,
              terminated_service(ServiceId,
                                 State#state{services = ServicesNew})};
@@ -559,7 +576,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
             ?LOG_INFO_SYNC("Service pid ~p shutdown (~p)~n ~p",
                            [Pid, Reason, service_id(ServiceId)]),
             ServicesNew = terminate_service(Pids, Reason, Service,
-                                            Services, ServiceId, Pid),
+                                            Services, ServiceId, Pid, false),
             {noreply,
              terminated_service(ServiceId,
                                 State#state{services = ServicesNew})};
@@ -693,7 +710,7 @@ restart(#service{time_start = TimeStart,
 restart_stage1(#service{pids = Pids} = Service,
                Services, State, ServiceId, TimeTerminate, OldPid) ->
     ServicesNew = terminate_service(Pids, undefined, Service,
-                                    Services, ServiceId, OldPid),
+                                    Services, ServiceId, OldPid, true),
     restart_stage2(Service#service{pids = [],
                                    monitor = undefined},
                    ServicesNew, State, ServiceId, TimeTerminate, OldPid).
@@ -1113,14 +1130,29 @@ pids_decrease(Count, OldPids, CountProcessCurrent, Rate,
      ServicesNew} = pids_update(ServiceLNew, CountProcess, ServiceId, Services),
     ServicesNew.
 
-terminate_end_enforce(Self, Reason, Pid, ServiceId,
+terminate_end_enforce(TimeTerminate, Self,
+                      Reason, Pid, ServiceId,
                       #service{timeout_term = TimeoutTerm} = Service) ->
-    erlang:send_after(TimeoutTerm, Self,
-                      #cloudi_service_terminate_end{reason = Reason,
-                                                    pid = Pid,
-                                                    service_id = ServiceId,
-                                                    service = Service}),
-    ok.
+    Timeout = if
+        TimeTerminate =:= undefined ->
+            TimeoutTerm;
+        is_integer(TimeTerminate) ->
+            TimeoutTerm -
+            cloudi_timestamp:convert(cloudi_timestamp:native_monotonic() -
+                                     TimeTerminate, native, millisecond)
+    end,
+    if
+        Timeout > 0 ->
+            erlang:send_after(Timeout, Self,
+                              #cloudi_service_terminate_end{
+                                  reason = Reason,
+                                  pid = Pid,
+                                  service_id = ServiceId,
+                                  service = Service}),
+            ok;
+        true ->
+            terminate_end_enforce_now(Reason, Pid, ServiceId, Service)
+    end.
 
 terminate_end_enforce_now(Reason, Pid, ServiceId,
                           #service{timeout_term = TimeoutTerm}) ->
@@ -1135,7 +1167,7 @@ terminate_end_enforce_now(Reason, Pid, ServiceId,
     end,
     ok.
 
-terminate_service(Pids, Reason, Service, Services, ServiceId, OldPid) ->
+terminate_service(Pids, Reason, Service, Services, ServiceId, OldPid, Block) ->
     ShutdownExit = if
         Reason =:= undefined ->
             shutdown;
@@ -1144,7 +1176,12 @@ terminate_service(Pids, Reason, Service, Services, ServiceId, OldPid) ->
     end,
     ServicesNew = terminate_service_pids(Pids, Services, self(), ShutdownExit,
                                          Service, ServiceId, OldPid),
-    ok = terminate_service_wait(Pids, OldPid),
+    if
+        Block =:= true ->
+            ok = terminate_service_wait(Pids, OldPid);
+        Block =:= false ->
+            ok
+    end,
     ServicesNew.
 
 terminate_service_pids([], Services, _, _, _, _, _) ->
@@ -1157,7 +1194,8 @@ terminate_service_pids([OldPid | Pids], Services, Self, ShutdownExit,
 terminate_service_pids([Pid | Pids], Services, Self, ShutdownExit,
                        Service, ServiceId, OldPid) ->
     erlang:exit(Pid, ShutdownExit),
-    ok = terminate_end_enforce(Self, ShutdownExit, Pid, ServiceId, Service),
+    ok = terminate_end_enforce(undefined, Self, ShutdownExit, Pid,
+                               ServiceId, Service),
     ServicesNew = cloudi_x_key2value:erase(ServiceId, Pid, Services),
     terminate_service_pids(Pids, ServicesNew, Self, ShutdownExit,
                            Service, ServiceId, OldPid).

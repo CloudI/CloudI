@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_process).
@@ -396,13 +396,11 @@ cgroup_set(OSPid, Values)
     ok = cloudi_x_cgroups:destroy(CGroups),
     Result.
 
--spec cgroup_unset(OSPid :: pos_integer() | undefined,
+-spec cgroup_unset(OSPid :: pos_integer(),
                    Values :: cloudi_service_api:cgroup_external()) ->
     ok |
     {error, any()}.
 
-cgroup_unset(undefined, _) ->
-    ok;
 cgroup_unset(_, undefined) ->
     ok;
 cgroup_unset(OSPid, Values)

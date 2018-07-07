@@ -1,6 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-06 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the TIMEOUT_TERMINATE_EXTERNAL macro to reduce the
+      timeout_terminate value used in the OS processes of
+      external service threads, to allow time for sending SIGKILL
+      while avoiding the potential for the service monitor
+      to kill the external service Erlang process
+    * Fix how cloudi_service_api_requests turns an internal
+      service's arguments into a JSON string so it matches
+      the JSON input of an internal service
+    * Change the service monitor to not wait for the termination
+      of service processes when a service is forced to shutdown
+    * In the service monitor, use the time of the beginning of the
+      termination to more accurately enforce the timeout_termination
+
 2018-07-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve (internal cloudi_core) message names and function names

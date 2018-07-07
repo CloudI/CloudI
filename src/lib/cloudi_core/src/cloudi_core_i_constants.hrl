@@ -60,6 +60,13 @@
 -define(TIMEOUT_TERMINATE_CALC1(MaxR, MaxT),
         ((1000 * MaxT) div MaxR - ?TIMEOUT_DELTA)).
 
+% termination timeout reduction to ensure enough time is available
+% to send SIGKILL to the OS pid, if it is still running
+% (the external service Erlang process needs to avoid getting
+%  killed by the monitor to be able to send the SIGKILL)
+-define(TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
+        erlang:max(0, TimeoutTerm - 500)).
+
 % cloudi_x_pqueue4 usage limited by the signed byte integer storage
 -define(PRIORITY_HIGH, -128).
 -define(PRIORITY_LOW, 127).

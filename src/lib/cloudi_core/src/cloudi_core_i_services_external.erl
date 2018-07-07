@@ -1536,19 +1536,15 @@ os_pid_set(OSPid, State) ->
     ?LOG_INFO("OS pid ~w connected", [OSPid]),
     State#state{os_pid = OSPid}.
 
-os_pid_kill(#state_socket{os_pid = OSPid,
-                          cgroup = CGroup}) ->
+os_pid_terminate(#state_socket{os_pid = undefined}) ->
+    ok;
+os_pid_terminate(#state_socket{os_pid = OSPid,
+                               cgroup = CGroup}) ->
     % if the OSPid exists at this point, it is probably stuck.
     % without this kill, the process could just stay around, while
     % being unresponsive and without its Erlang socket pids.
-    if
-        OSPid =:= undefined ->
-            ok;
-        true ->
-            _ = os:cmd(cloudi_string:format("kill -9 ~w", [OSPid])),
-            _ = cloudi_core_i_os_process:cgroup_unset(OSPid, CGroup),
-            ok
-    end,
+    _ = os:cmd(cloudi_string:format("kill -9 ~w", [OSPid])),
+    _ = cloudi_core_i_os_process:cgroup_unset(OSPid, CGroup),
     ok.
 
 os_init(#state{initialize = true,
@@ -1815,6 +1811,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority,
     PrefixBin = erlang:list_to_binary(Prefix),
     PrefixSize = erlang:byte_size(PrefixBin) + 1,
     true = PrefixSize < 4294967296,
+    TimeoutTermExternal = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
     <<?MESSAGE_INIT:32/unsigned-integer-native,
       ProcessIndex:32/unsigned-integer-native,
       ProcessCount:32/unsigned-integer-native,
@@ -1825,7 +1822,7 @@ handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority,
       TimeoutInit:32/unsigned-integer-native,
       TimeoutAsync:32/unsigned-integer-native,
       TimeoutSync:32/unsigned-integer-native,
-      TimeoutTerm:32/unsigned-integer-native,
+      TimeoutTermExternal:32/unsigned-integer-native,
       PriorityDefault:8/signed-integer-native>>.
 
 'reinit_out'(ProcessCount, TimeoutAsync, TimeoutSync,
@@ -2392,13 +2389,14 @@ socket_close(_Reason,
         is_port(Socket) ->
             case send('terminate_out'(), StateSocket) of
                 ok ->
+                    Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
                     receive
                         {tcp_closed, Socket} ->
                             ok;
                         {tcp_error, Socket, _} ->
                             ok
                     after
-                        TimeoutTerm ->
+                        Timeout ->
                             ok
                     end;
                 {error, _} ->
@@ -2417,7 +2415,8 @@ socket_close(_Reason,
         is_port(Socket) ->
             case send('terminate_out'(), StateSocket) of
                 ok ->
-                    TerminateSleep = erlang:min(?KEEPALIVE_UDP, TimeoutTerm),
+                    Timeout = ?TIMEOUT_TERMINATE_EXTERNAL(TimeoutTerm),
+                    TerminateSleep = erlang:min(?KEEPALIVE_UDP, Timeout),
                     receive after TerminateSleep -> ok end;
                 {error, _} ->
                     ok
@@ -2444,7 +2443,7 @@ socket_close(#state_socket{protocol = Protocol,
         true ->
             ok
     end,
-    ok = os_pid_kill(StateSocket),
+    ok = os_pid_terminate(StateSocket),
     ok;
 socket_close(#state_socket{protocol = udp,
                            socket = Socket} = StateSocket) ->
@@ -2454,7 +2453,7 @@ socket_close(#state_socket{protocol = udp,
         is_port(Socket) ->
             catch gen_udp:close(Socket)
     end,
-    ok = os_pid_kill(StateSocket),
+    ok = os_pid_terminate(StateSocket),
     ok.
 
 socket_data_to_state(#state_socket{protocol = Protocol,
