@@ -203,7 +203,7 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    if (process.versions['node'] > '0.12.1') {
+    if (process.versions['node'].split('.') > ['0', '12', '1']) {
         API._s_in = new net.Socket({fd: (thread_index + 3),
                                     readable: true,
                                     writable: true});
@@ -979,6 +979,7 @@ CloudI.API.prototype._poll_wait = function (f) {
 CloudI.API.prototype._poll_terminate = function () {
     var API = this;
     API._terminate = true;
+    API._s_in.destroy();
     if (API._terminate_callback !== undefined) {
         API._terminate_callback(false);
     }
