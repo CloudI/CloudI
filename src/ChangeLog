@@ -19,7 +19,7 @@
     * Change the service monitor to not wait for the termination
       of service processes when a service is forced to shutdown
     * In the service monitor, use the time of the beginning of the
-      termination to more accurately enforce the timeout_termination
+      termination to more accurately enforce the timeout_terminate
 
 2018-07-05 Michael Truog   <mjtruog at protonmail dot com>
 
