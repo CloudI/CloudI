@@ -72,11 +72,11 @@ var packUint32big = function packUint32big (value) {
                        (value >>> 8) & 0xff,
                        value & 0xff]);
 };
-var nodejsVersion = process.versions['node'].split('.').map(s => parseInt(s));
+var nodejs_version = process.versions['node'].split('.').map(s => parseInt(s));
 var nodejsVersionAfter = function nodejsVersionAfter (s) {
     var v = s.split('.').map(s => parseInt(s));
     for (var i = 0; i < v.length; i++) {
-        if (nodejsVersion[i] > v[i]) {
+        if (nodejs_version[i] > v[i]) {
             return true;
         }
     }
