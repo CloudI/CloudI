@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_args_type type specification
+
 2018-07-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix Javascript CloudI API termination by closing its socket

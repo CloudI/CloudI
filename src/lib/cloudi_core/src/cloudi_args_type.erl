@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2018 Michael Truog
+%%% @version 1.7.4 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -50,7 +50,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec function_required({{module(), arity()}} | {module(), atom()} | fun(),
+-spec function_required({{module(), atom()}} | {module(), atom()} | fun(),
                         Arity :: non_neg_integer()) ->
     fun().
 
