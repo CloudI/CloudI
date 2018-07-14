@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve the JSON-RPC handling in cloudi_service_api_requests
+      so the specification is followed properly
+    * Change the service_api dashboard web interface service summary
+      to use the new JSON support added to cloudi_service_api_requests
+
 2018-07-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Manual update of Elixir logging module and content type data

@@ -11,7 +11,8 @@ Provide an interface for dynamically configuring CloudI.
 Supported request formats:
 
 * JSON-RPC
-* Erlang term format
+* JSON
+* Erlang term data
 * native Erlang function calls ([`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module) within the same Erlang VM
 
 CloudI allows you to call dynamic configuration functions from any CloudI
@@ -20,35 +21,38 @@ initializes the [CloudI service responsible for dynamic configuration](https://g
 which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
 * `"/cloudi/api/rpc.json"`
-* `"/cloudi/api/rpc/*.erl"` (see below)
-  * `"/cloudi/api/rpc/acl_add.erl"`
-  * `"/cloudi/api/rpc/acl_remove.erl"`
-  * `"/cloudi/api/rpc/acl.erl"`
-  * `"/cloudi/api/rpc/service_subscriptions.erl"`
-  * `"/cloudi/api/rpc/services_add.erl"`
-  * `"/cloudi/api/rpc/services_remove.erl"`
-  * `"/cloudi/api/rpc/services_restart.erl"`
-  * `"/cloudi/api/rpc/services_search.erl"`
-  * `"/cloudi/api/rpc/services_update.erl"`
-  * `"/cloudi/api/rpc/services.erl"`
-  * `"/cloudi/api/rpc/nodes_set.erl"`
-  * `"/cloudi/api/rpc/nodes_get.erl"`
-  * `"/cloudi/api/rpc/nodes_add.erl"`
-  * `"/cloudi/api/rpc/nodes_remove.erl"`
-  * `"/cloudi/api/rpc/nodes_alive.erl"`
-  * `"/cloudi/api/rpc/nodes_dead.erl"`
-  * `"/cloudi/api/rpc/nodes.erl"`
-  * `"/cloudi/api/rpc/logging_set.erl"`
-  * `"/cloudi/api/rpc/logging_file_set.erl"`
-  * `"/cloudi/api/rpc/logging_level_set.erl"`
-  * `"/cloudi/api/rpc/logging_stdout_set.erl"`
-  * `"/cloudi/api/rpc/logging_syslog_set.erl"`
+* `"/cloudi/api/rpc/*.json"` (see below)
+  * `"/cloudi/api/rpc/acl_add.json"`
+  * `"/cloudi/api/rpc/acl_remove.json"`
+  * `"/cloudi/api/rpc/acl.json"`
+  * `"/cloudi/api/rpc/service_subscriptions.json"`
+  * `"/cloudi/api/rpc/services_add.json"`
+  * `"/cloudi/api/rpc/services_remove.json"`
+  * `"/cloudi/api/rpc/services_restart.json"`
+  * `"/cloudi/api/rpc/services_search.json"`
+  * `"/cloudi/api/rpc/services_status.json"`
+  * `"/cloudi/api/rpc/services_update.json"`
+  * `"/cloudi/api/rpc/services.json"`
+  * `"/cloudi/api/rpc/nodes_set.json"`
+  * `"/cloudi/api/rpc/nodes_get.json"`
+  * `"/cloudi/api/rpc/nodes_add.json"`
+  * `"/cloudi/api/rpc/nodes_remove.json"`
+  * `"/cloudi/api/rpc/nodes_alive.json"`
+  * `"/cloudi/api/rpc/nodes_dead.json"`
+  * `"/cloudi/api/rpc/nodes.json"`
+  * `"/cloudi/api/rpc/logging_set.json"`
+  * `"/cloudi/api/rpc/logging_file_set.json"`
+  * `"/cloudi/api/rpc/logging_level_set.json"`
+  * `"/cloudi/api/rpc/logging_stdout_set.json"`
+  * `"/cloudi/api/rpc/logging_syslog_set.json"`
   * `"/cloudi/api/rpc/logging_formatters_set"`
-  * `"/cloudi/api/rpc/logging_redirect_set.erl"`
-  * `"/cloudi/api/rpc/logging.erl"`
-  * `"/cloudi/api/rpc/code_path_add.erl"`
-  * `"/cloudi/api/rpc/code_path_remove.erl"`
-  * `"/cloudi/api/rpc/code_path.erl"`
+  * `"/cloudi/api/rpc/logging_redirect_set.json"`
+  * `"/cloudi/api/rpc/logging.json"`
+  * `"/cloudi/api/rpc/code_path_add.json"`
+  * `"/cloudi/api/rpc/code_path_remove.json"`
+  * `"/cloudi/api/rpc/code_path.json"`
+  * `"/cloudi/api/rpc/code_status.json"`
+* `"/cloudi/api/rpc/*.erl"` (same as above with Erlang term data)
 
 The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
 expects HTTP requests to port 6464 with the proper service path and format

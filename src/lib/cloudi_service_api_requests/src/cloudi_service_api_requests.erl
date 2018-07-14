@@ -173,7 +173,7 @@ format_json_call(Method, 2, Request, Timeout) ->
 
 format_json_rpc(Request, _, _)
     when not is_binary(Request) ->
-    cloudi_json_rpc:response_to_json(<<"not_binary">>, 0);
+    cloudi_json_rpc:error_parsing();
 format_json_rpc(Request, Timeout,
                 #state{functions = Functions}) ->
     try cloudi_json_rpc:request_to_term(Request) of
@@ -181,27 +181,24 @@ format_json_rpc(Request, Timeout,
             MethodName = erlang:binary_to_list(MethodNameBin),
             case cloudi_x_trie:find(MethodName, Functions) of
                 error ->
-                    cloudi_json_rpc:response_to_json(null, 1,
-                                                     <<"invalid_method">>, Id);
+                    cloudi_json_rpc:error_method_not_found(Id);
                 {ok, {Method, 1}} when Params == [] ->
                     format_json_rpc_call(Method, 1, undefined, Timeout, Id);
                 {ok, {Method, 2}} when length(Params) == 1 ->
                     format_json_rpc_call(Method, 2, hd(Params), Timeout, Id);
                 {ok, _} ->
-                    cloudi_json_rpc:response_to_json(null, 2,
-                                                     <<"invalid_params">>, Id)
+                    cloudi_json_rpc:error_invalid_params(Id)
             end
     catch
         _:_ ->
-            cloudi_json_rpc:response_to_json(null, 0,
-                                             <<"invalid_json_rpc">>, 0)
+            cloudi_json_rpc:error_invalid_request()
     end.
 
 format_json_rpc_call(Method, 1, _, Timeout, Id) ->
     try cloudi_service_api_call(Method, Timeout) of
         Result ->
-            cloudi_json_rpc:response_to_json(
-                convert_term_to_json(Result, Method, false), Id)
+            ResultJSON = convert_term_to_json(Result, Method, false),
+            cloudi_json_rpc:response_to_json(ResultJSON, Id)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
@@ -209,14 +206,13 @@ format_json_rpc_call(Method, 1, _, Timeout, Id) ->
     end;
 format_json_rpc_call(_, 2, Param, _, Id)
     when not is_binary(Param) ->
-    cloudi_json_rpc:response_to_json(null, 3,
-                                     <<"invalid_param">>, Id);
+    cloudi_json_rpc:error_invalid_params(Id);
 format_json_rpc_call(Method, 2, Param, Timeout, Id) ->
     Arg1 = convert_json_to_term(Param, Method),
     try cloudi_service_api_call(Method, Arg1, Timeout) of
         Result ->
-            cloudi_json_rpc:response_to_json(
-                convert_term_to_json(Result, Method, false), Id)
+            ResultJSON = convert_term_to_json(Result, Method, false),
+            cloudi_json_rpc:response_to_json(ResultJSON, Id)
     catch
         ErrorType:Error ->
             ?LOG_DEBUG("~p ~p", [ErrorType, Error]),
