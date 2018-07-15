@@ -45,13 +45,16 @@
           // add each row to the table
           for (i = 0; i < services.length; i++) {
               var s = services[i];
+              var index = i + 1;
               if (typeof s.module !== 'undefined') {
                   // internal service
-                  table.fnAddData([i, s.module, s.prefix, 'internal', s.id]);
+                  table.fnAddData([index, s.module, s.prefix,
+                                   'internal', s.id]);
               }
               else {
                   // external service
-                  table.fnAddData([i, s.file_path, s.prefix, 'external', s.id]);
+                  table.fnAddData([index, s.file_path, s.prefix,
+                                   'external', s.id]);
               }
           }
           loadingHide();
@@ -213,9 +216,8 @@
           // hide the top buttons until after a click on a single row occurs
           topButtonsHide();
 
-          // define a function that will highlight a row when selected
+          // handle clicking on a table row
           $('#services_table tbody').on('click', 'tr', function () {
-
               if ($(this).hasClass('selected')) {
                   // deselect a single row
                   $(this).removeClass('selected');
