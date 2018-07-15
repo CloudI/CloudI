@@ -16,7 +16,7 @@ Supported request formats:
 * native Erlang function calls ([`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module) within the same Erlang VM
 
 CloudI allows you to call dynamic configuration functions from any CloudI
-process (assuming it is not blocked by an ACL).  The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
+process (assuming it is not blocked by an ACL).  The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in)
 initializes the [CloudI service responsible for dynamic configuration](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl)
 which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
@@ -54,7 +54,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/code_status.json"`
 * `"/cloudi/api/rpc/*.erl"` (same as above with Erlang term data)
 
-The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi.conf.in)
+The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in)
 expects HTTP requests to port 6464 with the proper service path and format
 (listed above) to call the CloudI service interface.
 
