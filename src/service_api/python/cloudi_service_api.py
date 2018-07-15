@@ -10,18 +10,8 @@ import os
 _FILE_DIRECTORY = os.path.dirname(os.path.abspath(__file__)).split(os.path.sep)
 sys.path.extend([
     os.path.sep.join(_FILE_DIRECTORY + ['jsonrpclib']),
-    os.path.sep.join(_FILE_DIRECTORY[:-2] + ['api', 'python']),
 ])
 import jsonrpclib
-import erlang
-
-class _ServiceDescription(object):
-    # pylint: disable=too-few-public-methods
-    def __init__(self, *args):
-        self.__args = args
-
-    def __str__(self):
-        return str(self.__args)
 
 class CloudI(object):
     """
