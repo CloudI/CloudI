@@ -17,7 +17,7 @@ Supported request formats:
 
 CloudI allows you to call dynamic configuration functions from any CloudI
 process (assuming it is not blocked by an ACL).  The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in)
-initializes the [CloudI service responsible for dynamic configuration](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_services_internal/src/cloudi_service_api_requests.erl)
+initializes the [CloudI service responsible for dynamic configuration](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_api_requests/src/cloudi_service_api_requests.erl)
 which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
 * `"/cloudi/api/rpc.json"`
