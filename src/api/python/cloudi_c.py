@@ -32,6 +32,8 @@ integration tests <https://cloudi.org/tutorials.html#cloudi_examples>.
 
 import sys
 import os
+import inspect
+from functools import partial
 import libcloudi_py
 
 __all__ = [
@@ -78,6 +80,13 @@ class API(object):
         """
         subscribes to a service name pattern with a callback
         """
+        args, _, _, _ = inspect.getargspec(function)
+        if len(args) != 10:
+            # self + arguments for a member function
+            #  api + arguments for a static function
+            raise InvalidInputException()
+        if not inspect.ismethod(function):
+            function = partial(function, self)
         self.__api.subscribe(pattern, function)
 
     def subscribe_count(self, pattern):

@@ -41,10 +41,11 @@ class Task(threading.Thread):
     """
     msg_size thread task
     """
-    def __init__(self, api, name, terminate):
+    api_name = None
+
+    def __init__(self, api, terminate):
         threading.Thread.__init__(self)
         self.__api = api
-        self.__name = name
         self.__terminate_exception = terminate
 
     def run(self):
@@ -53,7 +54,7 @@ class Task(threading.Thread):
         """
         # pylint: disable=bare-except
         try:
-            self.__api.subscribe(self.__name, self.__request)
+            self.__api.subscribe(Task.api_name, _request)
 
             result = self.__api.poll()
             assert result is False
@@ -63,27 +64,28 @@ class Task(threading.Thread):
             traceback.print_exc(file=sys.stderr)
         print('terminate msg_size %s' % self.__name)
 
-    def __request(self, request_type, name, pattern, request_info, request,
-                  timeout, priority, trans_id, pid):
-        # pylint: disable=unused-argument
-        # pylint: disable=too-many-arguments
-        i = struct.unpack('=I', request[:4])[0]
-        if i == 4294967295:
-            i = 0
-        else:
-            i += 1
-        request = struct.pack('=I', i) + request[4:]
-        print('forward #%d %s to %s (with timeout %d ms)' % (
-            i, self.__name, _DESTINATION, timeout,
-        ))
-        self.__api.forward_(request_type, _DESTINATION, request_info, request,
-                            timeout, priority, trans_id, pid)
+def _request(api, request_type, name, pattern, request_info, request,
+             timeout, priority, trans_id, pid):
+    # pylint: disable=unused-argument
+    # pylint: disable=too-many-arguments
+    i = struct.unpack('=I', request[:4])[0]
+    if i == 4294967295:
+        i = 0
+    else:
+        i += 1
+    request = struct.pack('=I', i) + request[4:]
+    print('forward #%d %s to %s (with timeout %d ms)' % (
+        i, Task.api_name, _DESTINATION, timeout,
+    ))
+    api.forward_(request_type, _DESTINATION, request_info, request,
+                 timeout, priority, trans_id, pid)
 
 def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [Task(API(thread_index), 'python', TerminateException)
+    Task.api_name = 'python'
+    threads = [Task(API(thread_index), TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()

@@ -35,9 +35,10 @@ import os
 import struct
 import socket
 import select
-import inspect
 import collections
 import traceback
+import inspect
+from functools import partial
 from timeit import default_timer
 from erlang import (binary_to_term, term_to_binary,
                     OtpErlangAtom, OtpErlangBinary)
@@ -135,8 +136,12 @@ class API(object):
         subscribes to a service name pattern with a callback
         """
         args, _, _, _ = inspect.getargspec(function)
-        if len(args) != 10: # self + arguments, so a non-static method
+        if len(args) != 10:
+            # self + arguments for a member function
+            #  api + arguments for a static function
             raise InvalidInputException()
+        if not inspect.ismethod(function):
+            function = partial(function, self)
         key = self.__prefix + pattern
         value = self.__callbacks.get(key, None)
         if value is None:

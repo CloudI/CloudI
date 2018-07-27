@@ -35,8 +35,8 @@ def _main():
     thread_count = API.thread_count()
     assert thread_count >= 1
 
-    threads = [Task(API(thread_index),
-                    'python_c', TerminateException)
+    Task.api_name = 'python_c'
+    threads = [Task(API(thread_index), TerminateException)
                for thread_index in range(thread_count)]
     for thread in threads:
         thread.start()
