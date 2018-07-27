@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-26 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add "--verbose 3" to the rebar2 command line
+    * Fix the configure script help info default python-version
+    * Add configure script dependencies on Erlang/OTP snmp and eunit
+    * Prevent rebar2 from creating empty .so files
+
 2018-07-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improve the JSON-RPC handling in cloudi_service_api_requests

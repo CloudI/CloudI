@@ -519,7 +519,7 @@ AC_ARG_VAR([PYTHON],[python executable])
 AC_ARG_WITH([python_version],
     [AS_HELP_STRING([--with-python-version@<:@=ARG@:>@],
         [specify the version of Python (ARG=2|3)
-         @<:@ARG=2@:>@ ])],
+         @<:@ARG=3@:>@ ])],
         [
         if test "$withval" = "2"; then
             PYTHON_VERSION_REQUIRED="2"
@@ -574,6 +574,8 @@ AX_ERLANG_SUBST_OTP_VER
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB([erl_interface])
 AC_ERLANG_CHECK_LIB([ssl], , [AC_MSG_ERROR([Erlang ssl required for epgsql])])
+AC_ERLANG_CHECK_LIB([snmp])
+AC_ERLANG_CHECK_LIB([eunit])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 AC_SUBST([ERLC_OPTS],
@@ -609,6 +611,7 @@ else
     fi
 fi
 AC_SUBST(REBAR)
+AC_SUBST(REBAR_ARGS, ["--verbose 3"])
 
 # hexpi test
 if test "x$want_integration_tests" = "xyes" -a \

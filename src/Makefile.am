@@ -134,7 +134,8 @@ scoped: $(top_srcdir)/external/README.markdown
 rebar-compile: erlang-applications-scope-add \
                rebar-directories-compile
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config compile && \
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src.config compile && \
 	 $(top_srcdir)/rebar_dirs.sh process $(abs_top_srcdir) $(abs_top_builddir))
 
 clean-local: rebar-clean \
@@ -143,7 +144,8 @@ clean-local: rebar-clean \
 
 rebar-clean:
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src.config clean || \
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src.config clean || \
      exit 0)
 
 rebar-directories-clean: rebar-clean
@@ -263,14 +265,16 @@ $(top_srcdir)/dialyzer.plt:
 
 doc: all
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config doc \
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src_test.config doc \
         || exit 0)
 
 docs: doc
 
 xref: all
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config xref \
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src_test.config xref \
         || exit 0)
 
 api-python-test:
@@ -319,15 +323,18 @@ linter-ruby:
 
 ct: all
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct)
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src_test.config ct)
 
 eunit: all
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config eunit)
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src_test.config eunit)
 
 test: all $(PYTHON_TEST_HOOK) $(RUBY_TEST_HOOK)
 	(cd $(top_srcdir) && \
-     $(ESCRIPT) $(REBAR) -C $(abs_top_builddir)/rebar_src_test.config ct eunit)
+     $(ESCRIPT) $(REBAR) $(REBAR_ARGS) \
+                         -C $(abs_top_builddir)/rebar_src_test.config ct eunit)
 
 tests: test
 
