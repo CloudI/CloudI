@@ -8,10 +8,10 @@
     * Add configure script dependencies on Erlang/OTP snmp and eunit
     * Prevent rebar2 from creating empty .so files
     * Allow the Python CloudI API and the Python/C CloudI API
-      to utilize static methods that have api as the first
+      to utilize non-member functions that have api as the first
       parameter (to have access to the CloudI API object)
     * Update the msg_size python and python_c integration tests
-      to utilize a static method
+      to utilize a non-member function
 
 2018-07-14 Michael Truog   <mjtruog at protonmail dot com>
 
