@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-07-28 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add static method support to the Java CloudI API
+
 2018-07-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add "--verbose 3" to the rebar2 command line

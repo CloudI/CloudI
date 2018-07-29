@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2016-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2016-2018 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -40,9 +40,11 @@ public class FunctionObject9 implements FunctionInterface9
                             byte[],
                             OtpErlangPid> function;
 
-    public FunctionObject9(final Object instance, final String methodName)
+    public FunctionObject9(final Object instance,
+                           final String methodName)
         throws NoSuchMethodException
     {
+        // object instance method
         this.function = new Function9<Integer,
                                       String,
                                       String,
@@ -52,6 +54,23 @@ public class FunctionObject9 implements FunctionInterface9
                                       Byte,
                                       byte[],
                                       OtpErlangPid>(instance, methodName);
+    }
+
+    public FunctionObject9(final API api,
+                           final Class<?> clazz,
+                           final String methodName)
+        throws NoSuchMethodException
+    {
+        // class static method
+        this.function = new Function9<Integer,
+                                      String,
+                                      String,
+                                      byte[],
+                                      byte[],
+                                      Integer,
+                                      Byte,
+                                      byte[],
+                                      OtpErlangPid>(api, clazz, methodName);
     }
 
     public Object invoke(Integer command, String name, String pattern,

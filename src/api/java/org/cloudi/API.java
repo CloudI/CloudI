@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -219,6 +219,23 @@ public class API
         throws NoSuchMethodException
     {
         this.subscribe(pattern, new FunctionObject9(instance, methodName));
+    }
+
+    /**
+     * Subscribes a static method to a service name pattern.
+     *
+     * @param  pattern     the service name pattern
+     * @param  clazz       the class of the static method
+     * @param  methodName  the static method to handle matching requests
+     *
+     * @throws NoSuchMethodException instance method arity is invalid
+     */
+    public void subscribe(final String pattern,
+                          final Class<?> clazz,
+                          final String methodName)
+        throws NoSuchMethodException
+    {
+        this.subscribe(pattern, new FunctionObject9(this, clazz, methodName));
     }
 
     /**

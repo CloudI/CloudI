@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -27,29 +27,55 @@
 package org.cloudi;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.InvocationTargetException;
 
 public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
 {
+    private final API api;
+    private final Class<?> clazz;
     private final Object instance;
     private final String methodName;
     private Method method;
 
-    public Function9(final Object instance, final String methodName)
+    public Function9(final Object instance,
+                     final String methodName)
         throws NoSuchMethodException
     {
+        // object instance method
+        this.api = null;
+        this.clazz = instance.getClass();
         this.instance = instance;
         this.methodName = methodName;
+        validate(false, 9);
+    }
 
-        // make sure the method exists with the same arity
+    public Function9(final API api,
+                     final Class<?> clazz,
+                     final String methodName)
+        throws NoSuchMethodException
+    {
+        // class static method
+        this.api = api;
+        this.clazz = clazz;
+        this.instance = null;
+        this.methodName = methodName;
+        validate(true, 10);
+    }
+
+    private void validate(final boolean ztatic,
+                          final int arity)
+        throws NoSuchMethodException
+    {
+        // make sure the public method exists with the proper arity
         // (unable to type check due to generic type usage in Function9)
-        final Method[] methods = this.instance.getClass()
-                                              .getMethods();
+        final Method[] methods = this.clazz.getMethods();
         boolean exists = false;
         for (Method possibleMethod : methods)
         {
             if (possibleMethod.getName().equals(this.methodName) &&
-                possibleMethod.getParameterTypes().length == 9)
+                Modifier.isStatic(possibleMethod.getModifiers()) == ztatic &&
+                possibleMethod.getParameterTypes().length == arity)
             {
                 exists = true;
                 break;
@@ -57,8 +83,7 @@ public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
         }
         if (! exists)
         {
-            throw new NoSuchMethodException(this.instance.getClass()
-                                                         .getCanonicalName() +
+            throw new NoSuchMethodException(this.clazz.getCanonicalName() +
                                             "." + this.methodName + "(...)");
         }
     }
@@ -69,23 +94,47 @@ public class Function9<C1, C2, C3, C4, C5, C6, C7, C8, C9>
     {
         try
         {
-            if (this.method == null)
+            if (this.instance == null)
             {
-                this.method = this.instance
-                                  .getClass()
-                                  .getDeclaredMethod(this.methodName,
-                                                     a1.getClass(),
-                                                     a2.getClass(),
-                                                     a3.getClass(),
-                                                     a4.getClass(),
-                                                     a5.getClass(),
-                                                     a6.getClass(),
-                                                     a7.getClass(),
-                                                     a8.getClass(),
-                                                     a9.getClass());
+                // invoke a class static method
+                if (this.method == null)
+                {
+                    this.method = this.clazz
+                                      .getDeclaredMethod(this.methodName,
+                                                         API.class,
+                                                         a1.getClass(),
+                                                         a2.getClass(),
+                                                         a3.getClass(),
+                                                         a4.getClass(),
+                                                         a5.getClass(),
+                                                         a6.getClass(),
+                                                         a7.getClass(),
+                                                         a8.getClass(),
+                                                         a9.getClass());
+                }
+                return this.method.invoke(null, this.api,
+                                          a1, a2, a3, a4, a5, a6, a7, a8, a9);
             }
-            return this.method.invoke(this.instance,
-                                      a1, a2, a3, a4, a5, a6, a7, a8, a9);
+            else
+            {
+                // invoke an object instance method
+                if (this.method == null)
+                {
+                    this.method = this.clazz
+                                      .getDeclaredMethod(this.methodName,
+                                                         a1.getClass(),
+                                                         a2.getClass(),
+                                                         a3.getClass(),
+                                                         a4.getClass(),
+                                                         a5.getClass(),
+                                                         a6.getClass(),
+                                                         a7.getClass(),
+                                                         a8.getClass(),
+                                                         a9.getClass());
+                }
+                return this.method.invoke(this.instance,
+                                          a1, a2, a3, a4, a5, a6, a7, a8, a9);
+            }
         }
         catch (InvocationTargetException e)
         {

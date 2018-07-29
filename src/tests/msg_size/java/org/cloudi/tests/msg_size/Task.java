@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -33,8 +33,36 @@ import org.cloudi.API;
 
 public class Task implements Runnable
 {
+    public static class MsgSize
+    {
+        private static final String DESTINATION = "/tests/msg_size/erlang";
+
+        static public void request(API api,
+                                   Integer request_type,
+                                   String name, String pattern,
+                                   byte[] request_info, byte[] request,
+                                   Integer timeout, Byte priority,
+                                   byte[] trans_id, OtpErlangPid pid)
+                                   throws API.ForwardAsyncException,
+                                          API.ForwardSyncException,
+                                          API.InvalidInputException
+        {
+            ByteBuffer buffer = ByteBuffer.wrap(request);
+            buffer.order(ByteOrder.nativeOrder());
+            int i = buffer.getInt(0);
+            if (i == 4294967295L)
+                i = 0;
+            else
+                i++;
+            buffer.putInt(0, i);
+            API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
+                           i, MsgSize.DESTINATION, timeout);
+            api.forward_(request_type, MsgSize.DESTINATION,
+                         request_info, request,
+                         timeout, priority, trans_id, pid);
+        }
+    }
     private API api;
-    private static final String DESTINATION = "/tests/msg_size/erlang";
      
     public Task(final int thread_index)
     {
@@ -59,34 +87,11 @@ public class Task implements Runnable
         }
     }
 
-    public void request(Integer request_type, String name, String pattern,
-                        byte[] request_info, byte[] request,
-                        Integer timeout, Byte priority,
-                        byte[] trans_id, OtpErlangPid pid)
-                        throws API.ForwardAsyncException,
-                               API.ForwardSyncException,
-                               API.InvalidInputException
-    {
-        ByteBuffer buffer = ByteBuffer.wrap(request);
-        buffer.order(ByteOrder.nativeOrder());
-        int i = buffer.getInt(0);
-        if (i == 4294967295L)
-            i = 0;
-        else
-            i++;
-        buffer.putInt(0, i);
-        API.out.printf("forward #%d java to %s (with timeout %d ms)\n",
-                       i, Task.DESTINATION, timeout);
-        this.api.forward_(request_type, Task.DESTINATION,
-                          request_info, request,
-                          timeout, priority, trans_id, pid);
-    }
- 
     public void run()
     {
         try
         {
-            this.api.subscribe("java", this, "request");
+            this.api.subscribe("java", MsgSize.class, "request");
             Object result = this.api.poll();
             assert result == Boolean.FALSE;
         }
