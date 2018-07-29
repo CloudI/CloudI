@@ -242,14 +242,10 @@ public class API
      * Subscribes a static method to a service name pattern.
      *
      * @param  pattern     the service name pattern
-     * @param  clazz       the class of the static method
-     * @param  methodName  the static method to handle matching requests
-     *
-     * @throws NoSuchMethodException instance method arity is invalid
+     * @param  callback    method reference for callback (Java 8 or higher)
      */
     public void subscribe(final String pattern,
                           final FunctionInterface10 callback)
-        throws NoSuchMethodException
     {
         this.subscribe(pattern, new FunctionObject10(this, callback));
     }

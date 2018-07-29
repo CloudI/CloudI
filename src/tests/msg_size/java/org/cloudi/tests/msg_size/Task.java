@@ -93,10 +93,10 @@ public class Task implements Runnable
         try
         {
             // possible with Java >= 8
-            this.api.subscribe("java", MsgSize::request);
+            //this.api.subscribe("java", MsgSize::request);
 
             // required with Java < 8
-            //this.api.subscribe("java", MsgSize.class, "request");
+            this.api.subscribe("java", MsgSize.class, "request");
 
             Object result = this.api.poll();
             assert result == Boolean.FALSE;
