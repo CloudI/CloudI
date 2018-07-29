@@ -4,6 +4,7 @@
 2018-07-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add static method support to the Java CloudI API
+      (including method references to static methods)
 
 2018-07-26 Michael Truog   <mjtruog at protonmail dot com>
 

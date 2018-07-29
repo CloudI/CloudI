@@ -8,7 +8,9 @@ cloudi.jar: $(srcdir)/manifest.txt \
             org/cloudi/API.class \
             org/cloudi/Function9.class \
             org/cloudi/FunctionInterface9.class \
+            org/cloudi/FunctionInterface10.class \
             org/cloudi/FunctionObject9.class \
+            org/cloudi/FunctionObject10.class \
             com/ericsson/otp/erlang/AbstractConnection.class \
             com/ericsson/otp/erlang/AbstractNode.class \
             com/ericsson/otp/erlang/GenericQueue.class \

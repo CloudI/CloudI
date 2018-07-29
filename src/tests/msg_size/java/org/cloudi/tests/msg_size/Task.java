@@ -37,15 +37,15 @@ public class Task implements Runnable
     {
         private static final String DESTINATION = "/tests/msg_size/erlang";
 
-        static public void request(API api,
-                                   Integer request_type,
-                                   String name, String pattern,
-                                   byte[] request_info, byte[] request,
-                                   Integer timeout, Byte priority,
-                                   byte[] trans_id, OtpErlangPid pid)
-                                   throws API.ForwardAsyncException,
-                                          API.ForwardSyncException,
-                                          API.InvalidInputException
+        static public Object request(API api,
+                                     Integer request_type,
+                                     String name, String pattern,
+                                     byte[] request_info, byte[] request,
+                                     Integer timeout, Byte priority,
+                                     byte[] trans_id, OtpErlangPid pid)
+                                     throws API.ForwardAsyncException,
+                                            API.ForwardSyncException,
+                                            API.InvalidInputException
         {
             ByteBuffer buffer = ByteBuffer.wrap(request);
             buffer.order(ByteOrder.nativeOrder());
@@ -60,6 +60,7 @@ public class Task implements Runnable
             api.forward_(request_type, MsgSize.DESTINATION,
                          request_info, request,
                          timeout, priority, trans_id, pid);
+            return null;
         }
     }
     private API api;
@@ -91,7 +92,12 @@ public class Task implements Runnable
     {
         try
         {
-            this.api.subscribe("java", MsgSize.class, "request");
+            // possible with Java >= 8
+            this.api.subscribe("java", MsgSize::request);
+
+            // required with Java < 8
+            //this.api.subscribe("java", MsgSize.class, "request");
+
             Object result = this.api.poll();
             assert result == Boolean.FALSE;
         }

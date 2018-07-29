@@ -7,7 +7,9 @@ CLEANFILES = built
 FILES = $(srcdir)/API.java \
         $(srcdir)/Function9.java \
         $(srcdir)/FunctionInterface9.java \
-        $(srcdir)/FunctionObject9.java
+        $(srcdir)/FunctionInterface10.java \
+        $(srcdir)/FunctionObject9.java \
+        $(srcdir)/FunctionObject10.java
 
 all-local: built
 
