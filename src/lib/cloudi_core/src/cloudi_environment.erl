@@ -158,14 +158,18 @@ status_file_time(FilePath) ->
 
 erts_c_compiler_version() ->
     case erlang:system_info(c_compiler_used) of
+        {undefined, _} ->
+            "";
         {Name, undefined}
         when is_atom(Name) ->
             erlang:atom_to_list(Name);
         {Name, V}
         when is_atom(Name), is_tuple(V) ->
-            [_ | Version] = lists:flatten([[$., erlang:integer_to_list(I)]
+            [_ | Version] = lists:flatten([[$., io_lib:format("~p", [I])]
                                            || I <- erlang:tuple_to_list(V)]),
             erlang:atom_to_list(Name) ++ [$  | Version];
+        {Name, Version} ->
+            cloudi_string:format("~p ~p", [Name, Version]);
         Unexpected ->
             ?LOG_ERROR("erlang:system_info(c_compiler_used) invalid: ~p",
                        [Unexpected]),
