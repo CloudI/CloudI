@@ -47,6 +47,7 @@
  [{d, 'ERLANG_OTP_VERSION_@ERLANG_OTP_VER_MAJOR@'},
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
+  deterministic,
   debug_info,
   warnings_as_errors,
   strict_validation,

@@ -41,7 +41,8 @@ status_static() ->
     [{build_machine, "@BUILD_MACHINE@"},
      {build_kernel_version, "@BUILD_KERNEL_VERSION@"},
      {build_operating_system, "@BUILD_OPERATING_SYSTEM@"},
-     {build_erlang_otp_release, "@ERLANG_OTP_VER@"}].
+     {build_erlang_otp_release, "@ERLANG_OTP_VER@"},
+     {build_cloudi_time, "@BUILD_TIME@"}].
 
 -endif.
 

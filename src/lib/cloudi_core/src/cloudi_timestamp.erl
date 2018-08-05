@@ -43,13 +43,16 @@
          native_monotonic/0,
          native_os/0,
          seconds/0,
+         seconds_epoch_to_string/1,
          seconds_monotonic/0,
          seconds_os/0,
          seconds_to_string/1,
          milliseconds/0,
+         milliseconds_epoch_to_string/1,
          milliseconds_monotonic/0,
          milliseconds_os/0,
          microseconds/0,
+         microseconds_epoch_to_string/1,
          microseconds_monotonic/0,
          microseconds_os/0,
          nanoseconds/0,
@@ -66,7 +69,7 @@
 
 -type time_unit() :: second | millisecond | microsecond | nanosecond |
                      native | perf_counter | pos_integer().
-% UNIX epoch (1970-01-01T00:00:00) offsets (POSIX time)
+% UNIX epoch (1970-01-01T00:00:00Z) offsets (POSIX time)
 -type seconds_epoch() :: non_neg_integer().
 -type milliseconds_epoch() :: non_neg_integer().
 -type microseconds_epoch() :: non_neg_integer().
@@ -153,7 +156,7 @@ timestamp() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Native time units since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -177,7 +180,7 @@ native_monotonic() ->
 %% @doc
 %% ===Native time units since the UNIX epoch, from the hardware.===
 %% Always prefer the mative function instead of this function.
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -189,7 +192,7 @@ native_os() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Seconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -202,6 +205,19 @@ seconds() ->
 seconds() ->
     erlang:system_time(seconds).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from seconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_epoch_to_string(Seconds :: seconds_epoch()) ->
+    string().
+
+seconds_epoch_to_string(Seconds) ->
+    cloudi_core_i_logger:seconds_to_string(Seconds).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -223,7 +239,7 @@ seconds_monotonic() ->
 %% @doc
 %% ===Seconds since the UNIX epoch, from the hardware.===
 %% Always prefer the seconds function instead of this function.
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -266,7 +282,7 @@ seconds_to_string(TotalSeconds) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Milliseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -279,6 +295,19 @@ milliseconds() ->
 milliseconds() ->
     erlang:system_time(milli_seconds).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from milliseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec milliseconds_epoch_to_string(MilliSeconds :: milliseconds_epoch()) ->
+    string().
+
+milliseconds_epoch_to_string(MilliSeconds) ->
+    cloudi_core_i_logger:milliseconds_to_string(MilliSeconds).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -300,7 +329,7 @@ milliseconds_monotonic() ->
 %% @doc
 %% ===Milliseconds since the UNIX epoch, from the hardware.===
 %% Always prefer the milliseconds function instead of this function.
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -317,7 +346,7 @@ milliseconds_os() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Microseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -330,6 +359,19 @@ microseconds() ->
 microseconds() ->
     erlang:system_time(micro_seconds).
 -endif.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from microseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds_epoch_to_string(MicroSeconds :: microseconds_epoch()) ->
+    string().
+
+microseconds_epoch_to_string(MicroSeconds) ->
+    cloudi_core_i_logger:microseconds_to_string(MicroSeconds).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -351,7 +393,7 @@ microseconds_monotonic() ->
 %% @doc
 %% ===Microseconds since the UNIX epoch, from the hardware.===
 %% Always prefer the microseconds function instead of this function.
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -368,7 +410,7 @@ microseconds_os() ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Nanoseconds since the UNIX epoch.===
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -402,7 +444,7 @@ nanoseconds_monotonic() ->
 %% @doc
 %% ===Nanoseconds since the UNIX epoch, from the hardware.===
 %% Always prefer the nanoseconds function instead of this function.
-%% (The UNIX epoch is 1970-01-01T00:00:00)
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
 %% @end
 %%-------------------------------------------------------------------------
 

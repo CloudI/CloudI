@@ -77,6 +77,7 @@
   {d, 'HUT_CUSTOM_CB', 'cloudi_logger_hut'},
   {i, "@abs_top_srcdir@/lib"},
   {i, "@abs_top_srcdir@/external"},
+  deterministic,
   debug_info,
   warnings_as_errors,
   strict_validation,

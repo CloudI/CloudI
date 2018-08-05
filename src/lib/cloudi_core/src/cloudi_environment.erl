@@ -46,6 +46,8 @@
 -export_type([lookup/0]).
 
 -include("cloudi_environment.hrl").
+-include_lib("cloudi_core/include/cloudi_logger.hrl").
+-include_lib("kernel/include/file.hrl").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -73,6 +75,15 @@ lookup() ->
     nonempty_list({atom(), string()}).
 
 status() ->
+    RuntimeErtsVersion = erlang:system_info(version),
+    FileErts = filename:join([code:root_dir(), "lib",
+                              "erts-" ++ RuntimeErtsVersion,
+                              "ebin", "erts.app"]),
+    FileKernel = [_ | _] = code:where_is_file("kernel.app"),
+    FileStdlib = [_ | _] = code:where_is_file("stdlib.app"),
+    FileSasl = [_ | _] = code:where_is_file("sasl.app"),
+    FileCompiler = [_ | _] = code:where_is_file("compiler.app"),
+    FileCloudI = [_ | _] = code:where_is_file("cloudi_core.app"),
     ApplicationVersions0 = application:loaded_applications(),
     {value, {kernel, _, RuntimeErlangKernelVersion},
      ApplicationVersions1} = lists:keytake(kernel, 1, ApplicationVersions0),
@@ -86,7 +97,13 @@ status() ->
      _} = lists:keytake(cloudi_core, 1, ApplicationVersions4),
     RuntimeMachineProcessors = erlang:system_info(schedulers),
     status_static() ++
-    [{runtime_erlang_erts_version, erlang:system_info(version)},
+    [{install_erlang_erts_time, status_file_time(FileErts)},
+     {install_erlang_kernel_time, status_file_time(FileKernel)},
+     {install_erlang_stdlib_time, status_file_time(FileStdlib)},
+     {install_erlang_sasl_time, status_file_time(FileSasl)},
+     {install_erlang_compiler_time, status_file_time(FileCompiler)},
+     {install_cloudi_time, status_file_time(FileCloudI)},
+     {runtime_erlang_erts_version, RuntimeErtsVersion},
      {runtime_erlang_kernel_version, RuntimeErlangKernelVersion},
      {runtime_erlang_stdlib_version, RuntimeErlangStdlibVersion},
      {runtime_erlang_sasl_version, RuntimeErlangSaslVersion},
@@ -123,4 +140,18 @@ transform(String) ->
 
 transform(String, Lookup) ->
     cloudi_core_i_spawn:environment_transform(String, Lookup).
+
+%%%------------------------------------------------------------------------
+%%% Private functions
+%%%------------------------------------------------------------------------
+
+status_file_time(FilePath) ->
+    case file:read_file_info(FilePath, [raw, {time, posix}]) of
+        {ok, #file_info{mtime = MTime}} ->
+            cloudi_timestamp:seconds_epoch_to_string(MTime);
+        {error, Reason} ->
+            ?LOG_ERROR("filesystem error (~ts): ~p",
+                       [FilePath, Reason]),
+            ""
+    end.
 

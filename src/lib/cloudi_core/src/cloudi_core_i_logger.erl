@@ -50,7 +50,10 @@
          redirect_update/1,
          fatal/8, error/8, warn/8, info/8, debug/8, trace/8,
          metadata_get/0, metadata_set/1,
-         format/2, format/3]).
+         format/2, format/3,
+         microseconds_to_string/1,
+         milliseconds_to_string/1,
+         seconds_to_string/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -464,6 +467,70 @@ format(Msg, _Config, _) ->
     format_line(Level, Timestamp, Node, PidStr,
                 Module, Line, Function, undefined,
                 ExtraMetaData, LogMessage).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from microseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec microseconds_to_string(TotalMicroSeconds :: non_neg_integer()) ->
+    string().
+
+microseconds_to_string(TotalMicroSeconds) ->
+    TotalSeconds = TotalMicroSeconds div 1000000,
+    MegaSeconds = TotalSeconds div 1000000,
+    Seconds = TotalSeconds - MegaSeconds * 1000000,
+    MicroSeconds = TotalMicroSeconds - TotalSeconds * 1000000,
+    timestamp_iso8601({MegaSeconds, Seconds, MicroSeconds}).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from milliseconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec milliseconds_to_string(TotalMilliSeconds :: non_neg_integer()) ->
+    string().
+
+milliseconds_to_string(TotalMilliSeconds) ->
+    TotalSeconds = TotalMilliSeconds div 1000,
+    MegaSeconds = TotalSeconds div 1000000,
+    Seconds = TotalSeconds - MegaSeconds * 1000000,
+    MilliSeconds = TotalMilliSeconds - TotalSeconds * 1000,
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
+     MicroSeconds0, MicroSeconds1, MicroSeconds2, _, _, _,
+     $Z] = timestamp_iso8601({MegaSeconds, Seconds, MilliSeconds * 1000}),
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
+     MicroSeconds0, MicroSeconds1, MicroSeconds2, $Z].
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Create an ISO8601 timestamp from seconds since the UNIX epoch.===
+%% (The UNIX epoch is 1970-01-01T00:00:00Z)
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_to_string(TotalSeconds :: non_neg_integer()) ->
+    string().
+
+seconds_to_string(TotalSeconds) ->
+    MegaSeconds = TotalSeconds div 1000000,
+    Seconds = TotalSeconds - MegaSeconds * 1000000,
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $.,
+     _, _, _, _, _, _,
+     $Z] = timestamp_iso8601({MegaSeconds, Seconds, 0}),
+    [DateYYYY0, DateYYYY1, DateYYYY2, DateYYYY3, $-,
+     DateMM0, DateMM1, $-, DateDD0, DateDD1, $T,
+     TimeHH0, TimeHH1, $:, TimeMM0, TimeMM1, $:, TimeSS0, TimeSS1, $Z].
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from gen_server

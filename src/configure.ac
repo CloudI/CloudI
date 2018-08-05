@@ -9,6 +9,7 @@ AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 AC_SUBST(BUILD_MACHINE, [`uname -m`])
 AC_SUBST(BUILD_KERNEL_VERSION, [`uname -srv`])
 AC_SUBST(BUILD_OPERATING_SYSTEM, [`uname -o`])
+AC_SUBST(BUILD_TIME, [`date`])
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)
