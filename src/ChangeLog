@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-08-05 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add field to the CloudI Service API code_status function
+      (build_cloudi_cxx_compiler_version)
+    * Fix rebar2 compilation warning
+
 2018-08-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add fields to the CloudI Service API code_status function

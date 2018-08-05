@@ -247,7 +247,7 @@ needs_link(SoName, NewBins) ->
 %% == port_specs ==
 %%
 
-get_specs(Config, AppFile) ->
+get_specs(Config, _AppFile) ->
     case rebar_config:get_local(Config, port_specs, []) of
         [] ->
             [];
@@ -256,26 +256,6 @@ get_specs(Config, AppFile) ->
             OsType = os:type(),
             [get_port_spec(Config, OsType, Spec) || Spec <- Filtered]
     end.
-
-port_spec_from_legacy(Config, AppFile) ->
-    %% Get the target from the so_name variable
-    Target = case rebar_config:get(Config, so_name, undefined) of
-                 undefined ->
-                     %% Generate a sensible default from app file
-                     {_, AppName} = rebar_app_utils:app_name(Config, AppFile),
-                     filename:join("priv",
-                                   lists:concat([AppName, "_drv.so"]));
-                 AName ->
-                     %% Old form is available -- use it
-                     filename:join("priv", AName)
-             end,
-    %% Get the list of source files from port_sources
-    Sources = port_sources(rebar_config:get_list(Config, port_sources,
-                                                 ["c_src/*.c"])),
-    #spec { type = target_type(Target),
-            target = maybe_switch_extension(os:type(), Target),
-            sources = Sources,
-            objects = port_objects(Sources) }.
 
 filter_port_specs(Specs) ->
     [S || S <- Specs, filter_port_spec(S)].

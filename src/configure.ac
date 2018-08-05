@@ -37,6 +37,14 @@ AC_PROG_CXX
 AC_PROG_SED
 AM_PROG_CC_C_O
 
+# C++ compiler vendor and version information for code_status
+AC_LANG_PUSH(C++)
+AX_COMPILER_VENDOR
+AX_COMPILER_VERSION
+AC_LANG_POP([C++])
+AC_SUBST(CXX_COMPILER_VENDOR_VERSION,
+         ["$ax_cv_cxx_compiler_vendor $ax_cv_cxx_compiler_version"])
+
 # now in autoconf 2.69
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])
 AC_SUBST(abs_top_builddir, [`pwd`])
