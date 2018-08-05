@@ -4,7 +4,8 @@
 2018-08-04 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add fields to the CloudI Service API code_status function
-      (build_cloudi_time, install_erlang_erts_time,
+      (build_cloudi_time, build_erlang_erts_c_compiler_version,
+       install_erlang_erts_time,
        install_erlang_kernel_time, install_erlang_stdlib_time,
        install_erlang_sasl_time, install_erlang_compiler_time,
        install_cloudi_time)

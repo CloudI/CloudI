@@ -97,7 +97,8 @@ status() ->
      _} = lists:keytake(cloudi_core, 1, ApplicationVersions4),
     RuntimeMachineProcessors = erlang:system_info(schedulers),
     status_static() ++
-    [{install_erlang_erts_time, status_file_time(FileErts)},
+    [{build_erlang_erts_c_compiler_version, erts_c_compiler_version()},
+     {install_erlang_erts_time, status_file_time(FileErts)},
      {install_erlang_kernel_time, status_file_time(FileKernel)},
      {install_erlang_stdlib_time, status_file_time(FileStdlib)},
      {install_erlang_sasl_time, status_file_time(FileSasl)},
@@ -152,6 +153,22 @@ status_file_time(FilePath) ->
         {error, Reason} ->
             ?LOG_ERROR("filesystem error (~ts): ~p",
                        [FilePath, Reason]),
+            ""
+    end.
+
+erts_c_compiler_version() ->
+    case erlang:system_info(c_compiler_used) of
+        {Name, undefined}
+        when is_atom(Name) ->
+            erlang:atom_to_list(Name);
+        {Name, V}
+        when is_atom(Name), is_tuple(V) ->
+            [_ | Version] = lists:flatten([[$., erlang:integer_to_list(I)]
+                                           || I <- erlang:tuple_to_list(V)]),
+            erlang:atom_to_list(Name) ++ [$  | Version];
+        Unexpected ->
+            ?LOG_ERROR("erlang:system_info(c_compiler_used) invalid: ~p",
+                       [Unexpected]),
             ""
     end.
 
