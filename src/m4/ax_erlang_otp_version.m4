@@ -28,6 +28,8 @@
 #     ERLANG_OTP_VER_PATCH (e.g., "")
 #     ERLANG_OTP_VER_RELEASE_CANDIDATE (e.g., "")
 #
+#   R14A or later is required due to binary module use.
+#
 #   WARNING: After the 17.0 Erlang/OTP release, both
 #            ERLANG_OTP_VER_MINOR and ERLANG_OTP_VER_RELEASE_CANDIDATE will be
 #            no longer correct due to the Erlang/OTP team not wanting to
@@ -165,8 +167,9 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                             0;
                         true ->
                             %% Remove -1 from R16B03-1
-                            [[MinorL | _]] = string:tokens(MinorT, "-"),
-                            list_to_integer(MinorL)
+                            list_to_integer(lists:takewhile(fun(C) ->
+                                C /= $-
+                            end, MinorT))
                     end,
                     if
                         T1 == \$B ->
@@ -196,7 +199,11 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                                     Major ++ ".0.0"
                             end
                     end,
-                    [[_, Minor | RCString]] = string:tokens(Package, ".-"),
+                    [[_, MinorBin |
+                      RCStringBin]] = binary:split(list_to_binary(Package),
+                                                   [[<<".">>, <<"-">>]],
+                                                   [[global]]),
+                    RCString = [[binary_to_list(B) || B <- RCStringBin]],
                     {Patch1, Patch2} = case RCString of
                         [["rc" ++ RCStr | _]] ->
                             {"0", RCStr};
@@ -210,7 +217,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                             {"0", "0"}
                     end,
                     list_to_integer(Major) * 1000000 +
-                    list_to_integer(Minor) * 1000 +
+                    list_to_integer(binary_to_list(MinorBin)) * 1000 +
                     list_to_integer(Patch1) * 10 +
                     list_to_integer(Patch2)
             end,

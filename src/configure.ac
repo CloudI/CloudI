@@ -357,6 +357,10 @@ AX_BOOST_SYSTEM
 AX_BOOST_CHECK_HEADER(boost/preprocessor.hpp, ,
     [AC_MSG_ERROR([boost::preprocessor not found])], ,
     $PATHS_NONSYSTEM_INC)
+AX_BOOST_VERSION()
+AC_SUBST(CXX_DEPENDENCIES_VERSIONS,
+         ["boost_$ax_cv_cxx_boost_version"])
+
 # C/C++ CloudI API support
 if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
         "x$python_c_support" = "xtrue" ; then
