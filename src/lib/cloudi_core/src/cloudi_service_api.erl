@@ -883,6 +883,16 @@
                   {build_kernel_version, nonempty_string()} |
                   {build_operating_system, nonempty_string()} |
                   {build_erlang_otp_release, nonempty_string()} |
+                  {build_cloudi_time, nonempty_string()} |
+                  {build_cloudi_cxx_compiler_version, nonempty_string()} |
+                  {build_cloudi_cxx_dependencies_versions, nonempty_string()} |
+                  {build_erts_c_compiler_version, nonempty_string()} |
+                  {install_erlang_erts_time, nonempty_string()} |
+                  {install_erlang_kernel_time, nonempty_string()} |
+                  {install_erlang_stdlib_time, nonempty_string()} |
+                  {install_erlang_sasl_time, nonempty_string()} |
+                  {install_erlang_compiler_time, nonempty_string()} |
+                  {install_cloudi_time, nonempty_string()} |
                   {runtime_erlang_erts_version, nonempty_string()} |
                   {runtime_erlang_kernel_version, nonempty_string()} |
                   {runtime_erlang_stdlib_version, nonempty_string()} |
@@ -890,6 +900,9 @@
                   {runtime_erlang_compiler_version, nonempty_string()} |
                   {runtime_cloudi_version, nonempty_string()} |
                   {runtime_machine_processors, pos_integer()} |
+                  {runtime_start, nonempty_string()} |
+                  {runtime_clock, nonempty_string()} |
+                  {runtime_clock_offset, nonempty_string()} |
                   {runtime_total, nonempty_string()} |
                   {runtime_changes,
                    list(nonempty_list({type, internal | external} |
@@ -1607,19 +1620,40 @@ code_status(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     TimeNative = cloudi_timestamp:native_monotonic(),
-    RuntimeTotal = cloudi_timestamp:
-                   convert(TimeNative - erlang:system_info(start_time),
-                           native, second),
-    SecondsNow = cloudi_timestamp:
-                 convert(TimeNative + erlang:time_offset(),
-                         native, second),
-    SecondsStart = SecondsNow - RuntimeTotal,
+    TimeOffset = erlang:time_offset(),
+    TimeOS = cloudi_timestamp:native_os(),
+    TimeNativeStart = erlang:system_info(start_time),
+    TimeNativeTotal = TimeNative - TimeNativeStart,
+    TimeNativeNow = TimeNative + TimeOffset,
+    SecondsNow = cloudi_timestamp:convert(TimeNativeNow, native, second),
+    SecondsStart = SecondsNow -
+                   cloudi_timestamp:convert(TimeNativeTotal, native, second),
     case cloudi_core_i_configurator:code_status(SecondsStart, SecondsNow,
                                                 Timeout) of
         {ok, RuntimeChanges} ->
+            MicroSecondsStart = cloudi_timestamp:
+                                convert(TimeNativeStart + TimeOffset,
+                                        native, microsecond),
+            MicroSecondsNow = cloudi_timestamp:
+                              convert(TimeNativeNow, native, microsecond),
+            NanoSecondsOffset = cloudi_timestamp:
+                                convert(TimeOS - TimeNativeNow,
+                                        native, nanosecond),
+            NanoSecondsTotal = cloudi_timestamp:
+                               convert(TimeNativeTotal, native, nanosecond),
             Status = cloudi_environment:status() ++
-                [{runtime_total,
-                  cloudi_timestamp:seconds_to_string(RuntimeTotal)},
+                [{runtime_start,
+                  cloudi_timestamp:
+                  microseconds_epoch_to_string(MicroSecondsStart)},
+                 {runtime_clock,
+                  cloudi_timestamp:
+                  microseconds_epoch_to_string(MicroSecondsNow)},
+                 {runtime_clock_offset,
+                  cloudi_timestamp:
+                  nanoseconds_to_string(NanoSecondsOffset)},
+                 {runtime_total,
+                  cloudi_timestamp:
+                  nanoseconds_to_string(NanoSecondsTotal)},
                  {runtime_changes,
                   RuntimeChanges}],
             {ok, Status};

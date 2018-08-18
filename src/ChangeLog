@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-08-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add fields to the CloudI Service API code_status function
+      (runtime_start, runtime_clock, runtime_clock_offset)
+    * Update the cloudi_service_api:code_status type specification
+
 2018-08-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Remove Erlang string module use in autoconf macros
