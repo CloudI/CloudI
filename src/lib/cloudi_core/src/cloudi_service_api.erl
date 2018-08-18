@@ -1650,7 +1650,7 @@ code_status(Timeout)
                   microseconds_epoch_to_string(MicroSecondsNow)},
                  {runtime_clock_offset,
                   cloudi_timestamp:
-                  nanoseconds_to_string(NanoSecondsOffset)},
+                  nanoseconds_to_string(NanoSecondsOffset, signed)},
                  {runtime_total,
                   cloudi_timestamp:
                   nanoseconds_to_string(NanoSecondsTotal)},

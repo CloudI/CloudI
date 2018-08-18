@@ -47,6 +47,7 @@
          seconds_monotonic/0,
          seconds_os/0,
          seconds_to_string/1,
+         seconds_to_string/2,
          milliseconds/0,
          milliseconds_epoch_to_string/1,
          milliseconds_monotonic/0,
@@ -59,6 +60,7 @@
          nanoseconds_monotonic/0,
          nanoseconds_os/0,
          nanoseconds_to_string/1,
+         nanoseconds_to_string/2,
          seconds_filter/3,
          seconds_filter_monotonic/3,
          uptime/0,
@@ -262,7 +264,8 @@ seconds_os() ->
 -spec seconds_to_string(TotalSeconds :: non_neg_integer()) ->
     nonempty_string().
 
-seconds_to_string(TotalSeconds) ->
+seconds_to_string(TotalSeconds)
+    when is_integer(TotalSeconds), TotalSeconds >= 0 ->
     Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
     TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
     Hours = TotalHours rem ?HOURS_IN_DAY,
@@ -277,6 +280,43 @@ seconds_to_string(TotalSeconds) ->
                            time_value_to_list(Seconds, "second")]);
         true ->
             lists:flatten(time_value_to_list(Seconds, "second"))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a seconds duration with options as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec seconds_to_string(TotalSeconds :: integer(),
+                        Options :: signed) ->
+    nonempty_string().
+
+seconds_to_string(TotalSeconds, signed)
+    when is_integer(TotalSeconds) ->
+    {Sign, TotalSecondsPositive} = if
+        TotalSeconds >= 0 ->
+            {"+ ", TotalSeconds};
+        true ->
+            {"- ", -1 * TotalSeconds}
+    end,
+    Seconds = TotalSecondsPositive rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSecondsPositive div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second")]);
+        Hours > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second")]);
+        true ->
+            lists:flatten([Sign,
+                           time_value_to_list(Seconds, "second")])
     end.
 
 %%-------------------------------------------------------------------------
@@ -467,7 +507,8 @@ nanoseconds_os() ->
 -spec nanoseconds_to_string(TotalNanoSeconds :: non_neg_integer()) ->
     nonempty_string().
 
-nanoseconds_to_string(TotalNanoSeconds) ->
+nanoseconds_to_string(TotalNanoSeconds)
+    when is_integer(TotalNanoSeconds), TotalNanoSeconds >= 0 ->
     NanoSeconds = TotalNanoSeconds rem ?NANOSECONDS_IN_SECOND,
     TotalSeconds = TotalNanoSeconds div ?NANOSECONDS_IN_SECOND,
     Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
@@ -489,6 +530,51 @@ nanoseconds_to_string(TotalNanoSeconds) ->
                            time_value_to_list(NanoSeconds, "nanosecond")]);
         true ->
             lists:flatten(time_value_to_list(NanoSeconds, "nanosecond"))
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Format a nanoseconds duration with options as a minimal string with lower-precision integers.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nanoseconds_to_string(TotalNanoSeconds :: integer(),
+                            Options :: signed) ->
+    nonempty_string().
+
+nanoseconds_to_string(TotalNanoSeconds, signed)
+    when is_integer(TotalNanoSeconds) ->
+    {Sign, TotalNanoSecondsPositive} = if
+        TotalNanoSeconds >= 0 ->
+            {"+ ", TotalNanoSeconds};
+        true ->
+            {"- ", -1 * TotalNanoSeconds}
+    end,
+    NanoSeconds = TotalNanoSecondsPositive rem ?NANOSECONDS_IN_SECOND,
+    TotalSeconds = TotalNanoSecondsPositive div ?NANOSECONDS_IN_SECOND,
+    Seconds = TotalSeconds rem ?SECONDS_IN_HOUR,
+    TotalHours = TotalSeconds div ?SECONDS_IN_HOUR,
+    Hours = TotalHours rem ?HOURS_IN_DAY,
+    TotalDays = TotalHours div ?HOURS_IN_DAY,
+    if
+        TotalDays > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(TotalDays, "day"), $ ,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Hours > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(Hours, "hour"), $ ,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        Seconds > 0 ->
+            lists:flatten([Sign,
+                           time_value_to_list(Seconds, "second"), $ ,
+                           time_value_to_list(NanoSeconds, "nanosecond")]);
+        true ->
+            lists:flatten([Sign,
+                           time_value_to_list(NanoSeconds, "nanosecond")])
     end.
 
 %%-------------------------------------------------------------------------
