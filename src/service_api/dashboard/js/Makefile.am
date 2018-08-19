@@ -8,4 +8,5 @@ install-exec-hook:
 	$(INSTALL_DATA) $(srcdir)/dataTables.jqueryui.js $(instdir)
 	$(INSTALL_DATA) $(srcdir)/jquery-1.11.1.min.js $(instdir)
 	$(INSTALL_DATA) $(srcdir)/jquery.dataTables.min.js $(instdir)
+	$(INSTALL_DATA) $(srcdir)/common.js $(instdir)
 

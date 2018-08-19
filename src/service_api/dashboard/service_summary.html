@@ -7,17 +7,19 @@
     <script src="js/jquery-1.11.1.min.js"></script>
     <script src="js/jquery.dataTables.min.js"></script>
     <script src="js/dataTables.jqueryui.js"></script>
+    <!-- link to common javascript functions -->
+    <script src="js/common.js"></script>
     <!-- link to JQuery and DataTables CSS definitions -->
     <link rel="stylesheet" href="css/jquery-ui.css"/>
     <link rel="stylesheet" href="css/dataTables.jqueryui.css"/>
     <!-- define an internal style -->
     <style type="text/css">
-        .right {
-            float:right;
-        }
-    .loading {
-        color:CornflowerBlue;
-    } 
+      .right {
+          float:right;
+      }
+      .loading {
+          color:CornflowerBlue;
+      }
     </style>
     <script type="text/javascript">
       // Request the current list of CloudI services
@@ -94,50 +96,6 @@
           };
           topButtonsHide();
           request.send(`["${service_id}"]`);
-      }
-
-      // parse a CloudI Service API response using JSON
-      function parseResponse(data, callback) {
-          var response;
-          try {
-              response = JSON.parse(data);
-          }
-          catch (e) {
-              console.log(`received invalid JSON "${data}"`);
-              return;
-          }
-          if (response.success == false) {
-              console.log(`CloudI Service API error "${response.error}"`);
-              return;
-          }
-          if (typeof callback !== 'undefined') {
-              callback(response);
-          }
-      }
-
-      // common javascript example http request function
-      function httpRequest(method, url) {
-          // function createCORSRequest(method, url) source code
-          // commonly used in javascript examples
-          var xhr = new XMLHttpRequest();
-          if ('withCredentials' in xhr) {
-              // Check if the XMLHttpRequest object
-              // has a "withCredentials" property.
-              // "withCredentials" only exists on XMLHTTPRequest2 objects.
-              xhr.open(method, url, true);
-          } else if (typeof XDomainRequest !== 'undefined') {
-              // Otherwise, check if XDomainRequest.
-              // XDomainRequest only exists in IE, and is IE's way of
-              // making CORS requests.
-              xhr = new XDomainRequest();
-              xhr.open(method, url);
-          } else {
-              // Otherwise, CORS is not supported by the browser.
-              xhr = null;
-              // throw an error if the browser is not supported
-              throw new Error('createCORSRequest failed!');
-          }
-          return xhr;
       }
 
       function topButtonsShow() {

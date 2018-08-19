@@ -8,6 +8,8 @@
     * Update the cloudi_service_api:code_status type specification
     * Add cloudi_timestamp:seconds_to_string/2 and
       cloudi_timestamp:nanoseconds_to_string/2
+    * Convert the CloudI Service API dashboard nodes.html to
+      utilize JSON responses from cloudi_service_api_requests
 
 2018-08-11 Michael Truog   <mjtruog at protonmail dot com>
 
