@@ -121,7 +121,8 @@
       <h2 class="loading">Waiting for data...</h2>
     </div>
     <div>
-      <input id="hostname" type="text" value="localhost" title="Host name or address to be monitored"></input>
+      <input id="hostname" type="text" value="localhost"
+             title="Host name or address to be monitored"></input>
       <button class="left" onclick="codePathRequest();">Refresh Now</button>
       <label id="code_path" hidden="true"></label>
       <button id="add_button" title="Add a directory to the CloudI Erlang VM code server's search paths. The path is always appended to the list of search paths">Add Path</button>
@@ -157,7 +158,7 @@
           // hide the top buttons until after a click on a single row occurs
           topButtonsHide();
 
-          // call the service request function now
+          // fill the table with data
           codePathRequest();
 
           // define a function that will highlight a row when selected

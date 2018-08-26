@@ -3,8 +3,11 @@
 
 2018-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Convert the CloudI Service API dashboard code_path.html to
-      utilize JSON responses from cloudi_service_api_requests
+    * Convert the CloudI Service API dashboard code_path.html 
+      and log_settings.html to utilize JSON responses from
+      cloudi_service_api_requests
+    * Fix the CloudI Service API functions logging_syslog_set and
+      logging_formatters_set so undefined is a valid parameter
 
 2018-08-18 Michael Truog   <mjtruog at protonmail dot com>
 

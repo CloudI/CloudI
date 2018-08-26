@@ -1339,13 +1339,14 @@ logging_set([_ | _] = Value, #config{} = Config) ->
 %%-------------------------------------------------------------------------
 
 -spec logging_syslog_set(Value :: cloudi_service_api:
-                                  logging_syslog_set_proplist(),
+                                  logging_syslog_set_proplist() |
+                                  undefined,
                          Config :: #config{}) ->
     {ok, #config{}} |
     {error, error_reason_logging_syslog_set()}.
 
 logging_syslog_set(Value, #config{logging = OldLogging} = Config)
-    when is_list(Value) ->
+    when is_list(Value) orelse (Value =:= undefined) ->
     case logging_validate_syslog(Value) of
         {ok, SyslogConfig} ->
             {ok,
@@ -1363,13 +1364,14 @@ logging_syslog_set(Value, #config{logging = OldLogging} = Config)
 %%-------------------------------------------------------------------------
 
 -spec logging_formatters_set(Value :: cloudi_service_api:
-                                      logging_formatters_set_proplist(),
+                                      logging_formatters_set_proplist() |
+                                      undefined,
                              Config :: #config{}) ->
     {ok, #config{}} |
     {error, error_reason_logging_formatters_set()}.
 
 logging_formatters_set(Value, #config{logging = OldLogging} = Config)
-    when is_list(Value) ->
+    when is_list(Value) orelse (Value =:= undefined) ->
     case logging_validate_formatters(Value) of
         {ok, FormattersConfig} ->
             {ok,

@@ -378,12 +378,21 @@ convert_json_to_term(Request, Method)
     end;
 convert_json_to_term(Request, Method)
     when Method =:= nodes_set;
-         Method =:= logging_set;
-         Method =:= logging_syslog_set;
+         Method =:= logging_set ->
+    case json_decode(Request) of
+        List when is_list(List) ->
+            convert_json_to_term_options(List);
+        _ ->
+            invalid
+    end;
+convert_json_to_term(Request, Method)
+    when Method =:= logging_syslog_set;
          Method =:= logging_formatters_set ->
     case json_decode(Request) of
         List when is_list(List) ->
             convert_json_to_term_options(List);
+        <<"undefined">> ->
+            undefined;
         _ ->
             invalid
     end;

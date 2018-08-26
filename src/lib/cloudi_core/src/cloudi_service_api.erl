@@ -1454,7 +1454,8 @@ logging_stdout_set(Stdout, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec logging_syslog_set(L :: logging_syslog_set_proplist(),
+-spec logging_syslog_set(L :: logging_syslog_set_proplist() |
+                              undefined,
                          Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -1462,7 +1463,7 @@ logging_stdout_set(Stdout, Timeout)
      cloudi_core_i_configuration:error_reason_logging_syslog_set()}.
 
 logging_syslog_set(L, Timeout)
-    when is_list(L),
+    when is_list(L) orelse (L =:= undefined),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
@@ -1478,7 +1479,8 @@ logging_syslog_set(L, Timeout)
 %% @end
 %%-------------------------------------------------------------------------
 
--spec logging_formatters_set(L :: logging_formatters_set_proplist(),
+-spec logging_formatters_set(L :: logging_formatters_set_proplist() |
+                                  undefined,
                              Timeout :: api_timeout_milliseconds()) ->
     ok |
     {error,
@@ -1486,7 +1488,7 @@ logging_syslog_set(L, Timeout)
      cloudi_core_i_configuration:error_reason_logging_formatters_set()}.
 
 logging_formatters_set(L, Timeout)
-    when is_list(L),
+    when is_list(L) orelse (L =:= undefined),
          ((is_integer(Timeout) andalso
            (Timeout > ?TIMEOUT_DELTA) andalso
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse

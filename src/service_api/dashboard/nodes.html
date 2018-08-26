@@ -147,10 +147,7 @@
   <body>
     <div id="logo">
       <img class="right" src="powered_by_cloudi.png"></img>
-       
       <h1>Node Settings</h1>
-       
-      <label class="right" id="connection_status"></label>
     </div>
     <div id="loading_message">
       <h2 class="loading">Waiting for data...</h2>
@@ -221,13 +218,12 @@
           $("#hostname").val("localhost:6464");
 
           // hide the loading message
-          $('#loading_message').hide();
+          loadingHide();
 
           // define a function to add a new node
           $('#add_node_button').click(function () {
               var node_value = prompt("Enter new node", "cloudi@host");
               if (node_value != null && node_value.length > 0) {
-                  console.log("New node " + node_value);
                   nodesAddRequest(node_value);
               }
           });
@@ -236,7 +232,6 @@
           $('#remove_node_button').click(function () {
               var node_value = prompt("Enter node to remove", "cloudi@host");
               if (node_value != null && node_value.length > 0) {
-                  console.log("Remove node " + node_value);
                   nodesRemoveRequest(node_value);
               }
           });
