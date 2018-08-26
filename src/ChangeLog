@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-08-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Convert the CloudI Service API dashboard code_path.html to
+      utilize JSON responses from cloudi_service_api_requests
+
 2018-08-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add fields to the CloudI Service API code_status function

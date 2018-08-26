@@ -1,421 +1,206 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Code Path</title>
     <!-- link to JQuery and DataTables javascript libraries -->
     <script src="js/jquery-1.11.1.min.js"></script>
     <script src="js/jquery.dataTables.min.js"></script>
     <script src="js/dataTables.jqueryui.js"></script>
+    <!-- link to common javascript functions -->
+    <script src="js/common.js"></script>
     <!-- link to JQuery and DataTables CSS definitions -->
     <link rel="stylesheet" href="css/jquery-ui.css"/>
     <link rel="stylesheet" href="css/dataTables.jqueryui.css"/>
     <!-- define an internal style -->
     <style type="text/css">
-        .right {
-            float:right;
-        }
-        .loading {
-            color:CornflowerBlue;
-        }
+      .right {
+          float:right;
+      }
+      .loading {
+          color:CornflowerBlue;
+      }
     </style>
     <script type="text/javascript">
-      var service_name = "/cloudi/api/rpc/code_path.erl";
-      var add_path_service_name = "/cloudi/api/rpc/code_path_add.erl";
-      var remove_path_service_name = "/cloudi/api/rpc/code_path_remove.erl";
-      var request_type = "get";
-      var web_socket = undefined;
-      var websocket_url = "";
-      var interval_id = undefined; 
-
-      function is(type, obj) {
-          if (obj === undefined)
-              return type === 'undefined';
-          else if (obj === null)
-              return type === 'null';
-          else 
-              return type === Object.prototype.toString.call(obj).slice(8,  - 1);
+      // Request the current list of code paths
+      function codePathRequest() {
+          topButtonsHide();
+          loadingShow();
+          var name_code_path = "/cloudi/api/rpc/code_path.json";
+          var code_path_url = "http://" + $("#hostname").val() + name_code_path;
+          var request = httpRequest('GET', code_path_url);
+          request.onload = function () {
+              parseResponse(request.responseText, function (response) {
+                  codePathResponse(response.code_path);
+              })
+          };
+          request.onerror = function () {
+              console.log(name_code_path + ' error!');
+          };
+          request.send('');
       }
 
-      String.prototype.startsWith = function (str) {
-          return this.slice(0, str.length) == str;
-      };
-
-      // This function uses a web socket to get the current code path settings
-      function send() {
-          // if the web socket is undefined then display an error
-          if (web_socket == undefined) {
-              $('#connectionStatus').text("Not connected");
-              open();
+      // Update the table of code paths
+      function codePathResponse(code_path) {
+          // clear the table
+          var table = $('#code_path_table').dataTable();
+          table.fnClearTable();
+          // add each row to the table
+          for (i = 0; i < code_path.length; i++) {
+              var path = code_path[i];
+              var index = i + 1;
+              table.fnAddData([index, path]);
           }
-
-          // if the web socket is in an open status then send the request
-          if (web_socket.readyState == web_socket.OPEN) {
-              web_socket.send(request_type);
-              //console.log("Request (out): " + request_type);
-          }
+          loadingHide();
       }
 
-      // This function opens a web socket used to get the current code path settings
-      function open() {
-          if (!("WebSocket" in window)) {
-              $('#connectionStatus').text("Not connected");
-              alert("This browser does not support WebSockets");
-              return;
-          }
-
-          // open the websocket
-          $('#connectionStatus').text("Connecting");
-          websocket_url = "ws://" + $("#hostname").val() + service_name;
-          web_socket = new WebSocket(websocket_url);
-          console.log("Connecting to " + websocket_url);
-
-
-          // define function that is called when an error occurs with the websocket
-          web_socket.onerror = function () {
-              $('#connectionStatus').text("Error");
-              console.log("Websocket error");
-
-              // turn off the timed page refresh
-              if (interval_id != undefined) {
-                 clearInterval(interval_id);
-                 interval_id = undefined;
-              }
-
-              // hide the loading message
-              $('#loadingMessage').hide();
-
-              alert("Error connecting to websocket " + websocket_url);
+      // Add a single code_path that was entered from a prompt
+      function codePathAddSelection(code_path) {
+          console.log(`codePathAddSelection("${code_path}")`);
+          var name_code_path_add = "/cloudi/api/rpc/code_path_add.json";
+          var code_path_add_url = "http://" + $("#hostname").val() + name_code_path_add;
+          var request = httpRequest('POST', code_path_add_url);
+          request.onload = function () {
+              parseResponse(request.responseText);
+              codePathRequest();
           };
-
-          // define function that is called when the web socket is opened
-          web_socket.onopen = function () {
-              $('#connectionStatus').text("Connected");
-              console.log("Connected");
-              send();
+          request.onerror = function () {
+              console.log(name_code_path_add + ' error!');
+              codePathRequest();
           };
-
-          // define function that is called when data is available on the websocket 
-          handle_message = function (data) {
-              if (data.startsWith("notification:")) {
-                  // client state check to determine this is an incoming
-                  // service request, not an incoming response
-                  console.log("Request (in): " + data);
-
-                  var response = "ok";
-                  web_socket.send(response);
-                  console.log("Response (in): " + response);
-              }
-              else {
-                  //console.log("Response (out): " + data);
-                  if (data != "got connect! yay!") {
-
-                      // attempt to parse the data response
-                      var start = 0;
-                      var end = 0;
-                      var code_path_entries = [];
-                      var pathName = "";
-
-                      do {
-                          // parse the service id
-                          start = data.indexOf("\"", end);
-
-                          if (start > 0) {
-                              end = data.indexOf(",", start);
-                              if (end ==  - 1) {
-                                  pathName = data.substring(start + 1, data.indexOf("\"]", start));
-                              }
-                              else {
-                                  pathName = data.substring(start + 1, end - 1);
-                              }
-                              var codePathEntry = new Object([pathName]);
-                              code_path_entries[code_path_entries.length] = codePathEntry;
-                          }
-
-                      }
-                      while (start > 0 && end > 0);
-
-                      // display the code path entries in the table
-                      updateTable(code_path_entries);
-          
-		      // setup time interval to refresh page
-                      if (interval_id == undefined) {
-                          interval_id = setInterval("send();", 60000);
-                      }
-                  }
-              }
-          };
-
-          // define function that is called when a message is received on the web socket 
-          web_socket.onmessage = function (evt) {
-              var data = evt.data;
-              if (is("Blob", data)) {
-                  // for the example, treat binary as text
-                  var reader = new FileReader();
-                  reader.readAsText(data, "text/plain");
-                  reader.onload = function (reader_evt) {
-                      data = reader_evt.target.result;
-                      handle_message(data);
-                  };
-              }
-              else {
-                  handle_message(data);
-              }
-          };
-
-          // define function that is called when the websocket is closed
-          web_socket.onclose = function () {
-              web_socket = undefined;
-              console.log("Connection closed");
-          };
-
+          request.send(`"${code_path}"`);
       }
 
-      // This function closes the web socket used to get the current code path settings
-      function close() {
-          $('#connectionStatus').text("Not connected");
-
-          if (web_socket == undefined) {
-              return;
-          }
-          web_socket.close();
+      // Remove a single code_path that was selected from the table
+      function codePathRemoveSelection(code_path) {
+          console.log(`codePathRemoveSelection("${code_path}")`);
+          var name_code_path_remove = "/cloudi/api/rpc/code_path_remove.json";
+          var code_path_remove_url = "http://" + $("#hostname").val() + name_code_path_remove;
+          var request = httpRequest('POST', code_path_remove_url);
+          request.onload = function () {
+              parseResponse(request.responseText);
+              codePathRequest();
+          };
+          request.onerror = function () {
+              console.log(name_code_path_remove + ' error!');
+              codePathRequest();
+          };
+          topButtonsHide();
+          request.send(`"${code_path}"`);
       }
 
-      // Toggle buttons visibility when an entry in the table is selected
-      function toggle_manage_buttons() {
-          // always show the add button
-          $('#add_button').show();
-
-          var codePath = $('#codePath').text();
-          if (codePath.length > 0) {
-              $('#remove_button').show();
-
-          }
-          else {
-              $('#remove_button').hide();
-          }
+      function topButtonsShow() {
+          // show the button that uses the code_path text
+          $('#remove_button').show();
       }
 
-      function createCORSRequest(method, url) {
-          console.log("Creating CORS Request " + method + " " + url);
-
-          var xhr = new XMLHttpRequest();
-          if ("withCredentials" in xhr) {
-
-              // Check if the XMLHttpRequest object has a "withCredentials" property.
-              // "withCredentials" only exists on XMLHTTPRequest2 objects.
-              xhr.open(method, url, true);
-
-          }
-          else if (typeof XDomainRequest != "undefined") {
-
-              // Otherwise, check if XDomainRequest.
-              // XDomainRequest only exists in IE, and is IE's way of making CORS requests.
-              xhr = new XDomainRequest();
-              xhr.open(method, url);
-
-          }
-          else {
-
-              // Otherwise, CORS is not supported by the browser.
-              xhr = null;
-              console.log("XHR not supported by this browser");
-
-          }
-          return xhr;
+      function topButtonsHide() {
+          // clear the code_path
+          $('#code_path').text("");
+          // hide the button that uses the code_path text
+          $('#remove_button').hide();
       }
 
-      // This function submits an HTTP request to remove a code path
-      function remove_path(codePath) {
-
-          var remove_path_service_url = "http://" + $("#hostname").val() + remove_path_service_name;
-          var xhr = createCORSRequest('POST', remove_path_service_url);
-          if (!xhr) {
-              throw new Error('CORS not supported');
-          }
-
-          xhr.onload = function () {
-              var responseText = xhr.responseText;
-              console.log(responseText);
-
-              // refresh the information on the page
-              send();
-          };
-
-          xhr.onerror = function (xhr, textStatus, errorThrown) {
-              console.log('There was an error.  Status ' + xhr.status);
-              console.log('Error response=' + xhr.responseText);
-
-              // refresh the information on the page
-              send();
-          };
-
-          // clear the codePath
-          $('#codePath').text("");
-
-          // hide the manage code path buttons
-          toggle_manage_buttons();
-
-          xhr.send('\"' + codePath + '\"');
+      function loadingShow() {
+          // show the loading message
+          $('#loading_message').show();
       }
 
-      // This function submits an HTTP request to add a code path
-      function add_path(codePath) {
-
-          var add_path_service_url = "http://" + $("#hostname").val() + add_path_service_name;
-          var xhr = createCORSRequest('POST', add_path_service_url);
-          if (!xhr) {
-              throw new Error('CORS not supported');
-          }
-
-          xhr.onload = function () {
-              var responseText = xhr.responseText;
-              console.log(responseText);
-
-              // refresh the information on the page
-              send();
-          };
-
-          xhr.onerror = function () {
-              console.log('There was an error!');
-
-              // refresh the information on the page
-              send();
-          };
-
-          // clear the code path
-          $('#codePath').text("");
-
-          // hide the manage code path buttons
-          toggle_manage_buttons();
-
-          xhr.send('\"' + codePath + '\"');
+      function loadingHide() {
+          // hide the loading message
+          $('#loading_message').hide();
       }
     </script>
   </head>
   <body>
-    <script type="text/javascript">
-      // This function is called by the server when data is ready to be processed
-      function updateTable(codePathEntries) {
-
-          // clear table
-          var oTable = $('#codePathTable').dataTable();
-          oTable.fnClearTable();
-
-          // process each object in the array            
-          for (i = 0;i < codePathEntries.length;i++) {
-              codePathEntry = codePathEntries[i];
-
-              oTable.fnAddData([codePathEntry[0]]);
-
-          }
-
-          // hide the loading message
-          $('#loadingMessage').hide();
-      }
-    </script>
     <div id="logo">
       <img class="right" src="powered_by_cloudi.png"></img>
-       
       <h1>Code Path</h1>
     </div>
-    <div id="loadingMessage">
+    <div id="loading_message">
       <h2 class="loading">Waiting for data...</h2>
     </div>
     <div>
-      <input id="hostname" type="text" value="localhost"  title="Host name or address to be monitored"></input>
-       
-      <button class="left" onclick="send();">Refresh Now</button>
-       
-      <label hidden="true" id="codePath"></label>
-       
-      <label class="right" id="connectionStatus"></label>
-       
-      <button id="remove_button" title="Remove selected directory from the CloudI Erlang VM code server's search paths. This doesn't impact any running services, only services that will be started in the future">Remove Path</button>
-       
+      <input id="hostname" type="text" value="localhost" title="Host name or address to be monitored"></input>
+      <button class="left" onclick="codePathRequest();">Refresh Now</button>
+      <label id="code_path" hidden="true"></label>
       <button id="add_button" title="Add a directory to the CloudI Erlang VM code server's search paths. The path is always appended to the list of search paths">Add Path</button>
+      <button id="remove_button" title="Remove selected directory from the CloudI Erlang VM code server's search paths. This doesn't impact any running services, only services that will be started in the future">Remove Path</button>
     </div>
-    <table id="codePathTable" class="display">
+    <table id="code_path_table" class="display">
       <thead>
         <tr>
+          <th>&nbsp;</th>
           <th>Directory Path</th>
         </tr>
       </thead>
-       
-      <tbody id="codePathTableBody"></tbody>
+      <tbody id="code_path_table_body"></tbody>
     </table>
     <script type="text/javascript">
       $(document).ready(function () {
 
           // assign default hostname
           $("#hostname").val("localhost:6464");
-	
+        
           // change the table attributes to support jQuery styles
-          $('#codePathTable').dataTable( {
+          $('#code_path_table').dataTable( {
               "bJQueryUI" : true, "sPaginationType" : "full_numbers"
           });
 
           // clear the table upon first displaying the page
-          var oTable = $('#codePathTable').dataTable();
+          var oTable = $('#code_path_table').dataTable();
           oTable.fnClearTable();
 
           // show the loading message
-          $('#loadingMessage').show();
+          loadingShow();
 
-          // set the connection status 
-          $('#connectionStatus').text("Not connected");
-
-          // hide the manage code path buttons
-          toggle_manage_buttons();
+          // hide the top buttons until after a click on a single row occurs
+          topButtonsHide();
 
           // call the service request function now
-          send();
+          codePathRequest();
 
           // define a function that will highlight a row when selected
-          $('#codePathTable tbody').on('click', 'tr', function () {
-
-              // toggle the row highlighting color
+          $('#code_path_table tbody').on('click', 'tr', function () {
               if ($(this).hasClass('selected')) {
+                  // deselect a single row
                   $(this).removeClass('selected');
+                  topButtonsHide();
               }
               else {
+                  // select a single row
                   oTable.$('tr.selected').removeClass('selected');
                   $(this).addClass('selected');
+
+                  var table_api = $('#code_path_table').dataTable().api();
+
+                  // save the code_path in a hidden HTML object for use later
+                  var row = table_api.row(this).data();
+                  $('#code_path').text(row[1]);
+
+                  topButtonsShow();
               }
-
-              var table_api = $('#codePathTable').dataTable().api();
-
-              // save the code path in a hidden HTML object for use later
-              var codePathEntry = table_api.row(this).data();
-              console.log("codePath is " + codePathEntry[0]);
-              $('#codePath').text(codePathEntry[0]);
-
-              // hide the manage code paths buttons
-              toggle_manage_buttons();
           });
 
       });
 
       // define a function to add a new code path
       $('#add_button').click(function () {
-
-          var codePath = prompt("Enter new code path", "");
-          if (codePath != null && codePath.length > 0) {
-              console.log("Code Path is " + codePath);
-              add_path(codePath);
+          var code_path = prompt("Enter new code path", "");
+          if (code_path != null && code_path.length > 0) {
+              codePathAddSelection(code_path);
           }
-
       });
 
       // define a function to remove the selected code path
       $('#remove_button').click(function () {
-
-          var codePath = $('#codePath').text();
-          if (codePath.length > 0) {
-              console.log("Code Path is " + codePath);
-              remove_path(codePath);
+          var code_path = $('#code_path').text();
+          if (code_path.length > 0) {
+              codePathRemoveSelection(code_path);
           }
-
+          else {
+              console.log('UI error: no service selected in table');
+          }
       });
     </script>
   </body>

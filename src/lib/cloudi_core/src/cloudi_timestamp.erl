@@ -575,7 +575,9 @@ nanoseconds_to_string(TotalNanoSeconds, signed)
         true ->
             lists:flatten([Sign,
                            time_value_to_list(NanoSeconds, "nanosecond")])
-    end.
+    end;
+nanoseconds_to_string(_, _) ->
+    erlang:exit(badarg).
 
 %%-------------------------------------------------------------------------
 %% @doc

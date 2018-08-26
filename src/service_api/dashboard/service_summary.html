@@ -1,7 +1,7 @@
-<!DOCTYPE HTML>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Service Summary</title>
     <!-- link to JQuery and DataTables javascript libraries -->
     <script src="js/jquery-1.11.1.min.js"></script>
@@ -24,6 +24,7 @@
     <script type="text/javascript">
       // Request the current list of CloudI services
       function servicesRequest() {
+          topButtonsHide();
           loadingShow();
           var name_services = "/cloudi/api/rpc/services.json";
           var services_url = "http://" + $("#hostname").val() + name_services;
@@ -166,13 +167,13 @@
           oTable.fnClearTable();
 
           // show the loading message
-          $('#loading_message').show();
-
-          // call the service request function now
-          servicesRequest();
+          loadingShow();
 
           // hide the top buttons until after a click on a single row occurs
           topButtonsHide();
+
+          // call the service request function now
+          servicesRequest();
 
           // handle clicking on a table row
           $('#services_table tbody').on('click', 'tr', function () {
