@@ -33,7 +33,7 @@ import struct
 import zlib
 import copy
 
-if int(sys.version[0]) >= 3:
+if sys.version_info[0] >= 3:
     TypeLong = int
     TypeUnicode = str
     def b_chr(integer):

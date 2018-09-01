@@ -422,7 +422,7 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
     class _unbuffered(object):
         # pylint: disable=too-few-public-methods
         def __init__(self, stream):
-            if int(sys.version[0]) >= 3:
+            if sys.version_info[0] >= 3:
                 import io
                 self.__stream = io.TextIOWrapper(
                     stream.buffer,

@@ -38,7 +38,7 @@ sys.path.append(
     )
 )
 import json
-if int(sys.version[0]) >= 3:
+if sys.version_info[0] >= 3:
     from urllib.request import urlopen
 else:
     from urllib2 import urlopen
@@ -76,7 +76,7 @@ def _main():
  {"prefix": "/json_rpc/4/",
   "module": "'cloudi_service_test_http_req'"}]
 """)
-    if int(sys.version[0]) >= 3:
+    if sys.version_info[0] >= 3:
         assert isinstance(services_added, str)
     else:
         assert isinstance(services_added, unicode)

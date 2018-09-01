@@ -4,6 +4,7 @@
 2018-09-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix small error in Python and Python/C msg_size source code
+    * Improve programmatic Python version checking
 
 2018-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
