@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-09-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix small error in Python and Python/C msg_size source code
+
 2018-08-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Convert the CloudI Service API dashboard code_path.html 

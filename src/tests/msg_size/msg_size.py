@@ -62,7 +62,7 @@ class Task(threading.Thread):
             pass
         except:
             traceback.print_exc(file=sys.stderr)
-        print('terminate msg_size %s' % self.__name)
+        print('terminate msg_size %s' % Task.api_name)
 
 def _request(api, request_type, name, pattern, request_info, request,
              timeout, priority, trans_id, pid):
