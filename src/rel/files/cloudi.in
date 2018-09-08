@@ -49,6 +49,12 @@ fi
 # based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl (milliseconds)
 SHUTDOWN_TIME_MAX=65000
 
+# default -heart timeout in seconds
+HEART_BEAT_TIMEOUT=60
+
+# wait indefinitely until the crash dump is completely written
+ERL_CRASH_DUMP_SECONDS=-1
+
 # Create nodetool command-line
 NODETOOL="$BINDIR/escript $ROOT_BIN_DIR/nodetool"
 
@@ -94,7 +100,9 @@ case "$1" in
         # CloudI environment variable settings
         export TMPDIR
 
+        # accumulate start command-line for future execution
         RUN_PARAM="'$@'"
+
         export HEART_COMMAND="$PROGNAME_FILE $HEART_OPTION $RUN_PARAM"
         rm -rf "$TMPDIR"
         mkdir "$TMPDIR"
@@ -158,8 +166,8 @@ case "$1" in
         fi
         # CloudI erl settings
         export ERL_CRASH_DUMP
+        export ERL_CRASH_DUMP_SECONDS
         unset ERL_CRASH_DUMP_NICE
-        unset ERL_CRASH_DUMP_SECONDS
         unset ERL_CRASH_DUMP_BYTES
         export ERL_AFLAGS
         export ERL_ZFLAGS
@@ -173,13 +181,17 @@ case "$1" in
         BOOTFILE="$PROGNAME"
         # CloudI erl settings
         export ERL_CRASH_DUMP
+        export ERL_CRASH_DUMP_SECONDS
         unset ERL_CRASH_DUMP_NICE
-        unset ERL_CRASH_DUMP_SECONDS
         unset ERL_CRASH_DUMP_BYTES
         export ERL_AFLAGS
         export ERL_ZFLAGS
         export ERL_FLAGS
         export ERL_LIBS
+        # erl -heart settings
+        export HEART_BEAT_TIMEOUT
+        export HEART_KILL_SIGNAL=SIGKILL
+        export HEART_NO_KILL=TRUE
 
         # Setup beam-required vars
         CMD="$BINDIR/erlexec -boot $RELEASEDIR/$BOOTFILE -config $ERLCONFIG_FILE -args_file $VMARGS_FILE $VMARGS"

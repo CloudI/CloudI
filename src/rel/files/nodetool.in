@@ -22,6 +22,7 @@
             timeout = ?SHUTDOWN_TIME_MAX :: pos_integer(),
             test :: boolean(),
             stderr :: port(),
+            heart = false :: boolean(),
             node_name_type = undefined :: longnames | shortnames | undefined,
             node = undefined :: node() | undefined,
             node_script = undefined :: node() | undefined,
@@ -85,8 +86,16 @@ command_line([?CMD_STOP], State) ->
     rpc_call_init(stop, State);
 command_line([?CMD_RESTART], State) ->
     rpc_call_init(restart, State);
-command_line([?CMD_REBOOT], State) ->
-    rpc_call_init(reboot, State);
+command_line([?CMD_REBOOT],
+             #state{heart = Heart} = State) ->
+    if
+        Heart =:= true ->
+            rpc_call_init(reboot, State);
+        Heart =:= false ->
+            exit_error(1,
+                       "reboot requires start with "
+                       "-heart (in vm.args)\n", State)
+    end;
 command_line([?CMD_ARGS_REMSH],
              #state{node_name_type = NodeNameType,
                     node = Node,
@@ -149,6 +158,8 @@ parse_vmargs_line(F, State) ->
         eof ->
             ok = file:close(F),
             State;
+        {ok, "-heart" ++ _} ->
+            parse_vmargs_line(F, State#state{heart = true});
         {ok, "-sname" ++ SName} ->
             SNameValue = strip_to_atom(SName),
             parse_vmargs_line(F, State#state{node_name_type = shortnames,

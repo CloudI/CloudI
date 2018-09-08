@@ -7,9 +7,14 @@
 ## Cookie for distributed erlang
 @CLOUDI_ARG_NODE_COOKIE@
 
-## Heartbeat management; auto-restarts VM if it dies or becomes unresponsive
-## (Disabled by default..use with caution!)
-##-heart
+## heart VM monitoring (required for reboot command)
+## (WARNING: (from http://erlang.org/doc/man/heart.html)
+##  "When running on OSs lacking support for monotonic time, heart is
+##   susceptible to system clock adjustments of more than HEART_BEAT_TIMEOUT
+##   seconds. When this happens, heart times out and tries to reboot the
+##   system. This can occur, for example, if the system clock is adjusted
+##   automatically by use of the Network Time Protocol (NTP).")
+#-heart
 
 ## Enable kernel poll and a few async threads
 +K true

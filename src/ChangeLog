@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-09-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improvements to CloudI release scripts
+        * reboot command checks the vm.args for -heart
+        * erl_crash.dump is always written (with or without -heart)
+        * heart defaults are constants
+
 2018-09-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix small error in Python and Python/C msg_size source code
