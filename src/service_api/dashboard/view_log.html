@@ -38,31 +38,39 @@
               table.fnClearTable();
               while (start >= 0) {
                   var end = log_data.indexOf(" ", start);
+                  if (end == -1) {
+                      break;
+                  }
                   var log_data_date = log_data.substring(start, end);
 
                   // parse the log level
                   start = end + 1;
                   end = log_data.indexOf(" ", start);
+                  if (end == -1) {
+                      break;
+                  }
                   var log_data_level = log_data.substring(start, end);
 
-                  // parse the log source    
+                  // parse the log source
                   start = end + 1;
-                  end = log_data.indexOf(")", start) + 1;
+                  end = log_data.indexOf(")", start);
+                  if (end == -1) {
+                      break;
+                  }
+                  ++end;
                   var log_data_source = log_data.substring(start, end);
 
-                  // parse the log message    
+                  // parse the log message if the line is complete
                   log_data = log_data.substring(end + 1);
-                  var log_data_message;
                   start = log_data.search(regex_date);
                   if (start != -1) {
                       end = start - 1;
-                      log_data_message = log_data.substring(0, end);
+                      var log_data_message = log_data.substring(0, end);
                       log_data = log_data.substring(end);
                       start = 0;
 
-                      // shift the remaining text
                       ++line_count;
-    
+
                       // check if log line passes the filter
                       if (regex_loglevel.test(log_data_level)) {
                           // add the log line to the table
@@ -105,11 +113,11 @@
     <div>
       <input id="hostname" type="text" value="localhost"
              title="Host name or address to be monitored"></input>
-       
+
       <button class="left" onclick="logDataRequest()">Refresh Now</button>
-       
+
       <label>Filter by Level</label>
-       
+
       <select id="set_level_input" onchange="logDataRequest()">
         <option selected="selected"
                 value="TRACE|DEBUG|INFO|WARN|ERROR|FATAL">&ge; Trace</option>
@@ -124,7 +132,7 @@
         <option value="ERROR">= Error</option>
         <option value="FATAL">= Fatal</option>
       </select>
-       
+
       <!-- <label class="right" id="connection_status"></label> -->
     </div>
     <table id="log_table" class="display">
