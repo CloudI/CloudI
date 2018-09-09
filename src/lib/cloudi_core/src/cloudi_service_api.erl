@@ -904,7 +904,9 @@
                   {runtime_clock, nonempty_string()} |
                   {runtime_clock_offset, nonempty_string()} |
                   {runtime_total, nonempty_string()} |
-                  {runtime_changes,
+                  {runtime_cloudi_start, nonempty_string()} |
+                  {runtime_cloudi_total, nonempty_string()} |
+                  {runtime_cloudi_changes,
                    list(nonempty_list({type, internal | external} |
                                       {file_age, nonempty_string()} |
                                       {file_path, nonempty_string()} |
