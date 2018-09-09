@@ -7,404 +7,114 @@
     <script src="js/jquery-1.11.1.min.js"></script>
     <script src="js/jquery.dataTables.min.js"></script>
     <script src="js/dataTables.jqueryui.js"></script>
+    <!-- link to common javascript functions -->
+    <script src="js/common.js"></script>
     <!-- link to JQuery and DataTables CSS definitions -->
     <link rel="stylesheet" href="css/jquery-ui.css"/>
     <link rel="stylesheet" href="css/dataTables.jqueryui.css"/>
     <!-- define an internal style -->
     <style type="text/css">
-        .right {
-            float:right;
-        }
-        .loading {
-            color:CornflowerBlue;
-        }
+      .right {
+          float:right;
+      }
+      .loading {
+          color:CornflowerBlue;
+      }
     </style>
     <script type="text/javascript">
-      var view_log_service_name = "/cloudi/log/cloudi.log";
-      var log_settings_service_name = "/cloudi/api/rpc/logging.erl";
-      var request_type = "get";
+      function logDataRequest() {
+          loadingShow();
+          var name_log_data = "/cloudi/log/cloudi.log";
+          var log_data_url = "http://" + $("#hostname").val() + name_log_data;
+          var request = httpRequest('GET', log_data_url);
+          request.onload = function () {
+              // add the log data to the table as it is parsed
+              var log_data = request.responseText;
+              var table = $('#log_table').dataTable();
+              var regex_loglevel = new RegExp($("#set_level_input").val());
+              var regex_date = /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/;
+              var start = log_data.search(regex_date);
+              var line_count = 0;
+              table.fnClearTable();
+              while (start >= 0) {
+                  var end = log_data.indexOf(" ", start);
+                  var log_data_date = log_data.substring(start, end);
 
-      var view_log_web_socket = undefined;
-      var log_settings_web_socket = undefined;
+                  // parse the log level
+                  start = end + 1;
+                  end = log_data.indexOf(" ", start);
+                  var log_data_level = log_data.substring(start, end);
 
-      var websocket_url = "";
-      var interval_id = undefined; 
+                  // parse the log source    
+                  start = end + 1;
+                  end = log_data.indexOf(")", start) + 1;
+                  var log_data_source = log_data.substring(start, end);
 
-      function is(type, obj) {
-          if (obj === undefined)
-              return type === 'undefined';
-          else if (obj === null)
-              return type === 'null';
-          else 
-              return type === Object.prototype.toString.call(obj).slice(8,  - 1);
-      }
+                  // parse the log message    
+                  log_data = log_data.substring(end + 1);
+                  var log_data_message;
+                  start = log_data.search(regex_date);
+                  if (start == -1) {
+                      log_data_message = log_data;
+                  }
+                  else {
+                      end = start - 1;
+                      log_data_message = log_data.substring(0, end);
+                      log_data = log_data.substring(end);
+                  }
 
-      String.prototype.startsWith = function (str) {
-          return this.slice(0, str.length) == str;
-      };
+                  // shift the remaining text
+                  ++line_count;
 
-      // This function is the high-level controller for viewing current log settings
-      function refresh_log() {
-
-          // reset the redirect value text
-          $("#set_redirect_input").val("unknown");
-
-          // Get the current log settings 
-          send_log_settings_service();
-      }
-
-      // This function uses a web socket to request the current log file contents
-      function send_view_log_service() {
-          // if the web socket is undefined then display an error
-          if (view_log_web_socket == undefined) {
-              $('#connectionStatus').text("Not connected");
-              open_view_log_service();
-          }
-
-          // if the web socket is in an open status then send the request
-          if (view_log_web_socket.readyState == view_log_web_socket.OPEN) {
-              var request = "";
-              view_log_web_socket.send(request);
-          }
-      }
-
-      // This function opens the web socket used to view the current log file contents
-      function open_view_log_service() {
-          if (!("WebSocket" in window)) {
-              $('#connectionStatus').text("Not connected");
-              alert("This browser does not support WebSockets");
-              return;
-          }
-
-          $('#connectionStatus').text("Connecting");
-
-          websocket_url = "ws://" + $("#hostname").val() + view_log_service_name;
-          view_log_web_socket = new WebSocket(websocket_url);
-
-          console.log("Connecting to " + websocket_url);
-
-          // define function that is called when the web socket is opened
-          view_log_web_socket.onopen = function () {
-              $('#connectionStatus').text("Connected");
-              console.log("Connected");
-              send_view_log_service();
-          };
-
-          // define function that is called when an error occurs with the websocket
-          view_log_web_socket.onerror = function () {
-              $('#connectionStatus').text("Error");
-              console.log("Websocket error");
-
-              // turn off the timed page refresh
-              if (interval_id != undefined) {
-                 clearInterval(interval_id);
-                 interval_id = undefined;
-              }
-
-              // hide the loading message
-              $('#loadingMessage').hide();
-
-              alert("Error connecting to websocket " + websocket_url);
-          };
-
-          // define function that is called when data is available on the websocket
-          handle_message = function (data) {
-              if (data.startsWith("notification:")) {
-                  // client state check to determine this is an incoming
-                  // service request, not an incoming response
-                  console.log("Request (in): " + data);
-
-                  var response = "ok";
-                  view_log_web_socket.send(response);
-                  console.log("Response (in): " + response);
-
-              }
-              else {
-                  //console.log("Response (out): " + data);
-                  console.log("Processing response");
-
-                  if (data != "got connect! yay!") {
-
-                      // attempt to parse the data response
-                      var start = 0;
-                      var end = 0;
-                      var log_entries = [];
-                      var remaining_data = data;
-
-                      var loglevel_regexp = new RegExp($("#set_level_input").val());
-                      var date_regexp = /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/;
-
-                      do {
-                          // parse the log date 
-                          start = remaining_data.search(date_regexp);
-                          if (start >= 0) {
-                              end = remaining_data.indexOf(" ", start);
-                              var logDate = remaining_data.substring(start, end);
-
-                              // parse the log level
-                              start = end + 1;
-                              end = remaining_data.indexOf(" ", start);
-                              var logLevel = remaining_data.substring(start, end);
-
-                              // parse the log source	
-                              start = end + 1;
-                              end = remaining_data.indexOf(")", start) + 1;
-                              var logSource = remaining_data.substring(start, end);
-
-                              // parse the log message	
-                              remaining_data = remaining_data.substring(end + 1);
-                              end = remaining_data.search(date_regexp) - 1;
-                              var logMessage = remaining_data.substring(0, end);
-
-                              // shift the remaining text
-                              remaining_data = remaining_data.substring(end);
-
-                              // filter by log level
-                              if (loglevel_regexp.test(logLevel)) {
-
-                                  // create a new log entry object with the various data elements
-                                  var lineNumber = log_entries.length + 1;
-                                  var logEntry = new Object([lineNumber, logDate, logLevel, logSource, logMessage]);
-
-                                  // add the log entry object to the array
-                                  log_entries[log_entries.length] = logEntry;
-                              }
-                          }
-                      }
-                      while (start >= 0);
-
-                      // display the log entries in the table
-                      updateTable(log_entries);
-
-                      // setup time interval to refresh page
-                      if (interval_id == undefined) {
-                          interval_id = setInterval("refresh_log();", 60000);
-                      }
-
+                  // check if log line passes the filter
+                  if (regex_loglevel.test(log_data_level)) {
+                      // add the log line to the table
+                      table.fnAddData([line_count,
+                                       log_data_date,
+                                       log_data_level,
+                                       log_data_source,
+                                       log_data_message]);
                   }
               }
-          };
-
-          // define function that is called when a message is received on the web socket 
-          view_log_web_socket.onmessage = function (evt) {
-              var data = evt.data;
-              if (is("Blob", data)) {
-                  // for the example, treat binary as text
-                  var reader = new FileReader();
-                  reader.readAsText(data, "text/plain");
-                  reader.onload = function (reader_evt) {
-                      data = reader_evt.target.result;
-                      handle_message(data);
-                  };
-              }
-              else {
-                  handle_message(data);
-              }
-          };
-
-          // define function that is called when the websocket is closed
-          view_log_web_socket.onclose = function () {
-              view_log_web_socket = undefined;
-
-              $('#connectionStatus').text("Not connected");
-              console.log("Connection closed");
-          };
-      }
-
-      // This function closes the web socket used to view the current log file contents
-      function close_view_log_service() {
-          $('#connectionStatus').text("Not connected");
-
-          if (view_log_web_socket == undefined) {
-              return;
-          }
-          view_log_web_socket.close();
-      }
-
-      // This function uses a web socket to request the current logging settings 
-      function send_log_settings_service() {
-          // if the web socket is undefined then display an error
-          if (log_settings_web_socket == undefined) {
-              $('#connectionStatus').text("Not connected");
-              open_log_settings_service();
-          }
-
-          // if the web socket is in an open status then send the request
-          if (log_settings_web_socket.readyState == log_settings_web_socket.OPEN) {
-              log_settings_web_socket.send(request_type);
-          }
-      }
-
-      // This function opens the web socket used to get the current logging settings 
-      function open_log_settings_service() {
-          if (!("WebSocket" in window)) {
-              $('#connectionStatus').text("Not connected");
-              alert("This browser does not support WebSockets");
-              return;
-          }
-
-          $('#connectionStatus').text("Connecting");
-
-          websocket_url = "ws://" + $("#hostname").val() + log_settings_service_name;
-          log_settings_web_socket = new WebSocket(websocket_url);
-
-          console.log("Connecting to " + websocket_url);
-
-          // define function that is called when the web socket is opened
-          log_settings_web_socket.onopen = function () {
-              $('#connectionStatus').text("Connected");
-              console.log("Connected");
-              send_log_settings_service();
-          };
-
-          // define function that is called when an error occurs with the websocket
-          log_settings_web_socket.onerror = function () {
-              $('#connectionStatus').text("Error");
-              console.log("Websocket error");
-
-              // turn off the timed page refresh
-              if (interval_id != undefined) {
-                 clearInterval(interval_id);
-                 interval_id = undefined;
-              }
-
               // hide the loading message
-              $('#loadingMessage').hide();
-
-              alert("Error connecting to websocket " + websocket_url);
+              loadingHide();
           };
-
-          // define function that is called when data is available on the websocket
-          handle_message_log_settings = function (data) {
-              if (data.startsWith("notification:")) {
-                  // client state check to determine this is an incoming
-                  // service request, not an incoming response
-                  console.log("Request (in): " + data);
-
-                  var response = "ok";
-                  log_settings_web_socket.send(response);
-                  console.log("Response (in): " + response);
-
-              }
-              else {
-                  //console.log("Response (out): " + data);
-                  console.log("Processing response");
-
-                  if (data != "got connect! yay!") {
-
-                      // attempt to parse the data response
-                      var start = 0;
-                      var end = 0;
-                      $("#set_redirect_input").val("undefined");
-
-                      // parse the redirect setting 
-                      searchString = "redirect,";
-                      start = data.indexOf(searchString);
-                      if (start > 0) {
-                          end = data.indexOf("}", start);
-                          redirectValue = data.substring(start + searchString.length, end);
-
-                          // set the value of the input field 
-                          $("#set_redirect_input").val(redirectValue);
-
-                          // display an alert message if the log file has been redirected	
-                          if ($("#set_redirect_input").val() != "undefined") {
-                              alert("The log file has been redirected and can not be displayed");
-          
-			      // hide the loading message
-          		      $('#loadingMessage').hide();
-      
-			      close_log_settings_service();
-                          }
-                      }
-
-                      // Verify that the redirect property is set to "undefined"
-                      if ($("#set_redirect_input").val() == "undefined") {
-
-                          // Call the dashboard log service to get the current log contents
-                          send_view_log_service();
-                      }
-                  }
-              }
+          request.onerror = function () {
+              console.log(name_log_data + ' error!');
           };
-
-
-          // define function that is called when a message is received on the web socket 
-          log_settings_web_socket.onmessage = function (evt) {
-              var data = evt.data;
-              if (is("Blob", data)) {
-                  // for the example, treat binary as text
-                  var reader = new FileReader();
-                  reader.readAsText(data, "text/plain");
-                  reader.onload = function (reader_evt) {
-                      data = reader_evt.target.result;
-                      handle_message_log_settings(data);
-                  };
-              }
-              else {
-                  handle_message_log_settings(data);
-              }
-          };
-
-          // define function that is called when the websocket is closed
-          log_settings_web_socket.onclose = function () {
-              log_settings_web_socket = undefined;
-
-              $('#connectionStatus').text("Not connected");
-              console.log("Connection closed");
-          };
+          request.send('');
       }
 
-      // This function closes the web socket used to get the current logging settings 
-      function close_log_settings_service() {
-          $('#connectionStatus').text("Not connected");
+      function loadingShow() {
+          // show the loading message
+          $('#loading_message').show();
+      }
 
-          if (log_settings_web_socket == undefined) {
-              return;
-          }
-          log_settings_web_socket.close();
+      function loadingHide() {
+          // hide the loading message
+          $('#loading_message').hide();
       }
     </script>
   </head>
   <body>
-    <script type="text/javascript">
-      // This function is called by the server when data is ready to be processed
-      function updateTable(logEntries) {
-
-          // clear table
-          var oTable = $('#logTable').dataTable();
-          oTable.fnClearTable();
-
-          // process each object in the array            
-          for (i = 0;i < logEntries.length;i++) {
-              logEntry = logEntries[i];
-
-              oTable.fnAddData([logEntry[0], logEntry[1], logEntry[2], logEntry[3], logEntry[4]]);
-
-          }
-
-          // hide the loading message
-          $('#loadingMessage').hide();
-      }
-    </script>
     <div id="logo">
       <img class="right" src="powered_by_cloudi.png"></img>
-       
       <h1>View Log File</h1>
     </div>
-    <div id="loadingMessage">
+    <div id="loading_message">
       <h2 class="loading">Waiting for data...</h2>
     </div>
     <div>
-      <input id="hostname" type="text" value="localhost" title="Host name or address to be monitored"></input>
+      <input id="hostname" type="text" value="localhost"
+             title="Host name or address to be monitored"></input>
        
-      <button class="left" onclick="refresh_log()">Refresh Now</button>
+      <button class="left" onclick="logDataRequest()">Refresh Now</button>
        
       <label>Filter by Level</label>
        
-      <select id="set_level_input" onchange="refresh_log()">
-        <option selected="selected" value="TRACE|DEBUG|INFO|WARN|ERROR|FATAL">&ge;
-                                                                              Trace</option>
+      <select id="set_level_input" onchange="logDataRequest()">
+        <option selected="selected"
+                value="TRACE|DEBUG|INFO|WARN|ERROR|FATAL">&ge; Trace</option>
         <option value="TRACE">= Trace</option>
         <option value="DEBUG|INFO|WARN|ERROR|FATAL">&ge; Debug</option>
         <option value="DEBUG">= Debug</option>
@@ -417,59 +127,46 @@
         <option value="FATAL">= Fatal</option>
       </select>
        
-      <input id="set_redirect_input" type="hidden"></input>
-       
-      <label class="right" id="connectionStatus"></label>
+      <!-- <label class="right" id="connection_status"></label> -->
     </div>
-    <table id="logTable" class="display">
+    <table id="log_table" class="display">
       <thead>
         <tr>
-          <th>Line #</th>
+          <th>Tail #</th>
           <th>Date</th>
           <th>Level</th>
           <th>Source</th>
           <th>Message</th>
         </tr>
       </thead>
-       
-      <tbody id="logTableBody"></tbody>
+      <tbody id="log_table_body"></tbody>
     </table>
     <script type="text/javascript">
-          $(document).ready(function () {
+      $(document).ready(function () {
 
-              // change the table attributes to support jQuery styles
-              $('#logTable').dataTable( {
-                  "bJQueryUI" : true, "sPaginationType" : "full_numbers", "lengthMenu" : [10, 100, 500, "All"], "pageLength" : 500, "columnDefs" : [
-                  {
-                      "width" : "50px", "targets" : 0
-                  },
-                  {
-                      "width" : "150px", "targets" : 1
-                  },
-                  {
-                      "width" : "50px", "targets" : 2
-                  }
-]
-              });
-
-              // clear the table upon first displaying the page
-              var oTable = $('#logTable').dataTable();
-              oTable.fnClearTable();
-
-
-              // assign default hostname
-              $("#hostname").val("localhost:6464");
-
-              // show the loading message
-              $('#loadingMessage').show();
-
-              // set the connection status 
-              $('#connectionStatus').text("Not connected");
-
-              // call the service request function now
-              refresh_log();
-
+          // change the table attributes to support jQuery styles
+          $('#log_table').dataTable({
+              "bJQueryUI" : true,
+              "sPaginationType" : "full_numbers",
+              "lengthMenu" : [10, 100, 500, "All"],
+              "pageLength" : 500, "columnDefs" : [{
+                  "width" : "50px",
+                  "targets" : 0
+              }, {
+                  "width" : "150px",
+                  "targets" : 1
+              }, {
+                  "width" : "50px",
+                  "targets" : 2
+              }]
           });
+
+          // assign default hostname
+          $("#hostname").val("localhost:6464");
+
+          // fill the table with log data
+          logDataRequest();
+      });
     </script>
   </body>
 </html>

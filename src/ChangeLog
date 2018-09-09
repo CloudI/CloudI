@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-09-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Simplify the CloudI Service API dashboard view_log.html page
+
 2018-09-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Improvements to CloudI release scripts
