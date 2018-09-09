@@ -32,7 +32,7 @@
               var log_data = request.responseText;
               var table = $('#log_table').dataTable();
               var regex_loglevel = new RegExp($("#set_level_input").val());
-              var regex_date = /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T/;
+              var regex_date = /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9][0-9][0-9][0-9][0-9]Z (FATAL|ERROR|WARN|INFO|DEBUG|TRACE)/;
               var start = log_data.search(regex_date);
               var line_count = 0;
               table.fnClearTable();
@@ -54,26 +54,24 @@
                   log_data = log_data.substring(end + 1);
                   var log_data_message;
                   start = log_data.search(regex_date);
-                  if (start == -1) {
-                      log_data_message = log_data;
-                  }
-                  else {
+                  if (start != -1) {
                       end = start - 1;
                       log_data_message = log_data.substring(0, end);
                       log_data = log_data.substring(end);
-                  }
+                      start = 0;
 
-                  // shift the remaining text
-                  ++line_count;
-
-                  // check if log line passes the filter
-                  if (regex_loglevel.test(log_data_level)) {
-                      // add the log line to the table
-                      table.fnAddData([line_count,
-                                       log_data_date,
-                                       log_data_level,
-                                       log_data_source,
-                                       log_data_message]);
+                      // shift the remaining text
+                      ++line_count;
+    
+                      // check if log line passes the filter
+                      if (regex_loglevel.test(log_data_level)) {
+                          // add the log line to the table
+                          table.fnAddData([line_count,
+                                           log_data_date,
+                                           log_data_level,
+                                           log_data_source,
+                                           log_data_message]);
+                      }
                   }
               }
               // hide the loading message

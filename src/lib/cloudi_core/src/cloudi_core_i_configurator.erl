@@ -122,6 +122,7 @@
 
 -record(state,
     {
+        time_start :: cloudi_timestamp:native_monotonic(),
         configuration :: #config{}
     }).
 
@@ -231,10 +232,10 @@ logging_redirect_set(L, Timeout) ->
 logging(Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE, logging, Timeout)).
 
-code_status(SecondsStart, SecondsNow, Timeout) ->
+code_status(TimeNative, TimeOffset, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {code_status,
-                                 SecondsStart, SecondsNow}, Timeout)).
+                                 TimeNative, TimeOffset}, Timeout)).
 
 -spec service_start(#config_service_internal{} |
                     #config_service_external{},
@@ -349,7 +350,8 @@ service_terminated(ID)
 %%%------------------------------------------------------------------------
 
 init([Config]) ->
-    {ok, #state{configuration = Config}}.
+    {ok, #state{time_start = cloudi_timestamp:native_monotonic(),
+                configuration = Config}}.
 
 handle_call(configure, _, State) ->
     % the application startup configuration must not block
@@ -550,10 +552,21 @@ handle_call(logging, _,
             #state{configuration = Config} = State) ->
     {reply, {ok, cloudi_core_i_configuration:logging(Config)}, State};
 
-handle_call({code_status, SecondsStart, SecondsNow}, _,
-            #state{configuration = Config} = State) ->
+handle_call({code_status, TimeNative, TimeOffset}, _,
+            #state{time_start = TimeStart,
+                   configuration = Config} = State) ->
     #config{services = Services} = Config,
-    {reply, code_status_files(Services, SecondsStart, SecondsNow), State};
+    SecondsNow = cloudi_timestamp:convert(TimeNative + TimeOffset,
+                                          native, second),
+    SecondsStart = SecondsNow -
+                   cloudi_timestamp:convert(TimeNative - TimeStart,
+                                            native, second),
+    case code_status_files(Services, SecondsStart, SecondsNow) of
+        {ok, RuntimeChanges} ->
+            {reply, {ok, TimeStart, RuntimeChanges}, State};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
 
 handle_call(Request, _, State) ->
     {stop, cloudi_string:format("Unknown call \"~w\"", [Request]),

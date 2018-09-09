@@ -230,16 +230,17 @@ cloudi_service_api_call(services = Method, Timeout) ->
 cloudi_service_api_call(code_status = Method, Timeout) ->
     case cloudi_service_api:Method(Timeout) of
         {ok, Status} ->
-            {runtime_changes,
-             RuntimeChanges} = lists:keyfind(runtime_changes, 1, Status),
+            {runtime_cloudi_changes,
+             RuntimeChanges} = lists:keyfind(runtime_cloudi_changes, 1, Status),
             RuntimeChangesNew = lists:map(fun(RuntimeChange) ->
                 {service_ids,
                  IDs} = lists:keyfind(service_ids, 1, RuntimeChange),
                 lists:keyreplace(service_ids, 1, RuntimeChange,
                                  {service_ids, [service_id(ID) || ID <- IDs]})
             end, RuntimeChanges),
-            StatusNew = lists:keyreplace(runtime_changes, 1, Status,
-                                         {runtime_changes, RuntimeChangesNew}),
+            StatusNew = lists:keyreplace(runtime_cloudi_changes, 1, Status,
+                                         {runtime_cloudi_changes,
+                                          RuntimeChangesNew}),
             {ok, StatusNew};
         {error, _} = Error ->
             Error

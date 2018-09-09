@@ -1627,12 +1627,9 @@ code_status(Timeout)
     TimeNativeStart = erlang:system_info(start_time),
     TimeNativeTotal = TimeNative - TimeNativeStart,
     TimeNativeNow = TimeNative + TimeOffset,
-    SecondsNow = cloudi_timestamp:convert(TimeNativeNow, native, second),
-    SecondsStart = SecondsNow -
-                   cloudi_timestamp:convert(TimeNativeTotal, native, second),
-    case cloudi_core_i_configurator:code_status(SecondsStart, SecondsNow,
+    case cloudi_core_i_configurator:code_status(TimeNative, TimeOffset,
                                                 Timeout) of
-        {ok, RuntimeChanges} ->
+        {ok, TimeNativeConfig, RuntimeChanges} ->
             MicroSecondsStart = cloudi_timestamp:
                                 convert(TimeNativeStart + TimeOffset,
                                         native, microsecond),
@@ -1643,6 +1640,12 @@ code_status(Timeout)
                                         native, nanosecond),
             NanoSecondsTotal = cloudi_timestamp:
                                convert(TimeNativeTotal, native, nanosecond),
+            MicroSecondsStartConfig = cloudi_timestamp:
+                                      convert(TimeNativeConfig + TimeOffset,
+                                              native, microsecond),
+            NanoSecondsTotalConfig = cloudi_timestamp:
+                                     convert(TimeNative - TimeNativeConfig,
+                                             native, nanosecond),
             Status = cloudi_environment:status() ++
                 [{runtime_start,
                   cloudi_timestamp:
@@ -1656,7 +1659,13 @@ code_status(Timeout)
                  {runtime_total,
                   cloudi_timestamp:
                   nanoseconds_to_string(NanoSecondsTotal)},
-                 {runtime_changes,
+                 {runtime_cloudi_start,
+                  cloudi_timestamp:
+                  microseconds_epoch_to_string(MicroSecondsStartConfig)},
+                 {runtime_cloudi_total,
+                  cloudi_timestamp:
+                  nanoseconds_to_string(NanoSecondsTotalConfig)},
+                 {runtime_cloudi_changes,
                   RuntimeChanges}],
             {ok, Status};
         {error, _} = Error ->

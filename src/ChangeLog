@@ -4,6 +4,9 @@
 2018-09-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Simplify the CloudI Service API dashboard view_log.html page
+    * Add fields to the CloudI Service API code_status function
+      (runtime_cloudi_start, runtime_cloudi_total) and change
+      runtime_changes to runtime_cloudi_changes
 
 2018-09-07 Michael Truog   <mjtruog at protonmail dot com>
 
