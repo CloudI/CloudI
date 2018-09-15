@@ -4,6 +4,18 @@
 instdir = "$(DESTDIR)$(cloudi_prefix)/api/haskell"
 CLEANFILES = cabal.sandbox.config
 
+#HASKELL_BINARY_VERSION=0.9.0.0
+#HASKELL_BYTESTRING_VERSION=0.10.8.1
+#HASKELL_NETWORK_VERSION=2.6.3.1
+#HASKELL_UNIX_VERSION=2.7.2.1
+#HASKELL_ZLIB_VERSION=0.6.1.2
+
+HASKELL_BINARY_VERSION=0.10.0.0
+HASKELL_BYTESTRING_VERSION=0.10.8.2
+HASKELL_NETWORK_VERSION=2.8.0.0
+HASKELL_UNIX_VERSION=2.7.2.2
+HASKELL_ZLIB_VERSION=0.6.2
+
 all-local: cabal.sandbox.config
 
 cabal.sandbox.config: src/Foreign/CloudI.hs \
@@ -14,11 +26,16 @@ cabal.sandbox.config: src/Foreign/CloudI.hs \
                       src/Foreign/Erlang/Port.hs \
                       src/Foreign/Erlang/Reference.hs
 	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
-	$(CABAL) sandbox add-source $(srcdir)/external/binary-0.9.0.0
-	$(CABAL) sandbox add-source $(srcdir)/external/bytestring-0.10.8.1
-	$(CABAL) sandbox add-source $(srcdir)/external/network-2.6.3.1
-	$(CABAL) sandbox add-source $(srcdir)/external/unix-2.7.2.1
-	$(CABAL) sandbox add-source $(srcdir)/external/zlib-0.6.1.2
+	$(CABAL) sandbox add-source \
+             $(srcdir)/external/binary-$(HASKELL_BINARY_VERSION)
+	$(CABAL) sandbox add-source \
+             $(srcdir)/external/bytestring-$(HASKELL_BYTESTRING_VERSION)
+	$(CABAL) sandbox add-source \
+             $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)
+	$(CABAL) sandbox add-source \
+             $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)
+	$(CABAL) sandbox add-source \
+             $(srcdir)/external/zlib-$(HASKELL_ZLIB_VERSION)
 	$(CABAL) install --only-dependencies --force-reinstalls \
                      --with-compiler=$(GHC)
 	$(CABAL) configure --with-compiler=$(GHC)
@@ -27,18 +44,18 @@ cabal.sandbox.config: src/Foreign/CloudI.hs \
 
 clean-local:
 	rm -rf $(builddir)/dist $(CABAL_SANDBOX)
-	rm -rf $(srcdir)/external/binary-0.9.0.0/dist
-	rm -rf $(srcdir)/external/bytestring-0.10.8.1/dist
-	rm -rf $(srcdir)/external/network-2.6.3.1/dist
-	rm -rf $(srcdir)/external/unix-2.7.2.1/dist
-	rm -rf $(srcdir)/external/zlib-0.6.1.2/dist
-	rm -f $(srcdir)/external/network-2.6.3.1/config.log
-	rm -f $(srcdir)/external/network-2.6.3.1/config.status
-	rm -f $(srcdir)/external/network-2.6.3.1/network.buildinfo
-	rm -f $(srcdir)/external/unix-2.7.2.1/config.log
-	rm -f $(srcdir)/external/unix-2.7.2.1/config.status
-	rm -f $(srcdir)/external/unix-2.7.2.1/include/HsUnixConfig.h
-	rm -f $(srcdir)/external/unix-2.7.2.1/unix.buildinfo
+	rm -rf $(srcdir)/external/binary-$(HASKELL_BINARY_VERSION)/dist
+	rm -rf $(srcdir)/external/bytestring-$(HASKELL_BYTESTRING_VERSION)/dist
+	rm -rf $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/dist
+	rm -rf $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/dist
+	rm -rf $(srcdir)/external/zlib-$(HASKELL_ZLIB_VERSION)/dist
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/config.log
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/config.status
+	rm -f $(srcdir)/external/network-$(HASKELL_NETWORK_VERSION)/network.buildinfo
+	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/config.log
+	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/config.status
+	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/include/HsUnixConfig.h
+	rm -f $(srcdir)/external/unix-$(HASKELL_UNIX_VERSION)/unix.buildinfo
 
 install-exec-hook:
 	$(MKDIR_P) $(instdir)

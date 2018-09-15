@@ -12,7 +12,7 @@ category:            Foreign
 stability:           provisional
 build-type:          Simple
 cabal-version:       >= 1.22
-tested-with:         GHC == 7.10.3, GHC == 8.0.2
+tested-with:         GHC == 7.10.3, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3
 
 library
   hs-source-dirs:    src
@@ -23,7 +23,7 @@ library
                      , Foreign.Erlang.Reference
                      , Foreign.Erlang.Function
   other-modules:       Foreign.CloudI.Instance
-  ghc-options:       -Wall -Werror -funbox-strict-fields -threaded
+  ghc-options:       -Wall -funbox-strict-fields -threaded
   build-depends:       base >= 4.8.2.0
                      , binary >= 0.8.4.0
                      , bytestring >= 0.10.4

@@ -654,7 +654,7 @@
  %CopyrightEnd%
 
 ---------------------------------------------------------------------------- BSD
-(Haskell) src/api/haskell/external/binary-0.9.0.0
+(Haskell) src/api/haskell/external/binary-0.10.0.0
 
  Copyright (c) Lennart Kolmodin
  
@@ -688,7 +688,7 @@
  POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------------------------------------------------- BSD
-(Haskell) src/api/haskell/external/bytestring-0.10.8.1
+(Haskell) src/api/haskell/external/bytestring-0.10.8.2
 
  Copyright (c) Don Stewart 2005-2009
            (c) Duncan Coutts 2006-2015
@@ -722,7 +722,7 @@
  SUCH DAMAGE.
 
 ---------------------------------------------------------------------------- BSD
-(Haskell) src/api/haskell/external/network-2.6.3.1
+(Haskell) src/api/haskell/external/network-2.8.0.0
 
  Copyright (c) 2002-2010, The University Court of the University of Glasgow.
  Copyright (c) 2007-2010, Johan Tibell
@@ -755,7 +755,7 @@
  DAMAGE.
 
 ---------------------------------------------------------------------------- BSD
-(Haskell) src/api/haskell/external/unix-2.7.2.1
+(Haskell) src/api/haskell/external/unix-2.7.2.2
 
  The Glasgow Haskell Compiler License
  
@@ -790,7 +790,7 @@
  DAMAGE.
 
 ---------------------------------------------------------------------------- BSD
-(Haskell) src/api/haskell/external/zlib-0.6.1.2
+(Haskell) src/api/haskell/external/zlib-0.6.2
 
  Copyright (c) 2006-2016, Duncan Coutts
  All rights reserved.
