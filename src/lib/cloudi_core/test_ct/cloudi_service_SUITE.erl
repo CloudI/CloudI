@@ -54,7 +54,8 @@
          end_per_testcase/2]).
 
 %% test callbacks
--export([t_service_internal_sync_1/1,
+-export([t_cloudi_code_status_1/1,
+         t_service_internal_sync_1/1,
          t_service_internal_sync_2/1,
          t_service_internal_sync_3/1,
          t_service_internal_async_1/1,
@@ -253,11 +254,14 @@ cloudi_service_terminate(_Reason, _Timeout,
 %%%------------------------------------------------------------------------
 
 all() ->
-    [{group, service_internal_1},
+    [{group, cloudi_runtime_1},
+     {group, service_internal_1},
      {group, cloudi_modules_1}].
 
 groups() ->
-    [{service_internal_1, [sequence],
+    [{cloudi_runtime_1, [sequence],
+      [t_cloudi_code_status_1]},
+     {service_internal_1, [sequence],
       [t_service_internal_sync_1,
        t_service_internal_sync_2,
        t_service_internal_sync_3,
@@ -301,12 +305,22 @@ end_per_group(_GroupName, Config) ->
 
 init_per_testcase(TestCase) ->
     error_logger:info_msg("~p init~n", [TestCase]),
-    error_logger:tty(false),
+    if
+        TestCase =:= t_cloudi_code_status_1 ->
+            ok;
+        true ->
+            error_logger:tty(false)
+    end,
     ?LOG_INFO("~p init", [TestCase]),
     ok.
 
 end_per_testcase(TestCase) ->
-    error_logger:tty(true),
+    if
+        TestCase =:= t_cloudi_code_status_1 ->
+            ok;
+        true ->
+            error_logger:tty(true)
+    end,
     error_logger:info_msg("~p end~n", [TestCase]),
     ?LOG_INFO("~p end", [TestCase]),
     ok.
@@ -481,6 +495,12 @@ end_per_testcase(TestCase, Config) ->
 %%%------------------------------------------------------------------------
 %%% test cases
 %%%------------------------------------------------------------------------
+
+t_cloudi_code_status_1(_Config) ->
+    {ok, CodeStatus} = cloudi_service_api:code_status(infinity),
+    error_logger:info_msg("~p~n", [CodeStatus]),
+    ?LOG_INFO("~p", [CodeStatus]),
+    ok.
 
 t_service_internal_sync_1(_Config) ->
     % make sure synchronous sends work normally,

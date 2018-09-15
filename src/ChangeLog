@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-09-15 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_core Erlang application compiler dependency
+    * Add CloudI Service API code_status output in cloudi_core CT tests
+
 2018-09-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for Haskell >= 8.4.1
