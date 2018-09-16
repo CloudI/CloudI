@@ -23,7 +23,7 @@ library
                      , Foreign.Erlang.Reference
                      , Foreign.Erlang.Function
   other-modules:       Foreign.CloudI.Instance
-  ghc-options:       -Wall -funbox-strict-fields -threaded
+  ghc-options:       -Wall -funbox-strict-fields
   build-depends:       base >= 4.8.2.0
                      , binary >= 0.8.4.0
                      , bytestring >= 0.10.4

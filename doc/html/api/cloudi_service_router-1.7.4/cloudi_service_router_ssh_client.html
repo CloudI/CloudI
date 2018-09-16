@@ -1,0 +1,98 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_service_router_ssh_client</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_service_router_ssh_client</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Router_Service_SSH_Client">CloudI Router Service SSH Client</a></h3>.
+<p>Copyright © 2018 Michael Truog</p>
+
+<p><b>Version:</b> 1.7.4 Sep 15 2018 21:55:26
+  ------------------------------------------------------------------------</p>
+<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Router_Service_SSH_Client">CloudI Router Service SSH Client</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-options">options()</a></h3>
+<p><tt>options() = [{host_name, string()} | {port, pos_integer()} | {inet, inet | inet6 | undefined} | {user_dir, string()} | {system_dir, string()}]</tt></p>
+
+
+<h3 class="typedecl"><a name="type-state">state()</a></h3>
+<p><tt>state() = #ssh_client{process = pid()}</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#code_change-3">code_change/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#forward-11">forward/11</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_call-3">handle_call/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_cast-2">handle_cast/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#new-3">new/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#silently_accept_hosts-3">silently_accept_hosts/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="code_change-3">code_change/3</a></h3>
+<div class="spec">
+<p><tt>code_change(X1, State, X3) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="forward-11">forward/11</a></h3>
+<div class="spec">
+<p><tt>forward(Type::<a href="deps/cloudi_core/doc/cloudi_service.html#type-request_type">cloudi_service:request_type()</a>, Name::<a href="deps/cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, Pattern::<a href="deps/cloudi_core/doc/cloudi_service.html#type-service_name_pattern">cloudi_service:service_name_pattern()</a>, NewName::<a href="deps/cloudi_core/doc/cloudi_service.html#type-service_name">cloudi_service:service_name()</a>, RequestInfo::<a href="deps/cloudi_core/doc/cloudi_service.html#type-request_info">cloudi_service:request_info()</a>, Request::<a href="deps/cloudi_core/doc/cloudi_service.html#type-request">cloudi_service:request()</a>, Timeout::<a href="deps/cloudi_core/doc/cloudi_service.html#type-timeout_value_milliseconds">cloudi_service:timeout_value_milliseconds()</a>, Priority::<a href="deps/cloudi_core/doc/cloudi_service.html#type-priority_value">cloudi_service:priority_value()</a>, TransId::<a href="deps/cloudi_core/doc/cloudi_service.html#type-trans_id">cloudi_service:trans_id()</a>, Source::<a href="deps/cloudi_core/doc/cloudi_service.html#type-source">cloudi_service:source()</a>, State::<a href="#type-state">state()</a>) -&gt; ok | timeout</tt><br></p>
+</div>
+
+<h3 class="function"><a name="handle_call-3">handle_call/3</a></h3>
+<div class="spec">
+<p><tt>handle_call(Request, X2, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_cast-2">handle_cast/2</a></h3>
+<div class="spec">
+<p><tt>handle_cast(Request, State) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="handle_info-2">handle_info/2</a></h3>
+<div class="spec">
+<p><tt>handle_info(Request, Ssh_client_connection) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="init-1">init/1</a></h3>
+<div class="spec">
+<p><tt>init(X1) -&gt; any()</tt></p>
+</div>
+
+<h3 class="function"><a name="new-3">new/3</a></h3>
+<div class="spec">
+<p><tt>new(Options::<a href="#type-options">options()</a>, Environment::<a href="deps/cloudi_core/doc/cloudi_environment.html#type-lookup">cloudi_environment:lookup()</a>, SSH::<a href="cloudi_service_router_ssh_server.html#type-state">cloudi_service_router_ssh_server:state()</a> | undefined) -&gt; <a href="#type-state">state()</a> | undefined</tt><br></p>
+</div>
+
+<h3 class="function"><a name="silently_accept_hosts-3">silently_accept_hosts/3</a></h3>
+<div class="spec">
+<p><tt>silently_accept_hosts(PeerName::string(), FingerPrint::string(), SystemDir::string()) -&gt; boolean()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="terminate-2">terminate/2</a></h3>
+<div class="spec">
+<p><tt>terminate(X1, Ssh_client_connection) -&gt; any()</tt></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

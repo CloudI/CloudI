@@ -27,12 +27,12 @@
   {debug_info, keep},
   %{app, debugger,
   % [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, sasl,
-   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   {boot_rel, "cloudi"},
   % CloudI source code, including dependencies
   {app, cloudi_core,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
+  {app, cloudi_x_msgpack,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
 
   % CloudI services, not automatically started
@@ -87,10 +87,7 @@
    [
     % CloudI
     cloudi_core,
-    % Erlang
-    sasl,
-    stdlib,
-    kernel
+    cloudi_x_msgpack
    ]},
   {rel, "start_clean", "",
    [

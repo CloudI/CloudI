@@ -1,3 +1,0 @@
-%% encoding: UTF-8
-{application,cloudi_service_zeromq}.
-{modules,[cloudi_service_zeromq]}.

@@ -3,7 +3,7 @@
 
 {application, nodefinder, 
   [{description, "nodefinder Application"},
-   {vsn, "1.7.3"},
+   {vsn, "1.7.4"},
    {modules, [
         nodefinder,
         nodefinder_app,

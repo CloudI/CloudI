@@ -1,5 +1,25 @@
 ------------------------------------------------------------------------        
 
+September 16, 2018
+  Version 1.7.4 released.
+  * Added CloudI Service API services_status function to provide
+    current uptime and availability information for any CloudI service
+    (using Erlang monotonic time)
+  * Added CloudI Service API code_status function to provide
+    information about the installation and any runtime changes of
+    the CloudI service files on the filesystem
+  * ZeroMQ support was removed and SSH connectivity was added to
+    cloudi_service_router as a better alternative
+  * cloudi_crdt had small additions and an important bugfix
+  * Added JSON support to cloudi_service_api_requests
+  * Fixed Javascript CloudI API service termination (no delay now)
+  * Added support in Python, Python/C and Java CloudI APIs for
+    non-member (static) functions (passed to the subscribe function)
+  * Erlang/OTP 21.x compatibility
+  * Haskell CloudI API dependencies were updated
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 February 27, 2018
   Version 1.7.3 released.
   * cloudi_crdt was added to provide an easy way to have replicated

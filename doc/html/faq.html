@@ -24,7 +24,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.3.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.4.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -32,8 +32,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.7.3<br />
-              last updated on March 29<sup>th</sup> 2018</h3></center>
+  <center><h3>version 1.7.4<br />
+              last updated on September 16<sup>th</sup> 2018</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -55,7 +55,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_SOA"          >1.15 - Does CloudI provide a Service-Oriented Architecture (SOA)</a></li>
     <li><a href="#1_Microservices">1.16 - Does CloudI provide a Microservice Architecture?</a></li>
     <li><a href="#1_Reactive"     >1.17 - Is CloudI Reactive?</a></li>
-    <li><a href="#1_HowAbout"     >1.18 - Why doesn't CloudI integrate with ProductX?</a></li>
+    <li><a href="#1_Sagas"        >1.18 - Does CloudI support Sagas?</a></li>
+    <li><a href="#1_HowAbout"     >1.19 - Why doesn't CloudI integrate with ProductX?</a></li>
   </ul>
   <a name="2_contents"></a>
   <h2>2 - Learning about CloudI</h2>
@@ -121,14 +122,14 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#6_Python"     >6.10 - Python Service Implementation</a></li>
     <li><a href="#6_Ruby"       >6.11 - Ruby Service Implementation</a></li>
     <li><a href="#6_HTTP"       >6.12 - HTTP Integration</a></li>
-    <li><a href="#6_ZeroMQ"     >6.13 - ZeroMQ Integration</a></li>
-    <li><a href="#6_FaultTolerance">6.14 - Service Fault Tolerance</a></li>
-    <li><a href="#6_Monitoring" >6.15 - Service Monitoring</a></li>
+    <li><a href="#6_FaultTolerance">6.13 - Service Fault Tolerance</a></li>
+    <li><a href="#6_Monitoring" >6.14 - Service Monitoring</a></li>
   </ul>
   <a name="7_contents"></a>
   <h2>7 - Troubleshooting</h2>
   <ul class="faq">
     <li><a href="#7_start"      >7.1 - Why does CloudI stop shortly after being started?</a></li>
+    <li><a href="#7_slow"       >7.2 - Why is CloudI making my Linux machine slow?</a></li>
   </ul>
 
   <hr \>
@@ -505,10 +506,6 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     commercial-friendly license
     (<a href="https://en.wikipedia.org/wiki/MIT_License" target="_blank">MIT</a>,
      <a href="https://en.wikipedia.org/wiki/Apache_License" target="_blank">Apache</a>).
-    Some conditional external source code dependencies
-    (not included by default) are under other licenses
-    (<a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
-     is under the <a href="http://zeromq.org/area:licensing" target="_blank">LGPL license</a>).
     Some dependencies used for building and testing use the GPL license
     (autoconf/automake/libtool, autoconf macros, and
      <a href="http://proper.softlab.ntua.gr/" target="_blank">PropEr</a>).
@@ -554,7 +551,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <a href="api.html#Service">service requests</a> are transactional
     and a service request response may be used to confirm any state change.
     To understand consistency, as it relates to CloudI service
-    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.14 - Service Fault Tolerance"</a>.
+    fault tolerance, please refer to <a href="#6_FaultTolerance">"6.13 - Service Fault Tolerance"</a>.
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
@@ -571,7 +568,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     despite the <a href="http://erlang.org/pipermail/erlang-questions/2014-June/079794.html" target="_blank">authors of Erlang being unaware of the Actor Model while implementing Erlang</a> (e.g., the paper by <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.226.5767" target="_blank">Rajesh K. Karmani, Gul Agha, "Actors"</a>).
     However, the Erlang VM does not provide the Actor
     Model when working with the original definition of the Actor Model as it was
-    provided in <a href="http://ijcai.org/Past%20Proceedings/IJCAI-73/PDF/027B.pdf" target="_blank">Carl Hewitt, Peter Bishop and Richard Steiger. "A Universal Modular Actor Formalism for Artificial Intelligence" (PDF), IJCAI'73</a>.
+    provided in <a href="http://ijcai.org/Past%20Proceedings/IJCAI-73/PDF/027B.pdf" target="_blank">Carl Hewitt, Peter Bishop and Richard Steiger. "A Universal Modular Actor Formalism for Artificial Intelligence". IJCAI'73</a>.
     Instead, the Erlang VM provides processes which are most similar to
     "Fog Cutter Actors", based on the paper <a href="http://arxiv.org/abs/1008.1459" target="_blank">by Carl Hewitt, "Actor Model of Computation: Scalable Robust Information Systems"</a>.
     Unfortunately, no better term currently exists to refer to the design of
@@ -636,7 +633,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     (<a href="http://en.wikipedia.org/wiki/Remote_procedure_call" target="_blank">RPC</a>),
     <a href="http://en.wikipedia.org/wiki/Publish/subscribe" target="_blank">Publish/Subscribe</a> and
     <a href="http://en.wikipedia.org/wiki/Flow-based_programming" target="_blank">Pipeline messaging (i.e., Flow-Based Programming (FBP))</a>.
-    CloudI supports both <a href="http://zeromq.org/whitepapers:brokerless" target="_blank">broker and broker-less</a>
+    CloudI supports both broker and broker-less
     service requests with a distributed fault-tolerant service directory
     (using "service names" and "service patterns")
     that can be locally cached (when using a "lazy" destination refresh method,
@@ -747,8 +744,68 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   </p>
   <div class="top"><a href="#1_contents">Top</a></div>
 
+  <a name="1_Sagas"></a>
+  <h3>1.18 - Does CloudI support Sagas?</h3>
+  <p class="paragraph">
+    Yes! Sagas are easy to develop using CloudI.  Sagas were first
+    described in the paper <a href="https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf" target="_blank">Hector Garcia-Molina and Kenneth Salem. "Sagas". SIGMOD'87</a>.
+    Sagas have become a more prominent concept as microservice development
+    has become more popular due to the need to manage the complexity of
+    long-lived microservice transactions.
+  </p>
+  <p class="paragraph">
+    Typically, two approaches to Sagas is described:
+    <ul>
+      <li>Events/Choreography</li>
+      <li>Command/Orchestration</li>
+    </ul>
+    Either approach is possible in a CloudI service, though Sagas development
+    prefers the Command/Orchestration approach to avoid abstract complexity
+    that leads to implementation and maintenance difficulties that are
+    common with the Events/Choreography approach.
+  </p>
+  <p class="paragraph">
+    An Events/Choreography CloudI service implementation would rely on
+    <a href="api.html#1_subscribe">subscribe</a> use in each service,
+    for each event that needs to be received
+    (it would be best with a unique event for each receive to track
+     the transaction logic and decouple the receive from the concurrency of
+     each service).
+    The service would use <a href="api.html#1_forward">forward</a>
+    to transfer the control of a transaction to a different service and
+    any additional transactions may be sent using
+    <a href="api.html#1_send_async">send_async</a>
+    or <a href="api.html#1_send_sync">send_sync</a>
+    until the final transaction in the Saga
+    <a href="api.html#1_return">return</a>s a response.
+  </p>
+  <p class="paragraph">
+    A Command/Orchestration CloudI service implementation would centralize
+    the core Saga logic in a single CloudI service that uses
+    <a href="api.html#1_send_async">send_async</a>
+    or <a href="api.html#1_send_sync">send_sync</a>
+    to use any services necessary with separate transactions in the Saga.
+    Transactions in these other services could be joined together
+    by using <a href="api.html#1_forward">forward</a>
+    to transfer control of the transaction to the next service.
+    The core Saga logic would be based on the responses to the separate
+    transactions and would end the Saga by
+    <a href="api.html#1_return">return</a>ing a response.
+  </p>
+  <p class="paragraph">
+    With CloudI services providing transactions as a core feature
+    while managing the fault-tolerance and scalability of each
+    service independently, the resulting CloudI service business logic
+    is kept simple and easy to maintain.  CloudI services are able to
+    avoid "boilerplate" source code that is required without CloudI
+    when handling timeouts and the propagation of timeout failures,
+    service failures or exceptions, service concurrency and other
+    common <a href="api.html#1_Intro">development</a> concerns.
+  </p>
+  <div class="top"><a href="#1_contents">Top</a></div>
+
   <a name="1_HowAbout"></a>
-  <h3>1.18 - Why doesn't CloudI integrate with ProductX?</h3>
+  <h3>1.19 - Why doesn't CloudI integrate with ProductX?</h3>
   <p class="paragraph">
     There are many possibilities for CloudI integration.  If you know of a
     public product that you think should be integrated or if you need
@@ -799,7 +856,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   <table><tr><td>
   IRC Server:
   </td><td>
-  <a href="http://freenode.net/" target="_blank">irc.freenode.net</a>
+  <a href="https://freenode.net/kb/answer/chat" target="_blank">chat.freenode.net</a>
   </td></tr><tr><td>
   Chat Room:
   </td><td>
@@ -1088,21 +1145,12 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     </td></tr><tr><td nowrap>
     --with-python-version=[2|3]
     </td><td>
-    Specify the version of python to use<br />(default="2")
+    Specify the version of python to use<br />(default="3")
     </td></tr><tr><td nowrap>
     --with-python-debug
     </td><td>
     Use the debug python executable instead of the normal python
     executable<br />(default="no")
-    </td></tr><tr><td nowrap>
-    --with-zeromq
-    </td><td>
-    Include <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
-    support<br />(default="no")
-    </td></tr><tr><td nowrap>
-    --with-zeromq-version=[2|3]
-    </td><td>
-    ZeroMQ major version<br />(default="3")
     </td></tr><tr><td nowrap>
     --without-integration-tests
     </td><td>
@@ -1944,8 +1992,9 @@ sudo cloudi stop
     based on the nodes configuration.
   </p>
   <p class="paragraph">
-    HTTPS can also be used to bridge CloudI clusters
-    (i.e., with the CloudI service cloudi_service_http_cowboy).
+    SSH or HTTPS may be used to bridge CloudI clusters
+    (i.e., with the CloudI service cloudi_service_router or
+     cloudi_service_http_cowboy).
     Scaling for capacity planning should often require increasing the
     database node count more than the CloudI node count, but that depends
     on the CloudI services and their incoming data rate.
@@ -2193,7 +2242,7 @@ sudo cloudi stop
     Many examples of Erlang CloudI services exist within the CloudI source code
     because the Erlang CloudI services provide integration with external
     systems like the supported databases (PostgreSQL, MySQL, etc.),
-    the supported messaging (HTTP, ZeroMQ, etc.), and the CloudI Service API
+    the supported messaging (HTTP, SSH, etc.), and the CloudI Service API
     functionality.  Some of the integration tests and services that
     provide example usage of the Erlang
     <a href="api.html#Service">CloudI API</a> are:
@@ -2437,9 +2486,6 @@ sudo cloudi stop
           Basic Message Size (Forwarding) Test</a></li>
       <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/messaging/messaging.py" target="_blank">src/tests/messaging
           Basic Messaging Test</a></li>
-      <li><a href="https://github.com/CloudI/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">src/tests/zeromq</a>
-          ZeroMQ Test (with
-          <a href="#6_ZeroMQ">cloudi_service_zeromq configuration</a>)</li>
     </ul>
     An example configuration (from the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in" target="_blank">integration tests CloudI configuration</a>)
     is provided below:
@@ -2593,93 +2639,8 @@ sudo cloudi stop
   </p>
   <div class="top"><a href="#6_contents">Top</a></div>
 
-  <a name="6_ZeroMQ"></a>
-  <h3>6.13 - ZeroMQ Integration</h3>
-  <p class="paragraph">
-    <a href="http://www.zeromq.org/" target="_blank">ZeroMQ</a>
-    integration is provided by the cloudi_service_zeromq Erlang CloudI service.
-    The CloudI configuration uses the cloudi_service_zeromq service to create
-    service names that represent ZeroMQ messaging endpoints.  There are three
-    ZeroMQ configuration examples in the <a href="https://github.com/CloudI/CloudI/blob/master/src/cloudi_tests.conf.in" target="_blank">integration tests CloudI configuration</a> (commented within the file)
-    which are (partially) shown below:
-    <pre>
-% Zig-Zag test
-{internal,
-    "/tests/zeromq/",
-    % inbound/outbound message paths much be acyclic
-    % (if they are not, you will receive a erlzmq EFSM error
-    %  because the ZeroMQ REQ has received 2 zmq_send calls)
-    cloudi_service_zeromq,
-    % outbound ZeroMQ requests connect a CloudI name to a ZeroMQ endpoint
-    [{outbound, {"zigzag_start", ["ipc:///tmp/cloudizigzagstart"]}},
-    % inbound ZeroMQ replies connect a ZeroMQ endpoint to a CloudI name
-     {inbound, {"zigzag_step1", ["ipc:///tmp/cloudizigzagstart"]}},
-     {outbound, {"zigzag_step1", ["inproc://zigzagstep1"]}},
-     {inbound, {"zigzag_step2", ["inproc://zigzagstep1"]}},
-    % ZeroMQ publish connects a CloudI name to a ZeroMQ (subscribe) name
-    % as {CloudI name (suffix), ZeroMQ name for message prefix}
-    % for any number of endpoints
-     {publish, {[{"zigzag_step2", "/zeromq/step2"}],
-                ["inproc://zigzagstep2a",
-                 "ipc:///tmp/cloudizigzagstep2b",
-                 "inproc://zigzagstep2c",
-                 "ipc:///tmp/cloudizigzagstep2d"]}},
-    % ZeroMQ subscribe connects a CloudI name to a ZeroMQ (subscribe) name
-    % as {CloudI name (suffix), ZeroMQ name for subscribe setsocketopt}
-    % for any number of endpoints
-     {subscribe, {[{"zigzag_step3a", "/zeromq/step2"},
-                   {"zigzag_step3b", "/zeromq/step2"}],
-                  ["inproc://zigzagstep2a",
-                   "ipc:///tmp/cloudizigzagstep2b",
-                   "inproc://zigzagstep2c",
-                   "ipc:///tmp/cloudizigzagstep2d"]}},
-     {outbound, {"zigzag_step3a", ["inproc://zigzagstep3"]}},
-     {inbound, {"zigzag_finish", ["inproc://zigzagstep3"]}}],
-    immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
-% Chain inproc test (50 endpoints in a sequential call path)
-{internal,
-    "/tests/zeromq/",
-    cloudi_service_zeromq,
-    [{outbound, {"chain_inproc_start", ["inproc://chainstep1"]}},
-     {inbound, {"chain_inproc_step1", ["inproc://chainstep1"]}},
-     {outbound, {"chain_inproc_step1", ["inproc://chainstep2"]}},
-     {inbound, {"chain_inproc_step2", ["inproc://chainstep2"]}},
-...
-     {outbound, {"chain_inproc_step48", ["inproc://chainstep49"]}},
-     {inbound, {"chain_inproc_step49", ["inproc://chainstep49"]}},
-     {outbound, {"chain_inproc_step49", ["inproc://chainstep50"]}},
-     {inbound, {"chain_inproc_finish", ["inproc://chainstep50"]}}],
-    immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300, []},
-% Chain ipc test (25 endpoints in a sequential call path)
-{internal,
-    "/tests/zeromq/",
-    cloudi_service_zeromq,
-    [{outbound, {"chain_ipc_start", ["ipc:///tmp/cloudichainstep1"]}},
-     {inbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep1"]}},
-     {outbound, {"chain_ipc_step1", ["ipc:///tmp/cloudichainstep2"]}},
-     {inbound, {"chain_ipc_step2", ["ipc:///tmp/cloudichainstep2"]}},
-...
-     {outbound, {"chain_ipc_step23", ["ipc:///tmp/cloudichainstep24"]}},
-     {inbound, {"chain_ipc_step24", ["ipc:///tmp/cloudichainstep24"]}},
-     {outbound, {"chain_ipc_step24", ["ipc:///tmp/cloudichainstep25"]}},
-     {inbound, {"chain_ipc_finish", ["ipc:///tmp/cloudichainstep25"]}}],
-    immediate_closest,
-    5000, 5000, 5000, [api], undefined, 2, 5, 300, []}
-    </pre>
-  </p>
-  <p class="paragraph">
-  The three cloudi_service_zeromq Erlang CloudI services are used by the
-  <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/zeromq/run.py" target="_blank">ZeroMQ integration test</a>
-  to test the ZeroMQ messaging when the integration test service starts.
-  ZeroMQ configuration within CloudI is dynamic through usage of the Service
-  API.  For more information, please refer to <a href="#4_API_ZeroMQ">"4.1 - How do I integrate external software with CloudI?"</a>.
-  </p>
-  <div class="top"><a href="#6_contents">Top</a></div>
-
   <a name="6_FaultTolerance"></a>
-  <h3>6.14 - Service Fault Tolerance</h3>
+  <h3>6.13 - Service Fault Tolerance</h3>
   <p class="paragraph">
     General fault tolerance considerations within the CloudI framework are
     described in <a href="#5_Stability">"5.3 - Stability and Fault Tolerance Considerations"</a>.
@@ -2743,7 +2704,7 @@ sudo cloudi stop
   <div class="top"><a href="#6_contents">Top</a></div>
 
   <a name="6_Monitoring" ></a>
-  <h3>6.15 - Service Monitoring</h3>
+  <h3>6.14 - Service Monitoring</h3>
   <p class="paragraph">
     The <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl" target="_blank">cloudi_service_monitoring</a>
     provides the ability to monitor the internals of any CloudI service
@@ -2799,26 +2760,50 @@ sudo cloudi stop
   <a name="7_start"></a>
   <h3>7.1 - Why does CloudI stop shortly after being started?</h3>
   <p class="paragraph">
-  If any services listed in the CloudI configuration file fail to initialize
-  CloudI will shutdown.  This behavior is required to ensure CloudI services
-  are able to fail-fast when services are unable to initialize.  If this has
-  happened while running the integration tests, please submit
-  the problem (with the /usr/local/var/log/cloudi/cloudi.log file and the
-  build's config.log file) as <a href="#2_ReportingBugs">a bug</a>.
+    If any services listed in the CloudI configuration file fail to initialize
+    CloudI will shutdown.  This behavior is required to ensure CloudI services
+    are able to fail-fast when services are unable to initialize.  If this has
+    happened while running the integration tests, please submit
+    the problem (with the /usr/local/var/log/cloudi/cloudi.log file and the
+    build's config.log file) as <a href="#2_ReportingBugs">a bug</a>.
   </p>
   <p class="paragraph">
-  The best place to have validation in a service is during service
-  <a href="api.html#1_initialization_timeout">initialization</a>
-  so the service's starting state is confirmed to be correct.
-  Performing verification during service initialization is important due to
-  the lifetime of a service's execution being typically undefined.
-  Critical CloudI services should have their configuration in the CloudI
-  configuration file (instead of using the CloudI Service API to dynamically
-  start the services with <a href="api.html#2_services_add">services_add</a>)
-  to take advantage of fail-fast service initialization.
+    The best place to have validation in a service is during service
+    <a href="api.html#1_initialization_timeout">initialization</a>
+    so the service's starting state is confirmed to be correct.
+    Performing verification during service initialization is important due to
+    the lifetime of a service's execution being typically undefined.
+    Critical CloudI services should have their configuration in the CloudI
+    configuration file (instead of using the CloudI Service API to dynamically
+    start the services with <a href="api.html#2_services_add">services_add</a>)
+    to take advantage of fail-fast service initialization.
   </p>
   <div class="top"><a href="#7_contents">Top</a></div>
 
+  <a name="7_slow"></a>
+  <h3>7.2 - Why is CloudI making my Linux machine slow?</h3>
+  <p class="paragraph">
+    The machine is likely overloaded by the number of services and their
+    configured concurrency.  However, the Linux scheduler that is selected
+    may make the overloaded machine slower by focusing on CPU intensive
+    execution.  If you are concerned about CloudI services overloading
+    the machine, it is best to select the
+    <a href="https://en.wikipedia.org/wiki/Completely_Fair_Scheduler" target="_blank">Completely Fair Queuing (CFQ)</a>
+    scheduler if it has not already been selected
+    (it is a common default for Linux distributions).  To select CFQ,
+    add elevator=cfq to the Linux kernel parameters.
+  </p>
+  <p class="paragraph">
+    Having CloudI services overload a machine is uncommon when the
+    service configuration is created based on the available resources.
+    The CloudI integration tests do a variety of different processing
+    that has often caused CloudI to overload small machines
+    (see <a href="api.html#2_services_add">services_add</a>
+     for service configuration details or
+     <a href="faq.html#5_Performance">"5.1 - Performance Considerations"</a>
+     for general information about scheduler limitations).
+  </p>
+  <div class="top"><a href="#7_contents">Top</a></div>
 </div>
 
 </body>
