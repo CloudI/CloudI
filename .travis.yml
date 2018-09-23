@@ -10,30 +10,32 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-6
+            - g++-7
       env:
-        - CONFIGURE_ENV="CC=gcc-6 CXX=g++-6"
-# Clang 4.0/5.0 broken for Trusty at http://apt.llvm.org/trusty/ (2017-09-04)
-#    # works on Trusty
-#    - os: linux
-#      addons:
-#        apt:
-#          sources:
-#            # method 1
-#            - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main'
-#              key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
-#            - ubuntu-toolchain-r-test
-#            # method 2
-#            - llvm-toolchain-trusty-4.0
-#          packages:
-#            - clang-4.0
-#      env:
-#        - CONFIGURE_ENV="CC=clang-4.0 CXX=clang++-4.0"
+        - CONFIGURE_ENV="CC=gcc-7 CXX=g++-7"
+    # works on Trusty
+    - os: linux
+      addons:
+        apt:
+          sources:
+            # method 1
+            - llvm-toolchain-trusty-5.0
+            # method 2
+            # Clang 4.0/5.0 broken for Trusty
+            # at http://apt.llvm.org/trusty/ (2017-09-04)
+            #- sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main'
+            #  key_url: 'http://apt.llvm.org/llvm-snapshot.gpg.key'
+            #- ubuntu-toolchain-r-test
+          packages:
+            - clang-5.0
+      env:
+        - CONFIGURE_ENV="CC=clang-5.0 CXX=clang++-5.0"
 compiler:
   - clang
   - gcc
 otp_release:
-  - 20.0
+  - 21.0.2
+  - 20.3
   - 19.3
 python:
   - "3.6"
@@ -49,7 +51,7 @@ before_script:
   - cd build
   - ../src/autogen.sh
   - export ${CONFIGURE_ENV}
-  - ../src/configure --with-zeromq --with-cxx-backtrace --prefix=`pwd`/../install_local
+  - ../src/configure --with-cxx-backtrace --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
   - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests;"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
