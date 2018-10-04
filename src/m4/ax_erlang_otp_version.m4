@@ -168,7 +168,7 @@ AC_DEFUN([AX_ERLANG_REQUIRE_OTP_VER],
                         true ->
                             %% Remove -1 from R16B03-1
                             list_to_integer(lists:takewhile(fun(C) ->
-                                C /= $-
+                                C /= \$-
                             end, MinorT))
                     end,
                     if
