@@ -1,16 +1,17 @@
 CloudI Contributors (chronological order):
 Michael Truog               <mjtruog at protonmail dot com>
-Michael T. Richter          <ttmrichter [at] gmail (dot) com>
-Hardy Jones                 <jones3.hardy [at] gmail (dot) com>
-Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+Michael T. Richter          <ttmrichter at gmail dot com>
+Hardy Jones                 <jones3.hardy at gmail dot com>
+Mahesh Paolini-Subramanya   <mahesh at dieswaytoofast dot com>
 Juan Jose Comellas
-Lukas Larsson               <garazdawi [at] gmail (dot) com>
-Drew Varner                 <drew.varner [at] ninefx (dot) com>
-Irina Guberman              <irina.guberman [at] gmail (dot) com>
-Bart Van Der Meerssche      <bart [at] flukso (dot) net>
-Bruce Kissinger             <brucekissinger [at] gmail (dot) com>
-Francisco Marchal           <marchal.francisco [at] gmail (dot) com>
-Dmitriy Mazurin             <dimas.m.19 [at] gmail (dot) com>
+Lukas Larsson               <garazdawi at gmail dot com>
+Drew Varner                 <drew.varner at ninefx dot com>
+Irina Guberman              <irina.guberman at gmail dot com>
+Bart Van Der Meerssche      <bart at flukso dot net>
+Bruce Kissinger             <brucekissinger at gmail dot com>
+Francisco Marchal           <marchal.francisco at gmail dot com>
+Dmitriy Mazurin             <dimas.m.19 at gmail dot com>
+Natanael Copa               <ncopa at alpinelinux dot org>
 
 CloudI Integration Dependencies (alphabetical project order):
 backward-cpp         François-Xavier Bourlet <bombela@gmail.com>

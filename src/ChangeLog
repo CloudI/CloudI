@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-10-04 Natanael Copa   <ncopa at alpinelinux dot org>
+
+    * Fix autoconf Erlang version check for aarch64
+
 2018-09-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update backward-cpp
