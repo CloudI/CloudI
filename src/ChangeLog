@@ -1966,7 +1966,7 @@
       in an Erlang CloudI service
     * Add cloudi_service_http_rest info function configuration argument
 
-2015-11-03 Dmitriy Mazurin <dimas.m.19 [at] gmail (dot) com>
+2015-11-03 Dmitriy Mazurin <dimas.m.19 at gmail dot com>
 
     * Update erlang_term to fix improper list size check
 
@@ -2182,7 +2182,7 @@
     * Fix cloudi_service_db_riak and cloudi_service_oauth1
       app file version and modelines
 
-2015-06-14 Bruce Kissinger   <brucekissinger [at] gmail (dot) com>
+2015-06-14 Bruce Kissinger   <brucekissinger at gmail dot com>
 
     * Add the CloudI dashboard
 
@@ -2191,7 +2191,7 @@
     * Fix service configuration option request_timeout_immediate_max usage
       in combination with queue_limit, queue_size, and/or rate_request_max 
 
-2015-06-08 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+2015-06-08 Francisco Marchal   <marchal.francisco at gmail dot com>
 
     * Fix vim modified flag at opening file
 
@@ -2208,7 +2208,7 @@
 
     * Add the rate_request_max service configuration option
 
-2015-06-01 Francisco Marchal   <marchal.francisco [at] gmail (dot) com>
+2015-06-01 Francisco Marchal   <marchal.francisco at gmail dot com>
 
     * Fix 'make install DESTDIR=pkgdir/'
 
@@ -3187,7 +3187,7 @@
 
     * Add a test to the cloudi_service_db_pgsql ct test
 
-2014-05-30 Drew Varner     <drew.varner [at] ninefx (dot) com>
+2014-05-30 Drew Varner     <drew.varner at ninefx dot com>
 
     * Fix the service application include file type spec
 
@@ -3202,7 +3202,7 @@
     * Add the functions cloudi_service:service_name_new/2 and
       cloudi_service:service_name_new/4
 
-2014-05-28 Drew Varner     <drew.varner [at] ninefx (dot) com>
+2014-05-28 Drew Varner     <drew.varner at ninefx dot com>
 
     * Add javadocs comments to the Java CloudI API
 
@@ -3232,7 +3232,7 @@
 
     * Update documentation
 
-2014-05-19 Drew Varner     <drew.varner [at] ninefx (dot) com>
+2014-05-19 Drew Varner     <drew.varner at ninefx dot com>
 
     * Add nonempty_list to cloudi_service_api typespecs
 
@@ -3771,7 +3771,7 @@
     * CloudI version 1.3.0 (beta) released
     * Update cpg, key2value, pqueue, reltool_util, uuid after version bump
 
-2013-10-17 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+2013-10-17 Mahesh Paolini-Subramanya   <mahesh at dieswaytoofast dot com>
 
     * Migrate elasticsearch version from 1.3 to 1.4
     * Added support for mapping and aliases
@@ -3825,7 +3825,7 @@
       performance for evaluating system resilience during service failures
       (http://techblog.netflix.com/2011/07/netflix-simian-army.html)
 
-2013-09-26 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+2013-09-26 Mahesh Paolini-Subramanya   <mahesh at dieswaytoofast dot com>
 
     * Update erlasticsearch to take json docs
     * Update jsx to 1.4.3
@@ -3922,7 +3922,7 @@
     * Move makefile "clean-configure" target to utilize the distclean target
     * Tweak example hello_world3 so that ERL_LIBS is not used
 
-2013-08-28 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+2013-08-28 Mahesh Paolini-Subramanya   <mahesh at dieswaytoofast dot com>
 
     * Merge cassandra database integration
 
@@ -4086,7 +4086,7 @@
     * Fix emysql crypto hash usage (error is in 1.2.4)
     * Update edoc documentation
 
-2013-07-05 Mahesh Paolini-Subramanya   <mahesh [at] dieswaytoofast (dot) com>
+2013-07-05 Mahesh Paolini-Subramanya   <mahesh at dieswaytoofast dot com>
 
     * Merge elasticsearch database integration
 
@@ -4098,7 +4098,7 @@
     * Add the hello_world3 example for rebar integration with CloudI
       as a dependency for a release
 
-2013-07-03 Lukas Larsson   <garazdawi [at] gmail (dot) com>
+2013-07-03 Lukas Larsson   <garazdawi at gmail dot com>
 
     * Fix emysql source file encoding for R17
 
@@ -4535,7 +4535,7 @@
       Python CloudI API C++ integration
     * Simplify cpg process lookup
 
-2012-08-17 Hardy Jones   <jones3.hardy [at] gmail (dot) com>
+2012-08-17 Hardy Jones   <jones3.hardy at gmail dot com>
 
     * Fix assignment statement in Python API cloudi.py
     * Fix list conversion to binary in Python API erlang.py
