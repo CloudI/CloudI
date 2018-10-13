@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_ssh_server).
@@ -86,7 +86,8 @@
     {
         dispatcher :: cloudi_service:dispatcher(),
         compression :: 0..9,
-        handle = undefined :: undefined | connection_handle()
+        handle = undefined :: undefined | connection_handle(),
+        send_timeouts = #{} :: #{cloudi:trans_id() := {pid(), reference()}}
     }).
 
 -type state() :: #ssh_server{}.
@@ -237,8 +238,8 @@ handle_ssh_msg({ssh_cm, Connection,
                 {data, ChannelId, 0, DataIn}},
                #ssh_server_connection{
                    dispatcher = Dispatcher,
-                   compression = Compression,
-                   handle = {Connection, ChannelId}} = State) ->
+                   handle = {Connection, ChannelId},
+                   send_timeouts = SendTimeouts} = State) ->
     try erlang:binary_to_term(DataIn) of
         {ForwardType, Name, Pattern, NextName, RequestInfo, Request,
          Timeout, Priority, TransId, Source}
@@ -248,39 +249,14 @@ handle_ssh_msg({ssh_cm, Connection,
             Dispatcher ! {ForwardType,
                           Name, Pattern, NextName, RequestInfo, Request,
                           Timeout, Priority, TransId, Self},
-            DataOutDecoded = receive
-                {'cloudi_service_return_async',
-                 NewName, NewPattern, ResponseInfo, Response,
-                 NewTimeout, TransId, Self} ->
-                    {'cloudi_service_return_async',
-                     NewName, NewPattern, ResponseInfo, Response,
-                     NewTimeout, TransId, Source};
-                {'cloudi_service_return_sync',
-                 NewName, NewPattern, ResponseInfo, Response,
-                 NewTimeout, TransId, Self} ->
-                    {'cloudi_service_return_sync',
-                     NewName, NewPattern, ResponseInfo, Response,
-                     NewTimeout, TransId, Source}
-            after
-                Timeout ->
-                    if
-                        ForwardType =:= 'cloudi_service_forward_async_retry' ->
-                            {'cloudi_service_return_async',
-                             Name, Pattern, <<>>, <<>>, 0, TransId, Source};
-                        ForwardType =:= 'cloudi_service_forward_sync_retry' ->
-                            {'cloudi_service_return_sync',
-                             Name, Pattern, <<>>, <<>>, 0, TransId, Source}
-                    end
-            end,
-            DataOut = erlang:term_to_binary(DataOutDecoded,
-                                            [{compressed, Compression}]),
-            case ssh_connection:send(Connection, ChannelId, DataOut) of
-                ok ->
-                    {ok, State};
-                {error, Reason} ->
-                    ?LOG_DEBUG("send error: ~w", [Reason]),
-                    {stop, ChannelId, State}
-            end
+            TimerRef = erlang:send_after(Timeout, Self,
+                                         {send_timeout, TransId}),
+            {ok,
+             State#ssh_server_connection{
+                 send_timeouts = maps:put(TransId,
+                                          {ForwardType,
+                                           Name, Pattern, Source, TimerRef},
+                                          SendTimeouts)}}
     catch
         error:badarg ->
             ssh_connection:send_eof(Connection, ChannelId),
@@ -307,11 +283,47 @@ handle_ssh_msg({ssh_cm, _, {exit_status, ChannelId, _Status}}, State) ->
 
 handle_msg({ssh_channel_up, ChannelId, Connection}, State) ->
     {ok, State#ssh_server_connection{handle = {Connection, ChannelId}}};
-handle_msg({ReturnType, _, _, _, _, _, _, _}, State)
+handle_msg({ReturnType,
+            NewName, NewPattern, ResponseInfo, Response,
+            NewTimeout, TransId, _},
+           #ssh_server_connection{
+               send_timeouts = SendTimeouts} = State)
     when ReturnType =:= 'cloudi_service_return_async' orelse
          ReturnType =:= 'cloudi_service_return_sync' ->
-    % Ignore old timeouts that have already occurred
-    {ok, State}.
+    case maps:find(TransId, SendTimeouts) of
+        {ok, {_, _, _, Source, TimerRef}} ->
+            erlang:cancel_timer(TimerRef),
+            DataOutDecoded = if
+                ReturnType =:= 'cloudi_service_return_async' ->
+                    {'cloudi_service_return_async',
+                     NewName, NewPattern, ResponseInfo, Response,
+                     NewTimeout, TransId, Source};
+                ReturnType =:= 'cloudi_service_return_sync' ->
+                    {'cloudi_service_return_sync',
+                     NewName, NewPattern, ResponseInfo, Response,
+                     NewTimeout, TransId, Source}
+            end,
+            return(DataOutDecoded, TransId, State);
+        error ->
+            {ok, State}
+    end;
+handle_msg({send_timeout, TransId},
+           #ssh_server_connection{
+               send_timeouts = SendTimeouts} = State) ->
+    case maps:find(TransId, SendTimeouts) of
+        {ok, {ForwardType, Name, Pattern, Source, _}} ->
+            DataOutDecoded = if
+                ForwardType =:= 'cloudi_service_forward_async_retry' ->
+                    {'cloudi_service_return_async',
+                     Name, Pattern, <<>>, <<>>, 0, TransId, Source};
+                ForwardType =:= 'cloudi_service_forward_sync_retry' ->
+                    {'cloudi_service_return_sync',
+                     Name, Pattern, <<>>, <<>>, 0, TransId, Source}
+            end,
+            return(DataOutDecoded, TransId, State);
+        error ->
+            {ok, State}
+    end.
 
 terminate(_Reason, _State) ->
     ok.
@@ -319,4 +331,21 @@ terminate(_Reason, _State) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
+
+return(DataOutDecoded, TransId,
+       #ssh_server_connection{
+           compression = Compression,
+           handle = {Connection, ChannelId},
+           send_timeouts = SendTimeouts} = State) ->
+    DataOut = erlang:term_to_binary(DataOutDecoded,
+                                    [{compressed, Compression}]),
+    NewState = State#ssh_server_connection{
+                   send_timeouts = maps:remove(TransId, SendTimeouts)},
+    case ssh_connection:send(Connection, ChannelId, DataOut) of
+        ok ->
+            {ok, NewState};
+        {error, Reason} ->
+            ?LOG_DEBUG("send error: ~w", [Reason]),
+            {stop, ChannelId, NewState}
+    end.
 
