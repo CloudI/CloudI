@@ -1,7 +1,7 @@
 %%% -*- coding: utf-8 -*-
 %%% -*- erlang-indent-level: 2 -*-
 %%% -------------------------------------------------------------------
-%%% Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
+%%% Copyright 2016-2018 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -20,23 +20,23 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2016-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
-%%% @author Eirini Arvaniti
-%%% @doc This module tests the use of symbolic calls in next_state/3.
+%%% @author Pierre Fenoll (adapted from the code of test/symb_statem.erl)
 
--module(symb_statem).
-
--export([command/1,
-	 initial_state/0, next_state/3,
-	 precondition/2, postcondition/3]).
--export([foo/1, bar/1]).
--export([prop_simple/0, prop_parallel_simple/0]).
+-module(symb_statem_maps).
 
 -include_lib("proper/include/proper.hrl").
 
--record(state, {foo = [] :: list(),
-		bar = [] :: list()}).
+-export([command/1,
+	 initial_state/0,
+	 next_state/3,
+	 precondition/2,
+	 postcondition/3]).
+
+-export([qux/1]).
+
+-record(state, {qux = #{key => []} :: map()}).
 -type state() :: #state{}.
 
 -spec initial_state() -> state().
@@ -44,38 +44,32 @@ initial_state() ->
     #state{}.
 
 command(_S) ->
-    oneof([{call,?MODULE,foo,[integer()]},
-	   {call,?MODULE,bar,[integer()]}]).
+    oneof([{call,?MODULE,qux,[integer()]}]).
 
 precondition(_, _) ->
     true.
 
-next_state(S = #state{foo=Foo}, V, {call,_,foo,[_Arg]}) ->
-    V1 = {call,erlang,element,[1,V]},
-    S#state{foo = [V1|Foo]};
-next_state(S = #state{bar=Bar}, V, {call,_,bar,[_Arg]}) ->
-    V1 = {call,erlang,hd,[V]},
-    S#state{bar = [V1|Bar]}.
+next_state(S = #state{qux=Qux}, V, {call,?MODULE,qux,[_Arg]}) ->
+    Values = maps:get(key, Qux),
+    NewValues = {call,maps,get,[key,V]},
+    NewQux = Qux#{key => [{call,erlang,hd,[NewValues]} | Values]},
+    S#state{qux = NewQux}.
 
-postcondition(S, {call,_,foo,[_Arg]}, Res) when is_tuple(Res) ->
-    lists:all(fun is_integer/1, S#state.foo);
-postcondition(S, {call,_,bar,[_Arg]}, Res) when is_list(Res) ->
-    lists:all(fun is_integer/1, S#state.bar);
+postcondition(#state{qux=#{key:=Values}}, {call,?MODULE,qux,[_Arg]}, Res)
+  when is_map(Res) ->
+    lists:all(fun is_integer/1, Values);
 postcondition(_, _, _) ->
     false.
 
-foo(I) when is_integer(I) ->
-    erlang:make_tuple(3, I).
-
-bar(I) when is_integer(I) ->
-    lists:duplicate(3, I).
+qux(I) when is_integer(I) ->
+    #{key => lists:duplicate(3, I)}.
 
 prop_simple() ->
     ?FORALL(Cmds, commands(?MODULE),
 	    begin
 		{H,S,Res} = run_commands(?MODULE, Cmds),
 		?WHENFAIL(
-		   io:format("H: ~w\nState: ~w\n:Res: ~w\n", [H,S,Res]),
+		   io:format("H: ~w\nState: ~p\n:Res: ~w\n", [H,S,Res]),
 		   Res =:= ok)
 	    end).
 
@@ -84,6 +78,6 @@ prop_parallel_simple() ->
 	    begin
 		{S,P,Res} = run_parallel_commands(?MODULE, Cmds),
 		?WHENFAIL(
-		   io:format("Seq: ~w\nParallel: ~w\n:Res: ~w\n", [S,P,Res]),
+		   io:format("Seq: ~w\nParallel: ~p\n:Res: ~w\n", [S,P,Res]),
 		   Res =:= ok)
 	    end).

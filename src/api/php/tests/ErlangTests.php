@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -30,7 +30,7 @@ class ErlangTests
 {
     public static function suite()
     {
-        $suite = new PHPUnit_Framework_TestSuite();
+        $suite = new PHPUnit\Framework\TestSuite();
         $cases = array('AtomTestCase',
                        'ListTestCase',
                        'ImproperListTestCase',
@@ -54,7 +54,7 @@ class ErlangTests
 // from erlport (https://github.com/hdima/erlport)
 // to make the tests more exhaustive
 
-class AtomTestCase extends PHPUnit_Framework_TestCase
+class AtomTestCase extends PHPUnit\Framework\TestCase
 {
     public function test_atom()
     {
@@ -72,14 +72,14 @@ class AtomTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_invalid_atom()
     {
-        $this->setExpectedException('\Erlang\OutputException',
-                                    'unknown atom type');
+        $this->expectException('\Erlang\OutputException');
+        $this->expectExceptionMessage('unknown atom type');
         $atom_invalid = new \Erlang\OtpErlangAtom(array(1, 2));
         $atom_invalid->binary();
     }
 }
 
-class ListTestCase extends PHPUnit_Framework_TestCase
+class ListTestCase extends PHPUnit\Framework\TestCase
 {
     public function test_list()
     {
@@ -94,7 +94,7 @@ class ListTestCase extends PHPUnit_Framework_TestCase
     }
 }
 
-class ImproperListTestCase extends PHPUnit_Framework_TestCase
+class ImproperListTestCase extends PHPUnit\Framework\TestCase
 {
     public function test_improper_list()
     {
@@ -120,48 +120,48 @@ class ImproperListTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_errors()
     {
-        $this->setExpectedException('\Erlang\OutputException',
-                                    'unknown list type');
+        $this->expectException('\Erlang\OutputException');
+        $this->expectExceptionMessage('unknown list type');
         $list_invalid = new \Erlang\OtpErlangList('invalid', true);
         $list_invalid->binary();
     }
 }
 
-class DecodeTestCase extends PHPUnit_Framework_TestCase
+class DecodeTestCase extends PHPUnit\Framework\TestCase
 {
     public function test_binary_to_term_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term('');
     }
     public function test_binary_to_term_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\0");
     }
     public function test_binary_to_term_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83");
     }
     public function test_binary_to_term_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83z");
     }
     public function test_binary_to_term_atom_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83d");
     }
     public function test_binary_to_term_atom_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83d\0");
     }
     public function test_binary_to_term_atom_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83d\0\1");
     }
     public function test_binary_to_term_atom()
@@ -191,27 +191,27 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_string_list_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l");
     }
     public function test_binary_to_term_string_list_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l\0");
     }
     public function test_binary_to_term_string_list_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l\0\0");
     }
     public function test_binary_to_term_string_list_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l\0\0\0");
     }
     public function test_binary_to_term_string_list_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l\0\0\0\0");
     }
     public function test_binary_to_term_string_list()
@@ -225,7 +225,7 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_improper_list_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83l\0\0\0\0k");
     }
     public function test_binary_to_term_improper_list()
@@ -239,12 +239,12 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_small_tuple_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83h");
     }
     public function test_binary_to_term_small_tuple_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83h\1");
     }
     public function test_binary_to_term_small_tuple()
@@ -258,27 +258,27 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_large_tuple_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83i");
     }
     public function test_binary_to_term_large_tuple_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83i\0");
     }
     public function test_binary_to_term_large_tuple_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83i\0\0");
     }
     public function test_binary_to_term_large_tuple_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83i\0\0\0");
     }
     public function test_binary_to_term_large_tuple_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83i\0\0\0\1");
     }
     public function test_binary_to_term_large_tuple()
@@ -291,7 +291,7 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_small_integer_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83a");
     }
     public function test_binary_to_term_small_integer()
@@ -301,22 +301,22 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_integer_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83b");
     }
     public function test_binary_to_term_integer_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83b\0");
     }
     public function test_binary_to_term_integer_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83b\0\0");
     }
     public function test_binary_to_term_integer_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83b\0\0\0");
     }
     public function test_binary_to_term_integer()
@@ -331,27 +331,27 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_binary_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83m");
     }
     public function test_binary_to_term_binary_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83m\0");
     }
     public function test_binary_to_term_binary_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83m\0\0");
     }
     public function test_binary_to_term_binary_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83m\0\0\0");
     }
     public function test_binary_to_term_binary_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83m\0\0\0\1");
     }
     public function test_binary_to_term_binary()
@@ -363,42 +363,42 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_float_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F");
     }
     public function test_binary_to_term_float_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0");
     }
     public function test_binary_to_term_float_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0");
     }
     public function test_binary_to_term_float_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0\0");
     }
     public function test_binary_to_term_float_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0\0\0");
     }
     public function test_binary_to_term_float_6()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0\0\0\0");
     }
     public function test_binary_to_term_float_7()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0\0\0\0\0");
     }
     public function test_binary_to_term_float_8()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83F\0\0\0\0\0\0\0");
     }
     public function test_binary_to_term_float()
@@ -410,17 +410,17 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_small_big_integer_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83n");
     }
     public function test_binary_to_term_small_big_integer_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83n\0");
     }
     public function test_binary_to_term_small_big_integer_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83n\1\0");
     }
     public function test_binary_to_term_small_big_integer()
@@ -434,32 +434,32 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_big_integer_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o");
     }
     public function test_binary_to_term_big_integer_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o\0");
     }
     public function test_binary_to_term_big_integer_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o\0\0");
     }
     public function test_binary_to_term_big_integer_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o\0\0\0");
     }
     public function test_binary_to_term_big_integer_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o\0\0\0\0");
     }
     public function test_binary_to_term_big_integer_6()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83o\0\0\0\1\0");
     }
     public function test_binary_to_term_big_integer()
@@ -475,32 +475,32 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
     public function test_binary_to_term_compressed_term_1()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P");
     }
     public function test_binary_to_term_compressed_term_2()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P\0");
     }
     public function test_binary_to_term_compressed_term_3()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P\0\0");
     }
     public function test_binary_to_term_compressed_term_4()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P\0\0\0");
     }
     public function test_binary_to_term_compressed_term_5()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P\0\0\0\0");
     }
     public function test_binary_to_term_compressed_term_6()
     {
-        $this->setExpectedException('\Erlang\ParseException');
+        $this->expectException('\Erlang\ParseException');
         \Erlang\binary_to_term("\x83P\0\0\0\x16\x78\xda\xcb\x66" .
                                "\x10\x49\xc1\2\0\x5d\x60\x08\x50");
     }
@@ -512,7 +512,7 @@ class DecodeTestCase extends PHPUnit_Framework_TestCase
     }
 }
 
-class EncodeTestCase extends PHPUnit_Framework_TestCase
+class EncodeTestCase extends PHPUnit\Framework\TestCase
 {
     public function test_term_to_binary_tuple()
     {
@@ -673,10 +673,11 @@ class EncodeTestCase extends PHPUnit_Framework_TestCase
         $this->assertEquals("\x83k\0\4test",
             \Erlang\term_to_binary('test'));
     }
-    public function test_term_to_binary_boolean()
+    public function test_term_to_binary_predefined_atoms()
     {
         $this->assertEquals("\x83s\4true", \Erlang\term_to_binary(true));
         $this->assertEquals("\x83s\5false", \Erlang\term_to_binary(false));
+        $this->assertEquals("\x83s\x09undefined", \Erlang\term_to_binary(NULL));
     }
     public function test_term_to_binary_short_integer()
     {

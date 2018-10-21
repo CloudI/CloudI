@@ -1,4 +1,7 @@
-%%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2017 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2016 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2017 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -244,19 +247,21 @@ pretty_print(VarValues, SymbTerm) ->
 
 -spec parse_fun(mod_name(), fun_name(), [abs_expr()]) -> abs_expr().
 parse_fun(Module, Function, ArgTreeList) ->
-    L = ?anno(0),
-    {call,L,{remote,L,{atom,L,Module},{atom,L,Function}},ArgTreeList}.
+    M = erl_syntax:atom(Module),
+    F = erl_syntax:atom(Function),
+    erl_syntax:revert(erl_syntax:application(M, F, ArgTreeList)).
 
 -spec parse_term(term()) -> abs_expr().
 parse_term(TreeList) when is_list(TreeList) ->
     {RestOfList, Acc0} =
 	case proper_arith:cut_improper_tail(TreeList) of
 	    {_ProperHead,_ImproperTail} = X -> X;
-	    ProperList                      -> {ProperList,{nil,0}}
+	    ProperList -> {ProperList, erl_syntax:revert(erl_syntax:nil())}
 	end,
-    lists:foldr(fun(X,Acc) -> {cons,0,X,Acc} end, Acc0, RestOfList);
+    lists:foldr(fun(X,Acc) -> erl_syntax:revert(erl_syntax:cons(X,Acc)) end,
+		Acc0, RestOfList);
 parse_term(TreeTuple) when is_tuple(TreeTuple) ->
-    {tuple,0,tuple_to_list(TreeTuple)};
+    erl_syntax:revert(erl_syntax:tuple(tuple_to_list(TreeTuple)));
 parse_term(Term) ->
     %% TODO: pid, port, reference, function value?
     erl_parse:abstract(Term).
@@ -299,10 +304,16 @@ symb_walk_call(VarValues, Mod, Fun, Args,
 symb_walk_gen(VarValues, SymbTerm,
 	      {_Caller,_HandleCall,HandleTerm} = HandleInfo) ->
     SymbWalk = fun(X) -> symb_walk(VarValues, X, HandleInfo) end,
-    Term =
-	if
-	    is_list(SymbTerm)  -> proper_arith:safe_map(SymbWalk, SymbTerm);
-	    is_tuple(SymbTerm) -> proper_arith:tuple_map(SymbWalk, SymbTerm);
-	    true               -> SymbTerm
-	end,
+    Term = do_symb_walk_gen(SymbWalk, SymbTerm),
     HandleTerm(Term).
+
+-spec do_symb_walk_gen(fun((T) -> S), maybe_improper_list(T,T | [])) ->
+			  maybe_improper_list(S,S | []).
+do_symb_walk_gen(SymbWalk, SymbTerm) when is_map(SymbTerm) ->
+    maps:from_list(proper_arith:safe_map(SymbWalk, maps:to_list(SymbTerm)));
+do_symb_walk_gen(SymbWalk, SymbTerm) when is_list(SymbTerm) ->
+    proper_arith:safe_map(SymbWalk, SymbTerm);
+do_symb_walk_gen(SymbWalk, SymbTerm) when is_tuple(SymbTerm) ->
+    proper_arith:tuple_map(SymbWalk, SymbTerm);
+do_symb_walk_gen(_, SymbTerm) ->
+    SymbTerm.

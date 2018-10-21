@@ -1,4 +1,7 @@
-%%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2016 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 
@@ -236,11 +239,7 @@
 
 -type type_kind() :: 'type' | 'record'.
 -type type_ref() :: {type_kind(),type_name(),arity()}.
--ifdef(NO_MODULES_IN_OPAQUES).
--type substs_dict() :: dict(). %% dict(field_name(),ret_type())
--else.
 -type substs_dict() :: dict:dict(field_name(),ret_type()).
--endif.
 -type full_type_ref() :: {mod_name(),type_kind(),type_name(),
 			  [ret_type()] | substs_dict()}.
 -type symb_info() :: 'not_symb' | {'orig_abs',abs_type()}.
@@ -252,8 +251,9 @@
 -type rec_arg() :: {boolean() | {'list',boolean(),rec_fun()},full_type_ref()}.
 -type rec_args() :: [rec_arg()].
 -type ret_type() :: {'simple',fin_type()} | {'rec',rec_fun(),rec_args()}.
--type rec_fun_info() :: {pos_integer(),pos_integer(),[arity(),...],
-			 [rec_fun(),...]}.
+-type rec_arg_lens() :: [arity(),...].
+-type rec_funs()     :: [rec_fun(),...].
+-type rec_fun_info() :: {pos_integer(),pos_integer(),rec_arg_lens(),rec_funs()}.
 
 -type imm_type_ref() :: {type_name(),arity()}.
 -type hard_adt_repr() :: {abs_type(),[var_name()]} | 'already_declared'.
@@ -267,35 +267,18 @@
 -type pattern() :: loose_tuple(pat_field()).
 -type next_step() :: 'none' | 'take_head' | {'match_with',pattern()}.
 
--ifdef(NO_MODULES_IN_OPAQUES).
-%% @private_type
--type mod_exp_types() :: set(). %% set(imm_type_ref())
--type mod_types() :: dict(). %% dict(type_ref(),type_repr())
-%% @private_type
--type mod_exp_funs() :: set(). %% set(fun_ref())
--type mod_specs() :: dict(). %% dict(fun_ref(),fun_repr())
--else.
 %% @private_type
 -type mod_exp_types() :: sets:set(imm_type_ref()).
 -type mod_types() :: dict:dict(type_ref(),type_repr()).
 %% @private_type
 -type mod_exp_funs() :: sets:set(fun_ref()).
 -type mod_specs() :: dict:dict(fun_ref(),fun_repr()).
--endif.
 
--ifdef(NO_MODULES_IN_OPAQUES).
--record(state,
-	{cached    = dict:new() :: dict(),   %% dict(imm_type(),fin_type())
-	 exp_types = dict:new() :: dict(),   %% dict(mod_name(),mod_exp_types())
-	 types     = dict:new() :: dict(),   %% dict(mod_name(),mod_types())
-	 exp_specs = dict:new() :: dict()}). %% dict(mod_name(),mod_specs())
--else.
 -record(state,
 	{cached    = dict:new() :: dict:dict(imm_type(),fin_type()),
 	 exp_types = dict:new() :: dict:dict(mod_name(),mod_exp_types()),
 	 types     = dict:new() :: dict:dict(mod_name(),mod_types()),
 	 exp_specs = dict:new() :: dict:dict(mod_name(),mod_specs())}).
--endif.
 -type state() :: #state{}.
 
 -record(mod_info,
@@ -307,11 +290,7 @@
 -type mod_info() :: #mod_info{}.
 
 -type stack() :: [full_type_ref() | 'tuple' | 'list' | 'union' | 'fun'].
--ifdef(NO_MODULES_IN_OPAQUES).
--type var_dict() :: dict(). %% dict(var_name(),ret_type())
--else.
 -type var_dict() :: dict:dict(var_name(),ret_type()).
--endif.
 %% @private_type
 -type imm_type() :: {mod_name(),string()}.
 %% @alias
@@ -529,11 +508,12 @@ apply_spec_test({Mod,Fun,_Arity}=MFA, {_Domain,Range}, SpecTimeout, FalsePositiv
     ?TIMEOUT(SpecTimeout,
              begin
                  %% NOTE: only call apply/3 inside try/catch (do not trust ?MODULE:is_instance/3)
-                 Result =
+                 {Result, StackTrace} =
                      try apply(Mod, Fun, Args) of
-                         X -> {ok, X}
+                         X -> {{ok, X}, none}
                      catch
-                         X:Y -> {X, Y}
+                         ?STACKTRACE(X, Y, Trace) %, is in macro
+                         {{X, Y}, Trace}
                      end,
                  case Result of
                      {ok, Z} ->
@@ -550,10 +530,10 @@ apply_spec_test({Mod,Fun,_Arity}=MFA, {_Domain,Range}, SpecTimeout, FalsePositiv
                              true ->
                                  true;
                              false ->
-                                 error(Exception, erlang:get_stacktrace())
+                                 error(Exception, StackTrace)
                          end;
                      Exception ->
-                         error(Exception, erlang:get_stacktrace())
+                         error(Exception, StackTrace)
                  end
              end).
 
@@ -1089,11 +1069,7 @@ multi_collect_vars({_Mod,_Name,Arity} = FullADTRef, Forms, UsedVars) ->
     CombineVars = fun(L1,L2) -> lists:zipwith(fun erlang:'++'/2, L1, L2) end,
     lists:foldl(CombineVars, UsedVars, MoreUsedVars).
 
--ifdef(NO_MODULES_IN_OPAQUES).
--type var_substs_dict() :: dict().
--else.
 -type var_substs_dict() :: dict:dict(var_name(),abs_type()).
--endif.
 -spec update_vars(abs_type(), var_substs_dict(), boolean()) -> abs_type().
 update_vars({paren_type,Line,[Type]}, VarSubstsDict, UnboundToAny) ->
     {paren_type, Line, [update_vars(Type,VarSubstsDict,UnboundToAny)]};
@@ -1819,16 +1795,16 @@ convert_union(Mod, ChoiceForms, State, Stack, VarDict) ->
 	    ProcessChoice = fun(T,A) -> process_choice(T,A,Stack) end,
 	    {RevSelfRecs,RevNonSelfRecs,RevNonRecs} =
 		lists:foldl(ProcessChoice, {[],[],[]}, RawChoices),
-	    case {lists:reverse(RevSelfRecs),lists:reverse(RevNonSelfRecs),
-		  lists:reverse(RevNonRecs)} of
-		{_SelfRecs,[],[]} ->
+	    case {RevSelfRecs,lists:reverse(RevNonSelfRecs),RevNonRecs} of
+		{_RevSelfRecs,[],[]} ->
 		    base_case_error(Stack);
-		{[],NonSelfRecs,NonRecs} ->
-		    {ok, combine_ret_types(NonRecs ++ NonSelfRecs, union),
-		     NewState};
-		{SelfRecs,NonSelfRecs,NonRecs} ->
+		{[],NonSelfRecs,RevNonRecs} ->
+		    RT = lists:reverse(RevNonRecs, NonSelfRecs),
+		    {ok, combine_ret_types(RT, union), NewState};
+		{RevSelfRecs,NonSelfRecs,RevNonRecs} ->
+		    RT = lists:reverse(RevNonRecs, NonSelfRecs),
 		    {BCaseRecFun,BCaseRecArgs} =
-			case combine_ret_types(NonRecs ++ NonSelfRecs, union) of
+			case combine_ret_types(RT, union) of
 			    {simple,BCaseType} ->
 				{fun([],_Size) -> BCaseType end,[]};
 			    {rec,BCRecFun,BCRecArgs} ->
@@ -1839,9 +1815,9 @@ convert_union(Mod, ChoiceForms, State, Stack, VarDict) ->
 		    FallbackRecFun = fun([SelfGen],_Size) -> SelfGen(0) end,
 		    FallbackRecArgs = [{false,ParentRef}],
 		    FallbackRetType = {rec,FallbackRecFun,FallbackRecArgs},
+		    RT2 = lists:reverse(RevSelfRecs, NonSelfRecs),
 		    {rec,RCaseRecFun,RCaseRecArgs} =
-			combine_ret_types([FallbackRetType] ++ SelfRecs
-					  ++ NonSelfRecs, wunion),
+			combine_ret_types([FallbackRetType|RT2], wunion),
 		    NewRecFun =
 			fun(AllGens,Size) ->
 			    {BCaseGens,RCaseGens} =
@@ -2335,11 +2311,11 @@ soft_clean_rec_args_tr([Arg | Rest], Acc, RecFunInfo, ToList, FoundListInst,
     soft_clean_rec_args_tr(Rest, [Arg | Acc], RecFunInfo, ToList, FoundListInst,
 			   Pos+1).
 
--spec get_group(pos_integer(), [non_neg_integer()]) -> pos_integer().
+-spec get_group(pos_integer(), rec_arg_lens()) -> pos_integer().
 get_group(Pos, AllMembers) ->
     get_group_tr(Pos, AllMembers, 1).
 
--spec get_group_tr(pos_integer(), [non_neg_integer()], pos_integer()) ->
+-spec get_group_tr(pos_integer(), rec_arg_lens(), pos_integer()) ->
 	  pos_integer().
 get_group_tr(Pos, [Members | Rest], GroupNum) ->
     case Pos =< Members of

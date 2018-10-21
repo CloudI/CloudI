@@ -1,4 +1,7 @@
-%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Eirini Arvaniti
 
@@ -47,7 +50,7 @@
 %%%   repeatable testcases, which is essential for correct shrinking.</li>
 %%% </ul>
 %%% Since the actual results of symbolic calls are not known at generation time,
-%%% we use symbolic variables ({@type symb_var()}) to refer to them.
+%%% we use symbolic variables ({@type symbolic_var()}) to refer to them.
 %%% A command ({@type command()}) is a symbolic term, used to bind a symbolic
 %%% variable to the result of a symbolic call. For example:
 %%%
@@ -89,7 +92,7 @@
 %%% The following functions must be exported from the callback module
 %%% implementing the abstract state machine:
 %%% <ul>
-%%% <li>`initial_state() ::' {@type symbolic_state()}
+%%% <li>`initial_state() ->' {@type symbolic_state()}
 %%%   <p>Specifies the symbolic initial state of the state machine. This state
 %%%   will be evaluated at command execution time to produce the actual initial
 %%%   state. The function is not only called at command generation time, but
@@ -97,14 +100,14 @@
 %%%   run (i.e. during normal execution, while shrinking and when checking a
 %%%   counterexample). For this reason, it should be deterministic and
 %%%   self-contained.</p></li>
-%%% <li>`command(S::'{@type symbolic_state()}`) ::' {@type proper_types:type()}
+%%% <li>`command(S::'{@type symbolic_state()}`) ->' {@type proper_types:type()}
 %%%   <p>Generates a symbolic call to be included in the command sequence,
 %%%   given the current state `S' of the abstract state machine. However,
 %%%   before the call is actually included, a precondition is checked. This
 %%%   function will be repeatedly called to produce the next call to be
 %%%   included in the test case.</p></li>
 %%% <li>`precondition(S::'{@type symbolic_state()}`,
-%%%                   Call::'{@type symb_call()}`) :: boolean()'
+%%%                   Call::'{@type symbolic_call()}`) -> boolean()'
 %%%   <p>Specifies the precondition that should hold so that `Call' can be
 %%%   included in the command sequence, given the current state `S' of the
 %%%   abstract state machine. In case precondition doesn't hold, a new call is
@@ -120,14 +123,14 @@
 %%%   different from the state it was when initially running the test.</p></li>
 %%% <li>`postcondition(S::'{@type dynamic_state()}`,
 %%%                    Call::'{@type symbolic_call()}`,
-%%%                    Res::term()) :: boolean()'
+%%%                    Res::term()) -> boolean()'
 %%%   <p>Specifies the postcondition that should hold about the result `Res' of
 %%%   performing `Call', given the dynamic state `S' of the abstract state
 %%%   machine prior to command execution. This function is called during
 %%%   runtime, this is why the state is dynamic.</p></li>
 %%% <li>`next_state(S::'{@type symbolic_state()} `|' {@type dynamic_state()}`,
 %%%                 Res::term(),
-%%%                 Call::'{@type symbolic_call()}`) ::'
+%%%                 Call::'{@type symbolic_call()}`) ->'
 %%%        {@type symbolic_state()} `|' {@type dynamic_state()}
 %%%   <p>Specifies the next state of the abstract state machine, given the
 %%%   current state `S', the symbolic `Call' chosen and its result `Res'. This
@@ -217,7 +220,7 @@
 %%% @end
 
 -module(proper_statem).
--export([behaviour_info/1]).
+
 -export([commands/1, commands/2, parallel_commands/1, parallel_commands/2,
 	 more_commands/2]).
 -export([run_commands/2, run_commands/3, run_parallel_commands/2,
@@ -237,7 +240,7 @@
 -export([index/2, all_insertions/3, insert_all/2]).
 -export([is_valid/4, args_defined/2]).
 -export([get_next/6, mk_first_comb/3]).
--export([execute/4, check/6, run/3, get_initial_state/2]).
+-export([execute/3, check/6, run/3, get_initial_state/2]).
 
 
 %% -----------------------------------------------------------------------------
@@ -248,44 +251,43 @@
 -type symbolic_state()    :: term().
 %% @type dynamic_state()
 -type dynamic_state()     :: term().
--type symb_var()          :: {'var',pos_integer()}.
--type symb_call()         :: {'call',mod_name(),fun_name(),[term()]}.
--type command()           :: {'set',symb_var(),symb_call()}
-			     | {'init',symbolic_state()}.
+-type symbolic_var()      :: {'var',pos_integer()}.
+%% @type symbolic_call()
+-type symbolic_call()     :: {'call',mod_name(),fun_name(),[term()]}.
+-type command()           :: {'set',symbolic_var(),symbolic_call()}
+			   | {'init',symbolic_state()}.
 -type command_list()      :: [command()].
 -type parallel_testcase() :: {command_list(),[command_list()]}.
 -type parallel_history()  :: [{command(),term()}].
 -type history()           :: [{dynamic_state(),term()}].
 -type statem_result() :: 'ok'
-			 | 'initialization_error'
-			 | {'precondition',  'false' | proper:exception()}
-			 | {'postcondition', 'false' | proper:exception()}
-			 | proper:exception()
-			 | 'no_possible_interleaving'.
+		       | 'initialization_error'
+		       | {'precondition',  'false' | proper:exception()}
+		       | {'postcondition', 'false' | proper:exception()}
+		       | proper:exception()
+		       | 'no_possible_interleaving'.
 -type index()       :: pos_integer().
 -type indices()     :: [index()].
 -type combination() :: [{pos_integer(),indices()}].
 -type lookup()      :: orddict:orddict().
 
--export_type([symb_var/0, symb_call/0, statem_result/0]).
+-export_type([symbolic_var/0, symbolic_call/0, statem_result/0]).
 
 
 %% -----------------------------------------------------------------------------
-%% Proper_statem behaviour
+%% Proper_statem behaviour callback functions
 %% ----------------------------------------------------------------------------
 
-%% @doc Specifies the callback functions that should be exported from a module
-%% implementing the `proper_statem' behaviour.
+-callback initial_state() -> symbolic_state().
 
--spec behaviour_info('callbacks') -> [{fun_name(),arity()}].
-behaviour_info(callbacks) ->
-    [{initial_state,0},
-      {command,1},
-      {precondition,2},
-      {postcondition,3},
-      {next_state,3}];
-behaviour_info(_Attribute) ->
-    undefined.
+-callback command(symbolic_state()) -> proper_types:type().
+
+-callback precondition(symbolic_state(), symbolic_call()) -> boolean().
+
+-callback postcondition(dynamic_state(), symbolic_call(), term()) -> boolean().
+
+-callback next_state(symbolic_state() | dynamic_state(), term(),
+		     symbolic_call()) -> symbolic_state() | dynamic_state().
 
 
 %% -----------------------------------------------------------------------------
@@ -293,7 +295,7 @@ behaviour_info(_Attribute) ->
 %% -----------------------------------------------------------------------------
 
 %% @doc A special PropEr type which generates random command sequences,
-%% according to an absract state machine specification. The function takes as
+%% according to an abstract state machine specification. The function takes as
 %% input the name of a callback module, which contains the state machine
 %% specification. The initial state is computed by `Mod:initial_state/0'.
 
@@ -329,6 +331,7 @@ commands(Mod, InitialState) ->
 	    [{init,InitialState}|CmdTail]),
        is_valid(Mod, InitialState, Cmds, [])).
 
+%% @private
 -spec commands(size(), mod_name(), symbolic_state(), pos_integer()) ->
          proper_types:type().
 commands(Size, Mod, State, Count) ->
@@ -554,22 +557,22 @@ run_commands(Cmds, Env, Mod, History, State) ->
 	    end
     end.
 
--spec check_precondition(mod_name(), dynamic_state(), symb_call()) ->
+-spec check_precondition(mod_name(), dynamic_state(), symbolic_call()) ->
          boolean() | proper:exception().
 check_precondition(Mod, State, Call) ->
     try Mod:precondition(State, Call)
     catch
-	Kind:Reason ->
-	    {exception, Kind, Reason, erlang:get_stacktrace()}
+	?STACKTRACE(Kind, Reason, StackTrace) %, is in macro
+	{exception, Kind, Reason, StackTrace}
     end.
 
--spec check_postcondition(mod_name(), dynamic_state(), symb_call(), term()) ->
+-spec check_postcondition(mod_name(), dynamic_state(), symbolic_call(), term()) ->
          boolean() | proper:exception().
 check_postcondition(Mod, State, Call, Res) ->
     try Mod:postcondition(State, Call, Res)
     catch
-	Kind:Reason ->
-	    {exception, Kind, Reason, erlang:get_stacktrace()}
+	?STACKTRACE(Kind, Reason, StackTrace) %, is in macro
+	{exception, Kind, Reason, StackTrace}
     end.
 
 -spec safe_apply(mod_name(), fun_name(), [term()]) ->
@@ -578,8 +581,8 @@ safe_apply(M, F, A) ->
     try apply(M, F, A) of
 	Result -> {ok, Result}
     catch
-	Kind:Reason ->
-	    {error, {exception, Kind, Reason, erlang:get_stacktrace()}}
+	?STACKTRACE(Kind, Reason, StackTrace) %, is in macro
+	{error, {exception, Kind, Reason, StackTrace}}
     end.
 
 
@@ -615,7 +618,7 @@ run_parallel_commands(Mod, {_Sequential, _Parallel} = Testcase) ->
 run_parallel_commands(Mod, {Sequential, Parallel}, Env) ->
     case run(Mod, Sequential, Env) of
 	{{Seq_history, State, ok}, SeqEnv} ->
-	    F = fun(T) -> execute(T, SeqEnv, Mod, []) end,
+	    F = fun(T) -> execute(T, SeqEnv, Mod) end,
 	    Parallel_history = pmap(F, Parallel),
 	    case check(Mod, State, SeqEnv, false, [], Parallel_history) of
 		true ->
@@ -628,33 +631,27 @@ run_parallel_commands(Mod, {Sequential, Parallel}, Env) ->
     end.
 
 %% @private
--spec execute(command_list(), proper_symb:var_values(), mod_name(),
-	      parallel_history()) -> parallel_history().
-execute(Cmds, Env, Mod, History) ->
-    case Cmds of
-	[] ->
-	    lists:reverse(History);
-	[{set, {var,V}, {call,M,F,A}} = Cmd|Rest] ->
-	    M2 = proper_symb:eval(Env, M),
-	    F2 = proper_symb:eval(Env, F),
-	    A2 = proper_symb:eval(Env, A),
-	    Res = apply(M2, F2, A2),
-	    Env2 = [{V,Res}|Env],
-	    History2 = [{Cmd,Res}|History],
-	    execute(Rest, Env2, Mod, History2)
-    end.
+-spec execute(command_list(), proper_symb:var_values(), mod_name()) ->
+	 parallel_history().
+execute([], _Env, _Mod) -> [];
+execute([{set, {var,V}, {call,M,F,A}} = Cmd|Rest], Env, Mod) ->
+    M2 = proper_symb:eval(Env, M),
+    F2 = proper_symb:eval(Env, F),
+    A2 = proper_symb:eval(Env, A),
+    Res = apply(M2, F2, A2),
+    Env2 = [{V,Res}|Env],
+    [{Cmd,Res}|execute(Rest, Env2, Mod)].
 
 -spec pmap(fun((command_list()) -> parallel_history()), [command_list()]) ->
          [parallel_history()].
 pmap(F, L) ->
-    await(spawn_jobs(F,L)).
+    await(spawn_jobs(F, L)).
 
 -spec spawn_jobs(fun((command_list()) -> parallel_history()),
 		 [command_list()]) -> [pid()].
 spawn_jobs(F, L) ->
     Parent = self(),
-    [spawn_link_cp(fun() -> Parent ! {self(),catch {ok,F(X)}} end)
-     || X <- L].
+    [spawn_link_cp(fun() -> Parent ! {self(),catch {ok,F(X)}} end) || X <- L].
 
 -spec await([pid()]) -> [parallel_history()].
 await([]) -> [];
@@ -725,7 +722,7 @@ state_after(Mod, Cmds) ->
     element(1, state_env_after(Mod, Cmds)).
 
 -spec state_env_after(mod_name(), command_list()) ->
-         {symbolic_state(), [symb_var()]}.
+         {symbolic_state(), [symbolic_var()]}.
 state_env_after(Mod, Cmds) ->
     lists:foldl(fun({init,S}, _) ->
 			{S, []};
@@ -749,7 +746,7 @@ zip([], _) -> [].
 %% -----------------------------------------------------------------------------
 
 %% @private
--spec is_valid(mod_name(), symbolic_state(), command_list(), [symb_var()]) ->
+-spec is_valid(mod_name(), symbolic_state(), command_list(), [symbolic_var()]) ->
          boolean().
 is_valid(_Mod, _State, [], _SymbEnv) -> true;
 is_valid(Mod, _State, [{init,S}|Cmds], _SymbEnv) ->
@@ -760,11 +757,11 @@ is_valid(Mod, State, [{set, Var, {call,_M,_F,A} = Call}|Cmds], SymbEnv) ->
 			 [Var|SymbEnv]).
 
 %% @private
--spec args_defined([term()], [symb_var()]) -> boolean().
+-spec args_defined([term()], [symbolic_var()]) -> boolean().
 args_defined(List, SymbEnv) ->
    lists:all(fun (A) -> arg_defined(A, SymbEnv) end, List).
 
--spec arg_defined(term(), [symb_var()]) -> boolean().
+-spec arg_defined(term(), [symbolic_var()]) -> boolean().
 arg_defined({var,I} = V, SymbEnv) when is_integer(I) ->
     lists:member(V, SymbEnv);
 arg_defined(Tuple, SymbEnv) when is_tuple(Tuple) ->
@@ -782,7 +779,7 @@ get_initial_state(Mod, Cmds) when is_list(Cmds) ->
 
 %% @private
 -spec fix_parallel(index(), non_neg_integer(), combination() | 'done',
-		   lookup(), mod_name(), symbolic_state(), [symb_var()],
+		   lookup(), mod_name(), symbolic_state(), [symbolic_var()],
 		   pos_integer()) -> [command_list()].
 fix_parallel(_, 0, done, _, _, _, _, _) ->
     exit(error);   %% not supposed to reach here
@@ -806,7 +803,7 @@ fix_parallel(MaxIndex, Len, Comb, LookUp, Mod, State, SymbEnv, W) ->
     end.
 
 -spec can_parallelize([command_list()], mod_name(), symbolic_state(),
-		      [symb_var()]) -> boolean().
+		      [symbolic_var()]) -> boolean().
 can_parallelize(CmdLists, Mod, State, SymbEnv) ->
     lists:all(fun(C) -> is_valid(Mod, State, C, SymbEnv) end, CmdLists)
 	andalso lists:all(fun(C) -> is_valid(Mod, State, C, SymbEnv) end,

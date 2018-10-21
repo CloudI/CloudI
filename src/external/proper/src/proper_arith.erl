@@ -1,3 +1,6 @@
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
 %%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
@@ -146,26 +149,36 @@ find_first_tr(Pred, [X | Rest], Pos) ->
 
 -spec filter(fun((T) -> boolean()), [T]) -> {[T],[position()]}.
 filter(Pred, List) ->
-    {Trues,TrueLookup,_Falses,_FalseLookup} = partition(Pred, List),
-    {Trues, TrueLookup}.
+    filter_tr(Pred, lists:reverse(List), length(List), [], []).
+
+-spec filter_tr(fun((T) -> boolean()), [T], position(), [T], [position()]) ->
+	  {[T], [position()]}.
+filter_tr(_Pred, [], _Pos, Trues, TrueLookup) ->
+    {Trues, TrueLookup};
+filter_tr(Pred, [X | Rest], Pos, Trues, TrueLookup) ->
+    case Pred(X) of
+	true ->
+	    filter_tr(Pred, Rest, Pos - 1, [X | Trues], [Pos | TrueLookup]);
+	false ->
+	    filter_tr(Pred, Rest, Pos - 1, Trues, TrueLookup)
+    end.
 
 -spec partition(fun((T) -> boolean()), [T]) ->
-	  {[T],[position()],[T],[position()]}.
+	  {[T], [position()], [T], [position()]}.
 partition(Pred, List) ->
-    partition_tr(Pred, List, 1, [], [], [], []).
+    partition_tr(Pred, lists:reverse(List), length(List), [], [], [], []).
 
 -spec partition_tr(fun((T) -> boolean()), [T], position(), [T], [position()],
 		   [T], [position()]) -> {[T],[position()],[T],[position()]}.
 partition_tr(_Pred, [], _Pos, Trues, TrueLookup, Falses, FalseLookup) ->
-    {lists:reverse(Trues), lists:reverse(TrueLookup), lists:reverse(Falses),
-     lists:reverse(FalseLookup)};
+    {Trues, TrueLookup, Falses, FalseLookup};
 partition_tr(Pred, [X | Rest], Pos, Trues, TrueLookup, Falses, FalseLookup) ->
     case Pred(X) of
 	true ->
-	    partition_tr(Pred, Rest, Pos + 1, [X | Trues], [Pos | TrueLookup],
+	    partition_tr(Pred, Rest, Pos - 1, [X | Trues], [Pos | TrueLookup],
 			 Falses, FalseLookup);
 	false ->
-	    partition_tr(Pred, Rest, Pos + 1, Trues, TrueLookup, [X | Falses],
+	    partition_tr(Pred, Rest, Pos - 1, Trues, TrueLookup, [X | Falses],
 			 [Pos | FalseLookup])
     end.
 
@@ -338,15 +351,7 @@ distribute_tr(CreditsLeft, PeopleLeft, AccList) ->
 -spec jumble([T]) -> [T].
 %% @doc Produces a random permutation of a list.
 jumble(List) ->
-    jumble_tr(List, length(List), []).
-
--spec jumble_tr([T], non_neg_integer(), [T]) -> [T].
-jumble_tr([], 0, Acc) ->
-    Acc;
-jumble_tr(List, Len, Acc) ->
-    Pos = rand_int(0, Len - 1),
-    {List1, [H|List2]} = lists:split(Pos, List),
-    jumble_tr(List1 ++ List2, Len - 1, [H|Acc]).
+    [X || {_, X} <- lists:sort([{?RANDOM_MOD:uniform(), X} || X <- List])].
 
 -spec rand_choose([T,...]) -> {position(),T}.
 rand_choose(Choices) when Choices =/= [] ->

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# -*- coding: utf-8 -*-
+# --------------------------------------------------------------------
 # Copyright 2010-2011 Manolis Papadakis <manopapad@gmail.com>,
 #                     Eirini Arvaniti <eirinibob@gmail.com>
 #                 and Kostis Sagonas <kostis@cs.ntua.gr>
@@ -22,4 +24,4 @@
 # Author:      Manolis Papadakis
 # Description: Cleanup script for temporary files
 
-find . \( -name '*~' -or -name '#*#' -or -name '*.dump' \) -delete
+find . \( -name '*~' -o -name '#*#' -o -name '*.dump' \) -exec rm {} \;

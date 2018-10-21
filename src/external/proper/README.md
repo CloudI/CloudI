@@ -1,4 +1,9 @@
-[![Build Status](https://travis-ci.org/manopapad/proper.svg?branch=master)](https://travis-ci.org/manopapad/proper)
+[![Travis][travis badge]][travis]
+[![CodeCov][codecov badge]][codecov]
+[![Erlang Versions][erlang versions badge]][erlang]
+[![License][license badge]][license]
+[![Latest Release][release badge]][release]
+[![Last Commit][commit badge]][commit]
 
 Contact information and license
 -------------------------------
@@ -12,18 +17,18 @@ base since 2012.
 
 You can reach PropEr's developers in the following ways:
 
-*   on the web: at [the project's home page](http://proper.softlab.ntua.gr) or
-    [the project's github page](https://github.com/manopapad/proper)
-*   by email: take the project's home page URL, remove the `http://` prefix and
-    replace the first dot with a @
+*   on the web: at [the project's home page](http://proper-testing.github.io)
+    or [the project's github page](https://github.com/proper-testing/proper)
+*   by email: take the tool's name (all lowercase), add a @ followed by
+    softlab dot ntua dot gr
 
 We welcome user contributions and feedback (comments, suggestions, feature
-requests, bug reports, patches etc.).
+requests, bug reports, patches, etc.).
 
-Copyright 2010-2016 by Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas.
+Copyright 2010-2018 by Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas.
 
 This program is distributed under the [GPL](http://www.gnu.org/licenses/gpl.html),
-version 3 or later. Please see the COPYING file for details.
+version 3 or later. Please see the [COPYING][license] file for details.
 
 
 Introduction
@@ -83,7 +88,7 @@ Quickstart guide
     base:
 
     ```shell
-        git clone git://github.com/manopapad/proper.git
+        git clone git://github.com/proper-testing/proper.git
     ```
 *   Compile PropEr: Run `make` if you just want to build PropEr, optionally
     followed by a `make tests` to run its unit tests and a `make dialyzer` call
@@ -127,7 +132,7 @@ Where to go from here
 ---------------------
 
 To get started on using PropEr, see the tutorials and testing tips provided on
-[PropEr's home page](http://proper.softlab.ntua.gr). On the same site you can
+[PropEr's home page](http://proper-testing.github.io). On the same site you can
 find a copy of PropEr's API documentation (you can also build this from source
 if you prefer, by running `make doc`), as well as links to more resources on
 property-based testing.
@@ -168,4 +173,23 @@ known incompatibilities:
 *   `proper:module/2` accepts options in the second argument instead of the
     first; this is for consistency with other `module/2` functions in Erlang/OTP.
 
+All the above are from circa 2010. Most likely, there exist many more
+incompatibilities between the two tools by now.
+
+
+<!-- Links (alphabetically) -->
+[codecov]: https://codecov.io/gh/proper-testing/proper
+[commit]: https://github.com/proper-testing/proper/commit/HEAD
+[erlang]: http://www.erlang.org
 [eunit stdout]: http://erlang.org/doc/apps/eunit/chapter.html#Running_EUnit
+[license]: ./COPYING
+[release]: https://github.com/proper-testing/proper/releases/latest
+[travis]: https://travis-ci.org/proper-testing/proper
+
+<!-- Badges (alphabetically) -->
+[codecov badge]: https://codecov.io/gh/proper-testing/proper/branch/master/graph/badge.svg
+[commit badge]: https://img.shields.io/github/last-commit/proper-testing/proper.svg?style=flat-square
+[erlang versions badge]: https://img.shields.io/badge/erlang-17.0%20to%2021.0-blue.svg?style=flat-square
+[license badge]: https://img.shields.io/github/license/proper-testing/proper.svg?style=flat-square
+[release badge]: https://img.shields.io/github/release/proper-testing/proper.svg?style=flat-square
+[travis badge]: https://img.shields.io/travis/proper-testing/proper/master.svg?style=flat-square

@@ -1,4 +1,4 @@
-# Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
+# Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
 #                     Eirini Arvaniti <eirinibob@gmail.com>
 #                 and Kostis Sagonas <kostis@cs.ntua.gr>
 #
@@ -36,9 +36,6 @@ fast: get-deps compile
 
 all: fast dialyzer doc tests
 
-include/compile_flags.hrl: write_compile_flags
-	./write_compile_flags $@
-
 get-deps:
 	$(REBAR) get-deps
 
@@ -49,27 +46,28 @@ dialyzer: .plt/proper_plt compile
 	dialyzer -n -nn --plt $< -Wunmatched_returns ebin $(find .  -path 'deps/*/ebin/*.beam')
 
 .plt/proper_plt: .plt
-	dialyzer --build_plt --output_plt $@ --apps erts kernel stdlib compiler crypto
+	dialyzer --build_plt --output_plt $@ --apps erts kernel stdlib compiler crypto syntax_tools
 
 check_escripts:
-	./check_escripts.sh make_doc write_compile_flags
+	./check_escripts.sh make_doc
 
 tests: compile
 	$(REBAR) eunit
 
-doc:
+doc: compile
 	./make_doc
 
 clean:
 	./clean_temp.sh
 
 distclean: clean
-	rm -f include/compile_flags.hrl .plt/proper_plt
+	$(RM) -r .eunit .rebar
+	$(RM) .plt/proper_plt
 	$(REBAR) clean
 
-rebuild: distclean include/compile_flags.hrl
+rebuild: distclean
 	$(REBAR) compile
 
 retest: compile
-	rm -rf .eunit
+	$(RM) -r .eunit
 	$(REBAR) eunit

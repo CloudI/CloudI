@@ -230,9 +230,9 @@ Erlang `proper`
 ---------------
 `PropEr (PROPerty-based testing tool for ERlang)`
 
-- `https://github.com/manopapad/proper`
-- `commit 5f0d69c831b6c9f52535c3d1846efca480f6190d (v1.2)`
-- `Sun Jun 26 22:55:05 PDT 2016`
+- `https://github.com/proper-testing/proper`
+- `commit 16f9f7cb181f41ffb882c4a31052275dfad16ee1`
+- `Sat Oct 20 19:09:19 PDT 2018`
 - `GPLv3` (build/test-time dependency only)
 
 Erlang `ranch`

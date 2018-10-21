@@ -1,6 +1,9 @@
 #!/usr/bin/env escript
 
-%%% Copyright 2010-2015 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2017 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -34,7 +37,7 @@
 %%%              * File and line information is partially lost.
 
 
-%% Needed for some defines (e.g. NO_MODULES_IN_OPAQUES) and some types
+%% Needed for some defines and some types
 -include("include/proper_internal.hrl").
 
 %%------------------------------------------------------------------------------
@@ -110,7 +113,7 @@ process(Filename) ->
     Comments = erl_comment_scan:file(Filename),
     {NewForms,NewComments} = process_forms(Forms, Comments),
     Code = pretty_print(NewForms, NewComments),
-    {ok,IODev} = file:open(Filename, [write]),
+    {ok,IODev} = file:open(Filename, [write, {encoding, utf8}]),
     ok = io:put_chars(IODev, Code),
     ok = file:close(IODev),
     ok.
@@ -316,9 +319,15 @@ continue_after_header(CommLine, RevForms, [Form|Rest], TopFileName) ->
 	    continue_after_header(CommLine, [Form|RevForms], Rest, TopFileName)
     end.
 
+-ifdef(AT_LEAST_20).
+-define(CONTAINS_TEST(Str, Tag), string:find(Str, Tag) =/= nomatch).
+-else.
+-define(CONTAINS_TEST(Str, Tag), string:str(Str, Tag) =/= 0).
+-endif.
+
 -spec contains_tag([string()], string()) -> boolean().
 contains_tag(Text, Tag) ->
-    StrContainsTag = fun(Str) -> string:str(Str,Tag) =/= 0 end,
+    StrContainsTag = fun(Str) -> ?CONTAINS_TEST(Str, Tag) end,
     lists:any(StrContainsTag, Text).
 
 -spec replace(abs_form() | abs_type() | abs_rec_field() | abs_clause(),
@@ -371,11 +380,7 @@ remove_private_types(Forms, PrivTypesList) ->
     PrivTypesSet = sets:from_list(PrivTypesList),
     [remove_from_exported(Form,PrivTypesSet) || Form <- Forms].
 
--ifdef(NO_MODULES_IN_OPAQUES).
--type priv_types() :: set().
--else.
 -type priv_types() :: sets:set({type_name(),arity()}).
--endif.
 -spec remove_from_exported(abs_form(), priv_types()) -> abs_form().
 remove_from_exported({attribute,Line,export_type,TypesList}, PrivTypesSet) ->
     IsNotPrivate = fun(T) -> not sets:is_element(T,PrivTypesSet) end,

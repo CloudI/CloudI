@@ -1,4 +1,7 @@
-%%% Copyright 2010-2013 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2017 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2013 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2017 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc User header file: This file should be included in each file containing
@@ -46,7 +49,7 @@
 -import(proper_types, [integer/2, float/2, atom/0, binary/0, binary/1,
 		       bitstring/0, bitstring/1, list/1, vector/2, union/1,
 		       weighted_union/1, tuple/1, loose_tuple/1, exactly/1,
-		       fixed_list/1, function/2, any/0]).
+		       fixed_list/1, function/2, map/2, any/0]).
 
 
 %%------------------------------------------------------------------------------

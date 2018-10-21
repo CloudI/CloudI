@@ -1,4 +1,7 @@
-%%% Copyright 2010-2016 Manolis Papadakis <manopapad@gmail.com>,
+%%% -*- coding: utf-8 -*-
+%%% -*- erlang-indent-level: 2 -*-
+%%% -------------------------------------------------------------------
+%%% Copyright 2010-2018 Manolis Papadakis <manopapad@gmail.com>,
 %%%                     Eirini Arvaniti <eirinibob@gmail.com>
 %%%                 and Kostis Sagonas <kostis@cs.ntua.gr>
 %%%
@@ -17,7 +20,7 @@
 %%% You should have received a copy of the GNU General Public License
 %%% along with PropEr.  If not, see <http://www.gnu.org/licenses/>.
 
-%%% @copyright 2010-2016 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
+%%% @copyright 2010-2018 Manolis Papadakis, Eirini Arvaniti and Kostis Sagonas
 %%% @version {@version}
 %%% @author Manolis Papadakis
 %%% @doc This module contains PropEr's Unit tests. You need the EUnit
@@ -25,7 +28,6 @@
 
 -module(proper_tests).
 
--include("compile_flags.hrl").
 -include("proper.hrl").
 
 -include_lib("eunit/include/eunit.hrl").
@@ -893,6 +895,10 @@ true_props_test_() ->
      {timeout, 20, ?_passes(ets_statem:prop_parallel_ets())},
      {timeout, 20, ?_passes(pdict_fsm:prop_pdict())}].
 
+map_in_nextstate3_test_() ->
+    [?_passes(symb_statem_maps:prop_simple()),
+     {timeout, 20, ?_passes(symb_statem_maps:prop_parallel_simple())}].
+
 false_props_test_() ->
     [?_failsWith([[_Same,_Same]],
 		 ?FORALL(L,list(integer()),is_sorted(L,lists:usort(L)))),
@@ -1033,25 +1039,80 @@ options_test_() ->
 		 ?FORALL(_,?SIZED(Size,integer(Size,Size)),false),
 		 [{start_size,12}])].
 
--ifdef(NO_MODULES_IN_OPAQUES).
--define(SET,  set).
--define(DICT, dict).
--else.
--define(SET,  sets:set).
--define(DICT, dict:dict).
--endif.
+setup_prop() ->
+    ?SETUP(fun () ->
+		   put(setup_token, true),
+		   fun () ->
+			   erase(setup_token),
+			   ok
+		   end
+	   end,
+	   ?FORALL(_, exactly(ok), get(setup_token))).
 
-adts_test_() ->
-    [{timeout, 20,	% for Kostis' old laptop
-      ?_passes(?FORALL({X,S},{integer(),?SET()},
-		       sets:is_element(X,sets:add_element(X,S))), [20])},
-     {timeout, 40,	% for 18.x (and onwards?)
-      ?_passes(?FORALL({X,Y,D},
-		       {integer(),float(),?DICT(integer(),float())},
-		       dict:fetch(X,dict:store(X,Y,eval(D))) =:= Y), [30])},
-     ?_fails(?FORALL({X,D},
-	     {boolean(),?DICT(boolean(),integer())},
-	     dict:erase(X, dict:store(X,42,D)) =:= D))].
+failing_setup_prop() ->
+    ?SETUP(fun () ->
+		   put(setup_token, true),
+		   fun () ->
+			   erase(setup_token),
+			   ok
+		   end
+	   end,
+	   ?FORALL(_, exactly(ok), not get(setup_token))).
+
+double_setup_prop() ->
+    ?SETUP(fun () ->
+		   put(setup_token2, true),
+		   fun () ->
+			   erase(setup_token2),
+			   ok
+		   end
+	   end,
+	   ?SETUP(fun () ->
+			  put(setup_token, true),
+			  fun () ->
+				  erase(setup_token),
+				  ok
+			  end
+		  end,
+		  ?FORALL(_, exactly(ok), get(setup_token) andalso get(setup_token2)))).
+
+setup_test_() ->
+    [?_passes(setup_prop(), [10]),
+     ?_assert(proper:quickcheck(setup_prop(), 10)
+	      andalso undefined =:= get(setup_token)),
+     ?_fails(failing_setup_prop(), [10]),
+     ?_assert(not proper:quickcheck(failing_setup_prop(), [10, noshrink, quiet])
+	      andalso undefined =:= get(setup_token)),
+     ?_assert(proper:check(setup_prop(), [ok], 10)),
+     ?_assert(proper:check(setup_prop(), [ok], 10)
+	      andalso undefined =:= get(setup_token)),
+     ?_assert(not proper:check(failing_setup_prop(), [ok], 10)),
+     ?_assert(not proper:check(failing_setup_prop(), [ok], 10)
+	      andalso undefined =:= get(setup_token)),
+     ?_passes(double_setup_prop(), [10]),
+     ?_assert(proper:quickcheck(double_setup_prop(), 10)
+	      andalso undefined =:= get(setup_token)
+	      andalso undefined =:= get(setup_token2)),
+     ?_assert(proper:check(double_setup_prop(), [ok], 10)),
+     ?_assert(true = proper:check(double_setup_prop(), [ok], 10)
+	      andalso undefined =:= get(setup_token)
+	      andalso undefined =:= get(setup_token2))].
+
+adts1_test_() ->
+    {timeout, 60,	% for Kostis' old laptop
+      ?_passes(?FORALL({X,S},{integer(),sets:set(integer())},
+		       sets:is_element(X,sets:add_element(X,S))), [20])}.
+
+%% adts2_test_() -> {timeout, 60,	% for 18.x (and onwards?)
+%%       ?_passes(?FORALL({X,Y,D},
+%% 		       {integer(),float(),dict:dict(integer(),float())},
+%% 		       dict:fetch(X,dict:store(X,Y,eval(D))) =:= Y), [30])}.
+
+adts3_test_() ->
+     {timeout, 60,
+      ?_fails(?FORALL({X,D},
+	      {boolean(),dict:dict(boolean(),integer())},
+	      dict:erase(X, dict:store(X,42,D)) =:= D))}.
 
 parameter_test_() ->
     ?_passes(?FORALL(List, [zero1(),zero2(),zero3(),zero4()],
