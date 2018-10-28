@@ -39,7 +39,11 @@ AC_PROG_SED
 AM_PROG_CC_C_O
 
 # C++ compiler checks (including vendor and version information for code_status)
+# (C++ compiler compilation checked here)
 AX_CXX_EXCEPTIONS
+if test "x$ax_cv_cxx_exceptions" = "xno"; then
+    AC_MSG_ERROR([$CXX does not support exceptions])
+fi
 AC_LANG_PUSH(C++)
 AX_COMPILER_VENDOR
 AX_COMPILER_VERSION
@@ -366,7 +370,6 @@ AC_SUBST(CXX_DEPENDENCIES_VERSIONS,
 # C/C++ CloudI API support
 if test "x$c_support" = "xtrue" -o "x$cxx_support" = "xtrue" -o \
         "x$python_c_support" = "xtrue" ; then
-AX_BOOST_THREAD
 AX_CLOCK_GETTIME
 AX_BOOST_CHECK_HEADER(boost/exception/all.hpp, ,
     [AC_MSG_ERROR([boost::exception not found])], ,
@@ -631,6 +634,7 @@ AC_SUBST(REBAR_ARGS, ["--verbose 3"])
 # hexpi test
 if test "x$want_integration_tests" = "xyes" -a \
         "x$cxx_support" = "xtrue"; then
+AX_BOOST_THREAD
 AX_GMP($PATHS_NONSYSTEM_INC, $PATHS_NONSYSTEM_LIB)
 fi
 
