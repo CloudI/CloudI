@@ -34,10 +34,12 @@ LT_INIT()
 AC_PROG_MKDIR_P
 AC_PROG_CC
 AC_PROG_CXX
+AC_PROG_CXXCPP
 AC_PROG_SED
 AM_PROG_CC_C_O
 
-# C++ compiler vendor and version information for code_status
+# C++ compiler checks (including vendor and version information for code_status)
+AX_CXX_EXCEPTIONS
 AC_LANG_PUSH(C++)
 AX_COMPILER_VENDOR
 AX_COMPILER_VERSION

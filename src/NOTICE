@@ -840,10 +840,32 @@
 
 ----------------------------------------------------------------------- MIT-like
 (M4) m4/ax_boost_base.m4
-(M4) m4/ax_boost_thread.m4
 
  Copyright (c) 2008 Thomas Porschberg <thomas@randspringer.de>
  Copyright (c) 2009 Peter Adolphs
+
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+----------------------------------------------------------------------- MIT-like
+(M4) m4/ax_boost_system.m4
+
+ Copyright (c) 2008 Thomas Porschberg <thomas@randspringer.de>
+ Copyright (c) 2008 Michael Tindal
+ Copyright (c) 2008 Daniel Casimiro <dan.casimiro@gmail.com>
+
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+----------------------------------------------------------------------- MIT-like
+(M4) m4/ax_boost_thread.m4
+
+ Copyright (c) 2009 Thomas Porschberg <thomas@randspringer.de>
+ Copyright (c) 2009 Michael Tindal
 
  Copying and distribution of this file, with or without modification, are
  permitted in any medium without royalty provided the copyright notice
@@ -873,34 +895,45 @@
 ---------------------------------------------------------------------------- GPL
 (M4) m4/ax_compiler_vendor.m4
 
-  Copyright (c) 2008 Steven G. Johnson <stevenj@alum.mit.edu>
-  Copyright (c) 2008 Matteo Frigo
+ Copyright (c) 2008 Steven G. Johnson <stevenj@alum.mit.edu>
+ Copyright (c) 2008 Matteo Frigo
 
-  This program is free software: you can redistribute it and/or modify it
-  under the terms of the GNU General Public License as published by the
-  Free Software Foundation, either version 3 of the License, or (at your
-  option) any later version.
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the
+ Free Software Foundation, either version 3 of the License, or (at your
+ option) any later version.
 
-  This program is distributed in the hope that it will be useful, but
-  WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-  Public License for more details.
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+ Public License for more details.
 
-  You should have received a copy of the GNU General Public License along
-  with this program. If not, see <https://www.gnu.org/licenses/>.
+ You should have received a copy of the GNU General Public License along
+ with this program. If not, see <https://www.gnu.org/licenses/>.
 
-  As a special exception, the respective Autoconf Macro's copyright owner
-  gives unlimited permission to copy, distribute and modify the configure
-  scripts that are the output of Autoconf when processing the Macro. You
-  need not follow the terms of the GNU General Public License when using
-  or distributing such scripts, even though portions of the text of the
-  Macro appear in them. The GNU General Public License (GPL) does govern
-  all other use of the material that constitutes the Autoconf Macro.
+ As a special exception, the respective Autoconf Macro's copyright owner
+ gives unlimited permission to copy, distribute and modify the configure
+ scripts that are the output of Autoconf when processing the Macro. You
+ need not follow the terms of the GNU General Public License when using
+ or distributing such scripts, even though portions of the text of the
+ Macro appear in them. The GNU General Public License (GPL) does govern
+ all other use of the material that constitutes the Autoconf Macro.
 
-  This special exception to the GPL applies to versions of the Autoconf
-  Macro released by the Autoconf Archive. When you make and distribute a
-  modified version of the Autoconf Macro, you may extend this special
-  exception to the GPL to apply to your modified version as well.
+ This special exception to the GPL applies to versions of the Autoconf
+ Macro released by the Autoconf Archive. When you make and distribute a
+ modified version of the Autoconf Macro, you may extend this special
+ exception to the GPL to apply to your modified version as well.
+
+----------------------------------------------------------------------- MIT-like
+(M4) m4/ax_cxx_exceptions.m4
+
+ Copyright (c) 2008 Todd Veldhuizen
+ Copyright (c) 2008 Luc Maisonobe <luc@spaceroots.org>
+
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
 
 ---------------------------------------------------------------------------- GPL
 (M4) m4/ax_check_class.m4

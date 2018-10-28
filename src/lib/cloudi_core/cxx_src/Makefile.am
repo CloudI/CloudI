@@ -14,16 +14,16 @@ CLEANFILES = $(INTERFACE_HEADER) $(RLIMIT_HEADER)
 $(INTERFACE_HEADER): Makefile \
                      cloudi_os_spawn_hrl.h \
                      cloudi_os_spawn_api.h
-	$(CXX) -DCURRENT_VERSION=$(CURRENT_VERSION) \
+	$(CXXCPP) -DCURRENT_VERSION=$(CURRENT_VERSION) \
          -include $(srcdir)/cloudi_os_spawn_api.h \
-         $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_spawn_hrl.h > $@
+         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_spawn_hrl.h > $@
 
 $(RLIMIT_HEADER): Makefile \
                   cloudi_os_rlimit_hrl.h \
 				  $(abs_top_builddir)/config.h
-	$(CXX) \
+	$(CXXCPP) \
          -include $(abs_top_builddir)/config.h \
-         $(BOOST_CPPFLAGS) -E -P $(srcdir)/cloudi_os_rlimit_hrl.h > $@
+         $(BOOST_CPPFLAGS) -P $(srcdir)/cloudi_os_rlimit_hrl.h > $@
 
 cloudi_os_spawn_vsn_1_SOURCES = cloudi_os_spawn.cpp \
                                 cloudi_os_rlimit.cpp \

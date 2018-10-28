@@ -54,6 +54,10 @@
 #include <iostream>
 #include "assert.hpp"
 
+#if ! defined(HAVE_EXCEPTIONS)
+#error Exceptions support is required by the C/C++ CloudI API
+#endif
+
 extern "C" {
 
 static std::string backtrace_string()

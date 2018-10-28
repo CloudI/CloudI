@@ -3,6 +3,7 @@
 
 2018-10-27 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add autoconf check for C++ exceptions
     * Update external autoconf macros
 
 2018-10-20 Michael Truog   <mjtruog at protonmail dot com>

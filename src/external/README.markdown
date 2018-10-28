@@ -340,16 +340,25 @@ Java `jinterface`
 - `Wed Sep 14 16:35:57 PDT 2016`
 - `Apache License 2.0`
 
-M4 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
-----------------------------------------------------------------------
-`autoconf m4 macros for boost detection`
+M4 `m4/ax_boost_base.m4, m4/ax_boost_system.m4, m4/ax_boost_thread.m4, m4/ax_compare_version.m4, m4/ax_compiler_version.m4, m4/ax_cxx_exceptions.m4`
+--------------------------------------------------------------------------------
+`autoconf m4 macros for c++ and boost detection`
 
 - `https://git.savannah.gnu.org/git/autoconf-archive`
 - `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
 - `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
 
-M4 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4`
+M4 `m4/ax_compiler_vendor.m4`
+-----------------------------
+`autoconf m4 macro for c++ compiler vendor detection`
+
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
+- `GPL` (build-time dependency only)
+
+M4 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4`
 --------------------------------------------------------------------------------
 `autoconf m4 macros for java detection`
 
@@ -358,8 +367,18 @@ M4 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_pr
 - `Sat Oct 27 17:49:52 PDT 2018`
 - `GPL` (build-time dependency only)
 
+M4 `m4/ax_prog_jar.m4, m4/ax_try_compile_java.m4`
+-------------------------------------------------
+`autoconf m4 macros for java detection`
+
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
+- `MIT-like`
+
 M4 `m4/ax_lib_socket_nsl.m4`
 ----------------------------
+`autoconf m4 macros for socket compatibility`
 
 - `https://git.savannah.gnu.org/git/autoconf-archive`
 - `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
