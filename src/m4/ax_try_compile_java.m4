@@ -1,5 +1,5 @@
 # ===========================================================================
-#    http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html
+#   https://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -29,7 +29,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 8
+#serial 10
 
 AU_ALIAS([AC_TRY_COMPILE_JAVA], [AX_TRY_COMPILE_JAVA])
 AC_DEFUN([AX_TRY_COMPILE_JAVA],[

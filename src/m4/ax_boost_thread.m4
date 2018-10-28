@@ -1,5 +1,5 @@
 # ===========================================================================
-#      http://www.gnu.org/software/autoconf-archive/ax_boost_thread.html
+#     https://www.gnu.org/software/autoconf-archive/ax_boost_thread.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -30,7 +30,7 @@
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 27
+#serial 31
 
 AC_DEFUN([AX_BOOST_THREAD],
 [
@@ -141,11 +141,11 @@ AC_DEFUN([AX_BOOST_THREAD],
                         BOOST_LDFLAGS="-pthread $BOOST_LDFLAGS"
                         break;
                         ;;
-                    solaris )
+                    xsolaris )
                         BOOST_THREAD_LIB="$BOOST_THREAD_LIB -lpthread"
                         break;
                         ;;
-                    mingw32 )
+                    xmingw32 )
                         break;
                         ;;
                     * )

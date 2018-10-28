@@ -1,5 +1,5 @@
 # ===========================================================================
-#      http://www.gnu.org/software/autoconf-archive/ax_check_class.html
+#      https://www.gnu.org/software/autoconf-archive/ax_check_class.html
 # ===========================================================================
 #
 # SYNOPSIS
@@ -36,7 +36,7 @@
 #   Public License for more details.
 #
 #   You should have received a copy of the GNU General Public License along
-#   with this program. If not, see <http://www.gnu.org/licenses/>.
+#   with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 #   As a special exception, the respective Autoconf Macro's copyright owner
 #   gives unlimited permission to copy, distribute and modify the configure
@@ -51,13 +51,13 @@
 #   modified version of the Autoconf Macro, you may extend this special
 #   exception to the GPL to apply to your modified version as well.
 
-#serial 7
+#serial 12
 
 AU_ALIAS([AC_CHECK_CLASS], [AX_CHECK_CLASS])
 AC_DEFUN([AX_CHECK_CLASS],[
 AC_REQUIRE([AX_PROG_JAVA])
 ac_var_name=`echo $1 | sed 's/\./_/g'`
-dnl Normaly I'd use a AC_CACHE_CHECK here but since the variable name is
+dnl Normally I'd use a AC_CACHE_CHECK here but since the variable name is
 dnl dynamic I need an extra level of extraction
 AC_MSG_CHECKING([for $1 class])
 AC_CACHE_VAL(ax_cv_class_$ac_var_name, [
@@ -72,7 +72,7 @@ else
         ifelse([$3], , :, [$3])
 fi
 ])
-dnl for some reason the above statment didn't fall though here?
+dnl for some reason the above statement didn't fall though here?
 dnl do scripts have variable scoping?
 eval "ac_var_val=$`eval echo ac_cv_class_$ac_var_name`"
 AC_MSG_RESULT($ac_var_val)

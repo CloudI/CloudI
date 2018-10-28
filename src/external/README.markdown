@@ -344,54 +344,44 @@ M4 `m4/ax_boost_base.m4, m4/ax_boost_thread.m4, m4/ax_boost_system.m4`
 ----------------------------------------------------------------------
 `autoconf m4 macros for boost detection`
 
-- `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_base.m4`
-- `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_thread.m4` (required local modification!)
-- `http://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_boost_system.m4`
-- `repository location: src/m4/`
-- `Mon Sep 19 17:55:21 UTC 2016`
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
 
 M4 `m4/ax_check_class.m4, m4/ax_check_rqrd_class.m4, m4/ax_prog_jar.m4, m4/ax_prog_javac.m4, m4/ax_prog_javac_works.m4, m4/ax_prog_java.m4, m4/ax_prog_java_works.m4, m4/ax_try_compile_java.m4`
 --------------------------------------------------------------------------------
 `autoconf m4 macros for java detection`
 
-- `http://www.gnu.org/software/autoconf-archive/ax_check_class.html` (required local modification!)
-- `http://www.gnu.org/software/autoconf-archive/ax_check_rqrd_class.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_jar.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_javac.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_javac_works.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_java.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_java_works.html` (required local modification!)
-- `http://www.gnu.org/software/autoconf-archive/ax_try_compile_java.html`
-- `repository location: src/m4/`
-- `Mon Sep 19 17:55:21 UTC 2016`
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
 - `GPL` (build-time dependency only)
 
 M4 `m4/ax_lib_socket_nsl.m4`
 ----------------------------
 
-- `http://www.gnu.org/software/autoconf-archive/ax_lib_socket_nsl.html`
-- `repository location: src/m4/`
-- `Mon Sep 19 17:55:21 UTC 2016`
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
 
 M4 `m4/ax_prog_python_version.m4`
 ---------------------------------
 `autoconf m4 macros for python detection`
 
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_python_version.html`
-- `repository location: src/m4/`
-- `Mon Sep 19 17:55:21 UTC 2016`
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
 
 M4 `m4/ax_prog_ruby_version.m4, m4/ax_compare_version.m4`
 ---------------------------------------------------------
 `autoconf m4 macros for ruby detection`
 
-- `http://www.gnu.org/software/autoconf-archive/ax_prog_ruby_version.html`
-- `http://www.gnu.org/software/autoconf-archive/ax_compare_version.html`
-- `repository location: src/m4/`
-- `Mon Sep 19 17:55:21 UTC 2016`
+- `https://git.savannah.gnu.org/git/autoconf-archive`
+- `commit bcdf5ad0c5981a3c01da3216fbf42b6d1e1ffab0`
+- `Sat Oct 27 17:49:52 PDT 2018`
 - `MIT-like`
 
 OCaml `num`
