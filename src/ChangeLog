@@ -3,6 +3,8 @@
 
 2018-10-28 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add Erlang/OTP 21 compatibility to the cloudi_service_quorum CT test
+    * Update trie
     * Update pqueue
 
 2018-10-27 Michael Truog   <mjtruog at protonmail dot com>

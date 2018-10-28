@@ -24,7 +24,10 @@
 %%%------------------------------------------------------------------------
 
 qc_opts() ->
-    [{numtests, 10000}].
+    % ?SERVER:start_link/1 uses a locally registered process name, so it must
+    % only be called once and that requires max_size be 1
+    [{numtests, 10000},
+     {max_size, 1}].
      
 qc_run(M) when is_atom(M) ->
     proper:quickcheck(trie_proper:correct(M), qc_opts()).
