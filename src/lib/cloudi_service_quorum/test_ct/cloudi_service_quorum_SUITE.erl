@@ -38,6 +38,21 @@
 -define(NUMTESTS, 1).
 -define(TIMEOUT_MAX, 1800000). % ms (30 minutes)
 
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(OTP_RELEASE).
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
@@ -144,10 +159,9 @@ prop_quorum_timeout(QuorumTypeProper, _Config) ->
                                         CountProcess, Monkey,
                                         RequestInfo, Request)
             catch
-                Type:Error ->
-                    StackTrace = erlang:get_stacktrace(),
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     error_msg("validate_quorum_timeout failed: ~p ~p~n~p~n",
-                              [Type, Error, StackTrace]),
+                              [ErrorType, Error, ErrorStackTrace]),
                     false
             end).
 
@@ -230,10 +244,9 @@ prop_quorum_crash(QuorumTypeProper, _Config) ->
                                       CountProcess, Monkey,
                                       RequestInfo, Request)
             catch
-                Type:Error ->
-                    StackTrace = erlang:get_stacktrace(),
+                ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     error_msg("validate_quorum_crash failed: ~p ~p~n~p~n",
-                              [Type, Error, StackTrace]),
+                              [ErrorType, Error, ErrorStackTrace]),
                     false
             end).
 
