@@ -126,13 +126,38 @@
 %  should have a maximum of TIMEOUT_MAX_ERLANG)
 -define(TIMEOUT_MAX, ?TIMEOUT_MAX_ERLANG - ?TIMEOUT_DELTA).
 
-% Unable to improve these values
+% time-related constants
 -define(DAYS_IN_YEAR, 365.25).
 -define(DAYS_IN_MONTH, (?DAYS_IN_YEAR / 12)).
 -define(DAYS_IN_WEEK, 7).
 -define(HOURS_IN_DAY, 24).
 -define(SECONDS_IN_HOUR, (60 * 60)).
 -define(NANOSECONDS_IN_SECOND, 1000000000).
+-define(NANOSECONDS_IN_DAY,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY)).
+-define(NANOSECONDS_IN_WEEK,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_WEEK)).
+-define(NANOSECONDS_IN_MONTH,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_MONTH)).
+-define(NANOSECONDS_IN_YEAR,
+        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
+         ?HOURS_IN_DAY * ?DAYS_IN_YEAR)).
+-define(NATIVE_TIME_IN_DAY,
+        cloudi_timestamp:
+        convert(?NANOSECONDS_IN_DAY, nanosecond, native)).
+-define(NATIVE_TIME_IN_WEEK,
+        cloudi_timestamp:
+        convert(?NANOSECONDS_IN_WEEK, nanosecond, native)).
+-define(NATIVE_TIME_IN_MONTH,
+        cloudi_timestamp:
+        convert(cloudi_math:ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
+-define(NATIVE_TIME_IN_YEAR,
+        cloudi_timestamp:
+        convert(cloudi_math:ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
+-define(AVAILABILITY_ZERO, "0 %").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Safe to tune without causing major internal problems                       %
@@ -252,6 +277,11 @@
 % interval to reload all internal services which have been configured to
 % reload their modules automatically
 -define(SERVICE_INTERNAL_RELOAD, 1000). % milliseconds
+
+% when tracking the durations of downtime during the past year, limit the
+% number of durations to this max to keep memory consumption low
+% (if durations are discarded, the downtime result is considered approximate)
+-define(STATUS_DURATIONS_YEAR_MAX, 366).
 
 % maximum average time inbetween CloudI logger calls during the interval
 % to trigger logger flooding prevention, so that logging messages are discarded

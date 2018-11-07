@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -112,14 +112,10 @@
             cloudi_x_key2value:
             cloudi_x_key2value(cloudi_service_api:service_id(),
                                pid(), #service{}),
-        durations_updating = #{} ::
-            #{cloudi_service_api:service_id() :=
-              list({T0 :: cloudi_timestamp:native_monotonic(),
-                    T1 :: cloudi_timestamp:native_monotonic()})},
-        durations_restarting = #{} ::
-            #{cloudi_service_api:service_id() :=
-              list({T0 :: cloudi_timestamp:native_monotonic(),
-                    T1 :: cloudi_timestamp:native_monotonic()})},
+        durations_update = cloudi_core_i_status:durations_new() ::
+            cloudi_core_i_status:durations(cloudi_service_api:service_id()),
+        durations_restart = cloudi_core_i_status:durations_new() ::
+            cloudi_core_i_status:durations(cloudi_service_api:service_id()),
         changes = #{} ::
             #{cloudi_service_api:service_id() :=
               list({increase | decrease, number(), number(), number()})}
@@ -164,34 +160,6 @@
 
 -define(CATCH_EXIT(F),
         try F catch exit:{Reason, _} -> {error, Reason} end).
-
--define(NANOSECONDS_IN_DAY,
-        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-         ?HOURS_IN_DAY)).
--define(NANOSECONDS_IN_WEEK,
-        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-         ?HOURS_IN_DAY * ?DAYS_IN_WEEK)).
--define(NANOSECONDS_IN_MONTH,
-        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-         ?HOURS_IN_DAY * ?DAYS_IN_MONTH)).
--define(NANOSECONDS_IN_YEAR,
-        (?NANOSECONDS_IN_SECOND * ?SECONDS_IN_HOUR *
-         ?HOURS_IN_DAY * ?DAYS_IN_YEAR)).
-
--define(NATIVE_TIME_IN_DAY,
-        cloudi_timestamp:
-        convert(?NANOSECONDS_IN_DAY, nanosecond, native)).
--define(NATIVE_TIME_IN_WEEK,
-        cloudi_timestamp:
-        convert(?NANOSECONDS_IN_WEEK, nanosecond, native)).
--define(NATIVE_TIME_IN_MONTH,
-        cloudi_timestamp:
-        convert(cloudi_math:ceil(?NANOSECONDS_IN_MONTH), nanosecond, native)).
--define(NATIVE_TIME_IN_YEAR,
-        cloudi_timestamp:
-        convert(cloudi_math:ceil(?NANOSECONDS_IN_YEAR), nanosecond, native)).
-
--define(AVAILABILITY_ZERO, "0 %").
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -392,7 +360,7 @@ handle_call({update,
              #config_service_update{
                  uuids = ServiceIdList} = UpdatePlan}, _,
             #state{services = Services,
-                   durations_updating = Durations} = State) ->
+                   durations_update = Durations} = State) ->
     case service_ids_pids(ServiceIdList, Services) of
         {ok, PidList0} ->
             T0 = cloudi_timestamp:native_monotonic(),
@@ -418,8 +386,9 @@ handle_call({update,
                     {{error, ResultsError}, State}
             end,
             T1 = cloudi_timestamp:native_monotonic(),
-            DurationsNew = duration_store(ServiceIdList, {T0, T1}, Durations),
-            {reply, Reply, StateNew#state{durations_updating = DurationsNew}};
+            DurationsNew = cloudi_core_i_status:
+                           durations_store(ServiceIdList, {T0, T1}, Durations),
+            {reply, Reply, StateNew#state{durations_update = DurationsNew}};
         {error, Reason} ->
             {reply, {error, [Reason]}, State}
     end;
@@ -443,11 +412,11 @@ handle_call({search, PidList}, _,
 
 handle_call({status, ServiceIdList}, _,
             #state{services = Services,
-                   durations_updating = DurationsUpdating,
-                   durations_restarting = DurationsRestarting} = State) ->
+                   durations_update = DurationsUpdate,
+                   durations_restart = DurationsRestart} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
     Reply = service_ids_status(ServiceIdList, TimeNow,
-                               DurationsUpdating, DurationsRestarting,
+                               DurationsUpdate, DurationsRestart,
                                Services),
     {reply, Reply, State};
 
@@ -688,7 +657,7 @@ initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
 restart(#service{time_start = TimeStart,
                  time_restart = TimeRestart,
                  time_terminate = TimeTerminate} = Service, Services,
-        #state{durations_updating = DurationsUpdating} = State,
+        #state{durations_update = DurationsUpdate} = State,
         ServiceId, OldPid) ->
     TimeTerminateNew = if
         TimeTerminate =:= undefined ->
@@ -702,9 +671,10 @@ restart(#service{time_start = TimeStart,
         is_integer(TimeTerminate) ->
             TimeTerminate
     end,
-    DurationsUpdatingNew = maps:remove(ServiceId, DurationsUpdating),
+    DurationsUpdateNew = cloudi_core_i_status:
+                         durations_erase(ServiceId, DurationsUpdate),
     restart_stage1(Service#service{time_terminate = undefined}, Services,
-                   State#state{durations_updating = DurationsUpdatingNew},
+                   State#state{durations_update = DurationsUpdateNew},
                    ServiceId, TimeTerminateNew, OldPid).
 
 restart_stage1(#service{pids = Pids} = Service,
@@ -775,7 +745,7 @@ restart_stage3(#service{service_m = M,
                         restart_count = 0,
                         restart_times = []} = Service,
                Services,
-               #state{durations_restarting = Durations} = State,
+               #state{durations_restart = Durations} = State,
                ServiceId, TimeTerminate, OldPid) ->
     % first restart
     TimeRestart = cloudi_timestamp:native_monotonic(),
@@ -791,9 +761,10 @@ restart_stage3(#service{service_m = M,
                            " ~p", [OldPid, Pid, service_id(ServiceId)]),
             Pids = [Pid],
             {TimeInitialized, [{MonitorRef, Pid}]} = initialize_wait(Pids),
-            DurationsNew = duration_store([ServiceId],
-                                          {TimeTerminate, TimeInitialized},
-                                          Durations),
+            DurationsNew = cloudi_core_i_status:
+                           durations_store([ServiceId],
+                                           {TimeTerminate, TimeInitialized},
+                                           Durations),
             ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
                                 monitor = MonitorRef,
@@ -802,15 +773,16 @@ restart_stage3(#service{service_m = M,
                                 restart_count = RestartCount,
                                 restart_times = RestartTimes}, Services),
             {true, State#state{services = ServicesNew,
-                               durations_restarting = DurationsNew}};
+                               durations_restart = DurationsNew}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart (R = 1)~n"
                            "                   (~p is now one of ~p)~n"
                            " ~p", [OldPid, Pids, service_id(ServiceId)]),
             {TimeInitialized, MonitorPids} = initialize_wait(Pids),
-            DurationsNew = duration_store([ServiceId],
-                                          {TimeTerminate, TimeInitialized},
-                                          Durations),
+            DurationsNew = cloudi_core_i_status:
+                           durations_store([ServiceId],
+                                           {TimeTerminate, TimeInitialized},
+                                           Durations),
             ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
@@ -821,7 +793,7 @@ restart_stage3(#service{service_m = M,
                                     restart_times = RestartTimes}, D)
             end, Services, MonitorPids),
             {true, State#state{services = ServicesNew,
-                               durations_restarting = DurationsNew}};
+                               durations_restart = DurationsNew}};
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
@@ -868,7 +840,7 @@ restart_stage3(#service{service_m = M,
                         restart_count = RestartCount,
                         restart_times = RestartTimes} = Service,
                Services,
-               #state{durations_restarting = Durations} = State,
+               #state{durations_restart = Durations} = State,
                ServiceId, TimeTerminate, OldPid) ->
     % typical restart scenario
     TimeRestart = cloudi_timestamp:native_monotonic(),
@@ -887,9 +859,10 @@ restart_stage3(#service{service_m = M,
                                    service_id(ServiceId)]),
             Pids = [Pid],
             {TimeInitialized, [{MonitorRef, Pid}]} = initialize_wait(Pids),
-            DurationsNew = duration_store([ServiceId],
-                                          {TimeTerminate, TimeInitialized},
-                                          Durations),
+            DurationsNew = cloudi_core_i_status:
+                           durations_store([ServiceId],
+                                           {TimeTerminate, TimeInitialized},
+                                           Durations),
             ServicesNew = cloudi_x_key2value:store(ServiceId, Pid,
                 Service#service{pids = Pids,
                                 monitor = MonitorRef,
@@ -898,7 +871,7 @@ restart_stage3(#service{service_m = M,
                                 restart_count = R,
                                 restart_times = RestartTimesNew}, Services),
             {true, State#state{services = ServicesNew,
-                               durations_restarting = DurationsNew}};
+                               durations_restart = DurationsNew}};
         {ok, [Pid | _] = Pids} when is_pid(Pid) ->
             ?LOG_WARN_SYNC("successful restart "
                            "(R = ~p, T = ~p elapsed seconds)~n"
@@ -906,9 +879,10 @@ restart_stage3(#service{service_m = M,
                            " ~p", [R, T, OldPid, Pids,
                                    service_id(ServiceId)]),
             {TimeInitialized, MonitorPids} = initialize_wait(Pids),
-            DurationsNew = duration_store([ServiceId],
-                                          {TimeTerminate, TimeInitialized},
-                                          Durations),
+            DurationsNew = cloudi_core_i_status:
+                           durations_store([ServiceId],
+                                           {TimeTerminate, TimeInitialized},
+                                           Durations),
             ServicesNew = lists:foldl(fun({MonitorRef, P}, D) ->
                 cloudi_x_key2value:store(ServiceId, P,
                     Service#service{pids = Pids,
@@ -919,7 +893,7 @@ restart_stage3(#service{service_m = M,
                                     restart_times = RestartTimesNew}, D)
             end, Services, MonitorPids),
             {true, State#state{services = ServicesNew,
-                               durations_restarting = DurationsNew}};
+                               durations_restart = DurationsNew}};
         {error, _} = Error ->
             ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
                             [Error, service_id(ServiceId)]),
@@ -1223,9 +1197,10 @@ terminate_service_wait([Pid | Pids], OldPid) ->
     end.
 
 terminated_service(ServiceId,
-                   #state{durations_restarting = Durations} = State) ->
+                   #state{durations_restart = Durations} = State) ->
     ok = cloudi_core_i_configurator:service_terminated(ServiceId),
-    State#state{durations_restarting = maps:remove(ServiceId, Durations)}.
+    State#state{durations_restart = cloudi_core_i_status:
+                                    durations_erase(ServiceId, Durations)}.
 
 service_ids_pids(ServiceIdList, Services) ->
     service_ids_pids(ServiceIdList, [], Services).
@@ -1259,7 +1234,7 @@ service_id_pids(ServiceId, Services) ->
     end.
 
 service_ids_status(ServiceIdList, TimeNow,
-                   DurationsUpdating, DurationsRestarting, Services) ->
+                   DurationsUpdate, DurationsRestart, Services) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
@@ -1267,24 +1242,24 @@ service_ids_status(ServiceIdList, TimeNow,
     service_ids_status(ServiceIdList, [], TimeNow,
                        TimeDayStart, TimeWeekStart,
                        TimeMonthStart, TimeYearStart,
-                       DurationsUpdating, DurationsRestarting, Services).
+                       DurationsUpdate, DurationsRestart, Services).
 
 service_ids_status([], StatusList, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
                    TimeDayStart, TimeWeekStart,
                    TimeMonthStart, TimeYearStart,
-                   DurationsUpdating, DurationsRestarting, Services) ->
+                   DurationsUpdate, DurationsRestart, Services) ->
     case service_id_status(ServiceId, TimeNow,
                            TimeDayStart, TimeWeekStart,
                            TimeMonthStart, TimeYearStart,
-                           DurationsUpdating, DurationsRestarting, Services) of
+                           DurationsUpdate, DurationsRestart, Services) of
         {ok, Status} ->
             service_ids_status(ServiceIdList,
                                [{ServiceId, Status} | StatusList], TimeNow,
                                TimeDayStart, TimeWeekStart,
                                TimeMonthStart, TimeYearStart,
-                               DurationsUpdating, DurationsRestarting,
+                               DurationsUpdate, DurationsRestart,
                                Services);
         {error, _} = Error ->
             Error
@@ -1292,7 +1267,7 @@ service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
 
 service_id_status(ServiceId, TimeNow,
                   TimeDayStart, TimeWeekStart, TimeMonthStart, TimeYearStart,
-                  DurationsUpdating, DurationsRestarting, Services) ->
+                  DurationsUpdate, DurationsRestart, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {_, #service{service_f = StartType,
                           count_process = CountProcess,
@@ -1300,8 +1275,12 @@ service_id_status(ServiceId, TimeNow,
                           time_start = TimeStart,
                           time_restart = TimeRestart,
                           restart_count_total = Restarts}}} ->
-            DurationUpdateList = maps:get(ServiceId, DurationsUpdating, []),
-            DurationRestartList = maps:get(ServiceId, DurationsRestarting, []),
+            DurationsStateUpdate = cloudi_core_i_status:
+                                   durations_state(ServiceId,
+                                                   DurationsUpdate),
+            DurationsStateRestart = cloudi_core_i_status:
+                                    durations_state(ServiceId,
+                                                    DurationsRestart),
             TimeRunning = if
                 TimeRestart =:= undefined ->
                     TimeStart;
@@ -1318,33 +1297,52 @@ service_id_status(ServiceId, TimeNow,
                           nanoseconds_to_string(NanoSecondsTotal),
             UptimeRunning = cloudi_timestamp:
                             nanoseconds_to_string(NanoSecondsRunning),
-            NanoSecondsDayRestarting =
-                nanoseconds_downtime(DurationRestartList, TimeDayStart),
-            NanoSecondsDayUpdating =
-                nanoseconds_downtime(DurationUpdateList, TimeDayStart),
-            NanoSecondsWeekRestarting =
-                nanoseconds_downtime(DurationRestartList, TimeWeekStart),
-            NanoSecondsWeekUpdating =
-                nanoseconds_downtime(DurationUpdateList, TimeWeekStart),
-            NanoSecondsMonthRestarting =
-                nanoseconds_downtime(DurationRestartList, TimeMonthStart),
-            NanoSecondsMonthUpdating =
-                nanoseconds_downtime(DurationUpdateList, TimeMonthStart),
-            NanoSecondsYearRestarting =
-                nanoseconds_downtime(DurationRestartList, TimeYearStart),
-            NanoSecondsYearUpdating =
-                nanoseconds_downtime(DurationUpdateList, TimeYearStart),
+            {ApproximateYearUpdate,
+             NanoSecondsYearUpdate} = cloudi_core_i_status:
+                                      durations_sum(DurationsStateUpdate,
+                                                    TimeYearStart),
+            {ApproximateYearRestart,
+             NanoSecondsYearRestart} = cloudi_core_i_status:
+                                       durations_sum(DurationsStateRestart,
+                                                     TimeYearStart),
+            {ApproximateMonthUpdate,
+             NanoSecondsMonthUpdate} = cloudi_core_i_status:
+                                       durations_sum(DurationsStateUpdate,
+                                                     TimeMonthStart),
+            {ApproximateMonthRestart,
+             NanoSecondsMonthRestart} = cloudi_core_i_status:
+                                        durations_sum(DurationsStateRestart,
+                                                      TimeMonthStart),
+            {ApproximateWeekUpdate,
+             NanoSecondsWeekUpdate} = cloudi_core_i_status:
+                                      durations_sum(DurationsStateUpdate,
+                                                    TimeWeekStart),
+            {ApproximateWeekRestart,
+             NanoSecondsWeekRestart} = cloudi_core_i_status:
+                                       durations_sum(DurationsStateRestart,
+                                                     TimeWeekStart),
+            {ApproximateDayUpdate,
+             NanoSecondsDayUpdate} = cloudi_core_i_status:
+                                     durations_sum(DurationsStateUpdate,
+                                                   TimeDayStart),
+            {ApproximateDayRestart,
+             NanoSecondsDayRestart} = cloudi_core_i_status:
+                                      durations_sum(DurationsStateRestart,
+                                                    TimeDayStart),
             Status0 = [],
-            Status1 = case nanoseconds_to_availability_year_without(
+            Status1 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_year(
                                NanoSecondsRunning,
-                               NanoSecondsYearUpdating) of
+                               ApproximateYearUpdate,
+                               NanoSecondsYearUpdate) of
                 ?AVAILABILITY_ZERO ->
                     Status0;
                 AvailabilityYearUpdated ->
                     [{availability_year_updated,
                       AvailabilityYearUpdated} | Status0]
             end,
-            Status2 = case nanoseconds_to_availability_year_running(
+            Status2 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_year(
                                NanoSecondsRunning) of
                 ?AVAILABILITY_ZERO ->
                     Status1;
@@ -1352,25 +1350,30 @@ service_id_status(ServiceId, TimeNow,
                     [{availability_year_running,
                       AvailabilityYearRunning} | Status1]
             end,
-            Status3 = case nanoseconds_to_availability_year_without(
+            Status3 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_year(
                                NanoSecondsTotal,
-                               NanoSecondsYearRestarting) of
+                               ApproximateYearRestart,
+                               NanoSecondsYearRestart) of
                 ?AVAILABILITY_ZERO ->
                     Status2;
                 AvailabilityYearTotal ->
                     [{availability_year_total,
                       AvailabilityYearTotal} | Status2]
             end,
-            Status4 = case nanoseconds_to_availability_month_without(
+            Status4 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_month(
                                NanoSecondsRunning,
-                               NanoSecondsMonthUpdating) of
+                               ApproximateMonthUpdate,
+                               NanoSecondsMonthUpdate) of
                 ?AVAILABILITY_ZERO ->
                     Status3;
                 AvailabilityMonthUpdated ->
                     [{availability_month_updated,
                       AvailabilityMonthUpdated} | Status3]
             end,
-            Status5 = case nanoseconds_to_availability_month_running(
+            Status5 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_month(
                                NanoSecondsRunning) of
                 ?AVAILABILITY_ZERO ->
                     Status4;
@@ -1378,25 +1381,30 @@ service_id_status(ServiceId, TimeNow,
                     [{availability_month_running,
                       AvailabilityMonthRunning} | Status4]
             end,
-            Status6 = case nanoseconds_to_availability_month_without(
+            Status6 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_month(
                                NanoSecondsTotal,
-                               NanoSecondsMonthRestarting) of
+                               ApproximateMonthRestart,
+                               NanoSecondsMonthRestart) of
                 ?AVAILABILITY_ZERO ->
                     Status5;
                 AvailabilityMonthTotal ->
                     [{availability_month_total,
                       AvailabilityMonthTotal} | Status5]
             end,
-            Status7 = case nanoseconds_to_availability_week_without(
+            Status7 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_week(
                                NanoSecondsRunning,
-                               NanoSecondsWeekUpdating) of
+                               ApproximateWeekUpdate,
+                               NanoSecondsWeekUpdate) of
                 ?AVAILABILITY_ZERO ->
                     Status6;
                 AvailabilityWeekUpdated ->
                     [{availability_week_updated,
                       AvailabilityWeekUpdated} | Status6]
             end,
-            Status8 = case nanoseconds_to_availability_week_running(
+            Status8 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_week(
                                NanoSecondsRunning) of
                 ?AVAILABILITY_ZERO ->
                     Status7;
@@ -1404,9 +1412,11 @@ service_id_status(ServiceId, TimeNow,
                     [{availability_week_running,
                       AvailabilityWeekRunning} | Status7]
             end,
-            Status9 = case nanoseconds_to_availability_week_without(
+            Status9 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_week(
                                NanoSecondsTotal,
-                               NanoSecondsWeekRestarting) of
+                               ApproximateWeekRestart,
+                               NanoSecondsWeekRestart) of
                 ?AVAILABILITY_ZERO ->
                     Status8;
                 AvailabilityWeekTotal ->
@@ -1414,100 +1424,113 @@ service_id_status(ServiceId, TimeNow,
                       AvailabilityWeekTotal} | Status8]
             end,
             Status10 = [{availability_day_total,
-                         nanoseconds_to_availability_day_without(
+                         cloudi_core_i_status:
+                         nanoseconds_to_availability_day(
                              NanoSecondsTotal,
-                             NanoSecondsDayRestarting)},
+                             ApproximateDayRestart,
+                             NanoSecondsDayRestart)},
                         {availability_day_running,
-                         nanoseconds_to_availability_day_running(
+                         cloudi_core_i_status:
+                         nanoseconds_to_availability_day(
                              NanoSecondsRunning)},
                         {availability_day_updated,
-                         nanoseconds_to_availability_day_without(
+                         cloudi_core_i_status:
+                         nanoseconds_to_availability_day(
                              NanoSecondsRunning,
-                             NanoSecondsDayUpdating)} | Status9],
+                             ApproximateDayUpdate,
+                             NanoSecondsDayUpdate)} | Status9],
             Status11 = if
                 TimeRunning =< TimeMonthStart,
-                NanoSecondsYearUpdating > 0 ->
+                NanoSecondsYearUpdate > 0 ->
                     [{interrupt_year_updating,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsYearUpdating)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsYearUpdate,
+                                            ApproximateYearUpdate)} |
                      Status10];
                 true ->
                     Status10
             end,
             Status12 = if
                 TimeRunning =< TimeWeekStart,
-                NanoSecondsMonthUpdating > 0 orelse
-                NanoSecondsYearUpdating > 0 ->
+                NanoSecondsMonthUpdate > 0 orelse
+                NanoSecondsYearUpdate > 0 ->
                     [{interrupt_month_updating,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsMonthUpdating)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsMonthUpdate,
+                                            ApproximateMonthUpdate)} |
                      Status11];
                 true ->
                     Status11
             end,
             Status13 = if
                 TimeRunning =< TimeDayStart,
-                NanoSecondsWeekUpdating > 0 orelse
-                NanoSecondsMonthUpdating > 0 orelse
-                NanoSecondsYearUpdating > 0 ->
+                NanoSecondsWeekUpdate > 0 orelse
+                NanoSecondsMonthUpdate > 0 orelse
+                NanoSecondsYearUpdate > 0 ->
                     [{interrupt_week_updating,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsWeekUpdating)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsWeekUpdate,
+                                            ApproximateWeekUpdate)} |
                      Status12];
                 true ->
                     Status12
             end,
             Status14 = if
-                NanoSecondsDayUpdating > 0 orelse
-                NanoSecondsWeekUpdating > 0 orelse
-                NanoSecondsMonthUpdating > 0 ->
+                NanoSecondsDayUpdate > 0 orelse
+                NanoSecondsWeekUpdate > 0 orelse
+                NanoSecondsMonthUpdate > 0 ->
                     [{interrupt_day_updating,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsDayUpdating)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsDayUpdate,
+                                            ApproximateDayUpdate)} |
                      Status13];
                 true ->
                     Status13
             end,
             Status15 = if
                 TimeStart =< TimeMonthStart,
-                NanoSecondsYearRestarting > 0 ->
+                NanoSecondsYearRestart > 0 ->
                     [{downtime_year_restarting,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsYearRestarting)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsYearRestart,
+                                            ApproximateYearRestart)} |
                      Status14];
                 true ->
                     Status14
             end,
             Status16 = if
                 TimeStart =< TimeWeekStart,
-                NanoSecondsMonthRestarting > 0 orelse
-                NanoSecondsYearRestarting > 0 ->
+                NanoSecondsMonthRestart > 0 orelse
+                NanoSecondsYearRestart > 0 ->
                     [{downtime_month_restarting,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsMonthRestarting)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsMonthRestart,
+                                            ApproximateMonthRestart)} |
                      Status15];
                 true ->
                     Status15
             end,
             Status17 = if
                 TimeStart =< TimeDayStart,
-                NanoSecondsWeekRestarting > 0 orelse
-                NanoSecondsMonthRestarting > 0 orelse
-                NanoSecondsYearRestarting > 0 ->
+                NanoSecondsWeekRestart > 0 orelse
+                NanoSecondsMonthRestart > 0 orelse
+                NanoSecondsYearRestart > 0 ->
                     [{downtime_week_restarting,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsWeekRestarting)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsWeekRestart,
+                                            ApproximateWeekRestart)} |
                      Status16];
                 true ->
                     Status16
             end,
             Status18 = if
-                NanoSecondsDayRestarting > 0 orelse
-                NanoSecondsWeekRestarting > 0 orelse
-                NanoSecondsMonthRestarting > 0 ->
+                NanoSecondsDayRestart > 0 orelse
+                NanoSecondsWeekRestart > 0 orelse
+                NanoSecondsMonthRestart > 0 ->
                     [{downtime_day_restarting,
-                      cloudi_timestamp:
-                      nanoseconds_to_string(NanoSecondsDayRestarting)} |
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsDayRestart,
+                                            ApproximateDayRestart)} |
                      Status17];
                 true ->
                     Status17
@@ -1768,287 +1791,6 @@ update_after(UpdateSuccess, PidList, ResultsSuccess,
     update_unload_module(ModulesUnload, CodePathsRemove),
     ok = update_reload_start(UpdatePlan),
     ServicesNew.
-
-duration_clear([] = DurationList, _) ->
-    DurationList;
-duration_clear([{_, T1} | DurationList], T)
-    when T1 < T ->
-    duration_clear(DurationList, T);
-duration_clear(DurationList, _) ->
-    lists:reverse(DurationList).
-
-duration_store(ServiceIdList, {_, T1} = Duration, DurationLookup) ->
-    duration_store(ServiceIdList, T1 - ?NATIVE_TIME_IN_YEAR,
-                   Duration, DurationLookup).
-
-duration_store([], _, _, DurationLookup) ->
-    DurationLookup;
-duration_store([ServiceId | ServiceIdList], T, Duration, DurationLookup) ->
-    DurationList = maps:get(ServiceId, DurationLookup, []),
-    DurationListNew = [Duration |
-        duration_clear(lists:reverse(DurationList), T)],
-    DurationLookupNew = maps:put(ServiceId, DurationListNew, DurationLookup),
-    duration_store(ServiceIdList, T, Duration, DurationLookupNew).
-
-nanoseconds_to_availability_day_running(NanoSecondsRunning) ->
-    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_DAY).
-
-nanoseconds_to_availability_week_running(NanoSecondsRunning) ->
-    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_WEEK).
-
-nanoseconds_to_availability_month_running(NanoSecondsRunning) ->
-    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_MONTH).
-
-nanoseconds_to_availability_year_running(NanoSecondsRunning) ->
-    availability_to_string(NanoSecondsRunning / ?NANOSECONDS_IN_YEAR).
-
-nanoseconds_to_availability_day_without(NanoSecondsRunning,
-                                        NanoSecondsDayWithout) ->
-    NanoSecondsDay = ?NANOSECONDS_IN_DAY,
-    AvailabilityDay = (erlang:min(NanoSecondsRunning, NanoSecondsDay) -
-        NanoSecondsDayWithout) / NanoSecondsDay,
-    availability_to_string(AvailabilityDay).
-
-nanoseconds_to_availability_week_without(NanoSecondsRunning,
-                                         NanoSecondsWeekWithout) ->
-    NanoSecondsWeek = ?NANOSECONDS_IN_WEEK,
-    AvailabilityWeek = (erlang:min(NanoSecondsRunning, NanoSecondsWeek) -
-        NanoSecondsWeekWithout) / NanoSecondsWeek,
-    availability_to_string(AvailabilityWeek).
-
-nanoseconds_to_availability_month_without(NanoSecondsRunning,
-                                          NanoSecondsMonthWithout) ->
-    NanoSecondsMonth = ?NANOSECONDS_IN_MONTH,
-    AvailabilityMonth = (erlang:min(NanoSecondsRunning, NanoSecondsMonth) -
-        NanoSecondsMonthWithout) / NanoSecondsMonth,
-    availability_to_string(AvailabilityMonth).
-
-nanoseconds_to_availability_year_without(NanoSecondsRunning,
-                                         NanoSecondsYearWithout) ->
-    NanoSecondsYear = ?NANOSECONDS_IN_YEAR,
-    AvailabilityYear = (erlang:min(NanoSecondsRunning, NanoSecondsYear) -
-        NanoSecondsYearWithout) / NanoSecondsYear,
-    availability_to_string(AvailabilityYear).
-
-nanoseconds_downtime(DurationList, T) ->
-    nanoseconds_downtime(DurationList, 0, T).
-
-nanoseconds_downtime([], NativeDowntime, _) ->
-    cloudi_timestamp:convert(NativeDowntime, native, nanosecond);
-nanoseconds_downtime([{T0, T1} | DurationList], NativeDowntime, T) ->
-    NativeDowntimeNew = if
-        T0 >= T ->
-            NativeDowntime + (T1 - T0);
-        T1 > T ->
-            NativeDowntime + (T1 - T);
-        true ->
-            NativeDowntime
-    end,
-    nanoseconds_downtime(DurationList, NativeDowntimeNew, T).
-
-% avoid erlang:float_to_list precision problems
-% and keep the formatting efficient
-availability_to_string(Availability)
-    when Availability < 0.25 ->
-    ?AVAILABILITY_ZERO;
-availability_to_string(Availability)
-    when Availability < 1 / 3 ->
-    "25 %";
-availability_to_string(Availability)
-    when Availability < 0.5 ->
-    "33.3 %";
-availability_to_string(Availability)
-    when Availability < 2 / 3 ->
-    "50 %";
-availability_to_string(Availability)
-    when Availability < 0.75 ->
-    "66.6 %";
-availability_to_string(Availability)
-    when Availability < 0.9 ->
-    "75 %";
-availability_to_string(Availability)
-    when Availability < 0.99 ->
-    if % 1 nine
-        Availability < 0.91 ->
-            "90 %";
-        Availability < 0.92 ->
-            "91 %";
-        Availability < 0.93 ->
-            "92 %";
-        Availability < 0.94 ->
-            "93 %";
-        Availability < 0.95 ->
-            "94 %";
-        Availability < 0.96 ->
-            "95 %";
-        Availability < 0.97 ->
-            "96 %";
-        Availability < 0.98 ->
-            "97 %";
-        true ->
-            "98 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.999 ->
-    if % 2 nines
-        Availability < 0.991 ->
-            "99.0 %";
-        Availability < 0.992 ->
-            "99.1 %";
-        Availability < 0.993 ->
-            "99.2 %";
-        Availability < 0.994 ->
-            "99.3 %";
-        Availability < 0.995 ->
-            "99.4 %";
-        Availability < 0.996 ->
-            "99.5 %";
-        Availability < 0.997 ->
-            "99.6 %";
-        Availability < 0.998 ->
-            "99.7 %";
-        true ->
-            "99.8 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.9999 ->
-    if % 3 nines
-        Availability < 0.9991 ->
-            "99.9 %";
-        Availability < 0.9992 ->
-            "99.91 %";
-        Availability < 0.9993 ->
-            "99.92 %";
-        Availability < 0.9994 ->
-            "99.93 %";
-        Availability < 0.9995 ->
-            "99.94 %";
-        Availability < 0.9996 ->
-            "99.95 %";
-        Availability < 0.9997 ->
-            "99.96 %";
-        Availability < 0.9998 ->
-            "99.97 %";
-        true ->
-            "99.98 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.99999 ->
-    if % 4 nines
-        Availability < 0.99991 ->
-            "99.99 %";
-        Availability < 0.99992 ->
-            "99.991 %";
-        Availability < 0.99993 ->
-            "99.992 %";
-        Availability < 0.99994 ->
-            "99.993 %";
-        Availability < 0.99995 ->
-            "99.994 %";
-        Availability < 0.99996 ->
-            "99.995 %";
-        Availability < 0.99997 ->
-            "99.996 %";
-        Availability < 0.99998 ->
-            "99.997 %";
-        true ->
-            "99.998 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.999999 ->
-    if % 5 nines
-        Availability < 0.999991 ->
-            "99.999 %";
-        Availability < 0.999992 ->
-            "99.9991 %";
-        Availability < 0.999993 ->
-            "99.9992 %";
-        Availability < 0.999994 ->
-            "99.9993 %";
-        Availability < 0.999995 ->
-            "99.9994 %";
-        Availability < 0.999996 ->
-            "99.9995 %";
-        Availability < 0.999997 ->
-            "99.9996 %";
-        Availability < 0.999998 ->
-            "99.9997 %";
-        true ->
-            "99.9998 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.9999999 ->
-    if % 6 nines
-        Availability < 0.9999991 ->
-            "99.9999 %";
-        Availability < 0.9999992 ->
-            "99.99991 %";
-        Availability < 0.9999993 ->
-            "99.99992 %";
-        Availability < 0.9999994 ->
-            "99.99993 %";
-        Availability < 0.9999995 ->
-            "99.99994 %";
-        Availability < 0.9999996 ->
-            "99.99995 %";
-        Availability < 0.9999997 ->
-            "99.99996 %";
-        Availability < 0.9999998 ->
-            "99.99997 %";
-        true ->
-            "99.99998 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.99999999 ->
-    if % 7 nines
-        Availability < 0.99999991 ->
-            "99.99999 %";
-        Availability < 0.99999992 ->
-            "99.999991 %";
-        Availability < 0.99999993 ->
-            "99.999992 %";
-        Availability < 0.99999994 ->
-            "99.999993 %";
-        Availability < 0.99999995 ->
-            "99.999994 %";
-        Availability < 0.99999996 ->
-            "99.999995 %";
-        Availability < 0.99999997 ->
-            "99.999996 %";
-        Availability < 0.99999998 ->
-            "99.999997 %";
-        true ->
-            "99.999998 %"
-    end;
-availability_to_string(Availability)
-    when Availability < 0.999999999 ->
-    if % 8 nines
-        Availability < 0.999999991 ->
-            "99.999999 %";
-        Availability < 0.999999992 ->
-            "99.9999991 %";
-        Availability < 0.999999993 ->
-            "99.9999992 %";
-        Availability < 0.999999994 ->
-            "99.9999993 %";
-        Availability < 0.999999995 ->
-            "99.9999994 %";
-        Availability < 0.999999996 ->
-            "99.9999995 %";
-        Availability < 0.999999997 ->
-            "99.9999996 %";
-        Availability < 0.999999998 ->
-            "99.9999997 %";
-        true ->
-            "99.9999998 %"
-    end;
-availability_to_string(Availability) ->
-    if % 9 nines
-        Availability < 1.0 ->
-            "99.9999999 %";
-        true ->
-            "100 %"
-    end.
 
 service_id(ID) ->
     cloudi_x_uuid:uuid_to_string(ID, list_nodash).

@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-11-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add limit (STATUS_DURATIONS_YEAR_MAX) to the number of durations
+      that may be stored during a year when tracking restart/update delays
+      for the CloudI Service API services_status function
+
 2018-10-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 21 compatibility to the cloudi_service_quorum CT test

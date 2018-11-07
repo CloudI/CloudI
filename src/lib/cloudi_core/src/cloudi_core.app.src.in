@@ -31,6 +31,7 @@
         cloudi_core_i_services_monitor,
         cloudi_core_i_socket,
         cloudi_core_i_spawn,
+        cloudi_core_i_status,
         cloudi_core_i_sup,
         cloudi_crdt,
         cloudi_future,
