@@ -500,7 +500,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
             Status5 = if
                 TimeStart =< TimeMonthStart,
                 NanoSecondsYearDisconnect > 0 ->
-                    [{interrupt_year_disconnected,
+                    [{downtime_year_disconnected,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsYearDisconnect,
                                             ApproximateYearDisconnect)} |
@@ -512,7 +512,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 TimeStart =< TimeWeekStart,
                 NanoSecondsMonthDisconnect > 0 orelse
                 NanoSecondsYearDisconnect > 0 ->
-                    [{interrupt_month_disconnected,
+                    [{downtime_month_disconnected,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsMonthDisconnect,
                                             ApproximateMonthDisconnect)} |
@@ -525,7 +525,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsWeekDisconnect > 0 orelse
                 NanoSecondsMonthDisconnect > 0 orelse
                 NanoSecondsYearDisconnect > 0 ->
-                    [{interrupt_week_disconnected,
+                    [{downtime_week_disconnected,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsWeekDisconnect,
                                             ApproximateWeekDisconnect)} |
@@ -537,7 +537,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 NanoSecondsDayDisconnect > 0 orelse
                 NanoSecondsWeekDisconnect > 0 orelse
                 NanoSecondsMonthDisconnect > 0 ->
-                    [{interrupt_day_disconnected,
+                    [{downtime_day_disconnected,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsDayDisconnect,
                                             ApproximateDayDisconnect)} |

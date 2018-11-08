@@ -797,10 +797,10 @@
                   {tracked, nonempty_string()} |
                   {tracked_disconnects, nonempty_string()} |
                   {disconnected, boolean()} |
-                  {interrupt_day_disconnected, nonempty_string()} |
-                  {interrupt_week_disconnected, nonempty_string()} |
-                  {interrupt_month_disconnected, nonempty_string()} |
-                  {interrupt_year_disconnected, nonempty_string()} |
+                  {downtime_day_disconnected, nonempty_string()} |
+                  {downtime_week_disconnected, nonempty_string()} |
+                  {downtime_month_disconnected, nonempty_string()} |
+                  {downtime_year_disconnected, nonempty_string()} |
                   {availability_day, nonempty_string()} |
                   {availability_week, nonempty_string()} |
                   {availability_month, nonempty_string()} |
