@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-11-08 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI Service API nodes_status function to provide
+      uptime and availability information that is similar to services_status
+
 2018-11-07 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add limit (STATUS_DURATIONS_YEAR_MAX) to the number of durations

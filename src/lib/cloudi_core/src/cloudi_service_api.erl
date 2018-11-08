@@ -55,6 +55,7 @@
          nodes_remove/2,
          nodes_alive/1,
          nodes_dead/1,
+         nodes_status/2,
          nodes/1,
          logging_set/2,
          logging_file_set/2,
@@ -791,7 +792,19 @@
                                          {groups, list(string())} |
                                          {tags, list({string(), string()} |
                                                      string())})})}).
--export_type([nodes_proplist/0]).
+-type node_status() ::
+    nonempty_list({uptime, nonempty_string()} |
+                  {uptime_disconnects, nonempty_string()} |
+                  {downtime_day, nonempty_string()} |
+                  {downtime_week, nonempty_string()} |
+                  {downtime_month, nonempty_string()} |
+                  {downtime_year, nonempty_string()} |
+                  {availability_day, nonempty_string()} |
+                  {availability_week, nonempty_string()} |
+                  {availability_month, nonempty_string()} |
+                  {availability_year, nonempty_string()}).
+-export_type([nodes_proplist/0,
+              node_status/0]).
 
 -type aspect_log_f() ::
     fun((Level :: loglevel_on(),
@@ -1355,6 +1368,27 @@ nodes_dead(Timeout)
            (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
           (Timeout =:= infinity)) ->
     cloudi_core_i_nodes:dead(Timeout).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===List the current status of specific nodes.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec nodes_status(L :: list(node()),
+                   Timeout :: api_timeout_milliseconds()) ->
+    {ok, nonempty_list({node(), node_status()})} |
+    {error,
+     timeout | noproc |
+     {node_not_found, any()}}.
+
+nodes_status(L, Timeout)
+    when is_list(L),
+         ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    cloudi_core_i_nodes:status(L, Timeout).
 
 %%-------------------------------------------------------------------------
 %% @doc

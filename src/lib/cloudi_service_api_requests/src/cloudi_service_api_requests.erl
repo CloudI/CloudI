@@ -302,7 +302,8 @@ convert_json_to_term(Request, Method)
             invalid
     end;
 convert_json_to_term(Request, Method)
-    when Method =:= acl_remove ->
+    when Method =:= acl_remove;
+         Method =:= nodes_status ->
     case json_decode(Request) of
         List when is_list(List) ->
             convert_json_to_term_atoms_existing(List);
@@ -626,6 +627,12 @@ convert_term_to_json({ok, SuccessL}, Method, Space)
     json_encode([{<<"success">>, true},
                  {erlang:atom_to_binary(Method, utf8),
                   convert_term_to_json_atoms(SuccessL)}], Space);
+convert_term_to_json({ok, Statuses}, nodes_status = Method, Space) ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8),
+                  [[{<<"node">>, erlang:atom_to_binary(Node, utf8)} |
+                    convert_term_to_json_options(Status)]
+                   || {Node, Status} <- Statuses]}], Space);
 convert_term_to_json({ok, Options}, Method, Space)
     when Method =:= acl;
          Method =:= nodes_get;

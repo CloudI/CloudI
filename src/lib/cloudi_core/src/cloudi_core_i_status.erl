@@ -37,7 +37,8 @@
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([durations_erase/2,
+-export([durations_copy/2,
+         durations_erase/2,
          durations_new/0,
          durations_state/2,
          durations_store/3,
@@ -65,6 +66,13 @@
 
 -include("cloudi_core_i_constants.hrl").
 
+-spec durations_copy(KeyList :: list(),
+                     DurationsLookup :: durations(any())) ->
+    durations(any()).
+
+durations_copy(KeyList, DurationsLookup) ->
+    maps:with(KeyList, DurationsLookup).
+
 -spec durations_erase(Key :: any(),
                       DurationsLookup :: durations(any())) ->
     durations(any()).
@@ -85,12 +93,12 @@ durations_new() ->
 durations_state(Key, DurationsLookup) ->
     maps:get(Key, DurationsLookup, {0, []}).
 
--spec durations_store(KeyList :: list(),
+-spec durations_store(KeyList :: nonempty_list(),
                       Duration :: duration(),
                       DurationsLookup :: durations(any())) ->
     durations(any()).
 
-durations_store(KeyList, {_, T1} = Duration, DurationsLookup) ->
+durations_store([_ | _] = KeyList, {_, T1} = Duration, DurationsLookup) ->
     duration_store(KeyList, T1 - ?NATIVE_TIME_IN_YEAR,
                    Duration, DurationsLookup).
 
