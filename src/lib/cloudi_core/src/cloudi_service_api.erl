@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -794,11 +794,13 @@
                                                      string())})})}).
 -type node_status() ::
     nonempty_list({uptime, nonempty_string()} |
-                  {uptime_disconnects, nonempty_string()} |
-                  {downtime_day, nonempty_string()} |
-                  {downtime_week, nonempty_string()} |
-                  {downtime_month, nonempty_string()} |
-                  {downtime_year, nonempty_string()} |
+                  {tracked, nonempty_string()} |
+                  {tracked_disconnects, nonempty_string()} |
+                  {disconnected, boolean()} |
+                  {interrupt_day_disconnected, nonempty_string()} |
+                  {interrupt_week_disconnected, nonempty_string()} |
+                  {interrupt_month_disconnected, nonempty_string()} |
+                  {interrupt_year_disconnected, nonempty_string()} |
                   {availability_day, nonempty_string()} |
                   {availability_week, nonempty_string()} |
                   {availability_month, nonempty_string()} |
