@@ -69,7 +69,7 @@
         nodes_dead :: list(node()),
         nodes :: list(node()),
         nodes_up :: nodes_up(),
-        nodes_up_durations = cloudi_core_i_status:durations_new()
+        nodes_down_durations = cloudi_core_i_status:durations_new()
             :: cloudi_core_i_status:durations(node()),
         logging_redirect :: node() | undefined,
         reconnect_interval :: pos_integer(),
@@ -167,7 +167,7 @@ handle_call({reconfigure,
                                            discovery = Discovery}}}, _,
             #state{nodes_alive = NodesAlive,
                    nodes_up = NodesUp,
-                   nodes_up_durations = NodesUpDurations,
+                   nodes_down_durations = NodesDownDurations,
                    listen = ListenOld,
                    connect = ConnectOld,
                    discovery = DiscoveryOld} = State) ->
@@ -192,8 +192,8 @@ handle_call({reconfigure,
         not lists:member(N, NodesDeadNew)
     end, NodesNew),
     NodesUpNew = maps:with([node() | NodesNew], NodesUp),
-    NodesUpDurationsNew = cloudi_core_i_status:
-                          durations_copy(NodesNew, NodesUpDurations),
+    NodesDownDurationsNew = cloudi_core_i_status:
+                            durations_copy(NodesNew, NodesDownDurations),
     ReconnectInterval = ReconnectDelay * 1000,
     logging_redirect_set(NodeLogger),
     applications_set(Listen, Connect, TimestampType),
@@ -215,7 +215,7 @@ handle_call({reconfigure,
                             nodes_dead = NodesDeadNew,
                             nodes = NodesNew,
                             nodes_up = NodesUpNew,
-                            nodes_up_durations = NodesUpDurationsNew,
+                            nodes_down_durations = NodesDownDurationsNew,
                             reconnect_interval = ReconnectInterval,
                             connect = Connect,
                             discovery = Discovery}};
@@ -235,7 +235,7 @@ handle_call(nodes, _,
 handle_call({status, NodesSelection}, _,
             #state{nodes = Nodes,
                    nodes_up = NodesUp,
-                   nodes_up_durations = NodesUpDurations} = State) ->
+                   nodes_down_durations = NodesDownDurations} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
     NodesSelectionNew = if
         NodesSelection == [] ->
@@ -244,7 +244,7 @@ handle_call({status, NodesSelection}, _,
             NodesSelection
     end,
     Reply = nodes_status(NodesSelectionNew, TimeNow,
-                         NodesUpDurations, NodesUp),
+                         NodesDownDurations, NodesUp),
     {reply, Reply, State};
 
 handle_call(Request, _, State) ->
@@ -370,27 +370,27 @@ track_nodeup(Node,
                     nodes_dead = NodesDead,
                     nodes = Nodes,
                     nodes_up = NodesUp,
-                    nodes_up_durations = NodesUpDurations} = State) ->
+                    nodes_down_durations = NodesDownDurations} = State) ->
     TimeUp = cloudi_timestamp:native_monotonic(),
     NodeL = [Node],
     {NodesUpNew,
-     NodesUpDurationsNew} = case maps:find(Node, NodesUp) of
+     NodesDownDurationsNew} = case maps:find(Node, NodesUp) of
         {ok, {_, undefined, _}} ->
-            {NodesUp, NodesUpDurations}; % duplicate nodeup
+            {NodesUp, NodesDownDurations}; % duplicate nodeup
         {ok, {TimeStart, TimeDisconnect, Disconnects}} ->
             Duration = {TimeDisconnect, TimeUp},
             {maps:put(Node, {TimeStart, undefined, Disconnects}, NodesUp),
              cloudi_core_i_status:
-             durations_store(NodeL, Duration, NodesUpDurations)};
+             durations_store(NodeL, Duration, NodesDownDurations)};
         error ->
             {maps:put(Node, {TimeUp, undefined, 0}, NodesUp),
-             NodesUpDurations}
+             NodesDownDurations}
     end,
     State#state{nodes_alive = lists:umerge(NodesAlive, NodeL),
                 nodes_dead = lists:delete(Node, NodesDead),
                 nodes = lists:umerge(Nodes, NodeL),
                 nodes_up = NodesUpNew,
-                nodes_up_durations = NodesUpDurationsNew}.
+                nodes_down_durations = NodesDownDurationsNew}.
 
 track_nodedown(Node,
                #state{nodes_alive = NodesAlive,
@@ -408,55 +408,61 @@ track_nodedown(Node,
                 nodes_dead = lists:umerge(NodesDead, [Node]),
                 nodes_up = NodesUpNew}.
 
-nodes_status(NodesSelection, TimeNow, NodesUpDurations, NodesUp) ->
+nodes_status(NodesSelection, TimeNow, NodesDownDurations, NodesUp) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
     nodes_status(NodesSelection, [], TimeNow, TimeDayStart, TimeWeekStart,
-                 TimeMonthStart, TimeYearStart, NodesUpDurations, NodesUp).
+                 TimeMonthStart, TimeYearStart, NodesDownDurations, NodesUp).
 
 nodes_status([], StatusList, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 nodes_status([Node | NodesSelection], StatusList, TimeNow,
              TimeDayStart, TimeWeekStart,
              TimeMonthStart, TimeYearStart,
-             NodesUpDurations, NodesUp) ->
+             NodesDownDurations, NodesUp) ->
     case maps:find(Node, NodesUp) of
         {ok, {TimeStart, TimeDisconnect, Disconnects}} ->
-            NodesUpDurationsNew = if
+            {Disconnected,
+             NodesDownDurationsNew} = if
                 TimeDisconnect =:= undefined ->
-                    NodesUpDurations;
+                    {false, NodesDownDurations};
                 is_integer(TimeDisconnect) ->
                     % track ongoing downtime with a temporary duration
-                    cloudi_core_i_status:
-                    durations_store([Node], {TimeDisconnect, TimeNow},
-                                    NodesUpDurations)
+                    {true,
+                     cloudi_core_i_status:
+                     durations_store([Node], {TimeDisconnect, TimeNow},
+                                     NodesDownDurations)}
             end,
-            DurationsState = cloudi_core_i_status:
-                             durations_state(Node, NodesUpDurationsNew),
+            DurationsStateDown = cloudi_core_i_status:
+                                 durations_state(Node, NodesDownDurationsNew),
             NanoSeconds = cloudi_timestamp:
                           convert(TimeNow - TimeStart, native, nanosecond),
             Uptime = cloudi_timestamp:
                      nanoseconds_to_string(NanoSeconds),
-            {ApproximateYear,
-             NanoSecondsYear} = cloudi_core_i_status:
-                                durations_sum(DurationsState, TimeYearStart),
-            {ApproximateMonth,
-             NanoSecondsMonth} = cloudi_core_i_status:
-                                 durations_sum(DurationsState, TimeMonthStart),
-            {ApproximateWeek,
-             NanoSecondsWeek} = cloudi_core_i_status:
-                                durations_sum(DurationsState, TimeWeekStart),
-            {ApproximateDay,
-             NanoSecondsDay} = cloudi_core_i_status:
-                               durations_sum(DurationsState, TimeDayStart),
+            {ApproximateYearDisconnect,
+             NanoSecondsYearDisconnect} = cloudi_core_i_status:
+                                          durations_sum(DurationsStateDown,
+                                                        TimeYearStart),
+            {ApproximateMonthDisconnect,
+             NanoSecondsMonthDisconnect} = cloudi_core_i_status:
+                                           durations_sum(DurationsStateDown,
+                                                         TimeMonthStart),
+            {ApproximateWeekDisconnect,
+             NanoSecondsWeekDisconnect} = cloudi_core_i_status:
+                                          durations_sum(DurationsStateDown,
+                                                        TimeWeekStart),
+            {ApproximateDayDisconnect,
+             NanoSecondsDayDisconnect} = cloudi_core_i_status:
+                                         durations_sum(DurationsStateDown,
+                                                       TimeDayStart),
             Status0 = [],
             Status1 = case cloudi_core_i_status:
                            nanoseconds_to_availability_year(
                                NanoSeconds,
-                               ApproximateYear,
-                               NanoSecondsYear) of
+                               ApproximateYearDisconnect,
+                               NanoSecondsYearDisconnect) of
                 ?AVAILABILITY_ZERO ->
                     Status0;
                 AvailabilityYear ->
@@ -466,8 +472,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
             Status2 = case cloudi_core_i_status:
                            nanoseconds_to_availability_month(
                                NanoSeconds,
-                               ApproximateMonth,
-                               NanoSecondsMonth) of
+                               ApproximateMonthDisconnect,
+                               NanoSecondsMonthDisconnect) of
                 ?AVAILABILITY_ZERO ->
                     Status1;
                 AvailabilityMonth ->
@@ -477,8 +483,8 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
             Status3 = case cloudi_core_i_status:
                            nanoseconds_to_availability_week(
                                NanoSeconds,
-                               ApproximateWeek,
-                               NanoSecondsWeek) of
+                               ApproximateWeekDisconnect,
+                               NanoSecondsWeekDisconnect) of
                 ?AVAILABILITY_ZERO ->
                     Status2;
                 AvailabilityWeek ->
@@ -489,65 +495,70 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                         cloudi_core_i_status:
                         nanoseconds_to_availability_day(
                             NanoSeconds,
-                            ApproximateDay,
-                            NanoSecondsDay)} | Status3],
+                            ApproximateDayDisconnect,
+                            NanoSecondsDayDisconnect)} | Status3],
             Status5 = if
                 TimeStart =< TimeMonthStart,
-                NanoSecondsYear > 0 ->
-                    [{downtime_year,
+                NanoSecondsYearDisconnect > 0 ->
+                    [{interrupt_year_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsYear,
-                                            ApproximateYear)} | Status4];
+                      nanoseconds_to_string(NanoSecondsYearDisconnect,
+                                            ApproximateYearDisconnect)} |
+                     Status4];
                 true ->
                     Status4
             end,
             Status6 = if
                 TimeStart =< TimeWeekStart,
-                NanoSecondsMonth > 0 orelse
-                NanoSecondsYear > 0 ->
-                    [{downtime_month,
+                NanoSecondsMonthDisconnect > 0 orelse
+                NanoSecondsYearDisconnect > 0 ->
+                    [{interrupt_month_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsMonth,
-                                            ApproximateMonth)} | Status5];
+                      nanoseconds_to_string(NanoSecondsMonthDisconnect,
+                                            ApproximateMonthDisconnect)} |
+                     Status5];
                 true ->
                     Status5
             end,
             Status7 = if
                 TimeStart =< TimeDayStart,
-                NanoSecondsWeek > 0 orelse
-                NanoSecondsMonth > 0 orelse
-                NanoSecondsYear > 0 ->
-                    [{downtime_week,
+                NanoSecondsWeekDisconnect > 0 orelse
+                NanoSecondsMonthDisconnect > 0 orelse
+                NanoSecondsYearDisconnect > 0 ->
+                    [{interrupt_week_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsWeek,
-                                            ApproximateWeek)} | Status6];
+                      nanoseconds_to_string(NanoSecondsWeekDisconnect,
+                                            ApproximateWeekDisconnect)} |
+                     Status6];
                 true ->
                     Status6
             end,
             Status8 = if
-                NanoSecondsDay > 0 orelse
-                NanoSecondsWeek > 0 orelse
-                NanoSecondsMonth > 0 ->
-                    [{downtime_day,
+                NanoSecondsDayDisconnect > 0 orelse
+                NanoSecondsWeekDisconnect > 0 orelse
+                NanoSecondsMonthDisconnect > 0 ->
+                    [{interrupt_day_disconnected,
                       cloudi_core_i_status:
-                      nanoseconds_to_string(NanoSecondsDay,
-                                            ApproximateDay)} | Status7];
+                      nanoseconds_to_string(NanoSecondsDayDisconnect,
+                                            ApproximateDayDisconnect)} |
+                     Status7];
                 true ->
                     Status7
             end,
-            Status9 = if
+            StatusN = if
                 Node /= node() ->
-                    [{uptime_disconnects,
-                      erlang:integer_to_list(Disconnects)} | Status8];
+                    [{tracked, Uptime},
+                     {tracked_disconnects,
+                      erlang:integer_to_list(Disconnects)},
+                     {disconnected, Disconnected} | Status8];
                 true ->
-                    Status8
+                    [{uptime, Uptime} | Status8]
             end,
-            StatusN = [{uptime, Uptime} | Status9],
             nodes_status(NodesSelection,
                          [{Node, StatusN} | StatusList], TimeNow,
                          TimeDayStart, TimeWeekStart,
                          TimeMonthStart, TimeYearStart,
-                         NodesUpDurations, NodesUp);
+                         NodesDownDurations, NodesUp);
         error ->
             {error, {node_not_found, Node}}
     end.

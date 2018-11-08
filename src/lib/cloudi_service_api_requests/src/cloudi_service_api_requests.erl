@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -772,7 +772,12 @@ convert_term_to_json_option(Value)
     Value;
 convert_term_to_json_option(Value)
     when is_atom(Value) ->
-    erlang:atom_to_binary(Value, utf8);
+    if
+        is_boolean(Value) ->
+            Value;
+        true ->
+            erlang:atom_to_binary(Value, utf8)
+    end;
 convert_term_to_json_option(Value)
     when is_tuple(Value); is_map(Value) ->
     cloudi_string:term_to_binary_compact(Value).
