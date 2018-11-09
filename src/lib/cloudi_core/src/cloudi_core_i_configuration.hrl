@@ -675,7 +675,8 @@
         %
         discovery = undefined
             :: #config_nodes_discovery{} | undefined,
-        % cost as currency per kilowatt-hours (kWh)
+        % cost as currency per hour
+        % (average kilowatts * currency per kilowatt-hour (kWh))
         cost = []
             :: list({node() | default, float()}),
         % cost currency decimal places
