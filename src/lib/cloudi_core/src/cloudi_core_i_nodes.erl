@@ -443,7 +443,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
         {ok, {TimeStart, TimeDisconnect, Disconnects}} ->
             LocalNode = Node =:= node(),
             {Disconnected,
-             NodesDownDurationsNew} = if
+             NodesDownDurationsTmp} = if
                 TimeDisconnect =:= undefined ->
                     {false, NodesDownDurations};
                 is_integer(TimeDisconnect) ->
@@ -454,7 +454,7 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                                      NodesDownDurations)}
             end,
             DurationsStateDown = cloudi_core_i_status:
-                                 durations_state(Node, NodesDownDurationsNew),
+                                 durations_state(Node, NodesDownDurationsTmp),
             NanoSeconds = cloudi_timestamp:
                           convert(TimeNow - TimeStart, native, nanosecond),
             Uptime = cloudi_timestamp:
@@ -571,22 +571,9 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                       erlang:integer_to_list(Disconnects)},
                      {disconnected, Disconnected} | Status8]
             end,
-            Status10 = case maps:get(Node, Cost, CostDefault) of
-                undefined ->
-                    Status9;
-                CostValue ->
-                    CostName = if
-                        LocalNode =:= true ->
-                            uptime_cost;
-                        LocalNode =:= false ->
-                            tracked_cost
-                    end,
-                    [{CostName,
-                      erlang:float_to_list((NanoSeconds /
-                                            ?NANOSECONDS_IN_HOUR) * CostValue,
-                                           [{decimals, CostPrecision}])} |
-                     Status9]
-            end,
+            Status10 = node_status_cost(maps:get(Node, Cost, CostDefault),
+                                        NanoSeconds, CostPrecision,
+                                        LocalNode, Status9),
             StatusN = if
                 LocalNode =:= true ->
                     [{uptime, Uptime} | Status10];
@@ -602,6 +589,81 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
         error ->
             {error, {node_not_found, Node}}
     end.
+
+node_status_cost(undefined, _, _, _, Status0) ->
+    Status0;
+node_status_cost(CostValue, NanoSeconds, CostPrecision, LocalNode, Status0) ->
+    Hours = NanoSeconds / ?NANOSECONDS_IN_HOUR,
+    Days = Hours / ?HOURS_IN_DAY,
+    Weeks = Days / ?DAYS_IN_WEEK,
+    Months = Days / ?DAYS_IN_MONTH,
+    Years = Days / ?DAYS_IN_YEAR,
+    CostCurrency = Hours * CostValue,
+    Status1 = if
+        Years >= 1.0 ->
+            CostNameYear = if
+                LocalNode =:= true ->
+                    uptime_cost_year;
+                LocalNode =:= false ->
+                    tracked_cost_year
+            end,
+            [{CostNameYear,
+              erlang:float_to_list(CostCurrency / Years,
+                                   [{decimals, CostPrecision}])} | Status0];
+        true ->
+            Status0
+    end,
+    Status2 = if
+        Months >= 1.0 ->
+            CostNameMonth = if
+                LocalNode =:= true ->
+                    uptime_cost_month;
+                LocalNode =:= false ->
+                    tracked_cost_month
+            end,
+            [{CostNameMonth,
+              erlang:float_to_list(CostCurrency / Months,
+                                   [{decimals, CostPrecision}])} | Status1];
+        true ->
+            Status1
+    end,
+    Status3 = if
+        Weeks >= 1.0 ->
+            CostNameWeek = if
+                LocalNode =:= true ->
+                    uptime_cost_week;
+                LocalNode =:= false ->
+                    tracked_cost_week
+            end,
+            [{CostNameWeek,
+              erlang:float_to_list(CostCurrency / Weeks,
+                                   [{decimals, CostPrecision}])} | Status2];
+        true ->
+            Status2
+    end,
+    StatusN = if
+        Days >= 1.0 ->
+            CostNameDay = if
+                LocalNode =:= true ->
+                    uptime_cost_day;
+                LocalNode =:= false ->
+                    tracked_cost_day
+            end,
+            [{CostNameDay,
+              erlang:float_to_list(CostCurrency / Days,
+                                   [{decimals, CostPrecision}])} | Status3];
+        true ->
+            Status3
+    end,
+    CostNameTotal = if
+        LocalNode =:= true ->
+            uptime_cost_total;
+        LocalNode =:= false ->
+            tracked_cost_total
+    end,
+    [{CostNameTotal,
+      erlang:float_to_list(CostCurrency,
+                           [{decimals, CostPrecision}])} | StatusN].
 
 discovery_start_args(ec2_discover, StartA) ->
     [EC2AccessKeyId, EC2SecretAccessKey,

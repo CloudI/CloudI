@@ -796,9 +796,17 @@
                   {cost_precision, non_neg_integer()}).
 -type node_status() ::
     nonempty_list({uptime, nonempty_string()} |
-                  {uptime_cost, nonempty_string()} |
+                  {uptime_cost_total, nonempty_string()} |
+                  {uptime_cost_day, nonempty_string()} |
+                  {uptime_cost_week, nonempty_string()} |
+                  {uptime_cost_month, nonempty_string()} |
+                  {uptime_cost_year, nonempty_string()} |
                   {tracked, nonempty_string()} |
-                  {tracked_cost, nonempty_string()} |
+                  {tracked_cost_total, nonempty_string()} |
+                  {tracked_cost_day, nonempty_string()} |
+                  {tracked_cost_week, nonempty_string()} |
+                  {tracked_cost_month, nonempty_string()} |
+                  {tracked_cost_year, nonempty_string()} |
                   {tracked_disconnects, nonempty_string()} |
                   {disconnected, boolean()} |
                   {downtime_day_disconnected, nonempty_string()} |
