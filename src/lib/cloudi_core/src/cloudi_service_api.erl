@@ -791,10 +791,14 @@
                                          {ec2_host, string()} |
                                          {groups, list(string())} |
                                          {tags, list({string(), string()} |
-                                                     string())})})}).
+                                                     string())})})} |
+                  {cost, list({node() | default, float()})} |
+                  {cost_precision, non_neg_integer()}).
 -type node_status() ::
     nonempty_list({uptime, nonempty_string()} |
+                  {uptime_cost, nonempty_string()} |
                   {tracked, nonempty_string()} |
+                  {tracked_cost, nonempty_string()} |
                   {tracked_disconnects, nonempty_string()} |
                   {disconnected, boolean()} |
                   {downtime_day_disconnected, nonempty_string()} |

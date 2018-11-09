@@ -73,10 +73,12 @@
             :: cloudi_core_i_status:durations(node()),
         logging_redirect :: node() | undefined,
         reconnect_interval :: pos_integer(),
-        reconnect_timer,
+        reconnect_timer :: reference(),
         listen :: visible | all,
         connect :: visible | hidden,
-        discovery :: #config_nodes_discovery{} | undefined
+        discovery :: #config_nodes_discovery{} | undefined,
+        cost :: #{node() | default := float()},
+        cost_precision :: 0..253
     }).
 
 -define(CATCH_EXIT(F),
@@ -121,7 +123,9 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     reconnect_delay = ReconnectDelay,
                                     listen = Listen,
                                     connect = Connect,
-                                    discovery = Discovery}}]) ->
+                                    discovery = Discovery,
+                                    cost = Cost,
+                                    cost_precision = CostPrecision}}]) ->
     monitor_nodes(true, Listen),
     NodeLoggerNew = if
         NodeLogger == node(); NodeLogger =:= undefined ->
@@ -155,7 +159,9 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 reconnect_timer = ReconnectTimer,
                 listen = Listen,
                 connect = Connect,
-                discovery = Discovery}}.
+                discovery = Discovery,
+                cost = maps:from_list(Cost),
+                cost_precision = CostPrecision}}.
 
 handle_call({reconfigure,
              #config{logging = #config_logging{redirect = NodeLogger},
@@ -164,7 +170,9 @@ handle_call({reconfigure,
                                            listen = Listen,
                                            connect = Connect,
                                            timestamp_type = TimestampType,
-                                           discovery = Discovery}}}, _,
+                                           discovery = Discovery,
+                                           cost = Cost,
+                                           cost_precision = CostPrecision}}}, _,
             #state{nodes_alive = NodesAlive,
                    nodes_up = NodesUp,
                    nodes_down_durations = NodesDownDurations,
@@ -218,7 +226,9 @@ handle_call({reconfigure,
                             nodes_down_durations = NodesDownDurationsNew,
                             reconnect_interval = ReconnectInterval,
                             connect = Connect,
-                            discovery = Discovery}};
+                            discovery = Discovery,
+                            cost = maps:from_list(Cost),
+                            cost_precision = CostPrecision}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -235,7 +245,9 @@ handle_call(nodes, _,
 handle_call({status, NodesSelection}, _,
             #state{nodes = Nodes,
                    nodes_up = NodesUp,
-                   nodes_down_durations = NodesDownDurations} = State) ->
+                   nodes_down_durations = NodesDownDurations,
+                   cost = Cost,
+                   cost_precision = CostPrecision} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
     NodesSelectionNew = if
         NodesSelection == [] ->
@@ -244,7 +256,8 @@ handle_call({status, NodesSelection}, _,
             NodesSelection
     end,
     Reply = nodes_status(NodesSelectionNew, TimeNow,
-                         NodesDownDurations, NodesUp),
+                         NodesDownDurations, NodesUp,
+                         Cost, CostPrecision),
     {reply, Reply, State};
 
 handle_call(Request, _, State) ->
@@ -408,22 +421,27 @@ track_nodedown(Node,
                 nodes_dead = lists:umerge(NodesDead, [Node]),
                 nodes_up = NodesUpNew}.
 
-nodes_status(NodesSelection, TimeNow, NodesDownDurations, NodesUp) ->
+nodes_status(NodesSelection, TimeNow, NodesDownDurations, NodesUp,
+             Cost, CostPrecision) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
     TimeYearStart = TimeNow - ?NATIVE_TIME_IN_YEAR,
+    CostDefault = maps:get(default, Cost, undefined),
     nodes_status(NodesSelection, [], TimeNow, TimeDayStart, TimeWeekStart,
-                 TimeMonthStart, TimeYearStart, NodesDownDurations, NodesUp).
+                 TimeMonthStart, TimeYearStart, NodesDownDurations, NodesUp,
+                 Cost, CostDefault, CostPrecision).
 
-nodes_status([], StatusList, _, _, _, _, _, _, _) ->
+nodes_status([], StatusList, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 nodes_status([Node | NodesSelection], StatusList, TimeNow,
              TimeDayStart, TimeWeekStart,
              TimeMonthStart, TimeYearStart,
-             NodesDownDurations, NodesUp) ->
+             NodesDownDurations, NodesUp,
+             Cost, CostDefault, CostPrecision) ->
     case maps:find(Node, NodesUp) of
         {ok, {TimeStart, TimeDisconnect, Disconnects}} ->
+            LocalNode = Node =:= node(),
             {Disconnected,
              NodesDownDurationsNew} = if
                 TimeDisconnect =:= undefined ->
@@ -545,20 +563,42 @@ nodes_status([Node | NodesSelection], StatusList, TimeNow,
                 true ->
                     Status7
             end,
-            StatusN = if
-                Node /= node() ->
-                    [{tracked, Uptime},
-                     {tracked_disconnects,
+            Status9 = if
+                LocalNode =:= true ->
+                    Status8;
+                LocalNode =:= false ->
+                    [{tracked_disconnects,
                       erlang:integer_to_list(Disconnects)},
-                     {disconnected, Disconnected} | Status8];
-                true ->
-                    [{uptime, Uptime} | Status8]
+                     {disconnected, Disconnected} | Status8]
+            end,
+            Status10 = case maps:get(Node, Cost, CostDefault) of
+                undefined ->
+                    Status9;
+                CostValue ->
+                    CostName = if
+                        LocalNode =:= true ->
+                            uptime_cost;
+                        LocalNode =:= false ->
+                            tracked_cost
+                    end,
+                    [{CostName,
+                      erlang:float_to_list((NanoSeconds /
+                                            ?NANOSECONDS_IN_HOUR) * CostValue,
+                                           [{decimals, CostPrecision}])} |
+                     Status9]
+            end,
+            StatusN = if
+                LocalNode =:= true ->
+                    [{uptime, Uptime} | Status10];
+                LocalNode =:= false ->
+                    [{tracked, Uptime} | Status10]
             end,
             nodes_status(NodesSelection,
                          [{Node, StatusN} | StatusList], TimeNow,
                          TimeDayStart, TimeWeekStart,
                          TimeMonthStart, TimeYearStart,
-                         NodesDownDurations, NodesUp);
+                         NodesDownDurations, NodesUp,
+                         Cost, CostDefault, CostPrecision);
         error ->
             {error, {node_not_found, Node}}
     end.

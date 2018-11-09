@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-11-09 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cost and cost_precision as CloudI Service API nodes_set
+      configuration parameters for use in the nodes_status output
+      (in uptime_cost and tracked_cost, when cost is set)
+
 2018-11-08 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add CloudI Service API nodes_status function to provide

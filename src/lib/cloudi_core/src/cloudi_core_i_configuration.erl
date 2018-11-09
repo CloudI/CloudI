@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -232,7 +232,10 @@
      node_discovery_ec2_host_invalid |
      node_discovery_ec2_tags_selection_null |
      node_discovery_ec2_groups_invalid |
-     node_discovery_ec2_tags_invalid, any()}.
+     node_discovery_ec2_tags_invalid |
+     node_cost_invalid |
+     node_cost_precision_invalid |
+     node_cost_value, any()}.
 -type error_reason_logging_set_configuration() ::
     {node_invalid |
      logging_invalid |
@@ -1185,7 +1188,9 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                                         listen = Listen,
                                         connect = Connect,
                                         timestamp_type = TimestampType,
-                                        discovery = Discovery}}) ->
+                                        discovery = Discovery,
+                                        cost = Cost,
+                                        cost_precision = CostPrecision}}) ->
     Defaults = #config_nodes{},
     NodesList0 = [],
     NodesList1 = if
@@ -1252,7 +1257,19 @@ nodes_get(#config{nodes = #config_nodes{nodes = Nodes,
                  {groups, EC2Groups},
                  {tags, EC2Tags}]}]} | NodesList6]
     end,
-    lists:reverse(NodesList7).
+    NodesList8 = if
+        Cost == Defaults#config_nodes.cost ->
+            NodesList7;
+        true ->
+            [{cost, Cost} | NodesList7]
+    end,
+    NodesList9 = if
+        CostPrecision == Defaults#config_nodes.cost_precision ->
+            NodesList8;
+        true ->
+            [{cost_precision, CostPrecision} | NodesList8]
+    end,
+    lists:reverse(NodesList9).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -4696,6 +4713,33 @@ nodes_discovery_options(Value, NodesConfig) ->
             {error, {node_discovery_invalid, Extra}}
     end.
 
+nodes_cost([]) ->
+    ok;
+nodes_cost([{Node, Value} | Cost]) ->
+    if
+        not is_atom(Node) ->
+            {error, {node_cost_invalid, Node}};
+        not (is_float(Value) andalso (Value > 0.0)) ->
+            {error, {node_cost_value, Value}};
+        Node =:= default ->
+            nodes_cost(Cost);
+        true ->
+            case validate_node(Node) of
+                ok ->
+                    nodes_cost(Cost);
+                {error, {node_invalid, Node}} ->
+                    {error, {node_cost_invalid, Node}}
+            end
+    end.
+
+nodes_cost(Cost, NodesConfig) ->
+    case nodes_cost(Cost) of
+        ok ->
+            {ok, NodesConfig#config_nodes{cost = Cost}};
+        {error, _} = Error ->
+            Error
+    end.
+
 nodes_options(Nodes0, Value) ->
     NodesConfig = #config_nodes{},
     Defaults = [
@@ -4712,75 +4756,85 @@ nodes_options(Nodes0, Value) ->
         {timestamp_type,
          NodesConfig#config_nodes.timestamp_type},
         {discovery,
-         NodesConfig#config_nodes.discovery}],
+         NodesConfig#config_nodes.discovery},
+        {cost,
+         NodesConfig#config_nodes.cost},
+        {cost_precision,
+         NodesConfig#config_nodes.cost_precision}],
     ConnectTimeSeconds = (cloudi_x_nodefinder:timeout_min() + 500) div 1000,
     case cloudi_proplists:take_values(Defaults, Value) of
-        [Nodes1, _, _, _, _, _, _]
+        [Nodes1, _, _, _, _, _, _, _, _]
             when not is_list(Nodes1) ->
             {error, {node_invalid,
                      Nodes1}};
-        [_, ReconnectStart, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _]
             when not (is_integer(ReconnectStart) andalso
                       (ReconnectStart > 0) andalso
                       (ReconnectStart =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_start_invalid,
                      ReconnectStart}};
-        [_, ReconnectStart, _, _, _, _, _]
+        [_, ReconnectStart, _, _, _, _, _, _, _]
             when not (ReconnectStart >= ConnectTimeSeconds) ->
             {error, {node_reconnect_start_min,
                      ConnectTimeSeconds}};
-        [_, _, ReconnectDelay, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _]
             when not (is_integer(ReconnectDelay) andalso
                       (ReconnectDelay > 0) andalso
                       (ReconnectDelay =< ?TIMEOUT_MAX_ERLANG div 1000)) ->
             {error, {node_reconnect_delay_invalid,
                      ReconnectDelay}};
-        [_, _, ReconnectDelay, _, _, _, _]
+        [_, _, ReconnectDelay, _, _, _, _, _, _]
             when not (ReconnectDelay >= ConnectTimeSeconds) ->
             {error, {node_reconnect_delay_min,
                      ConnectTimeSeconds}};
-        [_, _, _, Listen, _, _, _]
+        [_, _, _, Listen, _, _, _, _, _]
             when not ((Listen =:= visible) orelse
                       (Listen =:= all)) ->
             {error, {node_listen_invalid,
                      Listen}};
-        [_, _, _, _, Connect, _, _]
+        [_, _, _, _, Connect, _, _, _, _]
             when not ((Connect =:= visible) orelse
                       (Connect =:= hidden)) ->
             {error, {node_connect_invalid,
                      Connect}};
-        [_, _, _, _, _, TimestampType, _]
+        [_, _, _, _, _, TimestampType, _, _, _]
             when not ((TimestampType =:= erlang) orelse
                       (TimestampType =:= os) orelse
                       (TimestampType =:= warp)) ->
             {error, {node_timestamp_type_invalid,
                      TimestampType}};
-        [_, _, _, _, _, _, Discovery]
+        [_, _, _, _, _, _, Discovery, _, _]
             when not ((Discovery =:= undefined) orelse
                       is_list(Discovery)) ->
             {error, {node_discovery_invalid,
                      Discovery}};
+        [_, _, _, _, _, _, _, Cost, _]
+            when not is_list(Cost) ->
+            {error, {node_cost_invalid,
+                     Cost}};
+        [_, _, _, _, _, _, _, _, CostPrecision]
+            when not (is_integer(CostPrecision) andalso
+                      (CostPrecision >= 0) andalso
+                      (CostPrecision =< 253)) ->
+            {error, {node_cost_precision_invalid,
+                     CostPrecision}};
         [Nodes1, ReconnectStart, ReconnectDelay,
-         Listen, Connect, TimestampType, Discovery] ->
-            case nodes_elements_add(lists:delete(node(), Nodes1),
-                                    NodesConfig#config_nodes{
-                                        nodes = Nodes0,
-                                        reconnect_start = ReconnectStart,
-                                        reconnect_delay = ReconnectDelay,
-                                        listen = Listen,
-                                        connect = Connect,
-                                        timestamp_type = TimestampType}) of
-                {ok, NextNodesConfig} ->
-                    case nodes_discovery_options(Discovery, NextNodesConfig) of
-                        {ok, NewNodesConfig} ->
-                            {ok, NewNodesConfig};
-                        {error, _} = Error ->
-                            Error
-                    end;
-                {error, _} = Error ->
-                    Error
-            end;
-        [_, _, _, _, _, _, _ | Extra] ->
+         Listen, Connect, TimestampType, Discovery, Cost, CostPrecision] ->
+            accum([{lists:delete(node(), Nodes1),
+                    fun nodes_elements_add/2},
+                   {Discovery,
+                    fun nodes_discovery_options/2},
+                   {Cost,
+                    fun nodes_cost/2}],
+                  NodesConfig#config_nodes{
+                      nodes = Nodes0,
+                      reconnect_start = ReconnectStart,
+                      reconnect_delay = ReconnectDelay,
+                      listen = Listen,
+                      connect = Connect,
+                      timestamp_type = TimestampType,
+                      cost_precision = CostPrecision});
+        [_, _, _, _, _, _, _, _, _ | Extra] ->
             {error, {node_invalid, Extra}}
     end.
 
@@ -5328,9 +5382,24 @@ eval([], Output) ->
 eval([{Value, F} | L], Output)
     when is_number(Value) orelse is_atom(Value) orelse is_list(Value) ->
     case F(Value) of
-        {ok, NewValue} ->
-            eval(L, [NewValue | Output]);
+        {ok, ValueNew} ->
+            eval(L, [ValueNew | Output]);
         {error, _} = Error ->
             Error
     end.
 
+-type accum_value() :: any().
+-spec accum(list({accum_value(),
+                  fun((accum_value(), any()) -> {ok, any()} | {error, any()})}),
+            State :: any()) ->
+    {ok, StateNew :: any()} | {error, any()}.
+
+accum([], State) ->
+    {ok, State};
+accum([{Value, F} | L], State) ->
+    case F(Value, State) of
+        {ok, StateNew} ->
+            accum(L, StateNew);
+        {error, _} = Error ->
+            Error
+    end.
