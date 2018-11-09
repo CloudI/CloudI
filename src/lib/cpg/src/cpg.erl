@@ -34,7 +34,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg).
@@ -3010,8 +3010,8 @@ handle_cast(reset,
     Listen = cpg_app:listen_type(),
     if
         Listen /= OldListen ->
-            monitor_nodes(false, OldListen),
-            monitor_nodes(true, Listen);
+            monitor_nodes(true, Listen),
+            monitor_nodes(false, OldListen);
         true ->
             ok
     end,

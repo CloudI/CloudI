@@ -6,6 +6,7 @@
     * Add cost and cost_precision as CloudI Service API nodes_set
       configuration parameters for use in the nodes_status output
       (in uptime_cost and tracked_cost, when cost is set)
+    * Update cpg
 
 2018-11-08 Michael Truog   <mjtruog at protonmail dot com>
 
