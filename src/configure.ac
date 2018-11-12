@@ -320,8 +320,9 @@ if test "x$want_integration_tests_ran" = "xyes" -a \
     integration_tests_ran="true"
 else
     if test "x$want_integration_tests_ran" = "xyes" ; then
-        AC_MSG_ERROR([--with-integration-tests-ran=yes
-                      requires all programming languages be enabled])
+        AC_MSG_ERROR([--with-integration-tests-ran=yes requires
+                      C/C++/Java/Javascript/Perl/PHP/Python/Python-C/Ruby
+                      programming languages are enabled])
     fi
     integration_tests_ran="false"
 fi

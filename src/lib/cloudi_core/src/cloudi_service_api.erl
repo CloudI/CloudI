@@ -793,14 +793,16 @@
                                          {tags, list({string(), string()} |
                                                      string())})})} |
                   {cost, list({node() | default, float()})} |
-                  {cost_precision, non_neg_integer()}).
+                  {cost_precision, 0..253}).
 -type node_status() ::
-    nonempty_list({uptime, nonempty_string()} |
+    nonempty_list(% local node
+                  {uptime, nonempty_string()} |
                   {uptime_cost_total, nonempty_string()} |
                   {uptime_cost_day, nonempty_string()} |
                   {uptime_cost_week, nonempty_string()} |
                   {uptime_cost_month, nonempty_string()} |
                   {uptime_cost_year, nonempty_string()} |
+                  % remote node
                   {tracked, nonempty_string()} |
                   {tracked_cost_total, nonempty_string()} |
                   {tracked_cost_day, nonempty_string()} |
@@ -813,6 +815,7 @@
                   {downtime_week_disconnected, nonempty_string()} |
                   {downtime_month_disconnected, nonempty_string()} |
                   {downtime_year_disconnected, nonempty_string()} |
+                  % all nodes
                   {availability_day, nonempty_string()} |
                   {availability_week, nonempty_string()} |
                   {availability_month, nonempty_string()} |
