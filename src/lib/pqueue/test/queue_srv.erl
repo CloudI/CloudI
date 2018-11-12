@@ -38,11 +38,7 @@ start_link(Mod) ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [Mod], []).
 
 stop() ->
-    try call(stop)
-    catch
-        exit:{noproc, _} -> ok;
-        exit:{normal, _} -> ok
-    end.
+    gen_server:stop(?SERVER).
 
 call(M) ->
     gen_server:call(?SERVER, M, infinity).
@@ -107,8 +103,6 @@ init([Mod]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(stop, _F, S) ->
-    {stop, normal, ok, S};
 handle_call({in, Item}, _F, #state { q = Q, mod = M } = S) ->
     NQ = M:in(Item, Q),
     {reply, ok, S#state { q = NQ }};

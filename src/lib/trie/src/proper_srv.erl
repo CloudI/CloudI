@@ -51,7 +51,7 @@ start_link(Module) ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [Module], []).
 
 stop() ->
-    call(stop, undefined).
+    gen_server:stop(?MODULE).
 
 %%%------------------------------------------------------------------------
 %%% Data structure API
@@ -101,8 +101,6 @@ init([Module]) ->
     {ok, #state{module = Module,
                 data_structure = Module:new()}}.
 
-handle_call({stop, undefined}, _F, S) ->
-    {stop, normal, ok, S};
 handle_call({F, A}, _,
             #state{data_structure = D,
                    module = M} = S) when F =:= filter ->
