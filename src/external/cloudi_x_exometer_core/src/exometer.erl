@@ -195,7 +195,7 @@ repair(Name) ->
 ensure(Name, Type, Opts) when is_list(Name), is_list(Opts) ->
     exometer_admin:ensure(Name, Type, Opts).
 
-
+-dialyzer({no_match, update/2}).
 -spec update(name(), value()) -> ok | error().
 %% @doc Update the given metric with `Value'.
 %%
@@ -389,21 +389,25 @@ get_cached_value_(#exometer_entry{name = Name,
                             end
                     end, {[],[]}, DataPoints),
 
-    %% Go through all cache misses and retreive their actual values.
-    case get_value_(E#exometer_entry { cache = 0 }, Uncached) of
-        {error, unavailable} = Result -> 
-            %% a function entry returns this in exception case.
-            %% see `exometer_function:get_value/4`
-            Result;
-        Result ->
-            %% Update the cache with all the shiny new values retrieved.
-            [ exometer_cache:write(Name, DataPoint1, Value1, CacheTTL)
-              || { DataPoint1, Value1 } <- Result],
-            All = Result ++ Cached,
-            [{_,_} = lists:keyfind(DP, 1, All) || DP <- DataPoints]
+    if Uncached == [] ->
+            %% We are done, return
+            Cached;
+       true ->
+            %% Go through all cache misses and retreive their actual values.
+            case get_value_(E#exometer_entry { cache = 0 }, Uncached) of
+                {error, unavailable} = Result ->
+                    %% a function entry returns this in exception case.
+                    %% see `exometer_function:get_value/4`
+                    Result;
+                Result ->
+                    %% Update the cache with all the shiny new values retrieved.
+                    [ exometer_cache:write(Name, DataPoint1, Value1, CacheTTL)
+                      || { DataPoint1, Value1 } <- Result],
+                    All = Result ++ Cached,
+                    [{_,_} = lists:keyfind(DP, 1, All) || DP <- DataPoints,
+                                                          lists:keymember(DP,1,All)]
+            end
     end.
-
-
 
 -spec delete(name()) -> ok | error().
 %% @doc Delete the metric
@@ -439,6 +443,7 @@ sample(Name)  when is_list(Name) ->
     end.
 
 
+-dialyzer({no_match, reset/1}).
 -spec reset(name()) -> ok | error().
 %% @doc Reset the metric.
 %%

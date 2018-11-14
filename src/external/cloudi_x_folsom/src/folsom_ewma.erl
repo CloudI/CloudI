@@ -29,6 +29,7 @@
 
 -module(folsom_ewma).
 
+-define(INSTANT_ALPHA, 1).
 -define(M1_ALPHA,   1 - math:exp(-5 / 60.0)).
 -define(M5_ALPHA,   1 - math:exp(-5 / 60.0 / 5)).
 -define(M15_ALPHA,  1 - math:exp(-5 / 60.0 / 15)).
@@ -46,6 +47,7 @@
          new/2,
          rate/1,
          tick/1,
+         instant_ewma/0,
          one_minute_ewma/0,
          five_minute_ewma/0,
          fifteen_minute_ewma/0,
@@ -53,6 +55,8 @@
 
 
 % API
+instant_ewma() ->
+  new(?INSTANT_ALPHA, 5).
 
 one_minute_ewma() ->
     new(?M1_ALPHA, 5).
@@ -72,6 +76,9 @@ new(Alpha, Interval) ->
 update(#ewma{total = Total} = EWMA, Value) ->
     EWMA#ewma{total = Total + Value}.
 
+tick(#ewma{total = Total, rate = _Rate, initialized = _Init, interval = Interval, alpha = ?INSTANT_ALPHA} = EWMA) ->
+  InstantRate = Total / Interval,
+  EWMA#ewma{rate = InstantRate, total = 0};
 tick(#ewma{total = Total, rate = Rate, initialized = Init, interval = Interval, alpha = Alpha} = EWMA) ->
     InstantRate = Total / Interval,
     Rate1 = rate_calc(Init, Alpha, Rate, InstantRate),

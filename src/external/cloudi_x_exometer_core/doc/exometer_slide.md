@@ -6,18 +6,15 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Efficient sliding-window buffer.
+
 __Authors:__ Tony Rogvall ([`tony@rogvall.se`](mailto:tony@rogvall.se)), Ulf Wiger ([`ulf@feuerlabs.com`](mailto:ulf@feuerlabs.com)), Magnus Feuer ([`magnus@feuerlabs.com`](mailto:magnus@feuerlabs.com)).
+
 <a name="description"></a>
 
 ## Description ##
 
-
-
 Initial implementation: 29 Sep 2009 by Tony Rogvall
-
-
 
 This module implements an efficient sliding window, maintaining
 two lists - a primary and a secondary. Values are paired with a
@@ -26,7 +23,6 @@ and prepended to the primary list. When the time span between the oldest
 and the newest entry in the primary list exceeds the given window size,
 the primary list is shifted into the secondary list position, and the
 new entry is added to a new (empty) primary list.
-
 
 The window can be converted to a list using `to_list/1` or folded
 over using `foldl/3`.
@@ -40,7 +36,6 @@ over using `foldl/3`.
 ### <a name="type-cur_state">cur_state()</a> ###
 
 
-
 <pre><code>
 cur_state() = any()
 </code></pre>
@@ -48,9 +43,7 @@ cur_state() = any()
 
 
 
-
 ### <a name="type-fold_acc">fold_acc()</a> ###
-
 
 
 <pre><code>
@@ -60,9 +53,7 @@ fold_acc() = any()
 
 
 
-
 ### <a name="type-fold_fun">fold_fun()</a> ###
-
 
 
 <pre><code>
@@ -72,9 +63,7 @@ fold_fun() = fun(({<a href="#type-timestamp">timestamp()</a>, <a href="#type-val
 
 
 
-
 ### <a name="type-sample_fun">sample_fun()</a> ###
-
 
 
 <pre><code>
@@ -84,9 +73,7 @@ sample_fun() = fun((<a href="#type-timestamp">timestamp()</a>, <a href="#type-va
 
 
 
-
 ### <a name="type-timestamp">timestamp()</a> ###
-
 
 
 <pre><code>
@@ -96,9 +83,7 @@ timestamp() = <a href="exometer_util.md#type-timestamp">exometer_util:timestamp(
 
 
 
-
 ### <a name="type-transform_fun">transform_fun()</a> ###
-
 
 
 <pre><code>
@@ -108,15 +93,12 @@ transform_fun() = fun((<a href="#type-timestamp">timestamp()</a>, <a href="#type
 
 
 
-
 ### <a name="type-value">value()</a> ###
-
 
 
 <pre><code>
 value() = any()
 </code></pre>
-
 
 <a name="index"></a>
 
@@ -134,48 +116,40 @@ value() = any()
 
 ### add_element/2 ###
 
-
 <pre><code>
-add_element(Evt::<a href="#type-value">value()</a>, Slide::#slide{}) -&gt; #slide{}
+add_element(Evt::<a href="#type-value">value()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 
-
 Add an element to the buffer, tagging it with the current time.
-
 
 Note that the buffer is a sliding window. Values will be discarded as they
 move out of the specified time span.
+
 <a name="add_element-3"></a>
 
 ### add_element/3 ###
 
-
 <pre><code>
-add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{}) -&gt; #slide{}
+add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 
-
 Add an element to the buffer, tagged with the given timestamp.
-
 
 Apart from the specified timestamp, this function works just like
 [`add_element/2`](#add_element-2).
+
 <a name="add_element-4"></a>
 
 ### add_element/4 ###
 
-
 <pre><code>
-add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{}, Wrap::true) -&gt; {boolean(), #slide{}}
+add_element(TS::<a href="#type-timestamp">timestamp()</a>, Evt::<a href="#type-value">value()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}, Wrap::true) -&gt; {boolean(), #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}}
 </code></pre>
 <br />
 
-
 Add an element to the buffer, optionally indicating if a swap occurred.
-
-
 
 This function works like [`add_element/3`](#add_element-3), but will also indicate
 whether the sliding window buffer swapped lists (this means that the
@@ -184,60 +158,51 @@ over with an empty primary list. If `Wrap == true`, the return value will be
 `{Bool,Slide}`, where `Bool==true` means that a swap occurred, and
 `Bool==false` means that it didn't.
 
-
-
 If `Wrap == false`, this function works exactly like [`add_element/3`](#add_element-3).
-
 
 One possible use of the `Wrap == true` option could be to keep a sliding
 window buffer of values that are pushed e.g. to an external stats service.
 The swap indication could be a trigger point where values are pushed in order
 to not lose entries.
+
 <a name="foldl-3"></a>
 
 ### foldl/3 ###
 
-
 <pre><code>
-foldl(Fun::<a href="#type-fold_fun">fold_fun()</a>, Acc::<a href="#type-fold_acc">fold_acc()</a>, Slide::#slide{}) -&gt; <a href="#type-fold_acc">fold_acc()</a>
+foldl(Fun::<a href="#type-fold_fun">fold_fun()</a>, Acc::<a href="#type-fold_acc">fold_acc()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; <a href="#type-fold_acc">fold_acc()</a>
 </code></pre>
 <br />
 
-
 Fold over all values in the sliding window.
-
 
 The fun should as `fun({Timestamp, Value}, Acc) -> NewAcc`.
 The values are processed in order from oldest to newest.
+
 <a name="foldl-4"></a>
 
 ### foldl/4 ###
 
-
 <pre><code>
-foldl(Timestamp::<a href="#type-timestamp">timestamp()</a>, Fun::<a href="#type-fold_fun">fold_fun()</a>, Acc::<a href="#type-fold_acc">fold_acc()</a>, Slide::#slide{}) -&gt; <a href="#type-fold_acc">fold_acc()</a>
+foldl(Timestamp::<a href="#type-timestamp">timestamp()</a>, Fun::<a href="#type-fold_fun">fold_fun()</a>, Acc::<a href="#type-fold_acc">fold_acc()</a>, Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; <a href="#type-fold_acc">fold_acc()</a>
 </code></pre>
 <br />
 
-
 Fold over the sliding window, starting from `Timestamp`.
-
 
 The fun should as `fun({Timestamp, Value}, Acc) -> NewAcc`.
 The values are processed in order from oldest to newest.
+
 <a name="new-2"></a>
 
 ### new/2 ###
 
-
 <pre><code>
-new(_Size::integer(), _Options::list()) -&gt; #slide{}
+new(_Size::integer(), _Options::list()) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 
-
 Create a new sliding-window buffer.
-
 
 `Size` determines the size in milliseconds of the sliding window.
 The implementation prepends values into a primary list until the oldest
@@ -246,29 +211,27 @@ swaps the primary list into a secondary list, and starts prepending to
 a new primary list. This means that more data than fits inside the window
 will be kept - upwards of twice as much. On the other hand, updating the
 buffer is very cheap.
+
 <a name="new-5"></a>
 
 ### new/5 ###
 
-
 <pre><code>
-new(Size::integer(), Period::integer(), SampleFun::<a href="#type-sample_fun">sample_fun()</a>, TransformFun::<a href="#type-transform_fun">transform_fun()</a>, Opts::list()) -&gt; #slide{}
+new(Size::integer(), Period::integer(), SampleFun::<a href="#type-sample_fun">sample_fun()</a>, TransformFun::<a href="#type-transform_fun">transform_fun()</a>, Opts::list()) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 
-
 Callback function for exometer_histogram
-
 
 This function is not intended to be used directly. The arguments
 `_SampleFun` and `_TransformFun` are ignored.
+
 <a name="reset-1"></a>
 
 ### reset/1 ###
 
-
 <pre><code>
-reset(Slide::#slide{}) -&gt; #slide{}
+reset(Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; #slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}
 </code></pre>
 <br />
 
@@ -278,10 +241,10 @@ Empty the buffer
 
 ### to_list/1 ###
 
-
 <pre><code>
-to_list(Slide::#slide{}) -&gt; [{<a href="#type-timestamp">timestamp()</a>, <a href="#type-value">value()</a>}]
+to_list(Slide::#slide{size = integer(), n = integer(), max_n = undefined | integer(), last = integer(), buf1 = list(), buf2 = list()}) -&gt; [{<a href="#type-timestamp">timestamp()</a>, <a href="#type-value">value()</a>}]
 </code></pre>
 <br />
 
 Convert the sliding window into a list of timestamped values.
+

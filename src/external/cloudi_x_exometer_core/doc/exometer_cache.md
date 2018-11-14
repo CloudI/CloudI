@@ -5,6 +5,7 @@
 * [Function Details](#functions)
 
 __Behaviours:__ [`gen_server`](gen_server.md).
+
 <a name="index"></a>
 
 ## Function Index ##
@@ -23,13 +24,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `code_change(X1, S, X3) -> any()`
 
-
 <a name="delete-2"></a>
 
 ### delete/2 ###
 
 `delete(Name, DataPoint) -> any()`
-
 
 <a name="delete_name-1"></a>
 
@@ -37,13 +36,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `delete_name(Name) -> any()`
 
-
 <a name="handle_call-3"></a>
 
 ### handle_call/3 ###
 
 `handle_call(X1, X2, S) -> any()`
-
 
 <a name="handle_cast-2"></a>
 
@@ -51,13 +48,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `handle_cast(X1, St) -> any()`
 
-
 <a name="handle_info-2"></a>
 
 ### handle_info/2 ###
 
 `handle_info(X1, S) -> any()`
-
 
 <a name="init-1"></a>
 
@@ -65,13 +60,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `init(X1) -> any()`
 
-
 <a name="read-2"></a>
 
 ### read/2 ###
 
 `read(Name, DataPoint) -> any()`
-
 
 <a name="start_link-0"></a>
 
@@ -79,13 +72,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `start_link() -> any()`
 
-
 <a name="terminate-2"></a>
 
 ### terminate/2 ###
 
 `terminate(X1, X2) -> any()`
-
 
 <a name="write-3"></a>
 
@@ -93,11 +84,9 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `write(Name, DataPoint, Value) -> any()`
 
-
 <a name="write-4"></a>
 
 ### write/4 ###
 
 `write(Name, DataPoint, Value, TTL) -> any()`
-
 

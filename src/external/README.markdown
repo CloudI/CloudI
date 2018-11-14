@@ -42,8 +42,8 @@ Erlang `bear`
 `Statistics functions for Erlang`
 
 - `https://github.com/folsom-project/bear`
-- `commit cdd853442a20d36f2104f2be4dafcf94b32a8b06 (0.8.5)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit b31a294c4c7d6f2c124b9d524c480fbeb3fbbb8a (0.8.7)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Apache License 2.0`
 
 Erlang `certifi`
@@ -104,9 +104,9 @@ Erlang `exometer`
 -----------------
 `Erlang instrumentation package`
 
-- `https://github.com/Feuerlabs/exometer`
-- `commit 7a7bd8d2b52de4d90f65aa3f6044b0e988319b9e`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `https://github.com/Feuerlabs/exometer (branch tb-upgrade)`
+- `commit 4b0fcbc35ed6a1417022b6b2b6048c006aa88bca`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_core`
@@ -114,8 +114,8 @@ Erlang `exometer_core`
 `Erlang instrumentation package core`
 
 - `https://github.com/Feuerlabs/exometer_core`
-- `commit c4afd6d095c8eef7c5447133a033b9165f53da02 (1.5.0)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit 547f28bc93c7cb3d3f1174fb4c510667a4ebb645 (v1.5.7)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Mozilla Public License 2.0`
 
 Erlang `exometer_influxdb`
@@ -123,8 +123,8 @@ Erlang `exometer_influxdb`
 `Exometer InfluxDB reporter`
 
 - `https://github.com/travelping/exometer_influxdb`
-- `commit f484d1e82d15319b110c1bce82b4afaddfc094d9`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit df48129d1e47dd263eb28e7d2e453f1b9d66bb97 (0.6.0)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Mozilla Public License 2.0`
 
 Erlang `folsom`
@@ -132,8 +132,8 @@ Erlang `folsom`
 `Erlang Events and Metrics`
 
 - `https://github.com/folsom-project/folsom`
-- `commit 0948c5f7a2221cc7c4975d042b13c84bb9387517 (0.8.5)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit 9309bad9ffadeebbefe97521577c7480c7cfcd8a (0.8.7)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Apache License 2.0`
 
 Erlang `hackney`
@@ -150,8 +150,8 @@ Erlang `hut`
 `helper library for making Erlang libraries logging framework agnostic`
 
 - `https://github.com/tolbrino/hut`
-- `commit b200e5acbfe6e52e0470eeabc68d83437bde6866`
-- `Mon Mar  6 10:12:42 PST 2017`
+- `commit 37e281ff39d5767221314210f46d46c78ad530bf (v1.2.1)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `MIT`
 
 Erlang `idna`
@@ -213,8 +213,8 @@ Erlang `parse_trans`
 `Erlang parse transforms`
 
 - `https://github.com/uwiger/parse_trans`
-- `commit 6f3645afb43c7c57d61b54ef59aecab288ce1013 (3.0.0)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit 76abb347c3c1d00fb0ccf9e4b43e22b3d2288484 (3.3.0)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Apache License 2.0`
 
 Erlang `pgsql`
@@ -258,8 +258,8 @@ Erlang `setup`
 `Erlang Setup Application`
 
 - `https://github.com/uwiger/setup`
-- `commit a0b5a237b6359795af24257fee41d97bf1602819 (1.8.2)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit eda3352e7555b9faf42b5242d95fc386bccbe123 (2.0.2)`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `Apache License 2.0`
 
 Erlang `ssl_verify_fun`

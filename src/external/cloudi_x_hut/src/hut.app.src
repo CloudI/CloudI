@@ -2,8 +2,13 @@
 {application, hut, [
   {description, "helper library for making Erlang libraries logging framework agnostic"},
   {vsn, "1.2.0"},
+  {id, "git"},
   {registered, []},
   {applications, [kernel, stdlib]},
   {modules, []},
-  {env, []}
+  {env, []},
+  {maintainers, ["tolbrino"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/tolbrino/hut"}]},
+  {build_tools, ["erlang.mk", "rebar", "rebar3"]}
 ]}.

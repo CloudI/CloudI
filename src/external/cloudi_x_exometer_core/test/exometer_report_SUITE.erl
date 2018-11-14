@@ -88,7 +88,7 @@ stop_started_apps(Config) ->
 test_newentry(Config) ->
     majority(fun test_newentry_/1, Config).
 
-test_newentry_({cleanup, Config}) ->
+test_newentry_({cleanup, _Config}) ->
     restart_exometer_core();
 test_newentry_(Config) ->
     {ok, Info} = start_logger_and_reporter(test_udp, Config),
@@ -218,7 +218,7 @@ start_logger_and_reporter(Reporter, XArgs, Config) ->
 
 
 test_subscription_race_regression(Config) ->
-    {ok, Info} = start_logger_and_reporter(brittle_reporter, Config),
+    {ok, _Info} = start_logger_and_reporter(brittle_reporter, Config),
     ok = exometer:new([c,1], counter, []),
     exometer_report:subscribe(brittle_reporter, {find,[c,'_']}, value, main, true),
     LoggerPid = whereis(brittle_reporter),

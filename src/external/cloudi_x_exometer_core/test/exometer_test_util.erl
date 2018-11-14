@@ -61,10 +61,11 @@ majority(N, F, Cfg) ->
 
 majority(0, _, _, Hist) ->
     Failed = length([1 || {caught,_,_} <- Hist]),
-    LogMsg = lists:flatten(io_lib:format("majority: Failed = ~p, Hist = ~p", [Failed, Hist])),
+    Succeeded = length(Hist) - Failed,
+    LogMsg = lists:flatten(io_lib:format("majority: Succeeded = ~p, Failed = ~p, Hist = ~p", [Succeeded, Failed, Hist])),
     ct:pal(LogMsg),
-    case {Failed, length(Hist)} of
-        {Lf, L} when Lf >= L div 2 ->
+    case {Failed, Succeeded} of
+        {Lf, Ls} when Lf >= Ls ->
             ct:fail({error, {too_many_failures, Hist}});
         _ ->
             {comment, LogMsg}

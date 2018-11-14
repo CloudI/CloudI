@@ -17,17 +17,14 @@ __Behaviours:__ [`exometer_entry`](exometer_entry.md).
 ### <a name="type-arg">arg()</a> ###
 
 
-
 <pre><code>
-arg() = '$dp' | {'$call', atom(), atom(), <a href="#type-arg_spec">arg_spec()</a>} | any()
+arg() = $dp | {$call, atom(), atom(), <a href="#type-arg_spec">arg_spec()</a>} | any()
 </code></pre>
 
 
 
 
-
 ### <a name="type-arg_spec">arg_spec()</a> ###
-
 
 
 <pre><code>
@@ -37,9 +34,7 @@ arg_spec() = [<a href="#type-arg">arg()</a>]
 
 
 
-
 ### <a name="type-binding">binding()</a> ###
-
 
 
 <pre><code>
@@ -49,9 +44,7 @@ binding() = {atom(), any()}
 
 
 
-
 ### <a name="type-datapoints">datapoints()</a> ###
-
 
 
 <pre><code>
@@ -61,9 +54,7 @@ datapoints() = [atom()]
 
 
 
-
 ### <a name="type-expr">expr()</a> ###
-
 
 
 <pre><code>
@@ -73,9 +64,7 @@ expr() = <a href="#type-expr_descr">expr_descr()</a> | <a href="#type-expr_actio
 
 
 
-
 ### <a name="type-expr_action">expr_action()</a> ###
-
 
 
 <pre><code>
@@ -85,9 +74,7 @@ expr_action() = <a href="#type-expr_op">expr_op()</a> | <a href="#type-expr_call
 
 
 
-
 ### <a name="type-expr_atom">expr_atom()</a> ###
-
 
 
 <pre><code>
@@ -97,9 +84,7 @@ expr_atom() = atom() | {a, atom()} | {atom, atom()}
 
 
 
-
 ### <a name="type-expr_binary_op">expr_binary_op()</a> ###
-
 
 
 <pre><code>
@@ -109,9 +94,7 @@ expr_binary_op() = {op, <a href="#type-expr_operator">expr_operator()</a>, <a hr
 
 
 
-
 ### <a name="type-expr_call">expr_call()</a> ###
-
 
 
 <pre><code>
@@ -121,21 +104,17 @@ expr_call() = {call, atom(), [<a href="#type-expr">expr()</a>]} | {call, {atom()
 
 
 
-
 ### <a name="type-expr_case">expr_case()</a> ###
 
 
-
 <pre><code>
-expr_case() = {'case', [<a href="#type-expr">expr()</a>], [<a href="#type-expr_clause">expr_clause()</a>]}
+expr_case() = {case, [<a href="#type-expr">expr()</a>], [<a href="#type-expr_clause">expr_clause()</a>]}
 </code></pre>
 
 
 
 
-
 ### <a name="type-expr_clause">expr_clause()</a> ###
-
 
 
 <pre><code>
@@ -145,9 +124,7 @@ expr_clause() = {<a href="#type-expr_pattern">expr_pattern()</a>, [<a href="#typ
 
 
 
-
 ### <a name="type-expr_descr">expr_descr()</a> ###
-
 
 
 <pre><code>
@@ -157,9 +134,7 @@ expr_descr() = <a href="#type-expr_int">expr_int()</a> | <a href="#type-expr_ato
 
 
 
-
 ### <a name="type-expr_erl">expr_erl()</a> ###
-
 
 
 <pre><code>
@@ -169,9 +144,7 @@ expr_erl() = {erl, [<a href="erl_parse.md#type-abstract_expr">erl_parse:abstract
 
 
 
-
 ### <a name="type-expr_fold">expr_fold()</a> ###
-
 
 
 <pre><code>
@@ -181,23 +154,18 @@ expr_fold() = {fold, _IterVal::atom(), _AccVar::atom(), _IterExpr::[<a href="#ty
 
 
 
-
 ### <a name="type-expr_guard">expr_guard()</a> ###
-
 
 
 <pre><code>
 expr_guard() = [<a href="#type-expr">expr()</a>]
 </code></pre>
 
-
-
- Must all return 'true'.
+Must all return 'true'.
 
 
 
 ### <a name="type-expr_int">expr_int()</a> ###
-
 
 
 <pre><code>
@@ -207,9 +175,7 @@ expr_int() = integer() | {i, integer()} | {integer, integer()}
 
 
 
-
 ### <a name="type-expr_list">expr_list()</a> ###
-
 
 
 <pre><code>
@@ -219,9 +185,7 @@ expr_list() = {cons, <a href="#type-expr">expr()</a>, <a href="#type-expr">expr(
 
 
 
-
 ### <a name="type-expr_match">expr_match()</a> ###
-
 
 
 <pre><code>
@@ -231,9 +195,7 @@ expr_match() = {match, <a href="#type-expr_pattern">expr_pattern()</a>, <a href=
 
 
 
-
 ### <a name="type-expr_op">expr_op()</a> ###
-
 
 
 <pre><code>
@@ -243,15 +205,12 @@ expr_op() = <a href="#type-expr_unary_op">expr_unary_op()</a> | <a href="#type-e
 
 
 
-
 ### <a name="type-expr_operator">expr_operator()</a> ###
 
 
-
 <pre><code>
-expr_operator() = '+' | '-' | '*' | '/' | 'div' | 'rem' | 'band' | 'and' | 'bor' | 'bxor' | 'bsl' | 'bsr' | 'or' | 'xor' | '++' | '--' | '==' | '/=' | '&gt;=' | '=&lt;' | '&lt;' | '&gt;' | '=:=' | '=/='
+expr_operator() = + | - | * | / | div | rem | band | and | bor | bxor | bsl | bsr | or | xor | ++ | -- | == | /= | &gt;= | =&lt; | &lt; | &gt; | =:= | =/=
 </code></pre>
-
 
 
 
@@ -259,17 +218,14 @@ expr_operator() = '+' | '-' | '*' | '/' | 'div' | 'rem' | 'band' | 'and' | 'bor'
 ### <a name="type-expr_pattern">expr_pattern()</a> ###
 
 
-
 <pre><code>
-expr_pattern() = '_' | <a href="#type-expr_descr">expr_descr()</a>
+expr_pattern() = _ | <a href="#type-expr_descr">expr_descr()</a>
 </code></pre>
 
 
 
 
-
 ### <a name="type-expr_string">expr_string()</a> ###
-
 
 
 <pre><code>
@@ -279,9 +235,7 @@ expr_string() = {string, string()} | {s, string()}
 
 
 
-
 ### <a name="type-expr_tuple">expr_tuple()</a> ###
-
 
 
 <pre><code>
@@ -291,21 +245,17 @@ expr_tuple() = {tuple, [<a href="#type-expr">expr()</a>]} | {t, [<a href="#type-
 
 
 
-
 ### <a name="type-expr_unary_op">expr_unary_op()</a> ###
 
 
-
 <pre><code>
-expr_unary_op() = {op, '-' | 'not', <a href="#type-expr">expr()</a>}
+expr_unary_op() = {op, - | not, <a href="#type-expr">expr()</a>}
 </code></pre>
 
 
 
 
-
 ### <a name="type-extended_fun">extended_fun()</a> ###
-
 
 
 <pre><code>
@@ -315,9 +265,7 @@ extended_fun() = {function, <a href="#type-mod_name">mod_name()</a>, <a href="#t
 
 
 
-
 ### <a name="type-fun_name">fun_name()</a> ###
-
 
 
 <pre><code>
@@ -327,9 +275,7 @@ fun_name() = atom()
 
 
 
-
 ### <a name="type-fun_rep">fun_rep()</a> ###
-
 
 
 <pre><code>
@@ -339,9 +285,7 @@ fun_rep() = {<a href="#type-mod_name">mod_name()</a>, <a href="#type-fun_name">f
 
 
 
-
 ### <a name="type-fun_spec">fun_spec()</a> ###
-
 
 
 <pre><code>
@@ -351,9 +295,7 @@ fun_spec() = <a href="#type-simple_fun">simple_fun()</a> | <a href="#type-extend
 
 
 
-
 ### <a name="type-mod_name">mod_name()</a> ###
-
 
 
 <pre><code>
@@ -363,9 +305,7 @@ mod_name() = atom()
 
 
 
-
 ### <a name="type-res_type">res_type()</a> ###
-
 
 
 <pre><code>
@@ -375,15 +315,12 @@ res_type() = value | proplist | tagged
 
 
 
-
 ### <a name="type-simple_fun">simple_fun()</a> ###
-
 
 
 <pre><code>
 simple_fun() = {function, <a href="#type-mod_name">mod_name()</a>, <a href="#type-fun_name">fun_name()</a>}
 </code></pre>
-
 
 <a name="index"></a>
 
@@ -401,12 +338,10 @@ simple_fun() = {function, <a href="#type-mod_name">mod_name()</a>, <a href="#typ
 
 ### behaviour/0 ###
 
-
 <pre><code>
 behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
-
 
 <a name="delete-3"></a>
 
@@ -414,39 +349,29 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `delete(X1, X2, X3) -> any()`
 
-
 <a name="empty-0"></a>
 
 ### empty/0 ###
 
 `empty() -> any()`
 
-
 <a name="eval_exprs-2"></a>
 
 ### eval_exprs/2 ###
-
 
 <pre><code>
 eval_exprs(Es::[<a href="#type-expr">expr()</a>], Bs::[<a href="#type-binding">binding()</a>]) -&gt; {value, any(), [<a href="#type-binding">binding()</a>]}
 </code></pre>
 <br />
 
-
 Evaluate a list of abstract expressions.
-
-
 
 This function is reminiscent of `erl_eval:exprs/2`, but with a slightly
 different expression grammar. Most prominently, forms have no line numbers,
 and a few aliases for more compact representation. Otherwise, the forms can
 be seen as mostly a subset of the Erlang abstract forms.
 
-
-
 The list of bindings correspods exactly to the bindings in `erl_eval`.
-
-
 
 * Integers: `{integer, I}`, `{i, I}`, or simply just the integer
 * Atoms: `{atom, A}`, `{a, A}`, or simply just the atom (note that some atoms
@@ -462,28 +387,23 @@ are special).
 * Case exprs: `{'case', [Expr], [{Pat, Gs, Body}]}`
 * Generic Erlang: `{erl, [ErlAbstractExpr]}`
 
-
-
 The currently supported "built-in functions" are `length/1`, `size/1`,
 `byte_size/1` and `bit_size/1`.
 
-
-
 The operators supported are all the Erlang binary operators (as in: '+',
 '-', '==', '=/=', etc.)
-
 
 When evaluating guards in a case clause, any expression is legal. The
 guard must return true to succeed. Note that the abstract form of a guard
 sequence is [ [G11,...], [G21,...], ...], where each sublist represents
 an 'and' sequence, i.e. all guards in the sublist must succeed. The
 relationship between sublists is 'or'. This is the same as in Erlang.
+
 <a name="get_datapoints-3"></a>
 
 ### get_datapoints/3 ###
 
 `get_datapoints(Name, Type, T) -> any()`
-
 
 <a name="get_value-4"></a>
 
@@ -491,20 +411,16 @@ relationship between sublists is 'or'. This is the same as in Erlang.
 
 `get_value(X1, X2, X3, DataPoints0) -> any()`
 
-
 <a name="new-3"></a>
 
 ### new/3 ###
-
 
 <pre><code>
 new(Name::<a href="exometer.md#type-name">exometer:name()</a>, X2::function, Opts::<a href="exometer.md#type-options">exometer:options()</a>) -&gt; {ok, <a href="#type-fun_rep">fun_rep()</a>}
 </code></pre>
 <br />
 
-
 Callback for creating an exometer `function` entry.
-
 
 Function entries are created as
 
@@ -520,8 +436,6 @@ which is syntactic sugar for
   exometer:new(Name,function,[{arg,{function,...}}|Opts])
 ```
 
-
-
 `{function,...}` can be `{function, Mod, Fun}`, in which case
 where `get_value(Name, DataPoints)` will result in a call to
 `Mod:Fun(DataPoints)`.
@@ -532,8 +446,6 @@ values.
 `{function,...}` can also be setup as `{function,
 Mod,Fun,ArgSpec,Type,DataPoints}` in order to invoke a limited
 interpreter. The `ArgSpec` is evaluated as follows:
-
-
 
 * `[]` means to call with no arguments, i.e. `M:F()`
 
@@ -552,7 +464,6 @@ arguments after performing substitution on `Args0`.
 
 * `{'$value', Term}` uses `Term` without
 substitution.
-
 
 
 
@@ -582,34 +493,22 @@ of data points will be bound to `DPs`. The evaluation must return
 a list of `{DataPointName, Value}` tuples.
 
 
-
-
 An alternative version of `arg` is `{arg, {eval, Exprs, Datapoints}}`, which
 doesn't in fact call a function, but simply evaluates `Exprs` using
 [`eval_exprs/2`](#eval_exprs-2), with the pre-bound variables `Value = undefined`
 and `DPs = Datapoints`.
 
-
-
 Examples:
 
-
-
 An entry that returns a subset of `erlang:memory()`:
-
-
 
 ```erlang
 
   exometer:new([mem], {function,erlang,memory,[],proplist,[total,processes]}).
 ```
 
-
-
 An entry that reports the heap size and message queue length of the
 code server:
-
-
 
 ```erlang
 
@@ -619,11 +518,7 @@ code server:
        proplist, [heap_size, message_queue_len]}).
 ```
 
-
-
 An entry that reports the heap size of the code server.
-
-
 
 ```erlang
 
@@ -633,12 +528,8 @@ An entry that reports the heap size of the code server.
      [{'$call',erlang,whereis,[code_server]}, '$dp'], tagged, [heap_size]}).
 ```
 
-
-
 An entry that does pattern-matching on the return value
 (`erlang:statistics(garbage_collection)` returns `{GCs, Reclaimed, 0}`).
-
-
 
 ```erlang
 
@@ -648,12 +539,8 @@ An entry that does pattern-matching on the return value
        match, {gcs,reclaimed,'_'} }, []).
 ```
 
-
-
 An entry that calls `erlang:processes()` and evaluates a list of expressions
 that calculate the length of the returned list.
-
-
 
 ```erlang
 
@@ -663,11 +550,7 @@ that calculate the length of the returned list.
        eval, {[{l,[{t,[value,{call,length,[{v,'Value'}]}]}]}],[value]}}, []).
 ```
 
-
-
 An entry that simply builds a list of datapoints, using the abstract syntax.
-
-
 
 ```erlang
 
@@ -681,13 +564,11 @@ An entry that simply builds a list of datapoints, using the abstract syntax.
 
 `preprocess_setopts(Name, Opts, Type, Ref, OldOpts) -> any()`
 
-
 <a name="reset-3"></a>
 
 ### reset/3 ###
 
 `reset(X1, X2, X3) -> any()`
-
 
 <a name="sample-3"></a>
 
@@ -695,13 +576,11 @@ An entry that simply builds a list of datapoints, using the abstract syntax.
 
 `sample(X1, X2, X3) -> any()`
 
-
 <a name="setopts-3"></a>
 
 ### setopts/3 ###
 
 `setopts(X1, X2, X3) -> any()`
-
 
 <a name="test_mem_info-1"></a>
 
@@ -709,11 +588,9 @@ An entry that simply builds a list of datapoints, using the abstract syntax.
 
 `test_mem_info(DataPoints) -> any()`
 
-
 <a name="update-4"></a>
 
 ### update/4 ###
 
 `update(X1, X2, X3, X4) -> any()`
-
 

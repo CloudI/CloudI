@@ -2,14 +2,13 @@
 {application, exometer,
  [
   {description, "Code instrumentation and metrics collection package."},
-  {vsn, "1.2.1-dev"},
+  {vsn, "1.2.2"},
   {registered, []},
   {applications,
    [
     kernel,
     stdlib,
-    exometer_core,
-    hut
+    exometer_core
    ]},
   {included_applications,
    [

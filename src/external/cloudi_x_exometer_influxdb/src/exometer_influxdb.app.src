@@ -1,14 +1,16 @@
 {application, exometer_influxdb,
  [
-  {description, "InfluxDB reporrter for exometer"},
-  {vsn, "0.5.5-dev"},
+  {description, "InfluxDB reporter for exometer"},
+  {vsn, "0.6.0"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib,
                   hackney,
-                  exometer_core,
-                  hut
+                  exometer_core
                  ]},
-  {env, []}
+  {env, []},
+  {maintainers, ["Yury Gargay"]},
+  {licenses, ["MPL 2.0"]},
+  {links, [{"Github", "https://github.com/travelping/exometer_influxdb"}]}
  ]}.

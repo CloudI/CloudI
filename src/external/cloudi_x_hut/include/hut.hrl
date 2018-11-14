@@ -4,20 +4,20 @@
 -define(__HUT_HRL__, true).
 
 %% Supported logging levels (taken from lager):
--define(log_levels, [debug, info, notice, warning, error, critical, alert, emergency]).
--define(default_log_level, info).
--define(default_use_log_level_gate, true).
+-define(__log_levels, [debug, info, notice, warning, error, critical, alert, emergency]).
+-define(__default_log_level, info).
+-define(__default_use_log_level_gate, true).
 
 %% Helper macros
 -define(__fmt(__Fmt, __Args), lists:flatten(io_lib:format(__Fmt, __Args))).
 
 -define(__maybe_log(__Level, __Fun),
         ((fun() ->
-                   __UseGate = application:get_env(hut, use_log_level_gate, ?default_use_log_level_gate),
+                   __UseGate = application:get_env(hut, use_log_level_gate, ?__default_use_log_level_gate),
                   case __UseGate of
                       true ->
-                          __CurrentLevel = application:get_env(hut, level, ?default_log_level),
-                          __AllowedLevels = lists:dropwhile(fun(__Element) -> __Element =/= __CurrentLevel end, ?log_levels),
+                          __CurrentLevel = application:get_env(hut, level, ?__default_log_level),
+                          __AllowedLevels = lists:dropwhile(fun(__Element) -> __Element =/= __CurrentLevel end, ?__log_levels),
                           __IsEnabled = lists:member(__Level, __AllowedLevels),
                           case __IsEnabled of
                               true ->
@@ -68,19 +68,12 @@
 -ifdef(HUT_CUSTOM_CB).
 -define(log_type, "custom").
 
--ifndef(FUNCTION_NAME).
--define(FUNCTION_NAME, undefined).
--endif.
--ifndef(FUNCTION_ARITY).
--define(FUNCTION_ARITY, undefined).
--endif.
-
 -define(log(__Level, __Fmt),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY}]) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, [], []) end)).
 -define(log(__Level, __Fmt, __Args),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY}]) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, []) end)).
 -define(log(__Level, __Fmt, __Args, __Opts),
-        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, [{module, ?MODULE}, {line, ?LINE}, {function_name, ?FUNCTION_NAME}, {function_arity, ?FUNCTION_ARITY} | __Opts]) end)).
+        ?__maybe_log(__Level, fun() -> ?HUT_CUSTOM_CB:log(__Level, __Fmt, __Args, __Opts) end)).
 
 -endif.
 -else.
@@ -99,30 +92,12 @@
 % If none of the above options was defined, we default to using OTP sasl's error_logger.
 -define(log_type, "default").
 
--define(__log_error_logger(__Level, __Fmt, __Args, __Opts),
-        ((fun() ->
-                  case __Level of
-                      info ->
-                          error_logger:info_report([{msg, ?__fmt(__Fmt, __Args)}, {options, __Opts}]);
-                      warning ->
-                          error_logger:warning_report([{msg, ?__fmt(__Fmt, __Args)}, {options, __Opts}]);
-                      error ->
-                          error_logger:error_report([{msg, ?__fmt(__Fmt, __Args)}, {options, __Opts}]);
-                      _ when __Level =:= debug; __Level =:= notice ->
-                          error_logger:info_report([{sublevel, __Level}, {msg, ?__fmt(__Fmt, __Args)}, {options, __Opts}]);
-                      _ when __Level =:= critical; __Level =:= alert; __Level =:= emergency ->
-                          error_logger:error_report([{sublevel, __Level}, {msg, ?__fmt(__Fmt, __Args)}, {options, __Opts}]);
-                      _ ->
-                          ok
-                  end
-          end)())).
-
 -define(log(__Level, __Fmt),
-        ?__maybe_log(__Level, fun() -> ?__log_error_logger(__Level, __Fmt, [], []) end)).
+        ?__maybe_log(__Level, fun() -> hut:log(?log_type, __Level, __Fmt, [], []) end)).
 -define(log(__Level, __Fmt, __Args),
-        ?__maybe_log(__Level, fun() -> ?__log_error_logger(__Level, __Fmt, __Args, []) end)).
+        ?__maybe_log(__Level, fun() -> hut:log(?log_type, __Level, __Fmt, __Args, []) end)).
 -define(log(__Level, __Fmt, __Args, __Opts),
-        ?__maybe_log(__Level, fun() -> ?__log_error_logger(__Level, __Fmt, __Args, __Opts) end)).
+        ?__maybe_log(__Level, fun() -> hut:log(?log_type, __Level, __Fmt, __Args, __Opts) end)).
 
 % End of all actual log implementation switches.
 -endif.

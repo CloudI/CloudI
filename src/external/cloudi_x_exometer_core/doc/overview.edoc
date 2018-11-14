@@ -6,7 +6,11 @@
 
 @doc
 
-[![Build Status](https://travis-ci.org/Feuerlabs/exometer_core.png?branch=master)](https://travis-ci.org/Feuerlabs/exometer_core)
+[![Travis][travis badge]][travis]
+[![Hex.pm Version][hex version badge]][hex]
+[![Hex.pm License][hex license badge]][hex]
+[![Erlang Versions][erlang version badge]][travis]
+[![Build Tool][build tool]][hex]
 
 The Exometer Core package allows for easy and efficient instrumentation of
 Erlang code, allowing crucial data on system performance to be
@@ -650,3 +654,12 @@ As the names imply, the script given by `EXOMETER_CONFIG_CONFIG_PREPROCESS'
 (if any) will be run before exometer does any processing of its own, and the
 `EXOMETER_CORE_CONFIG_POSTPROCESS' script (if any) will be run after all other
 processing is complete.
+
+<!-- Badges -->
+[travis]: https://travis-ci.org/Feuerlabs/exometer_core
+[travis badge]: https://img.shields.io/travis/Feuerlabs/exometer_core/master.svg?style=flat-square
+[hex]: https://hex.pm/packages/exometer_core
+[hex version badge]: https://img.shields.io/hexpm/v/exometer_core.svg?style=flat-square
+[hex license badge]: https://img.shields.io/hexpm/l/exometer_core.svg?style=flat-square
+[erlang version badge]: https://img.shields.io/badge/erlang-18--21-blue.svg?style=flat-square
+[build tool]: https://img.shields.io/badge/build%20tool-rebar3-orange.svg?style=flat-square

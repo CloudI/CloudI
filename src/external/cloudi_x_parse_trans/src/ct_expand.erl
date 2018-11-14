@@ -117,22 +117,20 @@ extract_fun(Name, Arity, Forms) ->
 
 eval_lfun({function,L,F,_,Clauses}, Args, Bs, Forms, Trace) ->
     try
-        begin
-            {ArgsV, Bs1} = lists:mapfoldl(
-                             fun(A, Bs_) ->
-                                     {value,AV,Bs1_} =
-                                         erl_eval:expr(A, Bs_, lfh(Forms, Trace)),
-                                     {abstract(AV), Bs1_}
-                             end, Bs, Args),
-            Expr = {call, L, {'fun', L, {clauses, lfun_rewrite(Clauses, Forms)}}, ArgsV},
-            call_trace(Trace =/= [], L, F, ArgsV),
-            {value, Ret, _} =
-                erl_eval:expr(Expr, erl_eval:new_bindings(), lfh(Forms, Trace)),
-            ret_trace(lists:member(r, Trace) orelse lists:member(x, Trace),
-                      L, F, Args, Ret),
-            %% restore bindings
-            {value, Ret, Bs1}
-        end
+        {ArgsV, Bs1} = lists:mapfoldl(
+                         fun(A, Bs_) ->
+                                 {value,AV,Bs1_} =
+                                     erl_eval:expr(A, Bs_, lfh(Forms, Trace)),
+                                 {abstract(AV), Bs1_}
+                         end, Bs, Args),
+        Expr = {call, L, {'fun', L, {clauses, lfun_rewrite(Clauses, Forms)}}, ArgsV},
+        call_trace(Trace =/= [], L, F, ArgsV),
+        {value, Ret, _} =
+            erl_eval:expr(Expr, erl_eval:new_bindings(), lfh(Forms, Trace)),
+        ret_trace(lists:member(r, Trace) orelse lists:member(x, Trace),
+                  L, F, Args, Ret),
+        %% restore bindings
+        {value, Ret, Bs1}
     catch
         error:Err ->
             exception_trace(lists:member(x, Trace), L, F, Args, Err),
@@ -205,6 +203,8 @@ abstract([C|T]) when is_integer(C), 0 =< C, C < 256 ->
     abstract_string(T, [C]);
 abstract([H|T]) ->
     {cons,0,abstract(H),abstract(T)};
+abstract(Map) when is_map(Map) ->
+    {map,0,abstract_map(Map)};
 abstract(Tuple) when is_tuple(Tuple) ->
     {tuple,0,abstract_list(tuple_to_list(Tuple))}.
 
@@ -224,6 +224,11 @@ abstract_list([H|T]) ->
     [abstract(H)|abstract_list(T)];
 abstract_list([]) ->
     [].
+
+abstract_map(Map) ->
+    [{map_field_assoc,0,abstract(K),abstract(V)}
+     || {K,V} <- maps:to_list(Map)
+    ].
 
 abstract_byte(Byte, Line) when is_integer(Byte) ->
     {bin_element, Line, {integer, Line, Byte}, default, default};

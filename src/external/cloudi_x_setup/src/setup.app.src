@@ -17,7 +17,7 @@
 {application, setup,
  [
   {description, "Generic setup application for Erlang-based systems"},
-  {vsn, "1.8.2"},
+  {vsn, git},
   {registered, []},
   {applications, [
                   kernel,
@@ -29,5 +29,12 @@
 
   {maintainers, ["Ulf Wiger"]},
   {licenses, ["Apache 2.0"]},
-  {links, [{"Github", "https://github.com/uwiger/setup"}]}
+  {links, [{"Github", "https://github.com/uwiger/setup"}]},
+  %% List copied from rebar3_hex.hrl ?DEFAULT_FILES, adding "Makefile"
+  {files, ["src", "c_src", "include", "rebar.config.script"
+           ,"priv", "rebar.config", "rebar.lock"
+           ,"README*", "readme*"
+           ,"LICENSE*", "license*"
+           ,"NOTICE"
+           ,"Makefile"]}
  ]}.

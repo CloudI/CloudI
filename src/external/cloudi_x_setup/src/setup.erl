@@ -153,30 +153,32 @@
          find_env_vars/1,
          get_env/2, get_env/3,
          get_all_env/1,
-         expand_value/2,
+         expand_value/2,  % expand_value/3 recommended instead
+         expand_value/3,
          patch_app/1,
          find_app/1, find_app/2,
          pick_vsn/3,
          reload_app/1, reload_app/2, reload_app/3,
+         keep_release/1,
          lib_dirs/0, lib_dirs/1]).
 -export([read_config_script/3,   % (Name, F, Opts)
          read_config_script/4]). % (Name, F, Vars, Opts)
 
 -export([ok/1]).
--export([path_entries/1,
-         keep_release/1,
-         app_list/3,
-         env_diff/1,
-         fetch_env/1,
-         otp_root/0]).
+
 
 -export([run_setup/0]).
+
+-export([main/1]).  % new escript entry point
 
 -include_lib("kernel/include/file.hrl").
 
 -ifdef(TEST).
+-compile([export_all, nowarn_export_all]).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
+
+-define(THROW(E), {'___SETUP_THROW___', E}).
 
 -define(if_verbose(Expr),
         case get(verbose) of
@@ -184,20 +186,43 @@
             _    -> ok
         end).
 
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(OTP_RELEASE).
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 %% @spec home() -> Directory
 %% @doc Returns the configured `home' directory, or a best guess (`$CWD')
 %% @end
 %%
 home() ->
-    case app_get_env(setup, home) of
-        U when U == {ok, undefined};
-               U == undefined ->
+    home_([]).
+
+home_(Vis) ->
+    case get_env_v(setup, home, Vis) of
+        undefined ->
             CWD = cwd(),
             D = filename:absname(CWD),
             application:set_env(setup, home, D),
             D;
-        {ok, D} ->
-            D
+        {ok, D} when is_binary(D) ->
+            binary_to_list(D);
+        {ok, D} when is_list(D) ->
+            D;
+        {error,_} = Error ->
+            Error;
+        Other ->
+            {error, Other}
     end.
 
 %% @spec log_dir() -> Directory
@@ -205,7 +230,10 @@ home() ->
 %% @end
 %%
 log_dir() ->
-    setup_dir(log_dir, "log." ++ atom_to_list(node())).
+    log_dir_([]).
+
+log_dir_(Vis) ->
+    setup_dir(log_dir, "log." ++ atom_to_list(node()), Vis).
 
 %% @spec data_dir() -> Directory
 %% @doc Returns the configured data dir, or a best guess (`home()/data.Node').
@@ -213,17 +241,23 @@ log_dir() ->
 %% @end
 %%
 data_dir() ->
-    setup_dir(data_dir, "data." ++ atom_to_list(node())).
+    data_dir_([]).
 
-setup_dir(Key, Default) ->
-    case app_get_env(setup, Key) of
-        U when U == {ok, undefined};
-               U == undefined ->
+data_dir_(Vis) ->
+    setup_dir(data_dir, "data." ++ atom_to_list(node()), Vis).
+
+setup_dir(Key, Default, Vis) ->
+    case get_env_v(setup, Key, Vis) of
+        undefined ->
             D = filename:absname(filename:join(home(), Default)),
             application:set_env(setup, Key, D),
             D;
-        {ok, D} ->
-            D
+        {ok, D} when is_binary(D) ->
+            binary_to_list(D);
+        {ok, D} when is_list(D) ->
+            D;
+        Other ->
+            {error, Other}
     end.
 
 maybe_verify_directories() ->
@@ -273,7 +307,7 @@ find_env_vars(Env) ->
               case app_get_env(A, Env) of
                   {ok, Val} when Val =/= undefined ->
                       NewEnv = private_env(A, GEnv),
-                      [{A, expand_env(NewEnv, Val, A)}];
+                      [{A, expand_env(NewEnv, Val, A, [Env])}];
                   _ ->
                       []
               end
@@ -295,6 +329,26 @@ get_env(A, Key, Default) ->
             Default
     end.
 
+get_env_v(A, Key, V) ->
+    try get_env_v_(A, Key, V)
+    catch
+        throw:?THROW(Error) ->
+            Error
+    end.
+
+get_env_v_(A, Key, V) ->
+    case lists:member(Key, V) of
+        false ->
+            case app_get_env(A, Key) of
+                {ok, Val} ->
+                    {ok, expand_value_v(A, Key, Val, V)};
+                Other ->
+                    Other
+            end;
+        true ->
+            throw(?THROW({error, {loop_detected, Key}}))
+    end.
+
 -spec get_all_env(atom()) -> [{atom(), any()}].
 %% @doc Like `application:get_all_env/1', but with variable expansion.
 %%
@@ -302,21 +356,42 @@ get_env(A, Key, Default) ->
 %% {@section Variable expansion}.
 %% @end
 get_all_env(A) ->
-    Vars = private_env(A),
-    [{K, expand_env(Vars, V, A)} ||
+    Vars = private_env(A, global_env()),
+    [{K, expand_env(Vars, V, A, [K])} ||
         {K, V} <- application:get_all_env(A)].
 
 -spec expand_value(atom(), any()) -> any().
 %% @doc Expand `Value' using global variables and the variables of `App'
 %%
 %% The variable expansion is performed according to the rules outlined in
-%% {@section Variable expansion}.
+%% {@section Variable expansion}. If a loop is detected (a variable ends
+%% up referencing itself), an exception is raised.
+%% Use of {@link expand_value/3} (also providing the initial key name) is
+%% recommended; this function is primarily here for backward compatibility
+%% purposes.
 %% @end
 expand_value(App, Value) ->
-    expand_env(private_env(App), Value, App).
+    expand_env(private_env(App, global_env()), Value, App, []).
 
-global_env()  ->
-    Acc = [{K, fun() -> env_value(K) end} ||
+-spec expand_value(atom(), atom(), any()) -> any().
+%% @doc Expand `Value' using global variables and the variables of `App'
+%%
+%% The variable expansion is performed according to the rules outlined in
+%% {@section Variable expansion}. The `Key' name as second argument is used
+%% for loop detection, in which case an exception will be raised..
+%% @end
+expand_value(App, Key, Value) ->
+    try expand_value_v(App, Key, Value, [])
+    catch
+        throw:?THROW(Error) ->
+            error(Error)
+    end.
+
+expand_value_v(App, K, Value, V) ->
+    expand_env(private_env(App), Value, App, [K|V]).
+
+global_env() ->
+    Acc = [{K, fun(V1) -> env_value(K, V1) end} ||
               K <- ["DATA_DIR", "LOG_DIR", "HOME"]],
     custom_global_env(Acc).
 
@@ -331,7 +406,7 @@ private_env(A) ->
     private_env(A, global_env()).
 
 private_env(A, GEnv) ->
-    Acc = [{K, fun() -> env_value(K, A) end} ||
+    Acc = [{K, fun(Vis1) -> env_value(K, A, Vis1) end} ||
               K <- ["APP", "PRIV_DIR", "LIB_DIR"]],
     custom_private_env(A, Acc ++ GEnv).
 
@@ -361,13 +436,14 @@ app_get_key(A, K) ->
     application:get_key(A, K).
 
 custom_env1({K, V}, Acc, A) ->
-    [{K, fun() -> custom_env_value(K, V, Acc, A) end} | Acc].
+    [{K, fun(Vis1) -> custom_env_value(K, V, Acc, A, Vis1) end} | Acc].
 
-expand_env(_, {T,"$env(" ++ S} = X, A)
+expand_env(_, {T,"$env(" ++ S} = X, A, Vis)
   when T=='$value'; T=='$string'; T=='$binary' ->
     try Res = case get_env_name_l(S) of
                   false -> undefined;
-                  {Name,[]} -> app_get_env(A, Name)
+                  {Name,[]} ->
+                      get_env_v_(A, Name, Vis)
               end,
          case {Res, T} of
              {undefined, '$value'} -> undefined;
@@ -380,28 +456,40 @@ expand_env(_, {T,"$env(" ++ S} = X, A)
     catch
         error:_ -> X
     end;
-expand_env(Vs, {T,"$" ++ S}, _) when T=='$value'; T=='$string'; T=='$binary' ->
+expand_env(Vs, {T,"$" ++ S}, _, Vis)
+  when T=='$value'; T=='$string'; T=='$binary' ->
     case {lists:keyfind(S, 1, Vs), T} of
         {false, '$value'}  -> undefined;
         {false, '$string'} -> "";
         {false, '$binary'} -> <<>>;
-        {{_,V}, '$value'}  -> V();
-        {{_,V}, '$string'} -> binary_to_list(stringify(V()));
-        {{_,V}, '$binary'} -> stringify(V())
+        {{_,V}, '$value'}  -> V(Vis);
+        {{_,V}, '$string'} -> binary_to_list(stringify(V(Vis)));
+        {{_,V}, '$binary'} -> stringify(V(Vis))
     end;
-expand_env(Vs, T, A) when is_tuple(T) ->
-    list_to_tuple([expand_env(Vs, X, A) || X <- tuple_to_list(T)]);
-expand_env(Vs, L, A) when is_list(L) ->
+expand_env(Vs, T, A, V) when is_tuple(T) ->
+    list_to_tuple([expand_env(Vs, X, A, V) || X <- tuple_to_list(T)]);
+expand_env(Vs, L, A, V) when is_list(L) ->
     case setup_lib:is_string(L) of
         true ->
-            do_expand_env(L, Vs, A, list);
+            do_expand_env(L, Vs, A, list, V);
         false ->
-            [expand_env(Vs, X, A) || X <- L]
+            %% [expand_env(Vs, X, A) || X <- L]
+            expand_env_l(Vs, L, A, V)
     end;
-expand_env(Vs, B, A) when is_binary(B) ->
-    do_expand_env(B, Vs, A, binary);
-expand_env(_, X, _) ->
+expand_env(Vs, B, A, V) when is_binary(B) ->
+    do_expand_env(B, Vs, A, binary, V);
+expand_env(_, X, _, _) ->
     X.
+
+-spec expand_env_l(list(), maybe_improper_list(), any(), any()) ->
+                          maybe_improper_list().
+expand_env_l(_Vs, [], _A, _V) ->
+    [];
+expand_env_l(Vs, [H|T], A, V) when is_list(T) ->
+    [expand_env(Vs, H, A, V) | expand_env_l(Vs, T, A, V)];
+expand_env_l(Vs, [H|T], A, V) ->
+    [expand_env(Vs, H, A, V) | expand_env(Vs, T, A, V)].
+
 
 %% do_expand_env(X, Vs, Type) ->
 %%     lists:foldl(fun({K, Val}, Xx) ->
@@ -409,35 +497,35 @@ expand_env(_, X, _) ->
 %%                                    stringify(Val()), [{return,Type}])
 %%                 end, X, Vs).
 
-do_expand_env(X, Vs, A, binary) ->
-    do_expand_env_b(iolist_to_binary(X), Vs, A);
-do_expand_env(X, Vs, A, list) ->
-    binary_to_list(do_expand_env_b(iolist_to_binary(X), Vs, A)).
+do_expand_env(X, Vs, A, binary, V) ->
+    do_expand_env_b(iolist_to_binary(X), Vs, A, V);
+do_expand_env(X, Vs, A, list, V) ->
+    binary_to_list(do_expand_env_b(iolist_to_binary(X), Vs, A, V)).
 
-do_expand_env_b(<<"$env(", T/binary>>, Vs, A) ->
+do_expand_env_b(<<"$env(", T/binary>>, Vs, A, Vis) ->
     case get_env_name_b(T) of
         {K, T1} ->
-            case app_get_env(A, K) of
+            case get_env_v_(A, K, Vis) of
                 {ok, V} ->
-                    Res = expand_env(Vs, V, A),
+                    Res = expand_env(Vs, V, A, Vis),
                     <<(stringify(Res))/binary,
-                      (do_expand_env_b(T1, Vs, A))/binary>>;
+                      (do_expand_env_b(T1, Vs, A, Vis))/binary>>;
                 undefined ->
-                    <<"$env(", (do_expand_env_b(T, Vs, A))/binary>>
+                    <<"$env(", (do_expand_env_b(T, Vs, A, Vis))/binary>>
             end;
         false ->
-            do_expand_env_b(T, Vs, A)
+            do_expand_env_b(T, Vs, A, Vis)
     end;
-do_expand_env_b(<<"$", T/binary>>, Vs, A) ->
-    case match_var_b(Vs, T) of
+do_expand_env_b(<<"$", T/binary>>, Vs, A, Vis) ->
+    case match_var_b(Vs, T, Vis) of
         {Res, T1} ->
-            <<Res/binary, (do_expand_env_b(T1, Vs, A))/binary>>;
+            <<Res/binary, (do_expand_env_b(T1, Vs, A, Vis))/binary>>;
         false ->
-            <<"$", (do_expand_env_b(T, Vs, A))/binary>>
+            <<"$", (do_expand_env_b(T, Vs, A, Vis))/binary>>
     end;
-do_expand_env_b(<<H, T/binary>>, Vs, A) ->
-    <<H, (do_expand_env_b(T, Vs, A))/binary>>;
-do_expand_env_b(<<>>, _, _) ->
+do_expand_env_b(<<H, T/binary>>, Vs, A, Vis) ->
+    <<H, (do_expand_env_b(T, Vs, A, Vis))/binary>>;
+do_expand_env_b(<<>>, _, _, _) ->
     <<>>.
 
 get_env_name_b(B) ->
@@ -466,29 +554,29 @@ get_env_name_l([H|T], Acc) ->
 get_env_name_l([], _) ->
     false.
 
-match_var_b([{K,V}|T], B) ->
+match_var_b([{K,V}|T], B, Vis) ->
     case re:split(B, "^" ++ K, [{return, binary}]) of
         [_] ->
-            match_var_b(T, B);
+            match_var_b(T, B, Vis);
         [<<>>, Rest] ->
-            {stringify(V()), Rest}
+            {stringify(V(Vis)), Rest}
     end;
-match_var_b([], _) ->
+match_var_b([], _, _) ->
     false.
 
-env_value("LOG_DIR") -> log_dir();
-env_value("DATA_DIR") -> data_dir();
-env_value("HOME") -> home().
+env_value("LOG_DIR" , Vis) -> log_dir_(Vis);
+env_value("DATA_DIR", Vis) -> data_dir_(Vis);
+env_value("HOME"    , Vis) -> home_(Vis).
 
-env_value("APP", A) -> A;
-env_value("PRIV_DIR", A) -> priv_dir(A);
-env_value("LIB_DIR" , A) -> lib_dir(A).
+env_value("APP"     , A, _Vis) -> A;
+env_value("PRIV_DIR", A, _Vis) -> priv_dir(A);
+env_value("LIB_DIR" , A, _Vis) -> lib_dir(A).
 
-custom_env_value(_K, {value, V}, _Vs, _A) ->
+custom_env_value(_K, {value, V}, _Vs, _A, _Vis) ->
     V;
-custom_env_value(_K, {expand, V}, Vs, A) ->
-    expand_env(Vs, V, A);
-custom_env_value(K, {apply, M, F, As}, _Vs, _A) ->
+custom_env_value(K, {expand, V}, Vs, A, Vis) ->
+    expand_env(Vs, V, A, [K|Vis]);
+custom_env_value(K, {apply, M, F, As}, _Vs, _A, _Vis) ->
     %% Not ideal, but don't want to introduce exceptions in get_env()
     try apply(M, F, As)
     catch
@@ -656,7 +744,7 @@ roots_of(Path) ->
     All = lists:foldr(
             fun(D, Acc) ->
                     case lists:reverse(filename:split(D)) of
-                        ["ebin",_|T] ->
+                        ["ebin",_| [_|_] = T] ->
                             [filename:join(lists:reverse(T)) | Acc];
                         _ ->
                             Acc
@@ -772,9 +860,6 @@ remove_path(P, A) ->
             true
     end.
 
-path_entries(A) ->
-    path_entries(A, code:get_path()).
-
 path_entries(A, Path) ->
     Pat = atom_to_list(A) ++ "[^/]*/ebin\$",
     [P || P <- Path,
@@ -821,10 +906,10 @@ read_app(F) ->
 find_script(App, Dir, OldVsn, UpOrDown) ->
     Appup = filename:join([Dir, "ebin", atom_to_list(App)++".appup"]),
     case file:consult(Appup) of
-        {ok, [{NewVsn, UpFromScripts, DownToScripts}]} ->
+        {ok, [{NewVsn, UpFromScripts, _DownToScripts}]} ->
             Scripts = case UpOrDown of
-                          up -> UpFromScripts;
-                          down -> DownToScripts
+                          up -> UpFromScripts
+                          %% down -> DownToScripts
                       end,
             case lists:dropwhile(fun({Re,_}) ->
                                          re:run(OldVsn, Re) == nomatch
@@ -865,12 +950,18 @@ intersection(A, B) ->
 %%
 run_setup() ->
     error_logger:info_msg("Setup running ...~n", []),
+    AbortOnError = check_abort_on_error(),
     try run_setup_()
     catch
-        error:Error ->
+        ?STACKTRACE(error, Error, StackTrace)
             error_logger:error_msg("Caught exception:~n"
                                    "~p~n"
-                                   "~p~n", [Error, erlang:get_stacktrace()])
+                                   "~p~n", [Error, StackTrace]),
+            if AbortOnError ->
+                    erlang:error(Error);
+               true ->
+                    ok
+            end
     end.
 
 run_setup_() ->
@@ -882,6 +973,10 @@ run_setup_() ->
     error_logger:info_msg(
       "Setup finished processing hooks (Mode=~p)...~n", [Mode]),
     ok.
+
+%% @hidden
+main(Args) ->
+    setup_gen:main(Args).
 
 %% @spec find_hooks() -> [{PhaseNo, [{M,F,A}]}]
 %% @doc Finds all custom setup hooks in all applications.
@@ -1023,14 +1118,7 @@ run_hooks(Mode, Apps) ->
 %% @end
 %%
 run_selected_hooks(Hooks) ->
-    AbortOnError = case app_get_env(setup, abort_on_error) of
-                       {ok, F} when is_boolean(F) -> F;
-                       {ok, Other} ->
-                           error_logger:error_msg("Invalid abort_on_error flag (~p)~n"
-                                                  "Aborting...~n", [Other]),
-                           error({invalid_abort_on_error, Other});
-                       _ -> false
-                   end,
+    AbortOnError = check_abort_on_error(),
     lists:foreach(
       fun({Phase, MFAs}) ->
               error_logger:info_msg("Setup phase ~p~n", [Phase]),
@@ -1039,13 +1127,23 @@ run_selected_hooks(Hooks) ->
                             end, MFAs)
       end, Hooks).
 
+check_abort_on_error() ->
+    case app_get_env(setup, abort_on_error) of
+        {ok, F} when is_boolean(F) -> F;
+        {ok, Other} ->
+            error_logger:error_msg("Invalid abort_on_error flag (~p)~n"
+                                   "Aborting...~n", [Other]),
+            error({invalid_abort_on_error, Other});
+        _ -> false
+    end.
+
 try_apply(M, F, A, Abort) ->
     {_Pid, Ref} = spawn_monitor(
                    fun() ->
                            exit(try {ok, apply(M, F, A)}
                                 catch
-                                    Type:Exception ->
-                                        {error, {Type, Exception}}
+                                    ?STACKTRACE(Type, Exception, StackTrace)
+                                        {error, {Type, Exception, StackTrace}}
                                 end)
                    end),
     receive
@@ -1053,8 +1151,8 @@ try_apply(M, F, A, Abort) ->
             case Return of
                 {ok, Result} ->
                     report_result(Result, M, F, A);
-                {error, {Type, Exception}} ->
-                    report_error(Type, Exception, M, F, A),
+                {error, {Type, Exception, StackTrace}} ->
+                    report_error(Type, Exception, StackTrace, M, F, A),
                     if Abort ->
                             error_logger:error_msg(
                               "Abort on error is set. Terminating sequence~n",[]),
@@ -1069,7 +1167,7 @@ report_result(Result, M, F, A) ->
     MFAString = format_mfa(M, F, A),
     error_logger:info_msg(MFAString ++ "-> ~p~n", [Result]).
 
-report_error(Type, Error, M, F, A) ->
+report_error(Type, Error, StackTrace, M, F, A) ->
     ErrTypeStr = case Type of
                      error -> "ERROR: ";
                      throw -> "THROW: ";
@@ -1077,7 +1175,7 @@ report_error(Type, Error, M, F, A) ->
                  end,
     MFAString = format_mfa(M, F, A),
     error_logger:error_msg(MFAString ++ "-> " ++ ErrTypeStr ++ "~p~n~p~n",
-                           [Error, erlang:get_stacktrace()]).
+                           [Error, StackTrace]).
 
 
 format_mfa(M, F, A) ->
@@ -1138,7 +1236,9 @@ all_included([H | T]) ->
 all_included([]) ->
     [].
 
-
+%% @spec keep_release(RelVsn) -> ok
+%% @doc Generates a release based on what's running in the current node.
+%% @end
 keep_release(RelVsn) ->
     %% 0. Check
     RelDir = setup_lib:releases_dir(),
@@ -1469,8 +1569,11 @@ code_lib_dir("setup") ->
         false ->
             code:lib_dir(setup)
     end;
-code_lib_dir(App) ->
-    code:lib_dir(App).
+code_lib_dir(App) when is_list(App); is_binary(App) ->
+    try code:lib_dir(binary_to_existing_atom(
+                       iolist_to_binary(App), latin1))
+    catch error:_ -> undefined
+    end.
 
 %% -- a modified version of file:script/2
 %% -- The main difference: call erl_eval:exprs() with a local_function handler
@@ -1496,8 +1599,8 @@ eval_stream2({ok,Form,EndLine}, Fd, H, Last, E, Bs0) ->
     try erl_eval:exprs(Form, Bs0, local_func_handler()) of
         {value,V,Bs} ->
             eval_stream(Fd, H, EndLine, {V}, E, Bs)
-    catch Class:Reason ->
-            Error = {EndLine,?MODULE,{Class,Reason,erlang:get_stacktrace()}},
+    catch ?STACKTRACE(Class, Reason, StackTrace)
+            Error = {EndLine,?MODULE,{Class,Reason,StackTrace}},
             eval_stream(Fd, H, EndLine, Last, [Error|E], Bs0)
     end;
 eval_stream2({error,What,EndLine}, Fd, H, Last, E, Bs) ->
@@ -1508,8 +1611,8 @@ eval_stream2({eof,EndLine}, _Fd, H, Last, E, _Bs) ->
             {ok, Val};
         {return, undefined, E} ->
             {error, hd(lists:reverse(E, [{EndLine,?MODULE,undefined_script}]))};
-        {ignore, _, []} ->
-            ok;
+        %% {ignore, _, []} ->
+        %%     ok;
         {_, _, [_|_] = E} ->
             {error, hd(lists:reverse(E))}
     end.
@@ -1605,6 +1708,7 @@ t_expand_vars() ->
     application:set_env(stdlib, v1, {'$string', "$FOO"}),
     application:set_env(stdlib, v2, {'$binary', "$FOO"}),
     application:set_env(stdlib, v3, {"$PLUS", "$MINUS", "$BAR"}),
+    application:set_env(stdlib, v4, [a|b]),
     %% $BAR and $MINUS are not in setup's context
     {ok, "/$BAR/3/$MINUS/{foo,1}/17"} = setup:get_env(setup, v1),
     {ok, {foo,1}} = setup:get_env(setup, v2),
@@ -1612,6 +1716,7 @@ t_expand_vars() ->
     {ok, "{foo,1}"} = setup:get_env(stdlib, v1),
     {ok, <<"{foo,1}">>} = setup:get_env(stdlib,v2),
     {ok, {"3", "1", "bar"}} = setup:get_env(stdlib,v3),
+    {ok, [a|b]} = setup:get_env(stdlib, v4),
     ok.
 
 t_nested_includes() ->

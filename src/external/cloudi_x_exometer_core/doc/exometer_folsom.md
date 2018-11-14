@@ -5,6 +5,7 @@
 * [Function Details](#functions)
 
 __Behaviours:__ [`exometer_entry`](exometer_entry.md).
+
 <a name="index"></a>
 
 ## Function Index ##
@@ -21,12 +22,10 @@ __Behaviours:__ [`exometer_entry`](exometer_entry.md).
 
 ### behaviour/0 ###
 
-
 <pre><code>
 behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
-
 
 <a name="delete-3"></a>
 
@@ -34,13 +33,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `delete(Name, Type, Ref) -> any()`
 
-
 <a name="get_datapoints-3"></a>
 
 ### get_datapoints/3 ###
 
 `get_datapoints(Name, Type, Ref) -> any()`
-
 
 <a name="get_value-4"></a>
 
@@ -48,13 +45,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `get_value(Name, Type, Ref, DataPoints0) -> any()`
 
-
 <a name="new-3"></a>
 
 ### new/3 ###
 
 `new(Name, X2, Opts) -> any()`
-
 
 <a name="reset-3"></a>
 
@@ -62,13 +57,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `reset(Name, X2, Ref) -> any()`
 
-
 <a name="sample-3"></a>
 
 ### sample/3 ###
 
 `sample(Name, Type, Ref) -> any()`
-
 
 <a name="setopts-3"></a>
 
@@ -76,11 +69,9 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `setopts(Entry, Options, Status) -> any()`
 
-
 <a name="update-4"></a>
 
 ### update/4 ###
 
 `update(Name, Value, Type, Ref) -> any()`
-
 

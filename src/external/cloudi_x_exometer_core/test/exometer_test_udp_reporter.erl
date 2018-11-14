@@ -65,7 +65,7 @@ exometer_report(Metric, DataPoint, Extra, Value, #st{type_map = TypeMap,
                         {value, Value}]}, St),
     {ok, St}.
 
-exometer_report_bulk(Found, Extra, #st{} = St) ->
+exometer_report_bulk(Found, _Extra, #st{} = St) ->
     ok = send({report_bulk, Found}, St),
     {ok, St}.
 

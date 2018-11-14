@@ -5,14 +5,13 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Demo module for `exometer_folsom_monitor` behaviours.
+
 __Behaviours:__ [`exometer_entry`](exometer_entry.md), [`exometer_folsom_monitor`](exometer_folsom_monitor.md).
+
 <a name="description"></a>
 
 ## Description ##
-
-
 This module simply<a name="index"></a>
 
 ## Function Index ##
@@ -31,13 +30,11 @@ This module simply<a name="index"></a>
 
 `behaviour() -> any()`
 
-
 <a name="copy_folsom-3"></a>
 
 ### copy_folsom/3 ###
 
 `copy_folsom(Name, Type, Opts) -> any()`
-
 
 <a name="delete-3"></a>
 
@@ -45,13 +42,11 @@ This module simply<a name="index"></a>
 
 `delete(X1, X2, X3) -> any()`
 
-
 <a name="get_datapoints-3"></a>
 
 ### get_datapoints/3 ###
 
 `get_datapoints(Name, Type, X3) -> any()`
-
 
 <a name="get_value-4"></a>
 
@@ -59,13 +54,11 @@ This module simply<a name="index"></a>
 
 `get_value(X1, Type, X3, DPs) -> any()`
 
-
 <a name="new-3"></a>
 
 ### new/3 ###
 
 `new(N, X2, Opts) -> any()`
-
 
 <a name="reset-3"></a>
 
@@ -73,13 +66,11 @@ This module simply<a name="index"></a>
 
 `reset(X1, X2, X3) -> any()`
 
-
 <a name="sample-3"></a>
 
 ### sample/3 ###
 
 `sample(X1, X2, X3) -> any()`
-
 
 <a name="setopts-3"></a>
 
@@ -87,11 +78,9 @@ This module simply<a name="index"></a>
 
 `setopts(X1, X2, X3) -> any()`
 
-
 <a name="update-4"></a>
 
 ### update/4 ###
 
 `update(X1, Value, Type, X4) -> any()`
-
 

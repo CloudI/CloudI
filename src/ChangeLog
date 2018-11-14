@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-11-14 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update exometer
+    * Update exometer_core, parse_trans and setup
+    * Update exometer_influxdb
+    * Update folsom and bear
+    * Update hut
+
 2018-11-12 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix locally registered name race condition in proper_statem

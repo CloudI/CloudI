@@ -5,18 +5,17 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Exometer histogram probe behavior
 This module implements histogram metrics.
+
 __Behaviours:__ [`exometer_probe`](exometer_probe.md).
+
 <a name="description"></a>
 
 ## Description ##
 
 Each histogram is a sliding
 window, for which the following datapoints are calculated:
-
-
 
 * `max`: the maximum value
 * `min`: the minimum value
@@ -26,18 +25,12 @@ window, for which the following datapoints are calculated:
 * `999`: the 99.9th percentile
 * `n`: the number of values used in the calculation (Note)
 
-
-
 Two histogram implementations are supported and can be selected using
 the option `histogram_module`:
-
-
 
 * `exometer_slide` implements a sliding window, which saves all elements
 within the window. Updating the histogram is cheap, but calculating the
 datapoints may be expensive depending on the size of the window.
-
-
 
 * `exometer_slot_slide` (default), aggregates mean, min and max values
 within given time slots, thereby reducing the amount of data kept for
@@ -49,20 +42,15 @@ until a suitable number has been reached (up to 600). Note that
 `n` reflects the number of values used in the calculation - not the
 number of updates made within the time window.
 
-
-
 Supported options:
 
-
-
 * `time_span` (default: `60000`) size of the window in milliseconds.
-* `slot_period` (default: `1000`) size of the time slots in milliseconds.
+* `slot_period` (default: `10`) size of the time slots in milliseconds.
 * `histogram_module` (default: `exometer_slot_slide`).
 * `truncate` (default: `true`) whether to truncate the datapoint values.
 Supported values: `true | false | round`, where `round` means to round
 the value rather than truncating it.
 * `keep_high` (default: `0`) number of top values to actually keep.
-
 
 The `keep_high` option can be used to get better precision for the higher
 percentiles. A bounded buffer (see [`exometer_shallowtree`](exometer_shallowtree.md)) is used
@@ -88,24 +76,20 @@ to determine the percentiles `90` and up.
 
 `average_sample(TS, Val, Sample) -> any()`
 
-
 <a name="average_transform-2"></a>
 
 ### average_transform/2 ###
 
 `average_transform(TS, Sample) -> any()`
 
-
 <a name="behaviour-0"></a>
 
 ### behaviour/0 ###
-
 
 <pre><code>
 behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 </code></pre>
 <br />
-
 
 <a name="datapoints-0"></a>
 
@@ -113,13 +97,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `datapoints() -> any()`
 
-
 <a name="probe_code_change-3"></a>
 
 ### probe_code_change/3 ###
 
 `probe_code_change(X1, S, X3) -> any()`
-
 
 <a name="probe_get_datapoints-1"></a>
 
@@ -127,13 +109,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `probe_get_datapoints(St) -> any()`
 
-
 <a name="probe_get_value-2"></a>
 
 ### probe_get_value/2 ###
 
 `probe_get_value(DPs, St) -> any()`
-
 
 <a name="probe_handle_msg-2"></a>
 
@@ -141,13 +121,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `probe_handle_msg(X1, S) -> any()`
 
-
 <a name="probe_init-3"></a>
 
 ### probe_init/3 ###
 
 `probe_init(Name, Type, Options) -> any()`
-
 
 <a name="probe_reset-1"></a>
 
@@ -155,13 +133,11 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `probe_reset(St) -> any()`
 
-
 <a name="probe_sample-1"></a>
 
 ### probe_sample/1 ###
 
 `probe_sample(St) -> any()`
-
 
 <a name="probe_setopts-3"></a>
 
@@ -169,20 +145,17 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 
 `probe_setopts(Entry, Opts, St) -> any()`
 
-
 <a name="probe_terminate-1"></a>
 
 ### probe_terminate/1 ###
 
 `probe_terminate(St) -> any()`
 
-
 <a name="probe_update-2"></a>
 
 ### probe_update/2 ###
 
 `probe_update(Value, St) -> any()`
-
 
 <a name="test_run-1"></a>
 
@@ -191,53 +164,42 @@ behaviour() -&gt; <a href="exometer.md#type-behaviour">exometer:behaviour()</a>
 `test_run(Module) -> any()`
 
 Equivalent to [`test_run(Module, 1)`](#test_run-2).
+
 <a name="test_run-2"></a>
 
 ### test_run/2 ###
 
 `test_run(Module, Interval) -> any()`
 
-
 Test the performance and accuracy of a histogram callback module.
-
-
 
 This function uses a test set ([`test_series/0`](#test_series-0)) and initializes
 and updates a histogram using the callback module `Module`.
 
-
-
 The `Module` argument can either be the module name, or `{ModName, Opts}`
 where `Opts` are options passed on to the histogram module.
 
-
-
 `Interval` is the gap in milliseconds between the inserts. The test run
 will not actually wait, but instead manipulate the timestamp.
-
-
 
 Return value: `[Result1, Result2]`, where the results are
 `{Time1, Time2, Datapoints}`. `Time1` is the time (in microsecs) it took to
 insert the values. `Time2` is the time it took to calculate all default
 datapoints. The data set is shuffled between the two runs.
 
-
 To assess the accuracy of the reported percentiles, use e.g.
 `bear:get_statistics(exometer_histogram:test_series())` as a reference.
+
 <a name="test_series-0"></a>
 
 ### test_series/0 ###
-
 
 <pre><code>
 test_series() -&gt; [integer()]
 </code></pre>
 <br />
 
-
 Create a series of values for histogram testing.
-
 
 These are the properties of the current test set:
 

@@ -61,6 +61,18 @@ timestamp() ->
 get_ets_size(Tab) ->
     ets:info(Tab, size).
 
+-ifdef(use_update_counter_4).
+
+%% ets:update_counter/4 was introduced in OTP 18. When < 18 is no
+%% longer supported all this code can be cleaned up along with
+%% folsom_metrics_spiral:new/2
+update_counter(Tid, Key, Value) when is_integer(Value) ->
+    ets:update_counter(Tid, Key, Value, {Key, 0}).
+update_counter_no_exceptions(Tid, Key, Value) ->
+    update_counter(Tid, Key, Value).
+
+-else.
+
 %% @doc
 %% Same as {@link ets:update_counter/3} but inserts `{Key, Value}' if object
 %% is missing in the table.
@@ -102,3 +114,5 @@ update_counter_no_exceptions(Tid, Key, Value) when is_integer(Value) ->
         _ ->
             ets:update_counter(Tid, Key, Value)
     end.
+
+-endif.

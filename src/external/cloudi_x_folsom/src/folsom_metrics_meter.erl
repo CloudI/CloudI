@@ -34,6 +34,7 @@
 
 
 -record(meter, {
+          instant,
           one,
           five,
           fifteen,
@@ -45,31 +46,38 @@
 -include("folsom.hrl").
 
 new(Name) ->
+    Instant = folsom_ewma:instant_ewma(),
     OneMin = folsom_ewma:one_minute_ewma(),
     FiveMin = folsom_ewma:five_minute_ewma(),
     FifteenMin = folsom_ewma:fifteen_minute_ewma(),
     OneDay = folsom_ewma:one_day_ewma(),
 
     ets:insert(?METER_TABLE,
-               {Name, #meter{one = OneMin,
+               {Name, #meter{
+                             instant = Instant,
+                             one = OneMin,
                              five = FiveMin,
                              fifteen = FifteenMin,
                              day = OneDay,
                              start_time = folsom_utils:now_epoch_micro()}}).
 
 tick(Name) ->
-    #meter{one = OneMin,
+    #meter{instant = Instant,
+           one = OneMin,
            five = FiveMin,
            fifteen = FifteenMin,
            day = OneDay} = Meter = get_value(Name),
 
+    Instant1 = folsom_ewma:tick(Instant),
     OneMin1 = folsom_ewma:tick(OneMin),
     FiveMin1 = folsom_ewma:tick(FiveMin),
     FifteenMin1 = folsom_ewma:tick(FifteenMin),
     OneDay1 = folsom_ewma:tick(OneDay),
 
     ets:insert(?METER_TABLE,
-               {Name, Meter#meter{one = OneMin1,
+               {Name, Meter#meter{
+                                  instant = Instant1,
+                                  one = OneMin1,
                                   five = FiveMin1,
                                   fifteen = FifteenMin1,
                                   day = OneDay1}}).
@@ -78,25 +86,30 @@ mark(Name) ->
     mark(Name, 1).
 
 mark(Name, Value) ->
-    #meter{count = Count,
+    #meter{
+           instant = Instant,
+           count = Count,
            one = OneMin,
            five = FiveMin,
            fifteen = FifteenMin,
            day = OneDay} = Meter = get_value(Name),
 
+    Instant1 = folsom_ewma:update(Instant, Value),
     OneMin1 = folsom_ewma:update(OneMin, Value),
     FiveMin1 = folsom_ewma:update(FiveMin, Value),
     FifteenMin1 = folsom_ewma:update(FifteenMin, Value),
     OneDay1 = folsom_ewma:update(OneDay, Value),
 
     ets:insert(?METER_TABLE, {Name, Meter#meter{count = Count + Value,
+                                                instant = Instant1,
                                                 one = OneMin1,
                                                 five = FiveMin1,
                                                 fifteen = FifteenMin1,
                                                 day = OneDay1}}).
 
 get_values(Name) ->
-    #meter{one = OneMin,
+    #meter{instant = Instant,
+           one = OneMin,
            five = FiveMin,
            fifteen = FifteenMin,
            day = OneDay,
@@ -104,6 +117,7 @@ get_values(Name) ->
 
     L = [
          {count, Count},
+         {instant, get_rate(Instant)},
          {one, get_rate(OneMin)},
          {five, get_rate(FiveMin)},
          {fifteen, get_rate(FifteenMin)},
@@ -115,11 +129,12 @@ get_values(Name) ->
     [ {K,V} || {K,V} <- L, V /= undefined ].
 
 get_acceleration(Name) ->
-    #meter{one = OneMin,
+    #meter{instant = Instant,
+           one = OneMin,
            five = FiveMin,
            fifteen = FifteenMin} = get_value(Name),
 
-    [
+    [{instant_to_one, calc_acceleration(get_rate(Instant), get_rate(OneMin), 60)},
      {one_to_five, calc_acceleration(get_rate(OneMin), get_rate(FiveMin), 300)},
      {five_to_fifteen, calc_acceleration(get_rate(FiveMin), get_rate(FifteenMin), 600)},
      {one_to_fifteen, calc_acceleration(get_rate(OneMin), get_rate(FifteenMin), 900)}

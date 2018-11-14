@@ -1,6 +1,9 @@
-# Exometer InfluxDB reporter [![Build Status](https://travis-ci.org/travelping/exometer_influxdb.svg)](https://travis-ci.org/travelping/exometer_influxdb)
+# Exometer InfluxDB reporter 
 
 This reporter pushes data to [InfluxDB](https://influxdb.com/index.html).
+
+[![Build Status](https://travis-ci.org/travelping/exometer_influxdb.svg)](https://travis-ci.org/travelping/exometer_influxdb)
+[![Hex pm](http://img.shields.io/hexpm/v/exometer_influxdb.svg?style=flat)](https://hex.pm/packages/exometer_influxdb)
 
 ## Usage
 
@@ -8,7 +11,7 @@ This reporter pushes data to [InfluxDB](https://influxdb.com/index.html).
 
     ```erlang
     {deps, [
-        {exometer_influxdb, ".*", {git, "https://github.com/travelping/exometer_influxdb.git", "master"}}
+        {exometer_influxdb, "0.6.0"}
     ]}.
     ```
 
@@ -21,15 +24,17 @@ This reporter pushes data to [InfluxDB](https://influxdb.com/index.html).
 3. Configure it:
 
     ```erlang
-    {exometer, 
-        {reporters, [
-            {exometer_report_influxdb, [{protocol, http}, 
-                                        {host, <<"localhost">>},
-                                        {port, 8086},
-                                        {db, <<"exometer">>},
-                                        {tags, [{region, ru}]}]}
+    {exometer_core, [
+        {report, [
+            {reporters, [
+                {exometer_report_influxdb, [{protocol, http},
+                                            {host, <<"localhost">>},
+                                            {port, 8086},
+                                            {db, <<"exometer">>},
+                                            {tags, [{region, ru}]}]}
+            ]}
         ]}
-    }.
+    ]}.
     ```
 
 Available options:
@@ -52,11 +57,14 @@ The following options can be set globally in the reporter config or locally in a
 ### Subscription examples:
 
 ```erlang
-{exometer, 
-    {subscriptions, [
-         {exometer_report_influxdb, [erlang, memory], total, 5000, [{tags, {tag, value}}]},
+
+{exometer_core, [
+    {report, [
+        {subscribers, [
+            {exometer_report_influxdb, [erlang, memory], total, 5000, [{tags, {tag, value}}]}
+         ]}
     ]}
-}.
+]}.
 ```
 
 By default the in InfluxDB visible name of the metric is derived from the exometer id: Here `[erlang, memory]` is translated to `erlang_memory`. 
@@ -83,17 +91,19 @@ Further it might be handy to remove e.g. `undefined` tag keys or values. This ca
 There is capability for making a subscription automatically for each new entry. By default it is off. If you need to enable it in the reporter options and also provide a callback module which handles newly created entries.
 
 ```erlang
-{exometer, 
-    {reporters, [
-        {exometer_report_influxdb, [{autosubscribe, true}, 
-                                    {subscriptions_module, exometer_influxdb_subscribe_mod}, 
-                                    {protocol, http}, 
-                                    {host, <<"localhost">>},
-                                    {port, 8086},
-                                    {db, <<"exometer">>},
-                                    {tags, [{region, ru}]}]}
+{exometer_core, [
+    {report, [
+        {reporters, [
+            {exometer_report_influxdb, [{autosubscribe, true},
+                                        {subscriptions_module, exometer_influxdb_subscribe_mod},
+                                        {protocol, http},
+                                        {host, <<"localhost">>},
+                                        {port, 8086},
+                                        {db, <<"exometer">>},
+                                        {tags, [{region, ru}]}]}
+        ]}
     ]}
-}.
+]}.
 ```
 
 The callback module may look like:

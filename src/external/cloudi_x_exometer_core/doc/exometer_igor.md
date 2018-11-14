@@ -4,7 +4,6 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 <a name="index"></a>
 
 ## Function Index ##
@@ -22,5 +21,4 @@
 ### parse_transform/2 ###
 
 `parse_transform(Forms, Opts) -> any()`
-
 

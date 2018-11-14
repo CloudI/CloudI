@@ -69,7 +69,11 @@ monitor(FromMod, Callback) when is_atom(FromMod), is_atom(Callback) ->
 
 %% @private
 hook(Args) ->
-    Stack = try error(x) catch error:_ -> erlang:get_stacktrace() end,
+    Stack = try error(x)
+            catch
+                ?EXCEPTION(error, _, Stacktrace) ->
+                    ?GET_STACK(Stacktrace)
+            end,
     gen_server:cast(?MODULE, {hook, Args, Stack}).
 
 %% @doc Start the server (called automatically by exometer).

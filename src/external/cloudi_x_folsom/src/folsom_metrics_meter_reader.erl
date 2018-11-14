@@ -36,6 +36,7 @@
 
 
 -record(meter_reader, {
+          instant,
           one,
           five,
           fifteen,
@@ -47,27 +48,32 @@
 -include("folsom.hrl").
 
 new(Name) ->
+    Instant = folsom_ewma:instant_ewma(),
     OneMin = folsom_ewma:one_minute_ewma(),
     FiveMin = folsom_ewma:five_minute_ewma(),
     FifteenMin = folsom_ewma:fifteen_minute_ewma(),
 
     ets:insert(?METER_READER_TABLE,
-               {Name, #meter_reader{one = OneMin,
+               {Name, #meter_reader{instant = Instant,
+                                    one = OneMin,
                                     five = FiveMin,
                                     fifteen = FifteenMin,
                                     start_time = folsom_utils:now_epoch_micro()}}).
 
 tick(Name) ->
-    #meter_reader{one = OneMin,
+    #meter_reader{instant = Instant,
+                  one = OneMin,
                   five = FiveMin,
                   fifteen = FifteenMin} = Meter = get_value(Name),
 
+    Instant1 = folsom_ewma:tick(Instant),
     OneMin1 = folsom_ewma:tick(OneMin),
     FiveMin1 = folsom_ewma:tick(FiveMin),
     FifteenMin1 = folsom_ewma:tick(FifteenMin),
 
     ets:insert(?METER_READER_TABLE,
-               {Name, Meter#meter_reader{one = OneMin1,
+               {Name, Meter#meter_reader{instant = Instant1,
+                                         one = OneMin1,
                                          five = FiveMin1,
                                          fifteen = FifteenMin1}}).
 
@@ -78,6 +84,7 @@ mark(Name, Value) ->
     % skip first reading to bootstrap last value
     #meter_reader{count = Count,
                   last_count = LastCount,
+                  instant = Instant,
                   one = OneMin,
                   five = FiveMin,
                   fifteen = FifteenMin} = Meter = get_value(Name),
@@ -87,11 +94,13 @@ mark(Name, Value) ->
                        Meter#meter_reader{last_count = Value};
                    _ ->
                        Delta = Value - LastCount,
+                       Instant1 = folsom_ewma:update(Instant, Delta),
                        OneMin1 = folsom_ewma:update(OneMin, Delta),
                        FiveMin1 = folsom_ewma:update(FiveMin, Delta),
                        FifteenMin1 = folsom_ewma:update(FifteenMin, Delta),
                        Meter#meter_reader{count = Count + Delta,
                                           last_count = Value,
+                                          instant = Instant1,
                                           one = OneMin1,
                                           five = FiveMin1,
                                           fifteen = FifteenMin1}
@@ -100,11 +109,12 @@ mark(Name, Value) ->
     ets:insert(?METER_READER_TABLE, {Name, NewMeter}).
 
 get_values(Name) ->
-    #meter_reader{one = OneMin,
+    #meter_reader{instant = Instant,
+                  one = OneMin,
                   five = FiveMin,
                   fifteen = FifteenMin} = Meter = get_value(Name),
 
-    L = [
+    L = [{instant, get_rate(Instant)},
          {one, get_rate(OneMin)},
          {five, get_rate(FiveMin)},
          {fifteen, get_rate(FifteenMin)},
@@ -115,11 +125,12 @@ get_values(Name) ->
     [ {K,V} || {K,V} <- L, V /= undefined ].
 
 get_acceleration(Name) ->
-    #meter_reader{one = OneMin,
+    #meter_reader{instant = Instant,
+                  one = OneMin,
                   five = FiveMin,
                   fifteen = FifteenMin} = get_value(Name),
 
-    [
+    [{instant_to_one, calc_acceleration(get_rate(Instant), get_rate(OneMin), 60)},
      {one_to_five, calc_acceleration(get_rate(OneMin), get_rate(FiveMin), 300)},
      {five_to_fifteen, calc_acceleration(get_rate(FiveMin), get_rate(FifteenMin), 600)},
      {one_to_fifteen, calc_acceleration(get_rate(OneMin), get_rate(FifteenMin), 900)}

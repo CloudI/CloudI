@@ -641,7 +641,6 @@ start_probe(#exometer_entry{module = Module,
 %% == Probe implementation
 
 init(Name, Type, Mod, Opts) ->
-    process_flag(min_heap_size, 40000),
     {St0, Opts1} = process_opts(Opts, #st{name = Name,
                                           type = Type,
                                           module = Mod}),

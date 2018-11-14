@@ -59,7 +59,7 @@
                 collected_metrics = #{} :: map(),
                 batch_window_size = 0 :: integer(),
                 tags :: map(),
-                series_name :: atom(),
+                series_name :: atom() | binary(),
                 formatting :: list(),
                 metrics :: map(),
                 autosubscribe :: boolean(),
@@ -243,17 +243,28 @@ connect(Protocol, _, _, _, _) -> {error, {Protocol, not_supported}}.
 
 -spec reconnect(state()) -> {ok, state()}.
 reconnect(#state{protocol = Protocol, host = Host, port = Port,
-                 username = Username, password = Password} = State) ->
+                 username = Username, password = Password, connection = ExistingConnection} = State) ->
+    close_connection(ExistingConnection),
     case connect(Protocol, Host, Port, Username, Password) of
         {ok, Connection} ->
             ?info("InfluxDB reporter reconnecting success: ~p",
-                  [{Protocol, Host, Port, Username, Password}]),
+                  [{Protocol, Host, Port, Username}]),
             {ok, State#state{connection = Connection}};
         Error ->
             ?error("InfluxDB reporter reconnecting error: ~p", [Error]),
             prepare_reconnect(),
             {ok, State#state{connection = undefined}}
     end.
+
+-spec close_connection(undefined | gen_udp:socket() | reference()) -> ok | {error, unsupported_protocol}.
+close_connection(undefined) -> ok;
+close_connection(Connection) when is_reference(Connection) ->
+    hackney:close(Connection);
+close_connection(Connection) when is_port(Connection) ->
+    gen_udp:close(Connection);
+close_connection(Connection) ->
+    ?error("Unsupported protocol connection: ~p", [Connection]),
+    {error, unsupported_protocol}.
 
 prepare_batch_send(Time) ->
     erlang:send_after(Time, self(), {exometer_influxdb, send}).
@@ -397,8 +408,9 @@ metric_elem_to_list(E) when is_binary(E) -> binary_to_list(E);
 metric_elem_to_list(E) when is_list(E) -> E;
 metric_elem_to_list(E) when is_integer(E) -> integer_to_list(E).
 
--spec name(exometer_report:metric() | atom()) -> binary().
+-spec name(exometer_report:metric() | atom() | binary()) -> binary().
 name(Metric) when is_atom(Metric) -> atom_to_binary(Metric, utf8);
+name(Metric) when is_binary(Metric) -> Metric;
 name(Metric) -> iolist_to_binary(metric_to_string(Metric)).
 
 -spec key(integer() | atom() | list() | binary()) -> binary().

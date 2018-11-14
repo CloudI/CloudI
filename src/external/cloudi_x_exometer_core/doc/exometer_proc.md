@@ -5,18 +5,14 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Utility functions for the `exometer_proc` probe type.
 
 <a name="description"></a>
 
 ## Description ##
 
-
-
 The `exometer_proc` probe type is a vanilla Erlang process. All messages
 must be handled explicitly.
-
 
 The functions in this module can be used by custom types
 (see e.g. [`exometer_spiral`](exometer_spiral.md)). When the `exometer_proc` type is
@@ -48,15 +44,12 @@ following messages:
 
 ### call/2 ###
 
-
 <pre><code>
 call(Pid::pid() | atom(), Req::any()) -&gt; any()
 </code></pre>
 <br />
 
-
 Make a synchronous call to an `exometer_proc` process.
-
 
 Note that the receiving process must explicitly handle the message in a
 `receive` clause and respond properly. The protocol is:
@@ -76,24 +69,21 @@ Note that the receiving process must explicitly handle the message in a
 
 ### cast/2 ###
 
-
 <pre><code>
 cast(Pid::pid() | atom(), Msg::any()) -&gt; ok
 </code></pre>
 <br />
 
-
 Send an asynchronous message to an `exometer_proc` process.
-
 
 This function sends a message on the form `{exometer_proc, Msg}` to the
 given process.
+
 <a name="format_status-2"></a>
 
 ### format_status/2 ###
 
 `format_status(Opt, StatusData) -> any()`
-
 
 <a name="handle_system_msg-4"></a>
 
@@ -101,11 +91,9 @@ given process.
 
 `handle_system_msg(Req, From, State, Cont) -> any()`
 
-
 <a name="process_options-1"></a>
 
 ### process_options/1 ###
-
 
 <pre><code>
 process_options(Opts::[{atom(), any()}]) -&gt; ok
@@ -113,51 +101,46 @@ process_options(Opts::[{atom(), any()}]) -&gt; ok
 <br />
 
 Apply process_flag-specific options.
+
 <a name="spawn_process-2"></a>
 
 ### spawn_process/2 ###
-
 
 <pre><code>
 spawn_process(Name::<a href="exometer.md#type-name">exometer:name()</a>, F::fun(() -&gt; no_return())) -&gt; pid()
 </code></pre>
 <br />
 
-
 Spawn an `exometer_proc` process.
-
 
 This function sets up appropriate monitoring, and calls the function `F`
 which needs to initialize the probe and enter an event loop.
 (Note: `exometer_proc` processes are responsible for their own event loop).
+
 <a name="spawn_process-3"></a>
 
 ### spawn_process/3 ###
 
 `spawn_process(Name, F, Opts) -> any()`
 
-
 <a name="stop-0"></a>
 
 ### stop/0 ###
-
 
 <pre><code>
 stop() -&gt; no_return()
 </code></pre>
 <br />
 
-
 Terminate probe process in an orderly way.
 
-
 This function doesn't return.
+
 <a name="system_code_change-4"></a>
 
 ### system_code_change/4 ###
 
 `system_code_change(IntState, Module, OldVsn, Extra) -> any()`
-
 
 <a name="system_continue-3"></a>
 
@@ -165,11 +148,9 @@ This function doesn't return.
 
 `system_continue(Parent, Debug, IntState) -> any()`
 
-
 <a name="system_terminate-4"></a>
 
 ### system_terminate/4 ###
 
 `system_terminate(Reason, Parent, Debug, State) -> any()`
-
 

@@ -5,6 +5,7 @@
 * [Function Details](#functions)
 
 __Behaviours:__ [`gen_server`](gen_server.md).
+
 <a name="index"></a>
 
 ## Function Index ##
@@ -24,13 +25,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `auto_create_entry(Name) -> any()`
 
-
 <a name="code_change-3"></a>
 
 ### code_change/3 ###
 
 `code_change(X1, S, X3) -> any()`
-
 
 <a name="delete_entry-1"></a>
 
@@ -38,13 +37,11 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `delete_entry(Name) -> any()`
 
-
 <a name="demonitor-1"></a>
 
 ### demonitor/1 ###
 
 `demonitor(Pid) -> any()`
-
 
 <a name="ensure-3"></a>
 
@@ -52,11 +49,9 @@ __Behaviours:__ [`gen_server`](gen_server.md).
 
 `ensure(Name, Type, Opts) -> any()`
 
-
 <a name="find_auto_template-1"></a>
 
 ### find_auto_template/1 ###
-
 
 <pre><code>
 find_auto_template(Name::<a href="exometer.md#type-name">exometer:name()</a>) -&gt; #exometer_entry{} | false
@@ -65,12 +60,12 @@ find_auto_template(Name::<a href="exometer.md#type-name">exometer:name()</a>) -&
 
 Convenience function for testing which template will apply to
 `Name`. See [`set_default/2`](#set_default-2) and [`exometer:update_or_create/2`](exometer.md#update_or_create-2).
+
 <a name="handle_call-3"></a>
 
 ### handle_call/3 ###
 
 `handle_call(Req, From, S) -> any()`
-
 
 <a name="handle_cast-2"></a>
 
@@ -78,13 +73,11 @@ Convenience function for testing which template will apply to
 
 `handle_cast(X1, S) -> any()`
 
-
 <a name="handle_info-2"></a>
 
 ### handle_info/2 ###
 
 `handle_info(X1, S) -> any()`
-
 
 <a name="init-1"></a>
 
@@ -92,13 +85,11 @@ Convenience function for testing which template will apply to
 
 `init(X1) -> any()`
 
-
 <a name="load_defaults-0"></a>
 
 ### load_defaults/0 ###
 
 `load_defaults() -> any()`
-
 
 <a name="load_predefined-0"></a>
 
@@ -106,13 +97,11 @@ Convenience function for testing which template will apply to
 
 `load_predefined() -> any()`
 
-
 <a name="make_patterns-2"></a>
 
 ### make_patterns/2 ###
 
 `make_patterns(Type, Name) -> any()`
-
 
 <a name="monitor-2"></a>
 
@@ -120,13 +109,11 @@ Convenience function for testing which template will apply to
 
 `monitor(Name, Pid) -> any()`
 
-
 <a name="monitor-3"></a>
 
 ### monitor/3 ###
 
 `monitor(Name, Pid, OnError) -> any()`
-
 
 <a name="new_entry-3"></a>
 
@@ -134,13 +121,11 @@ Convenience function for testing which template will apply to
 
 `new_entry(Name, Type, Opts) -> any()`
 
-
 <a name="normalize_name-1"></a>
 
 ### normalize_name/1 ###
 
 `normalize_name(N) -> any()`
-
 
 <a name="prefixes-1"></a>
 
@@ -148,13 +133,11 @@ Convenience function for testing which template will apply to
 
 `prefixes(L) -> any()`
 
-
 <a name="preset_defaults-0"></a>
 
 ### preset_defaults/0 ###
 
 `preset_defaults() -> any()`
-
 
 <a name="propose-3"></a>
 
@@ -162,13 +145,11 @@ Convenience function for testing which template will apply to
 
 `propose(Name, Type, Opts) -> any()`
 
-
 <a name="re_register_entry-3"></a>
 
 ### re_register_entry/3 ###
 
 `re_register_entry(Name, Type, Opts) -> any()`
-
 
 <a name="register_application-1"></a>
 
@@ -176,49 +157,41 @@ Convenience function for testing which template will apply to
 
 `register_application(App) -> any()`
 
-
 <a name="repair_entry-1"></a>
 
 ### repair_entry/1 ###
 
 `repair_entry(Name) -> any()`
 
-
 <a name="set_default-3"></a>
 
 ### set_default/3 ###
-
 
 <pre><code>
 set_default(NamePattern0::[atom()], Type::atom(), Exometer_entry::#exometer_entry{} | [{atom(), any()}]) -&gt; true
 </code></pre>
 <br />
 
-
 Sets a default definition for a metric type, possibly using wildcards.
-
-
 
 Names are lists of atoms, where '_' is a wildcard. For example,
 `[a, b, c, '_']` matches all children and grandchildren of
 `[a, b, c]`, whereas `[a, b, c, d]` specifies a single name.
 
-
 The longest match will be selected, unless an exact match is found.
 The definition can be given either as an `#exometer_entry{}` record, or
 a list of `{Key, Value}` tuples, where each `Key` matches an attribute
 of the `#exometer_entry{}` record.
+
 <a name="start_link-0"></a>
 
 ### start_link/0 ###
 
 `start_link() -> any()`
 
-
 <a name="terminate-2"></a>
 
 ### terminate/2 ###
 
 `terminate(X1, X2) -> any()`
-
 

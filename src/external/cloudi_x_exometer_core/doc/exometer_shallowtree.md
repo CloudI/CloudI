@@ -6,15 +6,12 @@
 * [Function Index](#index)
 * [Function Details](#functions)
 
-
 Size-constrained leftist tree
 Inspired by [Leftist Trees](http://www.cise.ufl.edu/~sahni/cop5536/powerpoint/lec11.ppt) by Sartaj Sahni.
 
 <a name="description"></a>
 
 ## Description ##
-
-
 The purpose of this module is to efficiently store a limited number of
 values in e.g. a lossy histogram (ex. [`exometer_slot_slide`](exometer_slot_slide.md)). The
 complexity of insert operations is log(N), but once the tree is full,
@@ -32,11 +29,9 @@ top node in the tree always contains the minimum.
 ### <a name="type-tree">tree()</a> ###
 
 
-
 <pre><code>
 tree() = #t{}
 </code></pre>
-
 
 <a name="index"></a>
 
@@ -56,13 +51,11 @@ tree() = #t{}
 
 `fill(Size) -> any()`
 
-
 <a name="fill1-2"></a>
 
 ### fill1/2 ###
 
 `fill1(T, Tree) -> any()`
-
 
 <a name="filter-2"></a>
 
@@ -70,27 +63,23 @@ tree() = #t{}
 
 `filter(F, T) -> any()`
 
-
 <a name="insert-3"></a>
 
 ### insert/3 ###
-
 
 <pre><code>
 insert(K::number(), V::any(), T::<a href="#type-tree">tree()</a>) -&gt; <a href="#type-tree">tree()</a>
 </code></pre>
 <br />
 
-
 Insert value `V` into tree `T`.
-
 
 If the tree is full and `V` is smaller than the minimum, this function
 will return immediately, leaving the tree unchanged.
+
 <a name="limit-1"></a>
 
 ### limit/1 ###
-
 
 <pre><code>
 limit(T::<a href="#type-tree">tree()</a>) -&gt; non_neg_integer()
@@ -98,10 +87,10 @@ limit(T::<a href="#type-tree">tree()</a>) -&gt; non_neg_integer()
 <br />
 
 Returns the maximum number of values for the given tree.
+
 <a name="new-1"></a>
 
 ### new/1 ###
-
 
 <pre><code>
 new(Size::pos_integer()) -&gt; <a href="#type-tree">tree()</a>
@@ -109,10 +98,10 @@ new(Size::pos_integer()) -&gt; <a href="#type-tree">tree()</a>
 <br />
 
 Create an empty tree limited to `Size`.
+
 <a name="size-1"></a>
 
 ### size/1 ###
-
 
 <pre><code>
 size(T::<a href="#type-tree">tree()</a>) -&gt; non_neg_integer()
@@ -120,36 +109,33 @@ size(T::<a href="#type-tree">tree()</a>) -&gt; non_neg_integer()
 <br />
 
 Returns the number of values stored in the given tree.
+
 <a name="take_min-1"></a>
 
 ### take_min/1 ###
-
 
 <pre><code>
 take_min(T::<a href="#type-tree">tree()</a>) -&gt; {number(), any(), <a href="#type-tree">tree()</a>} | error
 </code></pre>
 <br />
 
-
 Extract the smallest value from the tree `T`.
 
-
 If the tree is empty, `error` is returned, otherwise `{Minimum, NewTree}`.
+
 <a name="to_list-1"></a>
 
 ### to_list/1 ###
-
 
 <pre><code>
 to_list(T::<a href="#type-tree">tree()</a>) -&gt; [{number(), any()}]
 </code></pre>
 <br />
 
-
 Converts a tree to a list.
-
 
 The list will not be ordered, since the aim is to produce the list as
 quickly as possible. Also, `lists:sort(to_list(Tree))`, if to_list/1
 uses brute force, seems faster than most approaches for extracting
 values in order.
+

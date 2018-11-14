@@ -92,12 +92,17 @@
 
 -define(DUMMY_LINE, 9999).
 
--define(ERROR(R, F, I),
+-define(ERROR(R, F, I, Trace),
         begin
-            Trace = erlang:get_stacktrace(),
             rpt_error(R, F, I, Trace),
             throw({error,get_pos(I),{R, Trace}})
         end).
+
+-ifdef(OTP_RELEASE).
+-define(WITH_STACKTRACE(T, R, S), T:R:S ->).
+-else.
+-define(WITH_STACKTRACE(T, R, S), T:R -> S = erlang:get_stacktrace(),).
+-endif.
 
 -export_type([forms/0]).
 
@@ -125,8 +130,9 @@
 -spec error(string(), any(), [{any(),any()}]) ->
     none().
 error(R, _F, I) ->
-    % rpt_error(R, F, I, erlang:get_stacktrace()),
-    throw({error,get_pos(I),{R, erlang:get_stacktrace()}}).
+    ST = erlang:process_info(self(), current_stacktrace),
+    % rpt_error(R, F, I, ST),
+    throw({error,get_pos(I),{R, ST}}).
 
 %% @spec plain_transform(Fun, Forms) -> forms()
 %% Fun = function()
@@ -320,10 +326,10 @@ do(Transform, Fun, Acc, Forms, Options) ->
             optionally_pretty_print(NewForms1, Options, Context),
             {NewForms1, Acc1}
     catch
-        error:Reason ->
+        ?WITH_STACKTRACE(error, Reason, ST)
             {error,
              [{File, [{?DUMMY_LINE, ?MODULE,
-                       {Reason, erlang:get_stacktrace()}}]}]};
+                       {Reason, ST}}]}]};
         throw:{error, Ln, What} ->
             {error, [{error, {Ln, ?MODULE, What}}]}
     end.
@@ -340,10 +346,10 @@ top(F, Forms, Options) ->
             optionally_pretty_print(NewForms1, Options, Context),
             NewForms1
     catch
-        error:Reason ->
+        ?WITH_STACKTRACE(error, Reason, ST)
             {error,
              [{File, [{?DUMMY_LINE, ?MODULE,
-                       {Reason, erlang:get_stacktrace()}}]}]};
+                       {Reason, ST}}]}]};
         throw:{error, Ln, What} ->
             {error, [{File, [{Ln, ?MODULE, What}]}], []}
     end.
@@ -727,6 +733,7 @@ format_exception(Class, Reason) ->
 %%% Note that a stacktrace is generated inside this function.
 %%% @end
 format_exception(Class, Reason, Lines) ->
+    ST = erlang:process_info(self(), current_stacktrace),
     PrintF = fun(Term, I) ->
                      io_lib_pretty:print(
                        Term, I, columns(), ?LINEMAX, ?CHAR_MAX,
@@ -734,7 +741,7 @@ format_exception(Class, Reason, Lines) ->
              end,
     StackF = fun(_, _, _) -> false end,
     lines(Lines, lib:format_exception(
-                   1, Class, Reason, erlang:get_stacktrace(), StackF, PrintF)).
+                   1, Class, Reason, ST, StackF, PrintF)).
 
 columns() ->
     case io:columns() of
@@ -864,14 +871,15 @@ this_form_df(F, Form, Context, Acc) ->
 apply_F(F, Type, Form, Context, Acc) ->
     try F(Type, Form, Context, Acc)
     catch
-        error:Reason ->
+        ?WITH_STACKTRACE(error, Reason, ST)
             ?ERROR(Reason,
                    ?HERE,
                    [{type, Type},
                     {context, Context},
                     {acc, Acc},
                     {apply_f, F},
-                    {form, Form}] ++ [{stack, erlang:get_stacktrace()}])
+                    {form, Form}] ++ [{stack, ST}],
+                   ST)
     end.
 
 
