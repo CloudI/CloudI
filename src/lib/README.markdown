@@ -3,7 +3,7 @@ Internal Dependencies
 
 Various Erlang/OTP applications grew out of CloudI development.
 They exist as separate repositories for easier reuse in isolation and
-as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
+as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 
 `cgroups`
 ---------
@@ -19,8 +19,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 613eb6ac039ca36cd76842f667a90771b0e5c851 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit eecdb1aaebf64d2cc246124568dd948509d0543b`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `MIT`
 
 `erlang_term`
@@ -55,8 +55,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Priority Queues`
 
 - `https://github.com/okeuday/pqueue`
-- `commit 7d09c7f4584ab9fecf6aec2f879103324448f56d (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit ed05accd670dea06b40916857e4b86583efc8926`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `MIT`
 
 `quickrand`
@@ -100,8 +100,8 @@ as external dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit f6beab10d2cc8f28033a3b67528e46e89ecc05a1 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit ac85956064b4893b5d1dd1e4240fcdb90b1f7895`
+- `Wed Nov 14 20:15:29 UTC 2018`
 - `MIT`
 
 `uuid`
