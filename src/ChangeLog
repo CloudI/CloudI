@@ -6,6 +6,8 @@
     * Update cowboy (to 1.1.2)
     * Update cowlib
     * Update ranch
+    * Fixed cloudi_service_filesystem and cloudi_service_http_client
+      tests for cowboy 1.1.2
 
 2018-11-14 Michael Truog   <mjtruog at protonmail dot com>
 

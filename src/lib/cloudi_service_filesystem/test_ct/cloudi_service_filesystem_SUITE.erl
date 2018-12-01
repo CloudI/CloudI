@@ -389,7 +389,7 @@ t_filesystem_basic_read_1(_Config) ->
         "\r\ncontent-range: bytes 33-33/127\r\n\r\n"
         "!"
         "\r\n--", Boundary1:BSize/bitstring,
-        "--\r\n">>},
+        "--">>},
      Context3} = cloudi:send_sync(Context2, ServiceNameGet,
                                   RequestInfo1, Request,
                                   Timeout, Priority),
@@ -586,7 +586,7 @@ t_filesystem_basic_read_wcache_1(_Config) ->
         "\r\ncontent-range: bytes 33-33/127\r\n\r\n"
         "!"
         "\r\n--", Boundary1:BSize/bitstring,
-        "--\r\n">>},
+        "--">>},
      Context3} = cloudi:send_sync(Context2, ServiceNameGet,
                                   RequestInfo1, Request,
                                   Timeout, Priority),
