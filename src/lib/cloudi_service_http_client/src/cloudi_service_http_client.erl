@@ -685,7 +685,7 @@ headers_external_incoming(<<>>) ->
 headers_external_incoming([] = ResponseInfo) ->
     ResponseInfo;
 headers_external_incoming([{K, V} | _] = ResponseInfo) ->
-    % K/V possibly from cloudi_service_http_cowboy HTTP request headers
+    % K/V possibly from cloudi_service_http_cowboy1 HTTP request headers
     true = is_binary(K),
     true = is_binary(V),
     ResponseInfo;
@@ -705,7 +705,7 @@ headers_request(RequestInfo, internal) ->
         [] ->
             RequestInfo;
         [{K, V} | _] ->
-            % K/V possibly from cloudi_service_http_cowboy HTTP request headers
+            % K/V possibly from cloudi_service_http_cowboy1 HTTP request headers
             true = is_binary(K),
             true = is_binary(V),
             RequestInfo
@@ -727,7 +727,7 @@ headers_request_filter(Headers0) ->
         {<<"host">>,                     undefined},
         {<<"url-path">>,                 undefined},
         % removed parameters
-        % (possible if coming from cloudi_service_http_cowboy)
+        % (possible if coming from cloudi_service_http_cowboy1)
         {<<"peer">>,                     undefined},
         {<<"peer-port">>,                undefined},
         {<<"source-address">>,           undefined},

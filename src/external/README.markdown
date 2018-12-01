@@ -55,8 +55,8 @@ Erlang `certifi`
 - `Tue Sep 12 13:35:26 PDT 2017`
 - `BSD`
 
-Erlang `cowboy`
----------------
+Erlang `cowboy1`
+----------------
 `Erlang HTTP Server`
 
 - `https://github.com/ninenines/cowboy`
@@ -64,8 +64,8 @@ Erlang `cowboy`
 - `Fri Nov 30 17:21:05 PST 2018`
 - `MIT`
 
-Erlang `cowlib`
----------------
+Erlang `cowlib1`
+----------------
 `cowboy Protocols`
 
 - `https://github.com/ninenines/cowlib`
@@ -235,8 +235,8 @@ Erlang `proper`
 - `Sat Oct 20 19:09:19 PDT 2018`
 - `GPLv3` (build/test-time dependency only)
 
-Erlang `ranch`
---------------
+Erlang `ranch1`
+---------------
 `Erlang Socket acceptor pool for TCP protocols`
 
 - `https://github.com/ninenines/ranch`

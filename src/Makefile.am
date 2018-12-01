@@ -47,8 +47,8 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/varpool/test \
      -d $(top_srcdir)/external/cloudi_x_bear/src \
      -d $(top_srcdir)/external/cloudi_x_certifi/src \
-     -d $(top_srcdir)/external/cloudi_x_cowboy/src \
-     -d $(top_srcdir)/external/cloudi_x_cowlib/src \
+     -d $(top_srcdir)/external/cloudi_x_cowboy1/src \
+     -d $(top_srcdir)/external/cloudi_x_cowlib1/src \
      -d $(top_srcdir)/external/cloudi_x_elli/src \
      -d $(top_srcdir)/external/cloudi_x_emysql/src \
      -d $(top_srcdir)/external/cloudi_x_epgsql/src \
@@ -66,7 +66,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/external/cloudi_x_nodefinder/src \
      -d $(top_srcdir)/external/cloudi_x_parse_trans/src \
      -d $(top_srcdir)/external/cloudi_x_pgsql/src \
-     -d $(top_srcdir)/external/cloudi_x_ranch/src \
+     -d $(top_srcdir)/external/cloudi_x_ranch1/src \
      -d $(top_srcdir)/external/cloudi_x_setup/src \
      -d $(top_srcdir)/external/cloudi_x_ssl_verify_fun/src \
      -d $(top_srcdir)/external/cloudi_x_unicode_util_compat/src
@@ -247,7 +247,7 @@ dialyze: all \
               tests/msg_size/erlang/src/ \
               tests/null/erlang/src/ \
               external/cloudi_x_bear/ebin \
-              external/cloudi_x_cowlib/ebin \
+              external/cloudi_x_cowlib1/ebin \
               external/cloudi_x_emysql/ebin \
               external/cloudi_x_epgsql/ebin \
               external/cloudi_x_folsom/ebin \

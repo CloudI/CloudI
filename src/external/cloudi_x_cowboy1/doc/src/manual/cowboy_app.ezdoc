@@ -1,0 +1,23 @@
+::: The Cowboy Application
+
+Small, fast, modular HTTP server.
+
+:: Dependencies
+
+The `cowboy1` application uses the Erlang applications `ranch1`
+for listening and accepting TCP connections, `crypto` for
+establishing Websocket connections, and `cowlib1` for parsing and
+building messages for Web protocols. These dependencies must
+be loaded for the `cowboy1` application to work. In an embedded
+environment this means that they need to be started with the
+`application:start/{1,2}` function before the `cowboy1`
+application is started.
+
+The `cowboy1` application also uses the Erlang applications
+`asn1`, `public_key` and `ssl` when listening for HTTPS connections.
+These are started automatically if they weren't before.
+
+:: Environment
+
+The `cowboy1` application does not define any application
+environment configuration parameters.

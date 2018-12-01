@@ -52,7 +52,7 @@ range(Binary) ->
     token_ci(Binary, fun range/2).
 
 %%%------------------------------------------------------------------------
-%%% From cowboy, in cowboy_http.erl
+%%% From cowboy1, in cowboy1_http.erl
 %%%------------------------------------------------------------------------
 
 %% @doc Parse an HTTP date (RFC1123, RFC850 or asctime date).
@@ -477,7 +477,7 @@ http_range_test_() ->
 -endif.
 
 %%%------------------------------------------------------------------------
-%%% From cowboy, in cowboy_bstr.erl
+%%% From cowboy1, in cowboy1_bstr.erl
 %%%------------------------------------------------------------------------
 
 -spec char_to_lower(char()) -> char().

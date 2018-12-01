@@ -8,6 +8,10 @@
     * Update ranch
     * Fixed cloudi_service_filesystem and cloudi_service_http_client
       tests for cowboy 1.1.2
+    * Move all cowboy related source code to have a "1" suffix on
+      module names, to avoid future conflicts with cowboy 2.x modules
+      (cloudi_service_http_cowboy1, cowboy1, cowlib1, ranch1,
+       with cow_ prefix modules becoming cow1_)
 
 2018-11-14 Michael Truog   <mjtruog at protonmail dot com>
 

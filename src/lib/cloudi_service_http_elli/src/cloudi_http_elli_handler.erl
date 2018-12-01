@@ -109,7 +109,7 @@ handle(Req,
             end,
             if
                 QueryGetFormat =:= text_pairs ->
-                    QSVals = cloudi_x_cow_qs:parse_qs(QSRaw),
+                    QSVals = cloudi_x_cow1_qs:parse_qs(QSRaw),
                     if
                         (OutputType =:= external) orelse
                         (OutputType =:= binary) orelse (OutputType =:= list) ->

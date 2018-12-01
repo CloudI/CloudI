@@ -381,7 +381,7 @@ url(Method, RequestHeaders, URLHost, Host, Request) ->
     case cloudi_key_value:find(<<"host">>, RequestHeaders) of
         {ok, Host} when Method == "GET" ->
             {ok, URLHost ++ erlang:binary_to_list(URLPath) ++ "?" ++
-                 erlang:binary_to_list(cloudi_x_cow_qs:qs(Request))};
+                 erlang:binary_to_list(cloudi_x_cow1_qs:qs(Request))};
         {ok, Host} ->
             {ok, URLHost ++ erlang:binary_to_list(URLPath)};
         {ok, HostInvalid} ->
@@ -708,7 +708,7 @@ callback_merge_qs_filter_request([{K, _} = Entry |
 callback_merge(CallbackURL, CallbackQS, RequestQS, Verifier) ->
     NewCallbackQS = callback_merge_qs_filter_callback(CallbackQS),
     NewRequestQS = callback_merge_qs_filter_request(RequestQS, CallbackQS),
-    QS = cloudi_x_cow_qs:qs(NewCallbackQS ++ NewRequestQS ++
+    QS = cloudi_x_cow1_qs:qs(NewCallbackQS ++ NewRequestQS ++
                    [{<<"oauth_verifier">>, Verifier}]),
     <<CallbackURL/binary, $?, QS/binary>>.
 
@@ -746,7 +746,7 @@ request_authorize(RequestQS, TokenRequest, Timeout,
             end;
         {ok, CallbackURL, CallbackQS} ->
             Callback = callback_merge(CallbackURL,
-                                      cloudi_x_cow_qs:parse_qs(CallbackQS),
+                                      cloudi_x_cow1_qs:parse_qs(CallbackQS),
                                       RequestQS, Verifier),
             case DatabaseModule:token_request_update(Dispatcher, Database,
                                                      TokenRequest, Verifier,

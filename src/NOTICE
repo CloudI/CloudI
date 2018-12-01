@@ -102,11 +102,11 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---------------------------------------------------------------------------- MIT
-(Erlang) external/cloudi_x_cowboy
-(Erlang) external/cloudi_x_cowlib
-(Erlang) external/cloudi_x_ranch
+(Erlang) external/cloudi_x_cowboy1
+(Erlang) external/cloudi_x_cowlib1
+(Erlang) external/cloudi_x_ranch1
 
- Copyright (c) 2011-2013, Loïc Hoguin <essen@ninenines.eu>
+ Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
  
  Permission to use, copy, modify, and/or distribute this software for any
  purpose with or without fee is hereby granted, provided that the above

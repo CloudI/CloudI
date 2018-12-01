@@ -4,7 +4,7 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==CloudI OAuth v1.0 Parsing==
-%%% based on https://github.com/extend/cowboy
+%%% based on https://github.com/ninenines/cowboy
 %%% @end
 %%%
 %%% MIT LICENSE
@@ -41,7 +41,7 @@ authorization(Binary) ->
     nonempty_list(Binary, fun authorization_tokens_param/2).
 
 %%%------------------------------------------------------------------------
-%%% From cowboy, in cowboy_http.erl
+%%% From cowboy1, in cowboy1_http.erl
 %%%------------------------------------------------------------------------
 
 -spec authorization_tokens_param(binary(), fun()) -> any().
@@ -59,7 +59,7 @@ authorization_tokens_param(Data, Fun) ->
                                  Attr == <<"oauth_nonce">>;
                                  Attr == <<"oauth_consumer_key">>;
                                  Attr == <<"oauth_verifier">> ->
-                                    cloudi_x_cow_qs:urldecode(Value);
+                                    cloudi_x_cow1_qs:urldecode(Value);
                                  true ->
                                     Value
                              end,

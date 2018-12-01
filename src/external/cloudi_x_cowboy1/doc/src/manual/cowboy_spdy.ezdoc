@@ -1,0 +1,43 @@
+::: cowboy1_spdy
+
+The `cowboy1_spdy` module implements SPDY/3 as a Ranch protocol.
+
+:: Types
+
+: opts() = [{env, cowboy1_middleware:env()}
+	| {middlewares, [module()]}
+	| {onrequest, cowboy1:onrequest_fun()}
+	| {onresponse, cowboy1:onresponse_fun()}]
+
+Configuration for the SPDY protocol handler.
+
+This configuration is passed to Cowboy when starting listeners
+using the `cowboy1:start_spdy/4` function.
+
+It can be updated without restarting listeners using the
+Ranch functions `ranch1:get_protocol_options/1` and
+`ranch1:set_protocol_options/2`.
+
+:: Option descriptions
+
+The default value is given next to the option name.
+
+: env ([{listener, Ref}])
+
+Initial middleware environment.
+
+: middlewares ([cowboy1_router, cowboy1_handler])
+
+List of middlewares to execute for every requests.
+
+: onrequest (undefined)
+
+Fun called every time a request is received.
+
+: onresponse (undefined)
+
+Fun called every time a response is sent.
+
+:: Exports
+
+None.

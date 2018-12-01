@@ -126,7 +126,7 @@
 -define(DEFAULT_USE_HTTP_GET_SUFFIX,      true). % see below:
         % Uses the "/get" suffix on service name patterns used for
         % subscriptions as would be used from HTTP related senders like
-        % cloudi_service_http_cowboy.  Required for write-related
+        % cloudi_service_http_cowboy1.  Required for write-related
         % functionality and reading ranges.
 
 -type read_list_exact() :: list({string(),
@@ -2183,7 +2183,7 @@ content_range_read_part_get(Boundary,
                             ByteStart, ByteEnd, ContentLengthBin, Part) ->
     ByteStartBin = erlang:integer_to_binary(ByteStart),
     ByteEndBin = erlang:integer_to_binary(ByteEnd),
-    [cloudi_x_cow_multipart:part(Boundary,
+    [cloudi_x_cow1_multipart:part(Boundary,
                                  [{<<"content-range">>,
                                    <<(<<"bytes ">>)/binary,
                                      ByteStartBin/binary,(<<"-">>)/binary,
@@ -2223,7 +2223,7 @@ content_range_read([_ | L] = RangeList, Contents) ->
             undefined;
         true ->
             % make a multipart/byteranges response
-            cloudi_x_cow_multipart:boundary()
+            cloudi_x_cow1_multipart:boundary()
     end,
     content_range_read(RangeList, [], Boundary,
                        ContentLengthBin, ContentLength, Contents).
@@ -2234,7 +2234,7 @@ content_range_read([], [{Headers, Response}], undefined, _, _, _) ->
       {<<"content-type">>, <<"application/octet-stream">>} |
       Headers], Response};
 content_range_read([], Output, Boundary, _, _, _) ->
-    ResponseData = lists:reverse([cloudi_x_cow_multipart:close(Boundary) |
+    ResponseData = lists:reverse([cloudi_x_cow1_multipart:close(Boundary) |
                                   Output]),
     {206,
      [{<<"status">>, <<"206">>},
@@ -2279,7 +2279,7 @@ content_range_list_check([_ | L] = RangeList, Contents) ->
             undefined;
         true ->
             % make a multipart/byteranges response
-            cloudi_x_cow_multipart:boundary()
+            cloudi_x_cow1_multipart:boundary()
     end,
     content_range_list_check(RangeList, Boundary,
                              ContentLengthBin, ContentLength).

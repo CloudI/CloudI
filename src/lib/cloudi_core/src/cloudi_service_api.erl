@@ -1025,7 +1025,7 @@ acl(Timeout)
 %% When a subscription on the same service name pattern occurred
 %% multiple times, only a single entry is returned within the list.
 %% Service name patterns that are subscriptions of non-service Erlang pids
-%% (e.g., cloudi_service_http_cowboy websocket connection pids) will not
+%% (e.g., cloudi_service_http_cowboy1 websocket connection pids) will not
 %% be returned by this function.
 %% @end
 %%-------------------------------------------------------------------------
@@ -1149,7 +1149,7 @@ services_restart([_ | _] = L, Timeout)
 %% Multiple services may be returned for a single service name.  Only service
 %% instances on the local Erlang node are searched.  Service names that match
 %% subscriptions of non-service Erlang pids only
-%% (e.g., cloudi_service_http_cowboy websocket connection pids) will not
+%% (e.g., cloudi_service_http_cowboy1 websocket connection pids) will not
 %% return the service's configuration with this function.  Provide a scope
 %% within a 2 element tuple with the service name to check a custom scope.
 %% @end
