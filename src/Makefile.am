@@ -13,7 +13,7 @@ SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
      -d $(top_srcdir)/lib/cloudi_service_filesystem/src \
      -d $(top_srcdir)/lib/cloudi_service_http_client/src \
-     -d $(top_srcdir)/lib/cloudi_service_http_cowboy/src \
+     -d $(top_srcdir)/lib/cloudi_service_http_cowboy1/src \
      -d $(top_srcdir)/lib/cloudi_service_http_elli/src \
      -d $(top_srcdir)/lib/cloudi_service_http_rest/src \
      -d $(top_srcdir)/lib/cloudi_service_map_reduce/src \
@@ -213,7 +213,7 @@ dialyze: all \
               lib/cloudi_service_db_pgsql/ebin/ \
               lib/cloudi_service_filesystem/ebin/ \
               lib/cloudi_service_http_client/ebin/ \
-              lib/cloudi_service_http_cowboy/ebin/ \
+              lib/cloudi_service_http_cowboy1/ebin/ \
               lib/cloudi_service_http_elli/ebin/ \
               lib/cloudi_service_http_rest/ebin/ \
               lib/cloudi_service_map_reduce/ebin/ \
