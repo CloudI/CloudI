@@ -11,7 +11,7 @@
    {registered, []},
    {applications, [
         cloudi_core,
-        cloudi_x_cowlib,
+        cloudi_x_cowlib1,
         cloudi_x_trie,
         stdlib,
         kernel
