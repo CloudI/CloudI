@@ -197,10 +197,12 @@ setcookie(Name, Value, Opts) ->
 	end,
 	SecureBin = case lists:keyfind(secure, 1, Opts) of
 		false -> <<>>;
+		{_, false} -> <<>>;
 		{_, true} -> <<"; Secure">>
 	end,
 	HttpOnlyBin = case lists:keyfind(http_only, 1, Opts) of
 		false -> <<>>;
+		{_, false} -> <<>>;
 		{_, true} -> <<"; HttpOnly">>
 	end,
 	[Name, <<"=">>, Value, <<"; Version=1">>,
@@ -217,6 +219,12 @@ setcookie_test_() ->
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			[{path, <<"/acme">>}],
 			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{secure, true}],
+			<<"Customer=WILE_E_COYOTE; Version=1; Secure">>},
+		{<<"Customer">>, <<"WILE_E_COYOTE">>,
+			[{secure, false}, {http_only, false}],
+			<<"Customer=WILE_E_COYOTE; Version=1">>},
 		{<<"Customer">>, <<"WILE_E_COYOTE">>,
 			[{path, <<"/acme">>}, {badoption, <<"negatory">>}],
 			<<"Customer=WILE_E_COYOTE; Version=1; Path=/acme">>}

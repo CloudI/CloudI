@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-11-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update cowboy (to 1.1.2)
+    * Update cowlib
+    * Update ranch
+
 2018-11-14 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update exometer

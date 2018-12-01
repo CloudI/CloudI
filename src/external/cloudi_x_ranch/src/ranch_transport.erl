@@ -1,4 +1,4 @@
-%% Copyright (c) 2012-2014, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2012-2016, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -22,7 +22,7 @@
 -export_type([sendfile_opts/0]).
 
 -callback name() -> atom().
-%% @todo -callback caps(secure | sendfile) -> boolean().
+-callback secure() -> boolean().
 -callback messages() -> {OK::atom(), Closed::atom(), Error::atom()}.
 -callback listen(opts()) -> {ok, socket()} | {error, atom()}.
 -callback accept(socket(), timeout())

@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2016, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -27,14 +27,19 @@ start_link(LSocket, Transport, ConnsSup) ->
 loop(LSocket, Transport, ConnsSup) ->
 	_ = case Transport:accept(LSocket, infinity) of
 		{ok, CSocket} ->
-			Transport:controlling_process(CSocket, ConnsSup),
-			%% This call will not return until process has been started
-			%% AND we are below the maximum number of connections.
-			ranch_conns_sup:start_protocol(ConnsSup, CSocket);
+			case Transport:controlling_process(CSocket, ConnsSup) of
+				ok ->
+					%% This call will not return until process has been started
+					%% AND we are below the maximum number of connections.
+					ranch_conns_sup:start_protocol(ConnsSup, CSocket);
+				{error, _} ->
+					Transport:close(CSocket)
+			end;
 		%% Reduce the accept rate if we run out of file descriptors.
 		%% We can't accept anymore anyway, so we might as well wait
 		%% a little for the situation to resolve itself.
 		{error, emfile} ->
+			error_logger:warning_msg("Ranch acceptor reducing accept rate: out of file descriptors~n"),
 			receive after 100 -> ok end;
 		%% We want to crash if the listening socket got closed.
 		{error, Reason} when Reason =/= closed ->

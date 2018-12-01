@@ -1,4 +1,4 @@
-%% Copyright (c) 2013, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -13,39 +13,21 @@
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 -module(shutdown_SUITE).
+-compile(export_all).
 
--include_lib("common_test/include/ct.hrl").
-
-%% ct.
--export([all/0]).
--export([init_per_suite/1]).
--export([end_per_suite/1]).
-
-%% Tests.
-
--export([brutal_kill/1]).
--export([infinity/1]).
--export([infinity_trap_exit/1]).
--export([timeout/1]).
--export([timeout_trap_exit/1]).
+-import(ct_helper, [doc/1]).
+-import(ct_helper, [name/0]).
 
 %% ct.
 
 all() ->
-	[brutal_kill, infinity, infinity_trap_exit, timeout, timeout_trap_exit].
-
-init_per_suite(Config) ->
-	ok = application:start(ranch),
-	Config.
-
-end_per_suite(_) ->
-	application:stop(ranch),
-	ok.
+	ct_helper:all(?MODULE).
 
 %% Tests.
 
 brutal_kill(_) ->
-	Name = brutal_kill,
+	doc("Shutdown Ranch listener with shutdown option set to brutal_kill."),
+	Name = name(),
 	{ok, ListenerSup} = ranch:start_listener(Name, 1,
 		ranch_tcp, [{port, 0}, {shutdown, brutal_kill}],
 		echo_protocol, []),
@@ -53,11 +35,10 @@ brutal_kill(_) ->
 	{ok, _} = gen_tcp:connect("localhost", Port, []),
 	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSup, _, _}
-		= lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
 	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
-	ranch:stop_listener(Name),
+	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
 	false = is_process_alive(Pid),
 	false = is_process_alive(ListenerSup),
@@ -65,7 +46,8 @@ brutal_kill(_) ->
 	ok.
 
 infinity(_) ->
-	Name = infinity,
+	doc("Shutdown Ranch listener with shutdown option set to infinity."),
+	Name = name(),
 	{ok, ListenerSup} = ranch:start_listener(Name, 1,
 		ranch_tcp, [{port, 0}, {shutdown, infinity}],
 		echo_protocol, []),
@@ -73,11 +55,10 @@ infinity(_) ->
 	{ok, _} = gen_tcp:connect("localhost", Port, []),
 	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSup, _, _}
-		= lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
 	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
-	ranch:stop_listener(Name),
+	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
 	false = is_process_alive(Pid),
 	false = is_process_alive(ListenerSup),
@@ -85,7 +66,10 @@ infinity(_) ->
 	ok.
 
 infinity_trap_exit(_) ->
-	Name = infinity_trap_exit,
+	doc("Shutdown Ranch listener with shutdown option set to infinity "
+		"and protocol process trapping exits. The listener must not stop "
+		"until the protocol process terminates."),
+	Name = name(),
 	{ok, ListenerSup} = ranch:start_listener(Name, 1,
 		ranch_tcp, [{port, 0}, {shutdown, infinity}],
 		trap_exit_protocol, []),
@@ -93,12 +77,11 @@ infinity_trap_exit(_) ->
 	{ok, _} = gen_tcp:connect("localhost", Port, []),
 	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSup, _, _}
-		= lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
 	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	%% This call will block infinitely.
-	SpawnPid = spawn(fun() -> ranch:stop_listener(Name) end),
+	SpawnPid = spawn(fun() -> ok = ranch:stop_listener(Name) end),
 	receive after 100 -> ok end,
 	%% The protocol traps exit signals, and ignore them, so it won't die.
 	true = is_process_alive(Pid),
@@ -113,9 +96,9 @@ infinity_trap_exit(_) ->
 	false = is_process_alive(SpawnPid),
 	ok.
 
-%% Same as infinity because the protocol doesn't trap exits.
 timeout(_) ->
-	Name = timeout,
+	doc("Shutdown Ranch listener with shutdown option set to 500ms."),
+	Name = name(),
 	{ok, ListenerSup} = ranch:start_listener(Name, 1,
 		ranch_tcp, [{port, 0}, {shutdown, 500}],
 		echo_protocol, []),
@@ -123,11 +106,10 @@ timeout(_) ->
 	{ok, _} = gen_tcp:connect("localhost", Port, []),
 	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSup, _, _}
-		= lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
 	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
-	ranch:stop_listener(Name),
+	ok = ranch:stop_listener(Name),
 	receive after 100 -> ok end,
 	false = is_process_alive(Pid),
 	false = is_process_alive(ListenerSup),
@@ -135,7 +117,10 @@ timeout(_) ->
 	ok.
 
 timeout_trap_exit(_) ->
-	Name = timeout_trap_exit,
+	doc("Shutdown Ranch listener with shutdown option set to 500ms "
+		"and protocol process trapping exits. The listener will only stop "
+		"after the 500ms timeout."),
+	Name = name(),
 	{ok, ListenerSup} = ranch:start_listener(Name, 1,
 		ranch_tcp, [{port, 0}, {shutdown, 500}],
 		trap_exit_protocol, []),
@@ -143,12 +128,11 @@ timeout_trap_exit(_) ->
 	{ok, _} = gen_tcp:connect("localhost", Port, []),
 	receive after 100 -> ok end,
 	ListenerSupChildren = supervisor:which_children(ListenerSup),
-	{_, ConnsSup, _, _}
-		= lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
+	{_, ConnsSup, _, _} = lists:keyfind(ranch_conns_sup, 1, ListenerSupChildren),
 	[{_, Pid, _, _}] = supervisor:which_children(ConnsSup),
 	true = is_process_alive(Pid),
 	%% This call will block for the duration of the shutdown.
-	SpawnPid = spawn(fun() -> ranch:stop_listener(Name) end),
+	SpawnPid = spawn(fun() -> ok = ranch:stop_listener(Name) end),
 	receive after 100 -> ok end,
 	%% The protocol traps exit signals, and ignore them, so it won't die.
 	true = is_process_alive(Pid),

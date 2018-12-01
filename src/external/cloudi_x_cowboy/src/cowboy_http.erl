@@ -425,7 +425,7 @@ asctime_date(Data) ->
 							{error, badarg}
 					end);
 			(_Any, _WkDay) ->
-				{error, badarg1}
+				{error, badarg}
 		end).
 
 -spec asctime_year(binary(), tuple(), tuple()) -> any().
@@ -668,7 +668,9 @@ token(<< C, Rest/binary >>, Fun, Case, Acc) ->
 
 -spec quoted_string(binary(), fun()) -> any().
 quoted_string(<< $", Rest/binary >>, Fun) ->
-	quoted_string(Rest, Fun, <<>>).
+	quoted_string(Rest, Fun, <<>>);
+quoted_string(_, _Fun) ->
+    {error, badarg}.
 
 -spec quoted_string(binary(), fun(), binary()) -> any().
 quoted_string(<<>>, _Fun, _Acc) ->

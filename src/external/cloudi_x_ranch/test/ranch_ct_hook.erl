@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2016, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -12,21 +12,12 @@
 %% ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 %% OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
--module(ranch_sup).
--behaviour(supervisor).
+-module(ranch_ct_hook).
 
--export([start_link/0]).
--export([init/1]).
+-export([init/2]).
 
--spec start_link() -> {ok, pid()}.
-start_link() ->
-	supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-init([]) ->
-	ranch_server = ets:new(ranch_server, [
-		ordered_set, public, named_table]),
-	Procs = [
-		{ranch_server, {ranch_server, start_link, []},
-			permanent, 5000, worker, [ranch_server]}
-	],
-	{ok, {{one_for_one, 1, 5}, Procs}}.
+init(_, _) ->
+	ct_helper:start([ranch]),
+	ct_helper:make_certs_in_ets(),
+	error_logger:add_report_handler(ct_helper_error_h),
+	{ok, undefined}.

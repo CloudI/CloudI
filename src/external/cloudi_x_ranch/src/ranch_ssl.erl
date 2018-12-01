@@ -1,4 +1,4 @@
-%% Copyright (c) 2011-2014, Loïc Hoguin <essen@ninenines.eu>
+%% Copyright (c) 2011-2016, Loïc Hoguin <essen@ninenines.eu>
 %%
 %% Permission to use, copy, modify, and/or distribute this software for any
 %% purpose with or without fee is hereby granted, provided that the above
@@ -16,8 +16,10 @@
 -behaviour(ranch_transport).
 
 -export([name/0]).
+-export([secure/0]).
 -export([messages/0]).
 -export([listen/1]).
+-export([disallowed_listen_options/0]).
 -export([accept/2]).
 -export([accept_ack/2]).
 -export([connect/3]).
@@ -34,63 +36,87 @@
 -export([shutdown/2]).
 -export([close/1]).
 
--type opts() :: [{backlog, non_neg_integer()}
+-type ssl_opt() :: {alpn_preferred_protocols, [binary()]}
+	| {beast_mitigation, one_n_minus_one | zero_n | disabled}
 	| {cacertfile, string()}
-	| {cacerts, [Der::binary()]}
-	| {cert, Der::binary()}
+	| {cacerts, [public_key:der_encoded()]}
+	| {cert, public_key:der_encoded()}
 	| {certfile, string()}
 	| {ciphers, [ssl:erl_cipher_suite()] | string()}
+	| {client_renegotiation, boolean()}
+	| {crl_cache, {module(), {internal | any(), list()}}}
+	| {crl_check, boolean() | peer | best_effort}
+	| {depth, 0..255}
+	| {dh, public_key:der_encoded()}
+	| {dhfile, string()}
 	| {fail_if_no_peer_cert, boolean()}
 	| {hibernate_after, integer() | undefined}
 	| {honor_cipher_order, boolean()}
-	| {ip, inet:ip_address()}
-	| {key, Der::binary()}
+	| {key, {'RSAPrivateKey' | 'DSAPrivateKey' | 'PrivateKeyInfo', public_key:der_encoded()}}
 	| {keyfile, string()}
-	| {linger, {boolean(), non_neg_integer()}}
 	| {log_alert, boolean()}
 	| {next_protocols_advertised, [binary()]}
-	| {nodelay, boolean()}
+	| {padding_check, boolean()}
+	| {partial_chain, fun(([public_key:der_encoded()]) -> {trusted_ca, public_key:der_encoded()} | unknown_ca)}
 	| {password, string()}
-	| {port, inet:port_number()}
-	| {raw, non_neg_integer(), non_neg_integer(),
-		non_neg_integer() | binary()}
+	| {psk_identity, string()}
 	| {reuse_session, fun()}
 	| {reuse_sessions, boolean()}
 	| {secure_renegotiate, boolean()}
-	| {send_timeout, timeout()}
-	| {send_timeout_close, boolean()}
+	| {signature_algs, [{atom(), atom()}]}
+	| {sni_fun, fun()}
+	| {sni_hosts, [{string(), ssl_opt()}]}
+	| {user_lookup_fun, {fun(), any()}}
+	| {v2_hello_compatible, boolean()}
 	| {verify, ssl:verify_type()}
-	| {verify_fun, {fun(), InitialUserState::term()}}
-	| {versions, [atom()]}].
+	| {verify_fun, {fun(), any()}}
+	| {versions, [atom()]}.
+-export_type([ssl_opt/0]).
+
+-type opt() :: ranch_tcp:opt() | ssl_opt().
+-export_type([opt/0]).
+
+-type opts() :: [opt()].
 -export_type([opts/0]).
 
 name() -> ssl.
+
+-spec secure() -> boolean().
+secure() ->
+    true.
 
 messages() -> {ssl, ssl_closed, ssl_error}.
 
 -spec listen(opts()) -> {ok, ssl:sslsocket()} | {error, atom()}.
 listen(Opts) ->
-	ranch:require([crypto, asn1, public_key, ssl]),
-	true = lists:keymember(cert, 1, Opts)
-		orelse lists:keymember(certfile, 1, Opts),
+	case lists:keymember(cert, 1, Opts)
+			orelse lists:keymember(certfile, 1, Opts)
+			orelse lists:keymember(sni_fun, 1, Opts)
+			orelse lists:keymember(sni_hosts, 1, Opts) of
+		true ->
+			do_listen(Opts);
+		false ->
+			{error, no_cert}
+	end.
+
+do_listen(Opts) ->
 	Opts2 = ranch:set_option_default(Opts, backlog, 1024),
-	Opts3 = ranch:set_option_default(Opts2, send_timeout, 30000),
-	Opts4 = ranch:set_option_default(Opts3, send_timeout_close, true),
-	Opts5 = ranch:set_option_default(Opts4, ciphers, unbroken_cipher_suites()),
+	Opts3 = ranch:set_option_default(Opts2, ciphers, unbroken_cipher_suites()),
+	Opts4 = ranch:set_option_default(Opts3, nodelay, true),
+	Opts5 = ranch:set_option_default(Opts4, send_timeout, 30000),
+	Opts6 = ranch:set_option_default(Opts5, send_timeout_close, true),
 	%% We set the port to 0 because it is given in the Opts directly.
 	%% The port in the options takes precedence over the one in the
 	%% first argument.
-	ssl:listen(0, ranch:filter_options(Opts5,
-		[backlog, cacertfile, cacerts, cert, certfile, ciphers,
-			fail_if_no_peer_cert, hibernate_after,
-			honor_cipher_order, ip, key, keyfile, linger,
-			next_protocols_advertised, nodelay,
-			log_alert, password, port, raw,
-			reuse_session, reuse_sessions, secure_renegotiate,
-			send_timeout, send_timeout_close, verify, verify_fun,
-			versions],
-		[binary, {active, false}, {packet, raw},
-			{reuseaddr, true}, {nodelay, true}])).
+	ssl:listen(0, ranch:filter_options(Opts6, disallowed_listen_options(),
+		[binary, {active, false}, {packet, raw}, {reuseaddr, true}])).
+
+%% 'binary' and 'list' are disallowed but they are handled
+%% specifically as they do not have 2-tuple equivalents.
+disallowed_listen_options() ->
+	[alpn_advertised_protocols, client_preferred_next_protocols,
+		fallback, server_name_indication, srp_identity
+		|ranch_tcp:disallowed_listen_options()].
 
 -spec accept(ssl:sslsocket(), timeout())
 	-> {ok, ssl:sslsocket()} | {error, closed | timeout | atom()}.
@@ -107,7 +133,7 @@ accept_ack(CSocket, Timeout) ->
 			ok = close(CSocket),
 			exit(normal);
 		%% Socket most likely stopped responding, don't error out.
-		{error, timeout} ->
+		{error, Reason} when Reason =:= timeout; Reason =:= closed ->
 			ok = close(CSocket),
 			exit(normal);
 		{error, Reason} ->

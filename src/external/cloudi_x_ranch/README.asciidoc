@@ -1,10 +1,8 @@
-Ranch
-=====
+= Ranch
 
 Ranch is a socket acceptor pool for TCP protocols.
 
-Goals
------
+== Goals
 
 Ranch aims to provide everything you need to accept TCP connections with
 a **small** code base and **low latency** while being easy to use directly
@@ -19,16 +17,22 @@ into **pools**, each pool having a different configurable limit.
 Ranch also allows you to **upgrade** the acceptor pool without having
 to close any of the currently opened sockets.
 
-Getting started
----------------
+== Online documentation
 
- *  [Read the guide](http://ninenines.eu/docs/en/ranch/HEAD/guide)
- *  [Check the manual](http://ninenines.eu/docs/en/ranch/HEAD/manual)
- *  Look at the examples in the `examples/` directory
+* http://ninenines.eu/docs/en/ranch/1.3/guide[User guide]
+* http://ninenines.eu/docs/en/ranch/1.3/manual[Function reference]
 
-Support
--------
+== Offline documentation
 
- *  Official IRC Channel: #ninenines on irc.freenode.net
- *  [Mailing Lists](http://lists.ninenines.eu)
- *  [Commercial Support](http://ninenines.eu/support)
+* While still online, run `make docs`
+* User guide available in `doc/` in PDF and HTML formats
+* Function reference man pages available in `doc/man3/` and `doc/man7/`
+* Run `make install-docs` to install man pages on your system
+* Full documentation in Asciidoc available in `doc/src/`
+* Examples available in `examples/`
+
+== Support
+
+* Official IRC Channel: #ninenines on irc.freenode.net
+* https://github.com/ninenines/ranch/issues[Issues tracker]
+* http://ninenines.eu/services[Commercial Support]

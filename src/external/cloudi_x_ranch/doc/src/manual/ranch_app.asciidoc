@@ -1,0 +1,24 @@
+= ranch(7)
+
+== Name
+
+ranch - Socket acceptor pool for TCP protocols.
+
+== Dependencies
+
+The `ranch` application depends on the `ssl` application to
+start. It is used for handling secure connections, when the
+transport is `ranch_ssl`. It can be disabled if SSL is not
+used.
+
+== Environment
+
+The `ranch` application defines one application environment
+configuration parameter.
+
+profile (false)::
+	When enabled, Ranch will start `eprof` profiling automatically.
+
+You can use the `ranch_app:profile_output/0` function to stop
+profiling and output the results to the files 'procs.profile'
+and 'total.profile'. Do not use in production.

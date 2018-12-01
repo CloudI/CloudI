@@ -529,7 +529,9 @@ if_match_exists(Req, State) ->
 		{ok, '*', Req2} ->
 			if_unmodified_since_exists(Req2, State2);
 		{ok, ETagsList, Req2} ->
-			if_match(Req2, State2, ETagsList)
+			if_match(Req2, State2, ETagsList);
+		{error, badarg} ->
+			respond(Req, State2, 400)
 	end.
 
 if_match(Req, State, EtagsList) ->
@@ -579,7 +581,9 @@ if_none_match_exists(Req, State) ->
 		{ok, '*', Req2} ->
 			precondition_is_head_get(Req2, State);
 		{ok, EtagsList, Req2} ->
-			if_none_match(Req2, State, EtagsList)
+			if_none_match(Req2, State, EtagsList);
+		{error, badarg} ->
+			respond(Req, State, 400)
 	end.
 
 if_none_match(Req, State, EtagsList) ->
@@ -999,8 +1003,8 @@ terminate(Req, State=#state{env=Env}) ->
 
 error_terminate(Req, State=#state{handler=Handler, handler_state=HandlerState},
 		Class, Reason, Callback) ->
-	rest_terminate(Req, State),
 	Stacktrace = erlang:get_stacktrace(),
+	rest_terminate(Req, State),
 	cowboy_req:maybe_reply(Stacktrace, Req),
 	erlang:Class([
 		{reason, Reason},
