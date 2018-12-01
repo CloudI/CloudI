@@ -247,6 +247,10 @@ cloudi_service_terminate(_Reason, _Timeout,
 cloudi_service_terminate(_Reason, _Timeout,
                          #state{count = 60}) ->
     % t_service_internal_aspects_1/1 result
+    ok;
+cloudi_service_terminate(_Reason, _Timeout,
+                         #state{count = 100}) ->
+    % t_service_internal_update_1/1 result
     ok.
 
 %%%------------------------------------------------------------------------
