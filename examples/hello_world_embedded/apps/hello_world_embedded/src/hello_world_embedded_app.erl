@@ -76,11 +76,11 @@ start(_StartType, _StartArgs) ->
           [{automatic_loading, false},
            {application_name, Application}]}],
 
-        % cloudi_service_http_cowboy gets listed last so that
+        % cloudi_service_http_cowboy1 gets listed last so that
         % if the destination refresh method changes to lazy,
         % all service name pattern subscriptions are present at initialization
         [{prefix, "/tests/http/"},
-         {module, cloudi_service_http_cowboy},
+         {module, cloudi_service_http_cowboy1},
          {args, [{port, 6464}]},
          {options, [{automatic_loading, false}]}]],
     case hello_world_embedded_sup:start_link() of

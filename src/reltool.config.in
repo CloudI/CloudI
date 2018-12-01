@@ -47,7 +47,7 @@
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_http_client,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
-  {app, cloudi_service_http_cowboy,
+  {app, cloudi_service_http_cowboy1,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_http_elli,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},

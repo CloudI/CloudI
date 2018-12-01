@@ -17,10 +17,10 @@ The `hello_world_reltool` internal service configuration can use the
 fully on the generated release loading the `hello_world_reltool` application
 and its `hello_world_reltool` module implementation of the `cloudi_service`
 interface.  The reltool.config file includes the applications
-`cloudi_service_api_requests` and `cloudi_service_http_cowboy` since
+`cloudi_service_api_requests` and `cloudi_service_http_cowboy1` since
 they are used in the cloudi.conf but are not listed as `hello_world_reltool`
 application dependencies.  This means that both
-`cloudi_service_api_requests` and `cloudi_service_http_cowboy` utilize
+`cloudi_service_api_requests` and `cloudi_service_http_cowboy1` utilize
 `automatic_loading` to make sure both the application and the internal
 service module is loaded before each service instance is added.
 So, this is a method of embedding CloudI into an Erlang application by

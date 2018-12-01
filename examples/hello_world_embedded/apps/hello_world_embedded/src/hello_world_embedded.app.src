@@ -13,6 +13,6 @@
    {applications, [
         cloudi_core,
         cloudi_service_api_requests,
-        cloudi_service_http_cowboy,
+        cloudi_service_http_cowboy1,
         stdlib,
         kernel]}]}.
