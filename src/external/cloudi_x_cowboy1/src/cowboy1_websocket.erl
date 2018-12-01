@@ -53,6 +53,21 @@
 	deflate_state :: undefined | port()
 }).
 
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(OTP_RELEASE).
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 -spec upgrade(Req, Env, module(), any())
 	-> {ok, Req, Env}
 	| {suspend, module(), atom(), [any()]}
@@ -143,8 +158,7 @@ handler_init(State=#state{env=Env, transport=Transport,
 		{shutdown, Req2} ->
 			cowboy1_req:ensure_response(Req2, 400),
 			{ok, Req2, [{result, closed}|Env]}
-	catch Class:Reason ->
-		Stacktrace = erlang:get_stacktrace(),
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		cowboy1_req:maybe_reply(Stacktrace, Req),
 		erlang:Class([
 			{reason, Reason},
@@ -637,12 +651,12 @@ handler_call(State=#state{handler=Handler}, Req, HandlerState,
 			end;
 		{shutdown, Req2, HandlerState2} ->
 			websocket_close(State, Req2, HandlerState2, {normal, shutdown})
-	catch Class:Reason ->
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		_ = websocket_close(State, Req, HandlerState, {error, handler}),
 		erlang:Class([
 			{reason, Reason},
 			{mfa, {Handler, Callback, 3}},
-			{stacktrace, erlang:get_stacktrace()},
+			{stacktrace, Stacktrace},
 			{msg, Message},
 			{req, cowboy1_req:to_list(Req)},
 			{state, HandlerState}
@@ -748,11 +762,11 @@ handler_terminate(#state{env=Env, handler=Handler},
 		Req, HandlerState, TerminateReason) ->
 	try
 		Handler:websocket_terminate(TerminateReason, Req, HandlerState)
-	catch Class:Reason ->
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		erlang:Class([
 			{reason, Reason},
 			{mfa, {Handler, websocket_terminate, 3}},
-			{stacktrace, erlang:get_stacktrace()},
+			{stacktrace, Stacktrace},
 			{req, cowboy1_req:to_list(Req)},
 			{state, HandlerState},
 			{terminate_reason, TerminateReason}

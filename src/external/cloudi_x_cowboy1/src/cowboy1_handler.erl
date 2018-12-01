@@ -43,6 +43,21 @@
 	resp_sent = false :: boolean()
 }).
 
+% for features specific to Erlang/OTP version 21.x (and later versions)
+-ifdef(OTP_RELEASE).
+-define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-endif.
+
+% Get the stacktrace in a way that is backwards compatible
+-ifdef(ERLANG_OTP_VERSION_21_FEATURES).
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error:ErrorStackTrace ->).
+-else.
+-define(STACKTRACE(ErrorType, Error, ErrorStackTrace),
+        ErrorType:Error ->
+            ErrorStackTrace = erlang:get_stacktrace(),).
+-endif.
+
 -spec execute(Req, Env)
 	-> {ok, Req, Env} | {suspend, ?MODULE, handler_loop, [any()]}
 	when Req::cowboy1_req:req(), Env::cowboy1_middleware:env().
@@ -83,8 +98,7 @@ handler_init(Req, State, Handler, HandlerOpts) ->
 			upgrade_protocol(Req, State, Handler, HandlerOpts, Module);
 		{upgrade, protocol, Module, Req2, HandlerOpts2} ->
 			upgrade_protocol(Req2, State, Handler, HandlerOpts2, Module)
-	catch Class:Reason ->
-		Stacktrace = erlang:get_stacktrace(),
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		cowboy1_req:maybe_reply(Stacktrace, Req),
 		erlang:Class([
 			{reason, Reason},
@@ -112,8 +126,7 @@ handler_handle(Req, State, Handler, HandlerState) ->
 		{ok, Req2, HandlerState2} ->
 			terminate_request(Req2, State, Handler, HandlerState2,
 				{normal, shutdown})
-	catch Class:Reason ->
-		Stacktrace = erlang:get_stacktrace(),
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		cowboy1_req:maybe_reply(Stacktrace, Req),
 		handler_terminate(Req, Handler, HandlerState, Reason),
 		erlang:Class([
@@ -231,8 +244,7 @@ handler_call(Req, State=#state{resp_sent=RespSent},
 		{loop, Req2, HandlerState2, hibernate} ->
 			handler_after_callback(Req2, State#state{hibernate=true},
 				Handler, HandlerState2)
-	catch Class:Reason ->
-		Stacktrace = erlang:get_stacktrace(),
+	catch ?STACKTRACE(Class, Reason, Stacktrace)
 		if RespSent -> ok; true ->
 			cowboy1_req:maybe_reply(Stacktrace, Req)
 		end,
@@ -283,11 +295,11 @@ terminate_request(Req, #state{env=Env, loop_timeout_ref=TRef},
 handler_terminate(Req, Handler, HandlerState, Reason) ->
 	try
 		Handler:terminate(Reason, cowboy1_req:lock(Req), HandlerState)
-	catch Class:Reason2 ->
+	catch ?STACKTRACE(Class, Reason2, Stacktrace)
 		erlang:Class([
 			{reason, Reason2},
 			{mfa, {Handler, terminate, 3}},
-			{stacktrace, erlang:get_stacktrace()},
+			{stacktrace, Stacktrace},
 			{req, cowboy1_req:to_list(Req)},
 			{state, HandlerState},
 			{terminate_reason, Reason}
