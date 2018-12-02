@@ -1,0 +1,5 @@
+%% encoding: UTF-8
+{application,elli}.
+{modules,[elli,elli_example_callback,elli_example_callback_handover,
+          elli_handler,elli_http,elli_middleware,elli_middleware_compress,
+          elli_request,elli_sendfile,elli_tcp,elli_test,elli_util]}.

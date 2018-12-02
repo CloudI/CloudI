@@ -1,4 +1,50 @@
 # CHANGELOG
+
+## v3.0.0
+
+ * `scheme`, `host`, and `port` added to the `#req{}` record. Corresponding
+   helper functions added to the `elli_request` module.
+
+## v2.1.2
+
+ * Update dependencies and re-enable linting
+
+ * Increase test coverage
+
+ * Declare optional callbacks to elli_handler
+
+ * Add TLS sendfile implementation by James Fish (from Andrew Thompson)
+
+ * Use hackney instead of httpc in tests, due to httpc bug
+
+## v2.0.2
+
+ * Adapt [knutin/elli#108](https://github.com/knutin/elli/pull/108) by Michael Zazaian
+
+ * Incomplete request regression fix by Evan Vigil-McClanahan
+
+ * Handle binary URIs on OTP >=20
+
+ * Bespoke uri_decode/1 to obviate inets dependency by Christoffer Vikström
+
+## v2.0.1
+
+ * Miscellaneous tooling, test, and type spec tweaks
+
+ * Helper functions to reduce redundancy
+
+ * Request start timing fix
+
+## v2.0.0
+
+ * Code and documentation cleanup
+
+ * Instrumentation facilities
+
+ * RFC 2616 section 8.2.3 implementation by Martin Karlsson
+
+ * Send 500 and close connection if file operations fail
+
 ## v1.0.5
 
  * Optimization of SSL accept by Tristan Sloughter

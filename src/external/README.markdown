@@ -61,7 +61,7 @@ Erlang `cowboy1`
 
 - `https://github.com/ninenines/cowboy`
 - `commit 0c15b9216b7467390623db84e169b32c68e85bcb (1.1.2)`
-- `Fri Nov 30 17:21:05 PST 2018`
+- `Sun Dec  2 00:06:04 UTC 2018`
 - `MIT`
 
 Erlang `cowlib1`
@@ -70,16 +70,16 @@ Erlang `cowlib1`
 
 - `https://github.com/ninenines/cowlib`
 - `commit 45f750db410a4b08c68d142ad0af839f544c5d3d (1.0.2)`
-- `Fri Nov 30 17:21:05 PST 2018`
+- `Sun Dec  2 00:06:04 UTC 2018`
 - `MIT`
 
 Erlang `elli`
 -------------
 `Erlang HTTP Server`
 
-- `https://github.com/knutin/elli`
-- `commit 0cae1521190459bdb16958be7350191df710d799 (v1.0.5)`
-- `Wed May 18 19:39:55 PDT 2016`
+- `https://github.com/elli-lib/elli`
+- `commit 752e0f516d4be4be5f41810901362fbca77dde3c (3.1.0)`
+- `Sun Dec  2 00:06:04 UTC 2018`
 - `MIT`
 
 Erlang `emysql`
@@ -241,7 +241,7 @@ Erlang `ranch1`
 
 - `https://github.com/ninenines/ranch`
 - `commit a004ad710eddd0c21aaccc30d5633a76b06164b5 (1.3.2)`
-- `Fri Nov 30 17:21:05 PST 2018`
+- `Sun Dec  2 00:06:04 UTC 2018`
 - `MIT`
 
 Erlang `rebar`

@@ -1,9 +1,6 @@
 -module(elli_handover_tests).
 -include_lib("eunit/include/eunit.hrl").
--include("elli.hrl").
-
-
--define(i2b(I), list_to_binary(integer_to_list(I))).
+-include("elli_test.hrl").
 
 elli_test_() ->
     {setup,
@@ -19,8 +16,17 @@ setup() ->
     application:start(crypto),
     application:start(public_key),
     application:start(ssl),
-    inets:start(),
-    {ok, P} = elli:start_link([{callback, elli_example_callback_handover}, {port, 3003}]),
+    {ok, _} = application:ensure_all_started(hackney),
+
+    Config = [
+              {mods, [
+                      {elli_example_callback_handover, []}
+                     ]}
+             ],
+
+    {ok, P} = elli:start_link([{callback, elli_middleware},
+                               {callback_args, Config},
+                               {port, 3003}]),
     unlink(P),
     [P].
 
@@ -30,32 +36,17 @@ teardown(Pids) ->
 
 %%
 %% INTEGRATION TESTS
-%% Uses inets httpc to actually call Elli over the network
+%% Uses hackney to actually call Elli over the network
 %%
 
 hello_world() ->
-    {ok, Response} = httpc:request("http://localhost:3003/hello/world"),
-    ?assertEqual(200, status(Response)),
-    ?assertEqual([{"connection", "close"},
-                  {"content-length", "12"}], headers(Response)),
-    ?assertEqual("Hello World!", body(Response)).
+    Response = hackney:get("http://localhost:3003/hello/world"),
+    ?assertMatch(200, status(Response)),
+    ?assertMatch([{<<"Connection">>, <<"close">>},
+                  {<<"Content-Length">>, <<"12">>}], headers(Response)),
+    ?assertMatch(<<"Hello World!">>, body(Response)).
 
 echo() ->
-    {ok, Response} = httpc:request("http://localhost:3003/hello?name=knut"),
-    ?assertEqual(200, status(Response)),
-    ?assertEqual("Hello knut", body(Response)).
-
-
-
-%%
-%% HELPERS
-%%
-
-status({{_, Status, _}, _, _}) ->
-    Status.
-
-body({_, _, Body}) ->
-    Body.
-
-headers({_, Headers, _}) ->
-    lists:sort(Headers).
+    Response = hackney:get("http://localhost:3003/hello?name=knut"),
+    ?assertMatch(200, status(Response)),
+    ?assertMatch(<<"Hello knut">>, body(Response)).
