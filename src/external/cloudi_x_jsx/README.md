@@ -1,4 +1,4 @@
-# jsx (v2.8.0) #
+# jsx (v2.8.3) #
 
 
 an erlang application for consuming, producing and manipulating [json][json]. 
@@ -10,7 +10,7 @@ current status: [![Build Status](https://secure.travis-ci.org/talentdeficit/jsx.
 
 **jsx** is released under the terms of the [MIT][MIT] license
 
-copyright 2010-2015 alisdair sullivan
+copyright 2010-2016 alisdair sullivan
 
 ## really important note ##
 
@@ -47,6 +47,18 @@ for the overview or [migrating from 1.x](#migrating) for the details
 
 
 ## quickstart ##
+
+#### to add to a rebar3 project ####
+Add to `rebar.config`
+```erlang
+...
+{erl_opts, [debug_info]}.
+{deps, [
+       ...
+       {jsx, {git, "https://github.com/talentdeficit/jsx.git", {branch, "v2.8.0"}}}
+]}.
+...
+```
 
 #### to build the library and run tests ####
 
@@ -428,7 +440,7 @@ additional options beyond these. see
         escape sequences not adhering to the json spec result in a `badarg` error
     
     any combination of these can be passed to **jsx** by using `{strict, [strict_option()]}`.
-    `strict` is equivalent to `{strict, [comments, bad_utf8, single_quotes, escapes]}` 
+    `strict` is equivalent to `{strict, [comments, trailing_commas, utf8, single_quotes, escapes]}`
 
 - `return_tail`
 
