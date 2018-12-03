@@ -1,6 +1,6 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -pa ./ebin -pa ./deps/mimetypes/ebin
+%%! -pa ../_build/default/lib/hackney/ebin  -pa ../_build/default/lib/*/ebin  -pa ../_build/default/lib/certifi/ebin  -pa ../_build/default/lib/idna/ebin  -pa ../_build/default/lib/metrics/ebin -pa ../_build/default/lib/mimerl/ebin   -pa ../_build/default/lib/ssl_verify_fun/ebin -pa ../_build/default/lib/unicode_util_compat/ebin
 
 -module(test_streamto).
 
@@ -27,10 +27,10 @@ wait_response(Parent) ->
     end.
 
 main(_) ->
-    hackney:start(),
+    application:ensure_all_started(hackney),
     Self = self(),
     Pid = spawn(fun() -> wait_response(Self) end),
-    Url = <<"https://friendpaste.com/_all_languages">>,
+    Url = <<"https://httparrot.herokuapp.com/get">>,
     Opts = [async, {stream_to, Pid}],
     {ok, Ref} = hackney:get(Url, [], <<>>, Opts),
     receive

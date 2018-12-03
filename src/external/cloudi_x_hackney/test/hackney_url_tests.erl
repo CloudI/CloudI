@@ -173,9 +173,22 @@ parse_url_test_() ->
              #hackney_url{transport =hackney_tcp,
                           scheme = http,
                           netloc = <<"www.example.com">>,
-                          raw_path = <<"/">>,
+                          raw_path = <<"">>,
                           path = <<"/">>,
                           qs = <<"">>,
+                          fragment = <<"">>,
+                          host = "www.example.com",
+                          port = 80,
+                          user = <<"">>,
+                          password = <<"">>}
+            },
+            {<<"http://www.example.com?q=123">>,
+             #hackney_url{transport =hackney_tcp,
+                          scheme = http,
+                          netloc = <<"www.example.com">>,
+                          raw_path = <<"?q=123">>,
+                          path = <<"/">>,
+                          qs = <<"q=123">>,
                           fragment = <<"">>,
                           host = "www.example.com",
                           port = 80,
@@ -236,7 +249,9 @@ parse_qs_test_() ->
     Tests = [
             {<<"a=b">>, [{<<"a">>,<<"b">>}]},
             {<<"a=b&c=d">>, [{<<"a">>,<<"b">>}, {<<"c">>, <<"d">>}]},
-            {<<"a=b&c">>, [{<<"a">>,<<"b">>}, {<<"c">>, true}]}
+            {<<"&a=b&&c=d&">>, [{<<"a">>,<<"b">>}, {<<"c">>, <<"d">>}]},
+            {<<"a=b&c">>, [{<<"a">>,<<"b">>}, {<<"c">>, true}]},
+            {<<"&a=b&c&&">>, [{<<"a">>,<<"b">>}, {<<"c">>, true}]}
             ],
     [{V, fun() -> R = hackney_url:parse_qs(V) end} || {V, R} <- Tests].
 

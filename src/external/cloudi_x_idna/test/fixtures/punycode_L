@@ -1,7 +1,0 @@
-% cf. http://tools.ietf.org/html/rfc3492#section-7.1
-
-{description, "3<nen>B<gumi><kinpachi><sensei>"}.
-
-{punycode, "3B-ww4c5e180e575a65lsy2b"}.
-
-{unicode, [16#0033, 16#5E74, 16#0042, 16#7D44, 16#91D1, 16#516B, 16#5148, 16#751F]}.

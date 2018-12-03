@@ -12,6 +12,8 @@
          set_sockopts/2,
          ssl_opts/2,
          check_or_close/1,
+         peername/1,
+         sockname/1,
          close/1,
          is_pool/1]).
 
@@ -34,8 +36,13 @@ connect(Transport, Host, Port, Options, Dynamic) ->
     {host, Host},
     {port, Port},
     {dynamic, Dynamic}]),
-  case create_connection(Transport, idna:utf8_to_ascii(Host), Port,
-    Options, Dynamic) of
+
+  Host2 = case Transport of
+            hackney_local_tcp -> Host;
+            _ ->  idna:utf8_to_ascii(Host)
+          end,
+
+  case create_connection(Transport, Host2, Port, Options, Dynamic) of
     {ok, #client{request_ref=Ref}} ->
       {ok, Ref};
     Error ->
@@ -66,7 +73,7 @@ create_connection(Transport, Host, Port, Options, Dynamic)
   MaxBody = proplists:get_value(max_body, Options),
 
   %% get mod metrics
-  Engine = metrics:init(hackney_util:mod_metrics()),
+  Engine = hackney_metrics:get_engine(),
 
   %% initial state
   InitialState = #client{mod_metrics=Engine,
@@ -135,6 +142,29 @@ set_sockopts(#client{transport=Transport, socket=Skt}, Options) ->
   Transport:setopts(Skt, Options).
 
 
+%% @doc get the address and port for the other end of current connection in the client
+peername(#client{transport=Transport, socket=Socket}) ->
+  Transport:peername(Socket);
+peername(Ref) when is_reference(Ref) ->
+  case hackney_manager:get_state(Ref) of
+    req_not_found ->
+      req_not_found;
+    Client ->
+      peername(Client)
+  end.
+
+
+%% @doc the local address and port of current socket in the client
+sockname(#client{transport=Transport, socket=Socket}) ->
+  Transport:sockname(Socket);
+sockname(Ref) when is_reference(Ref) ->
+  case hackney_manager:get_state(Ref) of
+    req_not_found ->
+      req_not_found;
+    Client ->
+      sockname(Client)
+  end.
+
 %% @doc close the client
 %%
 %%
@@ -199,8 +229,9 @@ socket_from_pool(Host, Port, Transport, Client0) ->
     {error, no_socket, Ref} ->
       ?report_trace("no socket in the pool", [{pool, PoolName}]),
       _ = metrics:increment_counter(Metrics, [hackney_pool, PoolName, no_socket]),
-      do_connect(Host, Port, Transport, Client#client{socket_ref=Ref},
-        pool);
+      Client1 = Client#client{socket_ref=Ref, pool_handler=PoolHandler},
+
+      do_connect(Host, Port, Transport, Client1, pool);
     Error ->
       Error
   end.
@@ -278,29 +309,34 @@ check_mod_metrics(#client{mod_metrics=Mod}=State)
   when Mod /= nil, Mod /= undefined ->
   State;
 check_mod_metrics(State) ->
-  State#client{mod_metrics=metrics:init(hackney_util:mod_metrics())}.
+  State#client{mod_metrics=hackney_metrics:get_engine()}.
 
 ssl_opts(Host, Options) ->
   case proplists:get_value(ssl_options, Options) of
     undefined ->
-      Insecure =  proplists:get_value(insecure, Options, false),
-      CACerts = certifi:cacerts(),
-      case Insecure of
-        true ->
-          [{verify, verify_none}];
-        false ->
-          VerifyFun = {
-            fun ssl_verify_hostname:verify_fun/3,
-            [{check_hostname, Host}]
-          },
-          [{verify, verify_peer},
-            {depth, 99},
-            {cacerts, CACerts},
-            {partial_chain, fun partial_chain/1},
-            {verify_fun, VerifyFun}]
-      end;
+      ssl_opts_1(Host, Options);
+    [] ->
+      ssl_opts_1(Host, Options);
     SSLOpts ->
       SSLOpts
+  end.
+
+ssl_opts_1(Host, Options) ->
+  Insecure =  proplists:get_value(insecure, Options, false),
+  CACerts = certifi:cacerts(),
+  case Insecure of
+    true ->
+      [{verify, verify_none}];
+    false ->
+      VerifyFun = {
+        fun ssl_verify_hostname:verify_fun/3,
+        [{check_hostname, Host}]
+       },
+      [{verify, verify_peer},
+       {depth, 99},
+       {cacerts, CACerts},
+       {partial_chain, fun partial_chain/1},
+       {verify_fun, VerifyFun}]
   end.
 
 %% code from rebar3 undert BSD license

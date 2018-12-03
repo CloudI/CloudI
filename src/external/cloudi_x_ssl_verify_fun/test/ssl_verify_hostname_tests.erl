@@ -19,10 +19,11 @@ verify_hostname_success_test_ () ->
            {"*baz.example.com", "foobaz.example.com", {[], "baz.example.com", false}},
            {"baz*.example.com", "baz1.example.com", {"baz", ".example.com", false}}
           ],
-  [{string:join([I, R]," : "), fun() ->
-                                   ?assertMatch(V, ssl_verify_hostname:validate_and_parse_wildcard_identifier(I, R)),
-                                   ?assert(ssl_verify_hostname:try_match_hostname(I, R))
-                               end} || {I, R, V} <- Tests].
+  [{lists:append(join(" : ", [I, R])),
+    fun() ->
+            ?assertMatch(V, ssl_verify_hostname:parse_and_validate_wildcard_identifier(I, R)),
+            ?assert(ssl_verify_hostname:try_match_hostname(I, R))
+    end} || {I, R, V} <- Tests].
 
 
 verify_hostname_fail_test_ () ->
@@ -38,7 +39,8 @@ verify_hostname_fail_test_ () ->
            {"a*c.example.com", "abcd.example.com"},
            {"*baz.example.com", "foobuzz.example.com"}
           ],
-  [{string:join([I, R]," : "), fun() -> ?assertNot(ssl_verify_hostname:try_match_hostname(I, R)) end} || {I, R} <- Tests].
+  [{lists:append(join(" : ", [I, R])),
+    fun() -> ?assertNot(ssl_verify_hostname:try_match_hostname(I, R)) end} || {I, R} <- Tests].
 
 
 %% Certs generated via:
@@ -98,3 +100,28 @@ verify_google_cert_bmp_string_test() ->
 
 verify_google_cert_universal_string_test() ->
   ?assertEqual({valid, "google.co.uk"}, ssl_verify_hostname:verify_fun(google_cert_universal_string(), valid_peer, [{check_hostname, "google.co.uk"}])).
+
+%% Copyright Ericsson AB 1996-2016. All Rights Reserved.
+%%
+%% Licensed under the Apache License, Version 2.0 (the "License");
+%% you may not use this file except in compliance with the License.
+%% You may obtain a copy of the License at
+%%
+%%     http://www.apache.org/licenses/LICENSE-2.0
+%%
+%% Unless required by applicable law or agreed to in writing, software
+%% distributed under the License is distributed on an "AS IS" BASIS,
+%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%% See the License for the specific language governing permissions and
+%% limitations under the License.
+%%
+-spec join(Sep, List1) -> List2 when
+      Sep :: T,
+      List1 :: [T],
+      List2 :: [T],
+      T :: term().
+
+join(Sep, [H|T]) -> [H|join_prepend(Sep, T)].
+
+join_prepend(_Sep, []) -> [];
+join_prepend(Sep, [H|T]) -> [Sep, H|join_prepend(Sep, T)].

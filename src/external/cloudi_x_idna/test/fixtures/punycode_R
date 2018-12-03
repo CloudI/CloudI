@@ -1,7 +1,0 @@
-% cf. http://tools.ietf.org/html/rfc3492#section-7.1
-
-{description, "<sono><supiido><de>"}.
-
-{punycode, "d9juau41awczczp"}.
-
-{unicode, [16#305D, 16#306E, 16#30B9, 16#30D4, 16#30FC, 16#30C9, 16#3067]}.

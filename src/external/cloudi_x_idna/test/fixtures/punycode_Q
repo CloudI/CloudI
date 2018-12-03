@@ -1,7 +1,0 @@
-% cf. http://tools.ietf.org/html/rfc3492#section-7.1
-
-{description, "<pafii>de<runba>"}.
-
-{punycode, "de-jg4avhby1noc0d"}.
-
-{unicode, [16#30D1, 16#30D5, 16#30A3, 16#30FC, 16#0064, 16#0065, 16#30EB, 16#30F3, 16#30D0]}.

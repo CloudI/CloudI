@@ -1,0 +1,11 @@
+# CHANGELOG
+
+== 6.0.0 - 2018-08-30
+
+- IDNA 2008 support [RFC5981](https://tools.ietf.org/html/rfc5891)
+- International Domain Name validation
+- fix [Punycode](https://tools.ietf.org/html/rfc3492) algorithm
+
+== 5.1.2 - 2018-06-09
+
+- support build with rebar 2

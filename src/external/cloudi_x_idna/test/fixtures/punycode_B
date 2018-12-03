@@ -1,7 +1,0 @@
-% cf. http://tools.ietf.org/html/rfc3492#section-7.1
-
-{description, "Chinese (simplified)"}.
-
-{punycode, "ihqwcrb4cv8a8dqg056pqjye"}.
-
-{unicode, [16#4ED6, 16#4EEC, 16#4E3A, 16#4EC0, 16#4E48, 16#4E0D, 16#8BF4, 16#4E2D, 16#6587]}.

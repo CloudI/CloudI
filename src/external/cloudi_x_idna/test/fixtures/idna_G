@@ -1,5 +1,0 @@
-% cf. http://github.com/sporkmonger/addressable (spec/addressable/idna_spec.rb)
-
-{input, "\347\242\274\346\250\231\346\272\226\350\220\254\345\234\213\347\242\274.com"}.
-
-{output, "xn--9cs565brid46mda086o.com"}.

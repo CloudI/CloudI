@@ -51,8 +51,8 @@ Erlang `certifi`
 `SSL Certificates for Erlang`
 
 - `https://github.com/certifi/erlang-certifi`
-- `commit aad712ca0251ffed5d56c54c432aca04536bd18f (2.0.0)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit 4ad4051fd3f1d6ae8f9c4fe5eb3fb4f1cd66363e (2.4.2)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `BSD`
 
 Erlang `cowboy1`
@@ -141,8 +141,8 @@ Erlang `hackney`
 `HTTP client library in Erlang`
 
 - `https://github.com/benoitc/hackney`
-- `commit ac85ef2a918e1c14875c60c611038f161e0ea2a3 (1.9.0)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit a3a01695c6b6ef0f75c2b2d65ecb652e4768094d (1.14.3)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `Apache License 2.0`
 
 Erlang `hut`
@@ -159,8 +159,8 @@ Erlang `idna`
 `A pure Erlang IDNA implementation`
 
 - `https://github.com/benoitc/erlang-idna`
-- `commit b452d8fe4c15be8146f5ca15d4f0c08720a98be4 (5.1.0)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit 6cff72747821110169ecfac871b0c69e5064afff (6.0.0)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `BSD`
 
 Erlang `jsx`
@@ -178,7 +178,7 @@ Erlang `metrics`
 
 - `https://github.com/benoitc/erlang-metrics`
 - `commit c6eb4dcf29f9e907539915e2ab996f40c2ec7e8e (1.0.1)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `BSD`
 
 Erlang `mimerl`
@@ -187,7 +187,7 @@ Erlang `mimerl`
 
 - `https://github.com/benoitc/mimerl`
 - `commit 678aba028a690da6822c87410d475841c048b6bf (1.0.2)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `MIT`
 
 Erlang `msgpack`
@@ -267,8 +267,8 @@ Erlang `ssl_verify_fun`
 `SSL verification for Erlang`
 
 - `https://github.com/deadtrickster/ssl_verify_fun.erl`
-- `commit 33406f6decdcb9f03cf1e69e34728a288af156a0 (1.1.1)`
-- `Fri Feb 24 10:27:11 PST 2017`
+- `commit c5718226b0b9f3d1a38ef6ca3c3b4c75f53dda92 (1.1.4)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `MIT`
 
 Erlang `unicode_util_compat`
@@ -276,8 +276,8 @@ Erlang `unicode_util_compat`
 `unicode_util compatibility library for Erlang < 20`
 
 - `https://github.com/benoitc/unicode_util_compat`
-- `commit 38d7bc105f51159e8ea3279c40121db9db1e652f (0.3.1)`
-- `Tue Sep 12 13:35:26 PDT 2017`
+- `commit 6229b0c96785fb1800c8fa14641eb400c493c63f (0.4.1)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `Apache License 2.0`
 
 Haskell `binary`

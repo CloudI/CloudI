@@ -24,18 +24,14 @@ start_link(Owner, Ref, Client) ->
 init(Parent, Owner, Ref, Client) ->
   %% register the stream
   ok = proc_lib:init_ack(Parent, {ok, self()}),
-
   ok = wait_for_controlling_process(),
-
+  _MRef = erlang:monitor(process, Owner),
   Parser = hackney_http:parser([response]),
   try
     stream_loop(Parent, Owner, Ref, Client#client{parser=Parser,
       response_state=on_status})
-  catch Class:Reason ->
-    Owner ! {hackney_response, Ref, {error, {unknown_error,
-      {{Class, Reason,
-        erlang:get_stacktrace()},
-        "An unexpected error occurred."}}}}
+  catch _:Reason ->
+    Owner ! {hackney_response, Ref, {error, {unknown_error, Reason}}}
   end.
 
 wait_for_controlling_process() ->
@@ -52,9 +48,9 @@ stream_loop(Parent, Owner, Ref, #client{transport=Transport,
                                         method= <<"HEAD">>,
                                         parser=Parser}=Client) ->
   Buffer = hackney_http:get(Parser, buffer),
-
-
   hackney_manager:store_state(finish_response(Buffer, Client)),
+  %% remove ant message in the socket
+  _ = flush(Transport, Socket),
   %% pass the control of the socket to the manager so we make
   %% sure a new request will be able to use it
   Transport:controlling_process(Socket, Parent),
@@ -68,6 +64,8 @@ stream_loop(Parent, Owner, Ref, #client{transport=Transport,
   when TE /= <<"chunked">> ->
   Buffer = hackney_http:get(Parser, buffer),
   hackney_manager:store_state(finish_response(Buffer, Client)),
+  %% remove ant message in the socket
+  _ = flush(Transport, Socket),
   %% pass the control of the socket to the manager so we make
   %% sure a new request will be able to use it
   Transport:controlling_process(Socket, Parent),
@@ -90,6 +88,8 @@ stream_loop(Parent, Owner, Ref, #client{transport=Transport,
       Owner ! {hackney_response, Ref, Data},
       maybe_continue(Parent, Owner, Ref, Client2);
     done ->
+      %% remove ant message in the socket
+      _ = flush(Transport, Socket),
       %% pass the control of the socket to the manager so we make
       %% sure a new request will be able to use it
       Transport:controlling_process(Socket, Parent),
@@ -116,6 +116,8 @@ maybe_continue(Parent, Owner, Ref, #client{transport=Transport,
       From ! {Ref, ok};
     {Ref, close} ->
       hackney_response:close(Client);
+    {'DOWN', _MRef, process, Owner, Reason} ->
+      exit({owner_down, Owner, Reason});
     {system, From, Request} ->
       sys:handle_system_msg(Request, From, Parent, ?MODULE, [],
         {stream_loop, Parent, Owner, Ref, Client});
@@ -139,6 +141,8 @@ maybe_continue(Parent, Owner, Ref, #client{transport=Transport,
       From ! {Ref, ok};
     {Ref, close} ->
       hackney_response:close(Client);
+        {'DOWN', _MRef, process, Owner, Reason} ->
+      exit({owner_down, Owner, Reason});
     {system, From, Request} ->
       sys:handle_system_msg(Request, From, Parent, ?MODULE, [],
         {maybe_continue, Parent, Owner, Ref,
@@ -152,8 +156,6 @@ maybe_continue(Parent, Owner, Ref, #client{transport=Transport,
       Client])
 
   end.
-
-
 
 
 %% if follow_redirect is true, we are parsing the headers to fetch the
@@ -265,7 +267,7 @@ async_recv(Parent, Owner, Ref,
     {Closed, Sock} ->
       case Client#client.response_state of
         on_body when (Version =:= {1, 0} orelse Version =:= {1, 1})
-                       andalso CLen =:= nil ->
+                       andalso (CLen =:= undefined orelse CLen =:= nil) ->
           Owner ! {hackney_response, Ref, Buffer},
           Owner ! {hackney_response, Ref, done},
           ok;
@@ -284,6 +286,8 @@ async_recv(Parent, Owner, Ref,
     {Error, Sock, Reason} ->
       Owner ! {hackney_response, Ref, {error, Reason}},
       Transport:close(TSock);
+    {'DOWN', _MRef, process, Owner, Reason} ->
+      exit({owner_down, Owner, Reason});
     {system, From, Request} ->
       sys:handle_system_msg(Request, From, Parent, ?MODULE, [],
         {async_recv, Parent, Owner, Ref, Client});
@@ -336,8 +340,10 @@ process({header, {Key, Value}=KV, NParser},
   %% store useful headers
   Client1 = case hackney_bstr:to_lower(Key) of
               <<"content-length">> ->
-                CLen = list_to_integer(binary_to_list(Value)),
-                Client#client{clen=CLen};
+                case hackney_util:to_int(Value) of
+                  {ok, CLen} -> Client#client{clen=CLen};
+                  false -> Client#client{clen=bad_int}
+                end;
               <<"transfer-encoding">> ->
                 Client#client{te=hackney_bstr:to_lower(Value)};
               <<"connection">> ->
@@ -405,3 +411,15 @@ raw_sock({hackney_tcp, RawSock}) ->
   RawSock;
 raw_sock(RawSock) ->
   RawSock.
+
+%% check that no events from the sockets is received
+%% after giving the control back.
+flush(Transport, Socket) ->
+  {Msg, MsgClosed, MsgError} = Transport:messages(Socket),
+  receive
+    {Msg, Socket, _} -> flush(Transport, Socket) ;
+    {MsgClosed, Socket} -> flush(Transport, Socket) ;
+    {MsgError, Socket, _} -> flush(Transport, Socket)
+  after 0 ->
+    ok
+  end.

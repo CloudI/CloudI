@@ -1,10 +1,7 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
-%%! -pa ./ebin -pa ./deps/mimetypes/ebin
-%%
-%%
-%%
-%%
+%%! -pa ../_build/default/lib/hackney/ebin  -pa ../_build/default/lib/*/ebin  -pa ../_build/default/lib/certifi/ebin  -pa ../_build/default/lib/idna/ebin  -pa ../_build/default/lib/metrics/ebin -pa ../_build/default/lib/mimerl/ebin   -pa ../_build/default/lib/ssl_verify_fun/ebin -pa ../_build/default/lib/unicode_util_compat/ebin
+
 -define(MAX, 100).
 
 wait_request() ->
@@ -15,7 +12,7 @@ wait_request() ->
 request(WaitPid) ->
     wait_request(),
     Method = get,
-    Url = <<"https://friendpaste.com">>,
+    Url = <<"https://httparrot.herokuapp.com/get">>,
     Headers = [{<<"Connection">>, <<"keep-alive">>}],
     Options = [{pool, default}],
     {ok, _, _Headers, Ref} = hackney:request(Method, Url, Headers, <<>>, Options),

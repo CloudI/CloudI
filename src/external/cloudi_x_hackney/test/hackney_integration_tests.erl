@@ -21,7 +21,9 @@ all_tests() ->
    test_custom_host_headers(),
    async_request(),
    async_head_request(),
-   async_no_content_request()].
+   async_no_content_request(),
+   test_frees_manager_ets_when_body_is_in_client(),
+   test_frees_manager_ets_when_body_is_in_response()].
 
 %%all_tests() ->
 %%    case has_unix_socket() of
@@ -172,6 +174,24 @@ test_custom_host_headers() ->
   ReqHeaders = proplists:get_value(<<"headers">>, Obj),
   ?_assertEqual(<<"myhost.com">>, proplists:get_value(<<"Host">>, ReqHeaders)).
 
+test_frees_manager_ets_when_body_is_in_client() ->
+    URL = <<"http://localhost:8000/get">>,
+    BeforeCount = ets:info(hackney_manager_refs, size),
+    {ok, 200, _, Client} = hackney:get(URL),
+    DuringCount = ets:info(hackney_manager_refs, size),
+    {ok, _unusedBody} = hackney:body(Client),
+    AfterCount = ets:info(hackney_manager_refs, size),
+    ?_assertEqual(DuringCount, BeforeCount + 1),
+    ?_assertEqual(BeforeCount, AfterCount).
+
+test_frees_manager_ets_when_body_is_in_response() ->
+    URL = <<"http://localhost:8000/get">>,
+    Headers = [],
+    Options = [with_body],
+    BeforeCount = ets:info(hackney_manager_refs, size),
+    {ok, 200, _, _} = hackney:get(URL, Headers, <<>>, Options),
+    AfterCount = ets:info(hackney_manager_refs, size),
+    ?_assertEqual(BeforeCount, AfterCount).
 
 
 %%local_socket_request() ->
@@ -182,19 +202,19 @@ test_custom_host_headers() ->
 
 %% Helpers
 
-has_unix_socket() ->
-    {ok, Vsn} = application:get_key(kernel, vsn),
-    ParsedVsn = version_pad(string:tokens(Vsn, ".")),
-    ParsedVsn >= {5, 0, 0}.
+%%has_unix_socket() ->
+%%    {ok, Vsn} = application:get_key(kernel, vsn),
+%%    ParsedVsn = version_pad(string:tokens(Vsn, ".")),
+%%    ParsedVsn >= {5, 0, 0}.
 
-version_pad([Major]) ->
-    {list_to_integer(Major), 0, 0};
-version_pad([Major, Minor]) ->
-    {list_to_integer(Major), list_to_integer(Minor), 0};
-version_pad([Major, Minor, Patch]) ->
-    {list_to_integer(Major), list_to_integer(Minor), list_to_integer(Patch)};
-version_pad([Major, Minor, Patch | _]) ->
-    {list_to_integer(Major), list_to_integer(Minor), list_to_integer(Patch)}.
+%%version_pad([Major]) ->
+%%  {list_to_integer(Major), 0, 0};
+%%version_pad([Major, Minor]) ->
+%%    {list_to_integer(Major), list_to_integer(Minor), 0};
+%%version_pad([Major, Minor, Patch]) ->
+%%    {list_to_integer(Major), list_to_integer(Minor), list_to_integer(Patch)};
+%%version_pad([Major, Minor, Patch | _]) ->
+%%    {list_to_integer(Major), list_to_integer(Minor), list_to_integer(Patch)}.
 
 receive_response(Ref) ->
     Dict = receive_response(Ref, orddict:new()),

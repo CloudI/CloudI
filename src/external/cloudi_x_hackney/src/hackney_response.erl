@@ -113,8 +113,12 @@ wait_headers({headers_complete, Parser}, Client, Status, Headers) ->
   HeadersList = hackney_headers_new:to_list(Headers),
   TE = hackney_headers_new:get_value(<<"transfer-encoding">>, Headers, nil),
   CLen = case hackney_headers_new:lookup("content-length", Headers) of
-           [] -> nil;
-           [{_, Len} |_] -> list_to_integer(binary_to_list(Len))
+           [] -> undefined;
+           [{_, Len} |_] ->
+             case hackney_util:to_int(Len) of
+              {ok, I} -> I;
+               false -> bad_int
+             end
          end,
   Client2 = Client#client{parser=Parser,
                           headers=Headers,
@@ -128,13 +132,17 @@ stream_body(Client=#client{method= <<"HEAD">>, parser=Parser}) ->
   Buffer = hackney_http:get(Parser, buffer),
   Client2 = end_stream_body(Buffer, Client),
   {done, Client2};
-stream_body(Client=#client{parser=Parser, clen=0, te=TE})
-  when TE /= <<"chunked">> ->
-  Buffer = hackney_http:get(Parser, buffer),
-  Client2 = end_stream_body(Buffer, Client),
-  {done, Client2};
-stream_body(Client=#client{parser=Parser}) ->
-  stream_body1(hackney_http:execute(Parser), Client).
+stream_body(Client=#client{parser=Parser, clen=CLen, te=TE}) ->
+  case {TE, CLen} of
+    {<<"chunked">>, _} ->
+      stream_body1(hackney_http:execute(Parser), Client);
+    {_, CLen} when CLen =:= 0 orelse CLen =:= bad_int ->
+      Buffer = hackney_http:get(Parser, buffer),
+      Client2 = end_stream_body(Buffer, Client),
+      {done, Client2};
+    {_, _} ->
+      stream_body1(hackney_http:execute(Parser), Client)
+  end.
 
 stream_body(Data, #client{parser=Parser}=Client) ->
   stream_body1(hackney_http:execute(Parser, Data), Client).
@@ -155,16 +163,14 @@ stream_body1(Error, _Client) ->
 
 -spec stream_body_recv(binary(), #client{})
     -> {ok, binary(), #client{}} | {error, term()}.
-stream_body_recv(Buffer, Client=#client{version=Version,
-  clen=CLen}) ->
+stream_body_recv(Buffer, Client=#client{version=Version, clen=CLen}) ->
   case recv(Client) of
     {ok, Data} ->
       stream_body(Data, Client);
     {error, Reason} ->
       Client2 = close(Client),
       case Reason of
-        closed when (Version =:= {1, 0} orelse Version =:= {1, 1})
-                      andalso CLen =:= nil ->
+        closed when (Version =:= {1, 0} orelse Version =:= {1, 1}) andalso (CLen =:= nil orelse CLen =:= undefined) ->
           {ok, Buffer, Client2#client{response_state=done,
             body_state=done,
             buffer = <<>>,
@@ -175,7 +181,7 @@ stream_body_recv(Buffer, Client=#client{version=Version,
             buffer = <<>>}};
         closed ->
           {error, {closed, Buffer}};
-        _ ->
+        _Else ->
           {error, Reason}
       end
   end.
@@ -190,7 +196,7 @@ stream_body_recv(Buffer, Client=#client{version=Version,
     -> {headers, list(), #client{}} | {body, binary(), #client{}}
   | {eof|end_of_part|mp_mixed|mp_mixed_eof, #client{}}.
 stream_multipart(Client=#client{headers=Headers, body_state=waiting, clen=Length}) ->
-  CType = hackney_headers_new:get_value(<<"content-type">>, Headers),
+  CType = hackney_headers_new:get_value(<<"content-type">>, Headers),
   {<<"multipart">>, _, Params} = hackney_headers_new:parse_content_type(CType),
   {_, Boundary} = lists:keyfind(<<"boundary">>, 1, Params),
   Parser = hackney_multipart:parser(Boundary),
@@ -263,7 +269,7 @@ body(Client) ->
 body(MaxLength, Client) ->
   read_body(MaxLength, Client, <<>>).
 
--spec skip_body(#client{}) -> {ok, #client{}} | {error, atom()}.
+-spec skip_body(#client{}) -> {ok, #client{}} | {skip, #client{}} | {error, atom()}.
 skip_body(Client) ->
   case stream_body(Client) of
     {ok, _, Client2} -> skip_body(Client2);
@@ -305,9 +311,9 @@ read_body(MaxLength, Client, Acc) when MaxLength > byte_size(Acc) ->
       read_body(MaxLength, Client2, << Acc/binary, Data/binary >>);
     {done, Client2} ->
       {ok, Acc, Client2};
-    {error, Reason}=Error ->
+    {error, Reason}=Error ->
       case Reason of
-        {closed, Bin} when is_binary(Bin) ->
+        {closed, Bin} when is_binary(Bin) ->
           {error, {closed, << Acc/binary, Bin/binary >>}};
         _ ->
           Error
@@ -322,7 +328,7 @@ read_body(_MaxLength, Client, Acc) ->
 
 maybe_close(#client{socket=nil}) ->
   true;
-maybe_close(#client{version={Min,Maj}, headers=Headers}) ->
+maybe_close(#client{version={Min,Maj}, headers=Headers, clen=CLen}) ->
   Connection = hackney_bstr:to_lower(
                  hackney_headers_new:get_value(<<"connection">>, Headers, <<"">>)
                 ),
@@ -330,6 +336,7 @@ maybe_close(#client{version={Min,Maj}, headers=Headers}) ->
     <<"close">> -> true;
     <<"keep-alive">> -> false;
     _ when Min =< 0 orelse Maj < 1 -> true;
+    _ when CLen =:= bad_int -> true;
     _ -> false
   end.
 

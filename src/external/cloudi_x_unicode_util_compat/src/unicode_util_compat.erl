@@ -28,7 +28,7 @@ get_case(Argument) -> unicode_util:get_case(Argument).
 -else.
 -inline([class/1]).
 -compile(nowarn_unused_vars).
--dialyzer({no_improper_lists, cp/1}).
+-dialyzer({no_improper_lists, [cp/1, gc/1, gc_prepend/2, gc_e_cont/2]}).
 -type gc() :: char()|[char()].
 
 
@@ -44,7 +44,7 @@ get_case(Codepoint) ->
         {U,L,T,F} -> #{upper=>U,lower=>L,title=>T,fold=>F}
     end.
 
-spec_version() -> {9,0}.
+spec_version() -> {10,0}.
 
 
 class(Codepoint) -> {CCC,_,_} = unicode_table(Codepoint),
@@ -94,36 +94,40 @@ casefold(Str0) ->
         [] -> []
     end.
 
--spec nfd(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()).
+-spec nfd(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()) | {error, unicode:chardata()}.
 nfd(Str0) ->
     case gc(Str0) of
-        [GC|R] when GC < 127 -> [GC|R];
+        [GC|R] when GC < 128 -> [GC|R];
         [GC|Str] -> [decompose(GC)|Str];
-        [] -> []
+        [] -> [];
+        {error,_}=Error -> Error
     end.
 
--spec nfkd(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()).
+-spec nfkd(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()) | {error, unicode:chardata()}.
 nfkd(Str0) ->
     case gc(Str0) of
-        [GC|R] when GC < 127 -> [GC|R];
+        [GC|R] when GC < 128 -> [GC|R];
         [GC|Str] -> [decompose_compat(GC)|Str];
-        [] -> []
+        [] -> [];
+        {error,_}=Error -> Error
     end.
 
--spec nfc(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()).
+-spec nfc(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()) | {error, unicode:chardata()}.
 nfc(Str0) ->
     case gc(Str0) of
-        [GC|R] when GC < 255 -> [GC|R];
+        [GC|R] when GC < 256 -> [GC|R];
         [GC|Str] -> [compose(decompose(GC))|Str];
-        [] -> []
+        [] -> [];
+        {error,_}=Error -> Error
     end.
 
--spec nfkc(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()).
+-spec nfkc(unicode:chardata()) -> maybe_improper_list(gc(),unicode:chardata()) | {error, unicode:chardata()}.
 nfkc(Str0) ->
     case gc(Str0) of
-        [GC|R] when GC < 127 -> [GC|R];
+        [GC|R] when GC < 128 -> [GC|R];
         [GC|Str] -> [compose_compat_0(decompose_compat(GC))|Str];
-        [] -> []
+        [] -> [];
+        {error,_}=Error -> Error
     end.
 
 decompose(CP) when is_integer(CP), CP < 16#AC00, 16#D7A3 > CP ->
@@ -298,20 +302,34 @@ is_whitespace(8232) -> true;
 is_whitespace(8233) -> true;
 is_whitespace(_) -> false.
 
--spec cp(String::unicode:chardata()) -> maybe_improper_list().
+-spec cp(String::unicode:chardata()) -> maybe_improper_list() | {error, unicode:chardata()}.
 cp([C|_]=L) when is_integer(C) -> L;
 cp([List]) -> cp(List);
 cp([List|R]) ->
     case cp(List) of
         [] -> cp(R);
         [CP] -> [CP|R];
-        [C|R0] -> [C|[R0|R]]
+        [C|R0] -> [C|[R0|R]];
+        {error,Error} -> {error,[Error|R]}
     end;
 cp([]) -> [];
 cp(<<C/utf8, R/binary>>) -> [C|R];
-cp(<<>>) -> [].
+cp(<<>>) -> [];
+cp(<<R/binary>>) -> {error,R}.
 
--spec gc(String::unicode:chardata()) -> maybe_improper_list().
+-spec gc(String::unicode:chardata()) -> maybe_improper_list() | {error, unicode:chardata()}.
+gc([CP1, CP2|_]=T)
+  when CP1 < 256, CP2 < 256, CP1 =/= $ -> %% Ascii Fast path
+       T;
+gc(<<CP1/utf8, Rest/binary>>) ->
+    if CP1 < 256, CP1 =/= $ ->
+           case Rest of
+               <<CP2/utf8, _/binary>> when CP2 < 256 -> %% Ascii Fast path
+                   [CP1|Rest];
+               _ -> gc_1([CP1|Rest])
+           end;
+      true -> gc_1([CP1|Rest])
+    end;
 gc(Str) ->
     gc_1(cp(Str)).
 
@@ -386,7 +404,7 @@ gc_1([157=CP|R1]=R0) -> R0;
 gc_1([158=CP|R1]=R0) -> R0;
 gc_1([159=CP|R1]=R0) -> R0;
 gc_1([173=CP|R1]=R0) -> R0;
-gc_1([CP|R]) when CP < 255 -> gc_extend(R,CP);
+gc_1([CP|R]) when CP < 256 -> gc_extend(R,CP);
 gc_1([1564=CP|R1]=R0) -> R0;
 gc_1([6158=CP|R1]=R0) -> R0;
 gc_1([8203=CP|R1]=R0) -> R0;
@@ -409,8 +427,11 @@ gc_1([1807=CP|R1]=R0) -> gc_prepend(R1, CP);
 gc_1([2274=CP|R1]=R0) -> gc_prepend(R1, CP);
 gc_1([3406=CP|R1]=R0) -> gc_prepend(R1, CP);
 gc_1([69821=CP|R1]=R0) -> gc_prepend(R1, CP);
+gc_1([72250=CP|R1]=R0) -> gc_prepend(R1, CP);
+gc_1([73030=CP|R1]=R0) -> gc_prepend(R1, CP);
 gc_1([CP|R1]=R0) when 1536 =< CP, CP =< 1541 -> gc_prepend(R1, CP);
 gc_1([CP|R1]=R0) when 70082 =< CP, CP =< 70083 -> gc_prepend(R1, CP);
+gc_1([CP|R1]=R0) when 72326 =< CP, CP =< 72329 -> gc_prepend(R1, CP);
 %% Handle Hangul L
 gc_1([CP|R1]=R0) when 4352 =< CP, CP =< 4447 -> gc_h_L(R1,[CP]);
 gc_1([CP|R1]=R0) when 43360 =< CP, CP =< 43388 -> gc_h_L(R1,[CP]);
@@ -428,35 +449,39 @@ gc_1([CP|R1]=R0) when 127462 =< CP, CP =< 127487 -> gc_regional(R1,[CP]);
 gc_1([9757=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([9977=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([127877=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
+gc_1([127943=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128110=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128124=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128170=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
-gc_1([128373=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128378=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128400=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128675=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([128704=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
+gc_1([128716=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
 gc_1([129318=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
-gc_1([129328=CP|R1]=R0) -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 128133 =< CP, CP =< 128135 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 128066 =< CP, CP =< 128067 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 9994 =< CP, CP =< 9997 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 127939 =< CP, CP =< 127940 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 127946 =< CP, CP =< 127947 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 128405 =< CP, CP =< 128406 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128070 =< CP, CP =< 128080 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 127946 =< CP, CP =< 127948 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 9994 =< CP, CP =< 9997 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 127938 =< CP, CP =< 127940 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 128066 =< CP, CP =< 128067 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 128133 =< CP, CP =< 128135 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128112 =< CP, CP =< 128120 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128129 =< CP, CP =< 128131 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 128372 =< CP, CP =< 128373 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 129310 =< CP, CP =< 129311 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128692 =< CP, CP =< 128694 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 128405 =< CP, CP =< 128406 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128581 =< CP, CP =< 128583 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R1]=R0) when 128587 =< CP, CP =< 128591 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 129304 =< CP, CP =< 129310 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 129331 =< CP, CP =< 129337 -> gc_e_cont(R1,[CP]);
-gc_1([CP|R1]=R0) when 129340 =< CP, CP =< 129342 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 129304 =< CP, CP =< 129308 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 129328 =< CP, CP =< 129337 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 129341 =< CP, CP =< 129342 -> gc_e_cont(R1,[CP]);
+gc_1([CP|R1]=R0) when 129489 =< CP, CP =< 129501 -> gc_e_cont(R1,[CP]);
 %% Handle EBG
 gc_1([CP|R1]=R0) when 128102 =< CP, CP =< 128105 -> gc_e_cont(R1,[CP]);
 gc_1([CP|R]) -> gc_extend(R, CP);
-gc_1([]) -> [].
+gc_1([]) -> [];
+gc_1({error,_}=Error) -> Error.
 
 %% Handle Prepend
 gc_prepend(R00, CP0) ->
@@ -470,7 +495,8 @@ gc_prepend(R00, CP0) ->
                     [GC|R1] -> [[CP0|GC]|R1]
                 end
            end;
-      [] -> [CP0]
+      [] -> [CP0];
+      {error,R} -> [CP0|R]
     end.
 
 is_control(173) -> true;
@@ -522,7 +548,9 @@ gc_extend([], _, Acc0) ->
         [_]=Acc -> Acc;
         [_|_]=Acc -> [lists:reverse(Acc)];
         Acc -> [Acc]
-    end.
+    end;
+gc_extend({error,R}, T, Acc0) ->
+    gc_extend([], T, Acc0) ++ [R].
 
 is_extend(768) -> true;
 is_extend(769) -> true;
@@ -952,6 +980,12 @@ is_extend(2764) -> true;
 is_extend(2765) -> true;
 is_extend(2786) -> true;
 is_extend(2787) -> true;
+is_extend(2810) -> true;
+is_extend(2811) -> true;
+is_extend(2812) -> true;
+is_extend(2813) -> true;
+is_extend(2814) -> true;
+is_extend(2815) -> true;
 is_extend(2817) -> true;
 is_extend(2818) -> true;
 is_extend(2819) -> true;
@@ -1030,9 +1064,12 @@ is_extend(3285) -> true;
 is_extend(3286) -> true;
 is_extend(3298) -> true;
 is_extend(3299) -> true;
+is_extend(3328) -> true;
 is_extend(3329) -> true;
 is_extend(3330) -> true;
 is_extend(3331) -> true;
+is_extend(3387) -> true;
+is_extend(3388) -> true;
 is_extend(3390) -> true;
 is_extend(3391) -> true;
 is_extend(3392) -> true;
@@ -1456,6 +1493,7 @@ is_extend(7405) -> true;
 is_extend(7410) -> true;
 is_extend(7411) -> true;
 is_extend(7412) -> true;
+is_extend(7415) -> true;
 is_extend(7416) -> true;
 is_extend(7417) -> true;
 is_extend(7616) -> true;
@@ -1512,6 +1550,10 @@ is_extend(7666) -> true;
 is_extend(7667) -> true;
 is_extend(7668) -> true;
 is_extend(7669) -> true;
+is_extend(7670) -> true;
+is_extend(7671) -> true;
+is_extend(7672) -> true;
+is_extend(7673) -> true;
 is_extend(7675) -> true;
 is_extend(7676) -> true;
 is_extend(7677) -> true;
@@ -2030,6 +2072,55 @@ is_extend(71464) -> true;
 is_extend(71465) -> true;
 is_extend(71466) -> true;
 is_extend(71467) -> true;
+is_extend(72193) -> true;
+is_extend(72194) -> true;
+is_extend(72195) -> true;
+is_extend(72196) -> true;
+is_extend(72197) -> true;
+is_extend(72198) -> true;
+is_extend(72199) -> true;
+is_extend(72200) -> true;
+is_extend(72201) -> true;
+is_extend(72202) -> true;
+is_extend(72243) -> true;
+is_extend(72244) -> true;
+is_extend(72245) -> true;
+is_extend(72246) -> true;
+is_extend(72247) -> true;
+is_extend(72248) -> true;
+is_extend(72249) -> true;
+is_extend(72251) -> true;
+is_extend(72252) -> true;
+is_extend(72253) -> true;
+is_extend(72254) -> true;
+is_extend(72263) -> true;
+is_extend(72273) -> true;
+is_extend(72274) -> true;
+is_extend(72275) -> true;
+is_extend(72276) -> true;
+is_extend(72277) -> true;
+is_extend(72278) -> true;
+is_extend(72279) -> true;
+is_extend(72280) -> true;
+is_extend(72281) -> true;
+is_extend(72282) -> true;
+is_extend(72283) -> true;
+is_extend(72330) -> true;
+is_extend(72331) -> true;
+is_extend(72332) -> true;
+is_extend(72333) -> true;
+is_extend(72334) -> true;
+is_extend(72335) -> true;
+is_extend(72336) -> true;
+is_extend(72337) -> true;
+is_extend(72338) -> true;
+is_extend(72339) -> true;
+is_extend(72340) -> true;
+is_extend(72341) -> true;
+is_extend(72342) -> true;
+is_extend(72343) -> true;
+is_extend(72344) -> true;
+is_extend(72345) -> true;
 is_extend(72751) -> true;
 is_extend(72752) -> true;
 is_extend(72753) -> true;
@@ -2082,6 +2173,23 @@ is_extend(72883) -> true;
 is_extend(72884) -> true;
 is_extend(72885) -> true;
 is_extend(72886) -> true;
+is_extend(73009) -> true;
+is_extend(73010) -> true;
+is_extend(73011) -> true;
+is_extend(73012) -> true;
+is_extend(73013) -> true;
+is_extend(73014) -> true;
+is_extend(73018) -> true;
+is_extend(73020) -> true;
+is_extend(73021) -> true;
+is_extend(73023) -> true;
+is_extend(73024) -> true;
+is_extend(73025) -> true;
+is_extend(73026) -> true;
+is_extend(73027) -> true;
+is_extend(73028) -> true;
+is_extend(73029) -> true;
+is_extend(73031) -> true;
 is_extend(92912) -> true;
 is_extend(92913) -> true;
 is_extend(92914) -> true;
@@ -2716,6 +2824,11 @@ gc_e_cont(R0, Acc) ->
             case Acc of
                 [A] -> [A];
                 _ -> [lists:reverse(Acc)]
+            end;
+        {error,R} ->
+            case Acc of
+                [A] -> [A|R];
+                _ -> [lists:reverse(Acc)|R]
             end
     end.
 
@@ -2728,9 +2841,26 @@ is_emodifier(_) -> false.
 
 gc_zwj(R0, Acc) ->
     case cp(R0) of
+        [9792=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [9794=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [9992=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
         [10084=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127752=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127806=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127859=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127891=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127908=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127912=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127979=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [127981=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
         [128139=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [128295=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [128300=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
         [128488=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [128640=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [128658=CP|R1] -> gc_extend(R1, R0, [CP|Acc]);
+        [CP|R1] when 9877 =< CP, CP =< 9878 -> gc_extend(R1, R0, [CP|Acc]);
+        [CP|R1] when 128187 =< CP, CP =< 128188 -> gc_extend(R1, R0, [CP|Acc]);
         [CP|R1] when 128102 =< CP, CP =< 128105 -> gc_e_cont(R1, [CP|Acc]);
         R1 -> gc_extend(R1, R0, Acc)
     end.
@@ -2770,6 +2900,7 @@ gc_h_T(R0, Acc) ->
         R1 -> gc_extend(R1, R0, Acc)
     end.
 
+gc_h_lv_lvt({error,_}=Error, Acc) -> gc_extend(Error, [], Acc);
 %% Handle Hangul LV
 gc_h_lv_lvt([44032=CP|R1], Acc) -> gc_h_V(R1,[CP|Acc]);
 gc_h_lv_lvt([44060=CP|R1], Acc) -> gc_h_V(R1,[CP|Acc]);
@@ -7977,6 +8108,8 @@ unicode_table(3272) -> {0,[{0,3270},{0,3286}],[]};
 unicode_table(3274) -> {0,[{0,3270},{0,3266}],[]};
 unicode_table(3275) -> {0,[{0,3270},{0,3266},{0,3285}],[]};
 unicode_table(3277) -> {9,[],[]};
+unicode_table(3387) -> {9,[],[]};
+unicode_table(3388) -> {9,[],[]};
 unicode_table(3402) -> {0,[{0,3398},{0,3390}],[]};
 unicode_table(3403) -> {0,[{0,3399},{0,3390}],[]};
 unicode_table(3404) -> {0,[{0,3398},{0,3415}],[]};
@@ -8292,6 +8425,10 @@ unicode_table(7666) -> {230,[],[]};
 unicode_table(7667) -> {230,[],[]};
 unicode_table(7668) -> {230,[],[]};
 unicode_table(7669) -> {230,[],[]};
+unicode_table(7670) -> {232,[],[]};
+unicode_table(7671) -> {228,[],[]};
+unicode_table(7672) -> {228,[],[]};
+unicode_table(7673) -> {220,[],[]};
 unicode_table(7675) -> {230,[],[]};
 unicode_table(7676) -> {233,[],[]};
 unicode_table(7677) -> {220,[],[]};
@@ -11795,7 +11932,13 @@ unicode_table(71231) -> {9,[],[]};
 unicode_table(71350) -> {9,[],[]};
 unicode_table(71351) -> {7,[],[]};
 unicode_table(71467) -> {9,[],[]};
+unicode_table(72244) -> {9,[],[]};
+unicode_table(72263) -> {9,[],[]};
+unicode_table(72345) -> {9,[],[]};
 unicode_table(72767) -> {9,[],[]};
+unicode_table(73026) -> {7,[],[]};
+unicode_table(73028) -> {9,[],[]};
+unicode_table(73029) -> {9,[],[]};
 unicode_table(92912) -> {1,[],[]};
 unicode_table(92913) -> {1,[],[]};
 unicode_table(92914) -> {1,[],[]};

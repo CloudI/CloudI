@@ -1,8 +1,8 @@
 {application, ssl_verify_fun,
  [
   {description, ""},
-  {vsn, "1.1.1"},
-  {modules, [ssl_verify_hostname, ssl_verify_fingerprint, ssl_verify_pk]},
+  {vsn, "1.1.4"},
+  {modules, []},
   {registered, []},
   {applications, [
                   kernel,

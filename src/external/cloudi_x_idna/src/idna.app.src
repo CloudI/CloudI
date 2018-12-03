@@ -1,7 +1,7 @@
 {application, idna, [
   {description, "A pure Erlang IDNA implementation"},
-  {vsn, "5.1.0"},
-  {modules, [idna, idna_ucs, punycode]},
+  {vsn, "6.0.0"},
+  {modules, []},
   {registered, []},
   {applications, [kernel, stdlib, unicode_util_compat]},
 

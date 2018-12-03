@@ -1,7 +1,0 @@
-% cf. http://tools.ietf.org/html/rfc3492#section-7.1
-
-{description, "<hitotsu><yane><no><shita>2"}.
-
-{punycode, "2-u9tlzr9756bt3uc0v"}.
-
-{unicode, [16#3072, 16#3068, 16#3064, 16#5C4B, 16#6839, 16#306E, 16#4E0B, 16#0032]}.

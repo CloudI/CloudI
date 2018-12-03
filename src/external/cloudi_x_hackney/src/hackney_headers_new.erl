@@ -31,8 +31,8 @@
 
 
 -type headers() ::term().
--type key() :: binary() | string().
--type value() :: binary() | {binary() | list({binary(), binary()} | binary())}.
+-type key() :: binary() | string().
+-type value() :: binary() | {binary() | list({binary(), binary()} | binary())}.
 -type headers_list() :: [{key(), value()}].
 
 -export_types([headers/0, key/0, value/0]).
@@ -57,14 +57,14 @@ from_list(HeadersList) when is_list(HeadersList) ->
 from_list(_) -> erlang:error(badarg).
 
 %% @doc append a new value to the list of value for the the header field
-%% if the key has not been recorded the list will be created witht eh value as the first item.
+%% if the key has not been recorded the list will be created with the value as the first item.
 -spec append(key(), value(), headers()) -> headers().
 append(Key, Value, {N, Headers}) ->
   KL = ?kl(Key),
   {N + 1, dict:append(KL, {N, Key, Value}, Headers)}.
 
 %% @doc replace the content of the header field with the value or the list of values.
--spec store(key(), value() | [value()], headers()) -> headers().
+-spec store(key(), value() | [value()], headers()) -> headers().
 store(Key, Values, {N, Headers}) when is_list(Values) ->
   KL = ?kl(Key),
   lists:foldl(
@@ -125,7 +125,7 @@ lookup(Key, {_, Headers}) ->
 get_value(Key, Headers) -> get_value(Key, Headers, undefined).
 
 %% @doc get the first value of an headers or return the default
--spec get_value(key(), headers(), any()) -> value() | any().
+-spec get_value(key(), headers(), any()) -> value() | any().
 get_value(Key, Headers, Default) ->
   case lookup(Key, Headers) of
     [] -> Default;
