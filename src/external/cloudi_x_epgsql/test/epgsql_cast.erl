@@ -5,35 +5,45 @@
 
 -module(epgsql_cast).
 
--export([connect/2, connect/3, connect/4, close/1]).
--export([get_parameter/2, squery/2, equery/2, equery/3]).
+-export([connect/1, connect/2, connect/3, connect/4, close/1]).
+-export([get_parameter/2, set_notice_receiver/2, get_cmd_status/1, squery/2, equery/2, equery/3]).
+-export([prepared_query/3]).
 -export([parse/2, parse/3, parse/4, describe/2, describe/3]).
 -export([bind/3, bind/4, execute/2, execute/3, execute/4, execute_batch/2]).
 -export([close/2, close/3, sync/1]).
--export([with_transaction/2]).
 -export([receive_result/2, sync_on_error/2]).
 
 -include("epgsql.hrl").
 
 %% -- client interface --
 
+connect(Opts) ->
+    Ref = epgsqla:connect(Opts),
+    await_connect(Ref, Opts).
+
 connect(Host, Opts) ->
-    connect(Host, os:getenv("USER"), "", Opts).
+    Ref = epgsqla:connect(Host, Opts),
+    await_connect(Ref, Opts).
 
 connect(Host, Username, Opts) ->
-    connect(Host, Username, "", Opts).
+    Ref = epgsqla:connect(Host, Username, Opts),
+    await_connect(Ref, Opts).
 
 connect(Host, Username, Password, Opts) ->
-    {ok, C} = epgsql_sock:start_link(),
-    Ref = epgsqla:connect(C, Host, Username, Password, Opts),
+    Ref = epgsqla:connect(Host, Username, Password, Opts),
     %% TODO connect timeout
+    await_connect(Ref, Opts).
+
+await_connect(Ref, Opts0) ->
+    Opts = epgsql:to_map(Opts0),
+    Timeout = maps:get(timeout, Opts, 5000),
     receive
         {C, Ref, connected} ->
             {ok, C};
-        {C, Ref, Error = {error, _}} ->
-            Error;
-        {'EXIT', C, _Reason} ->
-            {error, closed}
+        {_C, Ref, Error = {error, _}} ->
+            Error
+    after Timeout ->
+            error(timeout)
     end.
 
 close(C) ->
@@ -41,6 +51,12 @@ close(C) ->
 
 get_parameter(C, Name) ->
     epgsqla:get_parameter(C, Name).
+
+set_notice_receiver(C, PidOrName) ->
+    epgsqla:set_notice_receiver(C, PidOrName).
+
+get_cmd_status(C) ->
+    epgsqla:get_cmd_status(C).
 
 squery(C, Sql) ->
     Ref = epgsqla:squery(C, Sql),
@@ -55,6 +71,16 @@ equery(C, Sql, Parameters) ->
         {ok, #statement{types = Types} = S} ->
             Typed_Parameters = lists:zip(Types, Parameters),
             Ref = epgsqla:equery(C, S, Typed_Parameters),
+            receive_result(C, Ref);
+        Error ->
+            Error
+    end.
+
+prepared_query(C, Name, Parameters) ->
+    case describe(C, statement, Name) of
+        {ok, #statement{types = Types} = S} ->
+            Typed_Parameters = lists:zip(Types, Parameters),
+            Ref = epgsqla:prepared_query(C, S, Typed_Parameters),
             receive_result(C, Ref);
         Error ->
             Error
@@ -117,19 +143,6 @@ close(C, Type, Name) ->
 sync(C) ->
     Ref = epgsqla:sync(C),
     receive_result(C, Ref).
-
-%% misc helper functions
-with_transaction(C, F) ->
-    try {ok, [], []} = squery(C, "BEGIN"),
-        R = F(C),
-        {ok, [], []} = squery(C, "COMMIT"),
-        R
-    catch
-        _:Why ->
-            squery(C, "ROLLBACK"),
-            %% TODO hides error stacktrace
-            {rollback, Why}
-    end.
 
 receive_result(C, Ref) ->
     %% TODO timeout

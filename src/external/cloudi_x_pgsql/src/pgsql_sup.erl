@@ -21,7 +21,7 @@ start_link() -> supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %% @doc Supervisor init callback.
 %%
--spec init(any()) -> {ok, {{supervisor:strategy(), non_neg_integer(), non_neg_integer()}, [supervisor:child_spec()]}}.
+-spec init(any()) -> {ok, {{supervisor:strategy(), non_neg_integer(), pos_integer()}, [supervisor:child_spec()]}}.
 init(_Args) ->
     PostgreSQLChildSpec = {pgsql_connection_sup, % id
         {pgsql_connection_sup, start_link, []}, % init function

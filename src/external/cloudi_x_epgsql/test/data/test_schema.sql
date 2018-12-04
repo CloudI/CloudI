@@ -1,41 +1,41 @@
+
 -- script to create test schema for epgsql unit tests --
 --
 -- this script should be run as the same user the tests will be run as,
 -- so that the test for connecting as the 'current user' succeeds
 --
--- the following lines must be added to pg_hba.conf for all tests to
--- succeed, with $USER replaced by your username, or the user you will
--- run the tests with.
---
--- host    epgsql_test_db1 $USER                   127.0.0.1/32    trust
--- host    epgsql_test_db1 epgsql_test             127.0.0.1/32    trust
--- host    epgsql_test_db1 epgsql_test_md5         127.0.0.1/32    md5
--- host    epgsql_test_db1 epgsql_test_cleartext   127.0.0.1/32    password
--- hostssl epgsql_test_db1 epgsql_test_cert        127.0.0.1/32    cert
---
--- any 'trust all' must be commented out for the invalid password test
--- to succeed.
---
 -- ssl support must be configured, and the sslinfo contrib module
 -- loaded for the ssl tests to succeed.
-
 
 CREATE USER epgsql_test;
 CREATE USER epgsql_test_md5 WITH PASSWORD 'epgsql_test_md5';
 CREATE USER epgsql_test_cleartext WITH PASSWORD 'epgsql_test_cleartext';
 CREATE USER epgsql_test_cert;
+CREATE USER epgsql_test_replication WITH REPLICATION PASSWORD 'epgsql_test_replication';
+SET password_encryption TO 'scram-sha-256';
+CREATE USER epgsql_test_scram WITH PASSWORD 'epgsql_test_scram';
+SET password_encryption TO 'md5';
 
 CREATE DATABASE epgsql_test_db1 WITH ENCODING 'UTF8';
 CREATE DATABASE epgsql_test_db2 WITH ENCODING 'UTF8';
 
 GRANT ALL ON DATABASE epgsql_test_db1 to epgsql_test;
 GRANT ALL ON DATABASE epgsql_test_db1 to epgsql_test_md5;
+GRANT ALL ON DATABASE epgsql_test_db1 to epgsql_test_scram;
 GRANT ALL ON DATABASE epgsql_test_db1 to epgsql_test_cleartext;
 GRANT ALL ON DATABASE epgsql_test_db2 to epgsql_test;
 
 \c epgsql_test_db1;
 
+CREATE TABLE schema_version (version varchar);
+
+-- This requires Postgres to be compiled with SSL:
+-- http://www.postgresql.org/docs/9.4/static/sslinfo.html
+CREATE EXTENSION sslinfo;
+
 CREATE EXTENSION hstore;
+CREATE EXTENSION postgis;
+
 CREATE TABLE test_table1 (id integer primary key, value text);
 
 INSERT INTO test_table1 (id, value) VALUES (1, 'one');
@@ -59,9 +59,22 @@ CREATE TABLE test_table2 (
   c_timestamp timestamp,
   c_timestamptz timestamptz,
   c_interval interval,
-  c_hstore hstore);
+  c_hstore hstore,
+  c_point point,
+  c_geometry geometry,
+  c_cidr cidr,
+  c_inet inet,
+  c_macaddr macaddr,
+  c_int4range int4range,
+  c_int8range int8range,
+  c_json json,
+  c_jsonb jsonb,
+  c_tsrange tsrange,
+  c_tstzrange tstzrange,
+  c_daterange daterange
+  );
 
-CREATE LANGUAGE plpgsql;
+-- CREATE LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION insert_test1(_id integer, _value text)
 returns integer

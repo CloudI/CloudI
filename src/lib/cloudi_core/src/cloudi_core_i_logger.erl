@@ -810,14 +810,14 @@ log_config_set(#config_logging{file = FilePath,
                                aspects_log_before = AspectsLogBefore,
                                aspects_log_after = AspectsLogAfter},
                State) ->
-    case eval([{MainLevel, fun log_config_main_level_set/2},
-               {FilePath, fun log_config_file_set/2},
-               {Stdout, fun log_config_stdout_set/2},
-               {SyslogConfig, fun log_config_syslog_set/2},
-               {FormattersConfig, fun log_config_formatters_set/2}],
-              State#state{log_time_offset = LogTimeOffset,
-                          aspects_log_before = AspectsLogBefore,
-                          aspects_log_after = AspectsLogAfter}) of
+    case accum([{MainLevel, fun log_config_main_level_set/2},
+                {FilePath, fun log_config_file_set/2},
+                {Stdout, fun log_config_stdout_set/2},
+                {SyslogConfig, fun log_config_syslog_set/2},
+                {FormattersConfig, fun log_config_formatters_set/2}],
+               State#state{log_time_offset = LogTimeOffset,
+                           aspects_log_before = AspectsLogBefore,
+                           aspects_log_after = AspectsLogAfter}) of
         {ok, _} = Success ->
             ok = cloudi_core_i_nodes:logging_redirect_set(NodeLogger),
             Success;
@@ -2040,18 +2040,18 @@ int_to_list_pad(L, Count, Char) ->
 int_to_dec(I) when 0 =< I, I =< 9 ->
     I + $0.
 
--spec eval(L :: list({any(),
-                      fun((any(), #state{}) ->
-                          {ok, #state{}} | {{error, any()}, #state{}})}),
-           State :: #state{}) ->
+-spec accum(L :: list({any(),
+                       fun((any(), #state{}) ->
+                           {ok, #state{}} | {{error, any()}, #state{}})}),
+            State :: #state{}) ->
     {ok, #state{}} | {{error, any()}, #state{}}.
 
-eval([], State) ->
+accum([], State) ->
     {ok, State};
-eval([{Value, F} | L], State) ->
+accum([{Value, F} | L], State) ->
     case F(Value, State) of
         {ok, StateNew} ->
-            eval(L, StateNew);
+            accum(L, StateNew);
         {{error, _}, _} = Error ->
             Error
     end.

@@ -5,33 +5,43 @@
 
 -module(epgsql_incremental).
 
--export([connect/2, connect/3, connect/4, close/1]).
--export([get_parameter/2, squery/2, equery/2, equery/3]).
+-export([connect/1, connect/2, connect/3, connect/4, close/1]).
+-export([get_parameter/2, set_notice_receiver/2, get_cmd_status/1, squery/2, equery/2, equery/3]).
+-export([prepared_query/3]).
 -export([parse/2, parse/3, parse/4, describe/2, describe/3]).
 -export([bind/3, bind/4, execute/2, execute/3, execute/4, execute_batch/2]).
 -export([close/2, close/3, sync/1]).
--export([with_transaction/2]).
 
 -include("epgsql.hrl").
 
 %% -- client interface --
 
+connect(Opts) ->
+    Ref = epgsqli:connect(Opts),
+    await_connect(Ref, Opts).
+
 connect(Host, Opts) ->
-    connect(Host, os:getenv("USER"), "", Opts).
+    Ref = epgsqli:connect(Host, Opts),
+    await_connect(Ref, Opts).
 
 connect(Host, Username, Opts) ->
-    connect(Host, Username, "", Opts).
+    Ref = epgsqli:connect(Host, Username, Opts),
+    await_connect(Ref, Opts).
 
 connect(Host, Username, Password, Opts) ->
-    {ok, C} = epgsql_sock:start_link(),
-    Ref = epgsqli:connect(C, Host, Username, Password, Opts),
+    Ref = epgsqli:connect(Host, Username, Password, Opts),
+    await_connect(Ref, Opts).
+
+await_connect(Ref, Opts0) ->
+    Opts = epgsql:to_map(Opts0),
+    Timeout = maps:get(timeout, Opts, 5000),
     receive
         {C, Ref, connected} ->
             {ok, C};
-        {C, Ref, Error = {error, _}} ->
-            Error;
-        {'EXIT', C, _Reason} ->
-            {error, closed}
+        {_C, Ref, Error = {error, _}} ->
+            Error
+    after Timeout ->
+            error(timeout)
     end.
 
 close(C) ->
@@ -39,6 +49,12 @@ close(C) ->
 
 get_parameter(C, Name) ->
     epgsqli:get_parameter(C, Name).
+
+set_notice_receiver(C, PidOrName) ->
+    epgsqli:set_notice_receiver(C, PidOrName).
+
+get_cmd_status(C) ->
+    epgsqli:get_cmd_status(C).
 
 squery(C, Sql) ->
     Ref = epgsqli:squery(C, Sql),
@@ -59,6 +75,17 @@ equery(C, Sql, Parameters) ->
         Error ->
             Error
     end.
+
+prepared_query(C, Name, Parameters) ->
+    case describe(C, statement, Name) of
+        {ok, #statement{types = Types} = S} ->
+            Typed_Parameters = lists:zip(Types, Parameters),
+            Ref = epgsqli:prepared_query(C, S, Typed_Parameters),
+            receive_result(C, Ref, undefined);
+        Error ->
+            Error
+    end.
+
 
 %% parse
 
@@ -121,19 +148,6 @@ sync(C) ->
     Ref = epgsqli:sync(C),
     receive_atom(C, Ref, ok, ok).
 
-%% misc helper functions
-with_transaction(C, F) ->
-    try {ok, [], []} = squery(C, "BEGIN"),
-        R = F(C),
-        {ok, [], []} = squery(C, "COMMIT"),
-        R
-    catch
-        _:Why ->
-            squery(C, "ROLLBACK"),
-            %% TODO hides error stacktrace
-            {rollback, Why}
-    end.
-
 %% -- internal functions --
 
 receive_result(C, Ref, Result) ->
@@ -161,7 +175,7 @@ receive_result(C, Ref, Cols, Rows) ->
         {C, Ref, {error, _E} = Error} ->
             Error;
         {C, Ref, {complete, {_Type, Count}}} ->
-            case Rows of
+            case Cols of
                 [] -> {ok, Count};
                 _L -> {ok, Count, Cols, lists:reverse(Rows)}
             end;
@@ -207,8 +221,7 @@ receive_describe(C, Ref, Statement = #statement{}) ->
         {C, Ref, {types, Types}} ->
             receive_describe(C, Ref, Statement#statement{types = Types});
         {C, Ref, {columns, Columns}} ->
-            Columns2 = [Col#column{format = epgsql_wire:format(Col#column.type)} || Col <- Columns],
-            {ok, Statement#statement{columns = Columns2}};
+            {ok, Statement#statement{columns = Columns}};
         {C, Ref, no_data} ->
             {ok, Statement#statement{columns = []}};
         {C, Ref, Error = {error, _}} ->

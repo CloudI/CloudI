@@ -22,7 +22,7 @@ In particular, this driver has the following features:
 Compilation
 -----------
 
-Driver can be compiled with [rebar](https://github.com/basho/rebar).
+Driver can be compiled with [rebar](https://github.com/basho/rebar) or [rebar3](http://rebar3.org/).
 
     erlc -o ebin/ src/*.erl
 
@@ -120,7 +120,7 @@ Application upgrade file ([pgsql.appup](https://github.com/semiocast/pgsql/blob/
 License
 -------
 
-Copyright (c) 2009-2015, Semiocast.
+Copyright (c) 2009-2018, Semiocast.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

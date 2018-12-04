@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-12-04 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Update pgsql (to 26.0.2)
+    * Update epgsql (to 4.2.1)
+
 2018-12-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update hackney (to 1.14.3)

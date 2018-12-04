@@ -1,9 +1,10 @@
-
 % Backend messages
 -type pgsql_oid() :: pos_integer().
 -type pgsql_procid() :: integer().
 -type pgsql_format() :: text | binary.
 -type pgsql_oid_map() :: gb_trees:tree(pgsql_oid(), atom()).
+
+-define(JSONB_VERSION_1, 1).
 
 % from pg_type.h
 -define(BOOLOID, 16).
@@ -22,6 +23,7 @@
 -define(CIDOID, 29).
 -define(OIDVECTOROID, 30).
 -define(JSONOID, 114).
+-define(JSONBOID, 3802).
 -define(XMLOID, 142).
 -define(PGNODETREEOID, 194).
 -define(POINTOID, 600).
@@ -132,6 +134,7 @@
 {?CIDOID, cid},
 {?OIDVECTOROID, oidvector},
 {?JSONOID, json},
+{?JSONBOID, jsonb},
 {?XMLOID, xml},
 {?PGNODETREEOID, pgnodetree},
 {?POINTOID, point},

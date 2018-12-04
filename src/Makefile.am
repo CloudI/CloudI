@@ -253,6 +253,7 @@ dialyze: all \
               external/cloudi_x_folsom/ebin \
               external/cloudi_x_msgpack/ebin \
               external/cloudi_x_nodefinder/ebin \
+              external/cloudi_x_pgsql/ebin \
               external/cloudi_x_setup/ebin
 	@echo "No Errors or Warnings Found!"
 

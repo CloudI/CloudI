@@ -2,7 +2,7 @@
     [
         {description,   "pgsql driver"},
         {id,            "pgsql"},
-        {vsn,           "25"},
+        {vsn,           "26.0.2"},
         {modules,       [
             pgsql_app,
             pgsql_connection,
@@ -13,5 +13,10 @@
             ]},
         {registered,    [pgsql_sup, pgsql_connection_sup]},
         {applications,  [kernel, stdlib, crypto]},
-        {mod,           {pgsql_app, []}}
+        {mod,           {pgsql_app, []}},
+        
+        % hex.pm metadata
+        {maintainers, ["Paul Guyot"]},
+        {licenses, ["BSD"]},
+        {links, [{"Github", "https://github.com/semiocast/pgsql"}]}
     ]}.

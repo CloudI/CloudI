@@ -84,7 +84,7 @@ Erlang `elli`
 
 Erlang `emysql`
 ---------------
- `Erlang MySQL (native) Driver`
+ `Erlang MySQL (native) Driver (Eonblast fork)`
  
 - `https://github.com/okeuday/emysql`
 - `commit 1b58bc3a0d08608824c5bc52c31551fdf357ec32 (v0.4.2_CloudI)`
@@ -93,11 +93,11 @@ Erlang `emysql`
 
 Erlang `epgsql`
 ---------------
-`Erlang PostgreSQL (native) Driver (community (newer) fork)`
+`Erlang PostgreSQL (native) Driver (epgsql community fork)`
 
-- `https://github.com/okeuday/epgsql_new`
-- `commit cebd2c88cf146b09553e6ec78ba4ede8309c52df (branch devel)`
-- `Wed Jul 16 11:33:44 PDT 2014`
+- `https://github.com/epgsql/epgsql`
+- `commit b3138f76759750ab5e6202766cb39acd88c8ff54 (4.2.1)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `BSD`
 
 Erlang `exometer`
@@ -219,11 +219,11 @@ Erlang `parse_trans`
 
 Erlang `pgsql`
 --------------
-`Erlang PostgreSQL (native) driver (semiocast branch)`
+`Erlang PostgreSQL (native) driver (semiocast driver)`
 
 - `https://github.com/semiocast/pgsql`
-- `commit e40786b5c3e76dcfe502cbad702ed1b5e50b616e`
-- `Tue Sep  1 21:59:06 PDT 2015`
+- `commit 890df880a55eac3364da0082e7e9a4790c4399fe (v26.0.2)`
+- `Mon Dec  3 20:45:23 UTC 2018`
 - `BSD`
 
 Erlang `proper`
