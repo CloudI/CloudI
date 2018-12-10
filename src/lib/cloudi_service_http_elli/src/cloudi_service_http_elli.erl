@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_elli).
@@ -192,7 +192,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(UseMethodSuffix),
     true = is_integer(UpdateDelaySeconds) andalso
            (UpdateDelaySeconds > 0) andalso (UpdateDelaySeconds =< 4294967),
-    false = lists:member($*, Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     HandlerState = #elli_state{
         dispatcher = cloudi_service:dispatcher(Dispatcher),
         timeout_sync = cloudi_service:timeout_sync(Dispatcher),

@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy1).
@@ -400,7 +400,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = is_boolean(UseMethodSuffix),
     true = is_integer(UpdateDelaySeconds) andalso
            (UpdateDelaySeconds > 0) andalso (UpdateDelaySeconds =< 4294967),
-    false = lists:member($*, Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     {_, Scope} = lists:keyfind(groups_scope, 1,
                                cloudi_service:context_options(Dispatcher)),
     HandlerState = #cowboy1_state{

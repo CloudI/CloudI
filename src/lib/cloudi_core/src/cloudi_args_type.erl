@@ -141,7 +141,7 @@ function_optional(Function, Arity) ->
 
 service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     when is_integer(PrefixC), is_integer(NameC) ->
-    case lists:member($*, Name) of
+    case cloudi_x_trie:is_pattern(Name) of
         true ->
             ?LOG_ERROR_SYNC("service name is pattern: \"~s\"", [Name]),
             erlang:exit(badarg);

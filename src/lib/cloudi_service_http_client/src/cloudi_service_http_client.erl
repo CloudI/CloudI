@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -629,7 +629,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
              ["head", "get", "put", "post", "trace", "options", "delete"],
              Profile1}
     end,
-    false = lists:member($*, Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     [cloudi_service:subscribe(Dispatcher, [$/ | Method]) || Method <- Methods],
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse

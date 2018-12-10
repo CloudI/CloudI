@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2014-2018 Michael Truog
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_name).
@@ -41,6 +41,7 @@
          new/4,
          parse/2,
          parse_with_suffix/2,
+         pattern/1,
          suffix/2]).
 
 %%%------------------------------------------------------------------------
@@ -115,6 +116,20 @@ parse_with_suffix(Name, Pattern) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Determine if a service name pattern contains wildcard characters.===
+%% If not, the service name pattern would only be used with a service name
+%% that is an exact match.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern(Pattern :: string()) ->
+    boolean().
+
+pattern(Pattern) ->
+    cloudi_x_trie:is_pattern(Pattern).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Provide the suffix of the service name or service pattern based on the service's configured prefix.===
 %% @end
 %%-------------------------------------------------------------------------
@@ -125,7 +140,7 @@ parse_with_suffix(Name, Pattern) ->
 
 suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)
     when is_integer(PrefixC), is_integer(NameOrPatternC) ->
-    case lists:member($*, NameOrPattern) of
+    case cloudi_x_trie:is_pattern(NameOrPattern) of
         true ->
             % handle as a pattern
             suffix_pattern_parse(Prefix, NameOrPattern);

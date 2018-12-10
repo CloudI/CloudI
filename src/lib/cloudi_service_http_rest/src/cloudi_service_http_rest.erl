@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -279,7 +279,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
         end,
         API = #api{method = HandlerMethod,
                    path = Path,
-                   parameters = lists:member($*, Prefix ++ Path),
+                   parameters = cloudi_service_name:pattern(Prefix ++ Path),
                    handler_f = Handler1,
                    arity = Arity},
         subscribe_paths(Method, Path, FormatsN, API, Lookup0, Dispatcher)

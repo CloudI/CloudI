@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -379,7 +379,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
             (WriteTruncateL == []) andalso
             (WriteAppendL == []) andalso
             (RedirectL == [])),
-    false = lists:member($*, Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     Directory = cloudi_environment:transform(DirectoryRaw),
     DirectoryLength = erlang:length(Directory),
     ContentTypeLookup = if
@@ -452,7 +452,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end, undefined, Files2),
         if
             Files6 =:= undefined ->
-                false = lists:member($*, Pattern),
+                false = cloudi_service_name:pattern(Pattern),
                 FileName = cloudi_args_type:service_name_suffix(Prefix,
                                                                 Pattern),
                 FilePath = filename:join(Directory, FileName),
@@ -503,7 +503,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         end, undefined, Files8),
         if
             Files12 =:= undefined ->
-                false = lists:member($*, Pattern),
+                false = cloudi_service_name:pattern(Pattern),
                 FileName = cloudi_args_type:service_name_suffix(Prefix,
                                                                 Pattern),
                 FilePath = filename:join(Directory, FileName),
@@ -561,7 +561,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end, Files16, NotifyAllL),
     FilesN = lists:foldl(fun({Pattern, RedirectPattern}, Files20) ->
         true = UseHttpGetSuffix,
-        true = lists:member($*, Pattern),
+        true = cloudi_service_name:pattern(Pattern),
         PatternMethods = Pattern ++ "/*",
         Files23 = cloudi_x_trie:fold_match(PatternMethods,
                                            fun(NameMethod, File, Files21) ->
@@ -1685,7 +1685,7 @@ read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
                 FilesSizeLimit, Prefix, Dispatcher) ->
     Finit = fun(FilePath, FileName, FileInfo, SegmentI, SegmentSize,
                 {FilesSize0, Files0}) ->
-        case lists:member($*, FileName) of
+        case cloudi_service_name:pattern(FileName) of
             false ->
                 #file_info{access = Access,
                            mtime = MTime} = FileInfo,
@@ -1722,7 +1722,7 @@ read_files_init(ReadL, Directory, Toggle, ContentTypeLookup,
                         {FilesSize0, Files0}
                 end;
             true ->
-                ?LOG_ERROR("file name ~s error: '*' character invalid",
+                ?LOG_ERROR("file name \"~s\" error: invalid character(s)",
                            [FilePath]),
                 {FilesSize0, Files0}
         end
