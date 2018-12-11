@@ -38,7 +38,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_quorum).
@@ -194,7 +194,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     true = (FailuresDstMaxPeriod =:= infinity) orelse
            (is_integer(FailuresDstMaxPeriod) andalso
             (FailuresDstMaxPeriod > 0)),
-    false = cloudi_x_trie:is_pattern(Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     cloudi_service:subscribe(Dispatcher, "*"),
     {ok, #state{quorum = Quorum,
                 use_response_info = UseResponseInfo,

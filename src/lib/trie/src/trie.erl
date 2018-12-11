@@ -20,7 +20,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -41,8 +41,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2010-2018 Michael Truog
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(trie).
@@ -59,6 +59,7 @@
          filter/2,
          find/2,
          find_match/2,
+         find_match2/2,
          find_prefix/2,
          find_prefixes/2,
          find_prefix_longest/2,
@@ -74,6 +75,7 @@
          from_list/1,
          is_key/2,
          is_pattern/1,
+         is_pattern2/1,
          is_prefix/2,
          is_prefixed/2,
          is_prefixed/3,
@@ -83,9 +85,16 @@
          merge/3,
          new/0,
          new/1,
+         pattern_fill/2,
+         pattern_fill/4,
          pattern_parse/2,
          pattern_parse/3,
          pattern_suffix/2,
+         pattern2_fill/2,
+         pattern2_fill/4,
+         pattern2_parse/2,
+         pattern2_parse/3,
+         pattern2_suffix/2,
          prefix/3,
          size/1,
          store/2,
@@ -112,9 +121,9 @@
 %% a regex of ".+".  "**" within the trie will result in undefined behavior
 %% (the pattern is malformed).  The function will search for the most specific
 %% match possible, given the input string and the trie contents.  The input
-%% string must not contain wildcard characters, otherwise badarg is thrown.
-%% If you instead want to supply a pattern string to match the contents of
-%% the trie, see fold_match/4.
+%% string must not contain wildcard characters, otherwise a badarg exit
+%% exception will occur.  If you instead want to supply a pattern string to
+%% match the contents of the trie, see fold_match/4.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -125,6 +134,9 @@ find_match(_, []) ->
 
 find_match(Match, Node) ->
     find_match_node(Match, [], Node).
+
+find_match_node([], _, _) ->
+    error;
 
 find_match_node([$* | _], _, _) ->
     erlang:exit(badarg);
@@ -168,17 +180,17 @@ find_match_node([H | T] = Match, Key, {I0, I1, Data} = Node)
     end,
     if
         Result =:= error ->
-            find_match_element_1(Match, Key, Node);
+            find_match_pattern_1(Match, Key, Node);
         true ->
             Result
     end.
 
-find_match_element_1([_ | T] = Match, Key, {I0, I1, Data})
+find_match_pattern_1([_ | T] = Match, Key, {I0, I1, Data})
     when $* >= I0, $* =< I1 ->
     {ChildNode, Value} = erlang:element($* - I0 + 1, Data),
     if
         is_tuple(ChildNode) ->
-            find_match_element_N(T, [$* | Key], Value, ChildNode);
+            find_match_pattern_N(T, [$* | Key], Value, ChildNode);
         Value =:= error ->
             error;
         true ->
@@ -191,40 +203,238 @@ find_match_element_1([_ | T] = Match, Key, {I0, I1, Data})
             end
     end;
 
-find_match_element_1(_, _, _) ->
+find_match_pattern_1(_, _, _) ->
     error.
 
-find_match_element_N([], _, error, _) ->
+find_match_pattern_N([], _, error, _) ->
     error;
 
-find_match_element_N([], Key, WildValue, _) ->
+find_match_pattern_N([], Key, WildValue, _) ->
     {ok, lists:reverse(Key), WildValue};
 
-find_match_element_N([$* | _], _, _, _) ->
+find_match_pattern_N([$* | _], _, _, _) ->
     erlang:exit(badarg);
 
-find_match_element_N([H | T], Key, WildValue, {I0, I1, _} = Node)
+find_match_pattern_N([H | T], Key, WildValue, {I0, I1, _} = Node)
     when H < I0; H > I1 ->
-    find_match_element_N(T, Key, WildValue, Node);
+    find_match_pattern_N(T, Key, WildValue, Node);
 
-find_match_element_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
+find_match_pattern_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
     {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
     if
         is_tuple(ChildNode) ->
             case find_match_node(T, [H | Key], ChildNode) of
                 error ->
-                    find_match_element_N(T, Key, WildValue, Node);
+                    find_match_pattern_N(T, Key, WildValue, Node);
                 Result ->
                     Result
             end;
         Value =:= error ->
-            find_match_element_N(T, Key, WildValue, Node);
+            find_match_pattern_N(T, Key, WildValue, Node);
         true ->
             case wildcard_match_lists(ChildNode, T) of
                 true ->
                     {ok, lists:reverse([H | Key], ChildNode), Value};
                 false ->
-                    find_match_element_N(T, Key, WildValue, Node)
+                    find_match_pattern_N(T, Key, WildValue, Node)
+            end
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Find a match with patterns (using 2 wildcard characters) held within a trie.===
+%% All patterns held within the trie use the wildcard character "*" or "?"
+%% to represent a regex of ".+".  "**", "??", "*?", or "?*" within the
+%% trie will result in undefined behavior (the pattern is malformed).
+%% The function will search for the most specific match possible, given the
+%% input string and the trie contents.  The input string must not contain
+%% wildcard characters, otherwise a badarg exit exception will occur.
+%% The "?" wildcard character consumes the shortest match to the next
+%% character and must not be the the last character in the string
+%% (the pattern would be malformed).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec find_match2(string(), trie()) -> {ok, any(), any()} | 'error'.
+
+find_match2(_, []) ->
+    error;
+
+find_match2(Match, Node) ->
+    find_match2_node(Match, [], Node).
+
+find_match2_node([], _, _) ->
+    error;
+
+find_match2_node([H | _], _, _)
+    when H == $*; H == $? ->
+    erlang:exit(badarg);
+
+find_match2_node([H | T] = Match, Key, {I0, I1, Data} = Node)
+    when is_integer(H) ->
+    Result = if
+        H < I0; H > I1 ->
+            error;
+        true ->
+            {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+            if
+                T =:= [] ->
+                    if
+                        is_tuple(ChildNode); ChildNode =:= [] ->
+                            if
+                                Value =:= error ->
+                                    error;
+                                true ->
+                                    {ok, lists:reverse([H | Key]), Value}
+                            end;
+                        true ->
+                            error
+                    end;
+                true ->
+                    if
+                        is_tuple(ChildNode) ->
+                            find_match2_node(T, [H | Key], ChildNode);
+                        Value =:= error ->
+                            error;
+                        true ->
+                            case wildcard_match2_lists(ChildNode, T) of
+                                true ->
+                                    {ok, lists:reverse([H | Key],
+                                                       ChildNode), Value};
+                                false ->
+                                    error
+                            end
+                    end
+            end
+    end,
+    if
+        Result =:= error ->
+            ResultPattern0 = find_match2_pattern0_0(Match, Key, Node),
+            if
+                ResultPattern0 =:= error ->
+                    find_match2_pattern1_1(Match, Key, Node);
+                true ->
+                    ResultPattern0
+            end;
+        true ->
+            Result
+    end.
+
+find_match2_pattern0_0([H | T] = Match, Key, {I0, I1, Data})
+    when $? >= I0, $? =< I1 ->
+    {ChildNode, Value} = erlang:element($? - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            find_match2_pattern0_1(T, H, [$? | Key], ChildNode);
+        Value =:= error; ChildNode =:= [] ->
+            error;
+        true ->
+            Suffix = [$? | ChildNode],
+            case wildcard_match2_lists(Suffix, Match) of
+                true ->
+                    {ok, lists:reverse(Key, Suffix), Value};
+                false ->
+                    error
+            end
+    end;
+
+find_match2_pattern0_0(_, _, _) ->
+    error.
+
+find_match2_pattern0_1(T, H, Key, {I0, I1, _} = Node)
+    when H < I0; H > I1 ->
+    find_match2_pattern0_N(T, undefined, Key, Node);
+
+find_match2_pattern0_1(T, H, Key, {I0, _, Data} = Node) ->
+    {_, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        Value =:= error ->
+            find_match2_pattern0_N(T, undefined, Key, Node);
+        true ->
+            find_match2_pattern0_N(T, H, Key, Node)
+    end.
+
+find_match2_pattern0_N([], _, _, _) ->
+    error;
+
+find_match2_pattern0_N([$? | _], _, _, _) ->
+    erlang:exit(badarg);
+
+find_match2_pattern0_N([H | T], H, Key, Node) ->
+    find_match2_pattern0_N(T, H, Key, Node);
+
+find_match2_pattern0_N([H | T], Ignore, Key, {I0, I1, _} = Node)
+    when H < I0; H > I1 ->
+    find_match2_pattern0_N(T, Ignore, Key, Node);
+
+find_match2_pattern0_N([H | T], Ignore, Key, {I0, _, Data} = Node) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            find_match2_node(T, [H | Key], ChildNode);
+        Value =:= error ->
+            find_match2_pattern0_N(T, Ignore, Key, Node);
+        true ->
+            case wildcard_match2_lists(ChildNode, T) of
+                true ->
+                    {ok, lists:reverse([H | Key], ChildNode), Value};
+                false ->
+                    find_match2_pattern0_N(T, Ignore, Key, Node)
+            end
+    end.
+
+find_match2_pattern1_1([_ | T] = Match, Key, {I0, I1, Data})
+    when $* >= I0, $* =< I1 ->
+    {ChildNode, Value} = erlang:element($* - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            find_match2_pattern1_N(T, [$* | Key], Value, ChildNode);
+        Value =:= error ->
+            error;
+        true ->
+            Suffix = [$* | ChildNode],
+            case wildcard_match2_lists(Suffix, Match) of
+                true ->
+                    {ok, lists:reverse(Key, Suffix), Value};
+                false ->
+                    error
+            end
+    end;
+
+find_match2_pattern1_1(_, _, _) ->
+    error.
+
+find_match2_pattern1_N([], _, error, _) ->
+    error;
+
+find_match2_pattern1_N([], Key, WildValue, _) ->
+    {ok, lists:reverse(Key), WildValue};
+
+find_match2_pattern1_N([$* | _], _, _, _) ->
+    erlang:exit(badarg);
+
+find_match2_pattern1_N([H | T], Key, WildValue, {I0, I1, _} = Node)
+    when H < I0; H > I1 ->
+    find_match2_pattern1_N(T, Key, WildValue, Node);
+
+find_match2_pattern1_N([H | T], Key, WildValue, {I0, _, Data} = Node) ->
+    {ChildNode, Value} = erlang:element(H - I0 + 1, Data),
+    if
+        is_tuple(ChildNode) ->
+            case find_match2_node(T, [H | Key], ChildNode) of
+                error ->
+                    find_match2_pattern1_N(T, Key, WildValue, Node);
+                Result ->
+                    Result
+            end;
+        Value =:= error ->
+            find_match2_pattern1_N(T, Key, WildValue, Node);
+        true ->
+            case wildcard_match2_lists(ChildNode, T) of
+                true ->
+                    {ok, lists:reverse([H | Key], ChildNode), Value};
+                false ->
+                    find_match2_pattern1_N(T, Key, WildValue, Node)
             end
     end.
 
@@ -298,9 +508,10 @@ find_similar_element(Key, Node) ->
 %% ===Fold a function over the keys within a trie that matches a pattern.===
 %% Traverses in alphabetical order.  Uses "*" as a wildcard character
 %% within the pattern (it acts like a ".+" regex, and "**" is forbidden).
-%% The trie keys must not contain wildcard characters, otherwise badarg
-%% is thrown. If you want to match a specific string without wildcards
-%% on trie values that contain wildcard characters, see find_match/2.
+%% The trie keys must not contain wildcard characters, otherwise a badarg
+%% exit exception will occur. If you want to match a specific string
+%% without wildcards on trie values that contain wildcard characters,
+%% see find_match/2.
 %% @end
 %%-------------------------------------------------------------------------
 
@@ -509,7 +720,7 @@ fold_match_element_N([$* | T] = Match, F, A, I, N, Offset, Prefix, Mid, Data) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Test to determine if a string is a pattern.===
-%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "*" is the wildcard character (equivalent to the ".+" regex).
 %% "**" is forbidden.
 %% @end
 %%-------------------------------------------------------------------------
@@ -530,6 +741,38 @@ is_pattern([$* | Pattern], _) ->
 
 is_pattern([_ | Pattern], Result) ->
     is_pattern(Pattern, Result).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Test to determine if a string is a pattern (using 2 wildcard characters).===
+%% "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+%% "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+%% character in the pattern.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec is_pattern2(Pattern :: string()) -> 'true' | 'false'.
+
+is_pattern2(Pattern) ->
+    is_pattern2(Pattern, false).
+
+is_pattern2([], Result) ->
+    Result;
+
+is_pattern2([$?], _) ->
+    erlang:exit(badarg);
+
+is_pattern2([C0, C1 | _], _)
+    when C0 == $* orelse C0 == $?,
+         C1 == $* orelse C1 == $? ->
+    erlang:exit(badarg);
+
+is_pattern2([H | Pattern], _)
+    when H == $*; H == $? ->
+    is_pattern2(Pattern, true);
+
+is_pattern2([_ | Pattern], Result) ->
+    is_pattern2(Pattern, Result).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -804,8 +1047,132 @@ itera_element(F, {trie_itera_done, A} = ReturnValue, I, N, Offset, Key, Data) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
+%% ===Fill wildcard characters in a string.===
+%% The "*" wildcard character may be used consecutively by this function
+%% to have parameters concatenated.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern_fill(FillPattern :: string(),
+                   Parameters :: list(string())) ->
+    {ok, string()} |
+    {error, parameters_ignored | parameter_missing}.
+
+pattern_fill(FillPattern, Parameters) ->
+    pattern_fill_insert(FillPattern, Parameters, true).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fill wildcard characters in a string.===
+%% The "*" wildcard character may be used consecutively by this function
+%% to have parameters concatenated.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern_fill(FillPattern :: string(),
+                   Parameters :: list(string()),
+                   ParametersSelected :: list(pos_integer()),
+                   ParametersStrictMatching :: boolean()) ->
+    {ok, string()} |
+    {error,
+     parameters_ignored | parameter_missing | parameters_selected_empty |
+     {parameters_selected_ignored, list(pos_integer())} |
+     {parameters_selected_missing, pos_integer()}}.
+
+pattern_fill(FillPattern, Parameters, [], ParametersStrictMatching) ->
+    pattern_fill_insert(FillPattern, Parameters, ParametersStrictMatching);
+pattern_fill(FillPattern, Parameters, ParametersSelected,
+             ParametersStrictMatching) ->
+    pattern_fill_select(FillPattern, Parameters, ParametersSelected,
+                        ParametersStrictMatching).
+
+pattern_fill_strip([], NameOut) ->
+    {ok, lists:reverse(NameOut)};
+pattern_fill_strip([$* | FillPatternIn], NameOut) ->
+    pattern_fill_strip(FillPatternIn, NameOut);
+pattern_fill_strip([C | FillPatternIn], NameOut) ->
+    pattern_fill_strip(FillPatternIn, [C | NameOut]).
+
+pattern_fill_insert([], NameOut,
+                    [], _) ->
+    {ok, lists:reverse(NameOut)};
+pattern_fill_insert([], NameOut,
+                    [_ | _], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_ignored};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+pattern_fill_insert([$* | FillPatternIn], NameOut,
+                    [], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameter_missing};
+        true ->
+            pattern_fill_strip(FillPatternIn, NameOut)
+    end;
+pattern_fill_insert([$* | FillPatternIn], NameOut,
+                    [Parameter | Parameters], ParametersStrictMatching) ->
+    pattern_fill_insert(FillPatternIn, lists:reverse(Parameter) ++ NameOut,
+                        Parameters, ParametersStrictMatching);
+pattern_fill_insert([C | FillPatternIn], NameOut,
+                    Parameters, ParametersStrictMatching) ->
+    pattern_fill_insert(FillPatternIn, [C | NameOut],
+                        Parameters, ParametersStrictMatching).
+
+pattern_fill_insert(FillPatternIn, Parameters, ParametersStrictMatching) ->
+    pattern_fill_insert(FillPatternIn, [],
+                        Parameters, ParametersStrictMatching).
+
+pattern_fill_select([], NameOut, _,
+                    ParametersSelected, ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
+            {error, {parameters_selected_ignored, ParametersSelected}};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+pattern_fill_select([$* | FillPatternIn], NameOut, _,
+                    [], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_selected_empty};
+        true ->
+            pattern_fill_strip(FillPatternIn, NameOut)
+    end;
+pattern_fill_select([$* | FillPatternIn], NameOut, Parameters,
+                    [I | ParametersSelected],
+                    ParametersStrictMatching) ->
+    try lists:nth(I, Parameters) of
+        Parameter ->
+            pattern_fill_select(FillPatternIn,
+                                lists:reverse(Parameter) ++ NameOut,
+                                Parameters, ParametersSelected,
+                                ParametersStrictMatching)
+    catch
+        error:_ ->
+            if
+                ParametersStrictMatching =:= true ->
+                    {error, {parameters_selected_missing, I}};
+                true ->
+                    pattern_fill_strip(FillPatternIn, NameOut)
+            end
+    end;
+pattern_fill_select([C | FillPatternIn], NameOut, Parameters,
+                    ParametersSelected, ParametersStrictMatching) ->
+    pattern_fill_select(FillPatternIn, [C | NameOut], Parameters,
+                        ParametersSelected, ParametersStrictMatching).
+
+pattern_fill_select(FillPatternIn, Parameters,
+                    ParametersSelected, ParametersStrictMatching) ->
+    pattern_fill_select(FillPatternIn, [], Parameters,
+                        ParametersSelected, ParametersStrictMatching).
+
+%%-------------------------------------------------------------------------
+%% @doc
 %% ===Parse a string based on the supplied wildcard pattern.===
-%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "*" is the wildcard character (equivalent to the ".+" regex).
 %% "**" is forbidden.
 %% @end
 %%-------------------------------------------------------------------------
@@ -819,7 +1186,7 @@ pattern_parse(Pattern, L) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse a string based on the supplied wildcard pattern.===
-%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "*" is the wildcard character (equivalent to the ".+" regex).
 %% "**" is forbidden.
 %% @end
 %%-------------------------------------------------------------------------
@@ -920,7 +1287,7 @@ pattern_parse(_, _, _, _, _) ->
 %%-------------------------------------------------------------------------
 %% @doc
 %% ===Parse a string based on the supplied wildcard pattern to return only the suffix after the pattern.===
-%% "*" is the wildcard character (equivalent to the ".+" regex) and
+%% "*" is the wildcard character (equivalent to the ".+" regex).
 %% "**" is forbidden.
 %% @end
 %%-------------------------------------------------------------------------
@@ -971,6 +1338,369 @@ pattern_suffix_pattern(Pattern, C, L) ->
             case pattern_suffix(Pattern, NewL) of
                 error ->
                     pattern_suffix_pattern(Pattern, C, NewL);
+                Success ->
+                    Success
+            end;
+        error ->
+            error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fill wildcard characters in a string.===
+%% The "*" and "?" wildcard characters may be used consecutively by this
+%% function to have parameters concatenated (both are processed the same
+%% way by this function).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern2_fill(FillPattern :: string(),
+                    Parameters :: list(string())) ->
+    {ok, string()} |
+    {error, parameters_ignored | parameter_missing}.
+
+pattern2_fill(FillPattern, Parameters) ->
+    pattern2_fill_insert(FillPattern, Parameters, true).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Fill wildcard characters in a string.===
+%% The "*" and "?" wildcard characters may be used consecutively by this
+%% function to have parameters concatenated (both are processed the same
+%% way by this function).
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern2_fill(FillPattern :: string(),
+                    Parameters :: list(string()),
+                    ParametersSelected :: list(pos_integer()),
+                    ParametersStrictMatching :: boolean()) ->
+    {ok, string()} |
+    {error,
+     parameters_ignored | parameter_missing | parameters_selected_empty |
+     {parameters_selected_ignored, list(pos_integer())} |
+     {parameters_selected_missing, pos_integer()}}.
+
+pattern2_fill(FillPattern, Parameters, [], ParametersStrictMatching) ->
+    pattern2_fill_insert(FillPattern, Parameters, ParametersStrictMatching);
+pattern2_fill(FillPattern, Parameters, ParametersSelected,
+              ParametersStrictMatching) ->
+    pattern2_fill_select(FillPattern, Parameters, ParametersSelected,
+                         ParametersStrictMatching).
+
+pattern2_fill_strip([], NameOut) ->
+    {ok, lists:reverse(NameOut)};
+pattern2_fill_strip([C | FillPatternIn], NameOut)
+    when C == $*; C == $? ->
+    pattern2_fill_strip(FillPatternIn, NameOut);
+pattern2_fill_strip([C | FillPatternIn], NameOut) ->
+    pattern2_fill_strip(FillPatternIn, [C | NameOut]).
+
+pattern2_fill_insert([], NameOut,
+                     [], _) ->
+    {ok, lists:reverse(NameOut)};
+pattern2_fill_insert([], NameOut,
+                     [_ | _], ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_ignored};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+pattern2_fill_insert([C | FillPatternIn], NameOut,
+                     [], ParametersStrictMatching)
+    when C == $*; C == $? ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameter_missing};
+        true ->
+            pattern2_fill_strip(FillPatternIn, NameOut)
+    end;
+pattern2_fill_insert([C | FillPatternIn], NameOut,
+                     [Parameter | Parameters], ParametersStrictMatching)
+    when C == $*; C == $? ->
+    pattern2_fill_insert(FillPatternIn, lists:reverse(Parameter) ++ NameOut,
+                         Parameters, ParametersStrictMatching);
+pattern2_fill_insert([C | FillPatternIn], NameOut,
+                     Parameters, ParametersStrictMatching) ->
+    pattern2_fill_insert(FillPatternIn, [C | NameOut],
+                         Parameters, ParametersStrictMatching).
+
+pattern2_fill_insert(FillPatternIn, Parameters, ParametersStrictMatching) ->
+    pattern2_fill_insert(FillPatternIn, [],
+                         Parameters, ParametersStrictMatching).
+
+pattern2_fill_select([], NameOut, _,
+                     ParametersSelected, ParametersStrictMatching) ->
+    if
+        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
+            {error, {parameters_selected_ignored, ParametersSelected}};
+        true ->
+            {ok, lists:reverse(NameOut)}
+    end;
+pattern2_fill_select([C | FillPatternIn], NameOut, _,
+                     [], ParametersStrictMatching)
+    when C == $*; C == $? ->
+    if
+        ParametersStrictMatching =:= true ->
+            {error, parameters_selected_empty};
+        true ->
+            pattern2_fill_strip(FillPatternIn, NameOut)
+    end;
+pattern2_fill_select([C | FillPatternIn], NameOut, Parameters,
+                     [I | ParametersSelected],
+                     ParametersStrictMatching)
+    when C == $*; C == $? ->
+    try lists:nth(I, Parameters) of
+        Parameter ->
+            pattern2_fill_select(FillPatternIn,
+                                 lists:reverse(Parameter) ++ NameOut,
+                                 Parameters, ParametersSelected,
+                                 ParametersStrictMatching)
+    catch
+        error:_ ->
+            if
+                ParametersStrictMatching =:= true ->
+                    {error, {parameters_selected_missing, I}};
+                true ->
+                    pattern2_fill_strip(FillPatternIn, NameOut)
+            end
+    end;
+pattern2_fill_select([C | FillPatternIn], NameOut, Parameters,
+                     ParametersSelected, ParametersStrictMatching) ->
+    pattern2_fill_select(FillPatternIn, [C | NameOut], Parameters,
+                         ParametersSelected, ParametersStrictMatching).
+
+pattern2_fill_select(FillPatternIn, Parameters,
+                     ParametersSelected, ParametersStrictMatching) ->
+    pattern2_fill_select(FillPatternIn, [], Parameters,
+                         ParametersSelected, ParametersStrictMatching).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).===
+%% "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+%% "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+%% character in the pattern.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern2_parse(Pattern :: string(),
+                    L :: string()) -> list(string()) | 'error'.
+
+pattern2_parse(Pattern, L) ->
+    pattern2_parse(Pattern, L, default).
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).===
+%% "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+%% "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+%% character in the pattern.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern2_parse(Pattern :: string(),
+                    L :: string(),
+                    Option :: default | with_suffix | expanded) ->
+    list(string()) |                       % default
+    {list(string()), string()} |           % with_suffix
+    list(string() | {exact, string()}) |   % expanded
+    'error'.
+
+pattern2_parse(Pattern, L, Option)
+    when (Option =:= default) orelse
+         (Option =:= with_suffix) orelse
+         (Option =:= expanded) ->
+    pattern2_parse(Pattern, L, [], [], Option).
+
+pattern2_parse_result(default, Parameters, _) ->
+    lists:reverse(Parameters);
+
+pattern2_parse_result(with_suffix, Parameters, Suffix) ->
+    {lists:reverse(Parameters), lists:reverse(Suffix)};
+
+pattern2_parse_result(expanded, Parameters, Suffix) ->
+    NewParameters = if
+        Suffix /= [] ->
+            [{exact, lists:reverse(Suffix)} | Parameters];
+        true ->
+            Parameters
+    end,
+    lists:reverse(NewParameters).
+
+pattern2_parse_element(_, [], _) ->
+    error;
+
+pattern2_parse_element(C, [C | T], Segment) ->
+    {ok, T, lists:reverse(Segment)};
+
+pattern2_parse_element(_, [H | _], _)
+    when H == $*; H == $? ->
+    erlang:exit(badarg);
+
+pattern2_parse_element(C, [H | T], L) ->
+    pattern2_parse_element(C, T, [H | L]).
+
+pattern2_parse_pattern0(Pattern, C, L, Segment, Parsed, Option) ->
+    case pattern2_parse_element(C, L, Segment) of
+        {ok, NewL, NewSegment} ->
+            pattern2_parse(Pattern, NewL,
+                           [NewSegment | Parsed], [C], Option);
+        error ->
+            error
+    end.
+
+pattern2_parse_pattern1(Pattern, C, L, Segment, Parsed, Option) ->
+    case pattern2_parse_element(C, L, Segment) of
+        {ok, NewL, NewSegment} ->
+            case pattern2_parse(Pattern, NewL,
+                               [NewSegment | Parsed], [C], Option) of
+                error ->
+                    pattern2_parse_pattern1(Pattern, C, NewL,
+                                            [C | lists:reverse(NewSegment)],
+                                            Parsed, Option);
+                Success ->
+                    Success
+            end;
+        error ->
+            error
+    end.
+
+pattern2_parse([], [], Parsed, Suffix, Option) ->
+    pattern2_parse_result(Option, Parsed, Suffix);
+
+pattern2_parse([], [_ | _], _, _, _) ->
+    error;
+
+pattern2_parse([_ | _], [H | _], _, _, _)
+    when H == $*; H == $? ->
+    erlang:exit(badarg);
+
+pattern2_parse([$*], [_ | _] = L, Parsed, Suffix, Option) ->
+    NewParsed = if
+        Option =:= expanded, Suffix /= [] ->
+            [{exact, lists:reverse(Suffix)} | Parsed];
+        true ->
+            Parsed
+    end,
+    pattern2_parse_result(Option, [L | NewParsed], []);
+
+pattern2_parse([$?], _, _, _, _) ->
+    erlang:exit(badarg);
+
+pattern2_parse([C0, C1 | _], [_ | _], _, _, _)
+    when C0 == $* orelse C0 == $?,
+         C1 == $* orelse C1 == $? ->
+    erlang:exit(badarg);
+
+pattern2_parse([$?, C | Pattern], [H | T], Parsed, Suffix, Option) ->
+    if
+        C == H ->
+            error;
+        true ->
+            NewParsed = if
+                Option =:= expanded, Suffix /= [] ->
+                    [{exact, lists:reverse(Suffix)} | Parsed];
+                true ->
+                    Parsed
+            end,
+            pattern2_parse_pattern0(Pattern, C, T, [H], NewParsed, Option)
+    end;
+
+pattern2_parse([$*, C | Pattern], [H | T], Parsed, Suffix, Option) ->
+    NewParsed = if
+        Option =:= expanded, Suffix /= [] ->
+            [{exact, lists:reverse(Suffix)} | Parsed];
+        true ->
+            Parsed
+    end,
+    pattern2_parse_pattern1(Pattern, C, T, [H], NewParsed, Option);
+
+pattern2_parse([C | Pattern], [C | L], Parsed, Suffix, Option) ->
+    pattern2_parse(Pattern, L, Parsed, [C | Suffix], Option);
+
+pattern2_parse(_, _, _, _, _) ->
+    error.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Parse a string based on the supplied wildcard pattern (using 2 wildcard characters) to return only the suffix after the pattern.===
+%% "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+%% "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+%% character in the pattern.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec pattern2_suffix(Pattern :: string(),
+                      L :: string()) ->
+    string() | 'error'.
+
+pattern2_suffix([], []) ->
+    [];
+
+pattern2_suffix([], [_ | _] = L) ->
+    L;
+
+pattern2_suffix([_ | _], [H | _])
+    when H == $*; H == $? ->
+    erlang:exit(badarg);
+
+pattern2_suffix([$*], [_ | _]) ->
+    [];
+
+pattern2_suffix([$?], _) ->
+    erlang:exit(badarg);
+
+pattern2_suffix([C0, C1 | _], [_ | _])
+    when C0 == $* orelse C0 == $?,
+         C1 == $* orelse C1 == $? ->
+    erlang:exit(badarg);
+
+pattern2_suffix([$?, C | Pattern], [H | T]) ->
+    if
+        C == H ->
+            error;
+        true ->
+            pattern2_suffix_pattern0(Pattern, C, T)
+    end;
+
+pattern2_suffix([$*, C | Pattern], [_ | T]) ->
+    pattern2_suffix_pattern1(Pattern, C, T);
+
+pattern2_suffix([C | Pattern], [C | L]) ->
+    pattern2_suffix(Pattern, L);
+
+pattern2_suffix(_, _) ->
+    error.
+
+pattern2_suffix_element(_, []) ->
+    error;
+
+pattern2_suffix_element(C, [C | T]) ->
+    {ok, T};
+
+pattern2_suffix_element(_, [H | _])
+    when H == $*; H == $? ->
+    erlang:exit(badarg);
+
+pattern2_suffix_element(C, [_ | T]) ->
+    pattern2_suffix_element(C, T).
+
+pattern2_suffix_pattern0(Pattern, C, L) ->
+    case pattern2_suffix_element(C, L) of
+        {ok, NewL} ->
+            pattern2_suffix(Pattern, NewL);
+        error ->
+            error
+    end.
+
+pattern2_suffix_pattern1(Pattern, C, L) ->
+    case pattern2_suffix_element(C, L) of
+        {ok, NewL} ->
+            case pattern2_suffix(Pattern, NewL) of
+                error ->
+                    pattern2_suffix_pattern1(Pattern, C, NewL);
                 Success ->
                     Success
             end;
@@ -1220,9 +1950,21 @@ test() ->
     {ok,"aa*a*",4} = trie:find_match("aababb", RootNode6),
     {ok,"aa*a*",4} = trie:find_match("aabbab", RootNode6),
     {ok,"aa*a*",4} = trie:find_match("aabbabb", RootNode6),
+    {ok,"aa*",2} = trie:find_match2("aaaa", RootNode6),
+    {ok,"aaaaa",5} = trie:find_match2("aaaaa", RootNode6),
+    {ok,"*",1} = trie:find_match2("aa", RootNode6),
+    {ok,"aa*",2} = trie:find_match2("aab", RootNode6),
+    {ok,"aa*b",3} = trie:find_match2("aabb", RootNode6),
+    {ok,"aa*a*",4} = trie:find_match2("aabab", RootNode6),
+    {ok,"aa*a*",4} = trie:find_match2("aababb", RootNode6),
+    {ok,"aa*a*",4} = trie:find_match2("aabbab", RootNode6),
+    {ok,"aa*a*",4} = trie:find_match2("aabbabb", RootNode6),
     {'EXIT',badarg} = (catch trie:find_match("aa*", RootNode6)),
     {'EXIT',badarg} = (catch trie:find_match("aaaa*", RootNode6)),
     {'EXIT',badarg} = (catch trie:find_match("aaaaa*", RootNode6)),
+    {'EXIT',badarg} = (catch trie:find_match2("aa*", RootNode6)),
+    {'EXIT',badarg} = (catch trie:find_match2("aaaa*", RootNode6)),
+    {'EXIT',badarg} = (catch trie:find_match2("aaaaa*", RootNode6)),
     ["aa"] = trie:pattern_parse("aa*", "aaaa"),
     ["b"] = trie:pattern_parse("aa*", "aab"),
     ["b"] = trie:pattern_parse("aa*b", "aabb"),
@@ -1237,6 +1979,26 @@ test() ->
     ["//"] = trie:pattern_parse("*/", "///"),
     "/get" = trie:pattern_suffix("*.txt", "file.name.txt/get"),
     "/get" = trie:pattern_suffix("*/", "///get"),
+    ["aa"] = trie:pattern2_parse("aa*", "aaaa"),
+    ["b"] = trie:pattern2_parse("aa*", "aab"),
+    ["b"] = trie:pattern2_parse("aa*b", "aabb"),
+    {["b"], "b"} = trie:pattern2_parse("aa*b", "aabb", with_suffix),
+    ["b", "b"] = trie:pattern2_parse("aa*a*", "aabab"),
+    {["b", "b"], ""} = trie:pattern2_parse("aa*a*", "aabab", with_suffix),
+    ["b", "bb"] = trie:pattern2_parse("aa*a*", "aababb"),
+    ["b", "bb"] = trie:pattern2_parse("aa?a*", "aababb"),
+    ["bb", "b"] = trie:pattern2_parse("aa*a*", "aabbab"),
+    ["bb", "b"] = trie:pattern2_parse("aa?a*", "aabbab"),
+    ["bb", "bb"] = trie:pattern2_parse("aa*a*", "aabbabb"),
+    ["bb", "bb"] = trie:pattern2_parse("aa?a*", "aabbabb"),
+    error = trie:pattern2_parse("aa*a*", "aaabb"),
+    ["file.name"] = trie:pattern2_parse("*.txt", "file.name.txt"),
+    ["//"] = trie:pattern2_parse("*/", "///"),
+    "/get" = trie:pattern2_suffix("*.txt", "file.name.txt/get"),
+    error = trie:pattern2_suffix("?.txt", "file.name.txt/get"),
+    "/get" = trie:pattern2_suffix("?.txt", "file_name.txt/get"),
+    "/get" = trie:pattern2_suffix("*/", "///get"),
+    error = trie:pattern2_suffix("?/", "///get"),
     {ok, "/accounting/balances/fred",
      empty} = trie:find_match("/accounting/balances/fred",
                               trie:new(["/accounting/balances/*",
@@ -1258,9 +2020,35 @@ test() ->
      {exact, "n"}] = trie:pattern_parse("a*t*n", "addition", expanded),
     ["w",{exact,"atch"}] = trie:pattern_parse("*atch", "watch", expanded),
     [{exact,"is"},"t"] = trie:pattern_parse("is*", "ist", expanded),
+    [] = trie:pattern2_parse("aaabb", "aaabb"),
+    {[], "aaabb"} = trie:pattern2_parse("aaabb", "aaabb", with_suffix),
+    [{exact, "a"},
+     "ddi",
+     {exact, "t"},
+     "io",
+     {exact, "n"}] = trie:pattern2_parse("a*t*n", "addition", expanded),
+    [{exact, "a"},
+     "ddi",
+     {exact, "t"},
+     "io",
+     {exact, "n"}] = trie:pattern2_parse("a?t?n", "addition", expanded),
+    ["w",{exact,"atch"}] = trie:pattern2_parse("*atch", "watch", expanded),
+    ["w",{exact,"atch"}] = trie:pattern2_parse("?atch", "watch", expanded),
+    error = trie:pattern2_parse("?atch", "aatch", expanded),
+    [{exact,"is"},"t"] = trie:pattern2_parse("is*", "ist", expanded),
     false = trie:is_pattern("abcdef"),
+    false = trie:is_pattern("abcde?f"),
     true = trie:is_pattern("abc*d*ef"),
     {'EXIT',badarg} = (catch trie:is_pattern("abc**ef")),
+    false = trie:is_pattern2("abcdef"),
+    true = trie:is_pattern2("abc?def"),
+    true = trie:is_pattern2("abc?d*ef"),
+    true = trie:is_pattern2("abcd*ef"),
+    {'EXIT',badarg} = (catch trie:is_pattern2("abc**ef")),
+    {'EXIT',badarg} = (catch trie:is_pattern2("abc??ef")),
+    {'EXIT',badarg} = (catch trie:is_pattern2("abc?*ef")),
+    {'EXIT',badarg} = (catch trie:is_pattern2("abc*?ef")),
+    {'EXIT',badarg} = (catch trie:is_pattern2("abcef?")),
     RootNode7 = trie:from_list([{"00", zeros}, {"11", ones}]),
     RootNode8 = trie:from_list([{"0", zero}, {"1", one}]),
     ["00"] = trie:fetch_keys_similar("02", RootNode7),
@@ -1286,6 +2074,71 @@ test() ->
     true = trie:is_prefixed("abcdefghijk", "ac", RootNode10),
     true = trie:is_prefixed("abcdefghijk", "bc", RootNode10),
     true = trie:is_prefixed("abcdefghijk", "ab", RootNode10),
+    RootNode12 = trie:new([
+        {"*",      1},
+        {"/?a",    2},
+        {"/?/a",   3},
+        {"/?/b" ,  4},
+        {"/*/a",   5}]),
+    {ok,"*",1} = trie:find_match2("/alba", RootNode12),
+    {ok,"*",1} = trie:find_match2("/aa", RootNode12),
+    {ok,"*",1} = trie:find_match2("/a", RootNode12),
+    {ok,"/?a",2} = trie:find_match2("/ba", RootNode12),
+    {ok,"/?a",2} = trie:find_match2("/bcdefghijklmno___a", RootNode12),
+    {ok,"/?/a",3} = trie:find_match2("/aaaaaaaa/a", RootNode12),
+    {ok,"/?/b",4} = trie:find_match2("/a/b", RootNode12),
+    {ok,"/?/b",4} = trie:find_match2("/aa/b", RootNode12),
+    {ok,"/?/b",4} = trie:find_match2("/ab/b", RootNode12),
+    {'EXIT',badarg} = (catch trie:find_match2("/?a", RootNode12)),
+    {'EXIT',badarg} = (catch trie:find_match2("/?b", RootNode12)),
+    {'EXIT',badarg} = (catch trie:find_match2("/?a", RootNode12)),
+    {ok,"/?/a",3} = trie:find_match2("/alba-white/a", RootNode12),
+    {ok,"/*/a",5} = trie:find_match2("/alba/white/a", RootNode12),
+    RootNode13 = trie:new([
+        {"/?a",    1},
+        {"/?bbb",  2},
+        {"/?c",    3}]),
+    {ok,"/?bbb",2} = trie:find_match2("/abbb", RootNode13),
+    error = trie:find_match2("/abba", RootNode13),
+    {ok,"/?c",3} = trie:find_match2("/abbc", RootNode13),
+    RootNode14 = trie:new([
+        {"*bc",   1},
+        {"*bd",   2}]),
+    error = trie:find_match("bb", RootNode14),
+    error = trie:find_match2("bb", RootNode14),
+    FillPattern0 = "/**/*",
+    Parameters0 = ["a/", "b", "c"],
+    Parameters1 = ["ignore1", "a/", "ignore2", "b", "c"],
+    FillError0 = parameters_selected_empty,
+    FillError1 = parameters_selected_ignored,
+    FillError2 = parameters_selected_missing,
+    {ok, "/a/b/c"} = trie:pattern_fill(FillPattern0, Parameters0),
+    {ok, "/a/b/c"} = trie:pattern_fill(FillPattern0, Parameters1,
+                                       [2, 4, 5], false),
+    {ok, "/a/b/"} = trie:pattern_fill(FillPattern0, Parameters1,
+                                       [2, 4], false),
+    {ok, "/a/b/c"} = trie:pattern_fill(FillPattern0, Parameters1,
+                                       [2, 4, 5], true),
+    {error, FillError0} = trie:pattern_fill(FillPattern0, Parameters1,
+                                            [2, 4], true),
+    {error, {FillError1, [1]}} = trie:pattern_fill(FillPattern0, Parameters1,
+                                                   [2, 4, 5, 1], true),
+    {error, {FillError2, 6}} = trie:pattern_fill(FillPattern0, Parameters1,
+                                                 [2, 4, 6], true),
+    FillPattern1 = "/??/?",
+    {ok, "/a/b/c"} = trie:pattern2_fill(FillPattern1, Parameters0),
+    {ok, "/a/b/c"} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                        [2, 4, 5], false),
+    {ok, "/a/b/"} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                        [2, 4], false),
+    {ok, "/a/b/c"} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                        [2, 4, 5], true),
+    {error, FillError0} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                             [2, 4], true),
+    {error, {FillError1, [1]}} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                                    [2, 4, 5, 1], true),
+    {error, {FillError2, 6}} = trie:pattern2_fill(FillPattern1, Parameters1,
+                                                  [2, 4, 6], true),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -1361,6 +2214,80 @@ wildcard_match_lists([C | Pattern], [C | L]) ->
 
 wildcard_match_lists(_, L) ->
     wildcard_match_lists_valid(L, false).
+
+wildcard_match2_lists_element(_, []) ->
+    error;
+
+wildcard_match2_lists_element(_, [C | _])
+    when C == $*; C == $? ->
+    erlang:exit(badarg);
+
+wildcard_match2_lists_element(C, [C | L]) ->
+    {ok, L};
+
+wildcard_match2_lists_element(C, [_ | L]) ->
+    wildcard_match2_lists_element(C, L).
+
+wildcard_match2_lists_valid([], Result) ->
+    Result;
+
+wildcard_match2_lists_valid([C | _], _)
+    when C == $*; C == $? ->
+    erlang:exit(badarg);
+
+wildcard_match2_lists_valid([_ | L], Result) ->
+    wildcard_match2_lists_valid(L, Result).
+
+wildcard_match2_lists_pattern0(Pattern, C, L) ->
+    case wildcard_match2_lists_element(C, L) of
+        {ok, NewL} ->
+            wildcard_match2_lists(Pattern, NewL);
+        error ->
+            wildcard_match2_lists_valid(L, false)
+    end.
+
+wildcard_match2_lists_pattern1(Pattern, C, L) ->
+    case wildcard_match2_lists_element(C, L) of
+        {ok, NewL} ->
+            case wildcard_match2_lists(Pattern, NewL) of
+                true ->
+                    true;
+                false ->
+                    wildcard_match2_lists_pattern1(Pattern, C, NewL)
+            end;
+        error ->
+            wildcard_match2_lists_valid(L, false)
+    end.
+
+wildcard_match2_lists([], []) ->
+    true;
+
+wildcard_match2_lists([], [_ | _] = L) ->
+    wildcard_match2_lists_valid(L, false);
+
+wildcard_match2_lists([_ | _], [C | _])
+    when C == $*; C == $? ->
+    erlang:exit(badarg);
+
+wildcard_match2_lists([$?], [_ | _]) ->
+    erlang:exit(badarg);
+
+wildcard_match2_lists([$?, C | Pattern], [_ | L]) ->
+    true = (C =/= $*) andalso (C =/= $?),
+    wildcard_match2_lists_pattern0(Pattern, C, L);
+
+wildcard_match2_lists([$*], [_ | L]) ->
+    wildcard_match2_lists_valid(L, true);
+
+wildcard_match2_lists([$*, C | Pattern], [_ | L]) ->
+    true = (C =/= $*) andalso (C =/= $?),
+    wildcard_match2_lists_pattern1(Pattern, C, L);
+
+wildcard_match2_lists([C | Pattern], [C | L]) ->
+    wildcard_match2_lists(Pattern, L);
+
+wildcard_match2_lists(_, L) ->
+    wildcard_match2_lists_valid(L, false).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

@@ -602,7 +602,7 @@ websocket_subscriptions_lookup([{PatternSuffix, L} |
             Name = Prefix ++ Suffix,
             true = ((ParametersAllowed =:= true) orelse
                     ((ParametersAllowed =:= false) andalso
-                     (cloudi_x_trie:is_pattern(Name) =:= false))),
+                     (cloudi_service_name:pattern(Name) =:= false))),
             F = if
                 ParametersAllowed =:= true ->
                     fun(Parameters) ->

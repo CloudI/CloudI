@@ -62,7 +62,7 @@
     {error, parameters_ignored | parameter_missing}.
 
 new(Pattern, Parameters) ->
-    new_insert(Pattern, Parameters, true).
+    cloudi_x_trie:pattern_fill(Pattern, Parameters).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -82,11 +82,9 @@ new(Pattern, Parameters) ->
      {parameters_selected_ignored, list(pos_integer())} |
      {parameters_selected_missing, pos_integer()}}.
 
-new(Pattern, Parameters, [], ParametersStrictMatching) ->
-    new_insert(Pattern, Parameters, ParametersStrictMatching);
 new(Pattern, Parameters, ParametersSelected, ParametersStrictMatching) ->
-    new_select(Pattern, Parameters, ParametersSelected,
-               ParametersStrictMatching).
+    cloudi_x_trie:pattern_fill(Pattern, Parameters,
+                               ParametersSelected, ParametersStrictMatching).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -159,87 +157,6 @@ suffix(_, _) ->
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
-
-new_strip([], NameOut) ->
-    {ok, lists:reverse(NameOut)};
-new_strip([$* | PatternIn], NameOut) ->
-    new_strip(PatternIn, NameOut);
-new_strip([C | PatternIn], NameOut) ->
-    new_strip(PatternIn, [C | NameOut]).
-
-new_insert([], NameOut,
-           [], _) ->
-    {ok, lists:reverse(NameOut)};
-new_insert([], NameOut,
-           [_ | _], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_ignored};
-        true ->
-            {ok, lists:reverse(NameOut)}
-    end;
-new_insert([$* | PatternIn], NameOut,
-           [], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameter_missing};
-        true ->
-            new_strip(PatternIn, NameOut)
-    end;
-new_insert([$* | PatternIn], NameOut,
-           [Parameter | Parameters], ParametersStrictMatching) ->
-    new_insert(PatternIn, lists:reverse(Parameter) ++ NameOut,
-               Parameters, ParametersStrictMatching);
-new_insert([C | PatternIn], NameOut,
-           Parameters, ParametersStrictMatching) ->
-    new_insert(PatternIn, [C | NameOut],
-               Parameters, ParametersStrictMatching).
-
-new_insert(PatternIn, Parameters, ParametersStrictMatching) ->
-    new_insert(PatternIn, [], Parameters, ParametersStrictMatching).
-
-new_select([], NameOut, _,
-           ParametersSelected, ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true, ParametersSelected /= [] ->
-            {error, {parameters_selected_ignored, ParametersSelected}};
-        true ->
-            {ok, lists:reverse(NameOut)}
-    end;
-new_select([$* | PatternIn], NameOut, _,
-           [], ParametersStrictMatching) ->
-    if
-        ParametersStrictMatching =:= true ->
-            {error, parameters_selected_empty};
-        true ->
-            new_strip(PatternIn, NameOut)
-    end;
-new_select([$* | PatternIn], NameOut, Parameters,
-           [I | ParametersSelected],
-           ParametersStrictMatching) ->
-    try lists:nth(I, Parameters) of
-        Parameter ->
-            new_select(PatternIn, lists:reverse(Parameter) ++ NameOut,
-                       Parameters, ParametersSelected,
-                       ParametersStrictMatching)
-    catch
-        error:_ ->
-            if
-                ParametersStrictMatching =:= true ->
-                    {error, {parameters_selected_missing, I}};
-                true ->
-                    new_strip(PatternIn, NameOut)
-            end
-    end;
-new_select([C | PatternIn], NameOut, Parameters,
-           ParametersSelected, ParametersStrictMatching) ->
-    new_select(PatternIn, [C | NameOut], Parameters,
-               ParametersSelected, ParametersStrictMatching).
-
-new_select(PatternIn, Parameters,
-           ParametersSelected, ParametersStrictMatching) ->
-    new_select(PatternIn, [], Parameters,
-               ParametersSelected, ParametersStrictMatching).
 
 suffix_pattern_parse([], Pattern) ->
     Pattern;

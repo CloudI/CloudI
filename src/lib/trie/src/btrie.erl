@@ -18,7 +18,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2010-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2010-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -39,8 +39,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2010-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2010-2018 Michael Truog
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(btrie).
@@ -206,24 +206,6 @@ test() ->
      {<<"aba">>,6},
      {<<"ammmmmmm">>,7}] = btrie:to_list(
         btrie:from_list(btrie:to_list(RootNode4))),
-%    Liter =  ["aa", "aaa", "aaaaaaaa", "aaaaaaaaaaa", "ab", "aba"],
-%    Fiter = fun(Key, _, Iter) ->
-%        case lists:member(Key, Liter) of
-%            true ->
-%                Iter();
-%            false ->
-%                done
-%        end
-%    end,
-%    Fitera = fun
-%        (_, _, [], _) ->
-%            done;
-%        (Key, _, [Key | T], Iter) ->
-%            Iter(T)
-%    end,
-%    ok = btrie:iter(Fiter, RootNode4),
-%    done = btrie:itera(Fitera, Liter, RootNode4),
-%    % btrie:map happens to go through in reverse order
     [<<"aa">>,
      <<"aaa">>,
      <<"aaaaaaaa">>,
@@ -283,56 +265,12 @@ test() ->
      <<"aba">>,
      <<"ammmmmmm">>] = btrie:fetch_keys_similar(<<"a">>, RootNode4),
     [] = btrie:fetch_keys_similar(<<"b">>, RootNode4),
-%    {ok, "aa", 1} = btrie:find_similar("aa", RootNode4),
-%    {ok, "aaa", 2} = btrie:find_similar("aaac", RootNode4),
-%    {ok, "aaaaaaaa", 3} = btrie:find_similar("aaaa", RootNode4),
-%    {ok, "ab", 5} = btrie:find_similar("abba", RootNode4),
-%    {ok, "aa", 1} = btrie:find_similar("a", RootNode4),
-%    true = btrie:is_prefixed("abacus", RootNode4),
-%    false = btrie:is_prefixed("ac", RootNode4),
-%    false = btrie:is_prefixed("abacus", "ab", RootNode4),
-%    true = btrie:foldl(fun(K, _, L) -> [K | L] end, [], RootNode4) ==
-%           btrie:fold_match("*", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    ["aaa"
-%     ] = btrie:fold_match("*aa", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    ["aaaaaaaaaaa",
-%     "aaaaaaaa",
-%     "aaa"
-%     ] = btrie:fold_match("aa*", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    ["aba"
-%     ] = btrie:fold_match("ab*", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    ["ammmmmmm"
-%     ] = btrie:fold_match("am*", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    ["aba",
-%     "aaa"
-%     ] = btrie:fold_match("a*a", fun(K, _, L) -> [K | L] end, [], RootNode4),
-%    {'EXIT',badarg} = (catch btrie:fold_match("a**a", fun(K, _, L) -> [K | L] end, [], RootNode4)),
     _RootNode6 = btrie:new([
         {<<"*">>,      1},
         {<<"aa*">>,    2},
         {<<"aa*b">>,   3},
         {<<"aa*a*">>,  4},
         {<<"aaaaa">>,  5}]),
-%    {ok,"aa*",2} = btrie:find_match("aaaa", RootNode6),
-%    {ok,"aaaaa",5} = btrie:find_match("aaaaa", RootNode6),
-%    {ok,"*",1} = btrie:find_match("aa", RootNode6),
-%    {ok,"aa*",2} = btrie:find_match("aab", RootNode6),
-%    {ok,"aa*b",3} = btrie:find_match("aabb", RootNode6),
-%    {ok,"aa*a*",4} = btrie:find_match("aabab", RootNode6),
-%    {ok,"aa*a*",4} = btrie:find_match("aababb", RootNode6),
-%    {ok,"aa*a*",4} = btrie:find_match("aabbab", RootNode6),
-%    {ok,"aa*a*",4} = btrie:find_match("aabbabb", RootNode6),
-%    {'EXIT',badarg} = (catch btrie:find_match("aa*", RootNode6)),
-%    {'EXIT',badarg} = (catch btrie:find_match("aaaa*", RootNode6)),
-%    {'EXIT',badarg} = (catch btrie:find_match("aaaaa*", RootNode6)),
-%    ["aa"] = btrie:pattern_parse("aa*", "aaaa"),
-%    ["b"] = btrie:pattern_parse("aa*", "aab"),
-%    ["b"] = btrie:pattern_parse("aa*b", "aabb"),
-%    ["b", "b"] = btrie:pattern_parse("aa*a*", "aabab"),
-%    ["b", "bb"] = btrie:pattern_parse("aa*a*", "aababb"),
-%    ["bb", "b"] = btrie:pattern_parse("aa*a*", "aabbab"),
-%    ["bb", "bb"] = btrie:pattern_parse("aa*a*", "aabbabb"),
-%    error = btrie:pattern_parse("aa*a*", "aaabb"),
     ok.
 
 %%%------------------------------------------------------------------------
@@ -363,55 +301,6 @@ binary_prefix(KeyEnd1, KeyEnd2) ->
             false
     end.
 
-%wildcard_match_lists_element(_, []) ->
-%    error;
-%
-%wildcard_match_lists_element(_, [$* | _]) ->
-%    erlang:exit(badarg);
-%
-%wildcard_match_lists_element(C, [C | L]) ->
-%    {ok, L};
-%
-%wildcard_match_lists_element(C, [_ | L]) ->
-%    wildcard_match_lists_element(C, L).
-%
-%wildcard_match_lists_valid([], Result) ->
-%    Result;
-%
-%wildcard_match_lists_valid([$* | _], _) ->
-%    erlang:exit(badarg);
-%
-%wildcard_match_lists_valid([_ | L], Result) ->
-%    wildcard_match_lists_valid(L, Result).
-%
-%wildcard_match_lists([], []) ->
-%    true;
-%
-%wildcard_match_lists([], [_ | _] = L) ->
-%    wildcard_match_lists_valid(L, false);
-%
-%wildcard_match_lists([_ | _], [$* | _]) ->
-%    erlang:exit(badarg);
-%
-%wildcard_match_lists([$*], [_ | L]) ->
-%    wildcard_match_lists_valid(L, true);
-%
-%wildcard_match_lists([$*, C | Match], [_ | L]) ->
-%    true = C =/= $*,
-%    case wildcard_match_lists_element(C, L) of
-%        {ok, NewL} ->
-%            wildcard_match_lists(Match, NewL);
-%        error ->
-%            wildcard_match_lists_valid(L, false)
-%    end;
-%
-%wildcard_match_lists([C | Match], [C | L]) ->
-%    wildcard_match_lists(Match, L);
-%
-%wildcard_match_lists(_, L) ->
-%    wildcard_match_lists_valid(L, false).
-
-
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
@@ -419,12 +308,6 @@ internal_test_() ->
     [
         {"internal tests", ?_assertEqual(ok, test())}
     ].
-
-% do not have a good way yet to have the proper test switch to use binaries
-%proper_test_() ->
-%    {timeout, 600, [
-%        {"proper tests", ?_assert(trie_proper:qc_run(?MODULE))}
-%    ]}.
 
 -endif.
 

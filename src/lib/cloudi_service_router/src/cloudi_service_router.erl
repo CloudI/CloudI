@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -203,7 +203,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 end,
                 true = ((ParametersAllowed =:= true) orelse
                         ((ParametersAllowed =:= false) andalso
-                         (lists:any(fun cloudi_x_trie:is_pattern/1,
+                         (lists:any(fun cloudi_service_name:pattern/1,
                                     Names1) =:= false))),
                 Destination = #destination{remote = Remote,
                                            mode = Mode,

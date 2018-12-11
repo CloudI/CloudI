@@ -94,7 +94,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -208,7 +208,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
         {fault_isolation,   ?DEFAULT_FAULT_ISOLATION}],
     [FilePath, FileSizeLimit, Compression, Checksum, Retry, RetryDelay,
      Mode] = cloudi_proplists:take_values(Defaults, Args),
-    false = cloudi_x_trie:is_pattern(Prefix),
+    false = cloudi_service_name:pattern(Prefix),
     true = is_list(FilePath) andalso is_integer(hd(FilePath)),
     true = is_integer(FileSizeLimit) andalso
            (FileSizeLimit >= 1) andalso (FileSizeLimit =< 18014398509481983),

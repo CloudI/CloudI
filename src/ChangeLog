@@ -5,6 +5,7 @@
 
     * Add cloudi_service_name:pattern/1 function to have the
       service name pattern wildcard character check in a single place
+    * Update trie
 
 2018-12-04 Michael Truog   <mjtruog at protonmail dot com>
 
