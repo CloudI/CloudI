@@ -1176,7 +1176,7 @@ services_search(Name, Timeout)
         [_ | _] = ServiceNameValue ->
             {?SCOPE_DEFAULT, ServiceNameValue}
     end,
-    try cloudi_x_trie:is_pattern(ServiceName) of
+    try cloudi_x_trie:is_pattern2(ServiceName) of
         false ->
             cloudi_core_i_configurator:services_search(Scope, ServiceName,
                                                        Timeout);

@@ -62,7 +62,7 @@
     {error, parameters_ignored | parameter_missing}.
 
 new(Pattern, Parameters) ->
-    cloudi_x_trie:pattern_fill(Pattern, Parameters).
+    cloudi_x_trie:pattern2_fill(Pattern, Parameters).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -83,8 +83,8 @@ new(Pattern, Parameters) ->
      {parameters_selected_missing, pos_integer()}}.
 
 new(Pattern, Parameters, ParametersSelected, ParametersStrictMatching) ->
-    cloudi_x_trie:pattern_fill(Pattern, Parameters,
-                               ParametersSelected, ParametersStrictMatching).
+    cloudi_x_trie:pattern2_fill(Pattern, Parameters,
+                                ParametersSelected, ParametersStrictMatching).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -97,7 +97,7 @@ new(Pattern, Parameters, ParametersSelected, ParametersStrictMatching) ->
     list(string()) | error.
 
 parse(Name, Pattern) ->
-    cloudi_x_trie:pattern_parse(Pattern, Name).
+    cloudi_x_trie:pattern2_parse(Pattern, Name).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -110,7 +110,7 @@ parse(Name, Pattern) ->
     {list(string()), string()} | error.
 
 parse_with_suffix(Name, Pattern) ->
-    cloudi_x_trie:pattern_parse(Pattern, Name, with_suffix).
+    cloudi_x_trie:pattern2_parse(Pattern, Name, with_suffix).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -124,7 +124,7 @@ parse_with_suffix(Name, Pattern) ->
     boolean().
 
 pattern(Pattern) ->
-    cloudi_x_trie:is_pattern(Pattern).
+    cloudi_x_trie:is_pattern2(Pattern).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -138,13 +138,13 @@ pattern(Pattern) ->
 
 suffix([PrefixC | _] = Prefix, [NameOrPatternC | _] = NameOrPattern)
     when is_integer(PrefixC), is_integer(NameOrPatternC) ->
-    case cloudi_x_trie:is_pattern(NameOrPattern) of
+    case cloudi_x_trie:is_pattern2(NameOrPattern) of
         true ->
             % handle as a pattern
             suffix_pattern_parse(Prefix, NameOrPattern);
         false ->
             % handle as a name
-            case cloudi_x_trie:pattern_suffix(Prefix, NameOrPattern) of
+            case cloudi_x_trie:pattern2_suffix(Prefix, NameOrPattern) of
                 error ->
                     erlang:exit(badarg);
                 Suffix ->

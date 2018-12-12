@@ -34,7 +34,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cpg_data).
@@ -895,12 +895,12 @@ get_remote_newest_pid(GroupName, Exclude, Groups)
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-% should names be matched with "*" interpreted as a wildcard within the
-% trie holding the groups of processes
+% should names be matched with "*" and "?" interpreted as wildcard characters
+% within the trie holding the groups of processes
 
 % matching with patterns
 group_find(GroupName, {trie, GroupsData}) ->
-    try trie:find_match(GroupName, GroupsData) catch
+    try trie:find_match2(GroupName, GroupsData) catch
         exit:badarg ->
             error
     end;

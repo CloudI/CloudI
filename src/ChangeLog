@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-12-11 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add "?" as a supported wildcard character in
+      service name patterns
+      ("?" will never match the next character in the string and
+       is unable to be the last character in the string,
+       i.e. "/?/" matches "/a/" but never "/a/b/" while
+       "/*/" will match either with preference for the shortest)
+    * Update cpg
+
 2018-12-10 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_name:pattern/1 function to have the

@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -141,12 +141,12 @@ function_optional(Function, Arity) ->
 
 service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     when is_integer(PrefixC), is_integer(NameC) ->
-    case cloudi_x_trie:is_pattern(Name) of
+    case cloudi_x_trie:is_pattern2(Name) of
         true ->
             ?LOG_ERROR_SYNC("service name is pattern: \"~s\"", [Name]),
             erlang:exit(badarg);
         false ->
-            case cloudi_x_trie:pattern_suffix(Prefix, Name) of
+            case cloudi_x_trie:pattern2_suffix(Prefix, Name) of
                 error ->
                     ?LOG_ERROR_SYNC("prefix service name mismatch: "
                                     "\"~s\" \"~s\"", [Prefix, Name]),

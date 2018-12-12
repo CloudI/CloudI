@@ -62,7 +62,7 @@ destination_allowed(_, undefined, undefined) ->
     true;
 
 destination_allowed(Name, undefined, DestAllow) ->
-    case cloudi_x_trie:find_match(Name, DestAllow) of
+    case cloudi_x_trie:find_match2(Name, DestAllow) of
         {ok, _, _} ->
             true;
         error ->
@@ -70,7 +70,7 @@ destination_allowed(Name, undefined, DestAllow) ->
     end;
 
 destination_allowed(Name, DestDeny, undefined) ->
-    case cloudi_x_trie:find_match(Name, DestDeny) of
+    case cloudi_x_trie:find_match2(Name, DestDeny) of
         {ok, _, _} ->
             false;
         error ->
@@ -78,11 +78,11 @@ destination_allowed(Name, DestDeny, undefined) ->
     end;
 
 destination_allowed(Name, DestDeny, DestAllow) ->
-    case cloudi_x_trie:find_match(Name, DestDeny) of
+    case cloudi_x_trie:find_match2(Name, DestDeny) of
         {ok, _, _} ->
             false;
         error ->
-            case cloudi_x_trie:find_match(Name, DestAllow) of
+            case cloudi_x_trie:find_match2(Name, DestAllow) of
                 {ok, _, _} ->
                     true;
                 error ->

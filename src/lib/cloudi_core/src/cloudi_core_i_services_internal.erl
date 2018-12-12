@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -425,7 +425,7 @@ handle_call({'subscribe', Suffix}, _,
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern(Pattern),
+            _ = cloudi_x_trie:is_pattern2(Pattern),
             cloudi_x_cpg:join(Scope, Pattern,
                               ReceiverPid, infinity);
         true ->
@@ -439,7 +439,7 @@ handle_call({'subscribe_count', Suffix}, _,
                    options = #config_service_options{
                        scope = Scope}} = State) ->
     Pattern = Prefix ++ Suffix,
-    _ = cloudi_x_trie:is_pattern(Pattern),
+    _ = cloudi_x_trie:is_pattern2(Pattern),
     Count = cloudi_x_cpg:join_count(Scope, Pattern,
                                     ReceiverPid, infinity),
     hibernate_check({reply, Count, State});
@@ -454,7 +454,7 @@ handle_call({'unsubscribe', Suffix}, _,
                   count_process_dynamic_terminated(CountProcessDynamic) of
         false ->
             Pattern = Prefix ++ Suffix,
-            _ = cloudi_x_trie:is_pattern(Pattern),
+            _ = cloudi_x_trie:is_pattern2(Pattern),
             cloudi_x_cpg:leave(Scope, Pattern,
                                ReceiverPid, infinity);
         true ->

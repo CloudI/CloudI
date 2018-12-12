@@ -4445,7 +4445,7 @@ service_acl_expand_list([E | L], Output, ACL)
     end;
 service_acl_expand_list([E | L], Output, ACL)
     when is_list(E), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern(E) of
+    try cloudi_x_trie:is_pattern2(E) of
         true ->
             service_acl_expand_list(L, [E | Output], ACL);
         false ->
@@ -4508,7 +4508,7 @@ acl_update_values([E | L], Output, Path, Key, ACL)
     end;
 acl_update_values([E | L], Output, Path, Key, ACL)
     when is_list(E), is_integer(hd(E)) ->
-    try cloudi_x_trie:is_pattern(E) of
+    try cloudi_x_trie:is_pattern2(E) of
         true ->
             acl_update_values(L, [E | Output], Path, Key, ACL);
         false ->
@@ -4521,7 +4521,7 @@ acl_update_values([E | _], _, _, _, _) ->
     {error, {acl_invalid, E}}.
 
 service_name_valid(Name, ErrorReason) ->
-    try cloudi_x_trie:is_pattern(Name) of
+    try cloudi_x_trie:is_pattern2(Name) of
         _ ->
             ok
     catch

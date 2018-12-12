@@ -75,7 +75,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -778,7 +778,7 @@ new(Dispatcher, Options)
     true = is_list(ServiceName) andalso is_integer(hd(ServiceName)),
     Prefix = cloudi_service:prefix(Dispatcher),
     ServiceNameFull = Prefix ++ ServiceName,
-    false = cloudi_x_trie:is_pattern(ServiceNameFull),
+    false = cloudi_x_trie:is_pattern2(ServiceNameFull),
     true = cloudi_service:process_count_min(Dispatcher) > 1,
     true = is_integer(CleanIntervalSeconds) andalso
            (CleanIntervalSeconds >= 1) andalso

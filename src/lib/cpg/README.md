@@ -19,10 +19,11 @@ which limits scalability) but cpg uses internal process memory
 (see the [Design](#design) section for more information).  By default,
 cpg utilizes Erlang strings for group names (list of integers) and provides
 the ability to set a pattern string as a group name.  A pattern string
-is a string that includes the`"*"`wildcard character (equivalent to ".+"
-regex while`"**"`is forbidden).  When a group name is a pattern string,
-a process can be retrieved by matching the pattern.  To change the behavior
-to be compatible with pg2 usage (or gproc), see the [Usage](#usage) section below.
+is a string that includes the `"*"` or `"?"` wildcard characters
+(equivalent to a ".+" regex while `"**"`, `"??"`, `"*?"`, and `"?*"`
+ are forbidden).  When a group name is a pattern string, a process can be
+retrieved by matching the pattern.  To change the behavior to be compatible
+with pg2 usage (or gproc), see the [Usage](#usage) section below.
 
 The cpg interface provides more error checking than the pg2 module, and it
 allows the user to obtain the groups state so that group name lookups do not

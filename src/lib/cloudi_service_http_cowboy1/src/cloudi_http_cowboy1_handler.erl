@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_http_cowboy1_handler).
@@ -445,12 +445,12 @@ websocket_init(_Transport, Req0,
                 WebSocketSubscriptions =:= undefined ->
                     ok;
                 true ->
-                    % match websocket_subscriptions to determine if a
+                    % match websocket_subscriptions to determine if
                     % more subscriptions should occur, possibly
                     % using parameters in a pattern template
                     % for the subscription
-                    case cloudi_x_trie:find_match(PathRawStr,
-                                                  WebSocketSubscriptions) of
+                    case cloudi_x_trie:find_match2(PathRawStr,
+                                                   WebSocketSubscriptions) of
                         error ->
                             ok;
                         {ok, Pattern, Functions} ->
