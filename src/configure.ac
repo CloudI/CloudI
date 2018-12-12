@@ -597,13 +597,12 @@ AC_ERLANG_CHECK_LIB([snmp])
 AC_ERLANG_CHECK_LIB([eunit])
 AC_PATH_PROG([ESCRIPT],[escript], ,[`AS_DIRNAME([$ERLC])`])
 AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
-AC_SUBST([ERLC_OPTS],
-         ["-DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"])
-if test "$ERLANG_OTP_VER_MAJOR" -ge 18 ; then
-ERL_OPTS="+C multi_time_warp +c true"
-else
-ERL_OPTS=""
+ERLC_OPTS="-DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"
+if test "$ERLANG_OTP_VER_MAJOR" -ge 20 ; then
+ERLC_OPTS="${ERLC_OPTS} +deterministic"
 fi
+ERL_OPTS="+C multi_time_warp +c true"
+AC_SUBST(ERLC_OPTS)
 AC_SUBST(ERL_OPTS)
 
 # rebar dependency

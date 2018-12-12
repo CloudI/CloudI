@@ -11,6 +11,9 @@
        "/*/" will match either with preference for the shortest)
     * Update cpg
     * Fix elli preprocessor use
+    * Ensure all Erlang compilation uses erl_opts
+      debug_info and deterministic
+    * Fix cloudi_core CT test TransId order checks
 
 2018-12-10 Michael Truog   <mjtruog at protonmail dot com>
 
