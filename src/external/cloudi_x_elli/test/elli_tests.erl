@@ -8,7 +8,7 @@
 -define(VTB(T1, T2, LB, UB),
         time_diff_to_micro_seconds(T1, T2) >= LB andalso
         time_diff_to_micro_seconds(T1, T2) =< UB).
--ifdef('21.0').
+-ifdef(OTP_RELEASE).
 -include_lib("kernel/include/logger.hrl").
 -else.
 -define(LOG_ERROR(Str), error_logger:error_msg(Str)).
