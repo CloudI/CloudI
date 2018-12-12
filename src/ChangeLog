@@ -8,7 +8,8 @@
       ("?" will never match the next character in the string and
        is unable to be the last character in the string,
        i.e. "/?/" matches "/a/" but never "/a/b/" while
-       "/*/" will match either with preference for the shortest)
+       "/*/" will match either with "?" taking precedence if
+       "*" is also present)
     * Update cpg
     * Fix elli preprocessor use
     * Ensure all Erlang compilation uses erl_opts
