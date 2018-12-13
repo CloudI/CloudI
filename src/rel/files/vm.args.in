@@ -29,6 +29,10 @@
 ## Distributed Erlang buffer size
 #+zdbbl 1024 # kB (valid values are 1 - 2097151)
 
+# Allow Erlang system time to move backwards/forwards at any time
++C multi_time_warp
++c true
+
 # CloudI configuration arguments specifically for Erlang/OTP @ERLANG_OTP_VER@
 @ERL_OPTS@
 

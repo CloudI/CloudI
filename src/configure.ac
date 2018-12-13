@@ -601,7 +601,7 @@ ERLC_OPTS="-DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +
 if test "$ERLANG_OTP_VER_MAJOR" -ge 20 ; then
 ERLC_OPTS="${ERLC_OPTS} +deterministic"
 fi
-ERL_OPTS="+C multi_time_warp +c true"
+ERL_OPTS=""
 AC_SUBST(ERLC_OPTS)
 AC_SUBST(ERL_OPTS)
 
