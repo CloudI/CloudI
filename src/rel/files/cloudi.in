@@ -7,7 +7,7 @@ PID_NAME=CloudI
 # Name of this file
 PROGNAME=cloudi
 
-ROOTDIR="@prefix@/lib/cloudi-@VERSION@"
+ROOTDIR="@cloudi_prefix@"
 BINDIR="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin"
 EMU=beam
 RELEASEDIR="$ROOTDIR/releases/@CLOUDI_CORE_RELEASE_VERSION@"

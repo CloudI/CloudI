@@ -103,17 +103,9 @@ endif
 
 .NOTPARALLEL:
 
-all-local: rel/files/app.config \
-           erlang-applications-scope-add \
+all-local: erlang-applications-scope-add \
            rebar-directories-compile \
            rebar-compile
-
-rel/files/app.config: rel/files/app.config.in
-	$(MKDIR_P) rel/files
-	$(SED) -e "s![@]cloudi_confdir[@]!$(cloudi_confdir)!g" \
-           -e "s![@]cloudi_logdir[@]!$(cloudi_logdir)!g" \
-           $(top_srcdir)/rel/files/app.config.in > \
-           $(top_builddir)/$@
 
 rebar-directories-compile:
 	$(top_srcdir)/rebar_dirs.sh create $(abs_top_srcdir) $(abs_top_builddir)
@@ -176,8 +168,7 @@ distclean-local: rebar-directories-distclean \
           $(top_srcdir)/m4/ltoptions.m4 \
           $(top_srcdir)/m4/ltsugar.m4 \
           $(top_srcdir)/m4/ltversion.m4 \
-          $(top_srcdir)/m4/lt~obsolete.m4 \
-          $(top_builddir)/rel/files/app.config
+          $(top_srcdir)/m4/lt~obsolete.m4
 	rm -rf $(top_srcdir)/autom4te.cache
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
@@ -352,7 +343,7 @@ manual-update:
 uninstall:
 	rm -rf "$(DESTDIR)$(cloudi_prefix)"
 
-install-exec-hook: rel/files/app.config
+install-exec-hook:
 	$(MKDIR_P) "$(DESTDIR)$(bindir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_logdir)"
 	$(MKDIR_P) "$(DESTDIR)$(cloudi_confdir)"

@@ -31,7 +31,7 @@
 
 main(Args) ->
     % set during configuration
-    RootDir = "@prefix@/lib/cloudi-@VERSION@",
+    RootDir = "@cloudi_prefix@",
     EpmdPath = RootDir ++ "/erts-@ERLANG_ERTS_VER@/bin/epmd",
     VMArgs = RootDir ++ "/etc/vm.args",
 

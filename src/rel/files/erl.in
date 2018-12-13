@@ -21,7 +21,7 @@
 
 # Replaces the Erlang "erl" script for the CloudI release.
 
-ROOTDIR="@prefix@/lib/cloudi-@VERSION@"
+ROOTDIR="@cloudi_prefix@"
 BINDIR="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin"
 EMU=beam
 PROGNAME=erl
