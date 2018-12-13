@@ -67,4 +67,14 @@ branches:
     - master
     - develop
 notifications:
-  irc: "chat.freenode.net#cloudi"
+  email:
+    recipients:
+      - mjtruog@gmail.com
+  irc:
+    channels:
+      - "chat.freenode.net#cloudi"
+    template:
+      - "%{repository_slug} (%{branch} - %{commit}) %{author}: %{commit_message}"
+      - "Build #%{build_number}: %{message}"
+      - "Change view : %{compare_url}"
+      - "Build details : %{build_url}"
