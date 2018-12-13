@@ -292,7 +292,6 @@ handle_msg({ReturnType,
          ReturnType =:= 'cloudi_service_return_sync' ->
     case maps:find(TransId, SendTimeouts) of
         {ok, {_, _, _, Source, TimerRef}} ->
-            erlang:cancel_timer(TimerRef),
             DataOutDecoded = if
                 ReturnType =:= 'cloudi_service_return_async' ->
                     {'cloudi_service_return_async',
@@ -303,7 +302,9 @@ handle_msg({ReturnType,
                      NewName, NewPattern, ResponseInfo, Response,
                      NewTimeout, TransId, Source}
             end,
-            return(DataOutDecoded, TransId, State);
+            Result = return(DataOutDecoded, TransId, State),
+            ok = erlang:cancel_timer(TimerRef, [{async, true}]),
+            Result;
         error ->
             {ok, State}
     end;

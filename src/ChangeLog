@@ -6,6 +6,8 @@
     * Fix cloudi_service_monitoring
       (for Erlang/OTP >= 21 and the changes in CloudI 1.7.4)
     * Add time warp configuration directly to the vm.args file
+    * Small change to reduce latency in the
+      cloudi_service_router ssh server connection use
 
 2018-12-11 Michael Truog   <mjtruog at protonmail dot com>
 
