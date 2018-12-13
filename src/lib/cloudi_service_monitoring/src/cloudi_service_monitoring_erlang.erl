@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2015-2018 Michael Truog
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_erlang).
@@ -55,13 +55,28 @@
 %%%------------------------------------------------------------------------
 
 basic_update() ->
-    {_, ErrorLoggerN} = erlang:process_info(whereis(error_logger),
-                                            message_queue_len),
+    MetricValues0 = case erlang:whereis(error_logger) of
+        undefined ->
+            [];
+        ErrorLoggerPid ->
+            ErrorLoggerLength = element(2,
+                erlang:process_info(ErrorLoggerPid, message_queue_len)),
+            [metric(gauge, [error_logger, message_queue_len],
+                    ErrorLoggerLength)]
+    end,
+    MetricValuesN = case erlang:whereis(logger) of
+        undefined ->
+            MetricValues0;
+        LoggerPid ->
+            LoggerLength = element(2,
+                erlang:process_info(LoggerPid, message_queue_len)),
+            [metric(gauge, [logger, message_queue_len],
+                    LoggerLength) | MetricValues0]
+    end,
     [metric(gauge, [code, modules],
             erlang:length(code:all_loaded())),
      metric(gauge, [ets, tables],
-            erlang:length(ets:all())),
-     metric(gauge, [error_logger, message_queue_len], ErrorLoggerN)].
+            erlang:length(ets:all())) | MetricValuesN].
 
 memory_init(Options) ->
     Options.

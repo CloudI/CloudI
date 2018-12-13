@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2015-2018 Michael Truog
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -201,7 +201,7 @@ basic_update(ProcessInfo0) ->
 services_state(Timeout) ->
     try sys:get_state(cloudi_core_i_services_monitor, Timeout) of
         State ->
-            3 = erlang:tuple_size(State),
+            5 = erlang:tuple_size(State),
             state = erlang:element(1, State),
             {ok, erlang:element(2, State)}
     catch
