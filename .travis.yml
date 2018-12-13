@@ -34,7 +34,7 @@ compiler:
   - clang
   - gcc
 otp_release:
-  - 21.0.2
+  - 21.1
   - 20.3
   - 19.3
 python:
@@ -75,6 +75,5 @@ notifications:
       - "chat.freenode.net#cloudi"
     template:
       - "%{repository_slug} (%{branch} - %{commit}) %{author}: %{commit_message}"
-      - "Build #%{build_number}: %{message}"
-      - "Change view : %{compare_url}"
-      - "Build details : %{build_url}"
+      - "View Changes %{compare_url}"
+      - "Build #%{build_number}: %{message} (%{build_url})"

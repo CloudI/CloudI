@@ -64,14 +64,23 @@ basic_update() ->
             [metric(gauge, [error_logger, message_queue_len],
                     ErrorLoggerLength)]
     end,
-    MetricValuesN = case erlang:whereis(logger) of
+    MetricValues1 = case erlang:whereis(logger_proxy) of
         undefined ->
             MetricValues0;
+        LoggerProxyPid ->
+            LoggerProxyLength = element(2,
+                erlang:process_info(LoggerProxyPid, message_queue_len)),
+            [metric(gauge, [logger_proxy, message_queue_len],
+                    LoggerProxyLength) | MetricValues0]
+    end,
+    MetricValuesN = case erlang:whereis(logger) of
+        undefined ->
+            MetricValues1;
         LoggerPid ->
             LoggerLength = element(2,
                 erlang:process_info(LoggerPid, message_queue_len)),
             [metric(gauge, [logger, message_queue_len],
-                    LoggerLength) | MetricValues0]
+                    LoggerLength) | MetricValues1]
     end,
     [metric(gauge, [code, modules],
             erlang:length(code:all_loaded())),
