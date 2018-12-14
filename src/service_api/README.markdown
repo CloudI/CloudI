@@ -21,7 +21,7 @@ initializes the [CloudI service responsible for dynamic configuration](https://g
 which subscribes to service names based on the functions defined in the [`cloudi_service_api`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_core/src/cloudi_service_api.erl) module:
 
 * `"/cloudi/api/rpc.json"`
-* `"/cloudi/api/rpc/*.json"` (see below)
+* `"/cloudi/api/rpc/?.json"` (see below)
   * `"/cloudi/api/rpc/acl_add.json"`
   * `"/cloudi/api/rpc/acl_remove.json"`
   * `"/cloudi/api/rpc/acl.json"`
@@ -52,7 +52,7 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/code_path_remove.json"`
   * `"/cloudi/api/rpc/code_path.json"`
   * `"/cloudi/api/rpc/code_status.json"`
-* `"/cloudi/api/rpc/*.erl"` (same as above with Erlang term data)
+* `"/cloudi/api/rpc/?.erl"` (same as above with Erlang term data)
 
 The [default configuration](https://github.com/CloudI/CloudI/blob/master/src/cloudi_minimal.conf.in)
 expects HTTP requests to port 6464 with the proper service path and format
