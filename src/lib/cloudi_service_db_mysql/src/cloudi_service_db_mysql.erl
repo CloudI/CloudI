@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @version 1.7.5 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -155,7 +155,11 @@
 -else.
 -ifdef(ERLANG_OTP_VERSION_20).
 -else.
+-ifdef(OTP_RELEASE).
 -define(ERLANG_OTP_VERSION_21_FEATURES, true).
+-else.
+-error("Erlang/OTP version invalid").
+-endif.
 -endif.
 -endif.
 
