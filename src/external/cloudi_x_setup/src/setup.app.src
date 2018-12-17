@@ -17,7 +17,7 @@
 {application, setup,
  [
   {description, "Generic setup application for Erlang-based systems"},
-  {vsn, git},
+  {vsn, "2.0.2"},
   {registered, []},
   {applications, [
                   kernel,
