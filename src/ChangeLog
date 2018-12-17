@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2018-12-17 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix parse_trans version string
+
 2018-12-13 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add logger_proxy message_queue_len check to
