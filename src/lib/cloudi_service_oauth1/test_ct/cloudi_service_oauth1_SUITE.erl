@@ -213,7 +213,7 @@ t_example_without_db_1(_Config) ->
     %    oauth_signature="74KNZJeDHnMBp0EMJ9ZHt%2FXKycU%3D"
     Name1 = "/initiate/post",
     RequestInfo1 = [
-        {<<"url-path">>, <<"/initiate">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/initiate">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>},
         {<<"authorization">>,
          <<"OAuth realm=\"Photos\","
@@ -244,7 +244,7 @@ t_example_without_db_1(_Config) ->
     % https://photos.example.net/authorize?oauth_token=hh5s93j4hdidpola
     Name2 = "/authorize/get",
     RequestInfo2 = [
-        {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>}],
     Request2 = [{<<"oauth_token">>, <<"hh5s93j4hdidpola">>}],
 
@@ -274,7 +274,7 @@ t_example_without_db_1(_Config) ->
     %    oauth_signature="gKgrFCywp7rO0OXSjdot%2FIHF7IU%3D"
     Name3 = "/token/post",
     RequestInfo3 = [
-        {<<"url-path">>, <<"/token">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/token">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>},
         {<<"authorization">>,
          <<"OAuth realm=\"Photos\","
@@ -358,7 +358,7 @@ t_example_with_db_1(_Config) ->
     %    oauth_signature="74KNZJeDHnMBp0EMJ9ZHt%2FXKycU%3D"
     Name1 = "/initiate/post",
     RequestInfo1 = [
-        {<<"url-path">>, <<"/initiate">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/initiate">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>},
         {<<"authorization">>,
          <<"OAuth realm=\"Photos\","
@@ -387,7 +387,7 @@ t_example_with_db_1(_Config) ->
     % https://photos.example.net/authorize?oauth_token=hh5s93j4hdidpola
     Name2 = "/authorize/get",
     RequestInfo2 = [
-        {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/authorize">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>}],
     Request2 = [{<<"oauth_token">>, TokenRequest}],
 
@@ -430,7 +430,7 @@ t_example_with_db_1(_Config) ->
     %    oauth_signature="gKgrFCywp7rO0OXSjdot%2FIHF7IU%3D"
     Name3 = "/token/post",
     RequestInfo3 = [
-        {<<"url-path">>, <<"/token">>}, % <- from cloudi_service_http_cowboy
+        {<<"url-path">>, <<"/token">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>},
         {<<"authorization">>,
          <<(<<"OAuth realm=\"Photos\","
@@ -485,7 +485,7 @@ t_example_with_db_1(_Config) ->
     Name4 = "/verify/photos/get",
     RequestInfo4 = [
         {<<"url-path">>,
-         <<"/verify/photos">>}, % <- from cloudi_service_http_cowboy
+         <<"/verify/photos">>}, % <- from cloudi_service_http_cowboy1
         {<<"host">>, <<"photos.example.net">>},
         {<<"authorization">>,
          <<(<<"OAuth realm=\"Photos\","
