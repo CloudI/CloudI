@@ -1,15 +1,19 @@
 #-*-Mode:autoconf;coding:utf-8;tab-width:4;c-basic-offset:4;indent-tabs-mode:()-*-
 # ex: set ft=config fenc=utf-8 sts=4 ts=4 sw=4 et nomod:
 
-AC_INIT([CloudI], [1.7.4], [mjtruog at protonmail dot com],
+AC_INIT([CloudI], [1.7.5], [mjtruog at protonmail dot com],
         [cloudi], [https://cloudi.org/])
 AC_SUBST(CLOUDI_CORE_RELEASE_VERSION, [1])
 
 # build-time information
 AC_SUBST(BUILD_MACHINE, [`uname -m`])
 AC_SUBST(BUILD_KERNEL_VERSION, [`uname -srv`])
-AC_SUBST(BUILD_OPERATING_SYSTEM, [`uname -o`])
 AC_SUBST(BUILD_TIME, [`date`])
+BUILD_OPERATING_SYSTEM=`uname -o`
+if test $? -ne 0; then
+    BUILD_OPERATING_SYSTEM=""
+fi
+AC_SUBST(BUILD_OPERATING_SYSTEM)
 
 # paths to check for installations that are not standard but typically used
 # (for any libraries that don't depend on executables for paths)

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -849,7 +849,7 @@ var hex = function hex(buffer) {
             assert.equal(binary.toString('binary'), '\x83k\0\4test');
         });
     }).call(this);
-    (function test_term_to_binary_boolean () {
+    (function test_term_to_binary_predefined_atom () {
         Erlang.term_to_binary(true, function(err, binary) {
             assert.strictEqual(err, undefined);
             assert.equal(binary.toString('binary'), '\x83s\4true');
@@ -857,6 +857,10 @@ var hex = function hex(buffer) {
         Erlang.term_to_binary(false, function(err, binary) {
             assert.strictEqual(err, undefined);
             assert.equal(binary.toString('binary'), '\x83s\5false');
+        });
+        Erlang.term_to_binary(undefined, function(err, binary) {
+            assert.strictEqual(err, undefined);
+            assert.equal(binary.toString('binary'), '\x83s\x09undefined');
         });
     }).call(this);
     (function test_term_to_binary_short_integer () {

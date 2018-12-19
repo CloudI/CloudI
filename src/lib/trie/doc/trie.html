@@ -21,9 +21,9 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
    This Erlang trie implementation uses string (list of integers) keys and
    is able to get performance close to the process dictionary when doing key
    lookups (find or fetch, see <a href="http://okeuday.livejournal.com/16941.html" target="_top"><tt>http://okeuday.livejournal.com/16941.html</tt></a>).
-<p>Copyright © 2010-2017 Michael Truog</p>
+<p>Copyright © 2010-2018 Michael Truog</p>
 
-<p><b>Version:</b> 1.7.1 Sep 15 2018 16:35:31
+<p><b>Version:</b> 1.7.5 Dec 17 2018 15:58:43
   ------------------------------------------------------------------------</p>
 <p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
 
@@ -78,6 +78,10 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   <h4><a name="Find_a_match_with_patterns_held_within_a_trie.">Find a match with patterns held within a trie.</a></h4>
   All patterns held within the trie use a wildcard character "*" to represent
   a regex of ".+".</td></tr>
+<tr><td valign="top"><a href="#find_match2-2">find_match2/2</a></td><td>
+  <h4><a name="Find_a_match_with_patterns_(using_2_wildcard_characters)_held_within_a_trie.">Find a match with patterns (using 2 wildcard characters) held within a trie.</a></h4>
+  All patterns held within the trie use the wildcard character "*" or "?"
+  to represent a regex of ".+".</td></tr>
 <tr><td valign="top"><a href="#find_prefix-2">find_prefix/2</a></td><td>
   <h4><a name="Find_a_value_in_a_trie_by_prefix.">Find a value in a trie by prefix.</a></h4>
   The atom 'prefix' is returned if the string supplied is a prefix
@@ -121,8 +125,10 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   <h4><a name="Determine_if_a_key_exists_in_a_trie.">Determine if a key exists in a trie.</a></h4>.</td></tr>
 <tr><td valign="top"><a href="#is_pattern-1">is_pattern/1</a></td><td>
   <h4><a name="Test_to_determine_if_a_string_is_a_pattern.">Test to determine if a string is a pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
-  "**" is forbidden.</td></tr>
+  "*" is the wildcard character (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#is_pattern2-1">is_pattern2/1</a></td><td>
+  <h4><a name="Test_to_determine_if_a_string_is_a_pattern_(using_2_wildcard_characters).">Test to determine if a string is a pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
 <tr><td valign="top"><a href="#is_prefix-2">is_prefix/2</a></td><td>
   <h4><a name="Determine_if_the_prefix_provided_has_existed_within_a_trie.">Determine if the prefix provided has existed within a trie.</a></h4>
   The function returns true if the string supplied is a prefix
@@ -153,18 +159,42 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   The list may contain either: strings, 2 element tuples with a string as the
   first tuple element, or tuples with more than 2 elements (including records)
   with a string as the first element (second element if it is a record).</td></tr>
+<tr><td valign="top"><a href="#pattern2_fill-2">pattern2_fill/2</a></td><td>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" and "?" wildcard characters may be used consecutively by this
+  function to have parameters concatenated (both are processed the same
+  way by this function).</td></tr>
+<tr><td valign="top"><a href="#pattern2_fill-4">pattern2_fill/4</a></td><td>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" and "?" wildcard characters may be used consecutively by this
+  function to have parameters concatenated (both are processed the same
+  way by this function).</td></tr>
+<tr><td valign="top"><a href="#pattern2_parse-2">pattern2_parse/2</a></td><td>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters).">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#pattern2_parse-3">pattern2_parse/3</a></td><td>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters).">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#pattern2_suffix-2">pattern2_suffix/2</a></td><td>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters)_to_return_only_the_suffix_after_the_pattern.">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters) to return only the suffix after the pattern.</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).</td></tr>
+<tr><td valign="top"><a href="#pattern_fill-2">pattern_fill/2</a></td><td>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" wildcard character may be used consecutively by this function
+  to have parameters concatenated.</td></tr>
+<tr><td valign="top"><a href="#pattern_fill-4">pattern_fill/4</a></td><td>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" wildcard character may be used consecutively by this function
+  to have parameters concatenated.</td></tr>
 <tr><td valign="top"><a href="#pattern_parse-2">pattern_parse/2</a></td><td>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
-  "**" is forbidden.</td></tr>
+  "*" is the wildcard character (equivalent to the ".+" regex).</td></tr>
 <tr><td valign="top"><a href="#pattern_parse-3">pattern_parse/3</a></td><td>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
-  "**" is forbidden.</td></tr>
+  "*" is the wildcard character (equivalent to the ".+" regex).</td></tr>
 <tr><td valign="top"><a href="#pattern_suffix-2">pattern_suffix/2</a></td><td>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_to_return_only_the_suffix_after_the_pattern.">Parse a string based on the supplied wildcard pattern to return only the suffix after the pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
-  "**" is forbidden.</td></tr>
+  "*" is the wildcard character (equivalent to the ".+" regex).</td></tr>
 <tr><td valign="top"><a href="#prefix-3">prefix/3</a></td><td>
   <h4><a name="Insert_a_value_as_the_first_list_element_in_a_trie_instance.">Insert a value as the first list element in a trie instance.</a></h4>
   The reverse of append/3.</td></tr>
@@ -263,9 +293,24 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   a regex of ".+".  "**" within the trie will result in undefined behavior
   (the pattern is malformed).  The function will search for the most specific
   match possible, given the input string and the trie contents.  The input
-  string must not contain wildcard characters, otherwise badarg is thrown.
-  If you instead want to supply a pattern string to match the contents of
-  the trie, see fold_match/4.</p>
+  string must not contain wildcard characters, otherwise a badarg exit
+  exception will occur.  If you instead want to supply a pattern string to
+  match the contents of the trie, see fold_match/4.</p>
+
+<h3 class="function"><a name="find_match2-2">find_match2/2</a></h3>
+<div class="spec">
+<p><tt>find_match2(Match::string(), Node::<a href="#type-trie">trie()</a>) -&gt; {ok, any(), any()} | error</tt><br></p>
+</div><p>
+  <h4><a name="Find_a_match_with_patterns_(using_2_wildcard_characters)_held_within_a_trie.">Find a match with patterns (using 2 wildcard characters) held within a trie.</a></h4>
+  All patterns held within the trie use the wildcard character "*" or "?"
+  to represent a regex of ".+".  "**", "??", "*?", or "?*" within the
+  trie will result in undefined behavior (the pattern is malformed).
+  The function will search for the most specific match possible, given the
+  input string and the trie contents.  The input string must not contain
+  wildcard characters, otherwise a badarg exit exception will occur.
+  The "?" wildcard character consumes the shortest match to the next
+  character and must not be the the last character in the string
+  (the pattern would be malformed).</p>
 
 <h3 class="function"><a name="find_prefix-2">find_prefix/2</a></h3>
 <div class="spec">
@@ -311,9 +356,10 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   <h4><a name="Fold_a_function_over_the_keys_within_a_trie_that_matches_a_pattern.">Fold a function over the keys within a trie that matches a pattern.</a></h4>
   Traverses in alphabetical order.  Uses "*" as a wildcard character
   within the pattern (it acts like a ".+" regex, and "**" is forbidden).
-  The trie keys must not contain wildcard characters, otherwise badarg
-  is thrown. If you want to match a specific string without wildcards
-  on trie values that contain wildcard characters, see find_match/2.</p>
+  The trie keys must not contain wildcard characters, otherwise a badarg
+  exit exception will occur. If you want to match a specific string
+  without wildcards on trie values that contain wildcard characters,
+  see find_match/2.</p>
 
 <h3 class="function"><a name="fold_similar-4">fold_similar/4</a></h3>
 <div class="spec">
@@ -376,8 +422,17 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <p><tt>is_pattern(Pattern::string()) -&gt; true | false</tt><br></p>
 </div><p>
   <h4><a name="Test_to_determine_if_a_string_is_a_pattern.">Test to determine if a string is a pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "*" is the wildcard character (equivalent to the ".+" regex).
   "**" is forbidden.</p>
+
+<h3 class="function"><a name="is_pattern2-1">is_pattern2/1</a></h3>
+<div class="spec">
+<p><tt>is_pattern2(Pattern::string()) -&gt; true | false</tt><br></p>
+</div><p>
+  <h4><a name="Test_to_determine_if_a_string_is_a_pattern_(using_2_wildcard_characters).">Test to determine if a string is a pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+  "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+  character in the pattern.</p>
 
 <h3 class="function"><a name="is_prefix-2">is_prefix/2</a></h3>
 <div class="spec">
@@ -451,12 +506,73 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
   If a list of records (or tuples larger than 2 elements) is provided,
   the whole record/tuple is stored as the value.</p>
 
+<h3 class="function"><a name="pattern2_fill-2">pattern2_fill/2</a></h3>
+<div class="spec">
+<p><tt>pattern2_fill(FillPattern::string(), Parameters::[string()]) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing}</tt><br></p>
+</div><p>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" and "?" wildcard characters may be used consecutively by this
+  function to have parameters concatenated (both are processed the same
+  way by this function).</p>
+
+<h3 class="function"><a name="pattern2_fill-4">pattern2_fill/4</a></h3>
+<div class="spec">
+<p><tt>pattern2_fill(FillPattern::string(), Parameters::[string()], ParametersSelected::[pos_integer()], ParametersStrictMatching::boolean()) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing | parameters_selected_empty | {parameters_selected_ignored, [pos_integer()]} | {parameters_selected_missing, pos_integer()}}</tt><br></p>
+</div><p>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" and "?" wildcard characters may be used consecutively by this
+  function to have parameters concatenated (both are processed the same
+  way by this function).</p>
+
+<h3 class="function"><a name="pattern2_parse-2">pattern2_parse/2</a></h3>
+<div class="spec">
+<p><tt>pattern2_parse(Pattern::string(), L::string()) -&gt; [string()] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters).">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+  "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+  character in the pattern.</p>
+
+<h3 class="function"><a name="pattern2_parse-3">pattern2_parse/3</a></h3>
+<div class="spec">
+<p><tt>pattern2_parse(Pattern::string(), L::string(), Option::default | with_suffix | expanded) -&gt; [string()] | {[string()], string()} | [string() | {exact, string()}] | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters).">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters).</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+  "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+  character in the pattern.</p>
+
+<h3 class="function"><a name="pattern2_suffix-2">pattern2_suffix/2</a></h3>
+<div class="spec">
+<p><tt>pattern2_suffix(Pattern::string(), L::string()) -&gt; string() | error</tt><br></p>
+</div><p>
+  <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_(using_2_wildcard_characters)_to_return_only_the_suffix_after_the_pattern.">Parse a string based on the supplied wildcard pattern (using 2 wildcard characters) to return only the suffix after the pattern.</a></h4>
+  "*" and "?" are wildcard characters (equivalent to the ".+" regex).
+  "**", "??", "*?" and "?*" are forbidden.  "?" must not be the last
+  character in the pattern.</p>
+
+<h3 class="function"><a name="pattern_fill-2">pattern_fill/2</a></h3>
+<div class="spec">
+<p><tt>pattern_fill(FillPattern::string(), Parameters::[string()]) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing}</tt><br></p>
+</div><p>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" wildcard character may be used consecutively by this function
+  to have parameters concatenated.</p>
+
+<h3 class="function"><a name="pattern_fill-4">pattern_fill/4</a></h3>
+<div class="spec">
+<p><tt>pattern_fill(FillPattern::string(), Parameters::[string()], ParametersSelected::[pos_integer()], ParametersStrictMatching::boolean()) -&gt; {ok, string()} | {error, parameters_ignored | parameter_missing | parameters_selected_empty | {parameters_selected_ignored, [pos_integer()]} | {parameters_selected_missing, pos_integer()}}</tt><br></p>
+</div><p>
+  <h4><a name="Fill_wildcard_characters_in_a_string.">Fill wildcard characters in a string.</a></h4>
+  The "*" wildcard character may be used consecutively by this function
+  to have parameters concatenated.</p>
+
 <h3 class="function"><a name="pattern_parse-2">pattern_parse/2</a></h3>
 <div class="spec">
 <p><tt>pattern_parse(Pattern::string(), L::string()) -&gt; [string()] | error</tt><br></p>
 </div><p>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "*" is the wildcard character (equivalent to the ".+" regex).
   "**" is forbidden.</p>
 
 <h3 class="function"><a name="pattern_parse-3">pattern_parse/3</a></h3>
@@ -464,7 +580,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <p><tt>pattern_parse(Pattern::string(), L::string(), Option::default | with_suffix | expanded) -&gt; [string()] | {[string()], string()} | [string() | {exact, string()}] | error</tt><br></p>
 </div><p>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern.">Parse a string based on the supplied wildcard pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "*" is the wildcard character (equivalent to the ".+" regex).
   "**" is forbidden.</p>
 
 <h3 class="function"><a name="pattern_suffix-2">pattern_suffix/2</a></h3>
@@ -472,7 +588,7 @@ Coded in Alphanumeric, D.R.Morrison (1968)).</p>
 <p><tt>pattern_suffix(Pattern::string(), L::string()) -&gt; string() | error</tt><br></p>
 </div><p>
   <h4><a name="Parse_a_string_based_on_the_supplied_wildcard_pattern_to_return_only_the_suffix_after_the_pattern.">Parse a string based on the supplied wildcard pattern to return only the suffix after the pattern.</a></h4>
-  "*" is the wildcard character (equivalent to the ".+" regex) and
+  "*" is the wildcard character (equivalent to the ".+" regex).
   "**" is forbidden.</p>
 
 <h3 class="function"><a name="prefix-3">prefix/3</a></h3>

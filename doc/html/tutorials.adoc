@@ -8,8 +8,8 @@
 :disable-javascript:
 :idprefix:
 :linkattrs:
-:revnumber: 1.7.4
-:revdate: 2018-09-16
+:revnumber: 1.7.5
+:revdate: 2018-12-18
 :lang: en
 :encoding: UTF-8
 :toc:
@@ -129,7 +129,7 @@ Then, as risks are identified during development, functionality can be moved int
 With this approach, the business logic will always have fault tolerance guarantees to keep all source code changes (which may include changing the external components used) isolated from other development during the lifetime of the business logic source code service(s).
 
 The main data throughput to the business logic should utilize CloudI service requests for reliable timeouts and service redundancy.
-Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
+Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy1 and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
 The incoming HTTP requests are automatically load-balanced among the available services, based on the incoming URL path matching a service name pattern for a pool of service processes.
 
 CloudI services provide process pooling automatically when their configuration has a link:api.html#2_services_add[count_process or count_thread (of an external service)^] greater than 1.

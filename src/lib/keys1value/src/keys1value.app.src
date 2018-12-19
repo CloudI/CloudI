@@ -3,7 +3,7 @@
 
 {application, keys1value,
   [{description, "Set Associative Map Data Structure For Key Lists"},
-   {vsn, "1.7.4"},
+   {vsn, "1.7.5"},
    {modules, [keys1value]},
    {registered, []},
    {applications, [stdlib, kernel]}]}.

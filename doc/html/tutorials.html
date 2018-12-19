@@ -9,6 +9,14 @@
 <meta name="keywords" content="tutorial, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi">
 <title>CloudI User Tutorials</title>
 <link rel="stylesheet" href="style_adoc.css">
+<!-- Open Graph Protocol (OGP) with LinkedIn requirements -->
+<meta property="og:title" content="CloudI: A Cloud at the lowest level - Tutorials" />
+<meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
+
+The bare essentials for efficient fault-tolerant processing on a cloud!" />
+<meta property="og:image" content="https://cloudi.org/images/cloud_ogp.png" />
+<meta property="og:url" content="https://cloudi.org/tutorials.html" />
+<meta property="og:type" content="website" />
 </head>
 <body class="article">
 <div id="header">
@@ -24,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html" class="active">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.4.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -32,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI User Tutorials</h1>
 <div class="details">
-<span id="revnumber">version 1.7.4,</span>
-<span id="revdate">2018-09-16</span>
+<span id="revnumber">version 1.7.5,</span>
+<span id="revdate">2018-12-18</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -373,7 +381,7 @@ With this approach, the business logic will always have fault tolerance guarante
 </div>
 <div class="paragraph">
 <p>The main data throughput to the business logic should utilize CloudI service requests for reliable timeouts and service redundancy.
-Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
+Often the main data throughput is HTTP protocol usage coming from any of the provided HTTP servers (both cloudi_service_http_cowboy1 and cloudi_service_http_elli are Erlang CloudI services for HTTP servers).
 The incoming HTTP requests are automatically load-balanced among the available services, based on the incoming URL path matching a service name pattern for a pool of service processes.</p>
 </div>
 <div class="paragraph">

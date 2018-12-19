@@ -3,7 +3,7 @@
 
 {application, quickrand,
   [{description, "Quick Random Number Generation"},
-   {vsn, "1.7.4"},
+   {vsn, "1.7.5"},
    {modules, [
         quickrand,
         quickrand_cache,

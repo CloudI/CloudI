@@ -3,7 +3,7 @@
 
 {application, varpool, 
   [{description, "Local Variable Pool"},
-   {vsn, "1.7.4"},
+   {vsn, "1.7.5"},
    {modules, [
         varpool,
         varpool_sup

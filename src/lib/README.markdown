@@ -10,8 +10,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang native cgroups interface`
 
 - `https://github.com/okeuday/cgroups`
-- `commit 96c38d6a24959949f376db8d0245326615ac91ae (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit b13b502df535fd382d95c28e379510d251e04217 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `cpg`
@@ -19,8 +19,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `CloudI Process Groups`
 
 - `https://github.com/okeuday/cpg`
-- `commit 1865696877d9ae41e9810b277b9918c546c225dd`
-- `Mon Dec 17 22:57:09 UTC 2018`
+- `commit 5d2af5c4025087df2f138e78fe51a98916ba13c2 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `erlang_term`
@@ -28,8 +28,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Term Info`
 
 - `https://github.com/okeuday/erlang_term`
-- `commit 2ac21cd82cf01bccf06af769ce869d9b29b770d7 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 1b573cd2c635759849b4b1043a83396656788230 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `key2value`
@@ -37,8 +37,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang 2-way map`
 
 - `https://github.com/okeuday/key2value`
-- `commit 45a16333f4098b96c79744cd94f58451c7931b39 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 09b4accd950e61747ed996e4272bd881aca581ae (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `keys1value`
@@ -46,8 +46,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang set associative map for key lists`
 
 - `https://github.com/okeuday/keys1value`
-- `commit 99fa4c29bb33be76f8e8fe5548fed2d785645bbc (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit dc559aeb924e68efc81a52479492ee0dbbde08a8 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `pqueue`
@@ -55,8 +55,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Priority Queues`
 
 - `https://github.com/okeuday/pqueue`
-- `commit ed05accd670dea06b40916857e4b86583efc8926`
-- `Wed Nov 14 20:15:29 UTC 2018`
+- `commit 0581a816805011a31761433bd615670c17a028f9 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `quickrand`
@@ -64,8 +64,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Quick Erlang Random Number Generation`
 
 - `https://github.com/okeuday/quickrand`
-- `commit f6e5228fc1d0f7c679ce3dc5aeca63ec8335875a (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 6f3d611c04e1cd734e8287b358f0f458b4f88662 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `reltool_util`
@@ -73,8 +73,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang reltool utility functionality application`
 
 - `https://github.com/okeuday/reltool_util`
-- `commit 0482d596e00e9295763bce119faaa263d1b5fd49 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 8d892fd9d145bbd0db199aa1f80bae51a3fcb081 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `supool`
@@ -82,8 +82,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pool as a Supervisor`
 
 - `https://github.com/okeuday/supool`
-- `commit 7b2e412d7398567ee4728fbe4a284df6a6452e59 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit d7aa39a27a641e9e966fc753c2f57c21b0f2a5fe (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `syslog_socket`
@@ -91,8 +91,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang syslog Client Interface`
 
 - `https://github.com/okeuday/syslog_socket`
-- `commit 0c282b6f6945bae237219520fa46a1d7a31f7ac6 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 7e2776a6befb91dd0be9f45a961a460ccf70d586 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `trie`
@@ -100,8 +100,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Trie Implementation`
 
 - `https://github.com/okeuday/trie`
-- `commit 71193b9084bd2ea375f30a8d6d5f1ef5842b98c5`
-- `Tue Dec 11 05:43:18 UTC 2018`
+- `commit 76b5fbf679e65d3529ca534f60bc39d343c49114 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `uuid`
@@ -109,8 +109,8 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Native UUID Generation`
 
 - `https://github.com/okeuday/uuid`
-- `commit e64cd99266b8beba7c30e78ee3ab3a061e99cdbf (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit fd20692d4fd6b72db029208dbc0e1a41b35de641 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 
 `varpool`
@@ -118,7 +118,7 @@ as namespaced dependencies within CloudI (i.e., with a `cloudi_x_` prefix).
 `Erlang Process Pools as a Local Variable`
 
 - `https://github.com/okeuday/varpool`
-- `commit 22bfba6daeffaa8de0b1e393c389057986a90936 (v1.7.4)`
-- `Sun Sep 16 12:55:52 PDT 2018`
+- `commit 268976d6969e094dbcee4e901d27155b6477d6a6 (v1.7.5)`
+- `Tue Dec 18 22:53:36 UTC 2018`
 - `MIT`
 

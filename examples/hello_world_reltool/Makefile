@@ -3,7 +3,7 @@
 
 .PHONY : all clean release
 
-CLOUDI_VERSION=1.7.4
+CLOUDI_VERSION=1.7.5
 CLOUDI_PATH=/usr/local/lib/cloudi-$(CLOUDI_VERSION)/lib/cloudi_core-$(CLOUDI_VERSION)
 
 all: src/hello_world_reltool.erl

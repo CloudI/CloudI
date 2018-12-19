@@ -1,0 +1,141 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Module cloudi_core_i_status</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module cloudi_core_i_status</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   <h3><a name="CloudI_Status_Data">CloudI Status Data</a></h3>.
+<p>Copyright © 2018 Michael Truog</p>
+
+<p><b>Version:</b> 1.7.5 Dec 17 2018 18:07:35
+  ------------------------------------------------------------------------</p>
+<p><b>Authors:</b> Michael Truog (<a href="mailto:mjtruog at protonmail dot com"><tt>mjtruog at protonmail dot com</tt></a>).</p>
+
+<h2><a name="description">Description</a></h2>
+   <h3><a name="CloudI_Status_Data">CloudI Status Data</a></h3>
+
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-duration">duration()</a></h3>
+<p><tt>duration() = {T0::<a href="cloudi_timestamp.html#type-native_monotonic">cloudi_timestamp:native_monotonic()</a>, T1::<a href="cloudi_timestamp.html#type-native_monotonic">cloudi_timestamp:native_monotonic()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-durations">durations()</a></h3>
+<p><tt>durations(Key) = #{Key := <a href="#type-durations_state">durations_state()</a>}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-durations_state">durations_state()</a></h3>
+<p><tt>durations_state() = {DurationCount::non_neg_integer(), DurationList::[<a href="#type-duration">duration()</a>]}</tt></p>
+
+
+<h3 class="typedecl"><a name="type-nanoseconds">nanoseconds()</a></h3>
+<p><tt>nanoseconds() = non_neg_integer()</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#durations_copy-2">durations_copy/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#durations_erase-2">durations_erase/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#durations_new-0">durations_new/0</a></td><td></td></tr>
+<tr><td valign="top"><a href="#durations_state-2">durations_state/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#durations_store-3">durations_store/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#durations_sum-2">durations_sum/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_day-1">nanoseconds_to_availability_day/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_day-3">nanoseconds_to_availability_day/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_month-1">nanoseconds_to_availability_month/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_month-3">nanoseconds_to_availability_month/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_week-1">nanoseconds_to_availability_week/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_week-3">nanoseconds_to_availability_week/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_year-1">nanoseconds_to_availability_year/1</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_availability_year-3">nanoseconds_to_availability_year/3</a></td><td></td></tr>
+<tr><td valign="top"><a href="#nanoseconds_to_string-2">nanoseconds_to_string/2</a></td><td></td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="durations_copy-2">durations_copy/2</a></h3>
+<div class="spec">
+<p><tt>durations_copy(KeyList::list(), DurationsLookup::<a href="#type-durations">durations</a>(any())) -&gt; <a href="#type-durations">durations</a>(any())</tt><br></p>
+</div>
+
+<h3 class="function"><a name="durations_erase-2">durations_erase/2</a></h3>
+<div class="spec">
+<p><tt>durations_erase(Key::any(), DurationsLookup::<a href="#type-durations">durations</a>(any())) -&gt; <a href="#type-durations">durations</a>(any())</tt><br></p>
+</div>
+
+<h3 class="function"><a name="durations_new-0">durations_new/0</a></h3>
+<div class="spec">
+<p><tt>durations_new() -&gt; <a href="#type-durations">durations</a>(any())</tt><br></p>
+</div>
+
+<h3 class="function"><a name="durations_state-2">durations_state/2</a></h3>
+<div class="spec">
+<p><tt>durations_state(Key::any(), DurationsLookup::<a href="#type-durations">durations</a>(any())) -&gt; <a href="#type-durations_state">durations_state()</a></tt><br></p>
+</div>
+
+<h3 class="function"><a name="durations_store-3">durations_store/3</a></h3>
+<div class="spec">
+<p><tt>durations_store(KeyList::nonempty_list(), Duration::<a href="#type-duration">duration()</a>, DurationsLookup::<a href="#type-durations">durations</a>(any())) -&gt; <a href="#type-durations">durations</a>(any())</tt><br></p>
+</div>
+
+<h3 class="function"><a name="durations_sum-2">durations_sum/2</a></h3>
+<div class="spec">
+<p><tt>durations_sum(X1::<a href="#type-durations_state">durations_state()</a>, T::<a href="cloudi_timestamp.html#type-native_monotonic">cloudi_timestamp:native_monotonic()</a>) -&gt; {boolean(), <a href="#type-nanoseconds">nanoseconds()</a>}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_day-1">nanoseconds_to_availability_day/1</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_day(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_day-3">nanoseconds_to_availability_day/3</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_day(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>, Approximate::boolean(), NanoSecondsDowntime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_month-1">nanoseconds_to_availability_month/1</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_month(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_month-3">nanoseconds_to_availability_month/3</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_month(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>, Approximate::boolean(), NanoSecondsDowntime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_week-1">nanoseconds_to_availability_week/1</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_week(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_week-3">nanoseconds_to_availability_week/3</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_week(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>, Approximate::boolean(), NanoSecondsDowntime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_year-1">nanoseconds_to_availability_year/1</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_year(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_availability_year-3">nanoseconds_to_availability_year/3</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_availability_year(NanoSecondsUptime::<a href="#type-nanoseconds">nanoseconds()</a>, Approximate::boolean(), NanoSecondsDowntime::<a href="#type-nanoseconds">nanoseconds()</a>) -&gt; string()</tt><br></p>
+</div>
+
+<h3 class="function"><a name="nanoseconds_to_string-2">nanoseconds_to_string/2</a></h3>
+<div class="spec">
+<p><tt>nanoseconds_to_string(NanoSeconds::<a href="#type-nanoseconds">nanoseconds()</a>, Approximate::boolean()) -&gt; string()</tt><br></p>
+</div>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc</i></p>
+</body>
+</html>

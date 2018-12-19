@@ -8,6 +8,14 @@
   <script type="text/javascript" src="style.js"></script>
   <link rel="stylesheet" type="text/css" href="style.css" />
   <link rel="shortcut icon" href="images/cloud.ico" type="image/x-icon" />
+  <!-- Open Graph Protocol (OGP) with LinkedIn requirements -->
+  <meta property="og:title" content="CloudI: A Cloud at the lowest level - Frequently Asked Questions" />
+  <meta property="og:description" content="CloudI is an open-source private cloud computing framework for efficient, secure, and internal data processing. CloudI provides scaling for previously unscalable source code with efficient fault-tolerant execution of C/C++, Erlang/Elixir, Go, Haskell, Java, JavaScript/node.js, OCaml, Perl, PHP, Python, or Ruby services.
+
+The bare essentials for efficient fault-tolerant processing on a cloud!" />
+  <meta property="og:image" content="https://cloudi.org/images/cloud_ogp.png" />
+  <meta property="og:url" content="https://cloudi.org/faq.html" />
+  <meta property="og:type" content="website" />
 </head>
 <body>
 
@@ -24,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.4.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -32,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.7.4<br />
-              last updated on September 16<sup>th</sup> 2018</h3></center>
+  <center><h3>version 1.7.5<br />
+              last updated on December 18<sup>th</sup> 2018</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -460,7 +468,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     allowed CloudI service (i.e., allowed based on the ACL entries).  The
     CloudI Service API is accessible remotely by using Erlang terms or JSON-RPC
     over HTTP when using the cloudi_service_api_requests service with the
-    cloudi_service_http_cowboy service.
+    cloudi_service_http_cowboy1 service.
     <a href="https://github.com/CloudI/CloudI/tree/master/src/service_api#readme" target="_blank">Examples of using the CloudI Service API</a>
     are provided as separate integration tests.
   </p>
@@ -649,7 +657,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     using light-weight messaging to facilitate CloudI
     <a href="#1_SOA">service requests</a> with the CloudI API.
     HTTP integration is provided by
-    <a href="#6_HTTP">cloudi_service_http_cowboy</a>
+    <a href="#6_HTTP">cloudi_service_http_cowboy1</a>
     (with other protocol integration relying on other CloudI services).
     The service memory footprint is kept small by relying on Erlang processes
     for their light-weight messaging (Erlang processes have been referred to
@@ -1083,7 +1091,6 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>erlang</li>
       <li>g++</li>
       <li>libboost-system-dev</li>
-      <li>libboost-thread-dev</li>
       <li>libboost-dev</li>
       <li>golang (optional)</li>
       <li>ghc cabal-install (optional)</li>
@@ -1094,8 +1101,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>python3 (optional)</li>
       <li>python3-dev (optional)</li>
       <li>ruby (optional)</li>
-      <li>libgmp3-dev (optional)</li>
-      <li>uuid-dev (optional)</li>
+      <li>libgmp3-dev libboost-thread-dev (optional)</li>
       <li>autoconf automake libtool<br />(to compile from repository)</li>
     </ul>
     </td></tr><tr><td>
@@ -1110,6 +1116,20 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
       <li>php-devel (optional)</li>
       <li>python-devel (optional)</li>
       <li>ruby-devel (optional)</li>
+      <li>gmp-devel (optional)</li>
+      <li>autoconf automake libtool<br />(to compile from repository)</li>
+    </ul>
+    </td></tr><tr><td>
+    Red Hat Enterprise Linux<br />(yum install &lt;package(s)&gt;)
+    </td><td>
+    <ul>
+      <li>gcc-c++</li>
+      <li>boost-devel</li>
+      <li>java-devel (optional)</li>
+      <li>perl-Compress-Zlib (optional)</li>
+      <li>php-devel (optional)</li>
+      <li>python-devel (optional)</li>
+      <li>ruby-devel rubygem-minitest (optional)</li>
       <li>gmp-devel (optional)</li>
       <li>autoconf automake libtool<br />(to compile from repository)</li>
     </ul>
@@ -1473,8 +1493,8 @@ sudo cloudi stop
     The Access Control List (ACL) is simply a list of strings that define
     patterns that must be explicitly allowed or denied when determining if a
     service can send to the service name.
-    A pattern uses "*" to represent a ".+" regex (one or more characters) while
-    "**" is forbidden, which is the same format used for service subscriptions.
+    An ACL string uses the wildcard characters "*" and "?" to match one or more
+    characters (in the same way service name patterns are matched).
     Previous ACL usage in CloudI used prefixes, which is still valid, but a "*"
     is appended to create a pattern.  This means that only patterns are accepted
     and no exact service names will be valid ACL strings.
@@ -1499,7 +1519,7 @@ sudo cloudi stop
   <a name="4_API_HTTP"></a>
   <h4><a href="#6_HTTP">HTTP</a></h4>
   <p class="paragraph">
-    The Erlang service cloudi_service_http_cowboy
+    The Erlang service cloudi_service_http_cowboy1
     (or cloudi_service_http_elli) accepts HTTP traffic and
     makes the HTTP requests CloudI requests where the HTTP path in the URL
     is used as the service name.
@@ -1535,7 +1555,7 @@ sudo cloudi stop
     cloudi_service_api_requests service or as Erlang function calls to the
     cloudi_service_api module.  However, typical usage of the
     CloudI Service API would use raw HTTP requests or JSON-RPC over HTTP, using
-    both a configured cloudi_service_http_cowboy service and a configured
+    both a configured cloudi_service_http_cowboy1 service and a configured
     cloudi_service_api_requests service.  A complex example of using the
     CloudI Service API through JSON-RPC over HTTP with python code can be found in <a href="https://github.com/CloudI/CloudI/blob/master/src/tests/service_api/run.py" target="_blank">src/tests/service_api/run.py</a>.
     Some simpler examples of using the CloudI Service API can be found at
@@ -1575,7 +1595,7 @@ sudo cloudi stop
   <h3>4.5 - How do I create Web Services?</h3>
   <p class="paragraph">
     Web Services are simply CloudI services that accept incoming HTTP traffic
-    coming from the cloudi_service_http_cowboy service.  The request body is
+    coming from the cloudi_service_http_cowboy1 service.  The request body is
     either the body of the uncompressed PUT or POST request, or it is the
     GET query string.
     For more details please refer to the
@@ -1586,7 +1606,7 @@ sudo cloudi stop
   <a name="4_WebSockets"></a>
   <h3>4.6 - Does CloudI support WebSockets?</h3>
   <p class="paragraph">
-    CloudI supports WebSocket connections with the cloudi_service_http_cowboy
+    CloudI supports WebSocket connections with the cloudi_service_http_cowboy1
     service, when it is configured with "{use_websockets, true}".  Incoming
     HTTP requests become CloudI service requests which return the service
     response as a HTTP response, with the HTTP headers passed in the
@@ -1598,7 +1618,7 @@ sudo cloudi stop
   </p>
   <p class="paragraph">
     Outgoing WebSocket CloudI service requests are also possible if the
-    WebSocket connection URL matches the cloudi_service_http_cowboy
+    WebSocket connection URL matches the cloudi_service_http_cowboy1
     service prefix in its service configuration.  The outgoing CloudI service
     requests can be sent to the WebSocket URL with a "/websocket" suffix added.
     All outgoing CloudI service requests expect a response from the WebSocket
@@ -1617,8 +1637,8 @@ sudo cloudi stop
   <p class="paragraph">
     Access Control Lists (ACLs) are used to explicitly allow or deny requests
     from being sent to service name patterns.
-    A pattern uses "*" to represent a ".+" regex (one or more characters) while
-    "**" is forbidden, which is the same format used for service subscriptions.
+    An ACL string uses the wildcard characters "*" and "?" to match one or more
+    characters (in the same way service name patterns are matched).
     Two separate ACL parameters are
     specified for each service configuration to allow or deny destinations.
     If an ACL is not provided, the atom 'undefined' is used instead.  An ACL is
@@ -1725,17 +1745,24 @@ sudo cloudi stop
   <a name="4_URLregex"></a>
   <h3>4.9 - Can I use Regular Expressions with Service Names (URLs)?</h3>
   <p class="paragraph">
-    A simpler substitute for regular expressions is provided for matching
-    CloudI service names.  The "*" character (a wildcard character) is
-    used to match 1 or more character within a service name
-    (i.e., a regex of '.+').  However, the sequence "**" is invalid and
-    will cause the operation to fail.  Any number of wildcard characters can
-    be used with the <a href="api.html#1_subscribe">subscribe</a>
-    and <a href="api.html#1_unsubscribe">unsubscribe</a> CloudI API functions
-    to create service names that match many patterns.  While this approach
-    may seem unusual, it helps keep service name lookups both efficient
-    and parallel (i.e., within the Erlang code, without any need to call an
-    external regex integration library).  For more details refer to
+    A string matching syntax simpler than regular expressions is provided
+    for matching CloudI service names.  Both "*" and "?" are used as
+    wildcard characters in service name patterns to match one or more
+    characters of a service name.
+    "?" never matches the character that follows it and is unable to be
+    the last service name pattern character
+    (i.e., "/?/" matches "/a/" but never "/a/b/" while "/*/" will match either).
+    Attempting to use wildcard characters together (e.g., "?*" or any other
+    combination) is invalid and will cause the operation to fail.
+    Any number of wildcard characters may be used with the service name
+    pattern string argument of the CloudI API functions
+    <a href="api.html#1_subscribe">subscribe</a>
+    and <a href="api.html#1_unsubscribe">unsubscribe</a>
+    to match any service names the service wants to receive.
+    While this approach may seem unusual, it helps keep service name
+    lookups both efficient and parallel (i.e., within the Erlang code,
+    without any need to call an external regex integration library).
+    For more details refer to
     <a href="#4_NamePattern">"4.10 - How do Service Name Patterns work?"</a>.
   </p>
   <p class="paragraph">
@@ -1751,7 +1778,7 @@ sudo cloudi stop
     structure, so that will increase the node's memory consumption.
     So, depending on your needs and your memory limitations, you may want to
     use explicit service names or service names with wildcard characters.
-    Using the wildcard character is normally a more efficient choice due
+    Using wildcard characters is normally a more efficient choice due
     to the memory consumption and its impact on caching but it puts the burden
     of validation on the source code handling the service request.
   </p>
@@ -1760,16 +1787,24 @@ sudo cloudi stop
   <a name="4_NamePattern"></a>
   <h3>4.10 - How do Service Name Patterns work?</h3>
   <p class="paragraph">
-    Service name patterns are service names that contain any number of "*"
-    character (while "**" is invalid).  The "*" character (a wildcard character)
-    matches 1 or more character within a service name used within a service
-    request.  A CloudI API
+    Service name patterns are strings that may contain any number of
+    the wildcard characters "*" and "?".  Both "*" and "?" match
+    one or more characters of a service name.
+    "?" never matches the character that follows it and is unable to be
+    the last service name pattern character
+    (i.e., "/?/" matches "/a/" but never "/a/b/" while "/*/" will match either).
+    Attempting to use wildcard characters together (e.g., "?*" or any other
+    combination) is invalid and will cause the operation to fail.
+    The CloudI API
     <a href="api.html#1_subscribe">subscribe</a>
-    function call can take a service name
-    pattern which then matches an exact (non-pattern) service name provided
-    to a CloudI API <a href="api.html#1_send_async">send_async</a>,
+    function call takes a service name pattern parameter
+    that is used to represent the service requests the service wants
+    to receive.  The service name patterns are matched with
+    (non-pattern) service names provided to a CloudI API
+    <a href="api.html#1_send_async">send_async</a>,
     <a href="api.html#1_send_sync">send_sync</a>, or
-    <a href="api.html#1_mcast_async">mcast_async</a> function.
+    <a href="api.html#1_mcast_async">mcast_async</a> function when
+    sending a service request.
   </p>
   <p class="paragraph">
     When a service name pattern exists that overlaps an exact service name,
@@ -1794,12 +1829,32 @@ sudo cloudi stop
     </ul>
     Service B will receive a service request sent to
     "/permissions/fred/accounts/add", instead of Service C, because
-    the left-most characters provide a more exact match.  Service name
-    prefixes within the service configuration provide a scope for the service
-    name subscriptions and the prefix shows the significance of the left-most
-    characters being used.  The service name subscriptions can be checked by
-    using the <a href="api.html#2_services_search">services_search</a>
-    CloudI Service API function.
+    the left-most characters provide a more exact match.
+    Service name prefixes within the service configuration provide a scope
+    for the service name subscriptions and the prefix shows the significance
+    of the left-most characters being used (the example above would likely
+    utilize services with prefixes configured as "/permissions"
+    with <a href="api.html#1_subscribe">subscribe</a> using the
+    service name pattern argument "/*/accounts/*" in Service A).
+  </p>
+  <p class="paragraph">
+    To avoid potential ambiguity, the service name patterns above are best as:
+    <ul>
+      <li>Service A subscribes to "/permissions/?/accounts/*"</li>
+      <li>Service B subscribes to "/permissions/fred/accounts/*"</li>
+      <li>Service C subscribes to "/permissions/?/accounts/add"</li>
+      <li>Service D subscribes to "/permissions/fred/accounts/remove"</li>
+    </ul>
+    Using a "?" wildcard character instead of the "*" wildcard character
+    ensures the match will not contain a "/" character
+    (due to "/" being the character after "?").  The "?" wildcard character
+    takes precedence when the "*" wildcard character is also present
+    (e.g., if "/permissions/*/accounts/*" and "/permissions/?/accounts/*"
+     are both valid matches, "/permissions/?/accounts/*" will be picked).
+    The service name pattern subscriptions may be checked by using the
+    <a href="api.html#2_services_search">services_search</a>
+    CloudI Service API function to determine what services would
+    receive a service request that uses the provided service name.
   </p>
   <div class="top"><a href="#4_contents">Top</a></div>
 
@@ -1875,7 +1930,7 @@ sudo cloudi stop
       <li>stdout and stderr output is logged automatically to the single CloudI log.</li>
       <li>A service does not require a node connection (like a cnode does), so it doesn't have service-count scalability problems (due to a distributed Erlang node being a member of a fully connected network topology).</li>
       <li>A long-running CloudI internal service is much more dependable when compared to a single Erlang process due to CloudI providing specific hints to the Erlang VM's garbage collection that avoids excessive memory consumption.</li>
-      <li>Any transactions are more dependable in a CloudI external service when compared to NIFs or port drivers due to the potential for unexpected latency that can cause the Erlang VM scheduler to "lock-up" when NIF or port driver latency exceeds 1 millisecond (a failure that requires manual recovery efforts).</li>
+      <li>Any transactions are more dependable in a CloudI external service when compared to NIFs or port drivers due to the potential for unexpected latency that can cause the Erlang VM scheduler to "lock-up" when NIF or port driver latency exceeds 1&nbsp;millisecond (a failure that requires manual recovery efforts).  To avoid the "lock-up" the dirty scheduler is used by a NIF with slower execution as a result, though causing instability within the Erlang VM is always possible with NIFs or port drivers.</li>
       <li>Core Erlang/OTP source code does not handle node-splits (global name registration, global transactions and mnesia are common examples), but CloudI provides master-less fault tolerance for a cluster of any number of CloudI nodes on an unreliable network.</li>
     </ul>
   </p>
@@ -1994,7 +2049,7 @@ sudo cloudi stop
   <p class="paragraph">
     SSH or HTTPS may be used to bridge CloudI clusters
     (i.e., with the CloudI service cloudi_service_router or
-     cloudi_service_http_cowboy).
+     cloudi_service_http_cowboy1).
     Scaling for capacity planning should often require increasing the
     database node count more than the CloudI node count, but that depends
     on the CloudI services and their incoming data rate.
@@ -2555,14 +2610,14 @@ sudo cloudi stop
     in the path tests/http_req/public_html/ are browsable at <a href="http://127.0.0.1:6464/tests/http_req/" target="_blank">http://127.0.0.1:6464/tests/http_req/</a>.
   </p>
   <p class="paragraph">
-    The incoming HTTP traffic goes through the <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy/src/cloudi_service_http_cowboy.erl" target="_blank">cloudi_service_http_cowboy</a>
+    The incoming HTTP traffic goes through the <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy1/src/cloudi_service_http_cowboy1.erl" target="_blank">cloudi_service_http_cowboy1</a>
     Erlang CloudI service (or <a href="https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl" target="_blank">cloudi_service_http_elli</a>)
     and simply uses the URL path
     to send a request to the subscribing CloudI service, where the prefix of
     the service name was set in the service configuration but the suffix of
     the service name was declared programmatically by calling the CloudI API
     <a href="api.html#1_subscribe">subscribe</a> function.
-    cloudi_service_http_cowboy adds the "/get" suffix
+    cloudi_service_http_cowboy1 adds the "/get" suffix
     (when configured with "{use_method_suffix, true}", the default)
     on the URL to make the service name for the CloudI service request
     which contains the HTTP request headers in the RequestInfo value of the
@@ -2590,7 +2645,7 @@ sudo cloudi stop
   </p>
   <p class="paragraph">
     To prevent HTTP requests from going to internal services, Access Control
-    List (ACL) entries can be added that prevent the cloudi_service_http_cowboy
+    List (ACL) entries can be added that prevent the cloudi_service_http_cowboy1
     Erlang
     CloudI service from sending to the internal services.  The ACL entries
     would be service name patterns that include the internal services in a
@@ -2605,7 +2660,7 @@ sudo cloudi stop
     using <a href="#4_URLregex">service name patterns</a>.
   </p>
   <p class="paragraph">
-    The cloudi_service_http_cowboy configuration allows you to specify various
+    The cloudi_service_http_cowboy1 configuration allows you to specify various
     output formats for the incoming HTTP requests with the "output"
     configuration value.  The possible values are:
   </p>
@@ -2668,7 +2723,7 @@ sudo cloudi stop
     </pre>
     then all service requests that match the "/byzantine*" service name pattern
     will be sent with mcast_async_active to the suffix matched by "*".
-    When the quorum configuration is set to 'byzantine', it makes sure that
+    When the quorum configuration is set to 'byzantine', it ensure that
     less than 1/3rd of the responses are erroneous (or timeouts) before
     responding to the original cloudi_service_quorum service request.
     However, the 'byzantine' setting (the default) requires that at least

@@ -1,5 +1,21 @@
 ------------------------------------------------------------------------        
 
+December 18, 2018
+  Version 1.7.5 released.
+  * Added CloudI Service API nodes_status function to provide
+    current uptime, availability and cost information for
+    any CloudI node (using Erlang monotonic time)
+  * Now both "*" and "?" are wildcard characters in service name
+    patterns that consume one or more characters, with "?" never
+    matching the next character in the string (i.e. "/?/" matches "/a/"
+     but never "/a/b/" while "/*/" will match either)
+  * cloudi_service_http_cowboy was renamed to be
+    cloudi_service_http_cowboy1
+  * cloudi_service_router ssh server throughput was improved
+  * All external dependencies were updated
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 September 16, 2018
   Version 1.7.4 released.
   * Added CloudI Service API services_status function to provide
