@@ -24,7 +24,8 @@
 %% test callbacks
 -export([t_batch_1/1,
          t_batch_2/1,
-         t_batch_3/1]).
+         t_batch_3/1,
+         t_batch_4/1]).
 
 -record(state,
     {
@@ -64,7 +65,11 @@ cloudi_service_init(Args, _Prefix, _Timeout, _Dispatcher) ->
         Mode =:= send_parent_value_3 ->
             Parent ! Value,
             erlang:send_after(500, self(), send_parent_value_3),
-            send_parent_value_3
+            send_parent_value_3;
+        Mode =:= send_parent_value_4 ->
+            Parent ! Value,
+            erlang:send_after(500, self(), send_parent_value_4),
+            send_parent_value_4
     end,
     {ok, #state{mode = NewMode}}.
 
@@ -81,7 +86,11 @@ cloudi_service_handle_info(send_parent_value_1, State, _Dispatcher) ->
 cloudi_service_handle_info(send_parent_value_2, State, _Dispatcher) ->
     {stop, {shutdown, send_parent_value_2}, State};
 cloudi_service_handle_info(send_parent_value_3, State, _Dispatcher) ->
-    {stop, anything_else_is_an_error, State}.
+    {stop, anything_else_is_an_error, State};
+cloudi_service_handle_info(send_parent_value_4, State, _Dispatcher) ->
+    % normal is an error stop reason for internal CloudI services
+    % (normal causes the service to do a restart)
+    {stop, normal, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
@@ -97,7 +106,8 @@ groups() ->
     [{batch_basic_1, [sequence],
       [t_batch_1,
        t_batch_2,
-       t_batch_3]}].
+       t_batch_3,
+       t_batch_4]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -226,6 +236,32 @@ t_batch_3(_Config) ->
                                                         Configs0),
     {ok, Received0} = receive_messages(6), % 5 restarts on error
     true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453],
+    nothing = receive Something -> Something after 1000 -> nothing end,
+    ok.
+
+t_batch_4(_Config) ->
+    Context0 = cloudi:new(),
+    ValuesCount0 = 3,
+    Values0 = [987453, 12, 467],
+    Configs0 = [[{module, ?MODULE},
+                 {args,
+                  [{mode, send_parent_value_4},
+                   {parent, self()},
+                   {value, Value0}]},
+                 {count_process, 2},
+                 {timeout_init, limit_min},
+                 {max_t, 10},
+                 {options,
+                  [{automatic_loading, false}]}] || Value0 <- Values0],
+    QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
+    {{ok, QueuedCount0},
+     _Context1} = cloudi_service_api_batch:services_add(Context0,
+                                                        ?SERVICE_PREFIX,
+                                                        ?QUEUE0,
+                                                        Configs0),
+    {ok, Received0} = receive_messages(12), % 2 processes with 5 restarts
+    true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453,
+                         987453, 987453, 987453, 987453, 987453, 987453],
     nothing = receive Something -> Something after 1000 -> nothing end,
     ok.
 

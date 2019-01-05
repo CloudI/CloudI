@@ -337,12 +337,7 @@ service_add_config([_ | _] = ServiceConfig, QueueName, Service) ->
              ServiceConfig]
     end.
 
-add_options(internal = Type, Options0, QueueName, Service) ->
-    OptionsN = add_option(Type, aspects_init_after,
-                          Options0, QueueName, Service),
-    add_option(Type, aspects_terminate_before,
-               OptionsN, QueueName, Service);
-add_options(external = Type, Options0, QueueName, Service) ->
+add_options(Type, Options0, QueueName, Service) ->
     OptionsN = add_option(Type, aspects_init_after,
                           Options0, QueueName, Service),
     add_option(Type, aspects_terminate_before,
