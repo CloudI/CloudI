@@ -8,6 +8,7 @@ SCOPE_EXTERNAL = cloudi_x_
 SCOPE_ARGS = -s $(SCOPE_EXTERNAL) -p cloudi -b _original \
      -c $(top_srcdir)/lib/ \
      -d $(top_srcdir)/lib/cloudi_core/src \
+     -d $(top_srcdir)/lib/cloudi_service_api_batch/src \
      -d $(top_srcdir)/lib/cloudi_service_api_requests/src \
      -d $(top_srcdir)/lib/cloudi_service_db_mysql/src \
      -d $(top_srcdir)/lib/cloudi_service_db_pgsql/src \
@@ -173,6 +174,7 @@ distclean-local: rebar-directories-distclean \
 	rm -rf $(top_srcdir)/tests/.eunit \
            $(top_srcdir)/tests/ct/logs \
            $(top_srcdir)/lib/cloudi_core/test_ct/logs \
+           $(top_srcdir)/lib/cloudi_service_api_batch/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_mysql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_db_pgsql/test_ct/logs \
            $(top_srcdir)/lib/cloudi_service_filesystem/test_ct/logs \
@@ -199,6 +201,7 @@ dialyze: all \
 	$(DIALYZER) --verbose --plt $(top_srcdir)/dialyzer.plt \
               -I lib/cloudi_core/include/ \
               lib/cloudi_core/ebin/ \
+              lib/cloudi_service_api_batch/ebin/ \
               lib/cloudi_service_api_requests/ebin/ \
               lib/cloudi_service_db_mysql/ebin/ \
               lib/cloudi_service_db_pgsql/ebin/ \

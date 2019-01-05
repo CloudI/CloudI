@@ -37,6 +37,8 @@
 
   % CloudI services, not automatically started
   % (i.e., started by the internal service configuration entries)
+  {app, cloudi_service_api_batch,
+   [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_api_requests,
    [{incl_cond, include}, {mod_cond, all}, {app_file, keep}]},
   {app, cloudi_service_db_mysql,

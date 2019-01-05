@@ -7,7 +7,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -28,8 +28,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.7.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -68,6 +68,7 @@
          t_service_internal_terminate_4/1,
          t_service_internal_update_1/1,
          t_service_internal_log_1/1,
+         t_service_internal_idle_1/1,
          t_cloudi_args_type_1/1,
          t_cloudi_service_name_1/1]).
 
@@ -155,6 +156,8 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
                                                       undefined, undefined),
             {ok, _, _} = cloudi_service:recv_async(Dispatcher, TransId),
             undefined;
+        Mode =:= idle ->
+            idle;
         Mode =:= terminate_sleep ->
             cloudi_service:subscribe(Dispatcher,
                                      ?SERVICE_SUFFIX1),
@@ -278,7 +281,8 @@ groups() ->
        t_service_internal_terminate_3,
        t_service_internal_terminate_4,
        t_service_internal_update_1,
-       t_service_internal_log_1]},
+       t_service_internal_log_1,
+       t_service_internal_idle_1]},
      {cloudi_modules_1, [parallel],
       [t_cloudi_args_type_1,
        t_cloudi_service_name_1]}].
@@ -480,6 +484,18 @@ init_per_testcase(TestCase, Config)
          {options,
           [{automatic_loading, false},
            {duo_mode, true}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when (TestCase =:= t_service_internal_idle_1) ->
+    init_per_testcase(TestCase),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX1},
+         {module, ?MODULE},
+         {args, [{mode, idle}]},
+         {options,
+          [{automatic_loading, false}]}]
         ], infinity),
     [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config) ->
@@ -918,6 +934,11 @@ t_service_internal_log_1(_Config) ->
     ?LOG_METADATA_SET([{test, t_service_internal_log_1},
                        {pid, self()} | ?LOG_METADATA_GET()]),
     ?LOG_INFO("Logging metadata", []),
+    ok.
+
+t_service_internal_idle_1(Config) ->
+    [ServiceId] = ?config(service_ids, Config),
+    {ok, []} = cloudi_service_api:service_subscriptions(ServiceId, infinity),
     ok.
 
 t_cloudi_args_type_1(_Config) ->

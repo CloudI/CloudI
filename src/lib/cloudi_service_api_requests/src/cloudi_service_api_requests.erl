@@ -67,6 +67,7 @@
 %%%------------------------------------------------------------------------
 
 cloudi_service_init([], Prefix, _Timeout, Dispatcher) ->
+    false = cloudi_service_name:pattern(Prefix),
     Exports = cloudi_x_reltool_util:module_exports(cloudi_service_api),
     CloudIServiceAPI = lists:foldl(fun({Method, Arity} = F, Functions) ->
         % service names are (prefix)rpc/(method)(format-extension)

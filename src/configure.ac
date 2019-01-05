@@ -696,6 +696,7 @@ AC_CONFIG_FILES([
     lib/cloudi_core/cxx_src/Makefile
     lib/cloudi_core/src/cloudi_core.app.src
     lib/cloudi_core/src/cloudi_environment.hrl
+    lib/cloudi_service_api_batch/src/cloudi_service_api_batch.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src

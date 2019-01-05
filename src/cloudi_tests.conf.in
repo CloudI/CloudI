@@ -95,6 +95,12 @@
         % (see config_service_options in
         %  lib/cloudi_core/src/cloudi_configuration.hrl)
         []},
+    {internal,
+        "/cloudi/api/",
+        cloudi_service_api_batch,
+        [],
+        none, 5000, 5000, 5000, undefined, undefined, 1, 5, 300,
+        []},
 
     % an external service is an OS process connected
     % with a socket to the loopback device for each thread

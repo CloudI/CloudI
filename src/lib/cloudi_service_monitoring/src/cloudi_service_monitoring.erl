@@ -47,7 +47,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -68,8 +68,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2015-2019 Michael Truog
+%%% @version 1.7.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).
@@ -271,9 +271,9 @@ add([_ | _] = ServiceConfig) ->
     end,
     case lists:keytake(options, 1, ServiceConfig) of
         {value, {_, Options}, NextServiceConfig} ->
-            NextServiceConfig ++ [{options, add_options(Type, Options)}];
+            [{options, add_options(Type, Options)} | NextServiceConfig];
         false ->
-            ServiceConfig ++ [{options, add_options(Type, [])}]
+            [{options, add_options(Type, [])} | ServiceConfig]
     end.
 
 %%-------------------------------------------------------------------------
