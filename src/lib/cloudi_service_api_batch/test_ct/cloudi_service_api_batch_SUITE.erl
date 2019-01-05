@@ -167,6 +167,7 @@ t_batch_1(_Config) ->
                   [{mode, send_parent_value_1},
                    {parent, self()},
                    {value, Value0}]},
+                 {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
                   [{automatic_loading, false}]}] || Value0 <- Values0],
@@ -189,6 +190,8 @@ t_batch_2(_Config) ->
                   [{mode, send_parent_value_2},
                    {parent, self()},
                    {value, Value0}]},
+                 {count_process, 3},
+                 {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
                   [{automatic_loading, false}]}] || Value0 <- Values0],
@@ -198,8 +201,8 @@ t_batch_2(_Config) ->
                                                         ?SERVICE_PREFIX,
                                                         ?QUEUE1,
                                                         Configs0),
-    {ok, Received0} = receive_messages(ValuesCount0),
-    true = Received0 == Values0,
+    {ok, Received0} = receive_messages(9), % 3 messages from 3 processes
+    true = Received0 == [987453, 987453, 987453, 12, 12, 12, 467, 467, 467],
     ok.
 
 t_batch_3(_Config) ->
@@ -211,6 +214,7 @@ t_batch_3(_Config) ->
                   [{mode, send_parent_value_3},
                    {parent, self()},
                    {value, Value0}]},
+                 {timeout_init, limit_min},
                  {max_t, 1},
                  {options,
                   [{automatic_loading, false}]}] || Value0 <- Values0],

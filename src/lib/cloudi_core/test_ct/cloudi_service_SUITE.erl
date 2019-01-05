@@ -938,7 +938,10 @@ t_service_internal_log_1(_Config) ->
 
 t_service_internal_idle_1(Config) ->
     [ServiceId] = ?config(service_ids, Config),
-    {ok, []} = cloudi_service_api:service_subscriptions(ServiceId, infinity),
+    {ok, []} = cloudi_service_api:
+               service_subscriptions(ServiceId, infinity),
+    {error, not_found} = cloudi_service_api:
+                         service_subscriptions(<<0:128>>, infinity),
     ok.
 
 t_cloudi_args_type_1(_Config) ->

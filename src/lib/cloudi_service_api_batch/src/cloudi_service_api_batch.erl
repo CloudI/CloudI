@@ -58,14 +58,19 @@
         % with an error and is unable to restart.
 
 -define(NAME_BATCH, "batch").
+-define(TIMEOUT_DELTA, 100). % milliseconds
+-define(TERMINATE_INTERVAL, 500). % milliseconds
 
 -record(queue,
     {
         count :: non_neg_integer(),
         data :: queue:queue(),
         service_id :: cloudi_service_api:service_id(),
-        terminated = false :: boolean(),
-        terminated_timer = undefined :: undefined | reference()
+        timeout_init = undefined
+          :: undefined |
+             cloudi_service_api:timeout_initialize_value_milliseconds(),
+        terminate = false :: boolean(),
+        terminate_timer = undefined :: undefined | reference()
     }).
 
 -record(state,
@@ -138,14 +143,16 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
             queue_add(QueueName, Configs, State)
     end.
 
-cloudi_service_handle_info({aspects_init_after, QueueName},
+cloudi_service_handle_info({aspects_init_after, QueueName, TimeoutInit},
                            State, _Dispatcher) ->
-    {noreply, running_init(QueueName, State)};
+    {noreply, running_init(QueueName, TimeoutInit, State)};
 cloudi_service_handle_info({aspects_terminate_before,
-                            QueueName, _Pid, Reason, Timeout},
+                            QueueName, Reason, TimeoutTerminate},
                            State, _Dispatcher) ->
-    %XXX add monitor of Pid
-    {noreply, running_terminate(QueueName, Reason, Timeout, State)};
+    {noreply, running_terminate(QueueName, Reason, TimeoutTerminate, State)};
+cloudi_service_handle_info({terminate, QueueName, Reason, Timeout},
+                           State, _Dispatcher) ->
+    {noreply, running_stopping(QueueName, Reason, Timeout, State)};
 cloudi_service_handle_info({terminated, QueueName, Reason},
                            #state{purge_on_error = PurgeOnError} = State,
                            _Dispatcher) ->
@@ -191,38 +198,82 @@ queue_add(QueueName, [Config | ConfigsTail] = Configs,
     {reply, CountNew,
      State#state{queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}}.
 
-running_init(QueueName,
+running_init(QueueName, TimeoutInit,
              #state{queues = Queues} = State) ->
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
-    #queue{terminated_timer = TerminatedTimer} = Queue,
+    #queue{terminate_timer = TerminateTimer} = Queue,
     if
-        is_reference(TerminatedTimer) ->
-            erlang:cancel_timer(TerminatedTimer);
-        TerminatedTimer =:= undefined ->
+        is_reference(TerminateTimer) ->
+            erlang:cancel_timer(TerminateTimer);
+        TerminateTimer =:= undefined ->
             ok
     end,
-    QueueNew = Queue#queue{terminated = false,
-                           terminated_timer = undefined},
+    QueueNew = Queue#queue{timeout_init = TimeoutInit,
+                           terminate = false,
+                           terminate_timer = undefined},
     State#state{queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}.
 
-running_terminate(QueueName, Reason, Timeout,
+running_terminate(QueueName, Reason, TimeoutTerminate,
                   #state{queues = Queues,
                          service = Service} = State) ->
+    case cloudi_x_trie:fetch(QueueName, Queues) of
+        #queue{terminate = true} ->
+            State;
+        #queue{timeout_init = TimeoutInit,
+               terminate = false} = Queue ->
+            Timeout = TimeoutTerminate + TimeoutInit + ?TIMEOUT_DELTA,
+            TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
+            TerminateTimer = if
+                TimeoutNew > 0 ->
+                    erlang:send_after(Timeout, Service,
+                                      {terminate, QueueName, Reason,
+                                       TimeoutNew});
+                true ->
+                    erlang:send_after(Timeout, Service,
+                                      {terminated, QueueName, Reason})
+            end,
+            QueueNew = Queue#queue{terminate = true,
+                                   terminate_timer = TerminateTimer},
+            State#state{queues = cloudi_x_trie:store(QueueName,
+                                                     QueueNew, Queues)}
+    end.
+
+running_stopping(QueueName, Reason, Timeout,
+                 #state{queues = Queues,
+                        service = Service} = State) ->
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
-    TerminatedTimer = erlang:send_after(Timeout + 100, Service,
-                                        {terminated, QueueName, Reason}),
-    QueueNew = Queue#queue{terminated = true,
-                           terminated_timer = TerminatedTimer},
-    State#state{queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}.
+    #queue{service_id = ServiceId} = Queue,
+    case cloudi_service_api:service_subscriptions(ServiceId, infinity) of
+        {error, not_found} ->
+            Service ! {terminated, QueueName, Reason},
+            QueueNew = Queue#queue{terminate = true,
+                                   terminate_timer = undefined},
+            State#state{queues = cloudi_x_trie:store(QueueName,
+                                                     QueueNew, Queues)};
+        _ ->
+            TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
+            TerminateTimer = if
+                TimeoutNew > 0 ->
+                    erlang:send_after(Timeout, Service,
+                                      {terminate, QueueName, Reason,
+                                       TimeoutNew});
+                true ->
+                    erlang:send_after(Timeout, Service,
+                                      {terminated, QueueName, Reason})
+            end,
+            QueueNew = Queue#queue{terminate_timer = TerminateTimer},
+            State#state{queues = cloudi_x_trie:store(QueueName,
+                                                     QueueNew, Queues)}
+    end.
 
 running_stopped(true, QueueName,
                 #state{queues = Queues} = State) ->
-    #queue{terminated = Terminated} = cloudi_x_trie:fetch(QueueName, Queues),
+    #queue{terminate = Terminate} = cloudi_x_trie:fetch(QueueName, Queues),
     QueuesNew = if
-        Terminated =:= true ->
+        Terminate =:= true ->
             cloudi_x_trie:erase(QueueName, Queues);
-        Terminated =:= false ->
-            % terminated_timer was cancelled after the message was queued
+        Terminate =:= false ->
+            % terminate_timer was cancelled after the message was queued
             Queues
     end,
     State#state{queues = QueuesNew};
@@ -230,8 +281,8 @@ running_stopped(false, QueueName,
                 #state{queues = Queues,
                        service = Service} = State) ->
     QueuesNew = case cloudi_x_trie:fetch(QueueName, Queues) of
-        #queue{terminated = false} ->
-            % terminated_timer was cancelled after the message was queued
+        #queue{terminate = false} ->
+            % terminate_timer was cancelled after the message was queued
             Queues;
         #queue{count = 0} ->
             cloudi_x_trie:erase(QueueName, Queues);
@@ -243,8 +294,8 @@ running_stopped(false, QueueName,
                                 Queue#queue{count = Count - 1,
                                             data = DataNew,
                                             service_id = ServiceId,
-                                            terminated = false,
-                                            terminated_timer = undefined},
+                                            terminate = false,
+                                            terminate_timer = undefined},
                                 Queues)
     end,
     State#state{queues = QueuesNew}.
@@ -298,19 +349,19 @@ add_option(Type, Option, Options, QueueName, Service) ->
         Option =:= aspects_init_after ->
             if
                 Type =:= internal ->
-                    fun(_Args, _Prefix, _Timeout, State, _Dispatcher) ->
-                        Service ! {Option, QueueName},
+                    fun(_Args, _Prefix, Timeout, State, _Dispatcher) ->
+                        Service ! {Option, QueueName, Timeout},
                         {ok, State}
                     end;
                 Type =:= external ->
-                    fun(_CommandLine, _Prefix, _Timeout, State) ->
-                        Service ! {Option, QueueName},
+                    fun(_CommandLine, _Prefix, Timeout, State) ->
+                        Service ! {Option, QueueName, Timeout},
                         {ok, State}
                     end
             end;
         Option =:= aspects_terminate_before ->
             fun(Reason, Timeout, State) ->
-                Service ! {Option, QueueName, self(), Reason, Timeout},
+                Service ! {Option, QueueName, Reason, Timeout},
                 {ok, State}
             end
     end,
