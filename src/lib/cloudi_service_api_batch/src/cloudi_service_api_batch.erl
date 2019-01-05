@@ -154,21 +154,8 @@ cloudi_service_handle_info({terminate, QueueName, Reason, Timeout},
                            State, _Dispatcher) ->
     {noreply, running_stopping(QueueName, Reason, Timeout, State)};
 cloudi_service_handle_info({terminated, QueueName, Reason},
-                           #state{purge_on_error = PurgeOnError} = State,
-                           _Dispatcher) ->
-    PurgeQueue = if
-        PurgeOnError =:= true ->
-            case Reason of
-                {shutdown, _} ->
-                    false;
-                shutdown ->
-                    false;
-                _ ->
-                    true
-            end;
-        PurgeOnError =:= false ->
-            false
-    end,
+                           State, _Dispatcher) ->
+    PurgeQueue = purge_queue(Reason, State),
     {noreply, running_stopped(PurgeQueue, QueueName, State)}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
@@ -225,7 +212,7 @@ running_terminate(QueueName, Reason, TimeoutTerminate,
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
-                    erlang:send_after(Timeout, Service,
+                    erlang:send_after(?TERMINATE_INTERVAL, Service,
                                       {terminate, QueueName, Reason,
                                        TimeoutNew});
                 true ->
@@ -245,16 +232,17 @@ running_stopping(QueueName, Reason, Timeout,
     #queue{service_id = ServiceId} = Queue,
     case cloudi_service_api:service_subscriptions(ServiceId, infinity) of
         {error, not_found} ->
-            Service ! {terminated, QueueName, Reason},
+            PurgeQueue = purge_queue(Reason, State),
             QueueNew = Queue#queue{terminate = true,
                                    terminate_timer = undefined},
-            State#state{queues = cloudi_x_trie:store(QueueName,
-                                                     QueueNew, Queues)};
+            QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
+            running_stopped(PurgeQueue, QueueName,
+                            State#state{queues = QueuesNew});
         _ ->
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
-                    erlang:send_after(Timeout, Service,
+                    erlang:send_after(?TERMINATE_INTERVAL, Service,
                                       {terminate, QueueName, Reason,
                                        TimeoutNew});
                 true ->
@@ -299,6 +287,18 @@ running_stopped(false, QueueName,
                                 Queues)
     end,
     State#state{queues = QueuesNew}.
+
+purge_queue(Reason, #state{purge_on_error = true}) ->
+    case Reason of
+        {shutdown, _} ->
+            false;
+        shutdown ->
+            false;
+        _ ->
+            true
+    end;
+purge_queue(_, #state{purge_on_error = false}) ->
+    false.
 
 service_add(Config, QueueName, Service) ->
     ConfigBatch = service_add_config(Config, QueueName, Service),

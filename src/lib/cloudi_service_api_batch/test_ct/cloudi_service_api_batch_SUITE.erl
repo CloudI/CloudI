@@ -55,15 +55,15 @@ cloudi_service_init(Args, _Prefix, _Timeout, _Dispatcher) ->
     NewMode = if
         Mode =:= send_parent_value_1 ->
             Parent ! Value,
-            self() ! send_parent_value_1,
+            erlang:send_after(500, self(), send_parent_value_1),
             send_parent_value_1;
         Mode =:= send_parent_value_2 ->
             Parent ! Value,
-            self() ! send_parent_value_2,
+            erlang:send_after(500, self(), send_parent_value_2),
             send_parent_value_2;
         Mode =:= send_parent_value_3 ->
             Parent ! Value,
-            self() ! send_parent_value_3,
+            erlang:send_after(500, self(), send_parent_value_3),
             send_parent_value_3
     end,
     {ok, #state{mode = NewMode}}.
@@ -215,7 +215,7 @@ t_batch_3(_Config) ->
                    {parent, self()},
                    {value, Value0}]},
                  {timeout_init, limit_min},
-                 {max_t, 1},
+                 {max_t, 10},
                  {options,
                   [{automatic_loading, false}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
