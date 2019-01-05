@@ -229,7 +229,8 @@ running_stopping(QueueName, Reason, Timeout,
                  #state{queues = Queues,
                         service = Service} = State) ->
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
-    #queue{service_id = ServiceId} = Queue,
+    #queue{service_id = ServiceId,
+           terminate = Terminate} = Queue,
     case cloudi_service_api:service_subscriptions(ServiceId, infinity) of
         {error, not_found} ->
             PurgeQueue = purge_queue(Reason, State),
@@ -238,7 +239,7 @@ running_stopping(QueueName, Reason, Timeout,
             QueuesNew = cloudi_x_trie:store(QueueName, QueueNew, Queues),
             running_stopped(PurgeQueue, QueueName,
                             State#state{queues = QueuesNew});
-        _ ->
+        _ when Terminate =:= true ->
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
                 TimeoutNew > 0 ->
@@ -251,7 +252,10 @@ running_stopping(QueueName, Reason, Timeout,
             end,
             QueueNew = Queue#queue{terminate_timer = TerminateTimer},
             State#state{queues = cloudi_x_trie:store(QueueName,
-                                                     QueueNew, Queues)}
+                                                     QueueNew, Queues)};
+        _ ->
+            % terminate_timer was cancelled after the message was queued
+            State
     end.
 
 running_stopped(true, QueueName,
