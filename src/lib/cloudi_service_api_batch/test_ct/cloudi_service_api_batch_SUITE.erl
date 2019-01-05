@@ -22,7 +22,9 @@
          end_per_testcase/2]).
 
 %% test callbacks
--export([t_batch_1/1]).
+-export([t_batch_1/1,
+         t_batch_2/1,
+         t_batch_3/1]).
 
 -record(state,
     {
@@ -93,7 +95,9 @@ all() ->
 
 groups() ->
     [{batch_basic_1, [sequence],
-      [t_batch_1]}].
+      [t_batch_1,
+       t_batch_2,
+       t_batch_3]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -131,8 +135,7 @@ end_per_testcase(TestCase) ->
     ?LOG_INFO("~p end", [TestCase]),
     ok.
 
-init_per_testcase(TestCase, Config)
-    when (TestCase =:= t_batch_1) ->
+init_per_testcase(TestCase, Config) ->
     init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
         % using proplist configuration format, not the tuple/record format
@@ -169,47 +172,56 @@ t_batch_1(_Config) ->
                   [{automatic_loading, false}]}] || Value0 <- Values0],
     QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
     {{ok, QueuedCount0},
-     Context1} = cloudi_service_api_batch:services_add(Context0,
-                                                       ?SERVICE_PREFIX,
-                                                       ?QUEUE0,
-                                                       Configs0),
+     _Context1} = cloudi_service_api_batch:services_add(Context0,
+                                                        ?SERVICE_PREFIX,
+                                                        ?QUEUE0,
+                                                        Configs0),
     {ok, Received0} = receive_messages(ValuesCount0),
     true = Received0 == Values0,
+    ok.
 
-    ValuesCount1 = 3,
-    Values1 = [987453, 12, 467],
-    Configs1 = [[{module, ?MODULE},
+t_batch_2(_Config) ->
+    Context0 = cloudi:new(),
+    ValuesCount0 = 3,
+    Values0 = [987453, 12, 467],
+    Configs0 = [[{module, ?MODULE},
                  {args,
                   [{mode, send_parent_value_2},
                    {parent, self()},
-                   {value, Value1}]},
+                   {value, Value0}]},
                  {max_t, 1},
                  {options,
-                  [{automatic_loading, false}]}] || Value1 <- Values1],
-    QueuedCount1 = ValuesCount1 - 1, % service configurations queued count
-    {{ok, QueuedCount1},
-     Context2} = cloudi_service_api_batch:services_add(Context1,
-                                                       ?SERVICE_PREFIX,
-                                                       ?QUEUE1,
-                                                       Configs1),
-    {ok, Received1} = receive_messages(ValuesCount1),
-    true = Received1 == Values1,
+                  [{automatic_loading, false}]}] || Value0 <- Values0],
+    QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
+    {{ok, QueuedCount0},
+     _Context1} = cloudi_service_api_batch:services_add(Context0,
+                                                        ?SERVICE_PREFIX,
+                                                        ?QUEUE1,
+                                                        Configs0),
+    {ok, Received0} = receive_messages(ValuesCount0),
+    true = Received0 == Values0,
+    ok.
 
-    Configs2 = [[{module, ?MODULE},
+t_batch_3(_Config) ->
+    Context0 = cloudi:new(),
+    ValuesCount0 = 3,
+    Values0 = [987453, 12, 467],
+    Configs0 = [[{module, ?MODULE},
                  {args,
                   [{mode, send_parent_value_3},
                    {parent, self()},
-                   {value, Value1}]},
+                   {value, Value0}]},
                  {max_t, 1},
                  {options,
-                  [{automatic_loading, false}]}] || Value1 <- Values1],
-    {{ok, QueuedCount1},
-     _Context3} = cloudi_service_api_batch:services_add(Context2,
+                  [{automatic_loading, false}]}] || Value0 <- Values0],
+    QueuedCount0 = ValuesCount0 - 1, % service configurations queued count
+    {{ok, QueuedCount0},
+     _Context1} = cloudi_service_api_batch:services_add(Context0,
                                                         ?SERVICE_PREFIX,
                                                         ?QUEUE2,
-                                                        Configs2),
-    {ok, Received2} = receive_messages(6), % 5 restarts on error
-    true = Received2 == [987453, 987453, 987453, 987453, 987453, 987453],
+                                                        Configs0),
+    {ok, Received0} = receive_messages(6), % 5 restarts on error
+    true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453],
     nothing = receive Something -> Something after 1000 -> nothing end,
     ok.
 
@@ -227,6 +239,6 @@ receive_messages(Count, L) ->
         Message ->
             receive_messages(Count - 1, [Message | L])
     after
-        5000 ->
+        10000 ->
             {error, timeout}
     end.
