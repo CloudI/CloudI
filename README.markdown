@@ -131,20 +131,13 @@ Integration points:
 
 * CloudI API (See [`src/api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/api#readme))
 * HTTP with [`cloudi_service_http_cowboy1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_cowboy1/src/cloudi_service_http_cowboy1.erl) and [`cloudi_service_http_elli`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_http_elli/src/cloudi_service_http_elli.erl)
+* SSH with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * OAuth v1 with [`cloudi_service_oauth1`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_oauth1/src/cloudi_service_oauth1.erl)
 * TCP with [`cloudi_service_tcp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_tcp/src/cloudi_service_tcp.erl)
 * UDP with [`cloudi_service_udp`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_udp/src/cloudi_service_udp.erl)
-* Supported databases (included)
+* SQL Databases
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
   * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
-* Internal Services Excluded from this Repository
-  * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/cloudi_service_db_elasticsearch)
-  * Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/cloudi_service_db_cassandra) or [`cloudi_service_db_cassandra_cql`](https://github.com/CloudI/cloudi_service_db_cassandra_cql)
-  * CouchDB with [`cloudi_service_db_couchdb`](https://github.com/CloudI/cloudi_service_db_couchdb)
-  * memcached with [`cloudi_service_db_memcached`](https://github.com/CloudI/cloudi_service_db_memcached)
-  * Riak with [`cloudi_service_db_riak`](https://github.com/CloudI/cloudi_service_db_riak)
-  * TokyoTyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/cloudi_service_db_tokyotyrant)
-  * ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/cloudi_service_zeromq)
 
 Dynamic Configuration and Monitoring:
 
@@ -161,6 +154,16 @@ Routing:
 * Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
 * Altering Request Destinations with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)
+
+Unmaintained Services Excluded from this Repository:
+
+* elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/cloudi_service_db_elasticsearch)
+* Cassandra with [`cloudi_service_db_cassandra`](https://github.com/CloudI/cloudi_service_db_cassandra) or [`cloudi_service_db_cassandra_cql`](https://github.com/CloudI/cloudi_service_db_cassandra_cql)
+* CouchDB with [`cloudi_service_db_couchdb`](https://github.com/CloudI/cloudi_service_db_couchdb)
+* memcached with [`cloudi_service_db_memcached`](https://github.com/CloudI/cloudi_service_db_memcached)
+* Riak with [`cloudi_service_db_riak`](https://github.com/CloudI/cloudi_service_db_riak)
+* TokyoTyrant with [`cloudi_service_db_tokyotyrant`](https://github.com/CloudI/cloudi_service_db_tokyotyrant)
+* ZeroMQ with [`cloudi_service_zeromq`](https://github.com/CloudI/cloudi_service_zeromq)
 
 The default CloudI configuration can run the included integration tests
 if all the supported programming languages are enabled at configure time
