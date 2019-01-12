@@ -41,7 +41,11 @@
 
 %% external interface
 -export([services_add/4,
-         services_add/5]).
+         services_add/5,
+         services_remove/3,
+         services_remove/4,
+         services_restart/3,
+         services_restart/4]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -119,6 +123,48 @@ services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs, Timeout)
     cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
                      {services_add, QueueName, Configs}, Timeout).
 
+-spec services_remove(Agent :: agent(),
+                      Prefix :: service_name(),
+                      QueueName :: nonempty_string()) ->
+    module_response(ok | {error, not_found}).
+
+services_remove(Agent, Prefix, [I | _] = QueueName)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {services_remove, QueueName}).
+
+-spec services_remove(Agent :: agent(),
+                      Prefix :: service_name(),
+                      QueueName :: nonempty_string(),
+                      Timeout :: timeout_milliseconds()) ->
+    module_response(ok | {error, not_found}).
+
+services_remove(Agent, Prefix, [I | _] = QueueName, Timeout)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {services_remove, QueueName}, Timeout).
+
+-spec services_restart(Agent :: agent(),
+                       Prefix :: service_name(),
+                       QueueName :: nonempty_string()) ->
+    module_response(ok | {error, not_found}).
+
+services_restart(Agent, Prefix, [I | _] = QueueName)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {services_restart, QueueName}).
+
+-spec services_restart(Agent :: agent(),
+                       Prefix :: service_name(),
+                       QueueName :: nonempty_string(),
+                       Timeout :: timeout_milliseconds()) ->
+    module_response(ok | {error, not_found}).
+
+services_restart(Agent, Prefix, [I | _] = QueueName, Timeout)
+    when is_integer(I) ->
+    cloudi:send_sync(Agent, Prefix ++ ?NAME_BATCH,
+                     {services_restart, QueueName}, Timeout).
+
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
@@ -140,7 +186,11 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               State, _Dispatcher) ->
     case Request of
         {services_add, QueueName, Configs} ->
-            queue_add(QueueName, Configs, State)
+            queue_add(QueueName, Configs, State);
+        {services_remove, QueueName} ->
+            queue_remove(QueueName, State);
+        {services_restart, QueueName} ->
+            queue_restart(QueueName, State)
     end.
 
 cloudi_service_handle_info({aspects_init_after, QueueName, TimeoutInit},
@@ -185,6 +235,32 @@ queue_add(QueueName, [Config | ConfigsTail] = Configs,
     {reply, CountNew,
      State#state{queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}}.
 
+queue_remove(QueueName,
+             #state{queues = Queues} = State) ->
+    case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{service_id = ServiceId}} ->
+            cloudi_service_api:services_remove([ServiceId], infinity),
+            {reply, ok,
+             State#state{queues = cloudi_x_trie:erase(QueueName, Queues)}};
+        error ->
+            {reply, {error, not_found}, State}
+    end.
+
+queue_restart(QueueName,
+              #state{queues = Queues} = State) ->
+    Result = case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{service_id = ServiceId}} ->
+            case cloudi_service_api:services_restart([ServiceId], infinity) of
+                ok ->
+                    ok;
+                {error, {service_not_found, ServiceId}} ->
+                    {error, not_found}
+            end;
+        error ->
+            {error, not_found}
+    end,
+    {reply, Result, State}.
+
 running_init(QueueName, TimeoutInit,
              #state{queues = Queues} = State) ->
     Queue = cloudi_x_trie:fetch(QueueName, Queues),
@@ -203,11 +279,11 @@ running_init(QueueName, TimeoutInit,
 running_terminate(QueueName, Reason, TimeoutTerminate,
                   #state{queues = Queues,
                          service = Service} = State) ->
-    case cloudi_x_trie:fetch(QueueName, Queues) of
-        #queue{terminate = true} ->
+    case cloudi_x_trie:find(QueueName, Queues) of
+        {ok, #queue{terminate = true}} ->
             State;
-        #queue{timeout_init = TimeoutInit,
-               terminate = false} = Queue ->
+        {ok, #queue{timeout_init = TimeoutInit,
+                    terminate = false} = Queue} ->
             Timeout = TimeoutTerminate + TimeoutInit + ?TIMEOUT_DELTA,
             TimeoutNew = Timeout - ?TERMINATE_INTERVAL,
             TerminateTimer = if
@@ -222,7 +298,9 @@ running_terminate(QueueName, Reason, TimeoutTerminate,
             QueueNew = Queue#queue{terminate = true,
                                    terminate_timer = TerminateTimer},
             State#state{queues = cloudi_x_trie:store(QueueName,
-                                                     QueueNew, Queues)}
+                                                     QueueNew, Queues)};
+        error ->
+            State
     end.
 
 running_stopping(QueueName, Reason, Timeout,
@@ -366,7 +444,12 @@ add_option(Type, Option, Options, QueueName, Service) ->
     end,
     case lists:keytake(Option, 1, Options) of
         {value, {_, OptionL}, NextOptions} ->
-            [{Option, OptionL ++ [Aspect]} | NextOptions];
+            if
+                Option =:= aspects_init_after ->
+                    [{Option, [Aspect | OptionL]} | NextOptions];
+                Option =:= aspects_terminate_before ->
+                    [{Option, OptionL ++ [Aspect]} | NextOptions]
+            end;
         false ->
             [{Option, [Aspect]} | Options]
     end.
