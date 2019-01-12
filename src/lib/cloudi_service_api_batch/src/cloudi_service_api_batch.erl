@@ -189,14 +189,9 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     1 = cloudi_service:process_count_max(Dispatcher),
     cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
     Service = cloudi_service:self(Dispatcher),
-    if
-        StopWhenDone =:= true ->
-            [_ | _] = QueuesList;
-        StopWhenDone =:= false ->
-            ok
-    end,
     case QueuesList of
         [] ->
+            false = StopWhenDone,
             ok;
         [_ | _] ->
             Service ! {init, QueuesList}
