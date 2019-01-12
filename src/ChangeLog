@@ -6,6 +6,7 @@
     * Add cloudi_service_api_batch arguments queues and stop_when_done
       (can allow cloudi_service_api_batch service executions to be
        nested if necessary)
+    * Add cloudi_service_api_batch CT tests for queues and stop_when_done
 
 2019-01-11 Michael Truog   <mjtruog at protonmail dot com>
 

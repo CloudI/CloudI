@@ -25,7 +25,9 @@
 -export([t_batch_1/1,
          t_batch_2/1,
          t_batch_3/1,
-         t_batch_4/1]).
+         t_batch_4/1,
+         t_stop_when_done_1/1,
+         t_stop_when_done_2/1]).
 
 -record(state,
     {
@@ -107,7 +109,9 @@ groups() ->
       [t_batch_1,
        t_batch_2,
        t_batch_3,
-       t_batch_4]}].
+       t_batch_4,
+       t_stop_when_done_1,
+       t_stop_when_done_2]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -145,6 +149,55 @@ end_per_testcase(TestCase) ->
     ?LOG_INFO("~p end", [TestCase]),
     ok.
 
+init_per_testcase(TestCase, Config)
+    when TestCase =:= t_stop_when_done_1 ->
+    init_per_testcase(TestCase),
+    Self = self(),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX},
+         {module, cloudi_service_api_batch},
+         {args,
+          [{stop_when_done, true},
+           {queues,
+            [{?QUEUE0,
+              [[{module, ?MODULE},
+                {args,
+                 [{mode, send_parent_value_1},
+                  {parent, Self},
+                  {value, Value}]},
+                {timeout_init, limit_min},
+                {max_t, 1},
+                {options,
+                 [{automatic_loading, false}]}]
+               || Value <- [987453, 12, 467]]}]}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
+init_per_testcase(TestCase, Config)
+    when TestCase =:= t_stop_when_done_2 ->
+    init_per_testcase(TestCase),
+    Self = self(),
+    {ok, ServiceIds} = cloudi_service_api:services_add([
+        % using proplist configuration format, not the tuple/record format
+        [{prefix, ?SERVICE_PREFIX},
+         {module, cloudi_service_api_batch},
+         {args,
+          [{stop_when_done, true},
+           {queues,
+            [{?QUEUE1,
+              [[{module, ?MODULE},
+                {args,
+                 [{mode, send_parent_value_2},
+                  {parent, Self},
+                  {value, Value}]},
+                {count_process, 3},
+                {timeout_init, limit_min},
+                {max_t, 1},
+                {options,
+                 [{automatic_loading, false}]}]
+               || Value <- [987453, 12, 467]]}]}]}]
+        ], infinity),
+    [{service_ids, ServiceIds} | Config];
 init_per_testcase(TestCase, Config) ->
     init_per_testcase(TestCase),
     {ok, ServiceIds} = cloudi_service_api:services_add([
@@ -154,6 +207,17 @@ init_per_testcase(TestCase, Config) ->
         ], infinity),
     [{service_ids, ServiceIds} | Config].
 
+end_per_testcase(TestCase, Config)
+    when TestCase =:= t_stop_when_done_1;
+         TestCase =:= t_stop_when_done_2 ->
+    end_per_testcase(TestCase),
+    case lists:keytake(service_ids, 1, Config) of
+        {value, {_, ServiceIds}, NewConfig} ->
+            _ = cloudi_service_api:services_remove(ServiceIds, infinity),
+            NewConfig;
+        false ->
+            Config
+    end;
 end_per_testcase(TestCase, Config) ->
     end_per_testcase(TestCase),
     case lists:keytake(service_ids, 1, Config) of
@@ -263,6 +327,24 @@ t_batch_4(_Config) ->
     true = Received0 == [987453, 987453, 987453, 987453, 987453, 987453,
                          987453, 987453, 987453, 987453, 987453, 987453],
     nothing = receive Something -> Something after 1000 -> nothing end,
+    ok.
+
+t_stop_when_done_1(Config) ->
+    {ok, Received0} = receive_messages(3), % 1 message from 3 processes
+    true = Received0 == [987453, 12, 467],
+    nothing = receive Something -> Something after 1000 -> nothing end,
+    {_, [ServiceId]} = lists:keyfind(service_ids, 1, Config),
+    {error, not_found} = cloudi_service_api:
+                         service_subscriptions(ServiceId, infinity),
+    ok.
+
+t_stop_when_done_2(Config) ->
+    {ok, Received0} = receive_messages(9), % 3 messages from 3 processes
+    true = Received0 == [987453, 987453, 987453, 12, 12, 12, 467, 467, 467],
+    nothing = receive Something -> Something after 1000 -> nothing end,
+    {_, [ServiceId]} = lists:keyfind(service_ids, 1, Config),
+    {error, not_found} = cloudi_service_api:
+                         service_subscriptions(ServiceId, infinity),
     ok.
 
 %%%------------------------------------------------------------------------

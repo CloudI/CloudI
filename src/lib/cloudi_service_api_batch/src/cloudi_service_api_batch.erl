@@ -185,23 +185,25 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     [PurgeOnError, QueuesList,
      StopWhenDone] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(PurgeOnError),
+    false = cloudi_service_name:pattern(Prefix),
+    1 = cloudi_service:process_count_max(Dispatcher),
+    cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
+    Service = cloudi_service:self(Dispatcher),
     if
         StopWhenDone =:= true ->
             [_ | _] = QueuesList;
         StopWhenDone =:= false ->
             ok
     end,
-    false = cloudi_service_name:pattern(Prefix),
-    1 = cloudi_service:process_count_max(Dispatcher),
-    cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
-    Service = cloudi_service:self(Dispatcher),
-    State0 = #state{purge_on_error = PurgeOnError,
-                    stop_when_done = StopWhenDone,
-                    service = Service},
-    StateN = lists:foldl(fun({QueueName, Configs}, State1) ->
-        element(2, queue_add(QueueName, Configs, State1))
-    end, State0, QueuesList),
-    {ok, StateN}.
+    case QueuesList of
+        [] ->
+            ok;
+        [_ | _] ->
+            Service ! {init, QueuesList}
+    end,
+    {ok, #state{purge_on_error = PurgeOnError,
+                stop_when_done = StopWhenDone,
+                service = Service}}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
@@ -216,6 +218,9 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
     end,
     {reply, Response, StateNew}.
 
+cloudi_service_handle_info({init, QueuesList},
+                           State, _Dispatcher) ->
+    {noreply, queue_adds(QueuesList, State)};
 cloudi_service_handle_info({aspects_init_after, QueueName, TimeoutInit},
                            State, _Dispatcher) ->
     {noreply, running_init(QueueName, TimeoutInit, State)};
@@ -232,7 +237,7 @@ cloudi_service_handle_info({terminated, QueueName, Reason},
     case running_stopped(PurgeQueue, QueueName, State) of
         #state{stop_when_done = true,
                queue_count = 0} = StateNew ->
-            {stop, {shutdown, stop_when_done}, StateNew};
+            {stop, shutdown, StateNew};
         StateNew ->
             {noreply, StateNew}
     end.
@@ -296,6 +301,12 @@ queue_restart(QueueName,
             {error, not_found}
     end,
     {Result, State}.
+
+queue_adds([], State) ->
+    State;
+queue_adds([{QueueName, Configs} | QueuesList], State) ->
+    {_, StateNew} = queue_add(QueueName, Configs, State),
+    queue_adds(QueuesList, StateNew).
 
 running_init(QueueName, TimeoutInit,
              #state{queues = Queues} = State) ->
