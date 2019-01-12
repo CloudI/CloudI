@@ -60,6 +60,12 @@
         % Should the batch queue contents be purged when
         % a queue's currently running service fails
         % with an error and is unable to restart.
+-define(DEFAULT_QUEUES,                        []).
+        % List of {QueueName, Configs} to be used for services_add
+-define(DEFAULT_STOP_WHEN_DONE,             false).
+        % If queues contains entries, cause the
+        % cloudi_service_api_batch service to stop successfully
+        % once all queued service configurations have finished executing.
 
 -define(NAME_BATCH, "batch").
 -define(TIMEOUT_DELTA, 100). % milliseconds
@@ -80,6 +86,8 @@
 -record(state,
     {
         purge_on_error :: boolean(),
+        stop_when_done :: boolean(),
+        queue_count = 0 :: non_neg_integer(),
         queues = cloudi_x_trie:new()
             :: cloudi_x_trie:cloudi_x_trie(), % queue name -> queue
         service :: cloudi_service:source()
@@ -171,27 +179,42 @@ services_restart(Agent, Prefix, [I | _] = QueueName, Timeout)
 
 cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {purge_on_error,               ?DEFAULT_PURGE_ON_ERROR}],
-    [PurgeOnError] = cloudi_proplists:take_values(Defaults, Args),
+        {purge_on_error,               ?DEFAULT_PURGE_ON_ERROR},
+        {queues,                       ?DEFAULT_QUEUES},
+        {stop_when_done,               ?DEFAULT_STOP_WHEN_DONE}],
+    [PurgeOnError, QueuesList,
+     StopWhenDone] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(PurgeOnError),
+    if
+        StopWhenDone =:= true ->
+            [_ | _] = QueuesList;
+        StopWhenDone =:= false ->
+            ok
+    end,
     false = cloudi_service_name:pattern(Prefix),
     1 = cloudi_service:process_count_max(Dispatcher),
     cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
     Service = cloudi_service:self(Dispatcher),
-    {ok, #state{purge_on_error = PurgeOnError,
-                service = Service}}.
+    State0 = #state{purge_on_error = PurgeOnError,
+                    stop_when_done = StopWhenDone,
+                    service = Service},
+    StateN = lists:foldl(fun({QueueName, Configs}, State1) ->
+        element(2, queue_add(QueueName, Configs, State1))
+    end, State0, QueuesList),
+    {ok, StateN}.
 
 cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
-    case Request of
+    {Response, StateNew} = case Request of
         {services_add, QueueName, Configs} ->
             queue_add(QueueName, Configs, State);
         {services_remove, QueueName} ->
             queue_remove(QueueName, State);
         {services_restart, QueueName} ->
             queue_restart(QueueName, State)
-    end.
+    end,
+    {reply, Response, StateNew}.
 
 cloudi_service_handle_info({aspects_init_after, QueueName, TimeoutInit},
                            State, _Dispatcher) ->
@@ -206,7 +229,13 @@ cloudi_service_handle_info({terminate, QueueName, Reason, Timeout},
 cloudi_service_handle_info({terminated, QueueName, Reason},
                            State, _Dispatcher) ->
     PurgeQueue = purge_queue(Reason, State),
-    {noreply, running_stopped(PurgeQueue, QueueName, State)}.
+    case running_stopped(PurgeQueue, QueueName, State) of
+        #state{stop_when_done = true,
+               queue_count = 0} = StateNew ->
+            {stop, {shutdown, stop_when_done}, StateNew};
+        StateNew ->
+            {noreply, StateNew}
+    end.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
@@ -216,34 +245,41 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 queue_add(QueueName, [Config | ConfigsTail] = Configs,
-          #state{queues = Queues,
+          #state{queue_count = QueueCount,
+                 queues = Queues,
                  service = Service} = State) ->
-    QueueNew = case cloudi_x_trie:find(QueueName, Queues) of
+    {QueueCountNew,
+     QueueNew} = case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{count = Count,
                     data = Data} = Queue} ->
             DataNew = queue:join(Data, queue:from_list(Configs)),
-            Queue#queue{count = Count + length(Configs),
-                        data = DataNew};
+            {QueueCount,
+             Queue#queue{count = Count + length(Configs),
+                         data = DataNew}};
         error ->
             Data = queue:from_list(ConfigsTail),
             ServiceId = service_add(Config, QueueName, Service),
-            #queue{count = length(ConfigsTail),
-                   data = Data,
-                   service_id = ServiceId}
+            {QueueCount + 1,
+             #queue{count = length(ConfigsTail),
+                    data = Data,
+                    service_id = ServiceId}}
     end,
     #queue{count = CountNew} = QueueNew,
-    {reply, CountNew,
-     State#state{queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}}.
+    {CountNew,
+     State#state{queue_count = QueueCountNew,
+                 queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}}.
 
 queue_remove(QueueName,
-             #state{queues = Queues} = State) ->
+             #state{queue_count = QueueCount,
+                    queues = Queues} = State) ->
     case cloudi_x_trie:find(QueueName, Queues) of
         {ok, #queue{service_id = ServiceId}} ->
             cloudi_service_api:services_remove([ServiceId], infinity),
-            {reply, ok,
-             State#state{queues = cloudi_x_trie:erase(QueueName, Queues)}};
+            {ok,
+             State#state{queue_count = QueueCount - 1,
+                         queues = cloudi_x_trie:erase(QueueName, Queues)}};
         error ->
-            {reply, {error, not_found}, State}
+            {{error, not_found}, State}
     end.
 
 queue_restart(QueueName,
@@ -259,7 +295,7 @@ queue_restart(QueueName,
         error ->
             {error, not_found}
     end,
-    {reply, Result, State}.
+    {Result, State}.
 
 running_init(QueueName, TimeoutInit,
              #state{queues = Queues} = State) ->
@@ -337,38 +373,49 @@ running_stopping(QueueName, Reason, Timeout,
     end.
 
 running_stopped(true, QueueName,
-                #state{queues = Queues} = State) ->
+                #state{queue_count = QueueCount,
+                       queues = Queues} = State) ->
     #queue{terminate = Terminate} = cloudi_x_trie:fetch(QueueName, Queues),
-    QueuesNew = if
+    {QueueCountNew,
+     QueuesNew} = if
         Terminate =:= true ->
-            cloudi_x_trie:erase(QueueName, Queues);
+            {QueueCount - 1,
+             cloudi_x_trie:erase(QueueName, Queues)};
         Terminate =:= false ->
             % terminate_timer was cancelled after the message was queued
-            Queues
+            {QueueCount,
+             Queues}
     end,
-    State#state{queues = QueuesNew};
+    State#state{queue_count = QueueCountNew,
+                queues = QueuesNew};
 running_stopped(false, QueueName,
-                #state{queues = Queues,
+                #state{queue_count = QueueCount,
+                       queues = Queues,
                        service = Service} = State) ->
-    QueuesNew = case cloudi_x_trie:fetch(QueueName, Queues) of
+    {QueueCountNew,
+     QueuesNew} = case cloudi_x_trie:fetch(QueueName, Queues) of
         #queue{terminate = false} ->
             % terminate_timer was cancelled after the message was queued
-            Queues;
+            {QueueCount,
+             Queues};
         #queue{count = 0} ->
-            cloudi_x_trie:erase(QueueName, Queues);
+            {QueueCount - 1,
+             cloudi_x_trie:erase(QueueName, Queues)};
         #queue{count = Count,
                data = Data} = Queue ->
             {{value, Config}, DataNew} = queue:out(Data),
             ServiceId = service_add(Config, QueueName, Service),
-            cloudi_x_trie:store(QueueName,
-                                Queue#queue{count = Count - 1,
-                                            data = DataNew,
-                                            service_id = ServiceId,
-                                            terminate = false,
-                                            terminate_timer = undefined},
-                                Queues)
+            {QueueCount,
+             cloudi_x_trie:store(QueueName,
+                                 Queue#queue{count = Count - 1,
+                                             data = DataNew,
+                                             service_id = ServiceId,
+                                             terminate = false,
+                                             terminate_timer = undefined},
+                                 Queues)}
     end,
-    State#state{queues = QueuesNew}.
+    State#state{queue_count = QueueCountNew,
+                queues = QueuesNew}.
 
 purge_queue(Reason, #state{purge_on_error = true}) ->
     case Reason of

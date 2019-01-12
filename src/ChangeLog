@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-01-12 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add cloudi_service_api_batch arguments queues and stop_when_done
+      (can allow cloudi_service_api_batch service executions to be
+       nested if necessary)
+
 2019-01-11 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add cloudi_service_api_batch services_remove and
