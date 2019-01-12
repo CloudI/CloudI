@@ -62,6 +62,9 @@
         % with an error and is unable to restart.
 -define(DEFAULT_QUEUES,                        []).
         % List of {QueueName, Configs} to be used for services_add
+-define(DEFAULT_QUEUES_STATIC,              false).
+        % Disable dynamic modifications to the queues
+        % (disables the external interface).
 -define(DEFAULT_STOP_WHEN_DONE,             false).
         % If queues contains entries, cause the
         % cloudi_service_api_batch service to stop successfully
@@ -181,20 +184,29 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {purge_on_error,               ?DEFAULT_PURGE_ON_ERROR},
         {queues,                       ?DEFAULT_QUEUES},
+        {queues_static,                ?DEFAULT_QUEUES_STATIC},
         {stop_when_done,               ?DEFAULT_STOP_WHEN_DONE}],
-    [PurgeOnError, QueuesList,
+    [PurgeOnError, QueuesList, QueuesStatic,
      StopWhenDone] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(PurgeOnError),
+    true = is_boolean(QueuesStatic),
+    true = is_boolean(StopWhenDone),
     false = cloudi_service_name:pattern(Prefix),
     1 = cloudi_service:process_count_max(Dispatcher),
-    cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
     Service = cloudi_service:self(Dispatcher),
     case QueuesList of
         [] ->
+            false = QueuesStatic,
             false = StopWhenDone,
             ok;
         [_ | _] ->
             Service ! {init, QueuesList}
+    end,
+    if
+        QueuesStatic =:= true ->
+            ok;
+        QueuesStatic =:= false ->
+            cloudi_service:subscribe(Dispatcher, ?NAME_BATCH)
     end,
     {ok, #state{purge_on_error = PurgeOnError,
                 stop_when_done = StopWhenDone,
