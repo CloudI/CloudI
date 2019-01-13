@@ -65,14 +65,12 @@
 -define(DEFAULT_QUEUES_STATIC,              false).
         % Disable dynamic modifications to the queues
         % (disables the external interface).
+        % If queues_static is set to true,
+        % stop_when_done must also be set to true.
 -define(DEFAULT_STOP_WHEN_DONE,             false).
         % If queues contains entries, cause the
         % cloudi_service_api_batch service to stop successfully
         % once all queued service configurations have finished executing.
-
--define(NAME_BATCH, "batch").
--define(TIMEOUT_DELTA, 100). % milliseconds
--define(TERMINATE_INTERVAL, 500). % milliseconds
 
 -record(queue,
     {
@@ -95,6 +93,12 @@
             :: cloudi_x_trie:cloudi_x_trie(), % queue name -> queue
         service :: cloudi_service:source()
     }).
+
+-define(NAME_BATCH, "batch").
+-define(FORMAT_ERLANG, "erl").
+-define(FORMAT_JSON, "json").
+-define(TIMEOUT_DELTA, 100). % milliseconds
+-define(TERMINATE_INTERVAL, 500). % milliseconds
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -204,24 +208,58 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     end,
     if
         QueuesStatic =:= true ->
+            true = StopWhenDone,
             ok;
         QueuesStatic =:= false ->
-            cloudi_service:subscribe(Dispatcher, ?NAME_BATCH)
+            cloudi_service:subscribe(Dispatcher, ?NAME_BATCH),
+            Interface = [{"services_add", "/post"},
+                         {"services_remove", "/get"},
+                         {"services_restart", "/get"}],
+            Suffixes = lists:flatmap(fun({MethodName, FormatSuffix}) ->
+                lists:flatmap(fun(Format) ->
+                    FormatName = "/?/" ++ MethodName ++ "." ++ Format,
+                    [FormatName,
+                     FormatName ++ FormatSuffix]
+                end, [?FORMAT_ERLANG, ?FORMAT_JSON])
+            end, Interface),
+            lists:foreach(fun(Suffix) ->
+                cloudi_service:subscribe(Dispatcher, ?NAME_BATCH ++ Suffix)
+            end, Suffixes)
     end,
     {ok, #state{purge_on_error = PurgeOnError,
                 stop_when_done = StopWhenDone,
                 service = Service}}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, Request,
+cloudi_service_handle_request(_Type, Name, Pattern, _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
-    {Response, StateNew} = case Request of
-        {services_add, QueueName, Configs} ->
-            queue_add(QueueName, Configs, State);
-        {services_remove, QueueName} ->
-            queue_remove(QueueName, State);
-        {services_restart, QueueName} ->
-            queue_restart(QueueName, State)
+    {Response,
+     StateNew} = case cloudi_service_name:parse_with_suffix(Name, Pattern) of
+        {[], _} ->
+            case Request of
+                {services_add, QueueName, Configs} ->
+                    queue_add(QueueName, Configs, State);
+                {services_remove, QueueName} ->
+                    queue_remove(QueueName, State);
+                {services_restart, QueueName} ->
+                    queue_restart(QueueName, State)
+            end;
+        {[QueueName], "/" ++ MethodSuffix} ->
+            MethodFormat = cloudi_string:beforel($/, MethodSuffix, input),
+            {MethodName, Format} = cloudi_string:splitr($., MethodFormat),
+            case MethodName of
+                "services_add" ->
+                    Configs = external_format_from(Format, services_add,
+                                                   Request),
+                    external_format_to(Format, services_add,
+                                       queue_add(QueueName, Configs, State));
+                "services_remove" ->
+                    external_format_to(Format, services_remove,
+                                       queue_remove(QueueName, State));
+                "services_restart" ->
+                    external_format_to(Format, services_restart,
+                                       queue_restart(QueueName, State))
+            end
     end,
     {reply, Response, StateNew}.
 
@@ -314,6 +352,16 @@ queue_adds([], State) ->
 queue_adds([{QueueName, Configs} | QueuesList], State) ->
     {_, StateNew} = queue_add(QueueName, Configs, State),
     queue_adds(QueuesList, StateNew).
+
+external_format_from(?FORMAT_ERLANG, Method, Request) ->
+    cloudi_service_api_requests:from_erl(Method, Request);
+external_format_from(?FORMAT_JSON, Method, Request) ->
+    cloudi_service_api_requests:from_json(Method, Request).
+
+external_format_to(?FORMAT_ERLANG, _Method, {Response, State}) ->
+    {convert_term_to_erlang(Response), State};
+external_format_to(?FORMAT_JSON, Method, {Response, State}) ->
+    {convert_term_to_json(Response, Method), State}.
 
 running_init(QueueName, TimeoutInit,
              #state{queues = Queues} = State) ->
@@ -518,4 +566,25 @@ add_option(Type, Option, Options, QueueName, Service) ->
         false ->
             [{Option, [Aspect]} | Options]
     end.
+
+%convert_term_to_erlang({ok, Result}) ->
+%    convert_term_to_erlang_string(Result);
+convert_term_to_erlang(Result) ->
+    convert_term_to_erlang_string(Result).
+
+convert_term_to_erlang_string(Result) ->
+    cloudi_string:format_to_binary("~p", [Result]).
+
+convert_term_to_json(ok, _) ->
+    json_encode([{<<"success">>, true}]);
+convert_term_to_json({error, Reason}, _) ->
+    ReasonBinary = cloudi_string:term_to_binary_compact(Reason),
+    json_encode([{<<"success">>, false},
+                 {<<"error">>, ReasonBinary}]);
+convert_term_to_json(Term, Method) ->
+    json_encode([{<<"success">>, true},
+                 {erlang:atom_to_binary(Method, utf8), Term}]).
+
+json_encode(Term) ->
+    cloudi_x_jsx:encode(Term, [{indent, 1}]).
 

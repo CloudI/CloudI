@@ -9,8 +9,10 @@
         ]},
    {registered, []},
    {applications, [
+        cloudi_service_api_requests,
         cloudi_core,
         cloudi_x_trie,
+        cloudi_x_jsx,
         stdlib,
         kernel
         ]}]}.

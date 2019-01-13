@@ -9,6 +9,8 @@
        nested if necessary)
     * Add cloudi_service_api_batch CT tests for the arguments
       queues, queues_static and stop_when_done
+    * Add HTTP support to cloudi_service_api_batch
+    * Add cloudi_service_api_requests from/to format conversion functions
 
 2019-01-11 Michael Truog   <mjtruog at protonmail dot com>
 
