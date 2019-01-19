@@ -59,7 +59,10 @@
 -define(DEFAULT_PURGE_ON_ERROR,              true).
         % Should the batch queue contents be purged when
         % a queue's currently running service fails
-        % with an error and is unable to restart.
+        % with an error and is unable to restart
+        % (n.b., if a service configuration is unable
+        %  to start (initialization fails) the queue is
+        %  always purged with the error logged).
 -define(DEFAULT_QUEUES,                        []).
         % List of {QueueName, Configs} to be used for services_add
 -define(DEFAULT_QUEUES_STATIC,              false).
@@ -119,7 +122,7 @@
                    Prefix :: service_name(),
                    QueueName :: nonempty_string(),
                    Configs :: service_configurations()) ->
-    module_response(CountQueued :: non_neg_integer()).
+    module_response(CountQueued :: non_neg_integer() | {error, purged}).
 
 services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs)
     when is_integer(I) ->
@@ -131,7 +134,7 @@ services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs)
                    QueueName :: nonempty_string(),
                    Configs :: service_configurations(),
                    Timeout :: timeout_milliseconds()) ->
-    module_response(CountQueued :: non_neg_integer()).
+    module_response(CountQueued :: non_neg_integer() | {error, purged}).
 
 services_add(Agent, Prefix, [I | _] = QueueName, [_ | _] = Configs, Timeout)
     when is_integer(I) ->
@@ -307,17 +310,29 @@ queue_add(QueueName, [Config | ConfigsTail] = Configs,
              Queue#queue{count = Count + length(Configs),
                          data = DataNew}};
         error ->
-            Data = queue:from_list(ConfigsTail),
-            ServiceId = service_add(Config, QueueName, Service),
-            {QueueCount + 1,
-             #queue{count = length(ConfigsTail),
-                    data = Data,
-                    service_id = ServiceId}}
+            case service_add(Config, QueueName, Service) of
+                {ok, ServiceId} ->
+                    Data = queue:from_list(ConfigsTail),
+                    {QueueCount + 1,
+                     #queue{count = length(ConfigsTail),
+                            data = Data,
+                            service_id = ServiceId}};
+                {error, _} ->
+                    {QueueCount, undefined}
+            end
     end,
-    #queue{count = CountNew} = QueueNew,
-    {CountNew,
+    {Response,
+     QueuesNew} = case QueueNew of
+        #queue{count = CountNew} ->
+            {CountNew,
+             cloudi_x_trie:store(QueueName, QueueNew, Queues)};
+        undefined ->
+            {{error, purged},
+             Queues}
+    end,
+    {Response,
      State#state{queue_count = QueueCountNew,
-                 queues = cloudi_x_trie:store(QueueName, QueueNew, Queues)}}.
+                 queues = QueuesNew}}.
 
 queue_remove(QueueName,
              #state{queue_count = QueueCount,
@@ -470,15 +485,19 @@ running_stopped(false, QueueName,
         #queue{count = Count,
                data = Data} = Queue ->
             {{value, Config}, DataNew} = queue:out(Data),
-            ServiceId = service_add(Config, QueueName, Service),
-            {QueueCount,
-             cloudi_x_trie:store(QueueName,
-                                 Queue#queue{count = Count - 1,
-                                             data = DataNew,
-                                             service_id = ServiceId,
-                                             terminate = false,
-                                             terminate_timer = undefined},
-                                 Queues)}
+            case service_add(Config, QueueName, Service) of
+                {ok, ServiceId} ->
+                    QueueNew = Queue#queue{count = Count - 1,
+                                           data = DataNew,
+                                           service_id = ServiceId,
+                                           terminate = false,
+                                           terminate_timer = undefined},
+                    {QueueCount,
+                     cloudi_x_trie:store(QueueName, QueueNew, Queues)};
+                {error, _} ->
+                    {QueueCount - 1,
+                     cloudi_x_trie:erase(QueueName, Queues)}
+            end
     end,
     State#state{queue_count = QueueCountNew,
                 queues = QueuesNew}.
@@ -499,9 +518,11 @@ service_add(Config, QueueName, Service) ->
     ConfigBatch = service_add_config(Config, QueueName, Service),
     case cloudi_service_api:services_add([ConfigBatch], infinity) of
         {ok, [ServiceId]} ->
-            ServiceId;
-        {error, _} = Error ->
-            erlang:exit({services_add, Error})
+            {ok, ServiceId};
+        {error, Reason} = Error ->
+            ?LOG_ERROR("config ~p~nfailure ~p purged \"~s\" queue",
+                       [ConfigBatch, Reason, QueueName]),
+            Error
     end.
 
 service_add_config(#internal{options = Options} = ServiceConfig,

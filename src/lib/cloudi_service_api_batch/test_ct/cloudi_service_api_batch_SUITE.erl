@@ -27,7 +27,8 @@
          t_batch_3/1,
          t_batch_4/1,
          t_stop_when_done_1/1,
-         t_stop_when_done_2/1]).
+         t_stop_when_done_2/1,
+         t_batch_add_error_1/1]).
 
 -record(state,
     {
@@ -111,7 +112,8 @@ groups() ->
        t_batch_3,
        t_batch_4,
        t_stop_when_done_1,
-       t_stop_when_done_2]}].
+       t_stop_when_done_2,
+       t_batch_add_error_1]}].
 
 suite() ->
     [{ct_hooks, [cth_surefire]},
@@ -347,6 +349,28 @@ t_stop_when_done_2(Config) ->
     {_, [ServiceId]} = lists:keyfind(service_ids, 1, Config),
     {error, not_found} = cloudi_service_api:
                          service_subscriptions(ServiceId, infinity),
+    ok.
+
+t_batch_add_error_1(_Config) ->
+    Context0 = cloudi:new(),
+    ValuesCount0 = 10,
+    Values0 = lists:seq(1, ValuesCount0),
+    Configs0 = [[{invalid_configuration, true},
+                 {module, ?MODULE},
+                 {args,
+                  [{mode, send_parent_value_1},
+                   {parent, self()},
+                   {value, Value0}]},
+                 {timeout_init, limit_min},
+                 {max_t, 1},
+                 {options,
+                  [{automatic_loading, false}]}] || Value0 <- Values0],
+    {{ok, {error, purged}},
+     _Context1} = cloudi_service_api_batch:services_add(Context0,
+                                                        ?SERVICE_PREFIX,
+                                                        ?QUEUE0,
+                                                        Configs0),
+    nothing = receive Something -> Something after 1000 -> nothing end,
     ok.
 
 %%%------------------------------------------------------------------------
