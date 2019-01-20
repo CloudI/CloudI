@@ -921,7 +921,9 @@ handle_event(EventType, EventContent, StateName, State) ->
         Reason == "" ->
             shutdown;
         is_list(Reason) ->
-            {shutdown, Reason}
+            {shutdown, Reason};
+        true ->
+            {shutdown, cloudi_string:term_to_list_compact(Reason)}
     end,
     if
         is_reference(InitTimer) ->

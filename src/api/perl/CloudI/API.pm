@@ -1008,7 +1008,7 @@ sub shutdown
     my ($reason) = @_;
     if (! defined($reason))
     {
-        $reason = "";
+        $reason = '';
     }
     $self->_send(Erlang::term_to_binary([
         Erlang::OtpErlangAtom->new('shutdown'), $reason]));

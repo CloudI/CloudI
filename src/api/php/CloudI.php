@@ -827,8 +827,8 @@ class API
 
     public function shutdown($reason = null)
     {
-        if (is_null($shutdown))
-            $shutdown = "";
+        if (is_null($reason))
+            $reason = "";
         $this->send(\Erlang\term_to_binary(
             array(new \Erlang\OtpErlangAtom('shutdown'), $reason)));
     }
