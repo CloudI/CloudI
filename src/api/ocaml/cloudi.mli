@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -184,6 +184,9 @@ val timeout_terminate : 's Instance.t -> int
 
 (** blocks to process incoming CloudI service requests *)
 val poll : 's Instance.t -> int -> (bool, string) result
+
+(** shutdown the service successfully *)
+val shutdown : ?reason:string -> 's Instance.t -> (unit, string) result
 
 (** parses "text_pairs" in service request info *)
 val info_key_value_parse : string -> (string, string list) Hashtbl.t

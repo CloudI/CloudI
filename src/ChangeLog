@@ -1,6 +1,19 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-01-19 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add the CloudI API function shutdown to all external service
+      programming languages (C/C++, Go, Haskell, Java, Javascript,
+      OCaml, Perl, PHP, Python, Ruby) to allow external services
+      a way to have a successful shutdown without using the
+      CloudI Service API services_remove
+      (the functionality is equivalent to an internal service using
+       {stop, {shutdown, Reason}, State} or
+       {stop, shutdown, State} if Reason == "")
+    * Fix pylint errors in the Python CloudI API and the
+      Python integration tests
+
 2019-01-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change cloudi_service_api_batch to log an error when

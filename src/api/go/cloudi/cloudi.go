@@ -5,7 +5,7 @@ package cloudi
 //
 // MIT License
 //
-// Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1211,6 +1211,32 @@ func (api *Instance) pollRequest(timeout int32, external bool) (bool, error) {
 // Poll blocks to process incoming CloudI service requests
 func (api *Instance) Poll(timeout int32) (bool, error) {
 	return api.pollRequest(timeout, true)
+}
+
+// Shutdown the service successfully
+func (api *Instance) Shutdown(extra ...interface{}) error {
+	extraArity := len(extra)
+	if extraArity > 1 {
+		return invalidInputErrorNew()
+	}
+	reason := ""
+	for _, extraArg := range extra {
+		switch arg := extraArg.(type) {
+		case string:
+			reason = arg
+		default:
+			return invalidInputErrorNew()
+		}
+	}
+	shutdown, err := erlang.TermToBinary([]interface{}{erlang.OtpErlangAtom("shutdown"), reason}, -1)
+	if err != nil {
+		return err
+	}
+	err = api.send(shutdown)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (api *Instance) textKeyValueParse(text []byte) map[string][]string {

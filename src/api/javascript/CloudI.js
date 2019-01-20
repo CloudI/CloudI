@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1051,6 +1051,17 @@ CloudI.API.prototype.poll = function (callback, timeout) {
     timers.setTimeout(function () {
         API._poll_block(callback, timeout);
     }, 0);
+};
+
+CloudI.API.prototype.shutdown = function (callback, reason) {
+    callback = typeof callback !== 'undefined' ?
+               callback : function () {};
+    reason = typeof reason !== 'undefined' ?
+             reason : "";
+    this._poll_wait(function (API) {
+        API._send([new Erlang.OtpErlangAtom('shutdown'), reason]);
+        callback();
+    });
 };
 
 CloudI.API.prototype._text_key_value_parse = function (text) {

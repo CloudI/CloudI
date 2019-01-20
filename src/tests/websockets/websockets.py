@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -95,7 +95,7 @@ class _Task(threading.Thread):
         trans_ids = self.__api.mcast_async(name[:-6] + '/websocket',
                                            b'notification: got "' +
                                            request + b'" 1 second ago')
-        if len(trans_ids) == 0:
+        if trans_ids == []:
             print('websockets: (no websockets connected?)')
         else:
             for check in trans_ids:
@@ -115,4 +115,3 @@ def _main():
 
 if __name__ == '__main__':
     _main()
-

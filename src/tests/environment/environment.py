@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -45,6 +45,7 @@ class _Task(threading.Thread):
         try:
             self.__check_environment()
             # idle service with no subscriptions
+            self.__api.shutdown('environment checked successfully')
             result = self.__api.poll()
             assert result is False
         except TerminateException:

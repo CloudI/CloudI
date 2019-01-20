@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1742,6 +1742,37 @@ int cloudi_poll(cloudi_instance_t * p,
     return poll_request(p, timeout, 1);
 }
 
+int cloudi_shutdown(cloudi_instance_t * p,
+                    char const * const reason)
+{
+    buffer_t & buffer = *reinterpret_cast<buffer_t *>(p->buffer_send);
+    int index = 0;
+    if (p->use_header)
+        index = 4;
+
+    if (ei_encode_version(buffer.get<char>(), &index))
+        return cloudi_error_ei_encode;
+    if (ei_encode_tuple_header(buffer.get<char>(), &index, 2))
+        return cloudi_error_ei_encode;
+    if (ei_encode_atom(buffer.get<char>(), &index, "shutdown"))
+        return cloudi_error_ei_encode;
+    if (reason == 0)
+    {
+        if (ei_encode_string(buffer.get<char>(), &index, ""))
+            return cloudi_error_ei_encode;
+    }
+    else
+    {
+        if (ei_encode_string(buffer.get<char>(), &index, reason))
+            return cloudi_error_ei_encode;
+    }
+    int result = write_exact(p->fd_out, p->use_header,
+                             buffer.get<char>(), index);
+    if (result)
+        return result;
+    return cloudi_success;
+}
+
 static char const ** text_key_value_parse(void const * const text,
                                           uint32_t const text_size)
 {
@@ -2236,6 +2267,18 @@ int API::poll(int timeout) const
 {
     return cloudi_poll(m_api,
                        timeout);
+}
+
+int API::shutdown() const
+{
+    return cloudi_shutdown(m_api,
+                           "");
+}
+
+int API::shutdown(char const * const reason) const
+{
+    return cloudi_shutdown(m_api,
+                           reason);
 }
 
 char const ** API::info_key_value_parse(void const * const message_info,

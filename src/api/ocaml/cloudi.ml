@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -1293,6 +1293,22 @@ let timeout_terminate (api : 's Instance.t) : int =
 
 let poll (api : 's Instance.t) (timeout : int) : (bool, string) result =
   poll_request api timeout true
+
+let shutdown
+  ?reason:(reason = "")
+  api =
+  match Erlang.term_to_binary (
+    Erlang.OtpErlangTuple ([
+      Erlang.OtpErlangAtom ("shutdown");
+      Erlang.OtpErlangString (reason)])) with
+  | Error (error) ->
+    Error (error)
+  | Ok (shutdown) ->
+    match send api shutdown with
+    | Error (error) ->
+      Error (error)
+    | Ok _ ->
+      Ok (())
 
 let text_key_value_parse text : (string, string list) Hashtbl.t =
   let result = Hashtbl.create 32

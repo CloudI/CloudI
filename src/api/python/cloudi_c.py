@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -322,6 +322,15 @@ class API(object):
         except Exception as exception:
             self.__rethrow_exception(exception)
 
+    def shutdown(self, reason=None):
+        """
+        shutdown the service successfully
+        """
+        kwargs = {}
+        if reason is not None:
+            kwargs['reason'] = reason
+        return self.__api.shutdown(**kwargs)
+
     def __rethrow_exception(self, exception):
         if isinstance(exception, libcloudi_py.message_decoding_exception):
             raise MessageDecodingException(str(exception))
@@ -362,7 +371,7 @@ class InvalidInputException(Exception):
             message = 'Invalid Input'
         Exception.__init__(self, message)
 # XXX backwards-compatibility
-invalid_input_exception = InvalidInputException
+invalid_input_exception = InvalidInputException # pylint: disable=invalid-name
 
 class ReturnSyncException(Exception):
     """
@@ -399,7 +408,7 @@ class MessageDecodingException(Exception):
     def __init__(self, message):
         Exception.__init__(self, message)
 # XXX backwards-compatibility
-message_decoding_exception = MessageDecodingException
+message_decoding_exception = MessageDecodingException # pylint: disable=invalid-name
 
 class TerminateException(Exception):
     """
@@ -415,7 +424,7 @@ class TerminateException(Exception):
         """
         return self.__timeout
 # XXX backwards-compatibility
-terminate_exception = TerminateException
+terminate_exception = TerminateException # pylint: disable=invalid-name
 
 # force unbuffered stdout/stderr handling without external configuration
 if sys.stderr.__class__.__name__ != '_unbuffered':
@@ -448,4 +457,3 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
 
     sys.stdout = _unbuffered(sys.stdout)
     sys.stderr = _unbuffered(sys.stderr)
-

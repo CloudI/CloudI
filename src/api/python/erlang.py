@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -371,6 +371,7 @@ class frozendict(dict):
     pop = popitem = setdefault = update = _blocked_attribute
     def __new__(cls, *args, **kw):
         # pylint: disable=unused-argument
+        # pylint: disable=too-many-nested-blocks
         new = dict.__new__(cls)
         args_ = []
         for arg in args:
@@ -485,8 +486,8 @@ def _binary_to_term(i, data):
         i += 1
         if tag == _TAG_REFERENCE_EXT:
             return (i, OtpErlangReference(node, id_value, creation))
-        elif tag == _TAG_PORT_EXT:
-            return (i, OtpErlangPort(node, id_value, creation))
+        # tag == _TAG_PORT_EXT
+        return (i, OtpErlangPort(node, id_value, creation))
     elif tag == _TAG_PID_EXT:
         i, node = _binary_to_atom(i, data)
         id_value = data[i:i + 4]
@@ -569,8 +570,7 @@ def _binary_to_term(i, data):
             return (i, True)
         elif atom_name == b'false':
             return (i, False)
-        else:
-            return (i, OtpErlangAtom(atom_name))
+        return (i, OtpErlangAtom(atom_name))
     elif tag == _TAG_MAP_EXT:
         length = struct.unpack(b'>I', data[i:i + 4])[0]
         i += 4
@@ -707,7 +707,7 @@ def _term_to_binary(term):
         return _tuple_to_binary(term)
     elif isinstance(term, bool):
         return OtpErlangAtom(term and b'true' or b'false').binary()
-    elif isinstance(term, int) or isinstance(term, TypeLong):
+    elif isinstance(term, (int, TypeLong)):
         return _long_to_binary(term)
     elif isinstance(term, float):
         return _float_to_binary(term)
@@ -781,14 +781,12 @@ def _dict_to_binary(term):
 def _integer_to_binary(term):
     if 0 <= term <= 255:
         return b_chr(_TAG_SMALL_INTEGER_EXT) + b_chr(term)
-    else:
-        return b_chr(_TAG_INTEGER_EXT) + struct.pack(b'>i', term)
+    return b_chr(_TAG_INTEGER_EXT) + struct.pack(b'>i', term)
 
 def _long_to_binary(term):
     if -2147483648 <= term <= 2147483647:
         return _integer_to_binary(term)
-    else:
-        return _bignum_to_binary(term)
+    return _bignum_to_binary(term)
 
 def _bignum_to_binary(term):
     bignum = abs(term)
@@ -923,4 +921,3 @@ def consult(string_in):
             list_out.append(character)
         i += 1
     return eval(''.join(list_out))
-

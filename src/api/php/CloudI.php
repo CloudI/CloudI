@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -823,6 +823,14 @@ class API
     public function poll($timeout = -1)
     {
         return $this->poll_request($timeout, true);
+    }
+
+    public function shutdown($reason = null)
+    {
+        if (is_null($shutdown))
+            $shutdown = "";
+        $this->send(\Erlang\term_to_binary(
+            array(new \Erlang\OtpErlangAtom('shutdown'), $reason)));
     }
 
     private function text_key_value_parse($text)

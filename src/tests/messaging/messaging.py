@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -450,6 +450,7 @@ class Task(threading.Thread):
                             request_info,
                             ('%d' % request_new).encode('ascii'),
                             timeout, priority, trans_id, pid)
+        return None # execution doesn't get here
 
     def __sequence3_f2(self, request_type, name, pattern,
                        request_info, request,
@@ -513,4 +514,3 @@ def _main():
 
 if __name__ == '__main__':
     _main()
-

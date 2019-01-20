@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -1000,6 +1000,18 @@ sub poll
         $timeout = -1;
     }
     return $self->_poll_request($timeout, 1);
+}
+
+sub shutdown
+{
+    my $self = shift;
+    my ($reason) = @_;
+    if (! defined($reason))
+    {
+        $reason = "";
+    }
+    $self->_send(Erlang::term_to_binary([
+        Erlang::OtpErlangAtom->new('shutdown'), $reason]));
 }
 
 sub _text_key_value_parse

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1219,6 +1219,15 @@ class API
         int8_t priority_default() const;
 
         int poll(int timeout = -1) const;
+
+        int shutdown() const;
+
+        int shutdown(char const * const reason) const;
+
+        inline int shutdown(std::string const & reason) const
+        {
+            return shutdown(reason.c_str());
+        }
 
         char const ** info_key_value_parse(void const * const message_info,
                                            uint32_t const message_info_size)

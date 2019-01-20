@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -252,6 +252,9 @@ int cloudi_recv_async(cloudi_instance_t * p,
 
 int cloudi_poll(cloudi_instance_t * p,
                 int timeout);
+
+int cloudi_shutdown(cloudi_instance_t * p,
+                    char const * const reason);
 
 char const ** cloudi_info_key_value_parse(void const * const request_info,
                                           uint32_t const request_info_size);

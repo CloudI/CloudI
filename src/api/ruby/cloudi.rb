@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -613,6 +613,13 @@ module CloudI
                 timeout = -1
             end
             return poll_request(timeout, true)
+        end
+
+        def shutdown(reason=nil)
+            if reason.nil?
+                reason = ''
+            end
+            send(Erlang.term_to_binary([:shutdown, reason]))
         end
 
         def text_key_value_parse(text)

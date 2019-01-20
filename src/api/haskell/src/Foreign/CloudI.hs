@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -68,6 +68,7 @@ module Foreign.CloudI
     , timeoutSync
     , timeoutTerminate
     , poll
+    , shutdown
     , threadCreate
     , threadsWait
     , infoKeyValueParse
@@ -995,6 +996,22 @@ pollRequest api0@Instance.T{
 poll :: Typeable s => Instance.T s -> Int -> IO (Result (Bool, Instance.T s))
 poll api0 timeout =
     pollRequest api0 timeout True
+
+-- | shutdown the service successfully
+shutdown :: Instance.T s -> Maybe ByteString ->
+    IO (Result (Instance.T s))
+shutdown api0 reasonOpt =
+    let reason = fromMaybe Char8.empty reasonOpt
+        shutdownTerms = Erlang.OtpErlangTuple
+            [ Erlang.OtpErlangAtom (Char8.pack "shutdown")
+            , Erlang.OtpErlangString reason]
+    in
+    case Erlang.termToBinary shutdownTerms (-1) of
+        Left err ->
+            return $ Left $ show err
+        Right shutdownBinary -> do
+            send api0 shutdownBinary
+            return $ Right $ api0
 
 send :: Instance.T s -> LazyByteString -> IO ()
 send Instance.T{

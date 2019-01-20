@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.7.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -913,6 +913,26 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(connection, 'keepalive', State) ->
     {keep_state, State#state{keepalive = received}};
+
+'HANDLE'(connection, {'shutdown', Reason},
+         #state{dispatcher = Dispatcher,
+                init_timer = InitTimer} = State) ->
+    StopReason = if
+        Reason == "" ->
+            shutdown;
+        is_list(Reason) ->
+            {shutdown, Reason}
+    end,
+    if
+        is_reference(InitTimer) ->
+            % initialization was interrupted by the shutdown request
+            cancel_timer_async(InitTimer),
+            ok = cloudi_core_i_services_monitor:
+                 process_init_end(Dispatcher),
+            {stop, StopReason, State#state{init_timer = undefined}};
+        InitTimer =:= undefined ->
+            {stop, StopReason}
+    end;
 
 'HANDLE'(info,
          {'cloudi_service_send_async_retry', Name, RequestInfo, Request,

@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
+ * Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -326,6 +326,8 @@ static PyObject *
 python_cloudi_timeout_terminate(PyObject * self, PyObject *);
 static PyObject *
 python_cloudi_poll(PyObject * self, PyObject *);
+static PyObject *
+python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs);
 
 static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"subscribe",
@@ -391,6 +393,9 @@ static PyMethodDef python_cloudi_instance_object_methods[] = {
     {"poll",
      python_cloudi_poll, METH_VARARGS,
      "Handle incoming requests."},
+    {"shutdown",
+     (PyCFunction) python_cloudi_shutdown, METH_VARARGS | METH_KEYWORDS,
+     "Shutdown the service successfully."},
     {NULL, NULL, 0, NULL} // Sentinel
 };
 
@@ -1363,5 +1368,32 @@ python_cloudi_poll(PyObject * self, PyObject * args)
         }
     }
     return Py_BuildValue("O", Py_False);
+}
+
+static PyObject *
+python_cloudi_shutdown(PyObject * self, PyObject * args, PyObject * kwargs)
+{
+    python_cloudi_instance_object * object =
+        (python_cloudi_instance_object *) self;
+    char const * reason = "";
+    static char const * kwlist[] = {
+        "reason", NULL};
+    if (! PyArg_ParseTupleAndKeywords(args, kwargs,
+                                      "|s:shutdown",
+                                      const_cast<char**>(kwlist),
+                                      &reason))
+    {
+        return NULL;
+    }
+    int result;
+    THREADS_BEGIN;
+    result = object->api->shutdown(reason);
+    THREADS_END;
+    if (result != 0)
+    {
+        python_error(result);
+        return NULL;
+    }
+    Py_RETURN_NONE;
 }
 

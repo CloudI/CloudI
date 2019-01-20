@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -167,7 +167,7 @@ class API(object):
         value = self.__callbacks.get(key, None)
         assert value is not None
         value.popleft()
-        if len(value) == 0:
+        if value == collections.deque([]):
             del self.__callbacks[key]
         self.__send(term_to_binary((OtpErlangAtom(b'unsubscribe'),
                                     pattern)))
@@ -407,13 +407,11 @@ class API(object):
                                     timeout, priority, trans_id, pid)
                 if isinstance(response, tuple):
                     response_info, response = response
-                    if not (isinstance(response_info, bytes) or
-                            isinstance(response_info, TypeUnicode)):
+                    if not isinstance(response_info, (bytes, TypeUnicode)):
                         response_info = b''
                 else:
                     response_info = b''
-                if not (isinstance(response, bytes) or
-                        isinstance(response_info, TypeUnicode)):
+                if not isinstance(response, (bytes, TypeUnicode)):
                     response = b''
             except InvalidInputException as exception:
                 raise exception
@@ -451,13 +449,11 @@ class API(object):
                                     timeout, priority, trans_id, pid)
                 if isinstance(response, tuple):
                     response_info, response = response
-                    if not (isinstance(response_info, bytes) or
-                            isinstance(response_info, TypeUnicode)):
+                    if not isinstance(response_info, (bytes, TypeUnicode)):
                         response_info = b''
                 else:
                     response_info = b''
-                if not (isinstance(response, bytes) or
-                        isinstance(response_info, TypeUnicode)):
+                if not isinstance(response, (bytes, TypeUnicode)):
                     response = b''
             except InvalidInputException as exception:
                 raise exception
@@ -544,9 +540,9 @@ class API(object):
             timeout_value = timeout * 0.001
         fd_in, _, fd_except = select.select([self.__s], [], [self.__s],
                                             timeout_value)
-        if len(fd_except) > 0:
+        if fd_except != []:
             return False
-        if len(fd_in) == 0:
+        if fd_in == []:
             return True
 
         data = b''
@@ -703,9 +699,9 @@ class API(object):
                     timeout_value = timeout * 0.001
             fd_in, _, fd_except = select.select([self.__s], [], [self.__s],
                                                 timeout_value)
-            if len(fd_except) > 0:
+            if fd_except != []:
                 return False
-            if len(fd_in) == 0:
+            if fd_in == []:
                 return True
 
             data = self.__recv(data)
@@ -719,6 +715,15 @@ class API(object):
         blocks to process incoming CloudI service requests
         """
         return self.__poll_request(timeout, True)
+
+    def shutdown(self, reason=None):
+        """
+        shutdown the service successfully
+        """
+        if reason is None:
+            reason = b''
+        self.__send(term_to_binary((OtpErlangAtom(b'shutdown'),
+                                    reason)))
 
     def __text_key_value_parse(self, text):
         # pylint: disable=no-self-use
@@ -770,7 +775,7 @@ class API(object):
                 ready = (len(fragment) == self.__size)
                 if ready:
                     fd_in, _, _ = select.select([self.__s], [], [], 0)
-                    ready = (len(fd_in) > 0)
+                    ready = (fd_in != [])
         return data
 
 class InvalidInputException(Exception):
@@ -780,7 +785,7 @@ class InvalidInputException(Exception):
     def __init__(self):
         Exception.__init__(self, 'Invalid Input')
 # XXX backwards-compatibility
-invalid_input_exception = InvalidInputException
+invalid_input_exception = InvalidInputException # pylint: disable=invalid-name
 
 class ReturnSyncException(Exception):
     """
@@ -817,7 +822,7 @@ class MessageDecodingException(Exception):
     def __init__(self):
         Exception.__init__(self, 'Message Decoding Error')
 # XXX backwards-compatibility
-message_decoding_exception = MessageDecodingException
+message_decoding_exception = MessageDecodingException # pylint: disable=invalid-name
 
 class TerminateException(Exception):
     """
@@ -833,7 +838,7 @@ class TerminateException(Exception):
         """
         return self.__timeout
 # XXX backwards-compatibility
-terminate_exception = TerminateException
+terminate_exception = TerminateException # pylint: disable=invalid-name
 
 # force unbuffered stdout/stderr handling without external configuration
 if sys.stderr.__class__.__name__ != '_unbuffered':
@@ -866,4 +871,3 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
 
     sys.stdout = _unbuffered(sys.stdout)
     sys.stderr = _unbuffered(sys.stderr)
-

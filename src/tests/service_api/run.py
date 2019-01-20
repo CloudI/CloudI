@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -30,6 +30,11 @@ Runtime CloudI Service API Integration Test
 
 import sys
 import os
+import json
+if sys.version_info[0] >= 3:
+    from urllib.request import urlopen
+else:
+    from urllib2 import urlopen
 sys.path.append(
     os.path.sep.join(
         os.path.dirname(
@@ -37,12 +42,7 @@ sys.path.append(
         ).split(os.path.sep)[:-2] + ['service_api', 'python']
     )
 )
-import json
-if sys.version_info[0] >= 3:
-    from urllib.request import urlopen
-else:
-    from urllib2 import urlopen
-from cloudi_service_api import CloudI
+from cloudi_service_api import CloudI # pylint: disable=wrong-import-position
 
 def _main():
     obj = CloudI()
@@ -111,4 +111,3 @@ def _main():
 
 if __name__ == '__main__':
     _main()
-

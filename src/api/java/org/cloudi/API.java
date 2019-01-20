@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -1475,6 +1475,14 @@ public class API
         }
     }
 
+    /**
+     * Blocks to process incoming CloudI service requests
+     *
+     * @return Boolean.FALSE
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
+     */
     public Object poll()
         throws InvalidInputException,
                MessageDecodingException,
@@ -1483,12 +1491,43 @@ public class API
         return poll(-1);
     }
 
+    /**
+     * Blocks to process incoming CloudI service requests
+     *
+     * @return a boolean object to determine if a timeout occurred
+     * @throws InvalidInputException invalid input to internal function call
+     * @throws MessageDecodingException service messaging failure
+     * @throws TerminateException service execution must terminate
+     */
     public Object poll(final int timeout)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
     {
         return poll_request(timeout, true);
+    }
+
+    /**
+     * Shutdown the service successfully
+     */
+    public void shutdown()
+    {
+        shutdown("");
+    }
+
+    /**
+     * Shutdown the service successfully
+     *
+     * @param  reason      the shutdown reason
+     */
+    public void shutdown(final String reason)
+    {
+        OtpOutputStream shutdown = new OtpOutputStream();
+        shutdown.write(OtpExternal.versionTag);
+        final OtpErlangObject[] tuple = {new OtpErlangAtom("shutdown"),
+                                         new OtpErlangString(reason)};
+        shutdown.write_any(new OtpErlangTuple(tuple));
+        send(shutdown);
     }
 
     private HashMap<String,

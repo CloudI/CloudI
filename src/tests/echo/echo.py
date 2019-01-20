@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -61,12 +61,10 @@ class _Task(threading.Thread):
         # pylint: disable=no-self-use
         if request == '':
             return 'echo'
-        else:
-            print('echo: %s' % request.decode('utf-8'))
-            if request_info == '':
-                return request
-            else:
-                return (request_info, request)
+        print('echo: %s' % request.decode('utf-8'))
+        if request_info == '':
+            return request
+        return (request_info, request)
 
 def _main():
     thread_count = API.thread_count()
@@ -81,4 +79,3 @@ def _main():
 
 if __name__ == '__main__':
     _main()
-
