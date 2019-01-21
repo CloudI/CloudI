@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2009-2019 Michael Truog
+%%% @version 1.7.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -3530,18 +3530,22 @@ services_remove_uuid([], RemoveServices, Services, Timeout) ->
     end;
 services_remove_uuid([ID | IDs], RemoveServices, Services, Timeout)
     when is_binary(ID), byte_size(ID) == 16 ->
-    {ServiceList, NextServices} = lists:partition(fun(S) ->
-        (is_record(S, config_service_internal) andalso
-         (S#config_service_internal.uuid == ID)) orelse
-        (is_record(S, config_service_external) andalso
-         (S#config_service_external.uuid == ID))
+    {ServiceList, ServicesNext} = lists:partition(fun(S) ->
+        case S of
+            #config_service_internal{uuid = ID} ->
+                true;
+            #config_service_external{uuid = ID} ->
+                true;
+            _ ->
+                false
+        end
     end, Services),
     case ServiceList of
         [] ->
             {error, {service_not_found, ID}};
         [Service] ->
             services_remove_uuid(IDs, [Service | RemoveServices],
-                                 NextServices, Timeout)
+                                 ServicesNext, Timeout)
     end;
 services_remove_uuid([ID | _], _, _, _) ->
     {error, {service_invalid, ID}}.
@@ -3591,10 +3595,14 @@ services_restart_uuid([], RestartServices, _, Timeout) ->
 services_restart_uuid([ID | IDs], RestartServices, Services, Timeout)
     when is_binary(ID), byte_size(ID) == 16 ->
     ServiceList = lists:filter(fun(S) ->
-        (is_record(S, config_service_internal) andalso
-         (S#config_service_internal.uuid == ID)) orelse
-        (is_record(S, config_service_external) andalso
-         (S#config_service_external.uuid == ID))
+        case S of
+            #config_service_internal{uuid = ID} ->
+                true;
+            #config_service_external{uuid = ID} ->
+                true;
+            _ ->
+                false
+        end
     end, Services),
     case ServiceList of
         [] ->

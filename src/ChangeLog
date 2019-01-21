@@ -1,6 +1,16 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-01-20 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix service shutdown to ensure other service processes
+      are terminated when one service process either reaches the
+      max restart count or has a successful shutdown
+      (via the shutdown CloudI API function)
+        * Fix count_process_dynamic enabled services to
+          ensure service termination occurs without interference
+          from the count_process_dynamic service process adjustments
+
 2019-01-19 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add the CloudI API function shutdown to all external service

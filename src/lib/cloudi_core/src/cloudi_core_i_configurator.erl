@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.7.6 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -265,9 +265,9 @@ service_start(#config_service_internal{
                 Reload =:= false ->
                     ok
             end,
-            NewCountProcess = cloudi_concurrency:count(CountProcess),
+            CountProcessNew = cloudi_concurrency:count(CountProcess),
             service_start_internal(FoundService, GroupLeader,
-                                   NewCountProcess, Timeout);
+                                   CountProcessNew, Timeout);
         {error, _} = Error ->
             Error
     end;
@@ -275,10 +275,10 @@ service_start(#config_service_internal{
 service_start(#config_service_external{count_process = CountProcess,
                                        count_thread = CountThread} = Service,
               Timeout) ->
-    NewCountProcess = cloudi_concurrency:count(CountProcess),
-    NewCountThread = cloudi_concurrency:count(CountThread),
-    service_start_external(Service, NewCountThread,
-                           NewCountProcess, Timeout).
+    CountProcessNew = cloudi_concurrency:count(CountProcess),
+    CountThreadNew = cloudi_concurrency:count(CountThread),
+    service_start_external(Service, CountThreadNew,
+                           CountProcessNew, Timeout).
 
 -spec service_stop(#config_service_internal{} |
                    #config_service_external{},
@@ -362,8 +362,8 @@ handle_call(configure, _, State) ->
 handle_call({acl_add, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:acl_add(L, Config) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -371,8 +371,8 @@ handle_call({acl_add, L}, _,
 handle_call({acl_remove, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:acl_remove(L, Config) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -394,8 +394,8 @@ handle_call({service_subscriptions, ServiceId, Timeout}, _, State) ->
 handle_call({services_add, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:services_add(L, Config, infinity) of
-        {ok, IDs, NewConfig} ->
-            {reply, {ok, IDs}, State#state{configuration = NewConfig}};
+        {ok, IDs, ConfigNew} ->
+            {reply, {ok, IDs}, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -403,8 +403,8 @@ handle_call({services_add, L}, _,
 handle_call({services_remove, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:services_remove(L, Config, infinity) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -412,8 +412,8 @@ handle_call({services_remove, L}, _,
 handle_call({services_restart, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:services_restart(L, Config, infinity) of
-        {ok, NewConfig} ->
-            {reply, ok, State#state{configuration = NewConfig}};
+        {ok, ConfigNew} ->
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -421,8 +421,8 @@ handle_call({services_restart, L}, _,
 handle_call({services_update, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:services_update(L, Config, infinity) of
-        {ok, Result, NewConfig} ->
-            {reply, Result, State#state{configuration = NewConfig}};
+        {ok, Result, ConfigNew} ->
+            {reply, Result, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -475,10 +475,10 @@ handle_call({nodes_remove, _, _} = Request, _, State) ->
 handle_call({logging_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_set(L, Config) of
-        {ok, #config{logging = LoggingConfig} = NewConfig} ->
+        {ok, #config{logging = LoggingConfig} = ConfigNew} ->
             case cloudi_core_i_logger:set(LoggingConfig) of
                 ok ->
-                    {reply, ok, State#state{configuration = NewConfig}};
+                    {reply, ok, State#state{configuration = ConfigNew}};
                 {error, _} = Error ->
                     {reply, Error, State}
             end;
@@ -491,10 +491,10 @@ handle_call({logging_file_set, FilePath}, _,
     #config{logging = LoggingConfig} = Config,
     case cloudi_core_i_logger:file_set(FilePath) of
         ok ->
-            NewConfig = Config#config{
+            ConfigNew = Config#config{
                             logging = LoggingConfig#config_logging{
                                 file = FilePath}},
-            {reply, ok, State#state{configuration = NewConfig}};
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -503,27 +503,27 @@ handle_call({logging_stdout_set, Stdout}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:stdout_set(Stdout),
-    NewConfig = Config#config{
+    ConfigNew = Config#config{
                     logging = LoggingConfig#config_logging{
                         stdout = Stdout}},
-    {reply, ok, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = ConfigNew}};
 
 handle_call({logging_level_set, Level}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:level_set(Level),
-    NewConfig = Config#config{
+    ConfigNew = Config#config{
                     logging = LoggingConfig#config_logging{
                         level = Level}},
-    {reply, ok, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = ConfigNew}};
 
 handle_call({logging_syslog_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_syslog_set(L, Config) of
         {ok, #config{logging = #config_logging{
-                         syslog = SyslogConfig}} = NewConfig} ->
+                         syslog = SyslogConfig}} = ConfigNew} ->
             ok = cloudi_core_i_logger:syslog_set(SyslogConfig),
-            {reply, ok, State#state{configuration = NewConfig}};
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -532,9 +532,9 @@ handle_call({logging_formatters_set, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:logging_formatters_set(L, Config) of
         {ok, #config{logging = #config_logging{
-                         formatters = FormattersConfig}} = NewConfig} ->
+                         formatters = FormattersConfig}} = ConfigNew} ->
             ok = cloudi_core_i_logger:formatters_set(FormattersConfig),
-            {reply, ok, State#state{configuration = NewConfig}};
+            {reply, ok, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -543,10 +543,10 @@ handle_call({logging_redirect_set, Node}, _,
             #state{configuration = Config} = State) ->
     #config{logging = LoggingConfig} = Config,
     ok = cloudi_core_i_logger:redirect_set(Node),
-    NewConfig = Config#config{
+    ConfigNew = Config#config{
                     logging = LoggingConfig#config_logging{
                         redirect = Node}},
-    {reply, ok, State#state{configuration = NewConfig}};
+    {reply, ok, State#state{configuration = ConfigNew}};
 
 handle_call(logging, _,
             #state{configuration = Config} = State) ->
@@ -575,16 +575,9 @@ handle_call(Request, _, State) ->
 handle_cast({service_terminated, ID},
             #state{configuration = Config} = State) ->
     #config{services = Services} = Config,
-    NewServices = lists:filter(fun(Service) ->
-        case Service of
-            #config_service_internal{uuid = InternalID} ->
-                InternalID /= ID;
-            #config_service_external{uuid = ExternalID} ->
-                ExternalID /= ID
-        end
-    end, Services),
-    NewConfig = Config#config{services = NewServices},
-    {noreply, State#state{configuration = NewConfig}};
+    ServicesNew = service_terminated_remove(Services, ID),
+    ConfigNew = Config#config{services = ServicesNew},
+    {noreply, State#state{configuration = ConfigNew}};
 
 handle_cast(Request, State) ->
     {stop, cloudi_string:format("Unknown cast \"~w\"", [Request]), State}.
@@ -592,8 +585,8 @@ handle_cast(Request, State) ->
 handle_info(configure,
             #state{configuration = Config} = State) ->
     case configure(Config, infinity) of
-        {ok, NewConfig} ->
-            {noreply, State#state{configuration = NewConfig}};
+        {ok, ConfigNew} ->
+            {noreply, State#state{configuration = ConfigNew}};
         {error, _} = Error ->
             % cloudi_core application startup failed due to a problem
             % with the cloudi.conf file
@@ -625,8 +618,8 @@ code_change(_, State, _) ->
 
 configure(#config{services = Services} = Config, Timeout) ->
     case configure_service(Services, Timeout) of
-        {ok, NewServices} ->
-            {ok, Config#config{services = NewServices}};
+        {ok, ServicesNew} ->
+            {ok, Config#config{services = ServicesNew}};
         {error, _} = Error ->
             Error
     end.
@@ -635,8 +628,8 @@ configure_service([], Configured, _) ->
     {ok, lists:reverse(Configured)};
 configure_service([Service | Services], Configured, Timeout) ->
     case service_start(Service, Timeout) of
-        {ok, NewService} ->
-            configure_service(Services, [NewService | Configured], Timeout);
+        {ok, ServiceNew} ->
+            configure_service(Services, [ServiceNew | Configured], Timeout);
         {error, Reason} = Error ->
             % wait for logging statements to be logged before crashing
             ?LOG_FATAL_SYNC("configure failed: ~p~n~p",
@@ -958,13 +951,13 @@ service_start_wait_pid([{MonitorRef, Pid} | M], Error) ->
             %   (so the external service is now executing the poll function)
             service_start_wait_pid(M, Error);
         {'DOWN', MonitorRef, process, Pid, Info} ->
-            NewError = if
+            ErrorNew = if
                 Error =:= undefined ->
                     {error, {service_internal_start_failed, Info}};
                 true ->
                     Error
             end,
-            service_start_wait_pid(M, NewError)
+            service_start_wait_pid(M, ErrorNew)
     end.
 
 service_start_wait_pids([], undefined, Service) ->
@@ -1084,7 +1077,6 @@ service_stop_internal(#config_service_internal{
                           uuid = ID} = Service, Remove, Timeout) ->
     case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
-            shutdown_wait(Pids),
             if
                 Reload =:= true ->
                     ok = cloudi_core_i_services_internal_reload:
@@ -1124,7 +1116,6 @@ service_stop_external(#config_service_external{
                           uuid = ID}, Timeout) ->
     case cloudi_core_i_services_monitor:shutdown(ID, Timeout) of
         {ok, Pids} ->
-            shutdown_wait(Pids),
             ?LOG_INFO_SYNC("Service pids ~p stopped~n ~p",
                            [Pids, service_id(ID)]),
             ok;
@@ -1206,11 +1197,11 @@ nodes_call({F, L, _} = Request,
     case cloudi_core_i_configuration:F(L, Config) of
         {ok, Config} ->
             {reply, ok, State};
-        {ok, #config{nodes = #config_nodes{connect = Connect}} = NewConfig} ->
+        {ok, #config{nodes = #config_nodes{connect = Connect}} = ConfigNew} ->
             Result = nodes_call_remote(Request, Connect),
-            case cloudi_core_i_nodes:reconfigure(NewConfig, infinity) of
+            case cloudi_core_i_nodes:reconfigure(ConfigNew, infinity) of
                 ok ->
-                    {reply, Result, State#state{configuration = NewConfig}};
+                    {reply, Result, State#state{configuration = ConfigNew}};
                 {error, _} = Error ->
                     {reply, Error, State}
             end;
@@ -1218,15 +1209,16 @@ nodes_call({F, L, _} = Request,
             {reply, Error, State}
     end.
 
-shutdown_wait_monitor([]) ->
-    ok;
-shutdown_wait_monitor(Monitors) ->
-    receive
-        {'DOWN', Monitor, process, _, _} ->
-            shutdown_wait_monitor(lists:delete(Monitor, Monitors))
-    end.
-shutdown_wait(Pids) ->
-    shutdown_wait_monitor([erlang:monitor(process, Pid) || Pid <- Pids]).
+service_terminated_remove([] = Services, _) ->
+    Services;
+service_terminated_remove([#config_service_internal{uuid = ID} | Services],
+                          ID) ->
+    Services;
+service_terminated_remove([#config_service_external{uuid = ID} | Services],
+                          ID) ->
+    Services;
+service_terminated_remove([Service | Services], ID) ->
+    [Service | service_terminated_remove(Services, ID)].
 
 timeout_decr(infinity) ->
     infinity;
