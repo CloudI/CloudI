@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -109,8 +109,8 @@ public class Task implements Runnable
             this.api.subscribe("java.xml/get", this, "request");
 
             assert this.api.subscribe_count("java.xml/get") == 1;
-            Object result = this.api.poll();
-            assert result == Boolean.FALSE;
+            boolean result = this.api.poll();
+            assert result == false;
         }
         catch (API.TerminateException e)
         {

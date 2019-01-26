@@ -1478,12 +1478,12 @@ public class API
     /**
      * Blocks to process incoming CloudI service requests
      *
-     * @return Boolean.FALSE
+     * @return false
      * @throws InvalidInputException invalid input to internal function call
      * @throws MessageDecodingException service messaging failure
      * @throws TerminateException service execution must terminate
      */
-    public Object poll()
+    public boolean poll()
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
@@ -1495,17 +1495,19 @@ public class API
      * Blocks to process incoming CloudI service requests
      *
      * @param timeout  the block timeout in milliseconds (-1 is infinity)
-     * @return a boolean object to determine if a timeout occurred
+     * @return a boolean to determine if a timeout occurred
      * @throws InvalidInputException invalid input to internal function call
      * @throws MessageDecodingException service messaging failure
      * @throws TerminateException service execution must terminate
      */
-    public Object poll(final int timeout)
+    public boolean poll(final int timeout)
         throws InvalidInputException,
                MessageDecodingException,
                TerminateException
     {
-        return poll_request(timeout, true);
+        if (Boolean.TRUE == poll_request(timeout, true))
+            return true;
+        return false;
     }
 
     /**

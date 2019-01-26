@@ -4,6 +4,8 @@
 2019-01-25 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add CloudI API fixes based on package builds
+    * Change the Java CloudI API poll function return type
+      to be boolean primitive instead of a Boolean object
 
 2019-01-20 Michael Truog   <mjtruog at protonmail dot com>
 
