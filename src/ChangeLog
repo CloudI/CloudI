@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-01-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add CloudI API fixes based on package builds
+
 2019-01-20 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix service shutdown to ensure other service processes

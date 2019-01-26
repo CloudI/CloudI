@@ -1494,6 +1494,7 @@ public class API
     /**
      * Blocks to process incoming CloudI service requests
      *
+     * @param timeout  the block timeout in milliseconds (-1 is infinity)
      * @return a boolean object to determine if a timeout occurred
      * @throws InvalidInputException invalid input to internal function call
      * @throws MessageDecodingException service messaging failure

@@ -752,8 +752,9 @@ class callback : public CloudI::API::function_object_c
                 {
                     Py_ssize_t response_size_tmp = 0;
 #ifdef PYTHON_VERSION_3_3_COMPATIBLE
-                    response = PyUnicode_AsUTF8AndSize(result,
-                                                       &response_size_tmp);
+                    response =
+                        const_cast<char *>(PyUnicode_AsUTF8AndSize(
+                            result, &response_size_tmp));
                     if (response == NULL)
                     {
                         PyErr_Print();
