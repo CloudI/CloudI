@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_client).
@@ -83,6 +83,30 @@
 
 % supported clients
 -define(MODULE_INETS, httpc). % Erlang/OTP inets HTTP client
+
+-define(CLIENT_DEBUG_START(Level),
+    if
+        Level =:= off ->
+            undefined;
+        true ->
+            cloudi_timestamp:microseconds_monotonic()
+    end).
+
+-define(CLIENT_DEBUG_END(Level, HttpCode, Method,
+                         HeadersIncoming, Request,
+                         HeadersOutgoing, Response,
+                         RequestStartMicroSec),
+    ?LOG(Level,
+         "~p ~s ~p ms~n"
+         "headers__in(~p)~n"
+         "request__in(~p)~n"
+         "headers_out(~p)~n"
+         "request_out(~p)",
+         [HttpCode, Method,
+          (cloudi_timestamp:microseconds_monotonic() -
+           RequestStartMicroSec) / 1000.0,
+          HeadersIncoming, Request,
+          HeadersOutgoing, Response])).
 
 -record(state,
     {
@@ -660,7 +684,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
                                      content_type_lookup = ContentTypeLookup,
                                      prefix_length = PrefixLength} = State,
                               _Dispatcher) ->
-    RequestStartMicroSec = client_debug_start(DebugLevel),
+    RequestStartMicroSec = ?CLIENT_DEBUG_START(DebugLevel),
     [$/ | Method] = cloudi_string:uppercase(lists:nthtail(PrefixLength, Name)),
     HeadersIncoming = headers_request(RequestInfo, InputType),
     {HttpCode,
@@ -668,9 +692,10 @@ cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
      Response} = client_request(Module, Profile, Method,
                                 HeadersIncoming, Request, Timeout,
                                 ContentTypeLookup),
-    client_debug_end(DebugLevel, HttpCode, Method,
-                     HeadersIncoming, Request,
-                     HeadersOutgoing, Response, RequestStartMicroSec),
+    ?CLIENT_DEBUG_END(DebugLevel, HttpCode, Method,
+                      HeadersIncoming, Request,
+                      HeadersOutgoing, Response,
+                      RequestStartMicroSec),
     {reply, HeadersOutgoing, Response, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
@@ -833,41 +858,6 @@ client_request(?MODULE_INETS, Profile, Method0,
         {error, _} = Error ->
             {undefined, <<>>, Error}
     end.
-
-client_debug_log(trace, Message, Args) ->
-    ?LOG_TRACE(Message, Args);
-client_debug_log(debug, Message, Args) ->
-    ?LOG_DEBUG(Message, Args);
-client_debug_log(info, Message, Args) ->
-    ?LOG_INFO(Message, Args);
-client_debug_log(warn, Message, Args) ->
-    ?LOG_WARN(Message, Args);
-client_debug_log(error, Message, Args) ->
-    ?LOG_ERROR(Message, Args);
-client_debug_log(fatal, Message, Args) ->
-    ?LOG_FATAL(Message, Args).
-
-client_debug_start(off) ->
-    undefined;
-client_debug_start(_) ->
-    cloudi_timestamp:microseconds_monotonic().
-
-client_debug_end(off, _, _, _, _, _, _, _) ->
-    undefined;
-client_debug_end(Level, HttpCode, Method,
-                 HeadersIncoming, Request,
-                 HeadersOutgoing, Response, RequestStartMicroSec) ->
-    client_debug_log(Level,
-                     "~p ~s ~p ms~n"
-                     "headers__in(~p)~n"
-                     "request__in(~p)~n"
-                     "headers_out(~p)~n"
-                     "request_out(~p)",
-                     [HttpCode, Method,
-                      (cloudi_timestamp:microseconds_monotonic() -
-                       RequestStartMicroSec) / 1000.0,
-                      HeadersIncoming, Request,
-                      HeadersOutgoing, Response]).
 
 result({{ok, {error, _} = Error}, NewAgent}) ->
     {Error, NewAgent};

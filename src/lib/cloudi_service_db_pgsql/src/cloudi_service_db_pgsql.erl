@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2009-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_pgsql).
@@ -74,6 +74,21 @@
 % supported drivers
 -define(MODULE_EPGSQL, cloudi_x_epgsql).
 -define(MODULE_SEMIOCAST, cloudi_x_pgsql_connection).
+
+-define(DRIVER_DEBUG(Level, Query, Parameters, Result),
+    ?LOG(Level,
+         "SQL(equery):~n"
+         " ~p~n"
+         " ~p~n"
+         " = ~p",
+         [Query, Parameters, Result])).
+
+-define(DRIVER_DEBUG(Level, Query, Result),
+    ?LOG(Level,
+         "SQL(squery):~n"
+         " ~p~n"
+         " = ~p",
+         [Query, Result])).
 
 -record(state,
     {
@@ -602,12 +617,7 @@ driver_equery(Query, Parameters, _Timeout, ResponseOutputType,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_EPGSQL:equery(Connection, Query, Parameters),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Parameters, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Parameters, Native),
     if
         Native == {error, closed} ->
             erlang:exit(closed);
@@ -634,12 +644,7 @@ driver_equery(Query, Parameters, Timeout, ResponseOutputType,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:extended_query(Query, Parameters, [],
                                               Timeout, Connection),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Parameters, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Parameters, Native),
     if
         Native == {error, closed} ->
             erlang:exit(closed);
@@ -666,12 +671,7 @@ driver_squery(Query, _Timeout, ResponseOutputType,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_EPGSQL:squery(Connection, Query),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Native),
     if
         Native == {error, closed} ->
             erlang:exit(closed);
@@ -697,12 +697,7 @@ driver_squery(Query, Timeout, ResponseOutputType,
                      interface = Interface,
                      debug_level = DebugLevel}) ->
     Native = ?MODULE_SEMIOCAST:simple_query(Query, [], Timeout, Connection),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Native),
     if
         Native == {error, closed} ->
             erlang:exit(closed);
@@ -721,34 +716,6 @@ driver_squery(Query, Timeout, ResponseOutputType,
         ResponseOutputType =:= external ->
             response_external(Response, ExternalFormat)
     end.
-
-driver_debug_log(trace, Message, Args) ->
-    ?LOG_TRACE(Message, Args);
-driver_debug_log(debug, Message, Args) ->
-    ?LOG_DEBUG(Message, Args);
-driver_debug_log(info, Message, Args) ->
-    ?LOG_INFO(Message, Args);
-driver_debug_log(warn, Message, Args) ->
-    ?LOG_WARN(Message, Args);
-driver_debug_log(error, Message, Args) ->
-    ?LOG_ERROR(Message, Args);
-driver_debug_log(fatal, Message, Args) ->
-    ?LOG_FATAL(Message, Args).
-
-driver_debug(Level, Query, Parameters, Result) ->
-    driver_debug_log(Level,
-                     "SQL(equery):~n"
-                     " ~p~n"
-                     " ~p~n"
-                     " = ~p",
-                     [Query, Parameters, Result]).
-
-driver_debug(Level, Query, Result) ->
-    driver_debug_log(Level,
-                     "SQL(squery):~n"
-                     " ~p~n"
-                     " = ~p",
-                     [Query, Result]).
 
 epgsql_to_common({ok, I}) ->
     {updated, I};

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2013-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_tcp).
@@ -546,7 +546,7 @@ socket_loop_init(Scope, DestinationSet, DestinationConnect,
         {init, ok} ->
             NewState = socket_loop_init_connect(DestinationConnect,
                 socket_loop_init_set(DestinationSet, Scope, State)),
-            socket_debug_log(DebugLevel, "socket ~p opened", [Socket]),
+            ?LOG(DebugLevel, "socket ~p opened", [Socket]),
             ok = inet:setopts(Socket, [{active, once}]),
             socket_loop(NewState);
         {init, Error} ->
@@ -567,8 +567,7 @@ socket_loop_out_request({Type, Name, Pattern, RequestInfo, Request,
          Timeout, Priority, TransId, Source},
     socket_terminate_check(Socket, RequestInfo),
     socket_send(Request, State),
-    socket_debug_log(DebugLevel,
-                    "socket out request ~p", [Request]),
+    ?LOG(DebugLevel, "socket out request ~p", [Request]),
     State#state_socket{
         response_pending = true,
         response_timer = ResponseTimer,
@@ -588,8 +587,7 @@ socket_loop_out_request({Type, Name, Pattern, RequestInfo, RequestProtocol,
          Timeout, Priority, TransId, Source},
     socket_terminate_check(Socket, RequestInfo),
     socket_send(Request, State),
-    socket_debug_log(DebugLevel,
-                    "socket out request ~p", [Request]),
+    ?LOG(DebugLevel, "socket out request ~p", [Request]),
     State#state_socket{
         response_lookup = maps:put(ID, {T, ResponseTimer}, ResponseLookup)};
 socket_loop_out_request({_, _, _, _, Request,
@@ -621,8 +619,7 @@ socket_loop_in_request(Request, ResponseF,
                            request_info = RequestInfo,
                            lock = Lock,
                            debug_level = DebugLevel} = State) ->
-    socket_debug_log(DebugLevel,
-                     "socket in request ~p", [Request]),
+    ?LOG(DebugLevel, "socket in request ~p", [Request]),
     case send_sync_minimal(Dispatcher, Destination, RequestInfo, Request,
                            TimeoutSync, Lock, self()) of
         {ok, ResponseInfo, Response} ->
@@ -634,15 +631,13 @@ socket_loop_in_request(Request, ResponseF,
                     ResponseF(Response)
             end,
             socket_send(NewResponse, State),
-            socket_debug_log(DebugLevel,
-                             "socket out response ~p", [NewResponse]),
+            ?LOG(DebugLevel, "socket out response ~p", [NewResponse]),
             State;
         {error, timeout} ->
             socket_send(<<>>, State),
             if
                 Lock =:= undefined ->
-                    socket_debug_log(DebugLevel,
-                                     "socket out response ~p", [<<>>]),
+                    ?LOG(DebugLevel, "socket out response ~p", [<<>>]),
                     State;
                 true ->
                     socket_loop_terminate(timeout, State)
@@ -653,8 +648,7 @@ socket_loop_in_response({SendType, Name, Pattern, _, _,
                          _, _, TransId, Source},
                         ResponseTimer, ResponseInfo, Response,
                         DebugLevel) ->
-    socket_debug_log(DebugLevel,
-                     "socket in response ~p", [Response]),
+    ?LOG(DebugLevel, "socket in response ~p", [Response]),
     Timeout = case erlang:cancel_timer(ResponseTimer) of
         false ->
             0;
@@ -788,7 +782,7 @@ socket_loop_terminate(Reason,
     end,
     if
         Reason =:= normal ->
-            socket_debug_log(DebugLevel, "socket ~p closed", [Socket]);
+            ?LOG(DebugLevel, "socket ~p closed", [Socket]);
         true ->
             ?LOG_ERROR("socket ~p error: ~p", [Socket, Reason])
     end,
@@ -816,21 +810,6 @@ socket_send(Outgoing,
             ?LOG_WARN("socket ~p send error: ~p", [Socket, Reason]),
             socket_loop_terminate(normal, State)
     end.
-
-socket_debug_log(off, _, _) ->
-    ok;
-socket_debug_log(trace, Message, Args) ->
-    ?LOG_TRACE(Message, Args);
-socket_debug_log(debug, Message, Args) ->
-    ?LOG_DEBUG(Message, Args);
-socket_debug_log(info, Message, Args) ->
-    ?LOG_INFO(Message, Args);
-socket_debug_log(warn, Message, Args) ->
-    ?LOG_WARN(Message, Args);
-socket_debug_log(error, Message, Args) ->
-    ?LOG_ERROR(Message, Args);
-socket_debug_log(fatal, Message, Args) ->
-    ?LOG_FATAL(Message, Args).
 
 socket_process_queue(#state_socket{recv_timeouts = RecvTimeouts,
                                    queued = Queue} = State) ->

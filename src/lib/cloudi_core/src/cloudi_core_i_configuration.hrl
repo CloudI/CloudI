@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -681,7 +681,11 @@
             :: list({node() | default, float()}),
         % cost currency decimal places
         cost_precision = 2
-            :: 0..253
+            :: 0..253,
+        % loglevel for logging disconnected nodes before
+        % each reconnect attempt occurs
+        log_reconnect = info
+            :: cloudi_service_api:loglevel()
     }).
 
 -record(config,

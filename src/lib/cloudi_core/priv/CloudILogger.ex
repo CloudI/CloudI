@@ -5,7 +5,7 @@
 ###
 ### MIT License
 ###
-### Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+### Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 ###
 ### Permission is hereby granted, free of charge, to any person obtaining a
 ### copy of this software and associated documentation files (the "Software"),
@@ -164,6 +164,24 @@ defmodule CloudILogger do
     end
   end
 
+  defmacro log(level, format, args) do
+    quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = function_arity ->
+            function_arity
+      end
+      :cloudi_core_i_logger_interface.log(__MODULE__,
+                                          __ENV__.line,
+                                          function,
+                                          arity,
+                                          unquote(level),
+                                          unquote(format),
+                                          unquote(args))
+    end
+  end
+
 # Force the logging to be done synchronously to the local log only
 # (if you are concerned about losing a logging message when the logging
 #  is done asynchronously while the logger's message queue is somewhat large,
@@ -275,6 +293,24 @@ defmodule CloudILogger do
     end
   end
 
+  defmacro log_sync(level, format, args) do
+    quote do
+      {function, arity} = case __ENV__.function do
+        nil ->
+            {:undefined, :undefined};
+        {_, _} = function_arity ->
+            function_arity
+      end
+      :cloudi_core_i_logger_interface.log_sync(__MODULE__,
+                                               __ENV__.line,
+                                               function,
+                                               arity,
+                                               unquote(level),
+                                               unquote(format),
+                                               unquote(args))
+    end
+  end
+
 # Apply an anonymous function if allowed by the current logging level setting
 
   defmacro log_fatal_apply(f, a) do
@@ -316,6 +352,14 @@ defmodule CloudILogger do
     quote do
       :cloudi_core_i_logger_interface.trace_apply(unquote(f),
                                                   unquote(a))
+    end
+  end
+
+  defmacro log_apply(level, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.log_apply(unquote(level),
+                                                unquote(f),
+                                                unquote(a))
     end
   end
 
@@ -366,6 +410,15 @@ defmodule CloudILogger do
       :cloudi_core_i_logger_interface.trace_apply(unquote(m),
                                                   unquote(f),
                                                   unquote(a))
+    end
+  end
+
+  defmacro log_apply(level, m, f, a) do
+    quote do
+      :cloudi_core_i_logger_interface.log_apply(unquote(level),
+                                                unquote(m),
+                                                unquote(f),
+                                                unquote(a))
     end
   end
 

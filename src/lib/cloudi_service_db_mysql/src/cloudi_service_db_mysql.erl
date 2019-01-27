@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2009-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_db_mysql).
@@ -72,6 +72,21 @@
 
 % supported drivers
 -define(MODULE_EONBLAST, cloudi_x_emysql_conn). % default
+
+-define(DRIVER_DEBUG(Level, Query, Parameters, Result),
+    ?LOG(Level,
+         "SQL(equery):~n"
+         " ~p~n"
+         " ~p~n"
+         " = ~p",
+         [Query, Parameters, Result])).
+
+-define(DRIVER_DEBUG(Level, Query, Result),
+    ?LOG(Level,
+         "SQL(squery):~n"
+         " ~p~n"
+         " = ~p",
+         [Query, Result])).
 
 -record(state,
     {
@@ -657,12 +672,7 @@ driver_equery(Query, Parameters, Timeout, ResponseOutputType,
     end,
     Native = ?MODULE_EONBLAST:execute(Connection,
                                       NewQuery, Parameters, Timeout),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Parameters, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Parameters, Native),
     Response = if
         Interface =:= common; ResponseOutputType =:= external ->
             eonblast_to_common(Native);
@@ -690,12 +700,7 @@ driver_squery(Query, Timeout, ResponseOutputType,
     end,
     Native = ?MODULE_EONBLAST:execute(Connection,
                                       QueryBinary, [], Timeout),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug(DebugLevel, Query, Native)
-    end,
+    ?DRIVER_DEBUG(DebugLevel, Query, Native),
     Response = if
         Interface =:= common; ResponseOutputType =:= external ->
             eonblast_to_common(Native);
@@ -728,17 +733,12 @@ driver_prepare(Identifier, Query, Timeout, ResponseOutputType,
         _:Reason ->
             {error, Reason}
     end,
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug_log(DebugLevel,
-                             "prepare:~n"
-                             " ~p~n"
-                             " ~p~n"
-                             " = ~p",
-                             [Identifier, Query, Response])
-    end,
+    ?LOG(DebugLevel,
+         "prepare:~n"
+         " ~p~n"
+         " ~p~n"
+         " = ~p",
+         [Identifier, Query, Response]),
     if
         ResponseOutputType =:= internal ->
             Response;
@@ -756,44 +756,11 @@ driver_ping(Timeout,
                    connection = Connection,
                    debug_level = DebugLevel}) ->
     Result = ?MODULE_EONBLAST:ping_connection(Connection, Timeout),
-    if
-        DebugLevel =:= off ->
-            ok;
-        true ->
-            driver_debug_log(DebugLevel,
-                             "ping:~n"
-                             " = ~p",
-                             [Result])
-    end,
+    ?LOG(DebugLevel,
+         "ping:~n"
+         " = ~p",
+         [Result]),
     Result.
-
-driver_debug_log(trace, Message, Args) ->
-    ?LOG_TRACE(Message, Args);
-driver_debug_log(debug, Message, Args) ->
-    ?LOG_DEBUG(Message, Args);
-driver_debug_log(info, Message, Args) ->
-    ?LOG_INFO(Message, Args);
-driver_debug_log(warn, Message, Args) ->
-    ?LOG_WARN(Message, Args);
-driver_debug_log(error, Message, Args) ->
-    ?LOG_ERROR(Message, Args);
-driver_debug_log(fatal, Message, Args) ->
-    ?LOG_FATAL(Message, Args).
-
-driver_debug(Level, Query, Parameters, Result) ->
-    driver_debug_log(Level,
-                     "SQL(equery):~n"
-                     " ~p~n"
-                     " ~p~n"
-                     " = ~p",
-                     [Query, Parameters, Result]).
-
-driver_debug(Level, Query, Result) ->
-    driver_debug_log(Level,
-                     "SQL(squery):~n"
-                     " ~p~n"
-                     " = ~p",
-                     [Query, Result]).
 
 eonblast_to_common(L) when is_list(L) ->
     [H | _] = lists:reverse(L),

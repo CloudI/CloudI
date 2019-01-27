@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_nodes).
@@ -78,7 +78,8 @@
         connect :: visible | hidden,
         discovery :: #config_nodes_discovery{} | undefined,
         cost :: #{node() | default := float()},
-        cost_precision :: 0..253
+        cost_precision :: 0..253,
+        log_reconnect :: cloudi_service_api:loglevel()
     }).
 
 -define(CATCH_EXIT(F),
@@ -125,7 +126,8 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                                     connect = Connect,
                                     discovery = Discovery,
                                     cost = Cost,
-                                    cost_precision = CostPrecision}}]) ->
+                                    cost_precision = CostPrecision,
+                                    log_reconnect = LogReconnect}}]) ->
     monitor_nodes(true, Listen),
     NodeLoggerNew = if
         NodeLogger == node(); NodeLogger =:= undefined ->
@@ -161,7 +163,8 @@ init([#config{logging = #config_logging{redirect = NodeLogger},
                 connect = Connect,
                 discovery = Discovery,
                 cost = maps:from_list(Cost),
-                cost_precision = CostPrecision}}.
+                cost_precision = CostPrecision,
+                log_reconnect = LogReconnect}}.
 
 handle_call({reconfigure,
              #config{logging = #config_logging{redirect = NodeLogger},
@@ -172,7 +175,8 @@ handle_call({reconfigure,
                                            timestamp_type = TimestampType,
                                            discovery = Discovery,
                                            cost = Cost,
-                                           cost_precision = CostPrecision}}}, _,
+                                           cost_precision = CostPrecision,
+                                           log_reconnect = LogReconnect}}}, _,
             #state{nodes_alive = NodesAlive,
                    nodes_up = NodesUp,
                    nodes_down_durations = NodesDownDurations,
@@ -228,7 +232,8 @@ handle_call({reconfigure,
                             connect = Connect,
                             discovery = Discovery,
                             cost = maps:from_list(Cost),
-                            cost_precision = CostPrecision}};
+                            cost_precision = CostPrecision,
+                            log_reconnect = LogReconnect}};
 
 handle_call(alive, _,
             #state{nodes_alive = NodesAlive} = State) ->
@@ -330,11 +335,12 @@ handle_info(reconnect,
             #state{nodes_dead = NodesDead,
                    reconnect_interval = ReconnectInterval,
                    connect = Connect,
-                   discovery = Discovery} = State) ->
+                   discovery = Discovery,
+                   log_reconnect = LogReconnect} = State) ->
     discovery_check(Discovery),
     if
         NodesDead /= [] ->
-            ?LOG_INFO("currently dead nodes ~p", [NodesDead]),
+            ?LOG(LogReconnect, "currently dead nodes ~p", [NodesDead]),
             pforeach(fun(Node) ->
                 % avoid the possibly long synchronous call here
                 connect_node(Connect, Node)

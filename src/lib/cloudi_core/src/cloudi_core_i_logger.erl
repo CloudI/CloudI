@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2009-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2009-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger).
@@ -1558,13 +1558,13 @@ timestamp_increment({MegaSecs, Secs, MicroSecs}) ->
     "
     -module(cloudi_core_i_logger_interface).
     -author('mjtruog at protonmail dot com').
-    -export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
+    -export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6, log/7,
              fatal_sync/6, error_sync/6, warn_sync/6,
-             info_sync/6, debug_sync/6, trace_sync/6,
+             info_sync/6, debug_sync/6, trace_sync/6, log_sync/7,
              fatal_apply/2, error_apply/2, warn_apply/2,
-             info_apply/2, debug_apply/2, trace_apply/2,
+             info_apply/2, debug_apply/2, trace_apply/2, log_apply/3,
              fatal_apply/3, error_apply/3, warn_apply/3,
-             info_apply/3, debug_apply/3, trace_apply/3]).").
+             info_apply/3, debug_apply/3, trace_apply/3, log_apply/4]).").
 interface(off, _, _) ->
     ?INTERFACE_MODULE_HEADER
     "
@@ -1574,24 +1574,40 @@ interface(off, _, _) ->
     info(_, _, _, _, _, _) -> ok.
     debug(_, _, _, _, _, _) -> ok.
     trace(_, _, _, _, _, _) -> ok.
+    log(_, _, _, _, Level, _, _)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(_, _, _, _, _, _) -> ok.
     error_sync(_, _, _, _, _, _) -> ok.
     warn_sync(_, _, _, _, _, _) -> ok.
     info_sync(_, _, _, _, _, _) -> ok.
     debug_sync(_, _, _, _, _, _) -> ok.
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(_, _) -> undefined.
     error_apply(_, _) -> undefined.
     warn_apply(_, _) -> undefined.
     info_apply(_, _) -> undefined.
     debug_apply(_, _) -> undefined.
     trace_apply(_, _) -> undefined.
+    log_apply(Level, _, _)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(_, _, _) -> undefined.
     error_apply(_, _, _) -> undefined.
     warn_apply(_, _, _) -> undefined.
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
+    log_apply(Level, _, _, _)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     ";
 interface(fatal, Mode, Process) ->
     cloudi_string:format(
@@ -1605,6 +1621,14 @@ interface(fatal, Mode, Process) ->
     info(_, _, _, _, _, _) -> ok.
     debug(_, _, _, _, _, _) -> ok.
     trace(_, _, _, _, _, _) -> ok.
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1613,6 +1637,14 @@ interface(fatal, Mode, Process) ->
     info_sync(_, _, _, _, _, _) -> ok.
     debug_sync(_, _, _, _, _, _) -> ok.
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(_, _) -> undefined.
@@ -1620,6 +1652,13 @@ interface(fatal, Mode, Process) ->
     info_apply(_, _) -> undefined.
     debug_apply(_, _) -> undefined.
     trace_apply(_, _) -> undefined.
+    log_apply(Level, F, A)
+        when Level =:= fatal ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(_, _, _) -> undefined.
@@ -1627,8 +1666,15 @@ interface(fatal, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process,
-        Process]);
+    log_apply(Level, M, F, A)
+        when Level =:= fatal ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
+    ", [Mode, Process, Mode, Process,
+        Process, Process]);
 interface(error, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1643,6 +1689,14 @@ interface(error, Mode, Process) ->
     info(_, _, _, _, _, _) -> ok.
     debug(_, _, _, _, _, _) -> ok.
     trace(_, _, _, _, _, _) -> ok.
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1653,6 +1707,14 @@ interface(error, Mode, Process) ->
     info_sync(_, _, _, _, _, _) -> ok.
     debug_sync(_, _, _, _, _, _) -> ok.
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1661,6 +1723,13 @@ interface(error, Mode, Process) ->
     info_apply(_, _) -> undefined.
     debug_apply(_, _) -> undefined.
     trace_apply(_, _) -> undefined.
+    log_apply(Level, F, A)
+        when Level =:= fatal; Level =:= error ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(M, F, A) ->
@@ -1669,8 +1738,15 @@ interface(error, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process, Mode, Process,
-        Process, Process]);
+    log_apply(Level, M, F, A)
+        when Level =:= fatal; Level =:= error ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
+    ", [Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process]);
 interface(warn, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1687,6 +1763,13 @@ interface(warn, Mode, Process) ->
     info(_, _, _, _, _, _) -> ok.
     debug(_, _, _, _, _, _) -> ok.
     trace(_, _, _, _, _, _) -> ok.
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1699,6 +1782,13 @@ interface(warn, Mode, Process) ->
     info_sync(_, _, _, _, _, _) -> ok.
     debug_sync(_, _, _, _, _, _) -> ok.
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1708,6 +1798,12 @@ interface(warn, Mode, Process) ->
     info_apply(_, _) -> undefined.
     debug_apply(_, _) -> undefined.
     trace_apply(_, _) -> undefined.
+    log_apply(Level, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(M, F, A) ->
@@ -1717,8 +1813,14 @@ interface(warn, Mode, Process) ->
     info_apply(_, _, _) -> undefined.
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
-    ", [Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process]);
+    log_apply(Level, M, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= info; Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
+    ", [Mode, Process, Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process, Process]);
 interface(info, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1737,6 +1839,14 @@ interface(info, Mode, Process) ->
                                   Format, Arguments).
     debug(_, _, _, _, _, _) -> ok.
     trace(_, _, _, _, _, _) -> ok.
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1751,6 +1861,14 @@ interface(info, Mode, Process) ->
                                   Format, Arguments).
     debug_sync(_, _, _, _, _, _) -> ok.
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= debug; Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1761,6 +1879,13 @@ interface(info, Mode, Process) ->
         erlang:apply(F, A).
     debug_apply(_, _) -> undefined.
     trace_apply(_, _) -> undefined.
+    log_apply(Level, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(M, F, A) ->
@@ -1771,9 +1896,16 @@ interface(info, Mode, Process) ->
         erlang:apply(M, F, A).
     debug_apply(_, _, _) -> undefined.
     trace_apply(_, _, _) -> undefined.
+    log_apply(Level, M, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= debug; Level =:= trace;
+             Level =:= off -> undefined.
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process,
-        Process, Process, Process, Process]);
+        Mode, Process, Mode, Process,
+        Process, Process, Process, Process, Process]);
 interface(debug, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1794,6 +1926,14 @@ interface(debug, Mode, Process) ->
         cloudi_core_i_logger:debug(~w, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
     trace(_, _, _, _, _, _) -> ok.
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= trace;
+             Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1810,6 +1950,14 @@ interface(debug, Mode, Process) ->
         cloudi_core_i_logger:debug(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
     trace_sync(_, _, _, _, _, _) -> ok.
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= trace;
+             Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1821,6 +1969,13 @@ interface(debug, Mode, Process) ->
     debug_apply(F, A) ->
         erlang:apply(F, A).
     trace_apply(_, _) -> undefined.
+    log_apply(Level, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= trace;
+             Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(M, F, A) ->
@@ -1832,9 +1987,16 @@ interface(debug, Mode, Process) ->
     debug_apply(M, F, A) ->
         erlang:apply(M, F, A).
     trace_apply(_, _, _) -> undefined.
+    log_apply(Level, M, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= trace;
+             Level =:= off -> undefined.
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process,
-        Process, Process, Process, Process, Process]);
+        Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process, Process, Process, Process]);
 interface(trace, Mode, Process) ->
     cloudi_string:format(
     ?INTERFACE_MODULE_HEADER
@@ -1857,6 +2019,13 @@ interface(trace, Mode, Process) ->
     trace(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:trace(~w, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
+    log(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace ->
+        cloudi_core_i_logger:Level(~w, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log(_, _, _, _, Level, _, _)
+        when Level =:= off -> ok.
     fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:fatal(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
@@ -1875,6 +2044,13 @@ interface(trace, Mode, Process) ->
     trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
         cloudi_core_i_logger:trace(sync, ~w, Module, Line, Function, Arity,
                                    Format, Arguments).
+    log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace ->
+        cloudi_core_i_logger:Level(sync, ~w, Module, Line, Function, Arity,
+                                   Format, Arguments);
+    log_sync(_, _, _, _, Level, _, _)
+        when Level =:= off -> ok.
     fatal_apply(F, A) ->
         erlang:apply(F, A).
     error_apply(F, A) ->
@@ -1887,6 +2063,12 @@ interface(trace, Mode, Process) ->
         erlang:apply(F, A).
     trace_apply(F, A) ->
         erlang:apply(F, A).
+    log_apply(Level, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace ->
+        erlang:apply(F, A);
+    log_apply(Level, _, _)
+        when Level =:= off -> undefined.
     fatal_apply(M, F, A) ->
         erlang:apply(M, F, A).
     error_apply(M, F, A) ->
@@ -1899,9 +2081,15 @@ interface(trace, Mode, Process) ->
         erlang:apply(M, F, A).
     trace_apply(M, F, A) ->
         erlang:apply(M, F, A).
+    log_apply(Level, M, F, A)
+        when Level =:= fatal; Level =:= error; Level =:= warn;
+             Level =:= info; Level =:= debug; Level =:= trace ->
+        erlang:apply(M, F, A);
+    log_apply(Level, _, _, _)
+        when Level =:= off -> undefined.
     ", [Mode, Process, Mode, Process, Mode, Process,
-        Mode, Process, Mode, Process, Mode, Process,
-        Process, Process, Process, Process, Process, Process]).
+        Mode, Process, Mode, Process, Mode, Process, Mode, Process,
+        Process, Process, Process, Process, Process, Process, Process]).
 
 load_interface_module(undefined, _, _) ->
     {error, logging_level_undefined};

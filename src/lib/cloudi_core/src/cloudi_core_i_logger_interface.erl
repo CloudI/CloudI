@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,19 +31,19 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.1 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_logger_interface).
 -author('mjtruog at protonmail dot com').
--export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6,
+-export([fatal/6, error/6, warn/6, info/6, debug/6, trace/6, log/7,
          fatal_sync/6, error_sync/6, warn_sync/6,
-         info_sync/6, debug_sync/6, trace_sync/6,
+         info_sync/6, debug_sync/6, trace_sync/6, log_sync/7,
          fatal_apply/2, error_apply/2, warn_apply/2,
-         info_apply/2, debug_apply/2, trace_apply/2,
+         info_apply/2, debug_apply/2, trace_apply/2, log_apply/3,
          fatal_apply/3, error_apply/3, warn_apply/3,
-         info_apply/3, debug_apply/3, trace_apply/3]).
+         info_apply/3, debug_apply/3, trace_apply/3, log_apply/4]).
 fatal(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(async, cloudi_core_i_logger,
                                Module, Line, Function, Arity,
@@ -68,6 +68,15 @@ trace(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(async, cloudi_core_i_logger,
                                Module, Line, Function, Arity,
                                Format, Arguments).
+log(Module, Line, Function, Arity, Level, Format, Arguments)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    cloudi_core_i_logger:Level(async, cloudi_core_i_logger,
+                               Module, Line, Function, Arity,
+                               Format, Arguments);
+log(_, _, _, _, Level, _, _)
+    when Level =:= off ->
+    ok.
 fatal_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:fatal(sync, cloudi_core_i_logger,
                                Module, Line, Function, Arity,
@@ -92,6 +101,15 @@ trace_sync(Module, Line, Function, Arity, Format, Arguments) ->
     cloudi_core_i_logger:trace(sync, cloudi_core_i_logger,
                                Module, Line, Function, Arity,
                                Format, Arguments).
+log_sync(Module, Line, Function, Arity, Level, Format, Arguments)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    cloudi_core_i_logger:Level(sync, cloudi_core_i_logger,
+                               Module, Line, Function, Arity,
+                               Format, Arguments);
+log_sync(_, _, _, _, Level, _, _)
+    when Level =:= off ->
+    ok.
 fatal_apply(F, A) ->
     erlang:apply(F, A).
 error_apply(F, A) ->
@@ -104,6 +122,13 @@ debug_apply(F, A) ->
     erlang:apply(F, A).
 trace_apply(F, A) ->
     erlang:apply(F, A).
+log_apply(Level, F, A)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    erlang:apply(F, A);
+log_apply(Level, _, _)
+    when Level =:= off ->
+    undefined.
 fatal_apply(M, F, A) ->
     erlang:apply(M, F, A).
 error_apply(M, F, A) ->
@@ -116,4 +141,11 @@ debug_apply(M, F, A) ->
     erlang:apply(M, F, A).
 trace_apply(M, F, A) ->
     erlang:apply(M, F, A).
+log_apply(Level, M, F, A)
+    when Level =:= fatal; Level =:= error; Level =:= warn;
+         Level =:= info; Level =:= debug; Level =:= trace ->
+    erlang:apply(M, F, A);
+log_apply(Level, _, _, _)
+    when Level =:= off ->
+    undefined.
 

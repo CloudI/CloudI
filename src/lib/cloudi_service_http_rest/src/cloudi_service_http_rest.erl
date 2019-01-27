@@ -11,7 +11,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -32,8 +32,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2015-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_rest).
@@ -333,11 +333,13 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
         DebugLevel =:= off ->
             ok;
         RequestInfo /= <<>> ->
-            protocol_debug_log(DebugLevel, "request ~p ~p",
-                               [Name, {RequestInfo, Request}]);
+            ?LOG(DebugLevel,
+                 "request ~p ~p",
+                 [Name, {RequestInfo, Request}]);
         true ->
-            protocol_debug_log(DebugLevel, "request ~p ~p",
-                               [Name, Request])
+            ?LOG(DebugLevel,
+                 "request ~p ~p",
+                 [Name, Request])
     end,
     true = is_list(ParametersL),
     ReturnAPI = if
@@ -350,49 +352,31 @@ cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
             ResponseInfo = response_info_headers([], Name, Format,
                                                  ContentTypes,
                                                  ContentDisposition),
-            if
-                DebugLevel =:= off ->
-                    ok;
-                true ->
-                    protocol_debug_log(DebugLevel, "response ~p ~p",
-                                       [Name, {ResponseInfo, Response}])
-            end,
+            ?LOG(DebugLevel,
+                 "response ~p ~p",
+                 [Name, {ResponseInfo, Response}]),
             {reply, ResponseInfo, Response,
              State#state{api_state = NewStateAPI}};
         {reply, ResponseInfo, Response, NewStateAPI} ->
             NewResponseInfo = response_info_headers(ResponseInfo, Name, Format,
                                                     ContentTypes,
                                                     ContentDisposition),
-            if
-                DebugLevel =:= off ->
-                    ok;
-                true ->
-                    protocol_debug_log(DebugLevel, "response ~p ~p",
-                                       [Name, {NewResponseInfo, Response}])
-            end,
+            ?LOG(DebugLevel,
+                 "response ~p ~p",
+                 [Name, {NewResponseInfo, Response}]),
             {reply, NewResponseInfo, Response,
              State#state{api_state = NewStateAPI}};
         {forward, NextName, NextRequestInfo, NextRequest, NewStateAPI} ->
-            if
-                DebugLevel =:= off ->
-                    ok;
-                true ->
-                    protocol_debug_log(DebugLevel, "forward ~p to ~p ~p",
-                                       [Name, NextName,
-                                        {NextRequestInfo, NextRequest}])
-            end,
+            ?LOG(DebugLevel,
+                 "forward ~p to ~p ~p",
+                 [Name, NextName, {NextRequestInfo, NextRequest}]),
             {forward, NextName, NextRequestInfo, NextRequest,
              State#state{api_state = NewStateAPI}};
         {forward, NextName, NextRequestInfo, NextRequest,
          NextTimeout, NextPriority, NewStateAPI} ->
-            if
-                DebugLevel =:= off ->
-                    ok;
-                true ->
-                    protocol_debug_log(DebugLevel, "forward ~p to ~p ~p",
-                                       [Name, NextName,
-                                        {NextRequestInfo, NextRequest}])
-            end,
+            ?LOG(DebugLevel,
+                 "forward ~p to ~p ~p",
+                 [Name, NextName, {NextRequestInfo, NextRequest}]),
             {forward, NextName, NextRequestInfo, NextRequest,
              NextTimeout, NextPriority,
              State#state{api_state = NewStateAPI}};
@@ -503,15 +487,3 @@ response_info_headers(ResponseInfo0, Name, Format,
 response_info_headers(ResponseInfo, _, _, _, _) ->
     ResponseInfo.
 
-protocol_debug_log(trace, Message, Args) ->
-    ?LOG_TRACE(Message, Args);
-protocol_debug_log(debug, Message, Args) ->
-    ?LOG_DEBUG(Message, Args);
-protocol_debug_log(info, Message, Args) ->
-    ?LOG_INFO(Message, Args);
-protocol_debug_log(warn, Message, Args) ->
-    ?LOG_WARN(Message, Args);
-protocol_debug_log(error, Message, Args) ->
-    ?LOG_ERROR(Message, Args);
-protocol_debug_log(fatal, Message, Args) ->
-    ?LOG_FATAL(Message, Args).

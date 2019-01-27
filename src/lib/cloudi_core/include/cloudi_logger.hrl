@@ -5,7 +5,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -70,6 +70,11 @@
                                          ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                          Format, Args)).
 
+-define(LOG(Level, Format, Args),
+    cloudi_core_i_logger_interface:log(?MODULE, ?LINE,
+                                       ?FUNCTION_NAME, ?FUNCTION_ARITY,
+                                       Level, Format, Args)).
+
 % Force the logging to be done synchronously to the local log only
 % (if you are concerned about losing a logging message when the logging
 %  is done asynchronously while the logger's message queue is somewhat large,
@@ -109,6 +114,11 @@
                                               ?FUNCTION_NAME, ?FUNCTION_ARITY,
                                               Format, Args)).
 
+-define(LOG_SYNC(Level, Format, Args),
+    cloudi_core_i_logger_interface:log_sync(?MODULE, ?LINE,
+                                            ?FUNCTION_NAME, ?FUNCTION_ARITY,
+                                            Level, Format, Args)).
+
 % Apply an anonymous function if allowed by the current logging level setting
 
 -define(LOG_FATAL_APPLY(F, A),
@@ -129,6 +139,9 @@
 -define(LOG_TRACE_APPLY(F, A),
     cloudi_core_i_logger_interface:trace_apply(F, A)).
 
+-define(LOG_APPLY(Level, F, A),
+    cloudi_core_i_logger_interface:log_apply(Level, F, A)).
+
 % Apply a module function if allowed by the current logging level setting
 
 -define(LOG_FATAL_APPLY(M, F, A),
@@ -148,6 +161,9 @@
 
 -define(LOG_TRACE_APPLY(M, F, A),
     cloudi_core_i_logger_interface:trace_apply(M, F, A)).
+
+-define(LOG_APPLY(Level, M, F, A),
+    cloudi_core_i_logger_interface:log_apply(Level, M, F, A)).
 
 % Get/Set lager-compatible logging metadata
 
