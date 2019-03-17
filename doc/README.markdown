@@ -247,7 +247,8 @@
                 {:ok, :undefined}
             end
         
-            def cloudi_service_handle_request(_request_type, _name, _pattern,
+            def cloudi_service_handle_request(_request_type,
+                                              _name, _pattern,
                                               _request_info, _request,
                                               _timeout, _priority,
                                               _transid, _pid, state,
