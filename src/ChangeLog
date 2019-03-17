@@ -6,9 +6,9 @@
     * Change all CloudI services to use "request type" as the
       variable name for the request type (instead of "type")
       (affects OCaml, Haskell and Erlang services)
-    * Add ,[[{load_dot_erlang,false}]] reltool release options
+    * Add {load_dot_erlang,false} reltool release option
       to prevent the ~/.erlang file from being used with the
-      Erlang cloudi release with Erlang/OTP >= 22
+      Erlang cloudi release when using Erlang/OTP >= 22
     * Avoid deprecated inspect.getargspec in the
       Python and Python/C CloudI API implementations
 
