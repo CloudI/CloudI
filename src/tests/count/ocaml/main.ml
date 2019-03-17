@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -35,14 +35,14 @@ module ServiceState = struct
     {count = 0}
 end
 
-let request type_ name pattern _ _ timeout _ trans_id pid state api =
+let request request_type name pattern _ _ timeout _ trans_id pid state api =
   let {ServiceState.count; _} = state in
   let count_new = if count == 4294967295 then 0 else count + 1 in
   state.ServiceState.count <- count_new ;
   print_endline ("count == " ^ (string_of_int count_new) ^ " ocaml") ;
   let response = string_of_int count_new in
   match Cloudi.return_ api
-    type_ name pattern "" response timeout trans_id pid with
+    request_type name pattern "" response timeout trans_id pid with
   | Error (error) ->
     Cloudi.NullError (error)
   | Ok _ ->

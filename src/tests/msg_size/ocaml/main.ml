@@ -5,7 +5,7 @@
  
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -58,7 +58,8 @@ let pack_uint32_native (value : int) : string =
   Bytes.set binary (if Sys.big_endian then 3 else 0) (char_of_int byte3) ;
   Bytes.to_string binary
 
-let request type_ _ _ request_info request timeout priority trans_id pid _ api =
+let request
+  request_type _ _ request_info request timeout priority trans_id pid _ api =
   match unpack_uint32_native request with
   | Error (error) ->
     Cloudi.NullError (error)
@@ -78,7 +79,7 @@ let request type_ _ _ request_info request timeout priority trans_id pid _ api =
       " (with timeout " ^ (string_of_int timeout) ^ " ms)"
     ) ;
     match Cloudi.forward_ api
-      type_ destination request_info request_new
+      request_type destination request_info request_new
       timeout priority trans_id pid with
     | Error (error) ->
       Cloudi.NullError (error)

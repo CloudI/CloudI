@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2017-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_count).
@@ -88,7 +88,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     end,
     {ok, State}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{mode = isolated,
                                      count = Count0} = State, _Dispatcher) ->
@@ -96,11 +97,13 @@ cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
     ?LOG_INFO("count == ~w erlang", [CountN]),
     Response = cloudi_string:format_to_binary("~w", [CountN]),
     {reply, Response, State#state{count = CountN}};
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern,
+                              RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
                               #state{mode = crdt,
                                      crdt = CRDT0} = State, Dispatcher) ->
-    case cloudi_crdt:handle_request(Type, Name, Pattern, RequestInfo, Request,
+    case cloudi_crdt:handle_request(RequestType, Name, Pattern,
+                                    RequestInfo, Request,
                                     Timeout, Priority, TransId, Pid,
                                     CRDT0, Dispatcher) of
         {ok, CRDTN} ->

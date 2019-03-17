@@ -53,7 +53,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -74,8 +74,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2017-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2017-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_crdt).
@@ -601,7 +601,7 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
 %% @end
 %%-------------------------------------------------------------------------
 
--spec handle_request(Type :: cloudi_service:request_type(),
+-spec handle_request(RequestType :: cloudi_service:request_type(),
                      Name :: cloudi_service:service_name(),
                      Pattern :: cloudi_service:service_name_pattern(),
                      RequestInfo :: cloudi_service:request_info(),
@@ -615,7 +615,7 @@ handle_info(Request, #cloudi_crdt{queue = Queue} = State, Dispatcher) ->
     {ok, StateNew :: state()} |
     {ignored, State :: state()}.
 
-handle_request(Type, ServiceNameFull, ServiceNameFull,
+handle_request(RequestType, ServiceNameFull, ServiceNameFull,
                _RequestInfo, Request, Timeout, _Priority, TransId, Pid,
                #cloudi_crdt{service_name_full = ServiceNameFull,
                             node_id = NodeId,
@@ -639,7 +639,7 @@ handle_request(Type, ServiceNameFull, ServiceNameFull,
               NodeId, VClock, VClocks,
               POLogMode, POLog, Data}, State}
     end,
-    ok = cloudi_service:return_nothrow(Dispatcher, Type,
+    ok = cloudi_service:return_nothrow(Dispatcher, RequestType,
                                        ServiceNameFull, ServiceNameFull,
                                        <<>>, Response, Timeout, TransId, Pid),
     {ok, StateNew};

@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_request_rate).
@@ -198,11 +198,11 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 tick_length = TickLength,
                 request_rate = RequestRateN}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
                               #state{mode = crdt,
                                      crdt = CRDT0} = State, Dispatcher) ->
-    {ok, CRDTN} = cloudi_crdt:handle_request(Type, Name, Pattern,
+    {ok, CRDTN} = cloudi_crdt:handle_request(RequestType, Name, Pattern,
                                              RequestInfo, Request,
                                              Timeout, Priority, TransId, Pid,
                                              CRDT0, Dispatcher),

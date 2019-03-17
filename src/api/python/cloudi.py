@@ -45,8 +45,14 @@ from erlang import (binary_to_term, term_to_binary,
 
 if sys.version_info[0] >= 3:
     TypeUnicode = str
+    def _function_argc(function):
+        args, _, _, _, _, _, _ = inspect.getfullargspec(function)
+        return len(args)
 else:
     TypeUnicode = unicode
+    def _function_argc(function):
+        args, _, _, _ = inspect.getargspec(function)
+        return len(args)
 
 __all__ = [
     'API',
@@ -135,8 +141,7 @@ class API(object):
         """
         subscribes to a service name pattern with a callback
         """
-        args, _, _, _ = inspect.getargspec(function)
-        if len(args) != 10:
+        if _function_argc(function) != 10:
             # self + arguments for a member function
             #  api + arguments for a static function
             raise InvalidInputException()
@@ -394,6 +399,7 @@ class API(object):
         # pylint: disable=too-many-return-statements
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+        # pylint: disable=too-many-locals
         function_queue = self.__callbacks.get(pattern, None)
         if function_queue is None:
             function = self.__null_response

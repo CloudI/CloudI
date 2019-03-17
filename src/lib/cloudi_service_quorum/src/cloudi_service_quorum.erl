@@ -16,7 +16,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -37,8 +37,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2013-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_quorum).
@@ -94,7 +94,7 @@
 
 -record(request,
     {
-        type :: cloudi_service:request_type(),
+        request_type :: cloudi_service:request_type(),
         name :: cloudi_service:service_name(),
         pattern :: cloudi_service:service_name_pattern(),
         timeout :: cloudi_service:timeout_value_milliseconds(),
@@ -209,7 +209,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_dest_max_count = FailuresDstMaxCount,
                 failures_dest_max_period = FailuresDstMaxPeriod}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, SrcPid,
                               #state{quorum = Quorum,
                                      validate_request_info = RequestInfoF,
@@ -250,7 +250,8 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                             request_failed(SrcPid, State);
                         true ->
                             mcast(PatternPids, QuorumName,
-                                  Type, Name, Pattern, RequestInfo, Request,
+                                  RequestType, Name, Pattern,
+                                  RequestInfo, Request,
                                   Timeout, Priority, TransId, SrcPid,
                                   CountRequired, State, Dispatcher)
                     end;
@@ -287,7 +288,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
               dest = DstPid},
      NewPending} = maps:take(QuorumTransId, Pending),
     #request{% return data
-             type = Type,
+             request_type = RequestType,
              name = Name,
              pattern = Pattern,
              source = SrcPid,
@@ -319,21 +320,20 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                     NewCountCorrect = erlang:max(Count, CountCorrect),
                     NewReturned = if
                         Count == CountRequired ->
-                            cloudi_service:return_nothrow(Dispatcher, Type,
-                                                          Name, Pattern,
-                                                          ResponseInfo,
-                                                          Response,
-                                                          Timeout, TransId,
-                                                          SrcPid),
+                            cloudi_service:
+                            return_nothrow(Dispatcher, RequestType,
+                                           Name, Pattern,
+                                           ResponseInfo, Response,
+                                           Timeout, TransId, SrcPid),
                             true;
                         (NewCountResponses == CountTotal) orelse
                         ((NewCountCorrect +
                           (CountTotal - NewCountResponses)) < CountRequired) ->
-                            cloudi_service:return_nothrow(Dispatcher, Type,
-                                                          Name, Pattern,
-                                                          <<>>, <<>>,
-                                                          Timeout, TransId,
-                                                          SrcPid),
+                            cloudi_service:
+                            return_nothrow(Dispatcher, RequestType,
+                                           Name, Pattern,
+                                           <<>>, <<>>,
+                                           Timeout, TransId, SrcPid),
                             true;
                         true ->
                             Returned
@@ -377,7 +377,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                 ((NewCountResponses == CountTotal) orelse
                  ((CountCorrect +
                    (CountTotal - NewCountResponses)) < CountRequired)) ->
-                    cloudi_service:return_nothrow(Dispatcher, Type,
+                    cloudi_service:return_nothrow(Dispatcher, RequestType,
                                                   Name, Pattern,
                                                   <<>>, <<>>,
                                                   Timeout, TransId, SrcPid),
@@ -422,7 +422,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
               dest = DstPid},
      NewPending} = maps:take(QuorumTransId, Pending),
     #request{% return data
-             type = Type,
+             request_type = RequestType,
              name = Name,
              pattern = Pattern,
              timeout = Timeout,
@@ -449,7 +449,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = QuorumTransId},
         ((NewCountResponses == CountTotal) orelse
          ((CountCorrect +
            (CountTotal - NewCountResponses)) < CountRequired)) ->
-            cloudi_service:return_nothrow(Dispatcher, Type,
+            cloudi_service:return_nothrow(Dispatcher, RequestType,
                                           Name, Pattern,
                                           <<>>, <<>>,
                                           Timeout, TransId, SrcPid),
@@ -532,7 +532,7 @@ mcast_send([{_, DstPid} = PatternPid | PatternPids],
     end.
 
 mcast(PatternPids, QuorumName,
-      Type, Name, Pattern, RequestInfo, Request,
+      RequestType, Name, Pattern, RequestInfo, Request,
       Timeout, Priority, TransId, SrcPid, CountRequired,
       #state{requests = Requests,
              pending = Pending} = State, Dispatcher) ->
@@ -543,7 +543,7 @@ mcast(PatternPids, QuorumName,
     if
         CountSent >= CountRequired ->
             NewRequests = maps:put(TransId,
-                                   #request{type = Type,
+                                   #request{request_type = RequestType,
                                             name = Name,
                                             pattern = Pattern,
                                             timeout = Timeout,
@@ -556,7 +556,7 @@ mcast(PatternPids, QuorumName,
                                   pending = NewPending}};
         true ->
             NewRequests = maps:put(TransId,
-                                   #request{type = Type,
+                                   #request{request_type = RequestType,
                                             name = Name,
                                             pattern = Pattern,
                                             timeout = Timeout,

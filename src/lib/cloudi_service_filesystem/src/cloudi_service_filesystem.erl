@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_filesystem).
@@ -641,7 +641,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 use_content_disposition = UseContentDisposition,
                 content_type_lookup = ContentTypeLookup}}.
 
-cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
+cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
                               #file_notify{} = Notify,
                               Timeout, Priority, _TransId, _Pid,
                               #state{prefix = Prefix,
@@ -656,7 +656,7 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
         {error, _} = Error ->
             {reply, Error, State}
     end;
-cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
+cloudi_service_handle_request(_RequestType, Name, _Pattern, _RequestInfo,
                               notify_clear,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{prefix = Prefix,
@@ -673,7 +673,8 @@ cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo,
         error ->
             {reply, {error, not_found}, State}
     end;
-cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_RequestType, Name, _Pattern,
+                              RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{files = Files,
                                      use_http_get_suffix = UseHttpGetSuffix

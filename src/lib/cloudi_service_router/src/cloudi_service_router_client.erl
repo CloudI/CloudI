@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2018-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_client).
@@ -52,7 +52,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec forward(Type :: cloudi_service:request_type(),
+-spec forward(RequestType :: cloudi_service:request_type(),
               Name :: cloudi_service:service_name(),
               Pattern :: cloudi_service:service_name_pattern(),
               NewName :: cloudi_service:service_name(),
@@ -65,10 +65,11 @@
               State :: state()) ->
     ok | timeout.
 
-forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
         Timeout, Priority, TransId, Source, State)
     when element(1, State) =:= ssh_client ->
-    cloudi_service_router_ssh_client:forward(Type, Name, Pattern, NewName,
+    cloudi_service_router_ssh_client:forward(RequestType,
+                                             Name, Pattern, NewName,
                                              RequestInfo, Request,
                                              Timeout, Priority,
                                              TransId, Source, State).

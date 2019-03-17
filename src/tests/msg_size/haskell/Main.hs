@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -49,7 +49,8 @@ destination_ = "/tests/msg_size/erlang"
 request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-request_ type_ _ _ requestInfo request timeout priority transId pid state api =
+request_ requestType _ _
+    requestInfo request timeout priority transId pid state api =
     let destination = Char8.pack destination_
         decode = do
             i <- Get.getWord32host
@@ -64,7 +65,8 @@ request_ type_ _ _ requestInfo request timeout priority transId pid state api =
     putStrLn $ "forward #" ++ (show i1) ++ " haskell to " ++ destination_ ++
         " (with timeout " ++ (show timeout) ++ " ms)"
     CloudI.forward_ api
-        type_ destination requestInfo requestNew timeout priority transId pid
+        requestType destination
+        requestInfo requestNew timeout priority transId pid
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()

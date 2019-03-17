@@ -675,7 +675,8 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 content_type_lookup = ContentTypeLookup,
                 prefix_length = erlang:length(Prefix)}}.
 
-cloudi_service_handle_request(_Type, Name, _Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_RequestType, Name, _Pattern,
+                              RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{module = Module,
                                      profile = Profile,

@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.7.6 {@date} {@time}
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -142,7 +142,8 @@ cloudi_service_init([], Prefix, _Timeout, Dispatcher) ->
     {ok, #state{functions = CloudIServiceAPI,
                 prefix = Prefix}}.
 
-cloudi_service_handle_request(_Type, Name, _Pattern, _RequestInfo, Request,
+cloudi_service_handle_request(_RequestType, Name, _Pattern,
+                              _RequestInfo, Request,
                               Timeout, _Priority, _TransId, _Pid,
                               #state{prefix = Prefix} = State, _Dispatcher) ->
     Response = case cloudi_service_name:suffix(Prefix, Name) of

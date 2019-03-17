@@ -69,7 +69,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2019 Michael Truog
-%%% @version 1.7.6 {@date} {@time}
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).
@@ -99,7 +99,6 @@
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
-         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
@@ -643,12 +642,6 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
                 nodes_visible = erlang:length(erlang:nodes(visible)),
                 nodes_hidden = erlang:length(erlang:nodes(hidden)),
                 nodes_all = erlang:length(erlang:nodes(connected))}}.
-
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              #state{} = State,
-                              _Dispatcher) ->
-    {reply, <<>>, State#state{}}.
 
 cloudi_service_handle_info(cloudi_update,
                            #state{service = Service,

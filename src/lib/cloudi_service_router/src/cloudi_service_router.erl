@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router).
@@ -226,7 +226,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_source_max_period = FailuresSrcMaxPeriod,
                 destinations = Destinations}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, SrcPid,
                               #state{validate_request_info = RequestInfoF,
                                      validate_request = RequestF,
@@ -246,7 +246,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                               store(Pattern,
                                                     NewDestination,
                                                     Destinations),
-                            forward(Type, Name, Pattern, NewName,
+                            forward(RequestType, Name, Pattern, NewName,
                                     RequestInfo, Request,
                                     Timeout, Priority, TransId, SrcPid,
                                     NewDestination,
@@ -328,11 +328,11 @@ forward(_, _, _, NewName, RequestInfo, Request,
         Timeout, Priority, _, _,
         #destination{remote = undefined}, State) ->
     {forward, NewName, RequestInfo, Request, Timeout, Priority, State};
-forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
         Timeout, Priority, TransId, SrcPid,
         #destination{remote = Remote}, State) ->
     Forward = cloudi_service_router_client:
-              forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+              forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
                       Timeout, Priority, TransId, SrcPid, Remote),
     if
         Forward =:= ok ->

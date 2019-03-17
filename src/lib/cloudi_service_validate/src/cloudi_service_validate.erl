@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2015-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_validate).
@@ -80,7 +80,7 @@
 
 -record(request,
     {
-        type :: cloudi_service:request_type(),
+        request_type :: cloudi_service:request_type(),
         name :: cloudi_service:service_name(),
         pattern :: cloudi_service:service_name_pattern(),
         timeout :: cloudi_service:timeout_value_milliseconds(),
@@ -165,7 +165,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 failures_dest_max_count = FailuresDstMaxCount,
                 failures_dest_max_period = FailuresDstMaxPeriod}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, SrcPid,
                               #state{validate_request_info = RequestInfoF,
                                      validate_request = RequestF,
@@ -183,13 +183,14 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                                           Timeout, Priority,
                                                           PatternPid) of
                         {ok, ValidateTransId} ->
-                            ValidateRequest = #request{type = Type,
-                                                       name = Name,
-                                                       pattern = Pattern,
-                                                       timeout = Timeout,
-                                                       trans_id = TransId,
-                                                       source = SrcPid,
-                                                       destination = DstPid},
+                            ValidateRequest =
+                                #request{request_type = RequestType,
+                                         name = Name,
+                                         pattern = Pattern,
+                                         timeout = Timeout,
+                                         trans_id = TransId,
+                                         source = SrcPid,
+                                         destination = DstPid},
                             {noreply,
                              State#state{requests = maps:put(ValidateTransId,
                                                              ValidateRequest,
@@ -224,7 +225,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                   failures_dest = FailuresDst,
                                   requests = Requests} = State,
                            Dispatcher) ->
-    {#request{type = Type,
+    {#request{request_type = RequestType,
               name = Name,
               pattern = Pattern,
               trans_id = TransId,
@@ -234,7 +235,8 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
     case validate(ResponseInfoF, ResponseF,
                   ResponseInfo, Response) of
         true ->
-            cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
+            cloudi_service:return_nothrow(Dispatcher, RequestType,
+                                          Name, Pattern,
                                           ResponseInfo, Response,
                                           Timeout, TransId, SrcPid),
             {noreply, State#state{requests = NewRequests}};
@@ -247,8 +249,8 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                 DeadSrc =:= true ->
                     ok;
                 DeadSrc =:= false ->
-                    cloudi_service:return_nothrow(Dispatcher,
-                                                  Type, Name, Pattern,
+                    cloudi_service:return_nothrow(Dispatcher, RequestType,
+                                                  Name, Pattern,
                                                   <<>>, <<>>,
                                                   Timeout, TransId, SrcPid)
             end,
@@ -276,7 +278,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
                                   failures_dest = FailuresDst,
                                   requests = Requests} = State,
                            Dispatcher) ->
-    {#request{type = Type,
+    {#request{request_type = RequestType,
               name = Name,
               pattern = Pattern,
               timeout = Timeout,
@@ -292,7 +294,8 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = ValidateTransId},
         DeadSrc =:= true ->
             ok;
         DeadSrc =:= false ->
-            cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
+            cloudi_service:return_nothrow(Dispatcher, RequestType,
+                                          Name, Pattern,
                                           <<>>, <<>>,
                                           Timeout, TransId, SrcPid)
     end,

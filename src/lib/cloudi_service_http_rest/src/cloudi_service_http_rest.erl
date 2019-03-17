@@ -307,7 +307,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
             {stop, Reason, State#state{api_state = StateAPI}}
     end.
 
-cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
                               #state{prefix = Prefix,
                                      lookup = Lookup,

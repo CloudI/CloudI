@@ -42,7 +42,6 @@
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
-         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
@@ -311,11 +310,6 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {error, _} = Error ->
             {stop, Error, #state{}}
     end.
-
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
-    {reply, <<>>, State}.
 
 cloudi_service_handle_info({inet_async, Listener, Acceptor, {ok, Socket}},
                            #state{listener = Listener,

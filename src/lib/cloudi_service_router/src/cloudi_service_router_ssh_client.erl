@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2018-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_router_ssh_client).
@@ -94,7 +94,7 @@
 %%% External interface functions
 %%%------------------------------------------------------------------------
 
--spec forward(Type :: cloudi_service:request_type(),
+-spec forward(RequestType :: cloudi_service:request_type(),
               Name :: cloudi_service:service_name(),
               Pattern :: cloudi_service:service_name_pattern(),
               NewName :: cloudi_service:service_name(),
@@ -107,12 +107,13 @@
               State :: state()) ->
     ok | timeout.
 
-forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
         Timeout, Priority, TransId, Source,
         #ssh_client{process = Pid}) ->
     try gen_server:call(Pid,
                         {forward,
-                         Type, Name, Pattern, NewName, RequestInfo, Request,
+                         RequestType, Name, Pattern, NewName,
+                         RequestInfo, Request,
                          Timeout, Priority, TransId, Source},
                         Timeout + ?TIMEOUT_DELTA)
     catch
@@ -242,10 +243,10 @@ init([HostName, Port, ClientOptions, Compression]) ->
                                 compression = Compression}}.
 
 handle_call({forward,
-             Type, Name, Pattern, NewName, RequestInfo, Request,
+             RequestType, Name, Pattern, NewName, RequestInfo, Request,
              Timeout, Priority, TransId, Source}, _, State) ->
     {Reply,
-     NewState} = handle_forward(Type, Name, Pattern, NewName,
+     NewState} = handle_forward(RequestType, Name, Pattern, NewName,
                                 RequestInfo, Request,
                                 Timeout, Priority, TransId, Source, State),
     {reply, Reply, NewState};
@@ -307,7 +308,7 @@ code_change(_, State, _) ->
 handle_forward(_, _, _, _, _, _, Timeout, _, _, _, State)
     when Timeout < ?TIMEOUT_SEND_MIN ->
     {timeout, State};
-handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+handle_forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
                Timeout, Priority, TransId, Source,
                #ssh_client_connection{
                    host_name = HostName,
@@ -333,7 +334,7 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                                     Timeout - ConnectTime
                             end,
                             ConnectionHandle = {Connection, ChannelId},
-                            handle_forward(Type, Name, Pattern, NewName,
+                            handle_forward(RequestType, Name, Pattern, NewName,
                                            RequestInfo, Request,
                                            NewTimeout, Priority,
                                            TransId, Source,
@@ -361,15 +362,15 @@ handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
                        [HostName, Port, Reason]),
             {timeout, State}
     end;
-handle_forward(Type, Name, Pattern, NewName, RequestInfo, Request,
+handle_forward(RequestType, Name, Pattern, NewName, RequestInfo, Request,
                Timeout, Priority, TransId, Source,
                #ssh_client_connection{
                    compression = Compression,
                    handle = {Connection, ChannelId}} = State) ->
     ForwardType = if
-        Type =:= 'send_async' ->
+        RequestType =:= 'send_async' ->
             'cloudi_service_forward_async_retry';
-        Type =:= 'send_sync' ->
+        RequestType =:= 'send_sync' ->
             'cloudi_service_forward_sync_retry'
     end,
     DataOutDecoded = {ForwardType, Name, Pattern, NewName,

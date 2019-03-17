@@ -47,6 +47,15 @@ __all__ = [
     'terminate_exception',
 ]
 
+if sys.version_info[0] >= 3:
+    def _function_argc(function):
+        args, _, _, _, _, _, _ = inspect.getfullargspec(function)
+        return len(args)
+else:
+    def _function_argc(function):
+        args, _, _, _ = inspect.getargspec(function)
+        return len(args)
+
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-public-methods
 class API(object):
@@ -80,8 +89,7 @@ class API(object):
         """
         subscribes to a service name pattern with a callback
         """
-        args, _, _, _ = inspect.getargspec(function)
-        if len(args) != 10:
+        if _function_argc(function) != 10:
             # self + arguments for a member function
             #  api + arguments for a static function
             raise InvalidInputException()

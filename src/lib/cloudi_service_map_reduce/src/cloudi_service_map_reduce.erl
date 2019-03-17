@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2012-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
@@ -173,7 +173,8 @@ cloudi_service_init(Args, Prefix, Timeout, _Dispatcher) ->
                            concurrency = Concurrency},
     {ok, undefined}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               State, _Dispatcher) ->
     {reply, <<>>, State}.

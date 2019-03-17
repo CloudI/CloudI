@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2012-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_http_cowboy1).
@@ -44,7 +44,6 @@
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
-         cloudi_service_handle_request/11,
          cloudi_service_handle_info/3,
          cloudi_service_terminate/3]).
 
@@ -504,11 +503,6 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
     {ok, #state{listener = ListenerPid,
                 service = Service,
                 handler_state = HandlerState}}.
-
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
-                              _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
-    {reply, <<>>, State}.
 
 cloudi_service_handle_info({update, UpdateDelaySeconds},
                            #state{service = Service,

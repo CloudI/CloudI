@@ -1,6 +1,17 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-03-16 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Change all CloudI services to use "request type" as the
+      variable name for the request type (instead of "type")
+      (affects OCaml, Haskell and Erlang services)
+    * Add ,[[{load_dot_erlang,false}]] reltool release options
+      to prevent the ~/.erlang file from being used with the
+      Erlang cloudi release with Erlang/OTP >= 22
+    * Avoid deprecated inspect.getargspec in the
+      Python and Python/C CloudI API implementations
+
 2019-01-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add CloudI Erlang logging macros for providing the

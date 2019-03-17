@@ -72,7 +72,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -93,8 +93,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_queue).
@@ -140,7 +140,7 @@
 % fault_isolation: destination
 -record(destination_request,
     {
-        type :: cloudi_service:request_type(),
+        request_type :: cloudi_service:request_type(),
         name :: cloudi_service:service_name(),
         pattern :: cloudi_service:service_name_pattern(),
         request_info :: cloudi_service:request_info(),
@@ -248,7 +248,7 @@ cloudi_service_init(Args, Prefix, _Timeout, Dispatcher) ->
                 retry_delay = RetryDelay,
                 retry_f = RetryF}}.
 
-cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Pid,
                               #state{service = Service,
                                      file_size_limit = FileSizeLimit,
@@ -256,7 +256,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                                      mode = destination} = State,
                               Dispatcher) ->
     [QueueName] = cloudi_service_name:parse(Name, Pattern),
-    ChunkRequest = #destination_request{type = Type,
+    ChunkRequest = #destination_request{request_type = RequestType,
                                         name = Name,
                                         pattern = Pattern,
                                         request_info = RequestInfo,
@@ -283,7 +283,7 @@ cloudi_service_handle_request(Type, Name, Pattern, RequestInfo, Request,
                       [FileSizeLimit]),
             {reply, <<>>, State}
     end;
-cloudi_service_handle_request(_Type, Name, Pattern, RequestInfo, Request,
+cloudi_service_handle_request(_RequestType, Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, _Pid,
                               #state{service = Service,
                                      file_size_limit = FileSizeLimit,
@@ -340,7 +340,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                            #state{logging = Logging,
                                   mode = destination} = State,
                            Dispatcher) ->
-    {#destination_request{type = Type,
+    {#destination_request{request_type = RequestType,
                           name = Name,
                           pattern = Pattern,
                           trans_id = TransId,
@@ -349,7 +349,7 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                    erase(QueueTransId, Logging),
     % PERSISTENCE END:
     % at this point the service request is no longer persisted
-    cloudi_service:return_nothrow(Dispatcher, Type, Name, Pattern,
+    cloudi_service:return_nothrow(Dispatcher, RequestType, Name, Pattern,
                                   ResponseInfo, Response,
                                   Timeout, TransId, Pid),
     {noreply, State#state{logging = NewLogging}};

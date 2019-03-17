@@ -417,9 +417,9 @@ let forward_sync
     raise ForwardSync
 
 let forward_
-  api type_ name request_info request timeout priority trans_id pid :
+  api request_type name request_info request timeout priority trans_id pid :
   (unit, string) result =
-  match type_ with
+  match request_type with
   | ASYNC ->
     forward_async api name request_info request timeout priority trans_id pid
   | SYNC ->
@@ -482,9 +482,9 @@ let return_sync
     raise ReturnSync
 
 let return_
-  api type_ name pattern response_info response timeout trans_id pid :
+  api request_type name pattern response_info response timeout trans_id pid :
   (unit, string) result =
-  match type_ with
+  match request_type with
   | ASYNC ->
     return_async api name pattern response_info response timeout trans_id pid
   | SYNC ->

@@ -15,7 +15,7 @@
 %%%               State = undefined, if not returned
 %%%               Reason = restart | shutdown | Term, terminate(State) is called
 %%%
-%%%   cloudi_service_handle_request(Type, Name, Pattern,
+%%%   cloudi_service_handle_request(RequestType, Name, Pattern,
 %%%                                 RequestInfo, Request, Timeout, Priority,
 %%%                                 TransId, Pid, State, Dispatcher)
 %%%    ==> {reply, Response, NewState}
@@ -59,7 +59,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -80,8 +80,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service).
@@ -237,7 +237,7 @@
     {stop, Reason :: any()} |
     {stop, Reason :: any(), State :: any()}.
 
--callback cloudi_service_handle_request(Type :: request_type(),
+-callback cloudi_service_handle_request(RequestType :: request_type(),
                                         Name :: service_name(),
                                         Pattern :: service_name_pattern(),
                                         RequestInfo :: request_info(),
@@ -1927,7 +1927,7 @@ mcast_async_passive(Dispatcher, Name, RequestInfo, Request,
 %%-------------------------------------------------------------------------
 
 -spec forward(Dispatcher :: dispatcher(),
-              Type :: request_type(),
+              RequestType :: request_type(),
               Name :: service_name(),
               RequestInfo :: request_info(),
               Request :: request(),
@@ -2037,7 +2037,7 @@ return(Dispatcher, ResponseInfo, Response)
 %%-------------------------------------------------------------------------
 
 -spec return(Dispatcher :: dispatcher(),
-             Type :: request_type(),
+             RequestType :: request_type(),
              Name :: service_name(),
              Pattern :: service_name_pattern(),
              ResponseInfo :: response_info(),
@@ -2121,7 +2121,7 @@ return_sync(Dispatcher, [NameC | _] = Name, [PatternC | _] = Pattern,
 %%-------------------------------------------------------------------------
 
 -spec return_nothrow(Dispatcher :: dispatcher(),
-                     Type :: request_type(),
+                     RequestType :: request_type(),
                      Name :: service_name(),
                      Pattern :: service_name_pattern(),
                      ResponseInfo :: response_info(),

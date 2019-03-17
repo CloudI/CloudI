@@ -90,7 +90,8 @@
     % CloudI
     cloudi_core,
     cloudi_x_msgpack
-   ]},
+   ]
+   @CLOUDI_CORE_RELEASE_OPTIONS@},
   {rel, "start_clean", "",
    [
     kernel,

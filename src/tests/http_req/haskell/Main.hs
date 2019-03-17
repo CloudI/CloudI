@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -43,7 +43,7 @@ type Source = CloudI.Source
 request_ :: RequestType -> ByteString -> ByteString ->
     ByteString -> ByteString -> Int -> Int -> ByteString -> Source ->
     () -> CloudI.T () -> IO (CloudI.Response ())
-request_ type_ name pattern _ request timeout _ transId pid state api =
+request_ requestType name pattern _ request timeout _ transId pid state api =
     let httpQs = CloudI.infoKeyValueParse request 
         value = Map.lookup (Char8.pack "value") httpQs >>=
             (\l -> Just (read (Char8.unpack $ head l) :: Integer))
@@ -54,7 +54,7 @@ request_ type_ name pattern _ request timeout _ transId pid state api =
                 "<http_test><value>" ++ (show i) ++ "</value></http_test>"
     in do
     CloudI.return_ api
-        type_ name pattern ByteString.empty response timeout transId pid
+        requestType name pattern ByteString.empty response timeout transId pid
     return $ CloudI.Null (state, api)
 
 task :: Int -> IO ()
