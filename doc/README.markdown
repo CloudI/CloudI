@@ -247,7 +247,7 @@
                 {:ok, :undefined}
             end
         
-            def cloudi_service_handle_request(_type, _name, _pattern,
+            def cloudi_service_handle_request(_request_type, _name, _pattern,
                                               _requestinfo, _request,
                                               _timeout, _priority,
                                               _transid, _pid, state,
@@ -364,7 +364,7 @@
             cloudi_service:subscribe(Dispatcher, "hello_world/get"),
             {ok, #state{}}.
         
-        cloudi_service_handle_request(_Type, _Name, _Pattern,
+        cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                                       _RequestInfo, _Request,
                                       _Timeout, _Priority,
                                       _TransId, _Pid,

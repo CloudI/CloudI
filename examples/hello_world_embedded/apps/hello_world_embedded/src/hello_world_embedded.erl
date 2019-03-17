@@ -17,7 +17,8 @@ cloudi_service_init(_Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, "hello_world_embedded/get"),
     {ok, #state{}}.
 
-cloudi_service_handle_request(_Type, _Name, _Pattern, _RequestInfo, _Request,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
+                              _RequestInfo, _Request,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{} = State, _Dispatcher) ->
     {reply, <<"Hello World!">>, State}.

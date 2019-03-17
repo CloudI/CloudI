@@ -8,7 +8,7 @@ defmodule HelloWorld do
     {:ok, :undefined}
   end
 
-  def cloudi_service_handle_request(_type, _name, _pattern,
+  def cloudi_service_handle_request(_request_type, _name, _pattern,
                                     _requestinfo, _request,
                                     _timeout, _priority,
                                     _transid, _pid, state, _dispatcher) do
