@@ -248,7 +248,7 @@
             end
         
             def cloudi_service_handle_request(_request_type, _name, _pattern,
-                                              _requestinfo, _request,
+                                              _request_info, _request,
                                               _timeout, _priority,
                                               _transid, _pid, state,
                                               _dispatcher) do
