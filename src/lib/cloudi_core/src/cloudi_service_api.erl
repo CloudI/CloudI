@@ -210,7 +210,7 @@
               aspect_init_after_internal/0,
               aspect_init_after_external/0]).
 -type aspect_request_before_internal_f() ::
-    fun((Type :: cloudi_service:request_type(),
+    fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
          RequestInfo :: cloudi_service:request_info(),
@@ -224,7 +224,7 @@
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_request_before_external_f() ::
-    fun((Type :: cloudi_service:request_type(),
+    fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
          RequestInfo :: cloudi_service:request_info(),
@@ -237,7 +237,7 @@
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_request_after_internal_f() ::
-    fun((Type :: cloudi_service:request_type(),
+    fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
          RequestInfo :: cloudi_service:request_info(),
@@ -252,7 +252,7 @@
         {ok, NewState :: any()} |
         {stop, Reason :: any(), NewState :: any()}).
 -type aspect_request_after_external_f() ::
-    fun((Type :: cloudi_service:request_type(),
+    fun((RequestType :: cloudi_service:request_type(),
          Name :: cloudi_service:service_name(),
          Pattern :: cloudi_service:service_name_pattern(),
          RequestInfo :: cloudi_service:request_info(),

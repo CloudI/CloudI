@@ -29,7 +29,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2014-2019 Michael Truog
-%%% @version 1.7.6 {@date} {@time}
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_SUITE).
@@ -165,23 +165,23 @@ cloudi_service_init(Args, ?SERVICE_PREFIX1, _Timeout, Dispatcher) ->
     end,
     {ok, #state{mode = NewMode}}.
 
-cloudi_service_handle_request(Type, Name, Pattern,
+cloudi_service_handle_request(RequestType, Name, Pattern,
                               ?REQUEST_INFO1 = RequestInfo, ?REQUEST1 = Request,
                               Timeout, Priority, TransId, Pid,
                               #state{mode = reply,
                                      requests = Requests} = State,
                               _Dispatcher) ->
-    NewRequests = [{Type, Name, Pattern, RequestInfo, Request,
+    NewRequests = [{RequestType, Name, Pattern, RequestInfo, Request,
                     Timeout, Priority, TransId, Pid} | Requests],
     {reply, ?RESPONSE_INFO1, ?RESPONSE1,
      State#state{requests = NewRequests}};
-cloudi_service_handle_request(_Type, _Name, _Pattern,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO2, ?REQUEST2,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{requests = Requests} = State,
                               _Dispatcher) ->
     {reply, <<>>, lists:reverse(Requests), State#state{requests = []}};
-cloudi_service_handle_request(_Type, Name, _Pattern,
+cloudi_service_handle_request(_RequestType, Name, _Pattern,
                               ?REQUEST_INFO3, ?REQUEST3,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{mode = reply} = State,
@@ -191,13 +191,13 @@ cloudi_service_handle_request(_Type, Name, _Pattern,
                                                 undefined, undefined),
     {ok, Responses} = cloudi_service:recv_asyncs(Dispatcher, TransIds),
     {reply, Responses, State};
-cloudi_service_handle_request(_Type, _Name, _Pattern,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO4, ?REQUEST4,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{} = State,
                               _Dispatcher) ->
     {reply, ?RESPONSE_INFO1, ?RESPONSE1, State};
-cloudi_service_handle_request(_Type, _Name, _Pattern,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO5, ?REQUEST5,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{mode = reply,
@@ -205,13 +205,13 @@ cloudi_service_handle_request(_Type, _Name, _Pattern,
                               _Dispatcher) ->
     {reply, ?RESPONSE_INFO1, ?RESPONSE1,
      State#state{count = Count + 1}};
-cloudi_service_handle_request(_Type, _Name, _Pattern,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO6, ?REQUEST6,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{count = Count} = State,
                               _Dispatcher) ->
     {reply, Count, State};
-cloudi_service_handle_request(_Type, _Name, _Pattern,
+cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               ?REQUEST_INFO7, ?REQUEST7,
                               _Timeout, _Priority, _TransId, _Pid,
                               #state{} = State,
