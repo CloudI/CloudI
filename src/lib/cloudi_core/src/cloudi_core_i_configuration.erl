@@ -4462,10 +4462,8 @@ service_acl_expand_list([E | L], Output, ACL)
 service_acl_expand_list([E | L], Output, ACL)
     when is_list(E), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern2(E) of
-        true ->
-            service_acl_expand_list(L, [E | Output], ACL);
-        false ->
-            service_acl_expand_list(L, [E ++ "*" | Output], ACL)
+        _ ->
+            service_acl_expand_list(L, [E | Output], ACL)
     catch
         exit:badarg ->
             {error, {acl_invalid, E}}
@@ -4525,10 +4523,8 @@ acl_update_values([E | L], Output, Path, Key, ACL)
 acl_update_values([E | L], Output, Path, Key, ACL)
     when is_list(E), is_integer(hd(E)) ->
     try cloudi_x_trie:is_pattern2(E) of
-        true ->
-            acl_update_values(L, [E | Output], Path, Key, ACL);
-        false ->
-            acl_update_values(L, [E ++ "*" | Output], Path, Key, ACL)
+        _ ->
+            acl_update_values(L, [E | Output], Path, Key, ACL)
     catch
         exit:badarg ->
             {error, {acl_invalid, E}}

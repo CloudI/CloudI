@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-03-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Allow ACL strings to not contain pattern characters for
+      exact matches (now ACL non-pattern strings are no longer
+      modified to become patterns by adding a "*" suffix)
+
 2019-03-22 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix quickstart so it uses request_type as the variable
