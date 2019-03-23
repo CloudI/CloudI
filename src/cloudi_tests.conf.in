@@ -9,9 +9,9 @@
     % patterns to match before a send operation and non-patterns are made
     % into service name patterns by appending a '*' character.
     {all, [database, tests]},
-    {database, ["/db/"]},
-    {tests, ["/tests/"]},
-    {api, ["/cloudi/api/"]}
+    {database, ["/db/*"]},
+    {tests, ["/tests/*"]},
+    {api, ["/cloudi/api/*"]}
 ]}.
 {services, [
     % an internal service is a native Erlang service,
