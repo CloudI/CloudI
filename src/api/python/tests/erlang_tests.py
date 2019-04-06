@@ -128,6 +128,8 @@ class DecodeTestCase(unittest.TestCase):
                          erlang.binary_to_term(b'\x83d\0\4test'))
         self.assertEqual(erlang.OtpErlangAtom(b'test'),
                          erlang.binary_to_term(b'\x83s\4test'))
+        self.assertEqual(erlang.OtpErlangAtom(u'name'),
+                         erlang.binary_to_term(b'\x83w\x04name'))
     def test_binary_to_term_predefined_atoms(self):
         self.assertEqual(True, erlang.binary_to_term(b'\x83s\4true'))
         self.assertEqual(False, erlang.binary_to_term(b'\x83s\5false'))

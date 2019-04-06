@@ -466,7 +466,7 @@ def _binary_to_term(i, data):
         i += 1
         return (i + j, OtpErlangBinary(data[i:i + j], bits))
     elif tag == _TAG_ATOM_CACHE_REF:
-        return (i + 1, OtpErlangAtom(b_ord(data[i:i + 1])))
+        return (i + 1, OtpErlangAtom(b_ord(data[i])))
     elif tag == _TAG_SMALL_INTEGER_EXT:
         return (i + 1, b_ord(data[i]))
     elif tag == _TAG_INTEGER_EXT:
@@ -603,7 +603,7 @@ def _binary_to_term(i, data):
         )
         return (i + j, OtpErlangAtom(atom_name))
     elif tag == _TAG_SMALL_ATOM_UTF8_EXT:
-        j = b_ord(data[i:i + 1])
+        j = b_ord(data[i])
         i += 1
         atom_name = TypeUnicode(
             data[i:i + j], encoding='utf-8', errors='strict'
@@ -668,9 +668,9 @@ def _binary_to_atom(i, data):
         i += 2
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_CACHE_REF:
-        return (i + 1, OtpErlangAtom(b_ord(data[i:i + 1])))
+        return (i + 1, OtpErlangAtom(b_ord(data[i])))
     elif tag == _TAG_SMALL_ATOM_EXT:
-        j = b_ord(data[i:i + 1])
+        j = b_ord(data[i])
         i += 1
         return (i + j, OtpErlangAtom(data[i:i + j]))
     elif tag == _TAG_ATOM_UTF8_EXT:
@@ -681,7 +681,7 @@ def _binary_to_atom(i, data):
         )
         return (i + j, OtpErlangAtom(atom_name))
     elif tag == _TAG_SMALL_ATOM_UTF8_EXT:
-        j = b_ord(data[i:i + 1])
+        j = b_ord(data[i])
         i += 1
         atom_name = TypeUnicode(
             data[i:i + j], encoding='utf-8', errors='strict'
