@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -36,7 +36,7 @@ module Pid :
       node : string;
       id : string;
       serial : string;
-      creation : int;
+      creation : string;
     }
   end
 module Port :
@@ -45,7 +45,7 @@ module Port :
       node_tag : int;
       node : string;
       id : string;
-      creation : int;
+      creation : string;
     }
   end
 module Reference :
@@ -54,7 +54,7 @@ module Reference :
       node_tag : int;
       node : string;
       id : string;
-      creation : int;
+      creation : string;
     }
   end
 module Function :

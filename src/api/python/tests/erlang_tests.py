@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 # Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -270,6 +270,64 @@ class DecodeTestCase(unittest.TestCase):
                          erlang.binary_to_term(b'\x83o\0\0\0\6\0\1\2\3\4\5\6'))
         self.assertEqual(-6618611909121,
                          erlang.binary_to_term(b'\x83o\0\0\0\6\1\1\2\3\4\5\6'))
+    def test_binary_to_term_pid(self):
+        pid_old_binary = (
+            b'\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F'
+            b'\x68\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00'
+        )
+        pid_old = erlang.binary_to_term(pid_old_binary)
+        self.assertTrue(isinstance(pid_old, erlang.OtpErlangPid))
+        self.assertEqual(erlang.term_to_binary(pid_old),
+                         b'\x83gs\rnonode@nohost\x00\x00\x00N'
+                         b'\x00\x00\x00\x00\x00')
+        pid_new_binary = (
+            b'\x83\x58\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68'
+            b'\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00\x00\x00\x00'
+        )
+        pid_new = erlang.binary_to_term(pid_new_binary)
+        self.assertTrue(isinstance(pid_new, erlang.OtpErlangPid))
+        self.assertEqual(erlang.term_to_binary(pid_new),
+                         b'\x83Xs\rnonode@nohost\x00\x00\x00N'
+                         b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    def test_binary_to_term_port(self):
+        port_old_binary = (
+            b'\x83\x66\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68'
+            b'\x6F\x73\x74\x00\x00\x00\x06\x00'
+        )
+        port_old = erlang.binary_to_term(port_old_binary)
+        self.assertTrue(isinstance(port_old, erlang.OtpErlangPort))
+        self.assertEqual(erlang.term_to_binary(port_old),
+                         b'\x83fs\rnonode@nohost\x00\x00\x00\x06\x00')
+        port_new_binary = (
+            b'\x83\x59\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68'
+            b'\x6F\x73\x74\x00\x00\x00\x06\x00\x00\x00\x00'
+        )
+        port_new = erlang.binary_to_term(port_new_binary)
+        self.assertTrue(isinstance(port_new, erlang.OtpErlangPort))
+        self.assertEqual(erlang.term_to_binary(port_new),
+                         b'\x83Ys\rnonode@nohost\x00\x00\x00\x06'
+                         b'\x00\x00\x00\x00')
+    def test_binary_to_term_ref(self):
+        ref_new_binary = (
+            b'\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E'
+            b'\x6F\x68\x6F\x73\x74\x00\x00\x03\xE8\x4E\xE7\x68\x00\x02\xA4'
+            b'\xC8\x53\x40'
+        )
+        ref_new = erlang.binary_to_term(ref_new_binary)
+        self.assertTrue(isinstance(ref_new, erlang.OtpErlangReference))
+        self.assertEqual(erlang.term_to_binary(ref_new),
+                         b'\x83r\x00\x03s\rnonode@nohost\x00\x00\x03\xe8'
+                         b'N\xe7h\x00\x02\xa4\xc8S@')
+        ref_newer_binary = (
+            b'\x83\x5A\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E'
+            b'\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\x00\x01\xAC\x03\xC7\x00'
+            b'\x00\x04\xBB\xB2\xCA\xEE'
+        )
+        ref_newer = erlang.binary_to_term(ref_newer_binary)
+        self.assertTrue(isinstance(ref_newer, erlang.OtpErlangReference))
+        self.assertEqual(erlang.term_to_binary(ref_newer),
+                         b'\x83Z\x00\x03s\rnonode@nohost\x00\x00\x00\x00\x00'
+                         b'\x01\xac\x03\xc7\x00\x00\x04\xbb\xb2\xca\xee')
     def test_binary_to_term_compressed_term(self):
         self.assertRaises(erlang.ParseException,
                           erlang.binary_to_term, b'\x83P')

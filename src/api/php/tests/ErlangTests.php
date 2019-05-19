@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -472,6 +472,75 @@ class DecodeTestCase extends PHPUnit\Framework\TestCase
         $this->assertEquals(-6618611909121,
                             \Erlang\binary_to_term("\x83o\0\0\0\6" .
                                                    "\1\1\2\3\4\5\6"));
+    }
+    public function test_binary_to_term_pid()
+    {
+        $pid_old_binary = (
+            "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" .
+            "\x68\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00"
+        );
+        $pid_old = \Erlang\binary_to_term($pid_old_binary);
+        $this->assertEquals(get_class($pid_old), 'Erlang\OtpErlangPid');
+        $this->assertEquals(
+            "\x83gs\rnonode@nohost\x00\x00\x00N\x00\x00\x00\x00\x00",
+            \Erlang\term_to_binary($pid_old));
+        $pid_new_binary = (
+            "\x83\x58\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" .
+            "\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00\x00\x00\x00"
+        );
+        $pid_new = \Erlang\binary_to_term($pid_new_binary);
+        $this->assertEquals(get_class($pid_new), 'Erlang\OtpErlangPid');
+        $this->assertEquals(
+            "\x83Xs\rnonode@nohost\x00\x00\x00N" .
+            "\x00\x00\x00\x00\x00\x00\x00\x00",
+            \Erlang\term_to_binary($pid_new));
+    }
+    public function test_binary_to_term_port()
+    {
+        $port_old_binary = (
+            "\x83\x66\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" .
+            "\x6F\x73\x74\x00\x00\x00\x06\x00"
+        );
+        $port_old = \Erlang\binary_to_term($port_old_binary);
+        $this->assertEquals(get_class($port_old), 'Erlang\OtpErlangPort');
+        $this->assertEquals(
+            "\x83fs\rnonode@nohost\x00\x00\x00\x06\x00",
+            \Erlang\term_to_binary($port_old));
+        $port_new_binary = (
+            "\x83\x59\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" .
+            "\x6F\x73\x74\x00\x00\x00\x06\x00\x00\x00\x00"
+        );
+        $port_new = \Erlang\binary_to_term($port_new_binary);
+        $this->assertEquals(get_class($port_new), 'Erlang\OtpErlangPort');
+        $this->assertEquals(
+            "\x83Ys\rnonode@nohost\x00\x00\x00\x06" .
+            "\x00\x00\x00\x00",
+            \Erlang\term_to_binary($port_new));
+    }
+    public function test_binary_to_term_ref()
+    {
+        $ref_new_binary = (
+            "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E" .
+            "\x6F\x68\x6F\x73\x74\x00\x00\x03\xE8\x4E\xE7\x68\x00\x02\xA4" .
+            "\xC8\x53\x40"
+        );
+        $ref_new = \Erlang\binary_to_term($ref_new_binary);
+        $this->assertEquals(get_class($ref_new), 'Erlang\OtpErlangReference');
+        $this->assertEquals(
+            "\x83r\x00\x03s\rnonode@nohost\x00\x00\x03\xe8" .
+            "N\xe7h\x00\x02\xa4\xc8S@",
+            \Erlang\term_to_binary($ref_new));
+        $ref_newer_binary = (
+            "\x83\x5A\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E" .
+            "\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\x00\x01\xAC\x03\xC7\x00" .
+            "\x00\x04\xBB\xB2\xCA\xEE"
+        );
+        $ref_newer = \Erlang\binary_to_term($ref_newer_binary);
+        $this->assertEquals(get_class($ref_newer), 'Erlang\OtpErlangReference');
+        $this->assertEquals(
+            "\x83Z\x00\x03s\rnonode@nohost\x00\x00\x00\x00\x00" .
+            "\x01\xac\x03\xc7\x00\x00\x04\xbb\xb2\xca\xee",
+            \Erlang\term_to_binary($ref_newer));
     }
     public function test_binary_to_term_compressed_term_1()
     {

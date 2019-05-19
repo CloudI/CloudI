@@ -4,7 +4,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -42,6 +42,9 @@ use constant TAG_COMPRESSED_ZLIB => 80;
 use constant TAG_NEW_FLOAT_EXT => 70;
 use constant TAG_BIT_BINARY_EXT => 77;
 use constant TAG_ATOM_CACHE_REF => 78;
+use constant TAG_NEW_PID_EXT => 88;
+use constant TAG_NEW_PORT_EXT => 89;
+use constant TAG_NEWER_REFERENCE_EXT => 90;
 use constant TAG_SMALL_INTEGER_EXT => 97;
 use constant TAG_INTEGER_EXT => 98;
 use constant TAG_FLOAT_EXT => 99;
@@ -212,24 +215,33 @@ sub _binary_to_term
         $i += 2;
         return ($i + $j, Erlang::OtpErlangAtom->new(substr($data, $i, $j)));
     }
-    elsif ($tag == TAG_REFERENCE_EXT || $tag == TAG_PORT_EXT)
+    elsif ($tag == TAG_NEW_PORT_EXT ||
+           $tag == TAG_REFERENCE_EXT || $tag == TAG_PORT_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
         my $id = substr($data, $i, 4);
         $i += 4;
-        my $creation = substr($data, $i, 1);
-        $i += 1;
-        if ($tag == TAG_REFERENCE_EXT)
+        my $creation;
+        if ($tag == TAG_NEW_PORT_EXT)
         {
-            return ($i, Erlang::OtpErlangReference->new($node, $id, $creation));
+            $creation = substr($data, $i, 4);
+            $i += 4;
         }
-        elsif ($tag == TAG_PORT_EXT)
+        else
         {
-            return ($i, Erlang::OtpErlangPort->new($node, $id, $creation));
+            $creation = substr($data, $i, 1);
+            $i += 1;
+            if ($tag == TAG_REFERENCE_EXT)
+            {
+                return ($i, Erlang::OtpErlangReference->new($node, $id,
+                                                            $creation));
+            }
         }
+        # $tag == TAG_NEW_PORT_EXT || $tag == TAG_PORT_EXT
+        return ($i, Erlang::OtpErlangPort->new($node, $id, $creation));
     }
-    elsif ($tag == TAG_PID_EXT)
+    elsif ($tag == TAG_NEW_PID_EXT || $tag == TAG_PID_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
@@ -237,8 +249,17 @@ sub _binary_to_term
         $i += 4;
         my $serial = substr($data, $i, 4);
         $i += 4;
-        my $creation = substr($data, $i, 1);
-        $i += 1;
+        my $creation;
+        if ($tag == TAG_NEW_PID_EXT)
+        {
+            $creation = substr($data, $i, 4);
+            $i += 4;
+        }
+        elsif ($tag == TAG_PID_EXT)
+        {
+            $creation = substr($data, $i, 1);
+            $i += 1;
+        }
         return ($i, Erlang::OtpErlangPid->new($node, $id, $serial, $creation));
     }
     elsif ($tag == TAG_SMALL_TUPLE_EXT || $tag == TAG_LARGE_TUPLE_EXT)
@@ -347,15 +368,24 @@ sub _binary_to_term
                                                    substr($data, $old_i,
                                                           $i - $old_i)));
     }
-    elsif ($tag == TAG_NEW_REFERENCE_EXT)
+    elsif ($tag == TAG_NEWER_REFERENCE_EXT || $tag == TAG_NEW_REFERENCE_EXT)
     {
         my ($j) = unpack('n', substr($data, $i, 2));
         $j *= 4;
         $i += 2;
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);
-        my $creation = substr($data, $i, 1);
-        $i += 1;
+        my $creation;
+        if ($tag == TAG_NEWER_REFERENCE_EXT)
+        {
+            $creation = substr($data, $i, 4);
+            $i += 4;
+        }
+        elsif ($tag == TAG_NEW_REFERENCE_EXT)
+        {
+            $creation = substr($data, $i, 1);
+            $i += 1;
+        }
         my $id = substr($data, $i, $j);
         return ($i + $j,
                 Erlang::OtpErlangReference->new($node, $id, $creation));
@@ -497,7 +527,19 @@ sub _binary_to_pid
     my ($i, $data) = @_;
     my $tag = ord(substr($data, $i, 1));
     $i += 1;
-    if ($tag == TAG_PID_EXT)
+    if ($tag == TAG_NEW_PID_EXT)
+    {
+        my $node;
+        ($i, $node) = _binary_to_atom($i, $data);
+        my $id = substr($data, $i, 4);
+        $i += 4;
+        my $serial = substr($data, $i, 4);
+        $i += 4;
+        my $creation = substr($data, $i, 4);
+        $i += 4;
+        return ($i, Erlang::OtpErlangPid->new($node, $id, $serial, $creation));
+    }
+    elsif ($tag == TAG_PID_EXT)
     {
         my $node;
         ($i, $node) = _binary_to_atom($i, $data);

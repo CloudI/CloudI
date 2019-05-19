@@ -162,7 +162,7 @@ module Instance = struct
   let callbacks_remove api pattern =
     let key = api.prefix ^ pattern in
     let value = Hashtbl.find api.callbacks key in
-    let _ = Queue.pop value in
+    let _f = Queue.pop value in
     if Queue.is_empty value then
       Hashtbl.remove api.callbacks key ;
     ()

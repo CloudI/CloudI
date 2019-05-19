@@ -1,6 +1,15 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-05-18 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add Erlang/OTP 23 compatibility
+    * Add OCaml 4.08.0 compatibility
+    * Update the Erlang binary term format encoding implementations
+      to support Erlang/OTP 23 with the programming languages
+      Go, Haskell, Java, Javascript, OCaml, Perl, PHP, Python and Ruby
+    * Update uuid
+
 2019-04-05 Michael Truog   <mjtruog at protonmail dot com>
 
     * Update Python Erlang binary term format encoding

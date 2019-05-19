@@ -19,7 +19,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -40,8 +40,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(uuid).
@@ -89,6 +89,14 @@
 -ifdef(ERLANG_OTP_VERSION_19).
 -else.
 -define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-ifdef(ERLANG_OTP_VERSION_20).
+-else.
+-ifdef(OTP_RELEASE). % Erlang/OTP >= 21.0
+% able to use -elif here
+-else.
+-error("Erlang/OTP version invalid").
+-endif.
+-endif.
 -endif.
 -endif.
 -endif.
@@ -116,6 +124,12 @@
               state/0]).
 
 -include("uuid.hrl").
+
+% Erlang Binary Term Format constants
+% info from http://erlang.org/doc/apps/erts/erl_ext_dist.html
+-define(TAG_VERSION, 131).
+-define(TAG_PID_EXT, 103).
+-define(TAG_NEW_PID_EXT, 88).
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -174,26 +188,43 @@ new(Pid, Options)
 
     % make the version 1 UUID specific to the Erlang node and pid
 
-    % (when the pid format changes, handle the different format)
-    ExternalTermFormatVersion = 131,
-    PidExtType = 103,
-    <<ExternalTermFormatVersion:8,
-      PidExtType:8,
-      PidBin/binary>> = erlang:term_to_binary(Pid),
-    % 72 bits for the Erlang pid
-    <<PidID1:8, PidID2:8, PidID3:8, PidID4:8, % ID (Node specific, 15 bits)
-      PidSR1:8, PidSR2:8, PidSR3:8, PidSR4:8, % Serial (extra uniqueness)
-      PidCR1:8                                % Node Creation Count
-      >> = binary:part(PidBin, erlang:byte_size(PidBin), -9),
     % 48 bits for the first MAC address found is included with the
-    % distributed Erlang node name to create a node specific value in 16 bits
-    Node32 = quickrand_hash:jenkins_32([MacAddress,
-                                        erlang:atom_to_binary(node(), utf8)],
-                                       PidCR1),
+    % distributed Erlang node name to be hashed with the node creation count
+    NodeData = [MacAddress, erlang:atom_to_binary(node(), utf8)],
+
+    % Reduce the node information to 16 bits and the pid information to 32 bits
+    % for use as the UUID v1 Node Id
+    {NodeCreationCount, PidData} = case erlang:term_to_binary(Pid) of
+        % (when the pid format changes, handle the different formats)
+        <<?TAG_VERSION:8,
+          ?TAG_PID_EXT:8,PidBin/binary>> ->
+            % 72 bits for the Erlang pid
+            <<PidID1:8,PidID2:8,PidID3:8,PidID4:8,% ID (Node specific, 15 bits)
+              PidSR1:8,PidSR2:8,PidSR3:8,PidSR4:8,% Serial (extra uniqueness)
+              PidCR:8                             % Node Creation Count
+              >> = binary:part(PidBin, erlang:byte_size(PidBin), -9),
+            {PidCR,
+             [PidID1, PidID2, PidID3, PidID4,
+              PidSR1, PidSR2, PidSR3, PidSR4]};
+        % format supported in Erlang/OTP 19.0-rc1
+        % required for Erlang/OTP 23.0 (and Erlang/OTP 22.0-rc2)
+        <<?TAG_VERSION:8,
+          ?TAG_NEW_PID_EXT:8,PidBin/binary>> ->
+            % 96 bits for the Erlang pid
+            <<PidID1:8,PidID2:8,PidID3:8,PidID4:8,% ID (Node specific, 15 bits)
+              PidSR1:8,PidSR2:8,PidSR3:8,PidSR4:8,% Serial (extra uniqueness)
+              PidCR:32                            % Node Creation Count
+              >> = binary:part(PidBin, erlang:byte_size(PidBin), -12),
+            {PidCR,
+             [PidID1, PidID2, PidID3, PidID4,
+              PidSR1, PidSR2, PidSR3, PidSR4]}
+    end,
+    Node32 = quickrand_hash:jenkins_32(NodeData, NodeCreationCount),
     Node16 = (Node32 bsr 16) bxor (Node32 band 16#FFFF),
-    % reduce the Erlang pid to 32 bits
-    Pid32 = quickrand_hash:jenkins_32([PidID1, PidID2, PidID3, PidID4,
-                                       PidSR1, PidSR2, PidSR3, PidSR4]),
+    Pid32 = quickrand_hash:jenkins_32(PidData),
+    NodeId = <<Node16:16/big-unsigned-integer,
+               Pid32:32/big-unsigned-integer>>,
+
     ClockSeq = pseudo_random(16384) - 1,
     TimestampTypeInternal = if
         TimestampType =:= os ->
@@ -211,8 +242,7 @@ new(Pid, Options)
             end
     end,
     TimestampLast = timestamp(TimestampTypeInternal),
-    #uuid_state{node_id = <<Node16:16/big-unsigned-integer,
-                            Pid32:32/big-unsigned-integer>>,
+    #uuid_state{node_id = NodeId,
                 clock_seq = ClockSeq,
                 timestamp_type = TimestampTypeInternal,
                 timestamp_last = TimestampLast}.

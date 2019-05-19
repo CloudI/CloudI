@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 // Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -105,10 +105,26 @@ func TestAtom(t *testing.T) {
 }
 
 func TestPid(t *testing.T) {
-	pid1 := OtpErlangPid{NodeTag: 100, Node: []uint8{0x0, 0xd, 0x6e, 0x6f, 0x6e, 0x6f, 0x64, 0x65, 0x40, 0x6e, 0x6f, 0x68, 0x6f, 0x73, 0x74}, ID: []uint8{0x0, 0x0, 0x0, 0x3b}, Serial: []uint8{0x0, 0x0, 0x0, 0x0}, Creation: 0x0}
+	pid1 := OtpErlangPid{NodeTag: 100, Node: []uint8{0x0, 0xd, 0x6e, 0x6f, 0x6e, 0x6f, 0x64, 0x65, 0x40, 0x6e, 0x6f, 0x68, 0x6f, 0x73, 0x74}, ID: []uint8{0x0, 0x0, 0x0, 0x3b}, Serial: []uint8{0x0, 0x0, 0x0, 0x0}, Creation: []uint8{0x0}}
 	binary := "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x3B\x00\x00\x00\x00\x00"
 	assertEqual(t, pid1, decode(t, binary), "")
 	assertEqual(t, binary, encode(t, pid1, -1), "")
+
+	pidOldBinary := "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00"
+	pidOld := decode(t, pidOldBinary)
+	assertEqual(t, "\x83gd\x00\rnonode@nohost\x00\x00\x00N\x00\x00\x00\x00\x00", encode(t, pidOld, -1), "")
+	pidNewBinary := "\x83\x58\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00\x00\x00\x00"
+	pidNew := decode(t, pidNewBinary)
+	assertEqual(t, "\x83Xd\x00\rnonode@nohost\x00\x00\x00N\x00\x00\x00\x00\x00\x00\x00\x00", encode(t, pidNew, -1), "")
+}
+
+func TestPort(t *testing.T) {
+	portOldBinary := "\x83\x66\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x06\x00"
+	portOld := decode(t, portOldBinary)
+	assertEqual(t, "\x83fd\x00\rnonode@nohost\x00\x00\x00\x06\x00", encode(t, portOld, -1), "")
+	portNewBinary := "\x83\x59\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x06\x00\x00\x00\x00"
+	portNew := decode(t, portNewBinary)
+	assertEqual(t, "\x83Yd\x00\rnonode@nohost\x00\x00\x00\x06\x00\x00\x00\x00", encode(t, portNew, -1), "")
 }
 
 func TestFunction(t *testing.T) {
@@ -119,10 +135,17 @@ func TestFunction(t *testing.T) {
 }
 
 func TestReference(t *testing.T) {
-	ref1 := OtpErlangReference{NodeTag: 100, Node: []uint8{0x0, 0xd, 0x6e, 0x6f, 0x6e, 0x6f, 0x64, 0x65, 0x40, 0x6e, 0x6f, 0x68, 0x6f, 0x73, 0x74}, ID: []uint8{0x0, 0x0, 0x0, 0xaf, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0, 0x0}, Creation: 0x0}
+	ref1 := OtpErlangReference{NodeTag: 100, Node: []uint8{0x0, 0xd, 0x6e, 0x6f, 0x6e, 0x6f, 0x64, 0x65, 0x40, 0x6e, 0x6f, 0x68, 0x6f, 0x73, 0x74}, ID: []uint8{0x0, 0x0, 0x0, 0xaf, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0, 0x0}, Creation: []uint8{0x0}}
 	binary := "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\xAF\x00\x00\x00\x03\x00\x00\x00\x00"
 	assertEqual(t, ref1, decode(t, binary), "")
 	assertEqual(t, binary, encode(t, ref1, -1), "")
+
+	refNewBinary := "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x03\xE8\x4E\xE7\x68\x00\x02\xA4\xC8\x53\x40"
+	refNew := decode(t, refNewBinary)
+	assertEqual(t, "\x83r\x00\x03d\x00\rnonode@nohost\x00\x00\x03\xe8N\xe7h\x00\x02\xa4\xc8S@", encode(t, refNew, -1), "")
+	refNewerBinary := "\x83\x5A\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\x00\x01\xAC\x03\xC7\x00\x00\x04\xBB\xB2\xCA\xEE"
+	refNewer := decode(t, refNewerBinary)
+	assertEqual(t, "\x83Z\x00\x03d\x00\rnonode@nohost\x00\x00\x00\x00\x00\x01\xac\x03\xc7\x00\x00\x04\xbb\xb2\xca\xee", encode(t, refNewer, -1), "")
 }
 
 func TestDecodeBinaryToTerm(t *testing.T) {

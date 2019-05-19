@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,9 @@ define(__NAMESPACE__ . '\TAG_COMPRESSED_ZLIB', 80);
 define(__NAMESPACE__ . '\TAG_NEW_FLOAT_EXT', 70);
 define(__NAMESPACE__ . '\TAG_BIT_BINARY_EXT', 77);
 define(__NAMESPACE__ . '\TAG_ATOM_CACHE_REF', 78);
+define(__NAMESPACE__ . '\TAG_NEW_PID_EXT', 88);
+define(__NAMESPACE__ . '\TAG_NEW_PORT_EXT', 89);
+define(__NAMESPACE__ . '\TAG_NEWER_REFERENCE_EXT', 90);
 define(__NAMESPACE__ . '\TAG_SMALL_INTEGER_EXT', 97);
 define(__NAMESPACE__ . '\TAG_INTEGER_EXT', 98);
 define(__NAMESPACE__ . '\TAG_FLOAT_EXT', 99);
@@ -208,17 +211,15 @@ class OtpErlangList
             elseif ($this->improper)
             {
                 $contents = '';
-                while (list($tmp, $element) = each($this->value))
+                foreach ($this->value as $element)
                     $contents .= _term_to_binary($element);
-                reset($this->value);
                 return pack('CN', TAG_LIST_EXT, $length - 1) . $contents;
             }
             else
             {
                 $contents = '';
-                while (list($tmp, $element) = each($this->value))
+                foreach ($this->value as $element)
                     $contents .= _term_to_binary($element);
-                reset($this->value);
                 return pack('CN', TAG_LIST_EXT, $length) . $contents .
                        chr(TAG_NIL_EXT);
             }
@@ -285,8 +286,18 @@ class OtpErlangPid
     }
     public function binary()
     {
-        return chr(TAG_PID_EXT) . $this->node->binary() .
-               $this->id . $this->serial . $this->creation;
+        $creation_size = strlen($this->creation);
+        if ($creation_size == 1) {
+            return chr(TAG_PID_EXT) . $this->node->binary() .
+                   $this->id . $this->serial . $this->creation;
+        }
+        elseif ($creation_size == 4) {
+            return chr(TAG_NEW_PID_EXT) . $this->node->binary() .
+                   $this->id . $this->serial . $this->creation;
+        }
+        else {
+            throw new OutputException('unknown pid type');
+        }
     }
     public function __toString()
     {
@@ -308,8 +319,18 @@ class OtpErlangPort
     }
     public function binary()
     {
-        return chr(TAG_PORT_EXT) .
-               $this->node->binary() . $this->id . $this->creation;
+        $creation_size = strlen($this->creation);
+        if ($creation_size == 1) {
+            return chr(TAG_PORT_EXT) .
+                   $this->node->binary() . $this->id . $this->creation;
+        }
+        elseif ($creation_size == 4) {
+            return chr(TAG_NEW_PORT_EXT) .
+                   $this->node->binary() . $this->id . $this->creation;
+        }
+        else {
+            throw new OutputException('unknown port type');
+        }
     }
     public function __toString()
     {
@@ -339,8 +360,18 @@ class OtpErlangReference
         }
         elseif ($length <= 65535)
         {
-            return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
-                   $this->node->binary() . $this->creation . $this->id;
+            $creation_size = strlen($this->creation);
+            if ($creation_size == 1) {
+                return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
+                       $this->node->binary() . $this->creation . $this->id;
+            }
+            elseif ($creation_size == 4) {
+                return pack('Cn', TAG_NEWER_REFERENCE_EXT, $length) .
+                       $this->node->binary() . $this->creation . $this->id;
+            }
+            else {
+                throw new OutputException('unknown reference type');
+            }
         }
         else
         {
@@ -450,25 +481,40 @@ function _binary_to_term($i, $data)
             list(, $j) = unpack('n', substr($data, $i, 2));
             $i += 2;
             return array($i + $j, new OtpErlangAtom(substr($data, $i, $j)));
+        case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
             list($i, $node) = _binary_to_atom($i, $data);
             $id = substr($data, $i, 4);
             $i += 4;
-            $creation = $data[$i];
-            $i += 1;
-            if ($tag == TAG_REFERENCE_EXT)
-                return array($i, new OtpErlangReference($node, $id, $creation));
-            elseif ($tag == TAG_PORT_EXT)
-                return array($i, new OtpErlangPort($node, $id, $creation));
+            if ($tag == TAG_NEW_PORT_EXT) {
+                $creation = substr($data, $i, 4);
+                $i += 4;
+            }
+            else {
+                $creation = $data[$i];
+                $i += 1;
+                if ($tag == TAG_REFERENCE_EXT)
+                    return array($i, new OtpErlangReference($node, $id,
+                                                            $creation));
+            }
+            # $tag == TAG_NEW_PORT_EXT or $tag == TAG_PORT_EXT)
+            return array($i, new OtpErlangPort($node, $id, $creation));
+        case TAG_NEW_PID_EXT:
         case TAG_PID_EXT:
             list($i, $node) = _binary_to_atom($i, $data);
             $id = substr($data, $i, 4);
             $i += 4;
             $serial = substr($data, $i, 4);
             $i += 4;
-            $creation = $data[$i];
-            $i += 1;
+            if ($tag == TAG_NEW_PID_EXT) {
+                $creation = substr($data, $i, 4);
+                $i += 4;
+            }
+            elseif ($tag == TAG_PID_EXT) {
+                $creation = $data[$i];
+                $i += 1;
+            }
             return array($i, new OtpErlangPid($node, $id, $serial, $creation));
         case TAG_SMALL_TUPLE_EXT:
         case TAG_LARGE_TUPLE_EXT:
@@ -554,13 +600,20 @@ function _binary_to_term($i, $data)
                          new OtpErlangFunction($tag,
                                                substr($data,
                                                       $old_i, $i - $old_i)));
+        case TAG_NEWER_REFERENCE_EXT:
         case TAG_NEW_REFERENCE_EXT:
             list(, $j) = unpack('n', substr($data, $i, 2));
             $j *= 4;
             $i += 2;
             list($i, $node) = _binary_to_atom($i, $data);
-            $creation = $data[$i];
-            $i += 1;
+            if ($tag == TAG_NEWER_REFERENCE_EXT) {
+                $creation = substr($data, $i, 4);
+                $i += 4;
+            }
+            elseif ($tag == TAG_NEW_REFERENCE_EXT) {
+                $creation = $data[$i];
+                $i += 1;
+            }
             $id = substr($data, $i, $j);
             return array($i + $j,
                          new OtpErlangReference($node, $id, $creation));
@@ -672,20 +725,28 @@ function _binary_to_pid($i, $data)
 {
     $tag = ord($data[$i]);
     $i += 1;
-    if ($tag == TAG_PID_EXT)
+    switch ($tag)
     {
-        list($i, $node) = _binary_to_atom($i, $data);
-        $id = substr($data, $i, 4);
-        $i += 4;
-        $serial = substr($data, $i, 4);
-        $i += 4;
-        $creation = $data[$i];
-        $i += 1;
-        return array($i, new OtpErlangPid($node, $id, $serial, $creation));
-    }
-    else
-    {
-        throw new ParseException('invalid pid tag');
+        case TAG_NEW_PID_EXT:
+            list($i, $node) = _binary_to_atom($i, $data);
+            $id = substr($data, $i, 4);
+            $i += 4;
+            $serial = substr($data, $i, 4);
+            $i += 4;
+            $creation = substr($data, $i, 4);
+            $i += 4;
+            return array($i, new OtpErlangPid($node, $id, $serial, $creation));
+        case TAG_PID_EXT:
+            list($i, $node) = _binary_to_atom($i, $data);
+            $id = substr($data, $i, 4);
+            $i += 4;
+            $serial = substr($data, $i, 4);
+            $i += 4;
+            $creation = $data[$i];
+            $i += 1;
+            return array($i, new OtpErlangPid($node, $id, $serial, $creation));
+        default:
+            throw new ParseException('invalid pid tag');
     }
 }
 

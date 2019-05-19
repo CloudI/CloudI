@@ -5,7 +5,7 @@ package erlang
 //
 // MIT License
 //
-// Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -39,34 +39,37 @@ import (
 
 const (
 	// tag values here http://www.erlang.org/doc/apps/erts/erl_ext_dist.html
-	tagVersion          = 131
-	tagCompressedZlib   = 80
-	tagNewFloatExt      = 70
-	tagBitBinaryExt     = 77
-	tagAtomCacheRef     = 78
-	tagSmallIntegerExt  = 97
-	tagIntegerExt       = 98
-	tagFloatExt         = 99
-	tagAtomExt          = 100
-	tagReferenceExt     = 101
-	tagPortExt          = 102
-	tagPidExt           = 103
-	tagSmallTupleExt    = 104
-	tagLargeTupleExt    = 105
-	tagNilExt           = 106
-	tagStringExt        = 107
-	tagListExt          = 108
-	tagBinaryExt        = 109
-	tagSmallBigExt      = 110
-	tagLargeBigExt      = 111
-	tagNewFunExt        = 112
-	tagExportExt        = 113
-	tagNewReferenceExt  = 114
-	tagSmallAtomExt     = 115
-	tagMapExt           = 116
-	tagFunExt           = 117
-	tagAtomUtf8Ext      = 118
-	tagSmallAtomUtf8Ext = 119
+	tagVersion           = 131
+	tagCompressedZlib    = 80
+	tagNewFloatExt       = 70
+	tagBitBinaryExt      = 77
+	tagAtomCacheRef      = 78
+	tagNewPidExt         = 88
+	tagNewPortExt        = 89
+	tagNewerReferenceExt = 90
+	tagSmallIntegerExt   = 97
+	tagIntegerExt        = 98
+	tagFloatExt          = 99
+	tagAtomExt           = 100
+	tagReferenceExt      = 101
+	tagPortExt           = 102
+	tagPidExt            = 103
+	tagSmallTupleExt     = 104
+	tagLargeTupleExt     = 105
+	tagNilExt            = 106
+	tagStringExt         = 107
+	tagListExt           = 108
+	tagBinaryExt         = 109
+	tagSmallBigExt       = 110
+	tagLargeBigExt       = 111
+	tagNewFunExt         = 112
+	tagExportExt         = 113
+	tagNewReferenceExt   = 114
+	tagSmallAtomExt      = 115
+	tagMapExt            = 116
+	tagFunExt            = 117
+	tagAtomUtf8Ext       = 118
+	tagSmallAtomUtf8Ext  = 119
 
 	bufferSize = 65536
 )
@@ -103,29 +106,30 @@ type OtpErlangList struct {
 // OtpErlangMap represents MAP_EXT
 type OtpErlangMap map[interface{}]interface{}
 
-// OtpErlangPid represents PID_EXT
+// OtpErlangPid represents NEW_PID_EXT or PID_EXT
 type OtpErlangPid struct {
 	NodeTag  uint8
 	Node     []byte
 	ID       []byte
 	Serial   []byte
-	Creation byte
+	Creation []byte
 }
 
-// OtpErlangPort represents PORT_EXT
+// OtpErlangPort represents NEW_PORT_EXT or PORT_EXT
 type OtpErlangPort struct {
 	NodeTag  uint8
 	Node     []byte
 	ID       []byte
-	Creation byte
+	Creation []byte
 }
 
-// OtpErlangReference represents REFERENCE_EXT or NEW_REFERENCE_EXT
+// OtpErlangReference represents
+// NEWER_REFERENCE_EXT, REFERENCE_EXT or NEW_REFERENCE_EXT
 type OtpErlangReference struct {
 	NodeTag  uint8
 	Node     []byte
 	ID       []byte
-	Creation byte
+	Creation []byte
 }
 
 // OtpErlangTuple represents SMALL_TUPLE_EXT or LARGE_TUPLE_EXT
@@ -325,6 +329,8 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			}
 		}
 		return i + int(j), OtpErlangAtom(value), nil
+	case tagNewPortExt:
+		fallthrough
 	case tagReferenceExt:
 		fallthrough
 	case tagPortExt:
@@ -340,20 +346,30 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		i += 4
-		var creation byte
-		creation, err = reader.ReadByte()
-		if err != nil {
-			return i, nil, err
-		}
-		i += 1
+		var creation []byte
 		switch tag {
-		case tagReferenceExt:
-			return i, OtpErlangReference{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
-		case tagPortExt:
-			return i, OtpErlangPort{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
+		case tagNewPortExt:
+			creation = make([]byte, 4)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 4
 		default:
-			return i, nil, parseErrorNew("invalid tag case")
+			creation = make([]byte, 1)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 1
+			if tag == tagReferenceExt {
+				return i, OtpErlangReference{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
+			}
 		}
+		// tag == tagNewPortExt || tag == tagPortExt
+		return i, OtpErlangPort{NodeTag: nodeTag, Node: node, ID: id, Creation: creation}, nil
+	case tagNewPidExt:
+		fallthrough
 	case tagPidExt:
 		var nodeTag uint8
 		var node []byte
@@ -373,12 +389,23 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		i += 4
-		var creation byte
-		creation, err = reader.ReadByte()
-		if err != nil {
-			return i, nil, err
+		var creation []byte
+		switch tag {
+		case tagNewPidExt:
+			creation = make([]byte, 4)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 4
+		case tagPidExt:
+			creation = make([]byte, 1)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 1
 		}
-		i += 1
 		return i, OtpErlangPid{NodeTag: nodeTag, Node: node, ID: id, Serial: serial, Creation: creation}, nil
 	case tagSmallTupleExt:
 		fallthrough
@@ -564,6 +591,8 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		return i, OtpErlangFunction{Tag: tag, Value: value}, nil
+	case tagNewerReferenceExt:
+		fallthrough
 	case tagNewReferenceExt:
 		var j uint16
 		err = binary.Read(reader, binary.BigEndian, &j)
@@ -578,12 +607,23 @@ func binaryToTerms(i int, reader *bytes.Reader) (int, interface{}, error) {
 		if err != nil {
 			return i, nil, err
 		}
-		var creation byte
-		creation, err = reader.ReadByte()
-		if err != nil {
-			return i, nil, err
+		var creation []byte
+		switch tag {
+		case tagNewerReferenceExt:
+			creation = make([]byte, 4)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 4
+		case tagNewReferenceExt:
+			creation = make([]byte, 1)
+			_, err = reader.Read(creation)
+			if err != nil {
+				return i, nil, err
+			}
+			i += 1
 		}
-		i += 1
 		id := make([]byte, j)
 		if j > 0 {
 			_, err = reader.Read(id)
@@ -788,6 +828,32 @@ func binaryToPid(i int, reader *bytes.Reader) (int, interface{}, error) {
 	}
 	i += 1
 	switch tag {
+	case tagNewPidExt:
+		var nodeTag uint8
+		var node []byte
+		i, nodeTag, node, err = binaryToAtom(i, reader)
+		if err != nil {
+			return i, nil, err
+		}
+		id := make([]byte, 4)
+		_, err = reader.Read(id)
+		if err != nil {
+			return i, nil, err
+		}
+		i += 4
+		serial := make([]byte, 4)
+		_, err = reader.Read(serial)
+		if err != nil {
+			return i, nil, err
+		}
+		i += 4
+		creation := make([]byte, 4)
+		_, err = reader.Read(creation)
+		if err != nil {
+			return i, nil, err
+		}
+		i += 4
+		return i, OtpErlangPid{NodeTag: nodeTag, Node: node, ID: id, Serial: serial, Creation: creation}, nil
 	case tagPidExt:
 		var nodeTag uint8
 		var node []byte
@@ -807,8 +873,8 @@ func binaryToPid(i int, reader *bytes.Reader) (int, interface{}, error) {
 			return i, nil, err
 		}
 		i += 4
-		var creation byte
-		creation, err = reader.ReadByte()
+		creation := make([]byte, 1)
+		_, err = reader.Read(creation)
 		if err != nil {
 			return i, nil, err
 		}
@@ -1253,9 +1319,20 @@ func functionToBinary(term OtpErlangFunction, buffer *bytes.Buffer) (*bytes.Buff
 }
 
 func pidToBinary(term OtpErlangPid, buffer *bytes.Buffer) (*bytes.Buffer, error) {
-	err := buffer.WriteByte(tagPidExt)
-	if err != nil {
-		return buffer, err
+	var err error
+	switch creationSize := len(term.Creation); {
+	case creationSize == 1:
+		err = buffer.WriteByte(tagPidExt)
+		if err != nil {
+			return buffer, err
+		}
+	case creationSize == 4:
+		err = buffer.WriteByte(tagNewPidExt)
+		if err != nil {
+			return buffer, err
+		}
+	default:
+		return buffer, outputErrorNew("unknown pid type")
 	}
 	err = buffer.WriteByte(term.NodeTag)
 	if err != nil {
@@ -1273,14 +1350,25 @@ func pidToBinary(term OtpErlangPid, buffer *bytes.Buffer) (*bytes.Buffer, error)
 	if err != nil {
 		return buffer, err
 	}
-	err = buffer.WriteByte(term.Creation)
+	_, err = buffer.Write(term.Creation)
 	return buffer, err
 }
 
 func portToBinary(term OtpErlangPort, buffer *bytes.Buffer) (*bytes.Buffer, error) {
-	err := buffer.WriteByte(tagPortExt)
-	if err != nil {
-		return buffer, err
+	var err error
+	switch creationSize := len(term.Creation); {
+	case creationSize == 1:
+		err = buffer.WriteByte(tagPortExt)
+		if err != nil {
+			return buffer, err
+		}
+	case creationSize == 4:
+		err = buffer.WriteByte(tagNewPortExt)
+		if err != nil {
+			return buffer, err
+		}
+	default:
+		return buffer, outputErrorNew("unknown port type")
 	}
 	err = buffer.WriteByte(term.NodeTag)
 	if err != nil {
@@ -1294,7 +1382,7 @@ func portToBinary(term OtpErlangPort, buffer *bytes.Buffer) (*bytes.Buffer, erro
 	if err != nil {
 		return buffer, err
 	}
-	err = buffer.WriteByte(term.Creation)
+	_, err = buffer.Write(term.Creation)
 	return buffer, err
 }
 
@@ -1317,12 +1405,23 @@ func referenceToBinary(term OtpErlangReference, buffer *bytes.Buffer) (*bytes.Bu
 		if err != nil {
 			return buffer, err
 		}
-		err = buffer.WriteByte(term.Creation)
+		_, err = buffer.Write(term.Creation)
 		return buffer, err
 	case length <= math.MaxUint16:
-		err := buffer.WriteByte(tagNewReferenceExt)
-		if err != nil {
-			return buffer, err
+		var err error
+		switch creationSize := len(term.Creation); {
+		case creationSize == 1:
+			err = buffer.WriteByte(tagNewReferenceExt)
+			if err != nil {
+				return buffer, err
+			}
+		case creationSize == 4:
+			err = buffer.WriteByte(tagNewerReferenceExt)
+			if err != nil {
+				return buffer, err
+			}
+		default:
+			return buffer, outputErrorNew("unknown reference type")
 		}
 		err = binary.Write(buffer, binary.BigEndian, uint16(length))
 		if err != nil {
@@ -1336,7 +1435,7 @@ func referenceToBinary(term OtpErlangReference, buffer *bytes.Buffer) (*bytes.Bu
 		if err != nil {
 			return buffer, err
 		}
-		err = buffer.WriteByte(term.Creation)
+		_, err = buffer.Write(term.Creation)
 		if err != nil {
 			return buffer, err
 		}

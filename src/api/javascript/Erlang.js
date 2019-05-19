@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -35,6 +35,9 @@ var TAG_COMPRESSED_ZLIB = 80;
 var TAG_NEW_FLOAT_EXT = 70;
 var TAG_BIT_BINARY_EXT = 77;
 var TAG_ATOM_CACHE_REF = 78;
+var TAG_NEW_PID_EXT = 88;
+var TAG_NEW_PORT_EXT = 89;
+var TAG_NEWER_REFERENCE_EXT = 90;
 var TAG_SMALL_INTEGER_EXT = 97;
 var TAG_INTEGER_EXT = 98;
 var TAG_FLOAT_EXT = 99;
@@ -340,9 +343,20 @@ Erlang.OtpErlangPid = function OtpErlangPid (node, id, serial, creation) {
     this.creation = creation;
 };
 Erlang.OtpErlangPid.prototype.binary = function() {
-    return Buffer.concat([new Buffer([TAG_PID_EXT]),
-                          this.node.binary(),
-                          this.id, this.serial, this.creation]);
+    var creation_size = this.creation.length;
+    if (creation_size == 1) {
+        return Buffer.concat([new Buffer([TAG_PID_EXT]),
+                              this.node.binary(),
+                              this.id, this.serial, this.creation]);
+    }
+    else if (creation_size == 4) {
+        return Buffer.concat([new Buffer([TAG_NEW_PID_EXT]),
+                              this.node.binary(),
+                              this.id, this.serial, this.creation]);
+    }
+    else {
+        throw new OutputException('unknown pid type');
+    }
 };
 Erlang.OtpErlangPid.prototype.toString = function() {
     return 'OtpErlangPid()';
@@ -354,8 +368,18 @@ Erlang.OtpErlangPort = function OtpErlangPort (node, id, creation) {
     this.creation = creation;
 };
 Erlang.OtpErlangPort.prototype.binary = function() {
-    return Buffer.concat([new Buffer([TAG_PORT_EXT]),
-                          this.node.binary(), this.id, this.creation]);
+    var creation_size = this.creation.length;
+    if (creation_size == 1) {
+        return Buffer.concat([new Buffer([TAG_PORT_EXT]),
+                              this.node.binary(), this.id, this.creation]);
+    }
+    else if (creation_size == 4) {
+        return Buffer.concat([new Buffer([TAG_NEW_PORT_EXT]),
+                              this.node.binary(), this.id, this.creation]);
+    }
+    else {
+        throw new OutputException('unknown port type');
+    }
 };
 Erlang.OtpErlangPort.prototype.toString = function() {
     return 'OtpErlangPort()';
@@ -376,8 +400,17 @@ Erlang.OtpErlangReference.prototype.binary = function() {
                               this.node.binary(), this.id, this.creation]);
     }
     else if (length <= 65535) {
+        var creation_size = this.creation.length;
         var header = new Buffer(3);
-        header[0] = TAG_NEW_REFERENCE_EXT;
+        if (creation_size == 1) {
+            header[0] = TAG_NEW_REFERENCE_EXT;
+        }
+        else if (creation_size == 4) {
+            header[0] = TAG_NEWER_REFERENCE_EXT;
+        }
+        else {
+            throw new OutputException('unknown reference type');
+        }
         packUint16(length, 1, header);
         return Buffer.concat([header,
                               this.node.binary(), this.creation, this.id]);
@@ -393,7 +426,16 @@ Erlang.OtpErlangReference.prototype.toString = function() {
         tag = TAG_REFERENCE_EXT;
     }
     else {
-        tag = TAG_NEW_REFERENCE_EXT;
+        var creation_size = this.creation.length;
+        if (creation_size == 1) {
+            tag = TAG_NEW_REFERENCE_EXT;
+        }
+        else if (creation_size == 4) {
+            tag = TAG_NEWER_REFERENCE_EXT;
+        }
+        else {
+            throw new OutputException('unknown reference type');
+        }
     }
     return 'OtpErlangReference(' + tag + ')';
 };
@@ -563,6 +605,7 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             i += 2;
             return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
                                                                   i, i + j))];
+        case TAG_NEW_PORT_EXT:
         case TAG_REFERENCE_EXT:
         case TAG_PORT_EXT:
             var result = Erlang._binary_to_atom(i, data);
@@ -570,14 +613,22 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             var node = result[1];
             var id = data.slice(i, i + 4);
             i += 4;
-            var creation = data.slice(i, i + 1);
-            i += 1;
-            if (tag == TAG_REFERENCE_EXT) {
-                return [i, new Erlang.OtpErlangReference(node, id, creation)];
+            var creation;
+            if (tag == TAG_NEW_PORT_EXT) {
+                creation = data.slice(i, i + 4);
+                i += 4;
             }
-            else if (tag == TAG_PORT_EXT) {
-                return [i, new Erlang.OtpErlangPort(node, id, creation)];
+            else {
+                creation = data.slice(i, i + 1);
+                i += 1;
+                if (tag == TAG_REFERENCE_EXT) {
+                    return [i, new Erlang.OtpErlangReference(node, id,
+                                                             creation)];
+                }
             }
+            // tag == TAG_NEW_PORT_EXT || tag == TAG_PORT_EXT
+            return [i, new Erlang.OtpErlangPort(node, id, creation)];
+        case TAG_NEW_PID_EXT:
         case TAG_PID_EXT:
             var result = Erlang._binary_to_atom(i, data);
             i = result[0];
@@ -586,8 +637,15 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             i += 4;
             var serial = data.slice(i, i + 4);
             i += 4;
-            var creation = data.slice(i, i + 1);
-            i += 1;
+            var creation;
+            if (tag == TAG_NEW_PID_EXT) {
+                creation = data.slice(i, i + 4);
+                i += 4;
+            }
+            else if (tag == TAG_PID_EXT) {
+                creation = data.slice(i, i + 1);
+                i += 1;
+            }
             return [i, new Erlang.OtpErlangPid(node, id, serial, creation)];
         case TAG_SMALL_TUPLE_EXT:
         case TAG_LARGE_TUPLE_EXT:
@@ -672,14 +730,22 @@ Erlang._binary_to_term = function _binary_to_term (i, data) {
             i += 1;
             return [i,
                     new Erlang.OtpErlangFunction(tag, data.slice(old_i, i))];
+        case TAG_NEWER_REFERENCE_EXT:
         case TAG_NEW_REFERENCE_EXT:
             var j = unpackUint16(i, data) * 4;
             i += 2;
             var result = Erlang._binary_to_atom(i, data);
             i = result[0];
             var node = result[1];
-            var creation = data.slice(i, i + 1);
-            i += 1;
+            var creation;
+            if (tag == TAG_NEWER_REFERENCE_EXT) {
+                creation = data.slice(i, i + 4);
+                i += 4;
+            }
+            else if (tag == TAG_NEW_REFERENCE_EXT) {
+                creation = data.slice(i, i + 1);
+                i += 1;
+            }
             return [i + j,
                     new Erlang.OtpErlangReference(node, data.slice(i, i + j),
                                                   creation)]
@@ -768,73 +834,83 @@ Erlang._binary_to_term_sequence = function _binary_to_term_sequence
 Erlang._binary_to_integer = function _binary_to_integer (i, data) {
     var tag = data[i];
     i += 1;
-    if (tag == TAG_SMALL_INTEGER_EXT) {
-        return [i + 1, data[i]];
-    }
-    else if (tag == TAG_INTEGER_EXT) {
-        var value = unpackUint32(i, data);
-        if (0 != (value & 0x80000000)) {
-            value = -2147483648 + (value & 0x7fffffff);
-        }
-        return [i + 4, value];
-    }
-    else {
-        throw new ParseException('invalid integer tag');
+    switch (tag) {
+        case TAG_SMALL_INTEGER_EXT:
+            return [i + 1, data[i]];
+        case TAG_INTEGER_EXT:
+            var value = unpackUint32(i, data);
+            if (0 != (value & 0x80000000)) {
+                value = -2147483648 + (value & 0x7fffffff);
+            }
+            return [i + 4, value];
+        default:
+            throw new ParseException('invalid integer tag');
     }
 };
 
 Erlang._binary_to_pid = function _binary_to_pid (i, data) {
     var tag = data[i];
     i += 1;
-    if (tag == TAG_PID_EXT) {
-        var result = Erlang._binary_to_atom(i, data);
-        i = result[0];
-        var node = result[1];
-        var id = data.slice(i, i + 4);
-        i += 4;
-        var serial = data.slice(i, i + 4);
-        i += 4;
-        var creation = data.slice(i, i + 1);
-        i += 1;
-        return [i, new Erlang.OtpErlangPid(node, id, serial, creation)];
-    }
-    else {
-        throw new ParseException('invalid pid tag');
+    switch (tag) {
+        case TAG_NEW_PID_EXT:
+            var result = Erlang._binary_to_atom(i, data);
+            i = result[0];
+            var node = result[1];
+            var id = data.slice(i, i + 4);
+            i += 4;
+            var serial = data.slice(i, i + 4);
+            i += 4;
+            var creation = data.slice(i, i + 4);
+            i += 4;
+            return [i, new Erlang.OtpErlangPid(node, id, serial, creation)];
+        case TAG_PID_EXT:
+            var result = Erlang._binary_to_atom(i, data);
+            i = result[0];
+            var node = result[1];
+            var id = data.slice(i, i + 4);
+            i += 4;
+            var serial = data.slice(i, i + 4);
+            i += 4;
+            var creation = data.slice(i, i + 1);
+            i += 1;
+            return [i, new Erlang.OtpErlangPid(node, id, serial, creation)];
+        default:
+            throw new ParseException('invalid pid tag');
     }
 };
 
 Erlang._binary_to_atom = function _binary_to_atom (i, data) {
     var tag = data[i];
     i += 1;
-    if (tag == TAG_ATOM_EXT) {
-        var j = unpackUint16(i, data);
-        i += 2;
-        return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
-                                                              i, i + j))];
-    }
-    else if (tag == TAG_ATOM_CACHE_REF) {
-        return [i + 1, new Erlang.OtpErlangAtom(data[i])];
-    }
-    else if (tag == TAG_SMALL_ATOM_EXT) {
-        var j = data[i];
-        i += 1;
-        return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
-                                                              i, i + j))];
-    }
-    else if (tag == TAG_ATOM_UTF8_EXT) {
-        var j = unpackUint16(i, data);
-        i += 2;
-        return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
-                                                              i, i + j), true)];
-    }
-    else if (tag == TAG_SMALL_ATOM_UTF8_EXT) {
-        var j = data[i];
-        i += 1;
-        return [i + j, new Erlang.OtpErlangAtom(data.toString('binary',
-                                                              i, i + j), true)];
-    }
-    else {
-        throw new ParseException('invalid atom tag');
+    switch (tag) {
+        case TAG_ATOM_EXT:
+            var j = unpackUint16(i, data);
+            i += 2;
+            return [i + j,
+                    new Erlang.OtpErlangAtom(data.toString('binary',
+                                                           i, i + j))];
+        case TAG_ATOM_CACHE_REF:
+            return [i + 1, new Erlang.OtpErlangAtom(data[i])];
+        case TAG_SMALL_ATOM_EXT:
+            var j = data[i];
+            i += 1;
+            return [i + j,
+                    new Erlang.OtpErlangAtom(data.toString('binary',
+                                                           i, i + j))];
+        case TAG_ATOM_UTF8_EXT:
+            var j = unpackUint16(i, data);
+            i += 2;
+            return [i + j,
+                    new Erlang.OtpErlangAtom(data.toString('binary',
+                                                           i, i + j), true)];
+        case TAG_SMALL_ATOM_UTF8_EXT:
+            var j = data[i];
+            i += 1;
+            return [i + j,
+                    new Erlang.OtpErlangAtom(data.toString('binary',
+                                                           i, i + j), true)];
+        default:
+            throw new ParseException('invalid atom tag');
     }
 };
 

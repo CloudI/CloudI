@@ -79,6 +79,9 @@ _TAG_COMPRESSED_ZLIB = 80
 _TAG_NEW_FLOAT_EXT = 70
 _TAG_BIT_BINARY_EXT = 77
 _TAG_ATOM_CACHE_REF = 78
+_TAG_NEW_PID_EXT = 88
+_TAG_NEW_PORT_EXT = 89
+_TAG_NEWER_REFERENCE_EXT = 90
 _TAG_SMALL_INTEGER_EXT = 97
 _TAG_INTEGER_EXT = 98
 _TAG_FLOAT_EXT = 99
@@ -274,10 +277,19 @@ class OtpErlangPid(object):
         """
         return encoded representation
         """
-        return (
-            b_chr(_TAG_PID_EXT) +
-            self.node.binary() + self.id + self.serial + self.creation
-        )
+        creation_size = len(self.creation)
+        if creation_size == 1:
+            return (
+                b_chr(_TAG_PID_EXT) +
+                self.node.binary() + self.id + self.serial + self.creation
+            )
+        elif creation_size == 4:
+            return (
+                b_chr(_TAG_NEW_PID_EXT) +
+                self.node.binary() + self.id + self.serial + self.creation
+            )
+        else:
+            raise OutputException('unknown pid type')
     def __repr__(self):
         return '%s(%s,%s,%s,%s)' % (
             self.__class__.__name__,
@@ -303,10 +315,19 @@ class OtpErlangPort(object):
         """
         return encoded representation
         """
-        return (
-            b_chr(_TAG_PORT_EXT) +
-            self.node.binary() + self.id + self.creation
-        )
+        creation_size = len(self.creation)
+        if creation_size == 1:
+            return (
+                b_chr(_TAG_PORT_EXT) +
+                self.node.binary() + self.id + self.creation
+            )
+        elif creation_size == 4:
+            return (
+                b_chr(_TAG_NEW_PORT_EXT) +
+                self.node.binary() + self.id + self.creation
+            )
+        else:
+            raise OutputException('unknown port type')
     def __repr__(self):
         return '%s(%s,%s,%s)' % (
             self.__class__.__name__,
@@ -331,18 +352,28 @@ class OtpErlangReference(object):
         """
         return encoded representation
         """
-        length = len(self.id) / 4
+        length = int(len(self.id) / 4)
         if length == 0:
             return (
                 b_chr(_TAG_REFERENCE_EXT) +
                 self.node.binary() + self.id + self.creation
             )
         elif length <= 65535:
-            return (
-                b_chr(_TAG_NEW_REFERENCE_EXT) +
-                struct.pack(b'>H', length) +
-                self.node.binary() + self.creation + self.id
-            )
+            creation_size = len(self.creation)
+            if creation_size == 1:
+                return (
+                    b_chr(_TAG_NEW_REFERENCE_EXT) +
+                    struct.pack(b'>H', length) +
+                    self.node.binary() + self.creation + self.id
+                )
+            elif creation_size == 4:
+                return (
+                    b_chr(_TAG_NEWER_REFERENCE_EXT) +
+                    struct.pack(b'>H', length) +
+                    self.node.binary() + self.creation + self.id
+                )
+            else:
+                raise OutputException('unknown reference type')
         else:
             raise OutputException('uint16 overflow')
     def __repr__(self):
@@ -478,24 +509,33 @@ def _binary_to_term(i, data):
         j = struct.unpack(b'>H', data[i:i + 2])[0]
         i += 2
         return (i + j, OtpErlangAtom(data[i:i + j]))
-    elif tag == _TAG_REFERENCE_EXT or tag == _TAG_PORT_EXT:
+    elif (tag == _TAG_NEW_PORT_EXT or
+          tag == _TAG_REFERENCE_EXT or tag == _TAG_PORT_EXT):
         i, node = _binary_to_atom(i, data)
         id_value = data[i:i + 4]
         i += 4
-        creation = data[i:i + 1]
-        i += 1
-        if tag == _TAG_REFERENCE_EXT:
-            return (i, OtpErlangReference(node, id_value, creation))
-        # tag == _TAG_PORT_EXT
+        if tag == _TAG_NEW_PORT_EXT:
+            creation = data[i:i + 4]
+            i += 4
+        else:
+            creation = data[i:i + 1]
+            i += 1
+            if tag == _TAG_REFERENCE_EXT:
+                return (i, OtpErlangReference(node, id_value, creation))
+        # tag == _TAG_NEW_PORT_EXT or tag == _TAG_PORT_EXT
         return (i, OtpErlangPort(node, id_value, creation))
-    elif tag == _TAG_PID_EXT:
+    elif tag == _TAG_NEW_PID_EXT or tag == _TAG_PID_EXT:
         i, node = _binary_to_atom(i, data)
         id_value = data[i:i + 4]
         i += 4
         serial = data[i:i + 4]
         i += 4
-        creation = data[i:i + 1]
-        i += 1
+        if tag == _TAG_NEW_PID_EXT:
+            creation = data[i:i + 4]
+            i += 4
+        elif tag == _TAG_PID_EXT:
+            creation = data[i:i + 1]
+            i += 1
         return (i, OtpErlangPid(node, id_value, serial, creation))
     elif tag == _TAG_SMALL_TUPLE_EXT or tag == _TAG_LARGE_TUPLE_EXT:
         if tag == _TAG_SMALL_TUPLE_EXT:
@@ -554,12 +594,16 @@ def _binary_to_term(i, data):
         _ = b_ord(data[i])
         i += 1
         return (i, OtpErlangFunction(tag, data[old_i:i]))
-    elif tag == _TAG_NEW_REFERENCE_EXT:
+    elif tag == _TAG_NEWER_REFERENCE_EXT or tag == _TAG_NEW_REFERENCE_EXT:
         j = struct.unpack(b'>H', data[i:i + 2])[0] * 4
         i += 2
         i, node = _binary_to_atom(i, data)
-        creation = data[i:i + 1]
-        i += 1
+        if tag == _TAG_NEWER_REFERENCE_EXT:
+            creation = data[i:i + 4]
+            i += 4
+        elif tag == _TAG_NEW_REFERENCE_EXT:
+            creation = data[i:i + 1]
+            i += 1
         return (i + j, OtpErlangReference(node, data[i: i + j], creation))
     elif tag == _TAG_SMALL_ATOM_EXT:
         j = b_ord(data[i])
@@ -648,7 +692,16 @@ def _binary_to_integer(i, data):
 def _binary_to_pid(i, data):
     tag = b_ord(data[i])
     i += 1
-    if tag == _TAG_PID_EXT:
+    if tag == _TAG_NEW_PID_EXT:
+        i, node = _binary_to_atom(i, data)
+        id_value = data[i:i + 4]
+        i += 4
+        serial = data[i:i + 4]
+        i += 4
+        creation = data[i:i + 4]
+        i += 4
+        return (i, OtpErlangPid(node, id_value, serial, creation))
+    elif tag == _TAG_PID_EXT:
         i, node = _binary_to_atom(i, data)
         id_value = data[i:i + 4]
         i += 4

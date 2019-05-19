@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -192,8 +192,16 @@ module Erlang
         attr_reader :serial
         attr_reader :creation
         def binary
-            return "#{TAG_PID_EXT.chr}" \
-                   "#{@node.binary}#{@id}#{@serial}#{@creation}"
+            creation_size = @creation.bytesize
+            if creation_size == 1
+                return "#{TAG_PID_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@serial}#{@creation}"
+            elsif creation_size == 4
+                return "#{TAG_NEW_PID_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@serial}#{@creation}"
+            else
+                raise OutputException, 'unknown pid type', caller
+            end
         end
         def to_s
             return "#{self.class.name}" \
@@ -219,7 +227,16 @@ module Erlang
         attr_reader :id
         attr_reader :creation
         def binary
-            return "#{TAG_PORT_EXT.chr}#{@node.binary}#{@id}#{@creation}"
+            creation_size = @creation.bytesize
+            if creation_size == 1
+                return "#{TAG_PORT_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@creation}"
+            elsif creation_size == 4
+                return "#{TAG_NEW_PORT_EXT.chr}" \
+                       "#{@node.binary}#{@id}#{@creation}"
+            else
+                raise OutputException, 'unknown port type', caller
+            end
         end
         def to_s
             return "#{self.class.name}" \
@@ -250,8 +267,16 @@ module Erlang
                        "#{@node.binary}#{@id}#{@creation}"
             elsif length <= 65535
                 length_packed = [length].pack('n')
-                return "#{TAG_NEW_REFERENCE_EXT.chr}#{length_packed}" \
-                       "#{@node.binary}#{@creation}#{@id}"
+                creation_size = @creation.bytesize
+                if creation_size == 1
+                    return "#{TAG_NEW_REFERENCE_EXT.chr}#{length_packed}" \
+                           "#{@node.binary}#{@creation}#{@id}"
+                elsif creation_size == 4
+                    return "#{TAG_NEWER_REFERENCE_EXT.chr}#{length_packed}" \
+                           "#{@node.binary}#{@creation}#{@id}"
+                else
+                    raise OutputException, 'unknown reference type', caller
+                end
             else
                 raise OutputException, 'uint16 overflow', caller
             end
@@ -354,27 +379,38 @@ module Erlang
             else
                 raise ParseException, 'invalid atom_name latin1', caller
             end
-        elsif tag == TAG_REFERENCE_EXT or tag == TAG_PORT_EXT
+        elsif tag == TAG_NEW_PORT_EXT or \
+              tag == TAG_REFERENCE_EXT or tag == TAG_PORT_EXT
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
             id = data[i,4]
             i += 4
-            creation = data[i]
-            i += 1
-            if tag == TAG_REFERENCE_EXT
-                return [i, OtpErlangReference.new(node, id, creation)]
-            elsif tag == TAG_PORT_EXT
-                return [i, OtpErlangPort.new(node, id, creation)]
+            if tag == TAG_NEW_PORT_EXT
+                creation = data[i,4]
+                i += 4
+            else
+                creation = data[i]
+                i += 1
+                if tag == TAG_REFERENCE_EXT
+                    return [i, OtpErlangReference.new(node, id, creation)]
+                end
             end
-        elsif tag == TAG_PID_EXT
+            # tag == TAG_NEW_PORT_EXT or tag == TAG_PORT_EXT
+            return [i, OtpErlangPort.new(node, id, creation)]
+        elsif tag == TAG_NEW_PID_EXT or tag == TAG_PID_EXT
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
             id = data[i,4]
             i += 4
             serial = data[i,4]
             i += 4
-            creation = data[i]
-            i += 1
+            if tag == TAG_NEW_PID_EXT
+                creation = data[i,4]
+                i += 4
+            elsif tag == TAG_PID_EXT
+                creation = data[i]
+                i += 1
+            end
             return [i, OtpErlangPid.new(node, id, serial, creation)]
         elsif tag == TAG_SMALL_TUPLE_EXT or tag == TAG_LARGE_TUPLE_EXT
             if tag == TAG_SMALL_TUPLE_EXT
@@ -446,13 +482,18 @@ module Erlang
             #arity = data[i].ord
             i += 1
             return [i, OtpErlangFunction.new(tag, data[old_i,i - old_i])]
-        elsif tag == TAG_NEW_REFERENCE_EXT
+        elsif tag == TAG_NEWER_REFERENCE_EXT or tag == TAG_NEW_REFERENCE_EXT
             j = data[i,2].unpack('n')[0] * 4
             i += 2
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
-            creation = data[i]
-            i += 1
+            if tag == TAG_NEWER_REFERENCE_EXT
+                creation = data[i,4]
+                i += 4
+            elsif tag == TAG_NEW_REFERENCE_EXT
+                creation = data[i]
+                i += 1
+            end
             id = data[i,j]
             return [i + j, OtpErlangReference.new(node, id, creation)]
         elsif tag == TAG_SMALL_ATOM_EXT
@@ -570,7 +611,17 @@ module Erlang
     def self.binary_to_pid(i, data)
         tag = data[i].ord
         i += 1
-        if tag == TAG_PID_EXT
+        if tag == TAG_NEW_PID_EXT
+            result = binary_to_atom(i, data)
+            i = result[0]; node = result[1]
+            id = data[i,4]
+            i += 4
+            serial = data[i,4]
+            i += 4
+            creation = data[i,4]
+            i += 4
+            return [i, OtpErlangPid.new(node, id, serial, creation)]
+        elsif tag == TAG_PID_EXT
             result = binary_to_atom(i, data)
             i = result[0]; node = result[1]
             id = data[i,4]
@@ -776,6 +827,9 @@ module Erlang
     TAG_NEW_FLOAT_EXT = 70
     TAG_BIT_BINARY_EXT = 77
     TAG_ATOM_CACHE_REF = 78
+    TAG_NEW_PID_EXT = 88
+    TAG_NEW_PORT_EXT = 89
+    TAG_NEWER_REFERENCE_EXT = 90
     TAG_SMALL_INTEGER_EXT = 97
     TAG_INTEGER_EXT = 98
     TAG_FLOAT_EXT = 99

@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017-2018 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -80,6 +80,12 @@ tagBitBinaryExt :: Word8
 tagBitBinaryExt = 77
 tagAtomCacheRef :: Word8
 tagAtomCacheRef = 78
+tagNewPidExt :: Word8
+tagNewPidExt = 88
+tagNewPortExt :: Word8
+tagNewPortExt = 89
+tagNewerReferenceExt :: Word8
+tagNewerReferenceExt = 90
 tagSmallIntegerExt :: Word8
 tagSmallIntegerExt = 97
 tagIntegerExt :: Word8
@@ -264,23 +270,24 @@ binaryToTerms = do
             j <- Get.getWord16be
             value <- Get.getByteString $ getUnsignedInt16 j
             return $ OtpErlangAtom value
-        | tag == tagReferenceExt || tag == tagPortExt -> do
+        | tag == tagNewPortExt ||
+          tag == tagReferenceExt || tag == tagPortExt -> do
             (nodeTag, node) <- binaryToAtom
             eid <- Get.getByteString 4
-            creation <- Get.getWord8
+            let creationSize = if tag == tagNewPortExt then 4 else 1
+            creation <- Get.getByteString creationSize
             if tag == tagReferenceExt then
                 return $ OtpErlangReference $ E.Reference
                     nodeTag node eid creation
-            else if tag == tagPortExt then
+            else -- tag == tagNewPortExt || tag == tagPortExt
                 return $ OtpErlangPort $ E.Port
                     nodeTag node eid creation
-            else
-                fail $ "invalid"
-        | tag == tagPidExt -> do
+        | tag == tagNewPidExt || tag == tagPidExt -> do
             (nodeTag, node) <- binaryToAtom
             eid <- Get.getByteString 4
             serial <- Get.getByteString 4
-            creation <- Get.getWord8
+            let creationSize = if tag == tagNewPidExt then 4 else 1
+            creation <- Get.getByteString creationSize
             return $ OtpErlangPid $ E.Pid
                 nodeTag node eid serial creation
         | tag == tagSmallTupleExt || tag == tagLargeTupleExt -> do
@@ -325,10 +332,11 @@ binaryToTerms = do
             value <- Get.getByteString length
             return $ OtpErlangFunction $ E.Function
                 tag value
-        | tag == tagNewReferenceExt -> do
+        | tag == tagNewerReferenceExt || tag == tagNewReferenceExt -> do
             j <- Get.getWord16be
             (nodeTag, node) <- binaryToAtom
-            creation <- Get.getWord8
+            let creationSize = if tag == tagNewerReferenceExt then 4 else 1
+            creation <- Get.getByteString creationSize
             eid <- Get.getByteString $ (getUnsignedInt16 j) * 4
             return $ OtpErlangReference $ E.Reference
                 nodeTag node eid creation
@@ -428,11 +436,18 @@ binaryToPid :: Get Pid
 binaryToPid = do
     tag <- Get.getWord8
     case () of
-      _ | tag == tagPidExt -> do
+      _ | tag == tagNewPidExt -> do
             (nodeTag, node) <- binaryToAtom
             eid <- Get.getByteString 4
             serial <- Get.getByteString 4
-            creation <- Get.getWord8
+            creation <- Get.getByteString 4
+            return $ E.Pid
+                nodeTag node eid serial creation
+        | tag == tagPidExt -> do
+            (nodeTag, node) <- binaryToAtom
+            eid <- Get.getByteString 4
+            serial <- Get.getByteString 4
+            creation <- Get.getByteString 1
             return $ E.Pid
                 nodeTag node eid serial creation
         | otherwise ->
@@ -651,20 +666,30 @@ termsToBinary (OtpErlangMap value) =
     else
         errorType $ OutputError "uint32 overflow"
 termsToBinary (OtpErlangPid (E.Pid nodeTag node eid serial creation)) =
+    let tag =
+            if (ByteString.length creation) == 4 then 
+                tagNewPidExt
+            else
+                tagPidExt in
     ok $ Builder.toLazyByteString $
-        Builder.word8 tagPidExt <>
+        Builder.word8 tag <>
         Builder.word8 nodeTag <>
         Builder.byteString node <>
         Builder.byteString eid <>
         Builder.byteString serial <>
-        Builder.word8 creation
+        Builder.byteString creation
 termsToBinary (OtpErlangPort (E.Port nodeTag node eid creation)) =
+    let tag =
+            if (ByteString.length creation) == 4 then 
+                tagNewPortExt
+            else
+                tagPortExt in
     ok $ Builder.toLazyByteString $
-        Builder.word8 tagPortExt <>
+        Builder.word8 tag <>
         Builder.word8 nodeTag <>
         Builder.byteString node <>
         Builder.byteString eid <>
-        Builder.word8 creation
+        Builder.byteString creation
 termsToBinary (OtpErlangReference (E.Reference nodeTag node eid creation)) =
     let length = (ByteString.length eid) `quot` 4 in
     if length == 0 then
@@ -673,14 +698,19 @@ termsToBinary (OtpErlangReference (E.Reference nodeTag node eid creation)) =
             Builder.word8 nodeTag <>
             Builder.byteString node <>
             Builder.byteString eid <>
-            Builder.word8 creation
+            Builder.byteString creation
     else if length <= 65535 then
+        let tag =
+                if (ByteString.length creation) == 4 then 
+                    tagNewerReferenceExt
+                else
+                    tagNewReferenceExt in
         ok $ Builder.toLazyByteString $
-            Builder.word8 tagNewReferenceExt <>
+            Builder.word8 tag <>
             Builder.word16BE (fromIntegral length) <>
             Builder.word8 nodeTag <>
             Builder.byteString node <>
-            Builder.word8 creation <>
+            Builder.byteString creation <>
             Builder.byteString eid
     else
         errorType $ OutputError "uint16 overflow"

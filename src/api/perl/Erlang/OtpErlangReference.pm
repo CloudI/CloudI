@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -28,6 +28,7 @@ package Erlang::OtpErlangReference;
 use strict;
 use warnings;
 
+use constant TAG_NEWER_REFERENCE_EXT => 90;
 use constant TAG_REFERENCE_EXT => 101;
 use constant TAG_NEW_REFERENCE_EXT => 114;
 
@@ -59,8 +60,21 @@ sub binary
     }
     elsif ($length <= 65535)
     {
-        return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
-               $self->{node}->binary() . $self->{creation} . $self->{id};
+        my $creation_size = length($self->{creation});
+        if ($creation_size == 1)
+        {
+            return pack('Cn', TAG_NEW_REFERENCE_EXT, $length) .
+                   $self->{node}->binary() . $self->{creation} . $self->{id};
+        }
+        elsif ($creation_size == 4)
+        {
+            return pack('Cn', TAG_NEWER_REFERENCE_EXT, $length) .
+                   $self->{node}->binary() . $self->{creation} . $self->{id};
+        }
+        else
+        {
+            die Erlang::OutputException->new('unknown reference type');
+        }
     }
     else
     {

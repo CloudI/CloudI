@@ -334,10 +334,11 @@ Java `jinterface`
 -----------------
 `Binary Erlang Term Encoding Java Source Code`
 
-- `http://erlang.org/download/otp_src_18.3.tar.gz (jinterface-1.6.1)`
-- `(in otp_src_18.3/lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `https://github.com/erlang/otp (jinterface-1.9.1)`
+- `(in lib/jinterface/java_src/com/ericsson/otp/erlang/)`
+- `commit 3b2c1dd3fdf1fec362cff3a88e188ef989ee79e5 (OTP-21.3.8.1)`
 - `repository location: src/api/java/com/ericsson/otp/erlang/`
-- `Wed Sep 14 16:35:57 PDT 2016`
+- `Sun May 19 01:29:55 UTC 2019`
 - `Apache License 2.0`
 
 M4 `m4/ax_boost_base.m4, m4/ax_boost_system.m4, m4/ax_boost_thread.m4, m4/ax_compare_version.m4, m4/ax_compiler_version.m4, m4/ax_cxx_exceptions.m4`

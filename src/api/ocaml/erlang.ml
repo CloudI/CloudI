@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -33,6 +33,9 @@ let tag_compressed_zlib = 80
 let tag_new_float_ext = 70
 let tag_bit_binary_ext = 77
 let tag_atom_cache_ref = 78
+let tag_new_pid_ext = 88
+let tag_new_port_ext = 89
+let tag_newer_reference_ext = 90
 let tag_small_integer_ext = 97
 let tag_integer_ext = 98
 let tag_float_ext = 99
@@ -65,7 +68,7 @@ module Pid = struct
       node : string;
       id : string;
       serial : string;
-      creation : int;
+      creation : string;
     }
   let make ~node_tag ~node ~id ~serial ~creation =
     {node_tag; node; id; serial; creation}
@@ -75,7 +78,7 @@ module Port = struct
       node_tag : int;
       node : string;
       id : string;
-      creation : int;
+      creation : string;
     }
   let make ~node_tag ~node ~id ~creation =
     {node_tag; node; id; creation}
@@ -85,7 +88,7 @@ module Reference = struct
       node_tag : int;
       node : string;
       id : string;
-      creation : int;
+      creation : string;
     }
   let make ~node_tag ~node ~id ~creation =
     {node_tag; node; id; creation}
@@ -296,24 +299,26 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
     let j = unpack_uint16 i0 binary
     and i1 = i0 + 2 in
     Ok2 (i1 + j, OtpErlangAtom (String.sub binary i1 j))
-  else if tag = tag_reference_ext || tag = tag_port_ext then
+  else if tag = tag_new_port_ext ||
+          tag = tag_reference_ext || tag = tag_port_ext then
     match binary_to_atom i0 binary with
     | Error3 (error) ->
       Error2 (error)
     | Ok3(i1, node_tag, node) ->
       let id = String.sub binary i1 4
-      and i2 = i1 + 4 in
-      let creation = int_of_char binary.[i2]
-      and i3 = i2 + 1 in
+      and i2 = i1 + 4
+      and creation_size = if tag = tag_new_port_ext then 4 else 1 in
+      let creation = String.sub binary i2 creation_size
+      and i3 = i2 + creation_size in
       if tag = tag_reference_ext then
         Ok2 (i3, OtpErlangReference (
           Reference.make
             ~node_tag:node_tag ~node:node ~id:id ~creation:creation))
-      else (* tag = tag_port_ext *)
+      else (* tag = tag_new_port_ext || tag = tag_port_ext *)
         Ok2 (i3, OtpErlangPort (
           Port.make
             ~node_tag:node_tag ~node:node ~id:id ~creation:creation))
-  else if tag = tag_pid_ext then
+  else if tag = tag_new_pid_ext || tag = tag_pid_ext then
     match binary_to_atom i0 binary with
     | Error3 (error) ->
       Error2 (error)
@@ -321,9 +326,10 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
       let id = String.sub binary i1 4
       and i2 = i1 + 4 in
       let serial = String.sub binary i2 4
-      and i3 = i2 + 4 in
-      let creation = int_of_char binary.[i3]
-      and i4 = i3 + 1 in
+      and i3 = i2 + 4
+      and creation_size = if tag = tag_new_pid_ext then 4 else 1 in
+      let creation = String.sub binary i3 creation_size
+      and i4 = i3 + creation_size in
       Ok2 (i4, OtpErlangPid (
         Pid.make
           ~node_tag:node_tag ~node:node
@@ -434,15 +440,16 @@ let rec binary_to_term_ i binary : (int, t, string) result2 =
         Ok2 (i3, OtpErlangFunction (
           Function.make
             ~tag:tag ~value:value))
-  else if tag = tag_new_reference_ext then
+  else if tag = tag_newer_reference_ext || tag = tag_new_reference_ext then
     let j = (unpack_uint16 i0 binary) * 4
     and i1 = i0 + 2 in
     match binary_to_atom i1 binary with
     | Error3 (error) ->
       Error2 (error)
     | Ok3 (i2, node_tag, node) ->
-      let creation = int_of_char binary.[i2]
-      and i3 = i2 + 1 in
+      let creation_size = if tag = tag_newer_reference_ext then 4 else 1 in
+      let creation = String.sub binary i2 creation_size
+      and i3 = i2 + creation_size in
       let id = String.sub binary i3 j in
       Ok2 (i3 + j, OtpErlangReference(
         Reference.make
@@ -547,7 +554,7 @@ and binary_to_integer i binary : (int, t, string) result2 =
 and binary_to_pid i binary : (int, t, string) result2 =
   let tag = int_of_char binary.[i]
   and i0 = i + 1 in
-  if tag = tag_pid_ext then
+  if tag = tag_new_pid_ext then
     match binary_to_atom i0 binary with
     | Error3 (error) ->
       Error2 (error)
@@ -556,7 +563,22 @@ and binary_to_pid i binary : (int, t, string) result2 =
       and i2 = i1 + 4 in
       let serial = String.sub binary i2 4
       and i3 = i2 + 4 in
-      let creation = int_of_char binary.[i3]
+      let creation = String.sub binary i3 4
+      and i4 = i3 + 4 in
+      Ok2 (i4, OtpErlangPid (
+        Pid.make
+          ~node_tag:node_tag ~node:node
+          ~id:id ~serial:serial ~creation:creation))
+  else if tag = tag_pid_ext then
+    match binary_to_atom i0 binary with
+    | Error3 (error) ->
+      Error2 (error)
+    | Ok3(i1, node_tag, node) ->
+      let id = String.sub binary i1 4
+      and i2 = i1 + 4 in
+      let serial = String.sub binary i2 4
+      and i3 = i2 + 4 in
+      let creation = String.sub binary i3 1
       and i4 = i3 + 1 in
       Ok2 (i4, OtpErlangPid (
         Pid.make
@@ -831,20 +853,34 @@ and function_to_binary tag value buffer =
   Ok (buffer)
 
 and pid_to_binary node_tag node id serial creation buffer =
-  Buffer.add_char buffer (char_of_int tag_pid_ext) ;
+  let creation_size = String.length creation in
+  let tag =
+    if creation_size = 4 then
+      tag_new_pid_ext
+    else
+      tag_pid_ext
+  in
+  Buffer.add_char buffer (char_of_int tag) ;
   Buffer.add_char buffer (char_of_int node_tag) ;
   Buffer.add_string buffer node ;
   Buffer.add_string buffer id ;
   Buffer.add_string buffer serial ;
-  Buffer.add_char buffer (char_of_int creation) ;
+  Buffer.add_string buffer creation ;
   Ok (buffer)
 
 and port_to_binary node_tag node id creation buffer =
-  Buffer.add_char buffer (char_of_int tag_port_ext) ;
+  let creation_size = String.length creation in
+  let tag =
+    if creation_size = 4 then
+      tag_new_port_ext
+    else
+      tag_port_ext
+  in
+  Buffer.add_char buffer (char_of_int tag) ;
   Buffer.add_char buffer (char_of_int node_tag) ;
   Buffer.add_string buffer node ;
   Buffer.add_string buffer id ;
-  Buffer.add_char buffer (char_of_int creation) ;
+  Buffer.add_string buffer creation ;
   Ok (buffer)
 
 and reference_to_binary node_tag node id creation buffer =
@@ -854,14 +890,21 @@ and reference_to_binary node_tag node id creation buffer =
     Buffer.add_char buffer (char_of_int node_tag) ;
     Buffer.add_string buffer node ;
     Buffer.add_string buffer id ;
-    Buffer.add_char buffer (char_of_int creation) ;
+    Buffer.add_string buffer creation ;
     Ok (buffer))
   else if length <= 65535 then (
-    Buffer.add_char buffer (char_of_int tag_new_reference_ext) ;
+    let creation_size = String.length creation in
+    let tag =
+      if creation_size = 4 then
+        tag_newer_reference_ext
+      else
+        tag_new_reference_ext
+    in
+    Buffer.add_char buffer (char_of_int tag) ;
     pack_uint16 length buffer ;
     Buffer.add_char buffer (char_of_int node_tag) ;
     Buffer.add_string buffer node ;
-    Buffer.add_char buffer (char_of_int creation) ;
+    Buffer.add_string buffer creation ;
     Buffer.add_string buffer id ;
     Ok (buffer))
   else
@@ -934,19 +977,19 @@ let rec t_to_string (term : t) : string =
       "node:\"" ^ (String.escaped node) ^ "\"; " ^
       "id:\"" ^ (String.escaped id) ^ "\"; " ^
       "serial:\"" ^ (String.escaped serial) ^ "\"; " ^
-      "creation:" ^ (string_of_int creation) ^ ")"
+      "creation:" ^ (String.escaped creation) ^ ")"
   | OtpErlangPort ({Port.node_tag; node; id; creation}) ->
     "OtpErlangPort(" ^
       "node_tag:" ^ (string_of_int node_tag) ^ "; " ^
       "node:\"" ^ (String.escaped node) ^ "\"; " ^
       "id:\"" ^ (String.escaped id) ^ "\"; " ^
-      "creation:" ^ (string_of_int creation) ^ ")"
+      "creation:" ^ (String.escaped creation) ^ ")"
   | OtpErlangReference ({Reference.node_tag; node; id; creation}) ->
     "OtpErlangReference(" ^
       "node_tag:" ^ (string_of_int node_tag) ^ "; " ^
       "node:\"" ^ (String.escaped node) ^ "\"; " ^
       "id:\"" ^ (String.escaped id) ^ "\"; " ^
-      "creation:" ^ (string_of_int creation) ^ ")"
+      "creation:" ^ (String.escaped creation) ^ ")"
   | OtpErlangFunction ({Function.tag; value}) ->
     "OtpErlangFunction(" ^
       "tag:" ^ (string_of_int tag) ^ "; " ^
@@ -1017,7 +1060,7 @@ let register_printers () =
 
   MIT LICENSE (of tests below)
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
   Copyright (c) 2009-2013 Dmitry Vasiliev <dima@hlabs.org>
 
   Permission is hereby granted, free of charge, to any person obtaining a
@@ -1053,19 +1096,42 @@ let test_pid () =
   let pid1 = OtpErlangPid (Pid.make
     ~node_tag:100
     ~node:"\x00\x0d\x6e\x6f\x6e\x6f\x64\x65\x40\x6e\x6f\x68\x6f\x73\x74"
-    ~id:"\x00\x00\x00\x3b" ~serial:"\x00\x00\x00\x00" ~creation:0)
+    ~id:"\x00\x00\x00\x3b" ~serial:"\x00\x00\x00\x00" ~creation:"\x00")
   and binary1 = "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" ^
     "\x68\x6F\x73\x74\x00\x00\x00\x3B\x00\x00\x00\x00\x00"
   and pid2 = OtpErlangPid (Pid.make
     ~node_tag:119
     ~node:"\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68\x6F\x73\x74"
-    ~id:"\x00\x00\x00\x50" ~serial:"\x00\x00\x00\x00" ~creation:0)
+    ~id:"\x00\x00\x00\x50" ~serial:"\x00\x00\x00\x00" ~creation:"\x00")
   and binary2 = "\x83\x67\x77\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" ^
     "\x6F\x73\x74\x00\x00\x00\x50\x00\x00\x00\x00\x00" in
   assert ((binary_ok (term_to_binary pid1)) = binary1) ;
   assert ((term_ok (binary_to_term binary1)) = pid1) ;
   assert ((binary_ok (term_to_binary pid2)) = binary2) ;
   assert ((term_ok (binary_to_term binary2)) = pid2) ;
+  let pid_old_binary = (
+    "\x83\x67\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F" ^
+    "\x68\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00") in
+  let pid_old = term_ok (binary_to_term pid_old_binary) in
+  assert ((binary_ok (term_to_binary pid_old)) = pid_old_binary) ;
+  let pid_new_binary = (
+    "\x83\x58\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" ^
+    "\x6F\x73\x74\x00\x00\x00\x4E\x00\x00\x00\x00\x00\x00\x00\x00") in
+  let pid_new = term_ok (binary_to_term pid_new_binary) in
+  assert ((binary_ok (term_to_binary pid_new)) = pid_new_binary) ;
+  true
+
+let test_port () =
+  let port_old_binary = (
+    "\x83\x66\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" ^
+    "\x6F\x73\x74\x00\x00\x00\x06\x00") in
+  let port_old = term_ok (binary_to_term port_old_binary) in
+  assert ((binary_ok (term_to_binary port_old)) = port_old_binary) ;
+  let port_new_binary = (
+    "\x83\x59\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E\x6F\x68" ^
+    "\x6F\x73\x74\x00\x00\x00\x06\x00\x00\x00\x00") in
+  let port_new = term_ok (binary_to_term port_new_binary) in
+  assert ((binary_ok (term_to_binary port_new)) = port_new_binary) ;
   true
 
 let test_function () =
@@ -1085,12 +1151,24 @@ let test_reference () =
   let reference1 = OtpErlangReference (Reference.make
     ~node_tag:100
     ~node:"\x00\x0d\x6e\x6f\x6e\x6f\x64\x65\x40\x6e\x6f\x68\x6f\x73\x74"
-    ~id:"\x00\x00\x00\xaf\x00\x00\x00\x03\x00\x00\x00\x00" ~creation:0)
+    ~id:"\x00\x00\x00\xaf\x00\x00\x00\x03\x00\x00\x00\x00" ~creation:"\x00")
   and binary = "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40" ^
     "\x6E\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\xAF\x00\x00\x00\x03\x00\x00" ^
     "\x00\x00" in
   assert ((binary_ok (term_to_binary reference1)) = binary) ;
   assert ((term_ok (binary_to_term binary)) = reference1) ;
+  let ref_new_binary = (
+    "\x83\x72\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E" ^
+    "\x6F\x68\x6F\x73\x74\x00\x00\x03\xE8\x4E\xE7\x68\x00\x02\xA4" ^
+    "\xC8\x53\x40") in
+  let ref_new = term_ok (binary_to_term ref_new_binary) in
+  assert ((binary_ok (term_to_binary ref_new)) = ref_new_binary) ;
+  let ref_newer_binary = (
+    "\x83\x5A\x00\x03\x64\x00\x0D\x6E\x6F\x6E\x6F\x64\x65\x40\x6E" ^
+    "\x6F\x68\x6F\x73\x74\x00\x00\x00\x00\x00\x01\xAC\x03\xC7\x00" ^
+    "\x00\x04\xBB\xB2\xCA\xEE") in
+  let ref_newer = term_ok (binary_to_term ref_newer_binary) in
+  assert ((binary_ok (term_to_binary ref_newer)) = ref_newer_binary) ;
   true
 
 let test_decode_basic () =
@@ -1729,6 +1807,7 @@ let tests =
   register_printers () ;
 [
   "binary_to_term/term_to_binary (pid)", test_pid;
+  "binary_to_term/term_to_binary (port)", test_port;
   "binary_to_term/term_to_binary (function)", test_function;
   "binary_to_term/term_to_binary (reference)", test_reference;
   "binary_to_term (basic)", test_decode_basic;

@@ -3,7 +3,7 @@
 #
 # MIT License
 #
-# Copyright (c) 2014-2017 Michael Truog <mjtruog at protonmail dot com>
+# Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -28,7 +28,10 @@ package Erlang::OtpErlangPid;
 use strict;
 use warnings;
 
+use constant TAG_NEW_PID_EXT => 88;
 use constant TAG_PID_EXT => 103;
+
+require Erlang::OutputException;
 
 use overload
     '""'     => sub { $_[0]->as_string };
@@ -49,8 +52,21 @@ sub new
 sub binary
 {
     my $self = shift;
-    return chr(TAG_PID_EXT) . $self->{node}->binary() .
-           $self->{id} . $self->{serial} . $self->{creation};
+    my $creation_size = length($self->{creation});
+    if ($creation_size == 1)
+    {
+        return chr(TAG_PID_EXT) . $self->{node}->binary() .
+               $self->{id} . $self->{serial} . $self->{creation};
+    }
+    elsif ($creation_size == 4)
+    {
+        return chr(TAG_NEW_PID_EXT) . $self->{node}->binary() .
+               $self->{id} . $self->{serial} . $self->{creation};
+    }
+    else
+    {
+        die Erlang::OutputException->new('unknown pid type');
+    }
 }
 
 sub as_string
