@@ -551,7 +551,10 @@
                             service_options_external()}).
 -type service() :: #internal{} | #external{}.
 -type service_status_internal() ::
-    nonempty_list({count_process, pos_integer()} |
+    nonempty_list({type, internal} |
+                  {prefix, cloudi:service_name_pattern()} |
+                  {module, atom()} |
+                  {count_process, pos_integer()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
                   {uptime_restarts, nonempty_string()} |
@@ -576,7 +579,10 @@
                   {availability_year_running, nonempty_string()} |
                   {availability_year_updated, nonempty_string()}).
 -type service_status_external() ::
-    nonempty_list({count_process, pos_integer()} |
+    nonempty_list({type, external} |
+                  {prefix, cloudi:service_name_pattern()} |
+                  {file_path, file:filename()} |
+                  {count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
