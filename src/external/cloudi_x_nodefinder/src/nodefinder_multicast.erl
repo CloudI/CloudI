@@ -62,7 +62,7 @@ discover(Timeout) ->
 %%%------------------------------------------------------------------------
 
 init([Interface, Address, Port, TTL, TimeoutSeconds]) ->
-    Opts = [{active, true},
+    Opts = [{active, once},
             {ip, Address},
             {multicast_if, Interface},
             {add_membership, {Address, Interface}},
@@ -97,6 +97,7 @@ handle_cast(Request, State) ->
 
 handle_info({udp, SocketRecv, IP, _InPortNo, Packet},
             #state{socket_recv = SocketRecv} = State) ->
+    inet:setopts(SocketRecv, [{active, once}]),
     ok = process_packet(Packet, IP, State),
     {noreply, State};
 

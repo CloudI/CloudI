@@ -7,6 +7,7 @@
     * Add "type", "prefix", "file_path", "module" to the
       CloudI Service API response for services_status
     * Fix errors in cloudi_service_api_requests caused by invalid input
+    * Update nodefinder
 
 2019-05-18 Michael Truog   <mjtruog at protonmail dot com>
 
