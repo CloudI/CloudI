@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_spawn).
@@ -42,6 +42,8 @@
          environment_transform/2,
          start_internal/18,
          start_external/21,
+         status_internal/3,
+         status_external/4,
          update_external/3,
          update_internal_f/9,
          update_external_f/12]).
@@ -195,6 +197,32 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         {error, _} = Error ->
             Error
     end.
+
+status_internal(CountProcess,
+                [_GroupLeader,
+                 Module, _Args, _TimeoutInit, Prefix,
+                 _TimeoutAsync, _TimeoutSync, _TimeoutTerm,
+                 _DestRefresh, _DestListDeny, _DestListAllow,
+                 _ConfigOptions, _ID],
+                Status) ->
+    [{type, internal},
+     {prefix, Prefix},
+     {module, Module},
+     {count_process, CountProcess} | Status].
+
+status_external(CountProcess, CountThread,
+                [_ThreadsPerProcess,
+                 Filename, _Arguments, _Environment,
+                 _Protocol, _BufferSize, _TimeoutInit, Prefix,
+                 _TimeoutAsync, _TimeoutSync, _TimeoutTerm,
+                 _DestRefresh, _DestListDeny, _DestListAllow,
+                 _ConfigOptions, _ID],
+                Status) ->
+    [{type, external},
+     {prefix, Prefix},
+     {file_path, Filename},
+     {count_process, CountProcess},
+     {count_thread, CountThread} | Status].
 
 update_external(Pids, Ports,
                 [ProcessIndex, ProcessCount, ThreadsPerProcess,

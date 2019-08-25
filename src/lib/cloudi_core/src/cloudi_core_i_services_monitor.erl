@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.7.6 {@date} {@time}
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -1326,12 +1326,15 @@ service_id_status(ServiceId, TimeNow,
                   TimeDayStart, TimeWeekStart, TimeMonthStart, TimeYearStart,
                   DurationsUpdate, DurationsRestart, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
-        {ok, {_, #service{service_f = StartType,
+        {ok, {_, #service{service_m = Module,
+                          service_f = Function,
+                          service_a = Arguments,
                           count_process = CountProcess,
                           count_thread = CountThread,
                           time_start = TimeStart,
                           time_restart = TimeRestart,
                           restart_count_total = Restarts}}} ->
+            cloudi_core_i_spawn = Module,
             DurationsStateUpdate = cloudi_core_i_status:
                                    durations_state(ServiceId,
                                                    DurationsUpdate),
@@ -1597,11 +1600,12 @@ service_id_status(ServiceId, TimeNow,
                         {uptime_restarts,
                          erlang:integer_to_list(Restarts)} | Status18],
             StatusN = if
-                StartType =:= start_internal ->
-                    [{count_process, CountProcess} | Status19];
-                StartType =:= start_external ->
-                    [{count_process, CountProcess},
-                     {count_thread, CountThread} | Status19]
+                Function =:= start_internal ->
+                    Module:status_internal(CountProcess,
+                                           Arguments,Status19);
+                Function =:= start_external ->
+                    Module:status_external(CountProcess,CountThread,
+                                           Arguments,Status19)
             end,
             {ok, StatusN};
         error ->

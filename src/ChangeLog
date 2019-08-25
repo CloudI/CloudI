@@ -1,6 +1,13 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-08-24 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add "type" to the CloudI Service API JSON response for services
+    * Add "type", "prefix", "file_path", "module" to the
+      CloudI Service API response for services_status
+    * Fix errors in cloudi_service_api_requests caused by invalid input
+
 2019-05-18 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add Erlang/OTP 23 compatibility
