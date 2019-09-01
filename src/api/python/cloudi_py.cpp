@@ -37,8 +37,10 @@
 #define PYTHON_VERSION_3_4_COMPATIBLE
 #endif
 #if defined(__clang__)
-#elif defined(__GNUC__) || defined(__GNUG__)
+#elif defined(__GNUC__)
+#if __GNUC__ >= 8
 #pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
 #endif
 #include "cloudi.hpp"
 #include <limits>
