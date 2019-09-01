@@ -1776,7 +1776,7 @@ int cloudi_shutdown(cloudi_instance_t * p,
 static char const ** text_key_value_parse(void const * const text,
                                           uint32_t const text_size)
 {
-    char const * p = reinterpret_cast<char const * const>(text);
+    char const * p = reinterpret_cast<char const *>(text);
     realloc_ptr<char const *> result(16, 8192);
     result[0] = p;
     size_t i = 1;

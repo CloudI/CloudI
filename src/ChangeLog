@@ -1,6 +1,10 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-09-01 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add support for GCC 8.3.0
+
 2019-08-24 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add "type" to the CloudI Service API JSON response for services

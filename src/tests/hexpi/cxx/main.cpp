@@ -92,13 +92,13 @@ class Input
                    char const * const pid,
                    uint32_t const pid_size)
         {
-            uint32_t const * const parameters = 
-                reinterpret_cast<uint32_t const * const>(request);
+            uint32_t const * parameters =
+                reinterpret_cast<uint32_t const *>(request);
             assert(request_size > (sizeof(uint32_t) * 2));
             uint32_t const & iteration_count = parameters[0];
             uint32_t const & digit_step = parameters[1];
             char const * digit_index =
-                reinterpret_cast<char const * const>(&parameters[2]);
+                reinterpret_cast<char const *>(&parameters[2]);
 
             // perform the work
             timer t;

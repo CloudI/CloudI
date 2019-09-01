@@ -36,6 +36,10 @@
     ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 4))
 #define PYTHON_VERSION_3_4_COMPATIBLE
 #endif
+#if defined(__clang__)
+#elif defined(__GNUC__) || defined(__GNUG__)
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
 #include "cloudi.hpp"
 #include <limits>
 #include <string>
