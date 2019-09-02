@@ -21,6 +21,10 @@ libcloudi_py_la_CPPFLAGS = -g -Wall \
                            $(PYTHON_CFLAGS) \
                            -I$(top_srcdir)/api/c/ \
                            $(CXXFLAGS)
+if CXX_CLANG
+# clang gets angry at a -spec command line argument from libtool
+libcloudi_py_la_CPPFLAGS += -Wno-unused-command-line-argument
+endif
 libcloudi_py_la_LDFLAGS = $(PYTHON_LDFLAGS) -shared \
                           -no-undefined -module -avoid-version \
                           -export-symbols-regex '.*libcloudi_py' \

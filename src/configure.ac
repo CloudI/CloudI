@@ -54,6 +54,7 @@ AX_COMPILER_VERSION
 AC_LANG_POP([C++])
 AC_SUBST(CXX_COMPILER_VENDOR_VERSION,
          ["$ax_cv_cxx_compiler_vendor $ax_cv_cxx_compiler_version"])
+AM_CONDITIONAL([CXX_CLANG], [test "x$ax_cv_cxx_compiler_vendor" = "xclang"])
 
 # now in autoconf 2.69
 AC_SUBST(abs_top_srcdir, [`cd $srcdir; pwd`])

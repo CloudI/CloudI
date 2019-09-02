@@ -24,6 +24,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#if defined(__clang__)
+// clang compiler specific
+#elif defined(__GNUC__)
+// GCC compiler specific
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
+#endif
 #include <Python.h>
 #if PY_MAJOR_VERSION >= 3
 #define PYTHON_VERSION_3_COMPATIBLE
@@ -35,12 +43,6 @@
 #if (PY_MAJOR_VERSION > 3) || \
     ((PY_MAJOR_VERSION == 3) && (PY_MINOR_VERSION >= 4))
 #define PYTHON_VERSION_3_4_COMPATIBLE
-#endif
-#if defined(__clang__)
-#elif defined(__GNUC__)
-#if __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wcast-function-type"
-#endif
 #endif
 #include "cloudi.hpp"
 #include <limits>

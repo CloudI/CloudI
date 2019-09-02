@@ -4,6 +4,7 @@
 2019-09-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for GCC 8.3.0
+    * Add support for clang 8.0.0
 
 2019-08-24 Michael Truog   <mjtruog at protonmail dot com>
 
