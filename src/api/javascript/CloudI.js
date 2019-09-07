@@ -82,6 +82,28 @@ var nodejsVersionAfter = function nodejsVersionAfter (s) {
     }
     return false;
 };
+if (nodejsVersionAfter('10.0.0')) {
+    var originalEmitWarning = process.emitWarning;
+    process.emitWarning = function(warning, type, code, ctor) {
+        if (code === 'DEP0097') {
+            // Ignore the stderr output of the runtime deprecation:
+            // "Using a domain property in MakeCallback is deprecated.
+            //  Use the async_context variant of MakeCallback or the
+            //  AsyncResource class instead."
+            //
+            // Until the exception handling of the domain module is
+            // provided by a different module (like async_hooks) or
+            // exceptions (throw/try/catch) are removed from Javascript,
+            // the use of the domain module needs to remain
+            // (to remain consistent with other CloudI API implementations).
+            // The stderr runtime deprecation information is ignored
+            // because it provides no useful information and is only an
+            // annoyance as a false negative.
+            return;
+        }
+        originalEmitWarning(warning, type, code, ctor);
+    };
+}
 
 var InvalidInputException = function InvalidInputException () {
     var error = new Error('Invalid Input');

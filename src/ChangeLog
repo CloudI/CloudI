@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-09-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Ignore the DEP0097 runtime deprecation in the
+      Javascript CloudI API due to required domain module use
+      (prevents stderr output logged as ERROR that is not an error)
+
 2019-09-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add support for GCC 8.3.0
