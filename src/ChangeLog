@@ -6,6 +6,7 @@
     * Ignore the DEP0097 runtime deprecation in the
       Javascript CloudI API due to required domain module use
       (prevents stderr output logged as ERROR that is not an error)
+    * Add Cabal package version check for testing GHC 8.8.1
 
 2019-09-01 Michael Truog   <mjtruog at protonmail dot com>
 

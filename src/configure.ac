@@ -425,11 +425,20 @@ AC_PATH_PROGS([GHC],[ghc])
 if test "x$GHC" = "x"; then
     AC_MSG_ERROR([Glasgow Haskell Compiler (GHC) not found])
 fi
+AC_ARG_VAR([GHC_PKG],[GHC package manager])
+AC_PATH_PROGS([GHC_PKG],[ghc-pkg])
+if test "x$GHC_PKG" = "x"; then
+    AC_MSG_ERROR([GHC package manager not found])
+fi
 AC_ARG_VAR([CABAL],[Haskell Cabal (cabal-install) executable])
 AC_PATH_PROGS([CABAL],[cabal])
 if test "x$CABAL" = "x"; then
     AC_MSG_ERROR([Haskell Cabal (cabal-install) not found])
 fi
+# Cabal >= 3.0.0.0 is included with GHC >= 8.8.1
+AX_CABAL_VERSION([3.0.0.0],
+    [AM_CONDITIONAL([CABAL_INSTALL_V2],[true])],
+    [AM_CONDITIONAL([CABAL_INSTALL_V2],[false])])
 AC_SUBST([CABAL_SANDBOX], ["$abs_top_builddir/api/haskell/sandbox"])
 AC_SUBST(CONFIG_TESTS_HASKELL_COUNT, ["[[{prefix, \"/tests/count/\"}, {file_path, \"$cloudi_prefix/tests/count/count_haskell\"}, {dest_refresh, none}, {count_thread, 4}, {options, [{nice, 10}]}]],"])
 AC_SUBST(CONFIG_TESTS_HASKELL_HTTP_REQ, ["[[{prefix, \"/tests/http_req/\"}, {file_path, \"$cloudi_prefix/tests/http_req/http_req_haskell\"}, {dest_refresh, none}, {options, [{request_timeout_adjustment, true}, {nice, 10}]}]],"])
