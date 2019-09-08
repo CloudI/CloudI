@@ -75,19 +75,15 @@ var packUint32big = function packUint32big (value) {
 var nodejs_version = process.versions['node'].split('.').map(s => parseInt(s));
 var nodejsVersionAfter = function nodejsVersionAfter (s, include) {
     var v = s.split('.').map(s => parseInt(s));
-    var compare;
-    if (include) {
-        compare = function (lhs, rhs) { return (lhs >= rhs); };
-    }
-    else {
-        compare = function (lhs, rhs) { return (lhs > rhs); };
-    }
     for (var i = 0; i < v.length; i++) {
-        if (compare(nodejs_version[i], v[i])) {
+        if (nodejs_version[i] > v[i]) {
             return true;
         }
+        if (nodejs_version[i] < v[i]) {
+            return false;
+        }
     }
-    return false;
+    return include;
 };
 if (nodejsVersionAfter('10.0.0',true)) {
     var originalEmitWarning = process.emitWarning;
