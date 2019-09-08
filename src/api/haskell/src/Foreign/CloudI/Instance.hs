@@ -5,7 +5,7 @@
 
   MIT License
 
-  Copyright (c) 2017 Michael Truog <mjtruog at protonmail dot com>
+  Copyright (c) 2017-2019 Michael Truog <mjtruog at protonmail dot com>
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -131,14 +131,11 @@ instance Show (T s) where
 
 makeSocket :: String -> C.CInt -> IO Socket
 makeSocket "local" fd =
-    Socket.mkSocket fd Socket.AF_UNIX Socket.Stream
-        Socket.defaultProtocol Socket.Connected
+    Socket.mkSocket fd
 makeSocket "tcp" fd =
-    Socket.mkSocket fd Socket.AF_INET Socket.Stream
-        Socket.defaultProtocol Socket.Connected
+    Socket.mkSocket fd
 makeSocket "udp" fd =
-    Socket.mkSocket fd Socket.AF_INET Socket.Datagram
-        Socket.defaultProtocol Socket.Connected
+    Socket.mkSocket fd
 makeSocket _ _ =
     error "invalid protocol"
 

@@ -73,16 +73,23 @@ var packUint32big = function packUint32big (value) {
                        value & 0xff]);
 };
 var nodejs_version = process.versions['node'].split('.').map(s => parseInt(s));
-var nodejsVersionAfter = function nodejsVersionAfter (s) {
+var nodejsVersionAfter = function nodejsVersionAfter (s, include) {
     var v = s.split('.').map(s => parseInt(s));
+    var compare;
+    if (include) {
+        compare = function (lhs, rhs) { return (lhs >= rhs); };
+    }
+    else {
+        compare = function (lhs, rhs) { return (lhs > rhs); };
+    }
     for (var i = 0; i < v.length; i++) {
-        if (nodejs_version[i] > v[i]) {
+        if (compare(nodejs_version[i], v[i])) {
             return true;
         }
     }
     return false;
 };
-if (nodejsVersionAfter('10.0.0')) {
+if (nodejsVersionAfter('10.0.0',true)) {
     var originalEmitWarning = process.emitWarning;
     process.emitWarning = function(warning, type, code, ctor) {
         if (code === 'DEP0097') {
@@ -235,7 +242,7 @@ CloudI.API = function API (thread_index, callback) {
     else {
         throw new InvalidInputException();
     }
-    if (nodejsVersionAfter('0.12.1')) {
+    if (nodejsVersionAfter('0.12.1',false)) {
         API._s_in = new net.Socket({fd: (thread_index + 3),
                                     readable: true,
                                     writable: true});

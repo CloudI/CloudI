@@ -12,7 +12,11 @@ category:            Foreign
 stability:           provisional
 build-type:          Simple
 cabal-version:       1.22
-tested-with:         GHC == 7.10.3, GHC == 8.0.2, GHC == 8.2.2, GHC == 8.4.3, GHC == 8.6.5
+tested-with:           GHC == 7.10.3
+                     , GHC == 8.0.2
+                     , GHC == 8.2.2
+                     , GHC == 8.4.3
+                     , GHC == 8.6.5
 
 library
   hs-source-dirs:    src
@@ -27,9 +31,9 @@ library
   build-depends:       base >= 4.8.2.0
                      , binary >= 0.8.4.0
                      , bytestring >= 0.10.4
+                     , network >= 3.0.0.0
                      , array
                      , containers
-                     , network
                      , time
                      , unix
                      , zlib

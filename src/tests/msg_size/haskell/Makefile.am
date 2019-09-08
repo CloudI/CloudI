@@ -4,18 +4,30 @@
 instdir = "$(DESTDIR)$(cloudi_prefix)/tests/msg_size"
 CLEANFILES = cabal.sandbox.config msg_size_haskell
 
+if CABAL_INSTALL_V2
+CABAL_CMD_SANDBOX=v1-sandbox
+CABAL_CMD_INSTALL=v1-install
+CABAL_CMD_CONFIGURE=v1-configure
+CABAL_CMD_BUILD=v1-build
+else
+CABAL_CMD_SANDBOX=sandbox
+CABAL_CMD_INSTALL=install
+CABAL_CMD_CONFIGURE=configure
+CABAL_CMD_BUILD=build
+endif
+
 .NOTPARALLEL:
 
 all-local: cabal.sandbox.config msg_size_haskell
 
 cabal.sandbox.config:
-	$(CABAL) sandbox init --sandbox $(CABAL_SANDBOX)
+	$(CABAL) $(CABAL_CMD_SANDBOX) init --sandbox $(CABAL_SANDBOX)
 
 msg_size_haskell: Main.hs
-	$(CABAL) install --only-dependencies --force-reinstalls \
-                     --with-compiler=$(GHC)
-	$(CABAL) configure --with-compiler=$(GHC)
-	$(CABAL) build
+	$(CABAL) $(CABAL_CMD_INSTALL) --only-dependencies --force-reinstalls \
+                                      --with-compiler=$(GHC)
+	$(CABAL) $(CABAL_CMD_CONFIGURE) --with-compiler=$(GHC)
+	$(CABAL) $(CABAL_CMD_BUILD)
 	cp $(builddir)/dist/build/msg_size_haskell/msg_size_haskell .
 
 clean-local:

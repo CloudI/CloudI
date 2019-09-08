@@ -285,9 +285,9 @@ Haskell `binary`
 `Haskell binary serialisation`
 
 - `https://hackage.haskell.org/package/binary`
-- `https://hackage.haskell.org/package/binary-0.9.0.0/binary-0.9.0.0.tar.gz`
+- `https://hackage.haskell.org/package/binary-0.8.7.0/binary-0.8.7.0.tar.gz`
 - `repository location: src/api/haskell/external/`
-- `Thu Mar 16 15:43:25 PDT 2017`
+- `Sat Sep  7 23:58:26 UTC 2019`
 - `BSD`
 
 Haskell `bytestring`
@@ -295,9 +295,9 @@ Haskell `bytestring`
 `Haskell ByteString: Fast, Packed Strings of Bytes`
 
 - `https://hackage.haskell.org/package/bytestring`
-- `https://hackage.haskell.org/package/bytestring-0.10.8.1/bytestring-0.10.8.1.tar.gz`
+- `https://hackage.haskell.org/package/bytestring-0.10.10.0/bytestring-0.10.10.0.tar.gz`
 - `repository location: src/api/haskell/external/`
-- `Thu Mar 16 15:43:25 PDT 2017`
+- `Sat Sep  7 23:58:26 UTC 2019`
 - `BSD`
 
 Haskell `network`
@@ -305,9 +305,9 @@ Haskell `network`
 `Haskell Low-level networking interface`
 
 - `https://hackage.haskell.org/package/network`
-- `https://hackage.haskell.org/package/network-2.6.3.1/network-2.6.3.1.tar.gz`
+- `https://hackage.haskell.org/package/network-3.1.0.1/network-3.1.0.1.tar.gz`
 - `repository location: src/api/haskell/external/`
-- `Thu Mar 16 15:43:25 PDT 2017`
+- `Sat Sep  7 23:58:26 UTC 2019`
 - `BSD`
 
 Haskell `unix`
@@ -315,9 +315,9 @@ Haskell `unix`
 `Haskell POSIX functionality`
 
 - `https://hackage.haskell.org/package/unix`
-- `https://hackage.haskell.org/package/unix-2.7.2.1/unix-2.7.2.1.tar.gz`
+- `https://hackage.haskell.org/package/unix-2.7.2.2/unix-2.7.2.2.tar.gz`
 - `repository location: src/api/haskell/external/`
-- `Thu Mar 16 15:43:25 PDT 2017`
+- `Sat Sep  7 23:58:26 UTC 2019`
 - `BSD`
 
 Haskell `zlib`
@@ -325,9 +325,9 @@ Haskell `zlib`
 `Haskell Compression and Decompression in the gzip and zlib formats`
 
 - `https://hackage.haskell.org/package/zlib`
-- `https://hackage.haskell.org/package/zlib-0.6.1.2/zlib-0.6.1.2.tar.gz`
+- `https://hackage.haskell.org/package/zlib-0.6.2.1/zlib-0.6.2.1.tar.gz`
 - `repository location: src/api/haskell/external/`
-- `Thu Mar 16 15:43:25 PDT 2017`
+- `Sat Sep  7 23:58:26 UTC 2019`
 - `BSD`
 
 Java `jinterface`
