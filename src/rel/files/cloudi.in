@@ -7,6 +7,9 @@ PID_NAME=CloudI
 # Name of this file
 PROGNAME=cloudi
 
+CLOUDI_UMASK="@CLOUDI_UMASK@"
+CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
+CLOUDI_NODE_NAME="@CLOUDI_NODE_NAME@"
 ROOTDIR="@cloudi_prefix@"
 BINDIR="$ROOTDIR/erts-@ERLANG_ERTS_VER@/bin"
 EMU=beam
@@ -17,7 +20,7 @@ ROOT_LOG_DIR="$ROOTDIR/logs"
 PROGNAME_FILE="$ROOT_BIN_DIR/$PROGNAME"
 VMARGS_FILE="$ROOT_ETC_DIR/vm.args"
 ERLCONFIG_FILE="$ROOT_ETC_DIR/app.config"
-TMPDIR="/tmp/$PROGNAME"
+TMPDIR="/tmp/$CLOUDI_NODE_NAME"
 PIPE_DIR="$TMPDIR/shell/"
 RUN_ERL_LOG_ACTIVITY_MINUTES="5"
 RUN_ERL_LOG_ALIVE_MINUTES="15"
@@ -33,8 +36,6 @@ ERL_FLAGS=""
 ERL_LIBS=""
 ERL_EPMD_ADDRESS=""
 ERL_EPMD_PORT="4369"
-CLOUDI_UMASK="@CLOUDI_UMASK@"
-CLOUDI_PID_FILE="@CLOUDI_PID_FILE@"
 
 # Default umask (u=rwx,g=rx,o=), if it wasn't provided to the configure script
 if [ -z "$CLOUDI_UMASK" ]; then
@@ -43,7 +44,7 @@ fi
 
 # Default pid file path, if it wasn't provided to the configure script
 if [ -z "$CLOUDI_PID_FILE" ]; then
-    CLOUDI_PID_FILE="$ROOT_LOG_DIR/$PROGNAME.pid"
+    CLOUDI_PID_FILE="$ROOT_LOG_DIR/$CLOUDI_NODE_NAME.pid"
 fi
 
 # based on TIMEOUT_TERMINATE_MAX in cloudi_core_i_constants.hrl (milliseconds)

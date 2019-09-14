@@ -5,6 +5,9 @@
 
     * The cloudi executable will not create a
       ${HOME}/.erlang.cookie file now
+    * Use the cloudi executable node name for the
+      /tmp pipe directory used for the Erlang shell and
+      the default pid file name
 
 2019-09-07 Michael Truog   <mjtruog at protonmail dot com>
 

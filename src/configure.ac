@@ -680,11 +680,15 @@ AC_ARG_VAR([CLOUDI_ARG_NODE_NAME_SHORT],
            [CloudI distributed Erlang short node name
             @<:@default='cloudi'@:>@])
 AS_IF([test -n "$CLOUDI_ARG_NODE_NAME_LONG"],
-      [CLOUDI_ARG_NODE_NAME="-name $CLOUDI_ARG_NODE_NAME_LONG"],
+      [CLOUDI_ARG_NODE_NAME="-name $CLOUDI_ARG_NODE_NAME_LONG"
+       CLOUDI_NODE_NAME="$CLOUDI_ARG_NODE_NAME_LONG"],
       [test -n "$CLOUDI_ARG_NODE_NAME_SHORT"],
-      [CLOUDI_ARG_NODE_NAME="-sname $CLOUDI_ARG_NODE_NAME_SHORT"],
-      [CLOUDI_ARG_NODE_NAME="-sname cloudi"])
+      [CLOUDI_ARG_NODE_NAME="-sname $CLOUDI_ARG_NODE_NAME_SHORT"
+       CLOUDI_NODE_NAME="$CLOUDI_ARG_NODE_NAME_SHORT"],
+      [CLOUDI_ARG_NODE_NAME="-sname cloudi"
+       CLOUDI_NODE_NAME="cloudi"])
 AC_SUBST(CLOUDI_ARG_NODE_NAME)
+AC_SUBST(CLOUDI_NODE_NAME)
 # Set a specific Distributed Erlang cookie
 AC_ARG_VAR([CLOUDI_ARG_NODE_COOKIE],
            [CloudI distributed Erlang cookie
