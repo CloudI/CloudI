@@ -187,8 +187,7 @@ case "$1" in
         export ERL_FLAGS
         export ERL_LIBS
 
-        CMD="$BINDIR/erl $REMSH"
-        exec $CMD
+        exec "$BINDIR/erl" "$REMSH"
         ;;
     console)
         BOOTFILE="$PROGNAME"

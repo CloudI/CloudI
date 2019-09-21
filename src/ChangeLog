@@ -3,7 +3,8 @@
 
 2019-09-21 Michael Truog   <mjtruog at protonmail dot com>
 
-    * Fix cloudi executable handling of quotes in the vm.args config file
+    * Fix cloudi executable handling of quotes and spaces when
+      parsing the vm.args config file
 
 2019-09-15 Michael Truog   <mjtruog at protonmail dot com>
 

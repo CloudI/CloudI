@@ -108,7 +108,7 @@ command_line([?CMD_ARGS_REMSH],
             "-name"
     end,
     NodeRemsh = node_remsh(NodeScript),
-    io:format("~s ~s -remsh ~s -setcookie ~s\n",
+    io:format("~s ~s -remsh ~s -setcookie '~s'\n",
               [NameArg, NodeRemsh, Node, Cookie]);
 command_line(_, State) ->
     exit_error(1, help(), State).
@@ -161,15 +161,15 @@ parse_vmargs_line(F, State) ->
         {ok, "-heart" ++ _} ->
             parse_vmargs_line(F, State#state{heart = true});
         {ok, "-sname" ++ SName} ->
-            SNameValue = strip_to_atom(SName),
+            SNameValue = vmarg_to_atom(SName),
             parse_vmargs_line(F, State#state{node_name_type = shortnames,
                                              node = SNameValue});
         {ok, "-name" ++ Name} ->
-            NameValue = strip_to_atom(Name),
+            NameValue = vmarg_to_atom(Name),
             parse_vmargs_line(F, State#state{node_name_type = longnames,
                                              node = NameValue});
         {ok, "-setcookie" ++ SetCookie} ->
-            CookieValue = strip_to_atom(SetCookie),
+            CookieValue = vmarg_to_atom(SetCookie),
             parse_vmargs_line(F, State#state{cookie = CookieValue});
         {ok, _} ->
             parse_vmargs_line(F, State);
@@ -204,8 +204,8 @@ shell_output(Shell, Output) ->
             {Status, lists:reverse(Output)}
     end.
 
-strip_to_atom(String) ->
-    erlang:list_to_atom(unquote(strip(String))).
+vmarg_to_atom(String) ->
+    erlang:list_to_atom(unquote(vmarg(String))).
 
 unquote([H | T] = L) when H =:= $'; H =:= $" ->
     case lists:reverse(T) of
@@ -217,12 +217,28 @@ unquote([H | T] = L) when H =:= $'; H =:= $" ->
 unquote(L) ->
     L.
 
-strip([]) ->
-    [];
-strip([H | T]) when H =:= $\s; H =:= $\t; H =:= $\r; H =:= $\n ->
-    strip(T);
-strip([H | T]) ->
-    [H | strip(T)].
+vmarg(L0) ->
+    [H0 | T0] = vmarg_left(L0),
+    case vmarg_left(lists:reverse(T0)) of
+        [H1 | T1] ->
+            [H0 | lists:reverse([H1 | vmarg_middle(T1)])];
+        L1 ->
+            [H0 | L1]
+    end.
+
+vmarg_left([H | T]) when H =:= $\s; H =:= $\t; H =:= $\r; H =:= $\n ->
+    vmarg_left(T);
+vmarg_left(L) ->
+    L.
+
+vmarg_middle([$\t | T]) ->
+    vmarg_middle([$\s | T]);
+vmarg_middle([$\s, H | T]) when (H =:= $\s); (H =:= $\t) ->
+    vmarg_middle([$\s | T]);
+vmarg_middle([H | T]) ->
+    [H | vmarg_middle(T)];
+vmarg_middle(L) ->
+    L.
 
 node_split(Node) when is_atom(Node) ->
     node_split(erlang:atom_to_list(Node), []).
