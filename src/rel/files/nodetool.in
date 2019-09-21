@@ -205,7 +205,17 @@ shell_output(Shell, Output) ->
     end.
 
 strip_to_atom(String) ->
-    erlang:list_to_atom(strip(String)).
+    erlang:list_to_atom(unquote(strip(String))).
+
+unquote([H | T] = L) when H =:= $'; H =:= $" ->
+    case lists:reverse(T) of
+        [H | Unquoted] ->
+            lists:reverse(Unquoted);
+        _ ->
+            L
+    end;
+unquote(L) ->
+    L.
 
 strip([]) ->
     [];
