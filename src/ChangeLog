@@ -5,6 +5,10 @@
 
     * Fix cloudi executable handling of quotes and spaces when
       parsing the vm.args config file
+    * Add a ${CLOUDI_NODE_ARGS}.args configuration file for
+      Erlang/OTP VM arguments specific to the node
+      (typically adding paths to the code server's search paths)
+    * Move the app.config configuration file to vm.config
 
 2019-09-15 Michael Truog   <mjtruog at protonmail dot com>
 

@@ -1,11 +1,11 @@
-## make sure enif_send can be used in NIFs
--smp
-
 ## Name of the node
 @CLOUDI_ARG_NODE_NAME@
 
 ## Cookie for distributed erlang
 @CLOUDI_ARG_NODE_COOKIE@
+
+## Ensure SMP is used
+-smp
 
 ## heart VM monitoring (required for reboot command)
 ## (WARNING: (from http://erlang.org/doc/man/heart.html)
@@ -36,11 +36,5 @@
 # CloudI configuration arguments specifically for Erlang/OTP @ERLANG_OTP_VER@
 @ERL_OPTS@
 
-# Integration Tests code paths for the default configuration
--pz @cloudi_prefix@/tests/count/erlang/ebin/
--pz @cloudi_prefix@/tests/hexpi/erlang/ebin/
--pz @cloudi_prefix@/tests/http_req/erlang/ebin/
--pz @cloudi_prefix@/tests/msg_size/erlang/ebin/
--pz @cloudi_prefix@/tests/messaging/erlang/ebin/
--pz @cloudi_prefix@/tests/null/erlang/ebin/
-
+# node specific arguments
+-args_file @cloudi_confdir@/@CLOUDI_NODE_NAME@.args

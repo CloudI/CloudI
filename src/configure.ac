@@ -659,10 +659,13 @@ fi
 
 if test "x$integration_tests_ran" = "xtrue" ; then
     CLOUDI_CONF="cloudi_tests.conf"
+    CLOUDI_NODE_ARGS="tests.args"
 else
     CLOUDI_CONF="cloudi_minimal.conf"
+    CLOUDI_NODE_ARGS="minimal.args"
 fi
 AC_SUBST(CLOUDI_CONF)
+AC_SUBST(CLOUDI_NODE_ARGS)
 
 # Set the umask used for file creation (e.g., log files)
 AC_ARG_VAR([CLOUDI_UMASK],
@@ -704,11 +707,13 @@ AC_CONFIG_FILES([
     rebar_src.config
     rebar_src_test.config
     reltool.config
-    rel/files/app.config
     rel/files/cloudi
     rel/files/erl
+    rel/files/minimal.args
     rel/files/nodetool
+    rel/files/tests.args
     rel/files/vm.args
+    rel/files/vm.config
     Makefile
     lib/Makefile
     lib/cloudi_core/Makefile

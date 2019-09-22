@@ -1,0 +1,10 @@
+# Erlang/OTP arguments specific to node @CLOUDI_NODE_NAME@
+
+# Integration Tests code paths for the default configuration
+-pz @cloudi_prefix@/tests/count/erlang/ebin/
+-pz @cloudi_prefix@/tests/hexpi/erlang/ebin/
+-pz @cloudi_prefix@/tests/http_req/erlang/ebin/
+-pz @cloudi_prefix@/tests/msg_size/erlang/ebin/
+-pz @cloudi_prefix@/tests/messaging/erlang/ebin/
+-pz @cloudi_prefix@/tests/null/erlang/ebin/
+
