@@ -51,8 +51,8 @@ fi
 # attempted during a stop or restart
 # (e.g., in cloudi_core_i_nodes.erl or nodefinder, due to the use of
 #  net_kernel:connect_node/1 or net_kernel:hidden_connect_node/1),
-# net_kernel source code will cause a delay based on its SETUPTIME define of
-# 7 seconds (it will take longer than 7 seconds).
+# net_kernel source code will cause a delay based on the net_setuptime
+# value that defaults to 7 seconds (it will take longer than 7 seconds).
 #
 # The SHUTDOWN_TIME_MAX value provides the maximum time a stop or restart
 # will take
