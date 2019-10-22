@@ -8,13 +8,9 @@
     %{inet_dist_use_interface,"127.0.0.1"},
     %{net_setuptime, 7000}, % milliseconds
     {net_ticktime, 60},
-    % Erlang/OTP 21.0 kernel logger
+    % Erlang/OTP >= 21.0 kernel logger
     {logger_level, debug},
-    {error_logger,
-     % filesync_repeat_interval default is 5000 milliseconds
-     %{file, "erlang_kernel.log", [raw, append]}} % Erlang/OTP >= 21.0 config
-     {file, "erlang_kernel.log"}}, % Erlang/OTP < 21.0 config
-    %{error_logger_format_depth, unlimited}, % Erlang/OTP >= 21.0 config
+    {error_logger, {file, "erlang_kernel.log"}},
     {logger_sasl_compatible, false}
   ]},
  {sasl, [

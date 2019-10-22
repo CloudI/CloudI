@@ -4,18 +4,23 @@
 
 -mode(compile).
 
--define(CMD_PING,        "ping").
--define(CMD_TEST,        "test").
--define(CMD_STOP,        "stop").
--define(CMD_RESTART,     "restart").
--define(CMD_REBOOT,      "reboot").
--define(CMD_ARGS_REMSH,  "args_remsh").
+-define(CMD_PING,       "ping").
+-define(CMD_TEST,       "test").
+-define(CMD_STOP,       "stop").
+-define(CMD_RESTART,    "restart").
+-define(CMD_REBOOT,     "reboot").
+-define(CMD_ARGS_REMSH, "args_remsh").
 
 -define(SHUTDOWN_TIME_MAX, 65000).
 
 % twice this number of atoms is created when running this script
 % (used for nodetool script node names and remsh node names)
 -define(MAX_ATOMS, 251). % prime number
+
+% set during configuration
+-define(CONFIG_ROOT_DIR, "@cloudi_prefix@").
+-define(CONFIG_EPMD_PATH, ?CONFIG_ROOT_DIR "/erts-@ERLANG_ERTS_VER@/bin/epmd").
+-define(CONFIG_VMARGS_PATH, ?CONFIG_ROOT_DIR "/etc/vm.args").
 
 -record(state,
         {
@@ -30,15 +35,10 @@
         }).
 
 main(Args) ->
-    % set during configuration
-    RootDir = "@cloudi_prefix@",
-    EpmdPath = RootDir ++ "/erts-@ERLANG_ERTS_VER@/bin/epmd",
-    VMArgs = RootDir ++ "/etc/vm.args",
-
     State0 = #state{test = test_mode(Args),
                     stderr = erlang:open_port({fd, 0, 2}, [out, {line, 256}])},
-    ok = ensure_epmd_started(EpmdPath, State0),
-    StateN = initialize(parse_vmargs(VMArgs, State0)),
+    ok = ensure_epmd_started(?CONFIG_EPMD_PATH, State0),
+    StateN = initialize(parse_vmargs(?CONFIG_VMARGS_PATH, State0)),
     ok = ensure_node_connection_works(StateN),
     ok = command_line(Args, StateN),
     exit_code(0).
