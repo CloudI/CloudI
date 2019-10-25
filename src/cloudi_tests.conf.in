@@ -244,7 +244,8 @@
           [{parameters_selected, [2, 1]},
            {service_name,
             "**tification/websocket"}]}
-         ]}]}],
+         ]}]},
+     {timeout_sync, 30000}],
     % tests/http/ services
     {internal,
         "/tests/http/",

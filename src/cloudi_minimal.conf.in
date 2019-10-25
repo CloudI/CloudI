@@ -30,7 +30,8 @@
    {module, cloudi_service_http_cowboy1},
    {args,
     [{port, 6464}, {output, external}, {use_websockets, true},
-     {query_get_format, text_pairs}]}]
+     {query_get_format, text_pairs}]},
+   {timeout_sync, 30000}]
  ]}.
 {nodes, []}.
 {logging, [

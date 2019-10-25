@@ -154,6 +154,10 @@ Routing:
 * Local/Remote(SSH) Request Routing with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)
 
+Maintained Services Excluded from this Repository:
+
+* htmlunit with [`cloudi_service_htmlunit`](https://github.com/CloudI/cloudi_service_htmlunit)
+
 Unmaintained Services Excluded from this Repository:
 
 * elasticsearch with [`cloudi_service_db_elasticsearch`](https://github.com/CloudI/cloudi_service_db_elasticsearch)
