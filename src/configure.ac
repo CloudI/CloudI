@@ -614,15 +614,20 @@ AC_PATH_PROG([DIALYZER],[dialyzer], ,[`AS_DIRNAME([$ERLC])`])
 ERLC_OPTS="-DERLANG_OTP_VERSION_${ERLANG_OTP_VER_MAJOR} -I $abs_top_srcdir/lib +debug_info +strict_validation +warn_bif_clash +warn_deprecated_function +warn_export_all +warn_export_vars +warn_exported_vars +warn_obsolete_guard +warn_shadow_vars +warn_unused_import +warn_unused_function +warn_unused_record +warn_unused_vars"
 ERL_OPTS=""
 CLOUDI_CORE_RELEASE_OPTIONS=""
+ERL_ARGS_FILE_PARSE="space_merge"
 if test "$ERLANG_OTP_VER_MAJOR" -ge 20 ; then
 ERLC_OPTS="${ERLC_OPTS} +deterministic"
 fi
 if test "$ERLANG_OTP_VER_MAJOR" -ge 22 ; then
 CLOUDI_CORE_RELEASE_OPTIONS=",[[{load_dot_erlang,false}]]"
 fi
+if test "$ERLANG_OTP_VER_MAJOR" -ge 23 ; then
+ERL_ARGS_FILE_PARSE="exact"
+fi
 AC_SUBST(ERLC_OPTS)
 AC_SUBST(ERL_OPTS)
 AC_SUBST(CLOUDI_CORE_RELEASE_OPTIONS)
+AC_SUBST(ERL_ARGS_FILE_PARSE)
 
 # rebar dependency
 AC_ARG_VAR([REBAR],[rebar executable])

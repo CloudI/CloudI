@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -41,14 +41,14 @@ public class FunctionObject10 implements FunctionInterface9
         this.function = function;
     }
 
-    public Object invoke(Integer command, String name, String pattern,
+    public Object invoke(Integer request_type, String name, String pattern,
                          byte[] request_info, byte[] request,
                          Integer timeout, Byte priority,
                          byte[] trans_id, OtpErlangPid pid)
         throws Throwable
     {
         return this.function.invoke(this.api,
-                                    command, name, pattern,
+                                    request_type, name, pattern,
                                     request_info, request,
                                     timeout, priority,
                                     trans_id, pid);

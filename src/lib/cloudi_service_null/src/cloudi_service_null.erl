@@ -48,10 +48,12 @@
 
 -define(DEFAULT_DEBUG,                      false). % log output for debugging
 -define(DEFAULT_DEBUG_LEVEL,                trace).
+-define(DEFAULT_DEBUG_CONTENTS,             false).
 
 -record(state,
     {
-        debug_level :: off | trace | debug | info | warn | error | fatal
+        debug_level :: off | trace | debug | info | warn | error | fatal,
+        debug_contents :: boolean()
     }).
 
 %%%------------------------------------------------------------------------
@@ -65,16 +67,18 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {debug,                    ?DEFAULT_DEBUG},
-        {debug_level,              ?DEFAULT_DEBUG_LEVEL}],
-    [Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
-    true = ((Debug =:= true) orelse
-            (Debug =:= false)),
+        {debug_level,              ?DEFAULT_DEBUG_LEVEL},
+        {debug_contents,           ?DEFAULT_DEBUG_CONTENTS}],
+    [Debug, DebugLevel,
+     DebugContents] = cloudi_proplists:take_values(Defaults, Args),
+    true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
             (DebugLevel =:= warn) orelse
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
+    true = is_boolean(DebugContents),
     cloudi_service:subscribe(Dispatcher, ""),
     DebugLogLevel = if
         Debug =:= false ->
@@ -82,14 +86,27 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         Debug =:= true ->
             DebugLevel
     end,
-    {ok, #state{debug_level = DebugLogLevel}}.
+    {ok, #state{debug_level = DebugLogLevel,
+                debug_contents = DebugContents}}.
 
 cloudi_service_handle_request(_RequestType, Name, _Pattern,
-                              _RequestInfo, _Request,
+                              RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              #state{debug_level = DebugLogLevel} = State,
+                              #state{debug_level = DebugLogLevel,
+                                     debug_contents = DebugContents} = State,
                               _Dispatcher) ->
-    ?LOG(DebugLogLevel, "\"~ts\" consumed", [Name]),
+    if
+        DebugContents =:= true ->
+            ?LOG(DebugLogLevel,
+                 "\"~ts\" consumed~n"
+                 "(~tp,~n"
+                 " ~tp)",
+                 [Name, RequestInfo, Request]);
+        DebugContents =:= false ->
+            ?LOG(DebugLogLevel,
+                 "\"~ts\" consumed",
+                 [Name])
+    end,
     {reply, <<>>, State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->

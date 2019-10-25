@@ -21,6 +21,7 @@
 -define(CONFIG_ROOT_DIR, "@cloudi_prefix@").
 -define(CONFIG_EPMD_PATH, ?CONFIG_ROOT_DIR "/erts-@ERLANG_ERTS_VER@/bin/epmd").
 -define(CONFIG_VMARGS_PATH, ?CONFIG_ROOT_DIR "/etc/vm.args").
+-define(CONFIG_VMARGS_PARSE, '@ERL_ARGS_FILE_PARSE@').
 
 -record(state,
         {
@@ -221,7 +222,7 @@ vmarg(L0) ->
     [H0 | T0] = vmarg_left(L0),
     case vmarg_left(lists:reverse(T0)) of
         [H1 | T1] ->
-            [H0 | lists:reverse([H1 | vmarg_middle(T1)])];
+            [H0 | lists:reverse([H1 | vmarg_middle(?CONFIG_VMARGS_PARSE, T1)])];
         L1 ->
             [H0 | L1]
     end.
@@ -231,13 +232,22 @@ vmarg_left([H | T]) when H =:= $\s; H =:= $\t; H =:= $\r; H =:= $\n ->
 vmarg_left(L) ->
     L.
 
-vmarg_middle([$\t | T]) ->
-    vmarg_middle([$\s | T]);
-vmarg_middle([$\s, H | T]) when (H =:= $\s); (H =:= $\t) ->
-    vmarg_middle([$\s | T]);
-vmarg_middle([H | T]) ->
-    [H | vmarg_middle(T)];
-vmarg_middle(L) ->
+-spec vmarg_middle(exact | space_merge, L :: string()) -> string().
+
+vmarg_middle(exact, L) ->
+    % Erlang/OTP >= 23.0
+    L;
+vmarg_middle(space_merge, L) ->
+    % Erlang/OTP < 23.0 (https://bugs.erlang.org/browse/ERL-1051)
+    vmarg_middle_space_merge(L).
+
+vmarg_middle_space_merge([$\t | T]) ->
+    vmarg_middle_space_merge([$\s | T]);
+vmarg_middle_space_merge([$\s, H | T]) when (H =:= $\s); (H =:= $\t) ->
+    vmarg_middle_space_merge([$\s | T]);
+vmarg_middle_space_merge([H | T]) ->
+    [H | vmarg_middle_space_merge(T)];
+vmarg_middle_space_merge(L) ->
     L.
 
 node_split(Node) when is_atom(Node) ->

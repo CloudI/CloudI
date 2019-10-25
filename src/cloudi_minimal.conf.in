@@ -23,7 +23,7 @@
    {dest_refresh, none}],
   [{prefix, "*"},
    {module, cloudi_service_null},
-   {args, [{debug, true}]},
+   {args, [{debug, true}, {debug_contents, true}]},
    {dest_refresh, none},
    {options, [{response_timeout_immediate_max, limit_min}]}],
   [{prefix, "/"},

@@ -3,7 +3,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -31,7 +31,7 @@ import com.ericsson.otp.erlang.OtpErlangPid;
 public interface FunctionInterface10
 {
     public Object invoke(API api,
-                         Integer command, String name, String pattern,
+                         Integer request_type, String name, String pattern,
                          byte[] request_info, byte[] request,
                          Integer timeout, Byte priority,
                          byte[] trans_id, OtpErlangPid pid)

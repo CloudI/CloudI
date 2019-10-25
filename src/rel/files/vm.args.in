@@ -33,6 +33,9 @@
 +C multi_time_warp
 +c true
 
+# Set the printable range to unicode for unicode logging
++pc unicode
+
 # CloudI configuration arguments specifically for Erlang/OTP @ERLANG_OTP_VER@
 @ERL_OPTS@
 
