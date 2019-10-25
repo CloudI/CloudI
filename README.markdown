@@ -156,7 +156,7 @@ Routing:
 
 Maintained Services Excluded from this Repository:
 
-* htmlunit with [`cloudi_service_htmlunit`](https://github.com/CloudI/cloudi_service_htmlunit)
+* HtmlUnit with [`cloudi_service_htmlunit`](https://github.com/CloudI/cloudi_service_htmlunit)
 
 Unmaintained Services Excluded from this Repository:
 
