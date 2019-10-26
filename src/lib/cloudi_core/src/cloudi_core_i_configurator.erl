@@ -396,8 +396,8 @@ handle_call({services_add, L}, _,
     case cloudi_core_i_configuration:services_add(L, Config, infinity) of
         {ok, IDs, ConfigNew} ->
             {reply, {ok, IDs}, State#state{configuration = ConfigNew}};
-        {error, _} = Error ->
-            {reply, Error, State}
+        {error, Reason, ConfigNew} ->
+            {reply, {error, Reason}, State#state{configuration = ConfigNew}}
     end;
 
 handle_call({services_remove, L}, _,

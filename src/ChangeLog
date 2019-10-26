@@ -3,6 +3,10 @@
 
 2019-10-25 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Fix CloudI Service API services_add so successfully started
+      services are tracked properly when a later service fails to
+      successfully start
+      (when starting multiple services in a single services_add call)
     * Set the default configuration of the port 6464 HTTP server
       to use a 30 second timeout for HTTP/1 requests
 

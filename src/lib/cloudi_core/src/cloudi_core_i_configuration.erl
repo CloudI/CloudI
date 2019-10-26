@@ -489,7 +489,7 @@ acl(#config{acl = ACL}) ->
                    Config :: #config{},
                    Timeout :: api_timeout_milliseconds()) ->
     {ok, list(cloudi_service_api:service_id()), #config{}} |
-    {error, error_reason_services_add()}.
+    {error, error_reason_services_add(), #config{}}.
 
 services_add([T | _] = Value,
              #config{uuid_generator = UUID,
@@ -505,17 +505,19 @@ services_add([T | _] = Value,
                             {ok, IDs,
                              Config#config{services = Services ++
                                                       NewServices}};
-                        {error, _} = Error ->
-                            Error
+                        {error, Reason, NewServices} ->
+                            {error, Reason,
+                             Config#config{services = Services ++
+                                                      NewServices}}
                     end;
-                {error, _} = Error ->
-                    Error
+                {error, Reason} ->
+                    {error, Reason, Config}
             end;
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, Reason, Config}
     end;
-services_add(Value, _, _) ->
-    {error, {service_invalid, Value}}.
+services_add(Value, Config, _) ->
+    {error, {service_invalid, Value}, Config}.
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -1721,8 +1723,8 @@ services_add_service([Service | Services], Added, Timeout) ->
     case cloudi_core_i_configurator:service_start(Service, Timeout) of
         {ok, NewService} ->
             services_add_service(Services, [NewService | Added], Timeout);
-        {error, _} = Error ->
-            Error
+        {error, Reason} ->
+            {error, Reason, lists:reverse(Added)}
     end.
 
 -spec services_validate(Services :: list(#internal{} | #external{} |
