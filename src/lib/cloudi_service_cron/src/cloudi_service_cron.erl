@@ -215,8 +215,8 @@ datetime_difference(DateTime1, DateTime0) ->
 
 datetime_now(true) ->
     {_, _, MicroSeconds} = Now = erlang:timestamp(),
-    {calendar:now_to_universal_time(Now), MicroSeconds div 1000};
+    {calendar:now_to_universal_time(Now), erlang:round(MicroSeconds / 1000)};
 datetime_now(false) ->
     {_, _, MicroSeconds} = Now = erlang:timestamp(),
-    {calendar:now_to_local_time(Now), MicroSeconds div 1000}.
+    {calendar:now_to_local_time(Now), erlang:round(MicroSeconds / 1000)}.
 
