@@ -224,7 +224,7 @@
      {args,
       [{expressions,
         [{"0 */1 * * * * *",
-          ["/shell", "echo \"Hello World! The time is \"`date`\"\""]}]}]},
+          ["/shell", "echo \"Hello World! The time is \"`date`\".\""]}]}]},
      {count_process, 4}],
     [{prefix, "*"},
      {module, cloudi_service_null},

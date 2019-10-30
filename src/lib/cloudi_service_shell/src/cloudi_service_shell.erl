@@ -49,13 +49,15 @@
 
 -include_lib("cloudi_core/include/cloudi_logger.hrl").
 
--define(DEFAULT_EXECUTABLE,             "/bin/sh").
+-define(DEFAULT_FILE_PATH,              "/bin/sh").
 -define(DEFAULT_DIRECTORY,                    "/").
+-define(DEFAULT_ENV,                           []).
 
 -record(state,
     {
-        executable :: nonempty_string(),
-        directory :: nonempty_string()
+        file_path :: nonempty_string(),
+        directory :: nonempty_string(),
+        env :: list({nonempty_string(), nonempty_string()})
     }).
 
 %%%------------------------------------------------------------------------
@@ -92,16 +94,19 @@ exec(Agent, Prefix, Command, Timeout) ->
 
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
-        {executable,                   ?DEFAULT_EXECUTABLE},
-        {directory,                    ?DEFAULT_DIRECTORY}],
-    [Executable, Directory] = cloudi_proplists:take_values(Defaults, Args),
-    [_ | _] = Executable,
-    true = filelib:is_regular(Executable),
+        {file_path,                    ?DEFAULT_FILE_PATH},
+        {directory,                    ?DEFAULT_DIRECTORY},
+        {env,                          ?DEFAULT_ENV}],
+    [FilePath, Directory, Env] = cloudi_proplists:take_values(Defaults, Args),
+    [_ | _] = FilePath,
+    true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
+    EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
     cloudi_service:subscribe(Dispatcher, ""),
-    {ok, #state{executable = Executable,
-                directory = Directory}}.
+    {ok, #state{file_path = FilePath,
+                directory = Directory,
+                env = EnvExpanded}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
@@ -118,10 +123,18 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-request(Exec, #state{executable = Executable,
-                     directory = Directory}) ->
-    Shell = erlang:open_port({spawn_executable, Executable},
-                             [{args, ["-"]}, {cd, Directory},
+env_expand([] = L, _) ->
+    L;
+env_expand([{[_ | _] = Key, [_ | _] = Value} | L], Lookup) ->
+    [{cloudi_environment:transform(Key, Lookup),
+      cloudi_environment:transform(Value, Lookup)} |
+     env_expand(L, Lookup)].
+
+request(Exec, #state{file_path = FilePath,
+                     directory = Directory,
+                     env = Env}) ->
+    Shell = erlang:open_port({spawn_executable, FilePath},
+                             [{args, ["-"]}, {cd, Directory}, {env, Env},
                               stream, binary, stderr_to_stdout, exit_status]),
     true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
     request_output(Shell, []).
@@ -149,3 +162,4 @@ log_output(Status, Output, Request) ->
             ?LOG(Level, "~s = ~w (stdout/stderr below)~n~s",
                  [Request, Status, erlang:iolist_to_binary(Output)])
     end.
+
