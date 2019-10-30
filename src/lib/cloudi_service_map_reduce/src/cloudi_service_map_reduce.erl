@@ -54,7 +54,7 @@
 -define(DEFAULT_CONCURRENCY,                 1.0). % schedulers multiplier
 -define(DEFAULT_LOG_EXECUTION_TIME,         true).
 
--type map_send_args() :: list().
+-type map_send_args() :: nonempty_list().
 -export_type([map_send_args/0]).
 
 -record(state,

@@ -1,10 +1,10 @@
-## Name of the node
+# Name of the node
 @CLOUDI_ARG_NODE_NAME@
 
-## Cookie for distributed erlang
+# Cookie for distributed erlang
 @CLOUDI_ARG_NODE_COOKIE@
 
-## Ensure SMP is used
+# Ensure SMP is used
 -smp
 
 ## heart VM monitoring (required for reboot command)
@@ -16,14 +16,14 @@
 ##   automatically by use of the Network Time Protocol (NTP).")
 #-heart
 
-## Enable kernel poll and a few async threads
+# Enable kernel poll and a few async threads
 +K true
 +A 5
 
-## Increase number of Erlang processes
+# Increase number of Erlang processes
 +P 65536
 
-## Increase number of concurrent ports/sockets
+# Increase number of concurrent ports/sockets
 +Q 32768
 
 ## Distributed Erlang buffer size

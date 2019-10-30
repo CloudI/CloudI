@@ -727,6 +727,7 @@ AC_CONFIG_FILES([
     lib/cloudi_core/src/cloudi_environment.hrl
     lib/cloudi_service_api_batch/src/cloudi_service_api_batch.app.src
     lib/cloudi_service_api_requests/src/cloudi_service_api_requests.app.src
+    lib/cloudi_service_cron/src/cloudi_service_cron.app.src
     lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.app.src
     lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.app.src
     lib/cloudi_service_filesystem/src/cloudi_service_filesystem.app.src
@@ -742,6 +743,7 @@ AC_CONFIG_FILES([
     lib/cloudi_service_quorum/src/cloudi_service_quorum.app.src
     lib/cloudi_service_request_rate/src/cloudi_service_request_rate.app.src
     lib/cloudi_service_router/src/cloudi_service_router.app.src
+    lib/cloudi_service_shell/src/cloudi_service_shell.app.src
     lib/cloudi_service_tcp/src/cloudi_service_tcp.app.src
     lib/cloudi_service_udp/src/cloudi_service_udp.app.src
     lib/cloudi_service_validate/src/cloudi_service_validate.app.src
