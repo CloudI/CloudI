@@ -119,7 +119,7 @@ expression(#cloudi_cron{expression_strings = ExpressionStrings}) ->
 %%-------------------------------------------------------------------------
 
 -spec new(Input :: nonempty_string()) ->
-    expression().
+    state().
 
 new(Input) ->
     SecondsDefault = "0",
