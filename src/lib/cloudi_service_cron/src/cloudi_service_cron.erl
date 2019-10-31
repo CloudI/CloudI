@@ -185,7 +185,7 @@ event_send(SendArgs, Service, Dispatcher) ->
                       [Dispatcher | SendArgs]) of
         {ok, TransId} ->
             TransId;
-        {error, _} ->
+        {error, timeout} ->
             TransId = cloudi_service:trans_id(Dispatcher),
             Service ! #timeout_async_active{trans_id = TransId},
             TransId
