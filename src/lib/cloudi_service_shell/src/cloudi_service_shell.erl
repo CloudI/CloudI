@@ -57,7 +57,7 @@
     {
         file_path :: nonempty_string(),
         directory :: nonempty_string(),
-        env :: list({nonempty_string(), nonempty_string()})
+        env :: list({nonempty_string(), string()})
     }).
 
 %%%------------------------------------------------------------------------
@@ -125,9 +125,10 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 
 env_expand([] = L, _) ->
     L;
-env_expand([{[_ | _] = Key, [_ | _] = Value} | L], Lookup) ->
-    [{cloudi_environment:transform(Key, Lookup),
-      cloudi_environment:transform(Value, Lookup)} |
+env_expand([{[_ | _] = Key, Value} | L], Lookup)
+    when is_list(Value) ->
+    [_ | _] = KeyExpanded = cloudi_environment:transform(Key, Lookup),
+    [{KeyExpanded, cloudi_environment:transform(Value, Lookup)} |
      env_expand(L, Lookup)].
 
 request(Exec, #state{file_path = FilePath,
