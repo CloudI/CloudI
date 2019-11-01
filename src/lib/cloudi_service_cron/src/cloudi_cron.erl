@@ -121,7 +121,7 @@ expression(#cloudi_cron{expression_strings = ExpressionStrings}) ->
 -spec new(Input :: nonempty_string()) ->
     state().
 
-new(Input) ->
+new([_ | _] = Input) ->
     SecondsDefault = "0",
     YearDefault = "*",
     [Seconds, Minutes, Hours, DayOfMonth, Month, DayOfWeek,

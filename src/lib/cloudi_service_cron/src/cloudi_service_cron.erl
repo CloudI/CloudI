@@ -47,13 +47,16 @@
 -include_lib("cloudi_core/include/cloudi_service.hrl").
 
 -define(DEFAULT_EXPRESSIONS,                   []).
-        % e.g. [{"0 9 * * mon-fri", ["/shell", "echo \"hello world\""]}]
+        % e.g. [{"0 9 * * mon-fri",
+        %        [{description, "hello"},
+        %         {send_args, ["/shell", "echo \"hello world\""]}]}]
 -define(DEFAULT_USE_UTC,                    false).
 
 -type expression_id() :: pos_integer().
 
 -record(expression,
     {
+        description :: nonempty_string() | undefined,
         definition :: cloudi_cron:state(),
         send_args :: nonempty_list(),
         timer = undefined :: reference() | undefined
@@ -138,15 +141,28 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 
 expressions_load([], Id, Expressions, _, _, _) ->
     {Id, Expressions};
-expressions_load([{ExpressionStr, [_ | _] = SendArgs} | L], Id, Expressions,
+expressions_load([{ExpressionStr, Args} | L], Id, Expressions,
                  ProcessIndex, ProcessIndex, ProcessCount) ->
+    Defaults = [
+        {description,                  undefined},
+        {send_args,                    undefined}],
+    [Description, SendArgs] = cloudi_proplists:take_values(Defaults, Args),
+    [_ | _] = ExpressionStr,
+    case Description of
+        [_ | _] ->
+            ok;
+        undefined ->
+            ok
+    end,
+    [_ | _] = SendArgs,
     Cron = cloudi_cron:new(ExpressionStr),
-    Expression = #expression{definition = Cron,
+    Expression = #expression{description = Description,
+                             definition = Cron,
                              send_args = SendArgs},
     expressions_load(L, Id + 1, maps:put(Id, Expression, Expressions),
                      (ProcessIndex + 1) rem ProcessCount,
                      ProcessIndex, ProcessCount);
-expressions_load([_ | L], Id, Expressions,
+expressions_load([{_, _} | L], Id, Expressions,
                  Index, ProcessIndex, ProcessCount) ->
     expressions_load(L, Id, Expressions,
                      (Index + 1) rem ProcessCount,
@@ -172,9 +188,9 @@ expressions_start(Expressions, Service, UseUTC) ->
 expression_event(Expressions, Sends, Id, Service, UseUTC, Dispatcher) ->
     Expression = maps:get(Id, Expressions),
     #expression{definition = Cron,
-                send_args = [SendArgsName | _] = SendArgs} = Expression,
+                send_args = [ServiceName | _] = SendArgs} = Expression,
     ?LOG_TRACE("\"~s\" event sent to ~s",
-               [cloudi_cron:expression(Cron), SendArgsName]),
+               [description(Expression), ServiceName]),
     TransId = event_send(SendArgs, Service, Dispatcher),
     Timer = expression_next(Id, Cron, Service, UseUTC),
     {maps:put(Id, Expression#expression{timer = Timer}, Expressions),
@@ -194,18 +210,17 @@ event_send(SendArgs, Service, Dispatcher) ->
 event_recv(Result, TransId, Expressions, Sends) ->
     {Id, SendsNew} = maps:take(TransId, Sends),
     Expression = maps:get(Id, Expressions),
-    #expression{definition = Cron,
-                send_args = [SendArgsName | _]} = Expression,
+    #expression{send_args = [ServiceName | _]} = Expression,
     if
         Result =:= ok ->
             ?LOG_TRACE("\"~s\" event completed at ~s",
-                       [cloudi_cron:expression(Cron), SendArgsName]);
+                       [description(Expression), ServiceName]);
         Result =:= timeout ->
             ?LOG_ERROR("\"~s\" event timeout at ~s",
-                       [cloudi_cron:expression(Cron), SendArgsName]);
+                       [description(Expression), ServiceName]);
         Result =:= error ->
             ?LOG_ERROR("\"~s\" event failed at ~s",
-                       [cloudi_cron:expression(Cron), SendArgsName])
+                       [description(Expression), ServiceName])
     end,
     SendsNew.
 
@@ -219,4 +234,9 @@ datetime_now(true) ->
 datetime_now(false) ->
     {_, _, MicroSeconds} = Now = erlang:timestamp(),
     {calendar:now_to_local_time(Now), erlang:round(MicroSeconds / 1000)}.
+
+description(#expression{description = [_ | _] = Description}) ->
+    Description;
+description(#expression{definition = Cron}) ->
+    cloudi_cron:expression(Cron).
 
