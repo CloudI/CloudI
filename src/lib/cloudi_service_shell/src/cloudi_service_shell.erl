@@ -114,7 +114,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
-    EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
+    EnvExpanded = env_reset(env_expand(Env, cloudi_environment:lookup())),
     case User of
         undefined ->
             ok;
@@ -159,6 +159,14 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 env_expand([] = L, _) ->
+    L;
+env_expand([{[_ | _] = Key, Value} | L], Lookup)
+    when is_list(Value) ->
+    [_ | _] = KeyExpanded = cloudi_environment:transform(Key, Lookup),
+    [{KeyExpanded, cloudi_environment:transform(Value, Lookup)} |
+     env_expand(L, Lookup)].
+
+env_reset(L) ->
     % remove environment variables set by CloudI execution
     [{"BINDIR", false},
      {"EMU", false},
@@ -184,12 +192,7 @@ env_expand([] = L, _) ->
      {"RUN_ERL_LOG_ALIVE_MINUTES", false},
      {"RUN_ERL_LOG_GENERATIONS", false},
      {"RUN_ERL_LOG_MAXSIZE", false},
-     {"TMPDIR", false} | L];
-env_expand([{[_ | _] = Key, Value} | L], Lookup)
-    when is_list(Value) ->
-    [_ | _] = KeyExpanded = cloudi_environment:transform(Key, Lookup),
-    [{KeyExpanded, cloudi_environment:transform(Value, Lookup)} |
-     env_expand(L, Lookup)].
+     {"TMPDIR", false} | L].
 
 request(Exec, #state{file_path = FilePath,
                      directory = Directory,
@@ -205,7 +208,7 @@ request(Exec, #state{file_path = FilePath,
         is_list(User) ->
             {erlang:open_port({spawn_executable, SUPath},
                               [{args, ["-s", FilePath, User]} | PortOptions]),
-             ["cd ", Directory, " && exec ", Exec, "\n"]}
+             ["cd '", Directory, "' && exec ", Exec, "\n"]}
     end,
     true = erlang:port_command(Shell, Command),
     request_output(Shell, []).
