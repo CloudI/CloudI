@@ -1,6 +1,14 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-11-02 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add user and su_path configuration arguments to
+      cloudi_service_shell for execution as a specific user
+    * Add debug configuration argument to
+      cloudi_service_shell and cloudi_service_cron, to be
+      consistent with cloudi_service_null
+
 2019-11-01 Michael Truog   <mjtruog at protonmail dot com>
 
     * Add debug_level configuration argument to

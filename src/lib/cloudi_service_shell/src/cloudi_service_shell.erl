@@ -52,6 +52,9 @@
 -define(DEFAULT_FILE_PATH,              "/bin/sh").
 -define(DEFAULT_DIRECTORY,                    "/").
 -define(DEFAULT_ENV,                           []).
+-define(DEFAULT_USER,                   undefined).
+-define(DEFAULT_SU_PATH,                "/bin/su").
+-define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
 -record(state,
@@ -59,6 +62,8 @@
         file_path :: nonempty_string(),
         directory :: nonempty_string(),
         env :: list({nonempty_string(), string()}),
+        user :: nonempty_string() | undefined,
+        su :: nonempty_string(),
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
@@ -99,26 +104,43 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {file_path,                    ?DEFAULT_FILE_PATH},
         {directory,                    ?DEFAULT_DIRECTORY},
         {env,                          ?DEFAULT_ENV},
+        {user,                         ?DEFAULT_USER},
+        {su_path,                      ?DEFAULT_SU_PATH},
+        {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
-    [FilePath, Directory, Env,
-     DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+    [FilePath, Directory, Env, User, SUPath,
+     Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
     EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
-    true = ((DebugLevel =:= off) orelse
-            (DebugLevel =:= trace) orelse
+    case User of
+        undefined ->
+            ok;
+        [_ | _] ->
+            true = filelib:is_regular(SUPath)
+    end,
+    true = is_boolean(Debug),
+    true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
             (DebugLevel =:= warn) orelse
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
+    DebugLogLevel = if
+        Debug =:= false ->
+            off;
+        Debug =:= true ->
+            DebugLevel
+    end,
     cloudi_service:subscribe(Dispatcher, ""),
     {ok, #state{file_path = FilePath,
                 directory = Directory,
                 env = EnvExpanded,
-                debug_level = DebugLevel}}.
+                user = User,
+                su = SUPath,
+                debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
@@ -137,7 +159,32 @@ cloudi_service_terminate(_Reason, _Timeout, _State) ->
 %%%------------------------------------------------------------------------
 
 env_expand([] = L, _) ->
-    L;
+    % remove environment variables set by CloudI execution
+    [{"BINDIR", false},
+     {"EMU", false},
+     {"ERL_AFLAGS", false},
+     {"ERL_CRASH_DUMP", false},
+     {"ERL_CRASH_DUMP_SECONDS", false},
+     {"ERL_EPMD_ADDRESS", false},
+     {"ERL_EPMD_PORT", false},
+     {"ERL_FLAGS", false},
+     {"ERL_LIBS", false},
+     {"ERL_ZFLAGS", false},
+     {"ESCRIPT_NAME", false},
+     {"HEART_BEAT_TIMEOUT", false},
+     {"HEART_COMMAND", false},
+     {"HEART_KILL_SIGNAL", false},
+     {"HEART_NO_KILL", false},
+     {"PROGNAME", false},
+     {"ROOTDIR", false},
+     {"RUN_ERL_DISABLE_FLOWCNTRL", false},
+     {"RUN_ERL_LOG_ACTIVITY_MINUTES", false},
+     {"RUN_ERL_LOG_ALIVE_FORMAT", false},
+     {"RUN_ERL_LOG_ALIVE_IN_UTC", false},
+     {"RUN_ERL_LOG_ALIVE_MINUTES", false},
+     {"RUN_ERL_LOG_GENERATIONS", false},
+     {"RUN_ERL_LOG_MAXSIZE", false},
+     {"TMPDIR", false} | L];
 env_expand([{[_ | _] = Key, Value} | L], Lookup)
     when is_list(Value) ->
     [_ | _] = KeyExpanded = cloudi_environment:transform(Key, Lookup),
@@ -146,11 +193,21 @@ env_expand([{[_ | _] = Key, Value} | L], Lookup)
 
 request(Exec, #state{file_path = FilePath,
                      directory = Directory,
-                     env = Env}) ->
-    Shell = erlang:open_port({spawn_executable, FilePath},
-                             [{args, ["-"]}, {cd, Directory}, {env, Env},
-                              stream, binary, stderr_to_stdout, exit_status]),
-    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
+                     env = Env,
+                     user = User,
+                     su = SUPath}) ->
+    PortOptions = [{env, Env}, stream, binary, stderr_to_stdout, exit_status],
+    {Shell, Command} = if
+        User =:= undefined ->
+            {erlang:open_port({spawn_executable, FilePath},
+                              [{args, ["-"]}, {cd, Directory} | PortOptions]),
+             ["exec ", Exec, "\n"]};
+        is_list(User) ->
+            {erlang:open_port({spawn_executable, SUPath},
+                              [{args, ["-s", FilePath, User]} | PortOptions]),
+             ["cd ", Directory, " && exec ", Exec, "\n"]}
+    end,
+    true = erlang:port_command(Shell, Command),
     request_output(Shell, []).
 
 request_output(Shell, Output) ->

@@ -51,6 +51,7 @@
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
 -define(DEFAULT_USE_UTC,                    false).
+-define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
 -type expression_id() :: pos_integer().
@@ -85,17 +86,24 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {expressions,                  ?DEFAULT_EXPRESSIONS},
         {use_utc,                      ?DEFAULT_USE_UTC},
+        {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
     [Expressions, UseUTC,
-     DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
+     Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(UseUTC),
-    true = ((DebugLevel =:= off) orelse
-            (DebugLevel =:= trace) orelse
+    true = is_boolean(Debug),
+    true = ((DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
             (DebugLevel =:= warn) orelse
             (DebugLevel =:= error) orelse
             (DebugLevel =:= fatal)),
+    DebugLogLevel = if
+        Debug =:= false ->
+            off;
+        Debug =:= true ->
+            DebugLevel
+    end,
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
     {IdNext,
@@ -105,7 +113,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     ExpressionsStarted = expressions_start(ExpressionsLoaded, Service, UseUTC),
     {ok, #state{service = Service,
                 utc = UseUTC,
-                debug_level = DebugLevel,
+                debug_level = DebugLogLevel,
                 id_next = IdNext,
                 expressions = ExpressionsStarted}}.
 
