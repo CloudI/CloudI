@@ -52,12 +52,14 @@
 -define(DEFAULT_FILE_PATH,              "/bin/sh").
 -define(DEFAULT_DIRECTORY,                    "/").
 -define(DEFAULT_ENV,                           []).
+-define(DEFAULT_DEBUG_LEVEL,                trace).
 
 -record(state,
     {
         file_path :: nonempty_string(),
         directory :: nonempty_string(),
-        env :: list({nonempty_string(), string()})
+        env :: list({nonempty_string(), string()}),
+        debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
 %%%------------------------------------------------------------------------
@@ -96,24 +98,34 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {file_path,                    ?DEFAULT_FILE_PATH},
         {directory,                    ?DEFAULT_DIRECTORY},
-        {env,                          ?DEFAULT_ENV}],
-    [FilePath, Directory, Env] = cloudi_proplists:take_values(Defaults, Args),
+        {env,                          ?DEFAULT_ENV},
+        {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
+    [FilePath, Directory, Env,
+     DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
     EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
+    true = ((DebugLevel =:= trace) orelse
+            (DebugLevel =:= debug) orelse
+            (DebugLevel =:= info) orelse
+            (DebugLevel =:= warn) orelse
+            (DebugLevel =:= error) orelse
+            (DebugLevel =:= fatal)),
     cloudi_service:subscribe(Dispatcher, ""),
     {ok, #state{file_path = FilePath,
                 directory = Directory,
-                env = EnvExpanded}}.
+                env = EnvExpanded,
+                debug_level = DebugLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
                               _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
+                              #state{debug_level = DebugLogLevel} = State,
+                              _Dispatcher) ->
     {Status, Output} = request(Request, State),
-    log_output(Status, Output, Request),
+    log_output(Status, Output, Request, DebugLogLevel),
     {reply, erlang:integer_to_binary(Status), State}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
@@ -148,10 +160,10 @@ request_output(Shell, Output) ->
             {Status, lists:reverse(Output)}
     end.
 
-log_output(Status, Output, Request) ->
+log_output(Status, Output, Request, DebugLogLevel) ->
     Level = if
         Status == 0 ->
-            trace;
+            DebugLogLevel;
         true ->
             error
     end,

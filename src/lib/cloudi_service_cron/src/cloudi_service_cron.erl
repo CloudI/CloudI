@@ -51,6 +51,7 @@
         %        [{description, "hello"},
         %         {send_args, ["/shell", "echo \"hello world\""]}]}]
 -define(DEFAULT_USE_UTC,                    false).
+-define(DEFAULT_DEBUG_LEVEL,                trace).
 
 -type expression_id() :: pos_integer().
 
@@ -66,6 +67,7 @@
     {
         service :: cloudi_service:source(),
         utc :: boolean(),
+        debug_level :: off | trace | debug | info | warn | error | fatal,
         id_next :: expression_id(),
         expressions :: #{expression_id() := #expression{}},
         sends = #{} :: #{cloudi_service:trans_id() := expression_id()}
@@ -82,9 +84,17 @@
 cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Defaults = [
         {expressions,                  ?DEFAULT_EXPRESSIONS},
-        {use_utc,                      ?DEFAULT_USE_UTC}],
-    [Expressions, UseUTC] = cloudi_proplists:take_values(Defaults, Args),
+        {use_utc,                      ?DEFAULT_USE_UTC},
+        {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
+    [Expressions, UseUTC,
+     DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(UseUTC),
+    true = ((DebugLevel =:= trace) orelse
+            (DebugLevel =:= debug) orelse
+            (DebugLevel =:= info) orelse
+            (DebugLevel =:= warn) orelse
+            (DebugLevel =:= error) orelse
+            (DebugLevel =:= fatal)),
     ProcessIndex = cloudi_service:process_index(Dispatcher),
     ProcessCount = cloudi_service:process_count(Dispatcher),
     {IdNext,
@@ -94,18 +104,21 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     ExpressionsStarted = expressions_start(ExpressionsLoaded, Service, UseUTC),
     {ok, #state{service = Service,
                 utc = UseUTC,
+                debug_level = DebugLevel,
                 id_next = IdNext,
                 expressions = ExpressionsStarted}}.
 
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
-                           #state{expressions = Expressions,
+                           #state{debug_level = DebugLogLevel,
+                                  expressions = Expressions,
                                   sends = Sends} = State,
                            _Dispatcher) ->
-    SendsNew = event_recv(timeout, TransId, Expressions, Sends),
+    SendsNew = event_recv(timeout, TransId, Expressions, Sends, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
 cloudi_service_handle_info(#return_async_active{response = Response,
                                                 trans_id = TransId},
-                           #state{expressions = Expressions,
+                           #state{debug_level = DebugLogLevel,
+                                  expressions = Expressions,
                                   sends = Sends} = State,
                            _Dispatcher) ->
     Result = try erlang:binary_to_integer(erlang:iolist_to_binary(Response)) of
@@ -118,17 +131,18 @@ cloudi_service_handle_info(#return_async_active{response = Response,
             % response is not understood as a shell status code response
             ok
     end,
-    SendsNew = event_recv(Result, TransId, Expressions, Sends),
+    SendsNew = event_recv(Result, TransId, Expressions, Sends, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
 cloudi_service_handle_info({expression, Id},
                            #state{service = Service,
                                   utc = UseUTC,
+                                  debug_level = DebugLogLevel,
                                   expressions = Expressions,
                                   sends = Sends} = State,
                            Dispatcher) ->
     {ExpressionsNew,
      SendsNew} = expression_event(Expressions, Sends, Id,
-                                  Service, UseUTC, Dispatcher),
+                                  Service, UseUTC, DebugLogLevel, Dispatcher),
     {noreply, State#state{expressions = ExpressionsNew,
                           sends = SendsNew}}.
 
@@ -185,12 +199,14 @@ expressions_start(Expressions, Service, UseUTC) ->
         Expression#expression{timer = Timer}
     end, Expressions).
 
-expression_event(Expressions, Sends, Id, Service, UseUTC, Dispatcher) ->
+expression_event(Expressions, Sends, Id,
+                 Service, UseUTC, DebugLogLevel, Dispatcher) ->
     Expression = maps:get(Id, Expressions),
     #expression{definition = Cron,
                 send_args = [ServiceName | _] = SendArgs} = Expression,
-    ?LOG_TRACE("\"~s\" event sent to ~s",
-               [description(Expression), ServiceName]),
+    ?LOG(DebugLogLevel,
+         "\"~s\" event sent to ~s",
+         [description(Expression), ServiceName]),
     TransId = event_send(SendArgs, Service, Dispatcher),
     Timer = expression_next(Id, Cron, Service, UseUTC),
     {maps:put(Id, Expression#expression{timer = Timer}, Expressions),
@@ -207,14 +223,15 @@ event_send(SendArgs, Service, Dispatcher) ->
             TransId
     end.
 
-event_recv(Result, TransId, Expressions, Sends) ->
+event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
     {Id, SendsNew} = maps:take(TransId, Sends),
     Expression = maps:get(Id, Expressions),
     #expression{send_args = [ServiceName | _]} = Expression,
     if
         Result =:= ok ->
-            ?LOG_TRACE("\"~s\" event completed at ~s",
-                       [description(Expression), ServiceName]);
+            ?LOG(DebugLogLevel,
+                 "\"~s\" event completed at ~s",
+                 [description(Expression), ServiceName]);
         Result =:= timeout ->
             ?LOG_ERROR("\"~s\" event timeout at ~s",
                        [description(Expression), ServiceName]);
