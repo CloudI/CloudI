@@ -199,18 +199,17 @@ request(Exec, #state{file_path = FilePath,
                      env = Env,
                      user = User,
                      su = SUPath}) ->
-    PortOptions = [{env, Env}, stream, binary, stderr_to_stdout, exit_status],
-    {Shell, Command} = if
+    PortOptions = [{cd, Directory}, {env, Env},
+                   stream, binary, stderr_to_stdout, exit_status],
+    Shell = if
         User =:= undefined ->
-            {erlang:open_port({spawn_executable, FilePath},
-                              [{args, ["-"]}, {cd, Directory} | PortOptions]),
-             ["exec ", Exec, "\n"]};
+            erlang:open_port({spawn_executable, FilePath},
+                             [{args, ["-"]} | PortOptions]);
         is_list(User) ->
-            {erlang:open_port({spawn_executable, SUPath},
-                              [{args, ["-s", FilePath, User]} | PortOptions]),
-             ["cd '", Directory, "' && exec ", Exec, "\n"]}
+            erlang:open_port({spawn_executable, SUPath},
+                             [{args, ["-s", FilePath, User]} | PortOptions])
     end,
-    true = erlang:port_command(Shell, Command),
+    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
     request_output(Shell, []).
 
 request_output(Shell, Output) ->
