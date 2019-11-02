@@ -89,7 +89,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     [Expressions, UseUTC,
      DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     true = is_boolean(UseUTC),
-    true = ((DebugLevel =:= trace) orelse
+    true = ((DebugLevel =:= off) orelse
+            (DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
             (DebugLevel =:= warn) orelse

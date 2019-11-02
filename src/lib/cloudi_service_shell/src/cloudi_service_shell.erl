@@ -107,7 +107,8 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
     EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
-    true = ((DebugLevel =:= trace) orelse
+    true = ((DebugLevel =:= off) orelse
+            (DebugLevel =:= trace) orelse
             (DebugLevel =:= debug) orelse
             (DebugLevel =:= info) orelse
             (DebugLevel =:= warn) orelse
