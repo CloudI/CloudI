@@ -421,9 +421,7 @@ metadata_set(L) ->
 
 %%-------------------------------------------------------------------------
 %% @doc
-%% ===Lager formatter for legacy output.===
-%% Provides legacy CloudI logger output formatting in a
-%% lager formatter function.
+%% ===Lager formatter example with default output.===
 %% @end
 %%-------------------------------------------------------------------------
 
