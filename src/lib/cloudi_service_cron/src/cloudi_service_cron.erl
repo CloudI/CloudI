@@ -199,6 +199,12 @@ expressions_load([{_, _} | L], Id, Expressions,
 expressions_load(L, ProcessIndex, ProcessCount) ->
     expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount).
 
+expression_next(Id, Cron, Service, UseUTC) ->
+    AbsoluteNow = cloudi_timestamp:milliseconds_monotonic(),
+    MilliSecondsEvent = expression_next_event(Cron, UseUTC),
+    erlang:send_after(AbsoluteNow + MilliSecondsEvent,
+                      Service, {expression, Id}, [{abs, true}]).
+
 expression_next_event(Cron, UseUTC) ->
     {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
     DateTimeNow = if
@@ -207,24 +213,12 @@ expression_next_event(Cron, UseUTC) ->
         UseUTC =:= false ->
             calendar:universal_time_to_local_time(DateTimeNowUTC)
     end,
-    DateTimeEvent = cloudi_cron:next_datetime(DateTimeNow, Cron),
-    DateTimeEventUTC = if
-        UseUTC =:= true ->
-            DateTimeEvent;
-        UseUTC =:= false ->
-            datetime_event_utc(DateTimeEvent)
-    end,
+    DateTimeEventUTC = datetime_event_utc(DateTimeNow, Cron, UseUTC),
     % subtraction must occur as gregorian seconds in UTC
     % to avoid DST offsets causing the difference to be invalid
     Seconds = calendar:datetime_to_gregorian_seconds(DateTimeEventUTC) -
               calendar:datetime_to_gregorian_seconds(DateTimeNowUTC),
     Seconds * 1000 - PastMilliSeconds.
-
-expression_next(Id, Cron, Service, UseUTC) ->
-    AbsoluteNow = cloudi_timestamp:milliseconds_monotonic(),
-    MilliSecondsEvent = expression_next_event(Cron, UseUTC),
-    erlang:send_after(AbsoluteNow + MilliSecondsEvent,
-                      Service, {expression, Id}, [{abs, true}]).
 
 expressions_start(Expressions, Service, UseUTC) ->
     maps:map(fun(Id, #expression{definition = Cron} = Expression) ->
@@ -274,28 +268,30 @@ event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
     end,
     SendsNew.
 
+datetime_event_utc(DateTime, Cron, UseUTC) ->
+    DateTimeEvent = cloudi_cron:next_datetime(DateTime, Cron),
+    if
+        UseUTC =:= true ->
+            DateTimeEvent;
+        UseUTC =:= false ->
+            case calendar:local_time_to_universal_time_dst(DateTimeEvent) of
+                [] ->
+                    % when DST sets clocks ahead,
+                    % pick the next valid datetime after the DST change
+                    datetime_event_utc(DateTimeEvent, Cron, UseUTC);
+                [DateTimeEventUTC] ->
+                    DateTimeEventUTC;
+                [_, DateTimeEventUTC] ->
+                    % when DST sets clocks back,
+                    % pick the UTC datetime after the DST change
+                    DateTimeEventUTC
+            end
+    end.
+
 datetime_now_utc() ->
     {_, _, MicroSeconds} = Now = erlang:timestamp(),
     {calendar:now_to_universal_time(Now),
      MicroSeconds div 1000 - ?MILLISECONDS_OFFSET}.
-
-datetime_event_utc(DateTime) ->
-    case calendar:local_time_to_universal_time_dst(DateTime) of
-        [] ->
-            % when DST sets clocks ahead,
-            % pick the next valid datetime after the DST change
-            datetime_event_utc(datetime_add(DateTime, 1));
-        [DateTimeUTC] ->
-            DateTimeUTC;
-        [_, DateTimeUTC] ->
-            % when DST sets clocks back,
-            % pick the UTC datetime after the DST change
-            DateTimeUTC
-    end.
-
-datetime_add(DateTime, SecondsIncr) ->
-    Seconds = calendar:datetime_to_gregorian_seconds(DateTime),
-    calendar:gregorian_seconds_to_datetime(Seconds + SecondsIncr).
 
 description(#expression{description = [_ | _] = Description}) ->
     Description;
