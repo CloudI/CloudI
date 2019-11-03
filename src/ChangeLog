@@ -4,6 +4,10 @@
 2019-11-03 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_cron so it handles DST adjustments
+    * Fix cloudi_service_cron milliseconds adjustment
+      by always having a cron expression timer occur
+      10 milliseconds after the appropriate datetime
+      (to handle any timer variation)
 
 2019-11-02 Michael Truog   <mjtruog at protonmail dot com>
 

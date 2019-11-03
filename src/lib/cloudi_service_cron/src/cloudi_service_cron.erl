@@ -258,7 +258,7 @@ datetime_now(UseUTC) ->
         UseUTC =:= false ->
             calendar:now_to_local_time(Now)
     end,
-    {DateTime, erlang:round(MicroSeconds / 1000)}.
+    {DateTime, MicroSeconds div 1000 - 10}.
 
 datetime_utc_seconds(DateTime, UseUTC) ->
     if
