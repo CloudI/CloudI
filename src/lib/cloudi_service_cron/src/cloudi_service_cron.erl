@@ -198,7 +198,7 @@ expression_next(Id, Cron, Service, UseUTC) ->
     AbsoluteNow = cloudi_timestamp:milliseconds_monotonic(),
     {DateTime, PastMilliSeconds} = datetime_now(UseUTC),
     DateTimeEvent = cloudi_cron:next_datetime(DateTime, Cron),
-    Seconds = datetime_difference(DateTimeEvent, DateTime),
+    Seconds = datetime_difference(DateTimeEvent, DateTime, UseUTC),
     erlang:send_after(AbsoluteNow + Seconds * 1000 - PastMilliSeconds,
                       Service, {expression, Id}, [{abs, true}]).
 
@@ -250,16 +250,40 @@ event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
     end,
     SendsNew.
 
-datetime_difference(DateTime1, DateTime0) ->
-    calendar:datetime_to_gregorian_seconds(DateTime1) -
-    calendar:datetime_to_gregorian_seconds(DateTime0).
+datetime_now(UseUTC) ->
+    {_, _, MicroSeconds} = Now = erlang:timestamp(),
+    DateTime = if
+        UseUTC =:= true ->
+            calendar:now_to_universal_time(Now);
+        UseUTC =:= false ->
+            calendar:now_to_local_time(Now)
+    end,
+    {DateTime, erlang:round(MicroSeconds / 1000)}.
 
-datetime_now(true) ->
-    {_, _, MicroSeconds} = Now = erlang:timestamp(),
-    {calendar:now_to_universal_time(Now), erlang:round(MicroSeconds / 1000)};
-datetime_now(false) ->
-    {_, _, MicroSeconds} = Now = erlang:timestamp(),
-    {calendar:now_to_local_time(Now), erlang:round(MicroSeconds / 1000)}.
+datetime_utc_seconds(DateTime, UseUTC) ->
+    if
+        UseUTC =:= true ->
+            calendar:datetime_to_gregorian_seconds(DateTime);
+        UseUTC =:= false ->
+            case calendar:local_time_to_universal_time_dst(DateTime) of
+                [] ->
+                    datetime_utc_seconds(datetime_add(DateTime, 1), UseUTC);
+                [DateTimeUTC] ->
+                    calendar:datetime_to_gregorian_seconds(DateTimeUTC);
+                [_, DateTimeUTC] ->
+                    calendar:datetime_to_gregorian_seconds(DateTimeUTC)
+            end
+    end.
+
+datetime_difference(DateTime1, DateTime0, UseUTC) ->
+    % subtraction must occur as gregorian seconds in UTC
+    % to avoid DST offsets causing the difference to be invalid
+    datetime_utc_seconds(DateTime1, UseUTC) -
+    datetime_utc_seconds(DateTime0, UseUTC).
+
+datetime_add(DateTime, SecondsIncr) ->
+    Seconds = calendar:datetime_to_gregorian_seconds(DateTime),
+    calendar:gregorian_seconds_to_datetime(Seconds + SecondsIncr).
 
 description(#expression{description = [_ | _] = Description}) ->
     Description;
