@@ -74,6 +74,11 @@
         sends = #{} :: #{cloudi_service:trans_id() := expression_id()}
     }).
 
+% All cron expression events will occur a small number of milliseconds after
+% the datetime specified to anticipate any Erlang timer jitter
+% (ensuring that the event datetime is always reached by the timer)
+-define(MILLISECONDS_OFFSET, 10).
+
 %%%------------------------------------------------------------------------
 %%% External interface functions
 %%%------------------------------------------------------------------------
@@ -271,7 +276,8 @@ event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
 
 datetime_now_utc() ->
     {_, _, MicroSeconds} = Now = erlang:timestamp(),
-    {calendar:now_to_universal_time(Now), MicroSeconds div 1000 - 10}.
+    {calendar:now_to_universal_time(Now),
+     MicroSeconds div 1000 - ?MILLISECONDS_OFFSET}.
 
 datetime_event_utc(DateTime) ->
     case calendar:local_time_to_universal_time_dst(DateTime) of
