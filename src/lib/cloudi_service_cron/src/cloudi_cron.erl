@@ -170,7 +170,7 @@ new([_ | _] = Input) ->
                     state()) ->
     calendar:datetime().
 
-next_datetime({{_, _, _}, {_, _, _}} = DateTime0,
+next_datetime({Date0, {_, _, _}} = DateTime0,
               #cloudi_cron{expression = Expression}) ->
     Equal0 = false,
     {Equal1,
@@ -185,7 +185,21 @@ next_datetime({{_, _, _}, {_, _, _}} = DateTime0,
      DateTime5} = next_datetime_month(Expression, Equal4, DateTime4),
     {Equal6,
      DateTime6} = next_datetime_day_of_week(Expression, Equal5, DateTime5),
-    {_, DateTimeN} = next_datetime_year(Expression, Equal6, DateTime6),
+    {_, DateTime7} = next_datetime_year(Expression, Equal6, DateTime6),
+    DateTimeN = case DateTime7 of
+        {Date0, _} ->
+            DateTime7;
+        {Date1, _} ->
+            Equal8 = true,
+            DateTime8 = {Date1, {0, 0, 0}},
+            {Equal9,
+             DateTime9} = next_datetime_seconds(Expression, Equal8, DateTime8),
+            {Equal10,
+             DateTime10} = next_datetime_minutes(Expression, Equal9, DateTime9),
+            {_,
+             DateTime11} = next_datetime_hours(Expression, Equal10, DateTime10),
+            DateTime11
+    end,
     DateTimeN.
 
 %%%------------------------------------------------------------------------
@@ -668,6 +682,9 @@ next_datetime_test() ->
     Cron5 = new("0 17 * * 1L"),
     DateTime11 = {{2019, 10, 28}, {17, 0, 0}},
     DateTime11 = next_datetime(DateTime7, Cron5),
+    DateTime12 = {{2019, 11, 3}, {12, 30, 53}},
+    DateTime13 = {{2019, 11, 4}, {17, 18, 0}},
+    DateTime13 = next_datetime(DateTime12, Cron0),
     ok.
 
 -endif.
