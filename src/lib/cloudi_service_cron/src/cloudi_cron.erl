@@ -185,19 +185,17 @@ next_datetime({Date0, {_, _, _}} = DateTime0,
      DateTime5} = next_datetime_month(Expression, Equal4, DateTime4),
     {Equal6,
      DateTime6} = next_datetime_day_of_week(Expression, Equal5, DateTime5),
-    {_, DateTime7} = next_datetime_year(Expression, Equal6, DateTime6),
-    DateTimeN = case DateTime7 of
-        {Date0, _} ->
+    DateTimeN = case next_datetime_year(Expression, Equal6, DateTime6) of
+        {Date0, _} = DateTime7 ->
             DateTime7;
         {Date1, _} ->
-            Equal8 = true,
             DateTime8 = {Date1, {0, 0, 0}},
-            {Equal9,
-             DateTime9} = next_datetime_seconds(Expression, Equal8, DateTime8),
-            {Equal10,
-             DateTime10} = next_datetime_minutes(Expression, Equal9, DateTime9),
-            {_,
-             DateTime11} = next_datetime_hours(Expression, Equal10, DateTime10),
+            {true,
+             DateTime9} = next_datetime_seconds(Expression, true, DateTime8),
+            {true,
+             DateTime10} = next_datetime_minutes(Expression, true, DateTime9),
+            {true,
+             DateTime11} = next_datetime_hours(Expression, true, DateTime10),
             DateTime11
     end,
     DateTimeN.
@@ -469,14 +467,14 @@ next_datetime_day_of_week({_, _, _, _, _,
                                       {date_add(Date, 1), Time})
     end.
 
-next_datetime_year({_, _, _, _, _, _, undefined}, Equal, DateTime) ->
-    {Equal, DateTime};
+next_datetime_year({_, _, _, _, _, _, undefined}, _, DateTime) ->
+    DateTime;
 next_datetime_year({_, _, _, _, _, _,
                     FieldYear} = Expression, Equal,
                    {{DateYY, _, _} = Date, Time} = DateTime) ->
     case get_next_value(FieldYear, DateYY, Equal, Date) of
         DateYY ->
-            {Equal, DateTime};
+            DateTime;
         _ ->
             next_datetime_year(Expression, true,
                                {date_add(Date, 1), Time})
