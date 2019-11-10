@@ -6,8 +6,79 @@
 %%% ==CloudI Cron Expression Functionality==
 %%% The special character ? and the @reboot macro are not supported
 %%% because they wouldn't work well with Erlang process restarts.
-%%% The other Cron expression syntax is implemented, including the optional
-%%% seconds and year values.
+%%% The other Cron expression syntax is implemented,
+%%% including the optional seconds and year values
+%%% (info from https://en.wikipedia.org/wiki/Cron#CRON_expression):
+%%% ```
+%%% Field name     Required     Allowed values    Allowed special characters
+%%% ----------     --------     --------------    --------------------------
+%%% Seconds        No           0-59              * / , -
+%%% Minutes        Yes          0-59              * / , -
+%%% Hours          Yes          0-23              * / , -
+%%% Day of month   Yes          1-31              * / , - L W
+%%% Month          Yes          1-12 or JAN-DEC   * / , -
+%%% Day of week    Yes          0-6 or SUN-SAT    * / , - L #
+%%% Year           No           1970–9999         * / , -
+%%% '''
+%%%
+%%% === Asterisk (*) ===
+%%% An asterisk indicates that the cron expression matches for all values
+%%% of the field.
+%%%
+%%% === Slash (/) ===
+%%% Slashes can be combined with ranges to specify step values.
+%%% For example, */5 in the minutes field indicates every 5 minutes.
+%%%
+%%% === Comma (,) ===
+%%% Commas are used to separate items of a list. For example,
+%%% using "MON,WED,FRI" in the day of week field means
+%%% Mondays, Wednesdays and Fridays.
+%%%
+%%% === Hyphen (-) ===
+%%% Hyphens define ranges. For example, 2000–2010 indicates every year
+%%% between 2000 and 2010, inclusive.
+%%%
+%%% === L ===
+%%% 'L' stands for "last". When used in the day-of-week field, it allows you
+%%% to specify constructs such as "the last Friday" ("5L") of a given month.
+%%% In the day-of-month field, it specifies the last day of the month.
+%%%
+%%% === W ===
+%%% The 'W' character is allowed for the day-of-month field.
+%%% This character is used to specify the weekday (Monday-Friday) nearest
+%%% the given day.  As an example, if you were to specify "15W" as the value
+%%% for the day-of-month field, the meaning is:
+%%% "the nearest weekday to the 15th of the month".
+%%% So, if the 15th is a Saturday, the trigger fires on Friday the 14th.
+%%% If the 15th is a Sunday, the trigger fires on Monday the 16th.
+%%% If the 15th is a Tuesday, then it fires on Tuesday the 15th.
+%%% However, if you specify "1W" as the value for day-of-month, and
+%%% the 1st is a Saturday, the trigger fires on Monday the 3rd,
+%%% as it does not 'jump' over the boundary of a month's days.
+%%%
+%%% This implementation allows the W character to be used in a list:
+%%% 1W,15W
+%%%
+%%% The W character can be combined with L as LW to mean
+%%% "the last business day of the month".
+%%%
+%%% === Hash (#) ===
+%%% '#' is allowed for the day-of-week field, and must be followed by
+%%% a number between one and five.  It allows you to specify constructs such as
+%%% "the second Friday" of a given month.  For example, entering "5#3" in the
+%%% day-of-week field corresponds to the third Friday of every month.
+%%%
+%%% === Other Details ===
+%%% ```
+%%% * If only six fields are present,
+%%%   a 0 second field is prepended
+%%% * If only five fields are present,
+%%%   a 0 second field is prepended and a wildcard year field is appended
+%%% * The range for the day-of-week field is 0-7 instead of 0-6,
+%%%   with 7 as Sunday (like 0) (BSD and ATT disagreed about this in the past)
+%%% * The month names are case-insensitive
+%%% * The day of week names are case-insensitive
+%%% '''
 %%% @end
 %%%
 %%% MIT License
@@ -412,15 +483,13 @@ next_datetime_minutes({_, FieldMinutes, _, _, _, _, _}, Equal,
 next_datetime_hours({_, _, undefined, _, _, _, _}, Equal, DateTime) ->
     {Equal, DateTime};
 next_datetime_hours({_, _, FieldHours, _, _, _, _}, Equal,
-                    {Date, {TimeHH, TimeMM, TimeSS}} = DateTime) ->
+                    {Date, {TimeHH, TimeMM, TimeSS}}) ->
     DateTimeNew = case get_next_value(FieldHours, TimeHH, Equal, Date) of
         undefined ->
             [TimeHHNew | _] = FieldHours,
-            SecondsIncr = (24 - TimeHH) * 60 * 60,
-            {{DateYYNew, DateMMNew, DateDDNew},
-             {_, TimeMMNew, TimeSSNew}} = datetime_add(DateTime, SecondsIncr),
-            {{DateYYNew, DateMMNew, DateDDNew},
-             {TimeHHNew, TimeMMNew, TimeSSNew}};
+            DateNew = date_add(Date, 1),
+            {DateNew,
+             {TimeHHNew, TimeMM, TimeSS}};
         TimeHHNew ->
             {Date,
              {TimeHHNew, TimeMM, TimeSS}}
