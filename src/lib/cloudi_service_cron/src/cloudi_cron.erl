@@ -31,7 +31,7 @@
 %%%
 %%% === Comma (,) ===
 %%% Commas are used to separate items of a list. For example,
-%%% using "MON,WED,FRI" in the day of week field means
+%%% using "MON,WED,FRI" in the day-of-week field means
 %%% Mondays, Wednesdays and Fridays.
 %%%
 %%% === Hyphen (-) ===
@@ -77,7 +77,7 @@
 %%% * The range for the day-of-week field is 0-7 instead of 0-6,
 %%%   with 7 as Sunday (like 0) (BSD and ATT disagreed about this in the past)
 %%% * The month names are case-insensitive
-%%% * The day of week names are case-insensitive
+%%% * The day-of-week names are case-insensitive
 %%% '''
 %%% @end
 %%%
