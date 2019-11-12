@@ -69,6 +69,8 @@
         service :: cloudi_service:source(),
         utc :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal,
+        time_offset_milliseconds :: integer(),
+        time_offset_monitor :: reference(),
         id_next :: expression_id(),
         expressions :: #{expression_id() := #expression{}},
         sends = #{} :: #{cloudi_service:trans_id() := expression_id()}
@@ -78,6 +80,11 @@
 % the datetime specified to anticipate any Erlang timer jitter
 % (ensuring that the event datetime is always reached by the timer)
 -define(MILLISECONDS_OFFSET, 10).
+
+-ifdef(ERLANG_OTP_VERSION_19).
+-else.
+-define(ERLANG_OTP_VERSION_20_FEATURES, true).
+-endif.
 
 %%%------------------------------------------------------------------------
 %%% External interface functions
@@ -115,10 +122,14 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
      ExpressionsLoaded} = expressions_load(Expressions,
                                            ProcessIndex, ProcessCount),
     Service = cloudi_service:self(Dispatcher),
+    TimeOffsetMilliseconds = time_offset_milliseconds(),
+    TimeOffsetMonitor = erlang:monitor(time_offset, clock_service),
     ExpressionsStarted = expressions_start(ExpressionsLoaded, Service, UseUTC),
     {ok, #state{service = Service,
                 utc = UseUTC,
                 debug_level = DebugLogLevel,
+                time_offset_milliseconds = TimeOffsetMilliseconds,
+                time_offset_monitor = TimeOffsetMonitor,
                 id_next = IdNext,
                 expressions = ExpressionsStarted}}.
 
@@ -158,7 +169,19 @@ cloudi_service_handle_info({expression, Id},
      SendsNew} = expression_event(Expressions, Sends, Id,
                                   Service, UseUTC, DebugLogLevel, Dispatcher),
     {noreply, State#state{expressions = ExpressionsNew,
-                          sends = SendsNew}}.
+                          sends = SendsNew}};
+cloudi_service_handle_info({'CHANGE', Monitor, time_offset,
+                            clock_service, TimeOffset},
+                           #state{service = Service,
+                                  time_offset_milliseconds = ValueOld,
+                                  time_offset_monitor = Monitor,
+                                  expressions = Expressions} = State,
+                           _Dispatcher) ->
+    ValueNew = time_offset_to_milliseconds(TimeOffset),
+    ExpressionsNew = expressions_time_offset(ValueOld - ValueNew,
+                                             Expressions, Service),
+    {noreply, State#state{time_offset_milliseconds = ValueNew,
+                          expressions = ExpressionsNew}}.
 
 cloudi_service_terminate(_Reason, _Timeout, _State) ->
     ok.
@@ -200,10 +223,8 @@ expressions_load(L, ProcessIndex, ProcessCount) ->
     expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount).
 
 expression_next(Id, Cron, Service, UseUTC) ->
-    AbsoluteNow = cloudi_timestamp:milliseconds_monotonic(),
     MilliSecondsEvent = expression_next_event(Cron, UseUTC),
-    erlang:send_after(AbsoluteNow + MilliSecondsEvent,
-                      Service, {expression, Id}, [{abs, true}]).
+    erlang:send_after(MilliSecondsEvent, Service, {expression, Id}).
 
 expression_next_event(Cron, UseUTC) ->
     {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
@@ -224,6 +245,25 @@ expressions_start(Expressions, Service, UseUTC) ->
     maps:map(fun(Id, #expression{definition = Cron} = Expression) ->
         Timer = expression_next(Id, Cron, Service, UseUTC),
         Expression#expression{timer = Timer}
+    end, Expressions).
+
+expressions_time_offset(MilliSecondsOffset, Expressions, Service) ->
+    maps:map(fun(Id, #expression{timer = TimerOld} = Expression) ->
+        TimerNew = case erlang:cancel_timer(TimerOld) of
+            false ->
+                TimerOld;
+            MilliSecondsOld ->
+                MilliSecondsNew = MilliSecondsOld + MilliSecondsOffset,
+                if
+                    MilliSecondsNew =< 0 ->
+                        Service ! {expression, Id},
+                        TimerOld;
+                    true ->
+                        erlang:send_after(MilliSecondsNew,
+                                          Service, {expression, Id})
+                end
+        end,
+        Expression#expression{timer = TimerNew}
     end, Expressions).
 
 expression_event(Expressions, Sends, Id,
@@ -298,3 +338,14 @@ description(#expression{description = [_ | _] = Description}) ->
 description(#expression{definition = Cron}) ->
     cloudi_cron:expression(Cron).
 
+-ifdef(ERLANG_OTP_VERSION_20_FEATURES).
+time_offset_milliseconds() ->
+    erlang:time_offset(millisecond).
+time_offset_to_milliseconds(TimeOffset) ->
+    erlang:convert_time_unit(TimeOffset, native, millisecond).
+-else.
+time_offset_milliseconds() ->
+    erlang:time_offset(milli_seconds).
+time_offset_to_milliseconds(TimeOffset) ->
+    erlang:convert_time_unit(TimeOffset, native, milli_seconds).
+-endif.

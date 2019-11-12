@@ -109,7 +109,7 @@
         log_time_offset
             :: cloudi_service_api:loglevel(),
         log_time_offset_nanoseconds
-            :: non_neg_integer(),
+            :: integer(),
         log_time_offset_monitor
             :: reference(),
         aspects_log_before
