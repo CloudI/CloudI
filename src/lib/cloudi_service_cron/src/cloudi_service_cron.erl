@@ -61,6 +61,7 @@
         description :: nonempty_string() | undefined,
         definition :: cloudi_cron:state(),
         send_args :: nonempty_list(),
+        datetime_utc = undefined :: calendar:datetime() | undefined,
         timer = undefined :: reference() | undefined
     }).
 
@@ -178,8 +179,8 @@ cloudi_service_handle_info({'CHANGE', Monitor, time_offset,
                                   expressions = Expressions} = State,
                            _Dispatcher) ->
     ValueNew = time_offset_to_milliseconds(TimeOffset),
-    ExpressionsNew = expressions_time_offset(ValueOld - ValueNew,
-                                             Expressions, Service),
+    ExpressionsNew = expressions_time_offset(Expressions,
+                                             ValueOld - ValueNew, Service),
     {noreply, State#state{time_offset_milliseconds = ValueNew,
                           expressions = ExpressionsNew}}.
 
@@ -222,43 +223,67 @@ expressions_load([{_, _} | L], Id, Expressions,
 expressions_load(L, ProcessIndex, ProcessCount) ->
     expressions_load(L, 1, #{}, 0, ProcessIndex, ProcessCount).
 
-expression_next(Id, Cron, Service, UseUTC) ->
-    MilliSecondsEvent = expression_next_event(Cron, UseUTC),
-    erlang:send_after(MilliSecondsEvent, Service, {expression, Id}).
+expression_next(#expression{definition = Cron,
+                            datetime_utc = DateTimeOldEventUTC} = Expression,
+                Id, Service, UseUTC) ->
+    {DateTimeNewEventUTC,
+     MilliSecondsEvent} = expression_next_event(DateTimeOldEventUTC,
+                                                Cron, UseUTC),
+    Timer = erlang:send_after(MilliSecondsEvent, Service, {expression, Id}),
+    Expression#expression{datetime_utc = DateTimeNewEventUTC,
+                          timer = Timer}.
 
-expression_next_event(Cron, UseUTC) ->
+expression_next_event(DateTimeOldEventUTC, Cron, UseUTC) ->
     {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
-    DateTimeNow = if
-        UseUTC =:= true ->
+    DateTimeNextEventUTC = if
+        DateTimeOldEventUTC =:= undefined ->
             DateTimeNowUTC;
-        UseUTC =:= false ->
-            calendar:universal_time_to_local_time(DateTimeNowUTC)
+        DateTimeOldEventUTC > DateTimeNowUTC ->
+            % if the time_offset adjustment occurred, ensure the same
+            % cron sequence occurs to prevent cloudi_service_cron from
+            % sending more service requests than the cron expression defines
+            DateTimeOldEventUTC;
+        true ->
+            DateTimeNowUTC
     end,
-    DateTimeEventUTC = datetime_event_utc(DateTimeNow, Cron, UseUTC),
-    % subtraction must occur as gregorian seconds in UTC
-    % to avoid DST offsets causing the difference to be invalid
-    Seconds = calendar:datetime_to_gregorian_seconds(DateTimeEventUTC) -
-              calendar:datetime_to_gregorian_seconds(DateTimeNowUTC),
-    Seconds * 1000 - PastMilliSeconds.
+    DateTimeNextEvent = if
+        UseUTC =:= true ->
+            DateTimeNextEventUTC;
+        UseUTC =:= false ->
+            calendar:universal_time_to_local_time(DateTimeNextEventUTC)
+    end,
+    DateTimeNewEventUTC = datetime_event_utc(DateTimeNextEvent, Cron, UseUTC),
+    MilliSecondsEvent = event_milliseconds(DateTimeNewEventUTC,
+                                           DateTimeNowUTC, PastMilliSeconds),
+    {DateTimeNewEventUTC,
+     MilliSecondsEvent}.
 
 expressions_start(Expressions, Service, UseUTC) ->
-    maps:map(fun(Id, #expression{definition = Cron} = Expression) ->
-        Timer = expression_next(Id, Cron, Service, UseUTC),
-        Expression#expression{timer = Timer}
+    maps:map(fun(Id, Expression) ->
+        expression_next(Expression, Id, Service, UseUTC)
     end, Expressions).
 
-expressions_time_offset(MilliSecondsOffset, Expressions, Service) ->
-    maps:map(fun(Id, #expression{timer = TimerOld} = Expression) ->
+expressions_time_offset(Expressions, MilliSecondsOffset, Service) ->
+    maps:map(fun(Id, #expression{datetime_utc = DateTimeEventUTC,
+                                 timer = TimerOld} = Expression) ->
         TimerNew = case erlang:cancel_timer(TimerOld) of
             false ->
                 TimerOld;
             MilliSecondsOld ->
-                MilliSecondsNew = MilliSecondsOld + MilliSecondsOffset,
+                {DateTimeNowUTC, PastMilliSeconds} = datetime_now_utc(),
                 if
-                    MilliSecondsNew =< 0 ->
+                    MilliSecondsOld + MilliSecondsOffset =< 0;
+                    DateTimeNowUTC >= DateTimeEventUTC ->
                         Service ! {expression, Id},
                         TimerOld;
                     true ->
+                        % determining MilliSecondsNew from
+                        % DateTimeEventUTC is more accurate than using
+                        % (MilliSecondsOld + MilliSecondsOffset)
+                        % because multiple time_offsets may occur
+                        MilliSecondsNew = event_milliseconds(DateTimeEventUTC,
+                                                             DateTimeNowUTC,
+                                                             PastMilliSeconds),
                         erlang:send_after(MilliSecondsNew,
                                           Service, {expression, Id})
                 end
@@ -269,14 +294,13 @@ expressions_time_offset(MilliSecondsOffset, Expressions, Service) ->
 expression_event(Expressions, Sends, Id,
                  Service, UseUTC, DebugLogLevel, Dispatcher) ->
     Expression = maps:get(Id, Expressions),
-    #expression{definition = Cron,
-                send_args = [ServiceName | _] = SendArgs} = Expression,
+    #expression{send_args = [ServiceName | _] = SendArgs} = Expression,
     ?LOG(DebugLogLevel,
          "\"~s\" event sent to ~s",
          [description(Expression), ServiceName]),
     TransId = event_send(SendArgs, Service, Dispatcher),
-    Timer = expression_next(Id, Cron, Service, UseUTC),
-    {maps:put(Id, Expression#expression{timer = Timer}, Expressions),
+    ExpressionNew = expression_next(Expression, Id, Service, UseUTC),
+    {maps:put(Id, ExpressionNew, Expressions),
      maps:put(TransId, Id, Sends)}.
 
 event_send(SendArgs, Service, Dispatcher) ->
@@ -307,6 +331,13 @@ event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
                        [description(Expression), ServiceName])
     end,
     SendsNew.
+
+event_milliseconds(DateTimeEventUTC, DateTimeNowUTC, PastMilliSeconds) ->
+    % subtraction must occur as gregorian seconds in UTC
+    % to avoid DST offsets causing the difference to be invalid
+    Seconds = calendar:datetime_to_gregorian_seconds(DateTimeEventUTC) -
+              calendar:datetime_to_gregorian_seconds(DateTimeNowUTC),
+    Seconds * 1000 - PastMilliSeconds.
 
 datetime_event_utc(DateTime, Cron, UseUTC) ->
     DateTimeEvent = cloudi_cron:next_datetime(DateTime, Cron),

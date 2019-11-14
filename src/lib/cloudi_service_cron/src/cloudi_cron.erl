@@ -56,8 +56,8 @@
 %%% the 1st is a Saturday, the trigger fires on Monday the 3rd,
 %%% as it does not 'jump' over the boundary of a month's days.
 %%%
-%%% This implementation allows the W character to be used in a list:
-%%% 1W,15W
+%%% This implementation allows the W character to be used in a list.
+%%% For example, "1W,15W" is valid in the day-of-month field.
 %%%
 %%% The W character can be combined with L as LW to mean
 %%% "the last business day of the month".
