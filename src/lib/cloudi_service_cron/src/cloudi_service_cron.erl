@@ -80,7 +80,7 @@
         time_offset_monitor :: reference(),
         id_next :: expression_id(),
         expressions :: #{expression_id() := #expression{}},
-        sends = #{} :: #{cloudi_service:trans_id() := expression_id()}
+        sends = #{} :: #{cloudi_service:trans_id() := #send_data{}}
     }).
 
 % All cron expression events will occur a small number of milliseconds after
