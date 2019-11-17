@@ -65,6 +65,12 @@
         timer = undefined :: reference() | undefined
     }).
 
+-record(send_data,
+    {
+        id :: expression_id(),
+        send_start :: cloudi_timestamp:milliseconds_monotonic()
+    }).
+
 -record(state,
     {
         service :: cloudi_service:source(),
@@ -125,7 +131,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     Service = cloudi_service:self(Dispatcher),
     TimeOffsetMilliseconds = time_offset_milliseconds(),
     TimeOffsetMonitor = erlang:monitor(time_offset, clock_service),
-    ExpressionsStarted = expressions_start(ExpressionsLoaded, Service, UseUTC),
+    ExpressionsStarted = expressions_start(ExpressionsLoaded, UseUTC, Service),
     {ok, #state{service = Service,
                 utc = UseUTC,
                 debug_level = DebugLogLevel,
@@ -139,7 +145,7 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId},
                                   expressions = Expressions,
                                   sends = Sends} = State,
                            _Dispatcher) ->
-    SendsNew = event_recv(timeout, TransId, Expressions, Sends, DebugLogLevel),
+    SendsNew = event_recv(Sends, Expressions, timeout, TransId, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
 cloudi_service_handle_info(#return_async_active{response = Response,
                                                 trans_id = TransId},
@@ -157,7 +163,7 @@ cloudi_service_handle_info(#return_async_active{response = Response,
             % response is not understood as a shell status code response
             ok
     end,
-    SendsNew = event_recv(Result, TransId, Expressions, Sends, DebugLogLevel),
+    SendsNew = event_recv(Sends, Expressions, Result, TransId, DebugLogLevel),
     {noreply, State#state{sends = SendsNew}};
 cloudi_service_handle_info({expression, Id},
                            #state{service = Service,
@@ -166,9 +172,10 @@ cloudi_service_handle_info({expression, Id},
                                   expressions = Expressions,
                                   sends = Sends} = State,
                            Dispatcher) ->
-    {ExpressionsNew,
-     SendsNew} = expression_event(Expressions, Sends, Id,
-                                  Service, UseUTC, DebugLogLevel, Dispatcher),
+    {SendsNew,
+     ExpressionsNew} = expression_event(Sends, Expressions, Id,
+                                        DebugLogLevel, UseUTC,
+                                        Service, Dispatcher),
     {noreply, State#state{expressions = ExpressionsNew,
                           sends = SendsNew}};
 cloudi_service_handle_info({'CHANGE', Monitor, time_offset,
@@ -225,7 +232,7 @@ expressions_load(L, ProcessIndex, ProcessCount) ->
 
 expression_next(#expression{definition = Cron,
                             datetime_utc = DateTimeOldEventUTC} = Expression,
-                Id, Service, UseUTC) ->
+                Id, UseUTC, Service) ->
     {DateTimeNewEventUTC,
      MilliSecondsEvent} = expression_next_event(DateTimeOldEventUTC,
                                                 Cron, UseUTC),
@@ -258,9 +265,9 @@ expression_next_event(DateTimeOldEventUTC, Cron, UseUTC) ->
     {DateTimeNewEventUTC,
      MilliSecondsEvent}.
 
-expressions_start(Expressions, Service, UseUTC) ->
+expressions_start(Expressions, UseUTC, Service) ->
     maps:map(fun(Id, Expression) ->
-        expression_next(Expression, Id, Service, UseUTC)
+        expression_next(Expression, Id, UseUTC, Service)
     end, Expressions).
 
 expressions_time_offset(Expressions, MilliSecondsOffset, Service) ->
@@ -291,44 +298,51 @@ expressions_time_offset(Expressions, MilliSecondsOffset, Service) ->
         Expression#expression{timer = TimerNew}
     end, Expressions).
 
-expression_event(Expressions, Sends, Id,
-                 Service, UseUTC, DebugLogLevel, Dispatcher) ->
+expression_event(Sends, Expressions, Id,
+                 DebugLogLevel, UseUTC, Service, Dispatcher) ->
     Expression = maps:get(Id, Expressions),
     #expression{send_args = [ServiceName | _] = SendArgs} = Expression,
     ?LOG(DebugLogLevel,
          "\"~s\" event sent to ~s",
          [description(Expression), ServiceName]),
-    TransId = event_send(SendArgs, Service, Dispatcher),
-    ExpressionNew = expression_next(Expression, Id, Service, UseUTC),
-    {maps:put(Id, ExpressionNew, Expressions),
-     maps:put(TransId, Id, Sends)}.
+    SendsNew = event_send(Sends, SendArgs, Id, Service, Dispatcher),
+    ExpressionNew = expression_next(Expression, Id, UseUTC, Service),
+    {SendsNew,
+     maps:put(Id, ExpressionNew, Expressions)}.
 
-event_send(SendArgs, Service, Dispatcher) ->
-    case erlang:apply(cloudi_service, send_async_active,
-                      [Dispatcher | SendArgs]) of
-        {ok, TransId} ->
-            TransId;
+event_send(Sends, SendArgs, Id, Service, Dispatcher) ->
+    SendStart = cloudi_timestamp:milliseconds_monotonic(),
+    TransId = case erlang:apply(cloudi_service, send_async_active,
+                                [Dispatcher | SendArgs]) of
+        {ok, TransIdValue} ->
+            TransIdValue;
         {error, timeout} ->
-            TransId = cloudi_service:trans_id(Dispatcher),
-            Service ! #timeout_async_active{trans_id = TransId},
-            TransId
-    end.
+            TransIdValue = cloudi_service:trans_id(Dispatcher),
+            Service ! #timeout_async_active{trans_id = TransIdValue},
+            TransIdValue
+    end,
+    SendData = #send_data{id = Id,
+                          send_start = SendStart},
+    maps:put(TransId, SendData, Sends).
 
-event_recv(Result, TransId, Expressions, Sends, DebugLogLevel) ->
-    {Id, SendsNew} = maps:take(TransId, Sends),
+event_recv(Sends, Expressions, Result, TransId, DebugLogLevel) ->
+    SendEnd = cloudi_timestamp:milliseconds_monotonic(),
+    {SendData, SendsNew} = maps:take(TransId, Sends),
+    #send_data{id = Id,
+               send_start = SendStart} = SendData,
     Expression = maps:get(Id, Expressions),
-    #expression{send_args = [ServiceName | _]} = Expression,
+    SecondsElapsed = (SendEnd - SendStart) / 1000.0,
     if
         Result =:= ok ->
             ?LOG(DebugLogLevel,
-                 "\"~s\" event completed at ~s",
-                 [description(Expression), ServiceName]);
+                 "\"~s\" event completed after ~p seconds",
+                 [description(Expression), SecondsElapsed]);
         Result =:= timeout ->
-            ?LOG_ERROR("\"~s\" event timeout at ~s",
-                       [description(Expression), ServiceName]);
+            ?LOG_ERROR("\"~s\" event timeout after ~p seconds",
+                       [description(Expression), SecondsElapsed]);
         Result =:= error ->
-            ?LOG_ERROR("\"~s\" event failed at ~s",
-                       [description(Expression), ServiceName])
+            ?LOG_ERROR("\"~s\" event failed after ~p seconds",
+                       [description(Expression), SecondsElapsed])
     end,
     SendsNew.
 

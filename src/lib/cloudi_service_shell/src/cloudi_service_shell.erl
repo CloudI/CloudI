@@ -209,7 +209,8 @@ request(Exec, #state{file_path = FilePath,
             erlang:open_port({spawn_executable, SUPath},
                              [{args, ["-s", FilePath, User]} | PortOptions])
     end,
-    true = erlang:port_command(Shell, ["exec ", Exec, "\n"]),
+    ExecUTF8 = unicode:characters_to_binary(Exec, utf8),
+    true = erlang:port_command(Shell, ["exec ", ExecUTF8, "\n"]),
     request_output(Shell, []).
 
 request_output(Shell, Output) ->
@@ -229,10 +230,10 @@ log_output(Status, Output, Request, DebugLogLevel) ->
     end,
     if
         Output == [] ->
-            ?LOG(Level, "~s = ~w",
+            ?LOG(Level, "~ts = ~w",
                  [Request, Status]);
         true ->
-            ?LOG(Level, "~s = ~w (stdout/stderr below)~n~s",
+            ?LOG(Level, "~ts = ~w (stdout/stderr below)~n~ts",
                  [Request, Status, erlang:iolist_to_binary(Output)])
     end.
 

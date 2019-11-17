@@ -3,6 +3,8 @@
 
 2019-11-16 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add support for unicode to cloudi_service_shell
+    * Add elapsed time to cloudi_service_cron log output
     * Fix handling of external service unicode strings for
       file_path, args and env string data (encoded as utf-8)
 
