@@ -632,7 +632,7 @@ configure_service([Service | Services], Configured, Timeout) ->
             configure_service(Services, [ServiceNew | Configured], Timeout);
         {error, Reason} = Error ->
             % wait for logging statements to be logged before crashing
-            ?LOG_FATAL_SYNC("configure failed: ~p~n~p",
+            ?LOG_FATAL_SYNC("configure failed: ~p~n~tp",
                             [Reason, service_format(Service)]),
             Error
     end.
@@ -1227,7 +1227,7 @@ timeout_decr(Timeout)
     Timeout - ?TIMEOUT_DELTA.
 
 service_format_log(Service, Pids) ->
-    ?LOG_INFO("~p ->~n    ~p", [service_format(Service), Pids]).
+    ?LOG_INFO("~tp ->~n    ~p", [service_format(Service), Pids]).
 
 service_format(Service) ->
     {ID, ServiceConfig} = cloudi_core_i_configuration:service_format(Service),

@@ -609,7 +609,7 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       string_terminate(Arguments),
                                       SpawnEnvironment) of
         {ok, OSPid} ->
-            ?LOG_INFO("OS pid ~p spawned ~p~n  ~p",
+            ?LOG_INFO("OS pid ~p spawned ~p~n  ~tp",
                       [OSPid, Pids, CommandLine]),
             case cloudi_core_i_os_process:cgroup_set(OSPid, CGroup) of
                 ok ->
@@ -673,7 +673,7 @@ filename_parse(Filename, EnvironmentLookup) ->
         [] ->
             {error, {service_external_file_path_invalid_expanded, Filename}};
         NewFilename ->
-            {ok, NewFilename}
+            {ok, string_utf8(NewFilename)}
     end.
 
 % remove beginning whitespace and validate delimiters
@@ -725,8 +725,8 @@ arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $`, [$` | T]) ->
     arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
 arguments_parse(ArgumentsBinary, ArgumentsList, Argument, Delim, [H | T]) ->
-    arguments_parse([H | ArgumentsBinary], ArgumentsList,
-                    [H | Argument], Delim, T).
+    arguments_parse(lists:reverse(string_utf8([H])) ++ ArgumentsBinary,
+                    ArgumentsList, [H | Argument], Delim, T).
 
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++
@@ -760,7 +760,7 @@ environment_format_value([], _) ->
 environment_format_value(_, []) ->
     [];
 environment_format_value([_ | _] = K, [_ | _] = V) ->
-    K ++ [$= | V] ++ [0].
+    string_utf8(K) ++ [$= | string_utf8(V)] ++ [0].
 
 environment_format(Environment, EnvironmentLookup) ->
     environment_format([], Environment, EnvironmentLookup).
@@ -773,6 +773,9 @@ environment_format(Output, [{K, V} | Environment], EnvironmentLookup) ->
     NewV = environment_transform(V, EnvironmentLookup),
     environment_format(Output ++ environment_format_value(NewK, NewV),
                        Environment, EnvironmentLookup).
+
+string_utf8(L) ->
+    erlang:binary_to_list(unicode:characters_to_binary(L, utf8)).
 
 % terminate the string for easy access within C/C++
 string_terminate([]) ->

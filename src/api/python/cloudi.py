@@ -863,7 +863,8 @@ if sys.stderr.__class__.__name__ != '_unbuffered':
                 )
             else:
                 import codecs
-                self.__stream = codecs.getwriter('UTF-8')(stream)
+                self.encoding = 'UTF-8'
+                self.__stream = codecs.getwriter(self.encoding)(stream)
 
         def write(self, data):
             """
