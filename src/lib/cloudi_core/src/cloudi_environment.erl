@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2014-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2014-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2014-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2014-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_environment).
@@ -151,7 +151,7 @@ status_file_time(FilePath) ->
         {ok, #file_info{mtime = MTime}} ->
             cloudi_timestamp:seconds_epoch_to_string(MTime);
         {error, Reason} ->
-            ?LOG_ERROR("filesystem error (~ts): ~p",
+            ?LOG_ERROR("filesystem error (~ts): ~tp",
                        [FilePath, Reason]),
             ""
     end.
@@ -169,9 +169,9 @@ erts_c_compiler_version() ->
                                            || I <- erlang:tuple_to_list(V)]),
             erlang:atom_to_list(Name) ++ [$  | Version];
         {Name, Version} ->
-            cloudi_string:format("~p ~p", [Name, Version]);
+            cloudi_string:format("~tp ~tp", [Name, Version]);
         Unexpected ->
-            ?LOG_ERROR("erlang:system_info(c_compiler_used) invalid: ~p",
+            ?LOG_ERROR("erlang:system_info(c_compiler_used) invalid: ~tp",
                        [Unexpected]),
             ""
     end.

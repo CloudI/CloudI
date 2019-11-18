@@ -303,7 +303,7 @@ expression_event(Sends, Expressions, Id,
     Expression = maps:get(Id, Expressions),
     #expression{send_args = [ServiceName | _] = SendArgs} = Expression,
     ?LOG(DebugLogLevel,
-         "\"~s\" event sent to ~s",
+         "\"~ts\" event sent to ~ts",
          [description(Expression), ServiceName]),
     SendsNew = event_send(Sends, SendArgs, Id, Service, Dispatcher),
     ExpressionNew = expression_next(Expression, Id, UseUTC, Service),
@@ -335,13 +335,13 @@ event_recv(Sends, Expressions, Result, TransId, DebugLogLevel) ->
     if
         Result =:= ok ->
             ?LOG(DebugLogLevel,
-                 "\"~s\" event completed after ~p seconds",
+                 "\"~ts\" event completed after ~p seconds",
                  [description(Expression), SecondsElapsed]);
         Result =:= timeout ->
-            ?LOG_ERROR("\"~s\" event timeout after ~p seconds",
+            ?LOG_ERROR("\"~ts\" event timeout after ~p seconds",
                        [description(Expression), SecondsElapsed]);
         Result =:= error ->
-            ?LOG_ERROR("\"~s\" event failed after ~p seconds",
+            ?LOG_ERROR("\"~ts\" event failed after ~p seconds",
                        [description(Expression), SecondsElapsed])
     end,
     SendsNew.

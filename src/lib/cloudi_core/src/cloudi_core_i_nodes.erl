@@ -691,7 +691,7 @@ discovery_start(#config_nodes_discovery{module = Module,
         {ok, _} ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("~p:~p error: ~p", [Module, StartF, Reason])
+            ?LOG_ERROR("~p:~tp error: ~tp", [Module, StartF, Reason])
     end,
     ok.
 
@@ -704,7 +704,7 @@ discovery_check(#config_nodes_discovery{module = Module,
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("~p:~p error: ~p", [Module, DiscoverF, Reason])
+            ?LOG_ERROR("~p:~tp error: ~tp", [Module, DiscoverF, Reason])
     end,
     ok.
 
@@ -717,7 +717,7 @@ discovery_stop(#config_nodes_discovery{module = Module,
         ok ->
             ok;
         {error, Reason} ->
-            ?LOG_ERROR("~p:~p error: ~p", [Module, StopF, Reason])
+            ?LOG_ERROR("~p:~tp error: ~tp", [Module, StopF, Reason])
     end,
     ok.
 

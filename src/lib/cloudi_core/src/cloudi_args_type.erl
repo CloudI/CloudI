@@ -9,7 +9,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2015-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_args_type).
@@ -63,12 +63,12 @@ function_required({{M, F}}, Arity)
                 is_function(Function) ->
                     function_required(Function, Arity);
                 true ->
-                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not "
+                    ?LOG_ERROR_SYNC("function ~w:~tw/~w does not "
                                     "return a function!", [M, F, 0]),
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!", [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!", [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required({M, F}, Arity)
@@ -77,7 +77,7 @@ function_required({M, F}, Arity)
         true ->
             fun M:F/Arity;
         false ->
-            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!",
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
                             [M, F, Arity]),
             erlang:exit(badarg)
     end;
@@ -91,7 +91,7 @@ function_required(Function, Arity)
             erlang:exit(badarg)
     end;
 function_required(Function, _) ->
-    ?LOG_ERROR_SYNC("not a function: ~p", [Function]),
+    ?LOG_ERROR_SYNC("not a function: ~tp", [Function]),
     erlang:exit(badarg).
 
 -spec function_required_pick({{module(), atom()}} | {module(), atom()} | fun(),
@@ -107,12 +107,12 @@ function_required_pick({{M, F}}, [_ | _] = ArityOrder)
                 is_function(Function) ->
                     function_required_pick(Function, ArityOrder);
                 true ->
-                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not "
+                    ?LOG_ERROR_SYNC("function ~w:~tw/~w does not "
                                     "return a function!", [M, F, 0]),
                     erlang:exit(badarg)
             end;
         false ->
-            ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!", [M, F, 0]),
+            ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!", [M, F, 0]),
             erlang:exit(badarg)
     end;
 function_required_pick({M, F}, [_ | _] = ArityOrder)
@@ -122,7 +122,7 @@ function_required_pick(Function, [_ | _] = ArityOrder)
     when is_function(Function) ->
     function_required_pick_function(ArityOrder, Function, ArityOrder);
 function_required_pick(Function, [_ | _]) ->
-    ?LOG_ERROR_SYNC("not a function: ~p", [Function]),
+    ?LOG_ERROR_SYNC("not a function: ~tp", [Function]),
     erlang:exit(badarg).
 
 -spec function_optional(undefined |
@@ -143,13 +143,13 @@ service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     when is_integer(PrefixC), is_integer(NameC) ->
     case cloudi_x_trie:is_pattern2(Name) of
         true ->
-            ?LOG_ERROR_SYNC("service name is pattern: \"~s\"", [Name]),
+            ?LOG_ERROR_SYNC("service name is pattern: \"~ts\"", [Name]),
             erlang:exit(badarg);
         false ->
             case cloudi_x_trie:pattern2_suffix(Prefix, Name) of
                 error ->
                     ?LOG_ERROR_SYNC("prefix service name mismatch: "
-                                    "\"~s\" \"~s\"", [Prefix, Name]),
+                                    "\"~ts\" \"~ts\"", [Prefix, Name]),
                     erlang:exit(badarg);
                 Suffix ->
                     Suffix
@@ -157,11 +157,11 @@ service_name_suffix([PrefixC | _] = Prefix, [NameC | _] = Name)
     end;
 service_name_suffix([PrefixC | _], Name)
     when is_integer(PrefixC) ->
-    ?LOG_ERROR_SYNC("invalid service name: ~p", [Name]),
+    ?LOG_ERROR_SYNC("invalid service name: ~tp", [Name]),
     erlang:exit(badarg);
 service_name_suffix(Prefix, [NameC | _])
     when is_integer(NameC) ->
-    ?LOG_ERROR_SYNC("invalid prefix: ~p", [Prefix]),
+    ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
     erlang:exit(badarg).
 
 -spec service_name_pattern_suffix(Prefix :: cloudi:service_name_pattern(),
@@ -173,7 +173,7 @@ service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
     case suffix_pattern_parse(Prefix, Pattern) of
         error ->
             ?LOG_ERROR_SYNC("prefix service name pattern mismatch: "
-                            "\"~s\" \"~s\"", [Prefix, Pattern]),
+                            "\"~ts\" \"~ts\"", [Prefix, Pattern]),
             erlang:exit(badarg);
         Suffix ->
             Suffix
@@ -184,7 +184,7 @@ service_name_pattern_suffix([PrefixC | _], Pattern)
     erlang:exit(badarg);
 service_name_pattern_suffix(Prefix, [PatternC | _])
     when is_integer(PatternC) ->
-    ?LOG_ERROR_SYNC("invalid prefix: ~p", [Prefix]),
+    ?LOG_ERROR_SYNC("invalid prefix: ~tp", [Prefix]),
     erlang:exit(badarg).
 
 %%%------------------------------------------------------------------------
@@ -199,7 +199,7 @@ function_required_pick_module([Arity | ArityL], M, F, ArityOrder)
         false ->
             if
                 ArityL == [] ->
-                    ?LOG_ERROR_SYNC("function ~w:~w/~w does not exist!",
+                    ?LOG_ERROR_SYNC("function ~w:~tw/~w does not exist!",
                                     [M, F, ArityOrder]),
                     erlang:exit(badarg);
                 true ->

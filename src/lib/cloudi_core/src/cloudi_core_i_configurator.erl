@@ -632,7 +632,7 @@ configure_service([Service | Services], Configured, Timeout) ->
             configure_service(Services, [ServiceNew | Configured], Timeout);
         {error, Reason} = Error ->
             % wait for logging statements to be logged before crashing
-            ?LOG_FATAL_SYNC("configure failed: ~p~n~tp",
+            ?LOG_FATAL_SYNC("configure failed: ~tp~n~tp",
                             [Reason, service_format(Service)]),
             Error
     end.

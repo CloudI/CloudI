@@ -524,7 +524,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, {shutdown, Reason}},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            ?LOG_INFO_SYNC("Service pid ~p shutdown (~p)~n ~p",
+            ?LOG_INFO_SYNC("Service pid ~p shutdown (~tp)~n ~p",
                            [Pid, Reason, service_id(ServiceId)]),
             {Pids, _} = cloudi_x_key2value:fetch1(ServiceId, Services),
             ServicesNew = terminate_service(Pids, Reason, Service,
@@ -541,7 +541,7 @@ handle_info({'DOWN', _MonitorRef, 'process', Pid, Info},
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find2(Pid, Services) of
         {ok, {[ServiceId], #service{} = Service}} ->
-            ?LOG_WARN("Service pid ~p error: ~p~n ~p",
+            ?LOG_WARN("Service pid ~p error: ~tp~n ~p",
                       [Pid, Info, service_id(ServiceId)]),
             {noreply, restart(Service, Services, State, ServiceId, Pid)};
         error ->
@@ -764,7 +764,7 @@ restart_stage3(#service{service_m = M,
             State#state{services = ServicesNew,
                         durations_restart = DurationsNew};
         {error, _} = Error ->
-            ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
+            ?LOG_ERROR_SYNC("failed ~tp restart~n ~p",
                             [Error, service_id(ServiceId)]),
             restart_stage2_async(Service#service{
                                      time_restart = TimeRestart,
@@ -862,7 +862,7 @@ restart_stage3(#service{service_m = M,
             State#state{services = ServicesNew,
                         durations_restart = DurationsNew};
         {error, _} = Error ->
-            ?LOG_ERROR_SYNC("failed ~p restart~n ~p",
+            ?LOG_ERROR_SYNC("failed ~tp restart~n ~p",
                             [Error, service_id(ServiceId)]),
             restart_stage2_async(Service#service{
                                      time_restart = TimeRestart,
@@ -968,7 +968,7 @@ terminate_end_enforce_now(Reason, Pid, ServiceId,
                           #service{timeout_term = TimeoutTerm}) ->
     case erlang:is_process_alive(Pid) of
         true ->
-            ?LOG_ERROR_SYNC("Service pid ~p brutal_kill (~p)~n"
+            ?LOG_ERROR_SYNC("Service pid ~p brutal_kill (~tp)~n"
                             " ~p after ~p ms (MaxT/MaxR)",
                             [Pid, Reason, service_id(ServiceId), TimeoutTerm]),
             erlang:exit(Pid, kill);
@@ -1177,7 +1177,7 @@ pids_change_increase_loop(Count, ProcessIndex,
             end, Services, Pids),
             ServicesNext;
         {error, _} = Error ->
-            ?LOG_ERROR("failed ~p increase (count_process_dynamic)~n ~p",
+            ?LOG_ERROR("failed ~tp increase (count_process_dynamic)~n ~p",
                        [Error, service_id(ServiceId)]),
             Services
     end,
@@ -1831,7 +1831,7 @@ update_service(Pids, Ports,
                 ok ->
                     ok;
                 {error, _} = Error ->
-                    ?LOG_ERROR("failed ~p service update~n ~p",
+                    ?LOG_ERROR("failed ~tp service update~n ~p",
                                [Error, service_id(ServiceId)]),
                     error
             end,

@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.7.6 {@date} {@time}
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_external).
@@ -679,7 +679,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~p ~p~n~p",
+            ?LOG_ERROR("request ~tp ~tp~n~tp",
                        [ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
@@ -774,7 +774,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~p ~p~n~p",
+            ?LOG_ERROR("request ~tp ~tp~n~tp",
                        [ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
@@ -842,7 +842,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("request ~p ~p~n~p",
+            ?LOG_ERROR("request ~tp ~tp~n~tp",
                        [ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}},
              State#state{request_data = undefined}}
@@ -1117,7 +1117,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                                  options = NewConfigOptions}}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~p ~p~n~p",
+                    ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     {stop, {ErrorType, {Error, ErrorStackTrace}},
                      State#state{options = NewConfigOptions}}
@@ -1629,7 +1629,7 @@ handle_info({udp, Socket, _, IncomingPort, Data}, StateName,
             ?MODULE:StateName(connection, Request, State)
     catch
         error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
+            ?LOG_ERROR("Protocol Error ~w", [Data]),
             {stop, {error, protocol}, State}
     end;
 
@@ -1643,7 +1643,7 @@ handle_info({tcp, Socket, Data}, StateName,
             ?MODULE:StateName(connection, Request, State)
     catch
         error:badarg ->
-            ?LOG_ERROR("Protocol Error ~p", [Data]),
+            ?LOG_ERROR("Protocol Error ~w", [Data]),
             {stop, {error, protocol}, State}
     end;
 
@@ -2078,7 +2078,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                 options = NewConfigOptions}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~p ~p~n~p",
+                    ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
@@ -2131,7 +2131,7 @@ process_queue(#state{dispatcher = Dispatcher,
                                 options = NewConfigOptions}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR("request ~p ~p~n~p",
+                    ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
@@ -2757,7 +2757,7 @@ update_after(StateSocket, State) ->
             ok = os_init(NewState),
             NewState;
         {error, Reason} ->
-            ?LOG_ERROR("update_failed: ~p", [Reason]),
+            ?LOG_ERROR("update_failed: ~tp", [Reason]),
             erlang:exit(update_failed)
     end.
 

@@ -738,7 +738,7 @@ handle_info({'DOWN', _, process, Process, Info},
             when Info =:= normal ->
             {noreply, StateNext};
         {ok, StateNext} ->
-            case ?LOG_T0_ERROR("~s died: ~w",
+            case ?LOG_T0_ERROR("~s died: ~tw",
                                [Entity, Info], StateNext) of
                 {ok, StateNew} ->
                     {noreply, StateNew};
@@ -791,7 +791,7 @@ code_change(_, State, _) ->
 log_init(ok, State) ->
     {ok, State};
 log_init({error, Reason}, State) ->
-    case ?LOG_T0_ERROR("syslog error: ~p", [Reason], State) of
+    case ?LOG_T0_ERROR("syslog error: ~tp", [Reason], State) of
         {ok, _} ->
             {stop, syslog};
         {{error, Reason}, _} ->
@@ -853,7 +853,7 @@ log_config_file_set(FilePathNew,
         FilePathOld =:= undefined ->
             "'undefined'"
     end,
-    case ?LOG_T0_INFO("changing file path from ~s to ~s",
+    case ?LOG_T0_INFO("changing file path from ~ts to ~ts",
                       [FilePathOldStr, FilePathNewStr], State) of
         {ok, #state{fd = FdOld} = StateNew} ->
             file:close(FdOld),
@@ -900,7 +900,7 @@ log_config_syslog_set(SyslogConfig,
                         {ok, StateSwitch#state{syslog = SyslogNew,
                                                syslog_level = SyslogLevelNew}};
                     {error, Reason} ->
-                        ?LOG_T0_ERROR("syslog error: ~p", [Reason],
+                        ?LOG_T0_ERROR("syslog error: ~tp", [Reason],
                                       StateSwitch#state{
                                           syslog = undefined,
                                           syslog_level = undefined})

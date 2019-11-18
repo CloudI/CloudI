@@ -10,7 +10,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -910,14 +910,14 @@ handle_info({'cloudi_service_request_failure',
                 shutdown ->
                     ?LOG_WARN("request stop shutdown", []);
                 {shutdown, ShutdownReason} ->
-                    ?LOG_WARN("request stop shutdown (~p)",
+                    ?LOG_WARN("request stop shutdown (~tp)",
                               [ShutdownReason]);
                 _ ->
-                    ?LOG_ERROR("request stop ~p", [Error])
+                    ?LOG_ERROR("request stop ~tp", [Error])
             end,
             Error;
         true ->
-            ?LOG_ERROR("request ~p ~p~n~p", [Type, Error, Stack]),
+            ?LOG_ERROR("request ~tp ~tp~n~tp", [Type, Error, Stack]),
             {Type, {Error, Stack}}
     end,
     {stop, Reason, State#state{service_state = NewServiceState}};
@@ -934,11 +934,11 @@ handle_info({'cloudi_service_info_failure',
                     ?LOG_WARN("info stop shutdown (~p)",
                               [ShutdownReason]);
                 _ ->
-                    ?LOG_ERROR("info stop ~p", [Error])
+                    ?LOG_ERROR("info stop ~tp", [Error])
             end,
             Error;
         true ->
-            ?LOG_ERROR("info ~p ~p~n~p", [Type, Error, Stack]),
+            ?LOG_ERROR("info ~tp ~tp~n~tp", [Type, Error, Stack]),
             {Type, {Error, Stack}}
     end,
     {stop, Reason, State#state{service_state = NewServiceState}};
@@ -1781,7 +1781,7 @@ handle_info({'EXIT', _, restart},
 
 handle_info({'EXIT', DuoModePid, Reason},
             #state{duo_mode_pid = DuoModePid} = State) ->
-    ?LOG_ERROR("~p duo_mode exited: ~p", [DuoModePid, Reason]),
+    ?LOG_ERROR("~p duo_mode exited: ~tp", [DuoModePid, Reason]),
     {stop, Reason, State};
 
 handle_info({'EXIT', RequestPid,
@@ -1798,7 +1798,7 @@ handle_info({'EXIT', RequestPid,
 
 handle_info({'EXIT', RequestPid, Reason},
             #state{request_pid = RequestPid} = State) ->
-    ?LOG_ERROR("~p request exited: ~p", [RequestPid, Reason]),
+    ?LOG_ERROR("~p request exited: ~tp", [RequestPid, Reason]),
     {stop, Reason, State};
 
 handle_info({'EXIT', InfoPid,
@@ -1815,16 +1815,16 @@ handle_info({'EXIT', InfoPid,
 
 handle_info({'EXIT', InfoPid, Reason},
             #state{info_pid = InfoPid} = State) ->
-    ?LOG_ERROR("~p info exited: ~p", [InfoPid, Reason]),
+    ?LOG_ERROR("~p info exited: ~tp", [InfoPid, Reason]),
     {stop, Reason, State};
 
 handle_info({'EXIT', Dispatcher, Reason},
             #state{dispatcher = Dispatcher} = State) ->
-    ?LOG_ERROR("~p service exited: ~p", [Dispatcher, Reason]),
+    ?LOG_ERROR("~p service exited: ~tp", [Dispatcher, Reason]),
     {stop, Reason, State};
 
 handle_info({'EXIT', Pid, Reason}, State) ->
-    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
+    ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
@@ -1883,7 +1883,7 @@ handle_info({'cloudi_service_init_execute', Args, Timeout,
                                             DispatcherProxy)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR_SYNC("init ~p ~p~n~p",
+            ?LOG_ERROR_SYNC("init ~tp ~tp~n~tp",
                             [ErrorType, Error, ErrorStackTrace]),
             {stop, {ErrorType, {Error, ErrorStackTrace}}}
     end,
@@ -3422,7 +3422,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                                                     DispatcherProxy)
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-                    ?LOG_ERROR_SYNC("init ~p ~p~n~p",
+                    ?LOG_ERROR_SYNC("init ~tp ~tp~n~tp",
                                     [ErrorType, Error, ErrorStackTrace]),
                     {stop, {ErrorType, {Error, ErrorStackTrace}}}
             end,
@@ -3601,14 +3601,14 @@ duo_handle_info({'cloudi_service_request_failure',
                 shutdown ->
                     ?LOG_WARN("duo_mode request stop shutdown", []);
                 {shutdown, ShutdownReason} ->
-                    ?LOG_WARN("duo_mode request stop shutdown (~p)",
+                    ?LOG_WARN("duo_mode request stop shutdown (~tp)",
                               [ShutdownReason]);
                 _ ->
-                    ?LOG_ERROR("duo_mode request stop ~p", [Error])
+                    ?LOG_ERROR("duo_mode request stop ~tp", [Error])
             end,
             Error;
         true ->
-            ?LOG_ERROR("duo_mode request ~p ~p~n~p", [Type, Error, Stack]),
+            ?LOG_ERROR("duo_mode request ~tp ~tp~n~tp", [Type, Error, Stack]),
             {Type, {Error, Stack}}
     end,
     {stop, Reason, State#state_duo{service_state = NewServiceState}};
@@ -3627,7 +3627,7 @@ duo_handle_info({'EXIT', RequestPid,
 
 duo_handle_info({'EXIT', RequestPid, Reason},
                 #state_duo{request_pid = RequestPid} = State) ->
-    ?LOG_ERROR("~p duo_mode request exited: ~p", [RequestPid, Reason]),
+    ?LOG_ERROR("~p duo_mode request exited: ~tp", [RequestPid, Reason]),
     {stop, Reason, State};
 
 duo_handle_info({'EXIT', _, shutdown}, State) ->
@@ -3644,11 +3644,11 @@ duo_handle_info({'EXIT', _, restart}, State) ->
 
 duo_handle_info({'EXIT', Dispatcher, Reason},
                 #state_duo{dispatcher = Dispatcher} = State) ->
-    ?LOG_ERROR("~p duo_mode dispatcher exited: ~p", [Dispatcher, Reason]),
+    ?LOG_ERROR("~p duo_mode dispatcher exited: ~tp", [Dispatcher, Reason]),
     {stop, Reason, State};
 
 duo_handle_info({'EXIT', Pid, Reason}, State) ->
-    ?LOG_ERROR("~p forced exit: ~p", [Pid, Reason]),
+    ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
 duo_handle_info({'cloudi_service_send_async',
@@ -3997,13 +3997,13 @@ duo_handle_info(Request,
                              options = NewConfigOptions}};
         {'cloudi_service_info_failure',
          stop, Reason, undefined, NewServiceState} ->
-            ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
+            ?LOG_ERROR("duo_mode info stop ~tp", [Reason]),
             {stop, Reason,
              State#state_duo{service_state = NewServiceState,
                              options = NewConfigOptions}};
         {'cloudi_service_info_failure',
          Type, Error, Stack, NewServiceState} ->
-            ?LOG_ERROR("duo_mode info ~p ~p~n~p", [Type, Error, Stack]),
+            ?LOG_ERROR("duo_mode info ~tp ~tp~n~tp", [Type, Error, Stack]),
             {stop, {Type, {Error, Stack}},
              State#state_duo{service_state = NewServiceState,
                              options = NewConfigOptions}}
@@ -4030,14 +4030,15 @@ duo_process_queue_info(#state_duo{queue_requests = true,
                                         options = NewConfigOptions});
                 {'cloudi_service_info_failure',
                  stop, Reason, undefined, NewServiceState} ->
-                    ?LOG_ERROR("duo_mode info stop ~p", [Reason]),
+                    ?LOG_ERROR("duo_mode info stop ~tp", [Reason]),
                     {stop, Reason,
                      State#state_duo{service_state = NewServiceState,
                                      queued_info = NewQueueInfo,
                                      options = NewConfigOptions}};
                 {'cloudi_service_info_failure',
                  Type, Error, Stack, NewServiceState} ->
-                    ?LOG_ERROR("duo_mode info ~p ~p~n~p", [Type, Error, Stack]),
+                    ?LOG_ERROR("duo_mode info ~tp ~tp~n~tp",
+                               [Type, Error, Stack]),
                     {stop, {Type, {Error, Stack}},
                      State#state_duo{service_state = NewServiceState,
                                      queued_info = NewQueueInfo,

@@ -138,7 +138,7 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                     DestRefresh, DestDeny, DestAllow,
                                     ConfigOptions, ID);
         {error, Reason} ->
-            ?LOG_ERROR("loading ~p failed: ~p", [Module, Reason]),
+            ?LOG_ERROR("loading ~p failed: ~tp", [Module, Reason]),
             {error, {service_internal_module_not_loaded, Module}}
     end.
 

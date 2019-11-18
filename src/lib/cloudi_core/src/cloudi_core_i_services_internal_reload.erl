@@ -31,8 +31,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2013-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2013-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal_reload).
@@ -100,7 +100,7 @@ handle_cast({service_add, Service},
                         {file, _} ->
                             true;
                         false ->
-                            ?LOG_ERROR("service ~p does not exist", [Service]),
+                            ?LOG_ERROR("service ~tp does not exist", [Service]),
                             false
                     end
             end,
