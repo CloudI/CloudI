@@ -3,6 +3,7 @@
 
 2019-11-23 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Change cloudi_environment:transform to allow unicode env names
     * Add unicode error handling during external service start
     * Change cloudi_os_spawn executable name to lack _vsn_1 suffix
 

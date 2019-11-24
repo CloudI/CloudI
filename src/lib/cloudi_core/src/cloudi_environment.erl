@@ -141,7 +141,7 @@ transform(String) ->
     string().
 
 transform(String, Lookup) ->
-    transform(String, [], undefined, Lookup).
+    transform(String, [], Lookup).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -179,46 +179,56 @@ erts_c_compiler_version() ->
 
 % transform a string using a lookup containing environment variables
 % (the loop doesn't have error conditions by design)
-transform([], Output, undefined, _) ->
+transform([], Output, _) ->
     lists:reverse(Output);
 
-transform([$\\, $$ | String], Output, undefined, Lookup) ->
-    transform(String, [$$ | Output], undefined, Lookup);
+transform([$\\, $$ | String], Output, Lookup) ->
+    transform(String, [$$ | Output], Lookup);
 
-transform([$$ | String], Output, undefined, Lookup) ->
+transform([$$ | String], Output, Lookup) ->
     case String of
         [${ | Rest] ->
-            transform(Rest, Output, [], Lookup);
+            transform_delimiter(Rest, Output, [], Lookup);
         _ ->
-            transform(String, Output, [], Lookup)
+            transform_bare(String, Output, [], Lookup)
     end;
 
-transform([C | String], Output, undefined, Lookup) ->
-    transform(String, [C | Output], undefined, Lookup);
+transform([C | String], Output, Lookup) ->
+    transform(String, [C | Output], Lookup).
 
-transform([$} | String], Output, Key, Lookup) ->
+transform_delimiter([], Output, _, _) ->
+    lists:reverse(Output);
+
+transform_delimiter([$} | String], Output, Key, Lookup) ->
     transform_value(Key, String, Output, Lookup);
 
-transform([C | String], Output, Key, Lookup)
-    when (C >= $A andalso C =< $Z); (C == $_);
-         (C >= $a andalso C =< $z);
-         (C >= $0 andalso C =< $9) ->
-    % handles ASCII only
-    transform(String, Output, [C | Key], Lookup);
+transform_delimiter([$= | String], Output, _, Lookup) ->
+    transform(String, Output, Lookup);
 
-transform(String, Output, Key, Lookup) ->
+transform_delimiter([C | String], Output, Key, Lookup) ->
+    transform_delimiter(String, Output, [C | Key], Lookup).
+
+transform_bare([] = String, Output, Key, Lookup) ->
+    transform_value(Key, String, Output, Lookup);
+
+transform_bare([$} | String], Output, _, Lookup) ->
+    transform(String, Output, Lookup);
+
+transform_bare([C | String], Output, Key, Lookup)
+    when C /= $=, C /= $$, C /= $/, C /= $ , C /= $', C /= $", C /= $` ->
+    transform_bare(String, Output, [C | Key], Lookup);
+
+transform_bare(String, Output, Key, Lookup) ->
     transform_value(Key, String, Output, Lookup).
 
 transform_value([], String, Output, Lookup) ->
-    transform(String, Output, undefined, Lookup);
+    transform(String, Output, Lookup);
 
 transform_value(Key, String, Output, Lookup) ->
     case cloudi_x_trie:find(lists:reverse(Key), Lookup) of
         {ok, Value} ->
-            transform(String, lists:reverse(Value, Output),
-                      undefined, Lookup);
+            transform(String, lists:reverse(Value, Output), Lookup);
         error ->
-            transform(String, Output,
-                      undefined, Lookup)
+            transform(String, Output, Lookup)
     end.
 

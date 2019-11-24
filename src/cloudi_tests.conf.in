@@ -802,7 +802,8 @@
     {external,
         "/tests/environment/",
         "@PYTHON@",
-        "@cloudi_prefix@/tests/environment/environment.py",
+        "@cloudi_prefix@/tests/environment/environment.py "
+        "À 'À' \"À\" `À`",
         [{"PYTHONPATH", "@cloudi_prefix@/api/python/"},
          {"LANG", "en_US.UTF-8"},
          {"USER", "${USER}"},
@@ -811,7 +812,10 @@
          {"$USER${USER}", "useruser"},
          {"${USER}123$USER", "user123user"},
          {"USER_D", "user_\\$"}, % \\ is needed to escape $
-         {"USER_", "user_$"}], % "$" is ignored
+         {"USER_", "user_$"}, % "$" is ignored
+         {"À_UNICODE", "true"},
+         {"UNICODE_À", "true"},
+         {"UNICODE_CHARACTER", "À"}],
         immediate_local, default, default,
         5000, 5000, 5000, [api], undefined, 1, 1, 5, 300,
         [{nice, 15}]},
