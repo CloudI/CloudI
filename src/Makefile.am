@@ -116,8 +116,8 @@ rebar-directories-compile:
         test ! -e cloudi_environment.hrl && \
         $(LN_S) $(abs_top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl || exit 0)
 	(cd $(top_srcdir)/lib/cloudi_core/cxx_src && \
-        test ! -e cloudi_os_spawn_vsn_1 && \
-        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || exit 0)
+        test ! -e cloudi_os_spawn && \
+        $(LN_S) $(abs_top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn || exit 0)
 
 erlang-applications-scope-add: scoped
 
@@ -148,8 +148,8 @@ rebar-directories-clean: rebar-clean
 	(test -h $(top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl && \
 	 rm $(top_builddir)/lib/cloudi_core/src/cloudi_environment.hrl || \
 	 exit 0)
-	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 && \
-	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn_vsn_1 || \
+	(test -h $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn && \
+	 rm $(top_builddir)/lib/cloudi_core/cxx_src/cloudi_os_spawn || \
 	 exit 0)
 
 clean-configure: distclean

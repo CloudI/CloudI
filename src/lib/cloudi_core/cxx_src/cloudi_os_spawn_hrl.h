@@ -7,7 +7,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2009-2017 Michael Truog <mjtruog at protonmail dot com>
+// Copyright (c) 2009-2019 Michael Truog <mjtruog at protonmail dot com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the "Software"),
@@ -120,14 +120,10 @@
 
 -define(ERL_PORT_DRIVER_NAME, \
         BOOST_PP_STRINGIZE(PORT_DRIVER_NAME)).
--define(ERL_PORT_DRIVER_NAME_PREFIX, \
-        BOOST_PP_STRINGIZE(PORT_DRIVER_NAME_PREFIX)).
 #define FUNCTIONS_SEQUENCE PORT_DRIVER_FUNCTIONS
 #if defined(PORT_NAME)
 -define(ERL_PORT_NAME, \
         BOOST_PP_STRINGIZE(PORT_NAME)).
--define(ERL_PORT_NAME_PREFIX, \
-        BOOST_PP_STRINGIZE(PORT_NAME_PREFIX)).
 #endif
 #elif defined(PORT_NAME)
 
@@ -221,8 +217,6 @@ BOOST_PP_ENUM(BOOST_PP_SEQ_SIZE(FUNCTIONS_SEQUENCE),
               EXPORT_FUNCTION, FUNCTIONS_SEQUENCE)
 ]).
 
--vsn(BOOST_PP_STRINGIZE(CURRENT_VERSION)).
-
 BOOST_PP_SEQ_FOR_EACH(CREATE_FUNCTION, _, FUNCTIONS_SEQUENCE)
 
 encode_uint8(Value) when is_binary(Value) ->
@@ -231,12 +225,12 @@ encode_uint8(Value) when is_binary(Value) ->
 encode_uint8(Value) when is_list(Value) ->
     ValueList = [<<E:8/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
-    DataSize = length(ValueList),
+    DataSize = erlang:byte_size(Data),
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 
 encode_uint32(Value) when is_list(Value) ->
     ValueList = [<<E:32/unsigned-integer-native>> || E <- Value],
     Data = erlang:list_to_binary(ValueList),
-    DataSize = erlang:length(ValueList),
+    DataSize = erlang:byte_size(Data) div 4,
     <<DataSize:32/unsigned-integer-native, Data/binary>>.
 

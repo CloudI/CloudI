@@ -6,7 +6,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2013-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2013-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -144,7 +144,7 @@ destination_get(immediate_oldest, Scope, Name, Pid, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_oldest_pid(Scope, Name, Pid, Timeout));
 
 destination_get(DestRefresh, _, _, _, _, _) ->
-    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
+    ?LOG_ERROR("unable to send with invalid destination refresh: ~s",
                [DestRefresh]),
     erlang:exit(badarg).
 
@@ -188,7 +188,7 @@ destination_all(immediate_remote, Scope, Name, Pid, _, Timeout) ->
     ?CATCH_EXIT(cloudi_x_cpg:get_remote_members(Scope, Name, Pid, Timeout));
 
 destination_all(DestRefresh, _, _, _, _, _) ->
-    ?LOG_ERROR("unable to send with invalid destination refresh: ~p",
+    ?LOG_ERROR("unable to send with invalid destination refresh: ~s",
                [DestRefresh]),
     erlang:exit(badarg).
 
@@ -502,7 +502,7 @@ aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
             aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
+            ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",
                        [Aspect, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end;
@@ -512,7 +512,7 @@ aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
             aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
-            ?LOG_ERROR("aspect_terminate(~p) ~p ~p~n~p",
+            ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",
                        [F, ErrorType, Error, ErrorStackTrace]),
             {ok, ServiceState}
     end.

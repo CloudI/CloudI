@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-11-23 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add unicode error handling during external service start
+    * Change cloudi_os_spawn executable name to lack _vsn_1 suffix
+
 2019-11-17 Michael Truog   <mjtruog at protonmail dot com>
 
     * Enable logging of unicode data used in error messages,

@@ -37,10 +37,7 @@
 -author('mjtruog at protonmail dot com').
 
 %% external interface
--export([environment_lookup/0,
-         environment_transform/1,
-         environment_transform/2,
-         start_internal/18,
+-export([start_internal/18,
          start_external/21,
          status_internal/3,
          status_external/4,
@@ -68,25 +65,21 @@
             update_external/3]}).
 -endif.
 
+-type error_reason_start_internal() ::
+    {service_internal_module_not_loaded, any()}.
+-type error_reason_start_external() ::
+    {service_external_file_path_invalid_expanded |
+     service_external_file_path_invalid_unicode |
+     service_external_args_invalid_quotes |
+     service_external_args_invalid_unicode |
+     service_external_env_invalid_expanded |
+     service_external_env_invalid_unicode, any()}.
+-export_type([error_reason_start_internal/0,
+              error_reason_start_external/0]).
+
 %%%------------------------------------------------------------------------
 %%% External interface
 %%%------------------------------------------------------------------------
-
-% all environment variables currently in the Erlang VM shell
-% are used as possible substitution values
-environment_lookup() ->
-    cloudi_x_trie:new(lists:map(fun(Entry) ->
-        cloudi_string:splitl($=, Entry, input)
-    end, os:getenv())).
-
-environment_transform(String) ->
-    EnvironmentLookup = environment_lookup(),
-    environment_transform(String, EnvironmentLookup).
-
-% update external service strings based on the Erlang VM shell
-% environmental variables
-environment_transform(String, EnvironmentLookup) ->
-    environment_transform(String, [], undefined, EnvironmentLookup).
 
 start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                GroupLeader, Module, Args, Timeout, Prefix,
@@ -127,13 +120,13 @@ start_internal(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
             cloudi_x_trie:new(DestListAllow)
     end,
     case cloudi_x_reltool_util:is_module_loaded(Module, Timeout) of
-        {ok, NewTimeout} ->
+        {ok, TimeoutNew} ->
             % Erlang application startup is asynchronous, so wait for the
             % module to be loaded or timeout
             ?PROCESS_START_INTERNAL(ProcessIndex, ProcessCount,
                                     TimeStart, TimeRestart, Restarts,
                                     GroupLeader, Module, Args,
-                                    NewTimeout, Prefix,
+                                    TimeoutNew, Prefix,
                                     TimeoutAsync, TimeoutSync, TimeoutTerm,
                                     DestRefresh, DestDeny, DestAllow,
                                     ConfigOptions, ID);
@@ -156,10 +149,10 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
          Rlimits, Owner, Nice, CGroup, Chroot, Directory,
-         CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
+         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
             {ok, DestDeny, DestAllow} =
                 start_external_threads_params(DestListDeny, DestListAllow),
-            NewConfigOptions = ConfigOptions#config_service_options{
+            ConfigOptionsNew = ConfigOptions#config_service_options{
                                    cgroup = CGroup},
             case start_external_threads(ThreadsPerProcess,
                                         ProcessIndex,
@@ -176,7 +169,7 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                         TimeoutTerm,
                                         DestRefresh,
                                         DestDeny, DestAllow,
-                                        NewConfigOptions, ID) of
+                                        ConfigOptionsNew, ID) of
                 {ok, Pids, Ports} ->
                     start_external_spawn(SpawnProcess,
                                          SpawnProtocol,
@@ -186,8 +179,8 @@ start_external(ProcessIndex, ProcessCount, TimeStart, TimeRestart, Restarts,
                                          Nice, CGroup, Chroot, Directory,
                                          ThreadsPerProcess,
                                          CommandLine,
-                                         NewFilename,
-                                         NewArguments,
+                                         FilenameNew,
+                                         ArgumentsNew,
                                          Environment,
                                          EnvironmentLookup,
                                          Protocol, BufferSize);
@@ -239,13 +232,13 @@ update_external(Pids, Ports,
         {ok,
          SpawnProcess, SpawnProtocol, SocketPath,
          Rlimits, Owner, Nice, CGroup, Chroot, Directory,
-         CommandLine, NewFilename, NewArguments, EnvironmentLookup} ->
+         CommandLine, FilenameNew, ArgumentsNew, EnvironmentLookup} ->
             case start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                                       Pids, Ports,
                                       Rlimits, Owner,
                                       Nice, CGroup, Chroot, Directory,
                                       ThreadsPerProcess,
-                                      CommandLine, NewFilename, NewArguments,
+                                      CommandLine, FilenameNew, ArgumentsNew,
                                       Environment, EnvironmentLookup,
                                       Protocol, BufferSize) of
                 {ok, Pids} ->
@@ -259,132 +252,132 @@ update_external(Pids, Ports,
             Error
     end.
 
-update_internal_f(NewDestRefresh, NewTimeoutInit,
-                  NewTimeoutAsync, NewTimeoutSync,
-                  NewDestListDeny, NewDestListAllow,
-                  OptionsKeys, NewConfigOptions,
+update_internal_f(DestRefreshNew, TimeoutInitNew,
+                  TimeoutAsyncNew, TimeoutSyncNew,
+                  DestListDenyNew, DestListAllowNew,
+                  OptionsKeys, ConfigOptionsNew,
                   [GroupLeader,
-                   Module, Args, OldTimeoutInit, Prefix,
-                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm,
-                   OldDestRefresh, OldDestListDeny, OldDestListAllow,
-                   OldConfigOptions, ID]) ->
+                   Module, Args, TimeoutInitOld, Prefix,
+                   TimeoutAsyncOld, TimeoutSyncOld, TimeoutTerm,
+                   DestRefreshOld, DestListDenyOld, DestListAllowOld,
+                   ConfigOptionsOld, ID]) ->
     [GroupLeader,
      Module, Args,
      if
-        NewTimeoutInit =:= undefined ->
-            OldTimeoutInit;
-        is_integer(NewTimeoutInit) ->
-            NewTimeoutInit
+        TimeoutInitNew =:= undefined ->
+            TimeoutInitOld;
+        is_integer(TimeoutInitNew) ->
+            TimeoutInitNew
      end,
      Prefix,
      if
-        NewTimeoutAsync =:= undefined ->
-            OldTimeoutAsync;
-        is_integer(NewTimeoutAsync) ->
-            NewTimeoutAsync
+        TimeoutAsyncNew =:= undefined ->
+            TimeoutAsyncOld;
+        is_integer(TimeoutAsyncNew) ->
+            TimeoutAsyncNew
      end,
      if
-        NewTimeoutSync =:= undefined ->
-            OldTimeoutSync;
-        is_integer(NewTimeoutSync) ->
-            NewTimeoutSync
+        TimeoutSyncNew =:= undefined ->
+            TimeoutSyncOld;
+        is_integer(TimeoutSyncNew) ->
+            TimeoutSyncNew
      end,
      TimeoutTerm,
      if
-        NewDestRefresh =:= undefined ->
-            OldDestRefresh;
-        is_atom(NewDestRefresh) ->
-            NewDestRefresh
+        DestRefreshNew =:= undefined ->
+            DestRefreshOld;
+        is_atom(DestRefreshNew) ->
+            DestRefreshNew
      end,
      if
-        NewDestListDeny =:= invalid ->
-            OldDestListDeny;
-        NewDestListDeny =:= undefined; is_list(NewDestListDeny) ->
-            NewDestListDeny
+        DestListDenyNew =:= invalid ->
+            DestListDenyOld;
+        DestListDenyNew =:= undefined; is_list(DestListDenyNew) ->
+            DestListDenyNew
      end,
      if
-        NewDestListAllow =:= invalid ->
-            OldDestListAllow;
-        NewDestListAllow =:= undefined; is_list(NewDestListAllow) ->
-            NewDestListAllow
+        DestListAllowNew =:= invalid ->
+            DestListAllowOld;
+        DestListAllowNew =:= undefined; is_list(DestListAllowNew) ->
+            DestListAllowNew
      end,
      cloudi_core_i_configuration:service_options_copy(OptionsKeys,
-                                                      OldConfigOptions,
-                                                      NewConfigOptions),
+                                                      ConfigOptionsOld,
+                                                      ConfigOptionsNew),
      ID].
 
-update_external_f(NewFilename, NewArguments, NewEnvironment,
-                  NewDestRefresh,
-                  NewTimeoutInit, NewTimeoutAsync, NewTimeoutSync,
-                  NewDestListDeny, NewDestListAllow,
-                  OptionsKeys, NewConfigOptions,
+update_external_f(FilenameNew, ArgumentsNew, EnvironmentNew,
+                  DestRefreshNew,
+                  TimeoutInitNew, TimeoutAsyncNew, TimeoutSyncNew,
+                  DestListDenyNew, DestListAllowNew,
+                  OptionsKeys, ConfigOptionsNew,
                   [ThreadsPerProcess,
-                   OldFilename, OldArguments, OldEnvironment,
-                   Protocol, BufferSize, OldTimeoutInit, Prefix,
-                   OldTimeoutAsync, OldTimeoutSync, TimeoutTerm,
-                   OldDestRefresh, OldDestListDeny, OldDestListAllow,
-                   OldConfigOptions, ID]) ->
+                   FilenameOld, ArgumentsOld, EnvironmentOld,
+                   Protocol, BufferSize, TimeoutInitOld, Prefix,
+                   TimeoutAsyncOld, TimeoutSyncOld, TimeoutTerm,
+                   DestRefreshOld, DestListDenyOld, DestListAllowOld,
+                   ConfigOptionsOld, ID]) ->
     [ThreadsPerProcess,
      if
-        is_list(NewFilename) ->
-            NewFilename;
-        NewFilename =:= undefined ->
-            OldFilename
+        is_list(FilenameNew) ->
+            FilenameNew;
+        FilenameNew =:= undefined ->
+            FilenameOld
      end,
      if
-        is_list(NewArguments) ->
-            NewArguments;
-        NewArguments =:= undefined ->
-            OldArguments
+        is_list(ArgumentsNew) ->
+            ArgumentsNew;
+        ArgumentsNew =:= undefined ->
+            ArgumentsOld
      end,
      if
-        is_list(NewEnvironment) ->
-            NewEnvironment;
-        NewEnvironment =:= undefined ->
-            OldEnvironment
+        is_list(EnvironmentNew) ->
+            EnvironmentNew;
+        EnvironmentNew =:= undefined ->
+            EnvironmentOld
      end,
      Protocol, BufferSize,
      if
-        is_integer(NewTimeoutInit) ->
-            NewTimeoutInit;
-        NewTimeoutInit =:= undefined ->
-            OldTimeoutInit
+        is_integer(TimeoutInitNew) ->
+            TimeoutInitNew;
+        TimeoutInitNew =:= undefined ->
+            TimeoutInitOld
      end,
      Prefix,
      if
-        is_integer(NewTimeoutAsync) ->
-            NewTimeoutAsync;
-        NewTimeoutAsync =:= undefined ->
-            OldTimeoutAsync
+        is_integer(TimeoutAsyncNew) ->
+            TimeoutAsyncNew;
+        TimeoutAsyncNew =:= undefined ->
+            TimeoutAsyncOld
      end,
      if
-        is_integer(NewTimeoutSync) ->
-            NewTimeoutSync;
-        NewTimeoutSync =:= undefined ->
-            OldTimeoutSync
+        is_integer(TimeoutSyncNew) ->
+            TimeoutSyncNew;
+        TimeoutSyncNew =:= undefined ->
+            TimeoutSyncOld
      end,
      TimeoutTerm,
      if
-        NewDestRefresh =:= undefined ->
-            OldDestRefresh;
-        is_atom(NewDestRefresh) ->
-            NewDestRefresh
+        DestRefreshNew =:= undefined ->
+            DestRefreshOld;
+        is_atom(DestRefreshNew) ->
+            DestRefreshNew
      end,
      if
-        NewDestListDeny =:= invalid ->
-            OldDestListDeny;
-        NewDestListDeny =:= undefined; is_list(NewDestListDeny) ->
-            NewDestListDeny
+        DestListDenyNew =:= invalid ->
+            DestListDenyOld;
+        DestListDenyNew =:= undefined; is_list(DestListDenyNew) ->
+            DestListDenyNew
      end,
      if
-        NewDestListAllow =:= invalid ->
-            OldDestListAllow;
-        NewDestListAllow =:= undefined; is_list(NewDestListAllow) ->
-            NewDestListAllow
+        DestListAllowNew =:= invalid ->
+            DestListAllowOld;
+        DestListAllowNew =:= undefined; is_list(DestListAllowNew) ->
+            DestListAllowNew
      end,
      cloudi_core_i_configuration:service_options_copy(OptionsKeys,
-                                                      OldConfigOptions,
-                                                      NewConfigOptions),
+                                                      ConfigOptionsOld,
+                                                      ConfigOptionsNew),
      ID].
 
 %%%------------------------------------------------------------------------
@@ -455,10 +448,10 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
             L
     end,
     SocketPath = create_socket_path(TemporaryDirectory, ID),
-    EnvironmentLookup = environment_lookup(),
+    EnvironmentLookup = cloudi_environment:lookup(),
     case start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                                            EnvironmentLookup) of
-        {ok, CommandLine, NewFilename, NewArguments, Chroot, Directory} ->
+        {ok, CommandLine, FilenameNew, ArgumentsNew, Chroot, Directory} ->
             case cloudi_x_supool:get(cloudi_core_i_os_spawn) of
                 SpawnProcess when is_pid(SpawnProcess) ->
                     SpawnProtocol = if
@@ -476,7 +469,7 @@ start_external_spawn_params(ProcessIndex, ProcessCount, ThreadsPerProcess,
                     {ok,
                      SpawnProcess, SpawnProtocol, SocketPath,
                      Rlimits, Owner, Nice, CGroup, Chroot, Directory,
-                     CommandLine, NewFilename, NewArguments,
+                     CommandLine, FilenameNew, ArgumentsNew,
                      EnvironmentLookup};
                 undefined ->
                     {error, noproc}
@@ -503,18 +496,18 @@ start_external_threads_params(DestListDeny, DestListAllow) ->
 start_external_spawn_params_parse(Filename, Arguments, ConfigOptions,
                                   EnvironmentLookup) ->
     case filename_parse(Filename, EnvironmentLookup) of
-        {ok, NewFilename} ->
+        {ok, FilenameNew} ->
             case arguments_parse(Arguments, EnvironmentLookup) of
-                {ok, NewArguments, ArgumentsList} ->
-                    CommandLine = [NewFilename | ArgumentsList],
+                {ok, ArgumentsNew, ArgumentsList} ->
+                    CommandLine = [FilenameNew | ArgumentsList],
                     case chroot(ConfigOptions, EnvironmentLookup) of
                         {ok, Chroot} ->
                             case directory(ConfigOptions, EnvironmentLookup) of
                                 {ok, Directory} ->
                                     {ok,
                                      CommandLine,
-                                     NewFilename,
-                                     NewArguments,
+                                     FilenameNew,
+                                     ArgumentsNew,
                                      Chroot,
                                      Directory};
                                 {error, _} = Error ->
@@ -589,31 +582,34 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
                      ThreadsPerProcess, CommandLine,
                      Filename, Arguments, Environment,
                      EnvironmentLookup, Protocol, BufferSize) ->
-    SpawnEnvironment = environment_parse(Environment, ThreadsPerProcess,
-                                         Protocol, BufferSize,
-                                         EnvironmentLookup),
-    {UserI, UserStr, GroupI, GroupStr} = Owner,
-    case cloudi_core_i_os_spawn:spawn(SpawnProcess,
-                                      SpawnProtocol,
-                                      string_terminate(SocketPath),
-                                      Ports,
-                                      Rlimits,
-                                      UserI,
-                                      string_terminate(UserStr),
-                                      GroupI,
-                                      string_terminate(GroupStr),
-                                      Nice,
-                                      string_terminate(Chroot),
-                                      string_terminate(Directory),
-                                      string_terminate(Filename),
-                                      string_terminate(Arguments),
-                                      SpawnEnvironment) of
-        {ok, OSPid} ->
-            ?LOG_INFO("OS pid ~p spawned ~p~n  ~tp",
-                      [OSPid, Pids, CommandLine]),
-            case cloudi_core_i_os_process:cgroup_set(OSPid, CGroup) of
-                ok ->
-                    {ok, Pids};
+    case environment_parse(Environment, ThreadsPerProcess,
+                           Protocol, BufferSize, EnvironmentLookup) of
+        {ok, SpawnEnvironment} ->
+            {UserI, UserStr, GroupI, GroupStr} = Owner,
+            case cloudi_core_i_os_spawn:spawn(SpawnProcess,
+                                              SpawnProtocol,
+                                              string_terminate(SocketPath),
+                                              Ports,
+                                              Rlimits,
+                                              UserI,
+                                              string_terminate(UserStr),
+                                              GroupI,
+                                              string_terminate(GroupStr),
+                                              Nice,
+                                              string_terminate(Chroot),
+                                              string_terminate(Directory),
+                                              string_terminate(Filename),
+                                              string_terminate(Arguments),
+                                              SpawnEnvironment) of
+                {ok, OSPid} ->
+                    ?LOG_INFO("OS pid ~p spawned ~p~n  ~tp",
+                              [OSPid, Pids, CommandLine]),
+                    case cloudi_core_i_os_process:cgroup_set(OSPid, CGroup) of
+                        ok ->
+                            {ok, Pids};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -621,59 +617,20 @@ start_external_spawn(SpawnProcess, SpawnProtocol, SocketPath,
             Error
     end.
 
-% transform a string using a lookup containing environment variables
-% (the loop doesn't have error conditions by design)
-environment_transform([], Output, undefined, _) ->
-    lists:reverse(Output);
-
-environment_transform([$\\, $$ | String], Output,
-                      undefined, EnvironmentLookup) ->
-    environment_transform(String, [$$ | Output], undefined, EnvironmentLookup);
-
-environment_transform([$$ | String], Output, undefined, EnvironmentLookup) ->
-    case String of
-        [${ | Rest] ->
-            environment_transform(Rest, Output, [], EnvironmentLookup);
-        _ ->
-            environment_transform(String, Output, [], EnvironmentLookup)
-    end;
-
-environment_transform([C | String], Output, undefined, EnvironmentLookup) ->
-    environment_transform(String, [C | Output], undefined, EnvironmentLookup);
-
-environment_transform([$} | String], Output, Key, EnvironmentLookup) ->
-    environment_transform_value(Key, String, Output, EnvironmentLookup);
-
-environment_transform([C | String], Output, Key, EnvironmentLookup)
-    when (C >= $A andalso C =< $Z); (C == $_);
-         (C >= $a andalso C =< $z);
-         (C >= $0 andalso C =< $9) ->
-    % handles ASCII only
-    environment_transform(String, Output, [C | Key], EnvironmentLookup);
-
-environment_transform(String, Output, Key, EnvironmentLookup) ->
-    environment_transform_value(Key, String, Output, EnvironmentLookup).
-
-environment_transform_value([], String, Output, EnvironmentLookup) ->
-    environment_transform(String, Output, undefined, EnvironmentLookup);
-
-environment_transform_value(Key, String, Output, EnvironmentLookup) ->
-    case cloudi_x_trie:find(lists:reverse(Key), EnvironmentLookup) of
-        {ok, Value} ->
-            environment_transform(String, lists:reverse(Value) ++ Output,
-                                  undefined, EnvironmentLookup);
-        error ->
-            environment_transform(String, Output,
-                                  undefined, EnvironmentLookup)
-    end.
-
 % update filename, including path
 filename_parse(Filename, EnvironmentLookup) ->
-    case environment_transform(Filename, EnvironmentLookup) of
+    case cloudi_environment:transform(Filename, EnvironmentLookup) of
         [] ->
             {error, {service_external_file_path_invalid_expanded, Filename}};
-        NewFilename ->
-            {ok, string_utf8(NewFilename)}
+        ExpandedFilename ->
+            case unicode:characters_to_binary(ExpandedFilename, utf8) of
+                {_, _, _} ->
+                    {error,
+                     {service_external_file_path_invalid_unicode,
+                      ExpandedFilename}};
+                Utf8Filename ->
+                    {ok, erlang:binary_to_list(Utf8Filename)}
+            end
     end.
 
 % remove beginning whitespace and validate delimiters
@@ -682,8 +639,8 @@ arguments_parse([32 | Arguments], EnvironmentLookup) ->
     arguments_parse(Arguments, EnvironmentLookup);
 
 arguments_parse(Arguments, EnvironmentLookup) ->
-    NewArguments = environment_transform(Arguments, EnvironmentLookup),
-    case arguments_parse([], [], [], none, NewArguments) of
+    ArgumentsNew = cloudi_environment:transform(Arguments, EnvironmentLookup),
+    case arguments_parse([], [], [], none, ArgumentsNew) of
         {ok, _, _} = Success ->
             Success;
         Reason when is_atom(Reason) ->
@@ -696,7 +653,7 @@ arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, []) ->
      lists:reverse([lists:reverse(Argument) | ArgumentsList])};
 
 arguments_parse(_, _, _, _, []) ->
-    service_external_args_malformed;
+    service_external_args_invalid_quotes;
 
 arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, [$' | T]) ->
     arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $', T);
@@ -725,8 +682,15 @@ arguments_parse(ArgumentsBinary, ArgumentsList, Argument, $`, [$` | T]) ->
     arguments_parse(ArgumentsBinary, ArgumentsList, Argument, none, T);
 
 arguments_parse(ArgumentsBinary, ArgumentsList, Argument, Delim, [H | T]) ->
-    arguments_parse(lists:reverse(string_utf8([H])) ++ ArgumentsBinary,
-                    ArgumentsList, [H | Argument], Delim, T).
+    case unicode:characters_to_binary([H], utf8) of
+        {_, _, _} ->
+            service_external_args_invalid_unicode;
+        Utf8H ->
+            ArgumentsBinaryNew = lists:reverse(erlang:binary_to_list(Utf8H),
+                                               ArgumentsBinary),
+            arguments_parse(ArgumentsBinaryNew, ArgumentsList,
+                            [H | Argument], Delim, T)
+    end.
 
 % add CloudI API environmental variables and format into a single
 % string that is easy to use in C/C++
@@ -755,31 +719,42 @@ environment_parse(Environment0, ThreadsPerProcess0,
                                              EnvironmentLookup2),
     environment_format(Environment3, EnvironmentLookup3).
 
-environment_format_value([], _) ->
-    [];
-environment_format_value(_, []) ->
-    [];
-environment_format_value([_ | _] = K, [_ | _] = V) ->
-    string_utf8(K) ++ [$= | string_utf8(V)] ++ [0].
+environment_format_value([], _, K, _) ->
+    {error, {service_external_env_invalid_expanded, K}};
+environment_format_value(_, [], _, _) ->
+    {ok, []};
+environment_format_value([_ | _] = ExpandedK, [_ | _] = ExpandedV, K, V) ->
+    case unicode:characters_to_binary(ExpandedK, utf8) of
+        {_, _, _} ->
+            {error, {service_external_env_invalid_unicode, K}};
+        Utf8K ->
+            case unicode:characters_to_binary(ExpandedV, utf8) of
+                {_, _, _} ->
+                    {error, {service_external_env_invalid_unicode, V}};
+                Utf8V ->
+                    {ok, [Utf8K, $=, Utf8V, 0]}
+            end
+    end.
 
 environment_format(Environment, EnvironmentLookup) ->
     environment_format([], Environment, EnvironmentLookup).
 
 environment_format(Output, [], _) ->
-    Output;
+    {ok, erlang:iolist_to_binary(lists:reverse(Output))};
 
 environment_format(Output, [{K, V} | Environment], EnvironmentLookup) ->
-    NewK = environment_transform(K, EnvironmentLookup),
-    NewV = environment_transform(V, EnvironmentLookup),
-    environment_format(Output ++ environment_format_value(NewK, NewV),
-                       Environment, EnvironmentLookup).
-
-string_utf8(L) ->
-    erlang:binary_to_list(unicode:characters_to_binary(L, utf8)).
+    ExpandedK = cloudi_environment:transform(K, EnvironmentLookup),
+    ExpandedV = cloudi_environment:transform(V, EnvironmentLookup),
+    case environment_format_value(ExpandedK, ExpandedV, K, V) of
+        {ok, Pair} ->
+            environment_format([Pair | Output], Environment, EnvironmentLookup);
+        {error, _} = Error ->
+            Error
+    end.
 
 % terminate the string for easy access within C/C++
 string_terminate([]) ->
-    [0];
+    <<0>>;
 string_terminate([_ | _] = L) ->
-    L ++ [0].
+    erlang:iolist_to_binary([L, 0]).
 

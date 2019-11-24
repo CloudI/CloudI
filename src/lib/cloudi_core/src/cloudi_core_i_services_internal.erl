@@ -931,7 +931,7 @@ handle_info({'cloudi_service_info_failure',
                 shutdown ->
                     ?LOG_WARN("info stop shutdown", []);
                 {shutdown, ShutdownReason} ->
-                    ?LOG_WARN("info stop shutdown (~p)",
+                    ?LOG_WARN("info stop shutdown (~tp)",
                               [ShutdownReason]);
                 _ ->
                     ?LOG_ERROR("info stop ~tp", [Error])

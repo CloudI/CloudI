@@ -94,9 +94,11 @@
      service_internal_release_invalid |
      service_internal_file_extension_invalid |
      service_internal_file_path_invalid |
-     service_internal_start_failed |
-     service_external_start_failed |
-     service_options_application_name_not_found, any()}.
+     service_options_application_name_not_found, any()} |
+    {service_internal_start_failed,
+     cloudi_core_i_spawn:error_reason_start_internal() | any()} |
+    {service_external_start_failed,
+     cloudi_core_i_spawn:error_reason_start_external() | any()}.
 -type error_reason_service_stop() ::
     {service_internal_module_not_found |
      service_internal_application_not_found |

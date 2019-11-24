@@ -63,7 +63,9 @@
     lookup().
 
 lookup() ->
-    cloudi_core_i_spawn:environment_lookup().
+    cloudi_x_trie:new(lists:map(fun(Entry) ->
+        cloudi_string:splitl($=, Entry, input)
+    end, os:getenv())).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -124,8 +126,7 @@ status() ->
     string().
 
 transform(String) ->
-    Lookup = lookup(),
-    cloudi_core_i_spawn:environment_transform(String, Lookup).
+    transform(String, lookup()).
 
 %%-------------------------------------------------------------------------
 %% @doc
@@ -140,7 +141,7 @@ transform(String) ->
     string().
 
 transform(String, Lookup) ->
-    cloudi_core_i_spawn:environment_transform(String, Lookup).
+    transform(String, [], undefined, Lookup).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
@@ -174,5 +175,50 @@ erts_c_compiler_version() ->
             ?LOG_ERROR("erlang:system_info(c_compiler_used) invalid: ~tp",
                        [Unexpected]),
             ""
+    end.
+
+% transform a string using a lookup containing environment variables
+% (the loop doesn't have error conditions by design)
+transform([], Output, undefined, _) ->
+    lists:reverse(Output);
+
+transform([$\\, $$ | String], Output, undefined, Lookup) ->
+    transform(String, [$$ | Output], undefined, Lookup);
+
+transform([$$ | String], Output, undefined, Lookup) ->
+    case String of
+        [${ | Rest] ->
+            transform(Rest, Output, [], Lookup);
+        _ ->
+            transform(String, Output, [], Lookup)
+    end;
+
+transform([C | String], Output, undefined, Lookup) ->
+    transform(String, [C | Output], undefined, Lookup);
+
+transform([$} | String], Output, Key, Lookup) ->
+    transform_value(Key, String, Output, Lookup);
+
+transform([C | String], Output, Key, Lookup)
+    when (C >= $A andalso C =< $Z); (C == $_);
+         (C >= $a andalso C =< $z);
+         (C >= $0 andalso C =< $9) ->
+    % handles ASCII only
+    transform(String, Output, [C | Key], Lookup);
+
+transform(String, Output, Key, Lookup) ->
+    transform_value(Key, String, Output, Lookup).
+
+transform_value([], String, Output, Lookup) ->
+    transform(String, Output, undefined, Lookup);
+
+transform_value(Key, String, Output, Lookup) ->
+    case cloudi_x_trie:find(lists:reverse(Key), Lookup) of
+        {ok, Value} ->
+            transform(String, lists:reverse(Value, Output),
+                      undefined, Lookup);
+        error ->
+            transform(String, Output,
+                      undefined, Lookup)
     end.
 

@@ -4,12 +4,12 @@
 %%%------------------------------------------------------------------------
 %%% @doc
 %%% ==OS Process Spawn==
-%%% Used interaction with the os_spawn process.
+%%% Used interaction with the cloudi_os_spawn process.
 %%% @end
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2011-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2011-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -30,8 +30,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2011-2018 Michael Truog
-%%% @version 1.7.4 {@date} {@time}
+%%% @copyright 2011-2019 Michael Truog
+%%% @version 1.8.0 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_os_spawn).
@@ -274,31 +274,21 @@ code_change(_, State, _) ->
 -ifdef(ERL_PORT_DRIVER_NAME).
 local_port_name() ->
     ?ERL_PORT_DRIVER_NAME.
-%local_port_name_prefix() ->
-%    ?ERL_PORT_DRIVER_NAME_PREFIX.
-%unload_local_port(Name) when is_list(Name) ->
-%    % assume only one process owns the driver
-%    % (otherwise more complex logic is necessary)
-%    case erl_ddll:try_unload(Name, []) of
-%        {ok, unloaded} ->
-%            ok;
-%        {ok, Error} when is_atom(Error) ->
-%            {error, atom_to_list(Error)};
-%        {error, Error} when is_atom(Error) ->
-%            {error, atom_to_list(Error)}
-%    end.
 load_local_port(Name) when is_list(Name) ->
     {ok, Path} = load_path(Name ++ ".so"),
     Result = case erl_ddll:load_driver(Path, Name) of
-        ok -> ok;
-        {error, already_loaded} -> ok;
+        ok ->
+            ok;
+        {error, already_loaded} ->
+            ok;
         % {open_error, -10}, otherwise known as "Unknown dlload error",
         % could mean any of the following:
         % - driver does not exist in the path specified
         % - driver can not be read
         % - driver does not have all the required symbols
         % etc.
-        {error, ErrorDesc} -> {error, erl_ddll:format_error(ErrorDesc)}
+        {error, ErrorDesc} ->
+            {error, erl_ddll:format_error(ErrorDesc)}
     end,
     case Result of
         ok ->
@@ -313,8 +303,7 @@ load_local_port(Name) when is_list(Name) ->
     end.
 transform_data(D) ->
     D.
-%% only a port driver can perform asynchronous function calls
-%% (you might be able to put a thread pool in an Erlang port, but why bother?)
+% only a port driver can perform asynchronous function calls
 call_port_async(Process, Command, Msg)
     when is_integer(Command), is_list(Msg) ->
     gen_server:cast(Process, {call, Command, Msg}).
@@ -322,10 +311,6 @@ call_port_async(Process, Command, Msg)
 -ifdef(ERL_PORT_NAME).
 local_port_name() ->
     ?ERL_PORT_NAME.
-%local_port_name_prefix() ->
-%    ?ERL_PORT_NAME_PREFIX.
-%unload_local_port(Name) when is_list(Name) ->
-%    ok.
 load_local_port(Name) when is_list(Name) ->
     {ok, Path} = load_path(Name),
     erlang:open_port({spawn, Path ++ "/" ++ Name},
@@ -347,15 +332,19 @@ call_port_sync(Process, Command, Msg)
 
 call_port(Port, Msg) when is_port(Port), is_list(Msg) ->
     try erlang:port_command(Port, Msg) of
-        true -> ok
+        true ->
+            ok
     catch
         error:badarg ->
             try erlang:iolist_size(Msg) of
-                _ -> {error, einval}
+                _ ->
+                    {error, einval}
             catch
-                error:_ -> {error, badarg}
+                error:_ ->
+                    {error, badarg}
             end;
-        error:Reason -> {error, Reason}
+        error:Reason ->
+            {error, Reason}
     end.
 
 load_path(File) when is_list(File) ->

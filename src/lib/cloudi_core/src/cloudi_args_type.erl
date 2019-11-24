@@ -180,7 +180,7 @@ service_name_pattern_suffix([PrefixC | _] = Prefix, [PatternC | _] = Pattern)
     end;
 service_name_pattern_suffix([PrefixC | _], Pattern)
     when is_integer(PrefixC) ->
-    ?LOG_ERROR_SYNC("invalid service name pattern: ~p", [Pattern]),
+    ?LOG_ERROR_SYNC("invalid service name pattern: ~tp", [Pattern]),
     erlang:exit(badarg);
 service_name_pattern_suffix(Prefix, [PatternC | _])
     when is_integer(PatternC) ->
