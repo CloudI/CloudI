@@ -211,11 +211,12 @@ transform_delimiter([C | String], Output, Key, Lookup) ->
 transform_bare([] = String, Output, Key, Lookup) ->
     transform_value(Key, String, Output, Lookup);
 
-transform_bare([$} | String], Output, _, Lookup) ->
+transform_bare([C | String], Output, _, Lookup)
+    when C == $}; C == $= ->
     transform(String, Output, Lookup);
 
 transform_bare([C | String], Output, Key, Lookup)
-    when C /= $=, C /= $$, C /= $/, C /= $ , C /= $', C /= $", C /= $` ->
+    when C /= $$, C /= $/, C /= $ , C /= $', C /= $", C /= $` ->
     transform_bare(String, Output, [C | Key], Lookup);
 
 transform_bare(String, Output, Key, Lookup) ->

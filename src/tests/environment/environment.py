@@ -64,6 +64,10 @@ class _Task(threading.Thread):
         assert os.environ[user + '123' + user] == 'user123user'
         assert os.environ['USER_D'] == 'user_$'
         assert os.environ['USER_'] == 'user_'
+        assert os.environ[user + "'check1'"] == "user'check1'"
+        assert os.environ[user + '"check2"'] == 'user"check2"'
+        assert os.environ[user + '/' + user + ' ' +
+                          user + '`' + user] == 'user/user user`user'
         assert os.environ['À_UNICODE'] == 'true'
         assert os.environ['UNICODE_À'] == 'true'
         assert os.environ['UNICODE_CHARACTER'] == 'À'

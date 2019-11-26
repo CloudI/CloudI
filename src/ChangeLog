@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-11-25 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Improve cloudi_environment:transform and add environment.py
+      integration test checks based on the current parsing
+    * Add login argument to cloudi_service_shell
+
 2019-11-23 Michael Truog   <mjtruog at protonmail dot com>
 
     * Change cloudi_environment:transform to allow unicode env names

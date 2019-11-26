@@ -54,6 +54,7 @@
 -define(DEFAULT_ENV,                           []).
 -define(DEFAULT_USER,                   undefined).
 -define(DEFAULT_SU_PATH,                "/bin/su").
+-define(DEFAULT_LOGIN,                       true).
 -define(DEFAULT_DEBUG,                       true).
 -define(DEFAULT_DEBUG_LEVEL,                trace).
 
@@ -64,6 +65,7 @@
         env :: list({nonempty_string(), string()}),
         user :: nonempty_string() | undefined,
         su :: nonempty_string(),
+        login :: boolean(),
         debug_level :: off | trace | debug | info | warn | error | fatal
     }).
 
@@ -106,20 +108,27 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         {env,                          ?DEFAULT_ENV},
         {user,                         ?DEFAULT_USER},
         {su_path,                      ?DEFAULT_SU_PATH},
+        {login,                        ?DEFAULT_LOGIN},
         {debug,                        ?DEFAULT_DEBUG},
         {debug_level,                  ?DEFAULT_DEBUG_LEVEL}],
-    [FilePath, Directory, Env, User, SUPath,
+    [FilePath, Directory, Env, User, SUPath, Login,
      Debug, DebugLevel] = cloudi_proplists:take_values(Defaults, Args),
     [_ | _] = FilePath,
     true = filelib:is_regular(FilePath),
     [_ | _] = Directory,
     true = filelib:is_dir(Directory),
-    EnvExpanded = env_reset(env_expand(Env, cloudi_environment:lookup())),
+    EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
     case User of
         undefined ->
             ok;
         [_ | _] ->
             true = filelib:is_regular(SUPath)
+    end,
+    EnvShell = if
+        Login =:= true, is_list(User) ->
+            EnvExpanded;
+        is_boolean(Login) ->
+            env_reset(EnvExpanded)
     end,
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
@@ -137,9 +146,10 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     cloudi_service:subscribe(Dispatcher, ""),
     {ok, #state{file_path = FilePath,
                 directory = Directory,
-                env = EnvExpanded,
+                env = EnvShell,
                 user = User,
                 su = SUPath,
+                login = Login,
                 debug_level = DebugLogLevel}}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
@@ -198,17 +208,30 @@ request(Exec, #state{file_path = FilePath,
                      directory = Directory,
                      env = Env,
                      user = User,
-                     su = SUPath}) ->
+                     su = SUPath,
+                     login = Login}) ->
     PortOptions = [{cd, Directory}, {env, Env},
                    stream, binary, stderr_to_stdout, exit_status],
-    Shell = if
+    {ShellExecutable, ShellArgs} = if
         User =:= undefined ->
-            erlang:open_port({spawn_executable, FilePath},
-                             [{args, ["-"]} | PortOptions]);
+            {FilePath,
+             if
+                 Login =:= true ->
+                     ["-"];
+                 Login =:= false ->
+                     []
+             end};
         is_list(User) ->
-            erlang:open_port({spawn_executable, SUPath},
-                             [{args, ["-s", FilePath, User]} | PortOptions])
+            {SUPath,
+             if
+                 Login =:= true ->
+                     ["-s", FilePath, "-", User];
+                 Login =:= false ->
+                     ["-s", FilePath, User]
+             end}
     end,
+    Shell = erlang:open_port({spawn_executable, ShellExecutable},
+                             [{args, ShellArgs} | PortOptions]),
     ExecUTF8 = unicode:characters_to_binary(Exec, utf8),
     true = erlang:port_command(Shell, ["exec ", ExecUTF8, "\n"]),
     request_output(Shell, []).

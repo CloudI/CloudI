@@ -813,6 +813,9 @@
          {"${USER}123$USER", "user123user"},
          {"USER_D", "user_\\$"}, % \\ is needed to escape $
          {"USER_", "user_$"}, % "$" is ignored
+         {"${INVALID1=$USER'check1'${INVALID2", "user'check1'"},
+         {"$INVALID1=$USER\"check2\"$INVALID2}", "user\"check2\""},
+         {"$USER/$USER $USER`$USER", "user/user user`user"},
          {"À_UNICODE", "true"},
          {"UNICODE_À", "true"},
          {"UNICODE_CHARACTER", "À"}],
