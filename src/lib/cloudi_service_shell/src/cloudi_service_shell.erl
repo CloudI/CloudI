@@ -63,6 +63,7 @@
         file_path :: nonempty_string(),
         directory :: nonempty_string(),
         env :: list({nonempty_string(), string()}),
+        env_port :: boolean(),
         user :: nonempty_string() | undefined,
         su :: nonempty_string(),
         login :: boolean(),
@@ -124,11 +125,18 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
         [_ | _] ->
             true = filelib:is_regular(SUPath)
     end,
-    EnvShell = if
+    EnvPort = if
         Login =:= true, is_list(User) ->
-            EnvExpanded;
+            false;
         is_boolean(Login) ->
-            env_reset(EnvExpanded)
+            true
+    end,
+    EnvExpanded = env_expand(Env, cloudi_environment:lookup()),
+    EnvShell = if
+        EnvPort =:= true ->
+            env_reset(EnvExpanded);
+        EnvPort =:= false ->
+            EnvExpanded
     end,
     true = is_boolean(Debug),
     true = ((DebugLevel =:= trace) orelse
@@ -147,6 +155,7 @@ cloudi_service_init(Args, _Prefix, _Timeout, Dispatcher) ->
     {ok, #state{file_path = FilePath,
                 directory = Directory,
                 env = EnvShell,
+                env_port = EnvPort,
                 user = User,
                 su = SUPath,
                 login = Login,
@@ -204,14 +213,30 @@ env_reset(L) ->
      {"RUN_ERL_LOG_MAXSIZE", false},
      {"TMPDIR", false} | L].
 
+env_set([], ShellInput) ->
+    ShellInput;
+env_set([{[_ | _] = Key, Value} | L], ShellInput) ->
+    [[Key, $=, Value, "; export ", Key, $\n] |
+     env_set(L, ShellInput)].
+
 request(Exec, #state{file_path = FilePath,
                      directory = Directory,
                      env = Env,
+                     env_port = EnvPort,
                      user = User,
                      su = SUPath,
                      login = Login}) ->
-    PortOptions = [{cd, Directory}, {env, Env},
-                   stream, binary, stderr_to_stdout, exit_status],
+    ShellInput0 = ["exec ", unicode:characters_to_binary(Exec, utf8), $\n],
+    PortOptions0 = [{cd, Directory},
+                    stream, binary, stderr_to_stdout, exit_status],
+    {ShellInputN, PortOptionsN} = if
+        EnvPort =:= true ->
+            {ShellInput0,
+             [{env, Env} | PortOptions0]};
+        EnvPort =:= false ->
+            {env_set(Env, ShellInput0),
+             PortOptions0}
+    end,
     {ShellExecutable, ShellArgs} = if
         User =:= undefined ->
             {FilePath,
@@ -231,9 +256,8 @@ request(Exec, #state{file_path = FilePath,
              end}
     end,
     Shell = erlang:open_port({spawn_executable, ShellExecutable},
-                             [{args, ShellArgs} | PortOptions]),
-    ExecUTF8 = unicode:characters_to_binary(Exec, utf8),
-    true = erlang:port_command(Shell, ["exec ", ExecUTF8, "\n"]),
+                             [{args, ShellArgs} | PortOptionsN]),
+    true = erlang:port_command(Shell, ShellInputN),
     request_output(Shell, []).
 
 request_output(Shell, Output) ->
