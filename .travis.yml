@@ -42,12 +42,12 @@ python:
   - "3.6"
 rvm:
   - 2.4.0
-services:
-  - mysql
-  - postgresql
+#services:
+#  - mysql
+#  - postgresql
 before_install:
   - sudo apt-get update
-# travis default image has: make autoconf automake libtool g++ git perl python python-dev
+  # travis default image has: make autoconf automake libtool g++ git perl python python-dev
   - sudo apt-get install default-jdk php5 libboost-system-dev libboost-thread-dev libboost-dev libgmp3-dev
 before_script:
   - kerl list installations
