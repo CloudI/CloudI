@@ -92,9 +92,7 @@
 -type response() :: any().
 -type timeout_value_milliseconds() :: 0..?TIMEOUT_MAX.
 -type timeout_milliseconds() :: timeout_value_milliseconds() |
-                                undefined | limit_min | limit_max |
-                                % deprecated type usage XXX
-                                immediate.
+                                undefined | limit_min | limit_max.
 -type priority_value() :: cloudi_service_api:priority().
 -type priority() :: priority_value() | undefined.
 -type trans_id() :: <<_:128>>. % version 1 UUID

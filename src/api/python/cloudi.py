@@ -59,10 +59,6 @@ __all__ = [
     'InvalidInputException',
     'MessageDecodingException',
     'TerminateException',
-    # XXX backwards-compatibility
-    'invalid_input_exception',
-    'message_decoding_exception',
-    'terminate_exception',
 ]
 
 _MESSAGE_INIT = 1
@@ -790,8 +786,6 @@ class InvalidInputException(Exception):
     """
     def __init__(self):
         Exception.__init__(self, 'Invalid Input')
-# XXX backwards-compatibility
-invalid_input_exception = InvalidInputException # pylint: disable=invalid-name
 
 class ReturnSyncException(Exception):
     """
@@ -827,8 +821,6 @@ class MessageDecodingException(Exception):
     """
     def __init__(self):
         Exception.__init__(self, 'Message Decoding Error')
-# XXX backwards-compatibility
-message_decoding_exception = MessageDecodingException # pylint: disable=invalid-name
 
 class TerminateException(Exception):
     """
@@ -843,8 +835,6 @@ class TerminateException(Exception):
         return the termination timeout
         """
         return self.__timeout
-# XXX backwards-compatibility
-terminate_exception = TerminateException # pylint: disable=invalid-name
 
 # force unbuffered stdout/stderr handling without external configuration
 if sys.stderr.__class__.__name__ != '_unbuffered':

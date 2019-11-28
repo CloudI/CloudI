@@ -1,6 +1,11 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-11-27 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Remove deprecated types from Python and Python/C CloudI API
+    * Remove deprecated type value in cloudi Erlang module
+
 2019-11-26 Michael Truog   <mjtruog at protonmail dot com>
 
     * Fix cloudi_service_shell setting env for login su shell
