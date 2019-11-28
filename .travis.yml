@@ -42,9 +42,9 @@ python:
   - "3.6"
 rvm:
   - 2.4.0
-#services:
-#  - mysql
-#  - postgresql
+services:
+  - mysql
+  - postgresql
 before_install:
   - sudo apt-get update
   # travis default image has: make autoconf automake libtool g++ git perl python python-dev
@@ -57,8 +57,7 @@ before_script:
   - export ${CONFIGURE_ENV}
   - ../src/configure --with-cxx-backtrace --prefix=`pwd`/../install_local
   - mysql -u root -e "CREATE DATABASE cloudi_tests;"
-  - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests IDENTIFIED BY 'cloudi_tes
-ts';"
+  - mysql -u root -e "CREATE USER 'cloudi_tests'@'localhost' IDENTIFIED BY 'cloudi_tests'; GRANT ALL ON cloudi_tests.* TO cloudi_tests IDENTIFIED BY 'cloudi_tests';"
   - psql -U postgres -c "CREATE DATABASE cloudi_tests;"
   - psql -U postgres -c "CREATE USER cloudi_tests WITH PASSWORD 'cloudi_tests'; GRANT ALL PRIVILEGES ON DATABASE cloudi_tests to cloudi_tests;"
   - gem install test-unit
