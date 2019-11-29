@@ -1,5 +1,28 @@
 ------------------------------------------------------------------------        
 
+November 28, 2019
+  Version 1.8.0 released.
+  * backwards compatibility difference:
+    * ACL strings do not get a "*" automatically appended on
+      non-patterns, so exact strings may be used as an ACL string
+  * Unicode support was added for external service configuration
+    (file_path, args, env) and any other string or function use
+  * CloudI API now has a shutdown function for external services
+    (internal services always had the shutdown return value)
+  * Fixed CloudI Service API services_add failure with multiple
+    service configurations to handle data properly
+  * Fixed service configuration option count_process_dynamic
+    so it doesn't influence a pending service termination
+  * Erlang services were added:
+    * cloudi_service_api_batch executes services with batch queues
+    * cloudi_service_cron sends service requests for cron expressions
+    * cloudi_service_shell executes service request shell commands
+  * Java service cloudi_service_htmlunit was created
+    (see https://github.com/CloudI/cloudi_service_htmlunit/)
+  * Haskell GHC 8.8.1 support was added
+  * Bugs were fixed and other improvements were added
+    (see the ChangeLog for more detail)
+
 December 18, 2018
   Version 1.7.5 released.
   * Added CloudI Service API nodes_status function to provide

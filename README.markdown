@@ -1,4 +1,4 @@
-# [CloudI 1.7.5](https://cloudi.org)
+# [CloudI 1.8.0](https://cloudi.org)
 
 [![Build Status](https://secure.travis-ci.org/CloudI/CloudI.png?branch=develop)](http://travis-ci.org/CloudI/CloudI) [![CloudI IRC](https://img.shields.io/badge/irc-%23cloudi-orange.svg)](https://webchat.freenode.net?randomnick=1&channels=cloudi) [![Project Stats](https://www.openhub.net/p/CloudI/widgets/project_thin_badge.gif)](https://www.openhub.net/p/CloudI)
 
@@ -137,12 +137,12 @@ Integration points:
 * SQL Databases
   * MySQL with [`cloudi_service_db_mysql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_mysql/src/cloudi_service_db_mysql.erl)
   * PostgreSQL with [`cloudi_service_db_pgsql`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_db_pgsql/src/cloudi_service_db_pgsql.erl)
-* shell with [`cloudi_service_shell`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_shell/src/cloudi_service_shell.erl)
+* shell with [`cloudi_service_shell`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_shell/src/cloudi_service_shell.erl)
 
 Dynamic Configuration and Monitoring:
 
 * CloudI Service API (See [`src/service_api/README.markdown`](https://github.com/CloudI/CloudI/tree/master/src/service_api#readme))
-* Batch CloudI Service Execution with [`cloudi_service_api_batch`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_api_batch/src/cloudi_service_api_batch.erl)
+* Batch CloudI Service Execution with [`cloudi_service_api_batch`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_api_batch/src/cloudi_service_api_batch.erl)
 * Monitoring to Graphite, OpenTSDB, SNMP, InfluxDB or StatsD with [`cloudi_service_monitoring`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_monitoring/src/cloudi_service_monitoring.erl)
 
 Routing:
@@ -153,7 +153,7 @@ Routing:
 * Fault-Tolerant Map-Reduce with [`cloudi_service_map_reduce`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_map_reduce/src/cloudi_service_map_reduce.erl) (See the [`hexpi` integration test controller](https://github.com/CloudI/CloudI/blob/master/src/tests/hexpi/src/cloudi_service_hexpi.erl))
 * Durable Service Requests with [`cloudi_service_queue`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_queue/src/cloudi_service_queue.erl)
 * Service Redundancy with [`cloudi_service_quorum`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_quorum/src/cloudi_service_quorum.erl)
-* Schedule Service Requests with [`cloudi_service_cron`](https://github.com/CloudI/CloudI/blob/develop/src/lib/cloudi_service_cron/src/cloudi_service_cron.erl)
+* Schedule Service Requests with [`cloudi_service_cron`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_cron/src/cloudi_service_cron.erl)
 * Local/Remote(SSH) Request Routing with [`cloudi_service_router`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_router/src/cloudi_service_router.erl)
 * Validation with [`cloudi_service_validate`](https://github.com/CloudI/CloudI/blob/master/src/lib/cloudi_service_validate/src/cloudi_service_validate.erl)
 

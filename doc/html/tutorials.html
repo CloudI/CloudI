@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.6.1">
+<meta name="generator" content="Asciidoctor 1.5.8">
 <meta name="description" content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing">
 <meta name="keywords" content="tutorial, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi">
 <title>CloudI User Tutorials</title>
@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html" class="active">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI User Tutorials</h1>
 <div class="details">
-<span id="revnumber">version 1.7.5,</span>
-<span id="revdate">2018-12-18</span>
+<span id="revnumber">version 1.8.0,</span>
+<span id="revdate">2019-11-28</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -87,7 +87,7 @@ With CloudI, you can create a system with Microservices that doesn&#8217;t requi
 If a supported programming language doesn&#8217;t yet have a tutorial written yet, it is best to refer to the <a href="#cloudi_examples">CloudI Examples</a>.</p>
 </div>
 <div class="sect2">
-<h3 id="a_href_tutorial_java_html_java_tutorial_a"><a href="tutorial_java.html">Java Tutorial</a></h3>
+<h3 id="java_tutorial"><a href="tutorial_java.html">Java Tutorial</a></h3>
 
 </div>
 </div>
@@ -340,6 +340,9 @@ If a supported programming language doesn&#8217;t yet have a tutorial written ye
 <li>
 <p><a href="https://github.com/CloudI/cloudi_tutorial_java">Java Tutorial</a></p>
 </li>
+<li>
+<p><a href="https://github.com/CloudI/cloudi_service_htmlunit">HtmlUnit Service</a></p>
+</li>
 </ul>
 </div>
 </dd>
@@ -409,7 +412,7 @@ If the service request messaging is able to keep many separate external CloudI s
 <div class="paragraph">
 <p>Controlling the potential service request latency with the selection of the programming languages can avoid prematurely exhausting computational resources.
 A good approach is using as few programming languages that can reasonably be used for the business logic design.
-Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank" rel="noopener">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds) just due to inefficiencies within the programming language runtimes.
+Based on CloudI <a href="faq.html#5_LoadTesting" target="_blank" rel="noopener">loadtesting</a> (ordered based on average latency during the loadtest), service requests are handled with low latency in Erlang/Elixir, C/C++, OCaml, Java, Python/C, Haskell, Go (less than 6 milliseconds) and higher latency in Python, Ruby, Perl, PHP, Javascript/node.js (greater than 2000 milliseconds, when under high load) due to inefficiencies within the programming language runtimes.
 By considering the latency requirements of the system early during development it will be easier to scale the deployment and avoid wasted development effort.</p>
 </div>
 <div class="paragraph">

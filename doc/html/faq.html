@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html" class="active">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>Frequently Asked Questions</h1>
-  <center><h3>version 1.7.5<br />
-              last updated on December 18<sup>th</sup> 2018</h3></center>
+  <center><h3>version 1.8.0<br />
+              last updated on November 28<sup>th</sup> 2019</h3></center>
 
   <a name="1_contents"></a>
   <h2>1 - Introduction to CloudI</h2>
@@ -355,7 +355,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
   Mozilla Public
   </td></tr></table>
   <p class="paragraph">
-    CloudI is for <a href="http://en.wikipedia.org/wiki/Online_transaction_processing" target="_blank">On-Line Transaction Processing (OLTP)</a>
+    CloudI is for <a href="http://en.wikipedia.org/wiki/Online_transaction_processing" target="_blank">Online Transaction Processing (OLTP)</a>
     where a transaction may not require database storage
     (transient or cached data may allow the transaction to complete).
     The processing of in-memory transactions is important for keeping
@@ -731,7 +731,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     the individual values are the most recent values.  For example, the
     timeout parameter in the service request is automatically decremented
     based on the time that has elapsed before getting to the function
-    call.  There are 2 constant parameters, the transaction id used to
+    call.  There are 3 constant parameters: the request type
+    (asynchronous or synchronous), the transaction id used to
     identify the service request, and the source process identifier that
     may receive the service request response, though all other parameters
     can be changed with a call to
@@ -1198,12 +1199,12 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     --disable-java-support
     </td><td>
     Disable the Java CloudI API,<br />
-    requires Java&nbsp;&ge;&nbsp;1.5 JDK<br />(default="yes")
+    requires Java&nbsp;&ge;&nbsp;1.5 JDK<br />(default="no")
     </td></tr><tr><td nowrap>
     --disable-javascript-support
     </td><td>
     Disable the Javascript CloudI API,<br />
-    requires node.js&nbsp;&ge;&nbsp;0.8.0<br />(default="yes")
+    requires node.js&nbsp;&ge;&nbsp;0.8.0<br />(default="no")
     </td></tr><tr><td nowrap>
     --enable-ocaml-support
     </td><td>
@@ -1213,22 +1214,22 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     --disable-perl-support
     </td><td>
     Disable the Perl CloudI API,<br />
-    requires Perl&nbsp;&ge;&nbsp;5.10 and Compress::Zlib<br />(default="yes")
+    requires Perl&nbsp;&ge;&nbsp;5.10 and Compress::Zlib<br />(default="no")
     </td></tr><tr><td nowrap>
     --disable-php-support
     </td><td>
     Disable the PHP CloudI API,<br />
-    requires PHP&nbsp;&ge;&nbsp;5.3.6<br />(default="yes")
+    requires PHP&nbsp;&ge;&nbsp;5.3.6<br />(default="no")
     </td></tr><tr><td nowrap>
     --disable-python-support
     </td><td>
     Disable the Python CloudI API,<br />
-    requires Python&nbsp;&ge;&nbsp;2.7.0<br />(default="yes")
+    requires Python&nbsp;&ge;&nbsp;2.7.0<br />(default="no")
     </td></tr><tr><td nowrap>
     --disable-ruby-support
     </td><td>
     Disable the Ruby CloudI API,<br />
-    requires Ruby&nbsp;&ge;&nbsp;1.9.0<br />(default="yes")
+    requires Ruby&nbsp;&ge;&nbsp;1.9.0<br />(default="no")
     </td></tr></table>
   </p>
   <p class="paragraph">
@@ -1278,7 +1279,7 @@ sudo cloudi stop
     The configuration is organized into sections for the ACLs, Services, Nodes,
     and Logging.  The ACLs provide a name which can be referenced by a Service
     to either explicitly allow or deny communication between services
-    (based on service name prefixes, see 
+    (based on service name patterns, see 
     <a href="#4_ACLs">"4.7 - How do I use Access Control Lists (ACLs)?"</a>
     for more information).
   </p>
@@ -1495,9 +1496,6 @@ sudo cloudi stop
     service can send to the service name.
     An ACL string uses the wildcard characters "*" and "?" to match one or more
     characters (in the same way service name patterns are matched).
-    Previous ACL usage in CloudI used prefixes, which is still valid, but a "*"
-    is appended to create a pattern.  This means that only patterns are accepted
-    and no exact service names will be valid ACL strings.
   </p>
   <p class="paragraph">
     If an ACL pattern is both allowed and
@@ -2651,7 +2649,7 @@ sudo cloudi stop
     would be service name patterns that include the internal services in a
     list that is referenced directly (i.e., literally as a list of string) or
     indirectly by an atom that represents the list of strings.  The ACL
-    entries would be specified for the cloudi_service_http service
+    entries would be specified for the cloudi_service_http_cowboy1 service
     configuration's deny list.  If service names are named consistently so that
     the service name represents a path which is a destination in a tree or
     hierarchy, then there should be no problems when adding or removing

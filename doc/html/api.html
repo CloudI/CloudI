@@ -20,18 +20,19 @@ The bare essentials for efficient fault-tolerant processing on a cloud!" />
 <body>
 
 <div id="header">
-<a href="index.html">
+<a href="https://cloudi.org/">
 Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="images/cloud.png" />
 </a>
 </div>
 <br />
 <div id="navigation">
   <ul>
+    <li><a href="index.html">QUICKSTART</a></li>
     <li><a href="api.html" class="active">API</a></li>
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -39,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 
 <div id="content">
   <h1>CloudI API Documentation</h1>
-  <center><h3>version 1.7.5<br />
-              last updated on December 18<sup>th</sup> 2018</h3></center>
+  <center><h3>version 1.8.0<br />
+              last updated on November 28<sup>th</sup> 2019</h3></center>
 
   <a name="Service"></a>
   <h2>CloudI API - Making a Service</h2>
@@ -69,6 +70,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#1_forward"           >1.16 - forward</a></li>
     <li><a href="#1_poll"              >1.17 - poll
                                         (external services only)</a></li>
+    <li><a href="#1_shutdown"          >1.18 - shutdown</a></li>
   </ul>
   <a name="CloudI"></a>
   <h2>CloudI Service API - Controlling CloudI</h2>
@@ -91,7 +93,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="#2_nodes_remove"          >2.15 - nodes_remove</a></li>
     <li><a href="#2_nodes_alive"           >2.16 - nodes_alive</a></li>
     <li><a href="#2_nodes_dead"            >2.17 - nodes_dead</a></li>
-    <li><a href="#2_nodes_status"          >2.18 - nodes_status (new in 1.7.5)</a></li>
+    <li><a href="#2_nodes_status"          >2.18 - nodes_status</a></li>
     <li><a href="#2_nodes"                 >2.19 - nodes</a></li>
     <li><a href="#2_logging_set"           >2.20 - logging_set</a></li>
     <li><a href="#2_logging_file_set"      >2.21 - logging_file_set</a></li>
@@ -433,13 +435,13 @@ CloudI::API.new(thread_index)
     priority.  Both the Timeout parameter and the Priority parameter
     accept the 'undefined' atom to assign the default configured value.
     Please see the
-    <a href="api/cloudi_core-1.7.5/cloudi_service.html#index" target="_blank">cloudi_service module</a>
+    <a href="api/cloudi_core-1.8.0/cloudi_service.html#index" target="_blank">cloudi_service module</a>
     to see all the available functions and the behavior interface functions
     that are implemented within an Erlang service.  The cloudi_service module
     is used within CloudI services, however, it is also possible to use CloudI
     services from external Erlang processes with a subset of the CloudI API
     functions in the
-    <a href="api/cloudi_core-1.7.5/cloudi.html#index" target="_blank">cloudi module</a>.
+    <a href="api/cloudi_core-1.8.0/cloudi.html#index" target="_blank">cloudi module</a>.
   </p>
   <p class="paragraph">
     Both the C and the C++ CloudI API rely on the same underlying code, with
@@ -1709,7 +1711,7 @@ cloudi_service:send_async_active(Dispatcher :: pid(),
     The send_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.7.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.8.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2091,7 +2093,7 @@ cloudi_service:mcast_async_active(Dispatcher :: pid(),
     The mcast_async_active message is sent to the Erlang process as an
     Erlang message, so it arrives in the cloudi_service_handle_info function
     of the Erlang service module (i.e., the module that implements the
-    <a href="api/cloudi_core-1.7.5/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
+    <a href="api/cloudi_core-1.8.0/cloudi_service.html#description" target="_blank">cloudi_service behavior</a>).
     The message formats are also provided as records that are accessible with:
   </p>
 <pre onclick="element_select(this);">
@@ -2425,7 +2427,7 @@ cloudi_service:recv_asyncs(Dispatcher :: pid(),
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 int cloudi_return(cloudi_instance_t * p,
-                  int const command,
+                  int const request_type,
                   char const * const name,
                   char const * const pattern,
                   void const * const response_info,
@@ -2443,7 +2445,7 @@ int cloudi_return(cloudi_instance_t * p,
   <a href="#1_return_CXX">C++</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int CloudI::API::return_(int const command,
+int CloudI::API::return_(int const request_type,
                          STRING name,
                          STRING pattern,
                          void const * const response_info,
@@ -2461,7 +2463,7 @@ int CloudI::API::return_(int const command,
   <a href="#1_return_Elixir">Elixir</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-:cloudi_service.return(dispatcher, type, name, pattern,
+:cloudi_service.return(dispatcher, request_type, name, pattern,
                        response_info, response,
                        timeout, trans_id, pid)
 </pre>
@@ -2472,7 +2474,7 @@ int CloudI::API::return_(int const command,
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 cloudi_service:return(Dispatcher :: pid(),
-                      Type :: 'send_async' | 'send_sync',
+                      RequestType :: 'send_async' | 'send_sync',
                       Name :: string(),
                       Pattern :: string(),
                       ResponseInfo :: any(),
@@ -2501,7 +2503,7 @@ func (api *cloudi.Instance) Return(requestType int,
   <a href="#1_return_Java">Java</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-void org.cloudi.API.return_(Integer command,
+void org.cloudi.API.return_(Integer request_type,
                             String name, String pattern,
                             byte[] response_info, byte[] response,
                             Integer timeout, byte[] transId,
@@ -2513,7 +2515,7 @@ void org.cloudi.API.return_(Integer command,
   <a href="#1_return_JavaScript">JavaScript</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI.API.return_(command, name, pattern,
+CloudI.API.return_(request_type, name, pattern,
                    response_info, response, timeout, trans_id, pid);
 </pre>
   </div>
@@ -2522,7 +2524,7 @@ CloudI.API.return_(command, name, pattern,
   <a href="#1_return_Perl">Perl</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI::API-&gt;return_($command, $name, $pattern,
+CloudI::API-&gt;return_($request_type, $name, $pattern,
                      $response_info, $response,
                      $timeout, $trans_id, $pid);
 </pre>
@@ -2532,7 +2534,7 @@ CloudI::API-&gt;return_($command, $name, $pattern,
   <a href="#1_return_PHP">PHP</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-\CloudI\API::return_($command, $name, $pattern,
+\CloudI\API::return_($request_type, $name, $pattern,
                      $response_info, $response,
                      $timeout, $trans_id, $pid);
 </pre>
@@ -2542,7 +2544,7 @@ CloudI::API-&gt;return_($command, $name, $pattern,
   <a href="#1_return_Python">Python</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-cloudi.API.return_(command, name, pattern, response_info, response,
+cloudi.API.return_(request_type, name, pattern, response_info, response,
                    timeout, trans_id, pid)
 </pre>
   </div>
@@ -2551,7 +2553,7 @@ cloudi.API.return_(command, name, pattern, response_info, response,
   <a href="#1_return_Ruby">Ruby</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI::API.return_(command, name, pattern, response_info, response,
+CloudI::API.return_(request_type, name, pattern, response_info, response,
                     timeout, trans_id, pid)
 </pre>
   </div>
@@ -2569,7 +2571,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
     after returning the service request response.  The simplest
     and preferred way to return a response within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.7.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
+    <a href="api/cloudi_core-1.8.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.  You can also
     utilize the request handler return value for the response in the
     programming languages Java, Python, and Ruby.  However, within the
     external services it is more explicit (i.e., easier to understand the
@@ -2593,7 +2595,7 @@ CloudI::API.return_(command, name, pattern, response_info, response,
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 int cloudi_forward(cloudi_instance_t * p,
-                   int const command,
+                   int const request_type,
                    char const * const name,
                    void const * const request_info,
                    uint32_t const request_info_size,
@@ -2611,7 +2613,7 @@ int cloudi_forward(cloudi_instance_t * p,
   <a href="#1_forward_CXX">C++</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-int CloudI::API::forward_(int const command,
+int CloudI::API::forward_(int const request_type,
                           STRING name,
                           void const * const request_info,
                           uint32_t const request_info_size,
@@ -2629,7 +2631,7 @@ int CloudI::API::forward_(int const command,
   <a href="#1_forward_Elixir">Elixir</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-:cloudi_service.forward(dispatcher, type, name,
+:cloudi_service.forward(dispatcher, request_type, name,
                         request_info, request,
                         timeout, priority, trans_id, pid)
 </pre>
@@ -2640,7 +2642,7 @@ int CloudI::API::forward_(int const command,
   <div class="tab_contents">
 <pre onclick="element_select(this);">
 cloudi_service:forward(Dispatcher :: pid(),
-                       Type :: 'send_async' | 'send_sync',
+                       RequestType :: 'send_async' | 'send_sync',
                        Name :: string(),
                        RequestInfo :: any(),
                        Request :: any(),
@@ -2670,7 +2672,7 @@ func (api *cloudi.Instance) Forward(requestType int,
   <a href="#1_forward_Java">Java</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-Response org.cloudi.API.forward_(Integer command, String name,
+Response org.cloudi.API.forward_(Integer request_type, String name,
                                  byte[] request_info, byte[] request,
                                  Integer timeout, Byte priority,
                                  byte[] transId, OtpErlangPid pid);
@@ -2681,7 +2683,7 @@ Response org.cloudi.API.forward_(Integer command, String name,
   <a href="#1_forward_JavaScript">JavaScript</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI.API.forward_(command, name, request_info, request,
+CloudI.API.forward_(request_type, name, request_info, request,
                     timeout, priority, trans_id, pid);
 </pre>
   </div>
@@ -2690,7 +2692,7 @@ CloudI.API.forward_(command, name, request_info, request,
   <a href="#1_forward_Perl">Perl</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI::API-&gt;forward_($command, $name, $request_info, $request,
+CloudI::API-&gt;forward_($request_type, $name, $request_info, $request,
                       $timeout, $priority, $trans_id, $pid);
 </pre>
   </div>
@@ -2699,7 +2701,7 @@ CloudI::API-&gt;forward_($command, $name, $request_info, $request,
   <a href="#1_forward_PHP">PHP</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-\CloudI\API::forward_($command, $name, $request_info, $request,
+\CloudI\API::forward_($request_type, $name, $request_info, $request,
                       $timeout, $priority, $trans_id, $pid);
 </pre>
   </div>
@@ -2708,7 +2710,7 @@ CloudI::API-&gt;forward_($command, $name, $request_info, $request,
   <a href="#1_forward_Python">Python</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-cloudi.API.forward_(command, name, request_info, request,
+cloudi.API.forward_(request_type, name, request_info, request,
                     timeout, priority, trans_id, pid)
 </pre>
   </div>
@@ -2717,7 +2719,7 @@ cloudi.API.forward_(command, name, request_info, request,
   <a href="#1_forward_Ruby">Ruby</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-CloudI::API.forward_(command, name, request_info, request,
+CloudI::API.forward_(request_type, name, request_info, request,
                      timeout, priority, trans_id, pid)
 </pre>
   </div>
@@ -2738,7 +2740,7 @@ CloudI::API.forward_(command, name, request_info, request,
     execution is aborted after forwarding the service request.  The simplest
     and preferred way to forward a request within an Erlang service is to
     utilize the cloudi_service_handle_request functon return values used by the
-    <a href="api/cloudi_core-1.7.5/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
+    <a href="api/cloudi_core-1.8.0/cloudi_service.html#Module%3acloudi_service_handle_request-11" target="_blank">cloudi_service behavior</a>.
     All external services must use a forward function when forwarding a request.
   </p>
   <p class="paragraph">
@@ -2783,7 +2785,7 @@ func (api *cloudi.Instance) Poll(timeout int32) (bool, error)
   <a href="#1_poll_Java">Java</a>
   <div class="tab_contents">
 <pre onclick="element_select(this);">
-Object org.cloudi.API.poll(int timeout);
+boolean org.cloudi.API.poll(int timeout);
 </pre>
   </div>
   </div> <!-- Java -->
@@ -2852,6 +2854,124 @@ CloudI::API.poll(timeout=nil)
   </p>
   <div class="top"><a href="#Service">Top</a></div>
 
+  <a name="1_shutdown"></a>
+  <h3>1.18 - shutdown</h3>
+  <div class="tabs" style="min-height: 17em;">
+  <div id="1_shutdown_C">
+  <a href="#1_shutdown_C">C</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+int cloudi_shutdown(cloudi_instance_t * p,
+                    char const * const reason);
+</pre>
+  </div>
+  </div> <!-- C -->
+  <div id="1_shutdown_CXX">
+  <a href="#1_shutdown_CXX">C++</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+int CloudI::API::shutdown() const;
+int CloudI::API::shutdown(STRING reason) const;
+</pre>
+  </div>
+  </div> <!-- C++ -->
+  <div id="1_shutdown_Elixir">
+  <a href="#1_shutdown_Elixir">Elixir</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+% cloudi_service behaviour return values:
+{:stop, :shutdown}
+{:stop, {:shutdown, 'reason'}}
+{:stop, :shutdown, state}
+{:stop, {:shutdown, 'reason'}, state}
+</pre>
+  </div>
+  </div> <!-- Elixir -->
+  <div id="1_shutdown_Erlang">
+  <a href="#1_shutdown_Erlang">Erlang</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+% cloudi_service behaviour return values:
+{stop, shutdown}
+{stop, {shutdown, "reason"}}
+{stop, shutdown, State}
+{stop, {shutdown, "reason"}, State}
+</pre>
+  </div>
+  </div> <!-- Erlang -->
+  <div id="1_shutdown_Go">
+  <a href="#1_shutdown_Go">Go</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+func (api *cloudi.Instance) Shutdown(extra ...interface{}) error
+</pre>
+  </div>
+  </div> <!-- Go -->
+  <div id="1_shutdown_Java">
+  <a href="#1_shutdown_Java">Java</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+void org.cloudi.API.shutdown();
+void org.cloudi.API.shutdown(String reason);
+</pre>
+  </div>
+  </div> <!-- Java -->
+  <div id="1_shutdown_JavaScript">
+  <a href="#1_shutdown_JavaScript">JavaScript</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+CloudI.API.shutdown(callback, reason);
+</pre>
+  </div>
+  </div> <!-- JavaScript -->
+  <div id="1_shutdown_Perl">
+  <a href="#1_shutdown_Perl">Perl</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+CloudI::API-&gt;shutdown($reason);
+</pre>
+  </div>
+  </div> <!-- Perl -->
+  <div id="1_shutdown_PHP">
+  <a href="#1_shutdown_PHP">PHP</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+\CloudI\API::shutdown($reason = null);
+</pre>
+  </div>
+  </div> <!-- PHP -->
+  <div id="1_shutdown_Python">
+  <a href="#1_shutdown_Python">Python</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+cloudi.API.shutdown(reason=None)
+</pre>
+  </div>
+  </div> <!-- Python -->
+  <div id="1_shutdown_Ruby">
+  <a href="#1_shutdown_Ruby">Ruby</a>
+  <div class="tab_contents">
+<pre onclick="element_select(this);">
+CloudI::API.shutdown(reason=nil)
+</pre>
+  </div>
+  </div> <!-- Ruby -->
+  <div id="1_shutdown_code">
+  <a href="#1_shutdown_code">&nbsp;</a>
+  <div class="tab_contents">
+    Cause the service instance to have a successful shutdown
+  </div>
+  </div> <!-- Description -->
+  </div>
+  <p class="paragraph">
+    The shutdown functionality provides a way of successfully stopping the
+    service instance when no error has occurred.  All service processes are
+    stopped and the service is removed without causing any service process
+    restarts.  An optional reason string may be provided to log the reason
+    for the service shutdown.
+  </p>
+  <div class="top"><a href="#Service">Top</a></div>
+
   <hr \>
   <h2>CloudI Service API - Controlling CloudI</h2>
 
@@ -2870,7 +2990,7 @@ CloudI::API.poll(timeout=nil)
     cloudi_service_api_requests and cloudi_service_http_cowboy).
     The CloudI Service API can also be accessed directly within the
     Erlang VM by using the
-    <a href="api/cloudi_core-1.7.5/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
+    <a href="api/cloudi_core-1.8.0/cloudi_service_api.html#index" target="_blank">cloudi_service_api module</a>.
   </p>
   <table><tr><th>
     Protocol
@@ -2898,15 +3018,19 @@ curl -X POST -d '{"method": "services", "params":[], "id": 1}' http://localhost:
   <a name="2_acl_add"></a>
   <h3>2.1 - acl_add</h3>
 <p class="code" onclick="element_select(this);">
-curl -X POST -d '[{sensitive, ["/accouting/", "/finance/"]}]' http://localhost:6464/cloudi/api/rpc/acl_add.erl
+curl -X POST -d '[{sensitive, ["/accouting/*", "/finance/*"]}]' http://localhost:6464/cloudi/api/rpc/acl_add.erl
 </p>
   <p class="paragraph">
     Add more ACL entries to be later used when starting services.  An ACL
     entry is an Erlang atom() -&gt; list(atom() | string()) relationship which
     provides a logical grouping of service name patterns
-    (e.g., {api, ["/cloudi/api/"]}).  When providing a service name pattern
-    for an ACL entry, a non-pattern will be assumed to be a prefix
-    (i.e., "/cloudi/api/" == "/cloudi/api/*").
+    (e.g., {api, ["/cloudi/api/*"]}).
+  </p>
+  <p class="paragraph">
+    <b>N.B., with the release of 1.8.0 and the current develop branch,
+    non-patterns no longer get a "*" suffix.  If you have ACL strings in CloudI
+    configurations from past releases, ensure the ACL string contains a
+    pattern character ("*" or "?") and manually add a "*" suffix if not.</b>
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
@@ -3018,8 +3142,7 @@ curl -X POST -d '[{internal, "/tests/http_req/", cloudi_service_request_rate, [{
 </pre>
   <p class="paragraph">
     The ACL lists contain either atoms that reference the current ACL
-    configuration or strings.  If an ACL string is not a pattern, it
-    is assumed to be a prefix (i.e., "*" is appended to make it a pattern).
+    configuration or pattern strings.  
     The ProcessCount and ThreadCount can be specified as integers for an
     exact count or as a floating point number to provide a CPU multiplier
     (X &lt; 1.0 is round, X &gt; 1.0 is floor).  MaxR is the maximum
@@ -3805,7 +3928,7 @@ fun((CommandLine :: list(string()),
     Internal
   </td><td>
 <pre onclick="element_select(this);">
-fun((Type :: cloudi_service:request_type(),
+fun((RequestType :: cloudi_service:request_type(),
      Name :: cloudi_service:service_name(),
      Pattern :: cloudi_service:service_name_pattern(),
      RequestInfo :: cloudi_service:request_info(),
@@ -3823,7 +3946,7 @@ fun((Type :: cloudi_service:request_type(),
     External
   </td><td>
 <pre onclick="element_select(this);">
-fun((Type :: cloudi_service:request_type(),
+fun((RequestType :: cloudi_service:request_type(),
      Name :: cloudi_service:service_name(),
      Pattern :: cloudi_service:service_name_pattern(),
      RequestInfo :: cloudi_service:request_info(),
@@ -3855,7 +3978,7 @@ fun((Type :: cloudi_service:request_type(),
     Internal
   </td><td>
 <pre onclick="element_select(this);">
-fun((Type :: cloudi_service:request_type(),
+fun((RequestType :: cloudi_service:request_type(),
      Name :: cloudi_service:service_name(),
      Pattern :: cloudi_service:service_name_pattern(),
      RequestInfo :: cloudi_service:request_info(),
@@ -3874,7 +3997,7 @@ fun((Type :: cloudi_service:request_type(),
     External
   </td><td>
 <pre onclick="element_select(this);">
-fun((Type :: cloudi_service:request_type(),
+fun((RequestType :: cloudi_service:request_type(),
      Name :: cloudi_service:service_name(),
      Pattern :: cloudi_service:service_name_pattern(),
      RequestInfo :: cloudi_service:request_info(),
@@ -4075,8 +4198,12 @@ curl -X POST -d '["65762d3262a511e882359563d34a433e"]' http://localhost:6464/clo
     Each service has a {UUID,&nbsp;Status} pair with the Status described below:
   </p>
 <pre>
-[{count_process, pos_integer()},                 % count_process_dynamic may vary
- {count_thread, pos_integer()},                  % external service threads
+[{type, internal | external},
+ {prefix, service_name_pattern()},
+ {module, atom()},                               % internal service only
+ {file_path, file:filename()},                   % external service only
+ {count_process, pos_integer()},                 % count_process_dynamic may vary
+ {count_thread, pos_integer()},                  % external service only
  {uptime_total, nonempty_string()},
  {uptime_running, nonempty_string()},
  {uptime_restarts, nonempty_string()},
@@ -4144,6 +4271,10 @@ curl -X POST -d '["65762d3262a511e882359563d34a433e"]' http://localhost:6464/clo
     All the availability values are percentages to describe the <a href="https://en.wikipedia.org/wiki/High_availability#Percentage_calculation" target="_blank">fraction of estimated uptime during each time period</a>.
     All status data is determined using the same point in time, so the values
     may be compared among separate services.
+  </p>
+  <p class="paragraph">
+    Example output is available at<br />
+    <a href="https://cloudi.org/config.html#services_status">https://cloudi.org/config.html#services_status</a>.
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
@@ -4393,8 +4524,47 @@ curl http://localhost:6464/cloudi/api/rpc/services.erl
 </p>
   <p class="paragraph">
     List the service configuration parameters with each service's UUID.
-    Any default settings are ignored to keep the output concise.
+    Any default service configuration options are omitted to keep the
+    output concise.  The service tuple format is provided in the output
+    after any defaults have been assigned, as described in
+    <a href="#2_services_add">services_add</a>.
   </p>
+<pre>
+% service tuple format list
+[{UUID,
+  {internal,
+   Prefix :: service_name_pattern(),
+   Module :: atom(),
+   Args :: list(),
+   DestRefresh :: <a href="#1_Intro_dest">dest_refresh()</a>,
+   TimeoutInit :: timeout_initialize_milliseconds(),
+   TimeoutAsync :: timeout_send_async_milliseconds(),
+   TimeoutSync :: timeout_send_sync_milliseconds(),
+   DestListDeny :: dest_list(),
+   DestListAllow :: dest_list(),
+   CountProcess :: pos_integer(),
+   MaxR :: non_neg_integer(),
+   MaxT :: seconds(),
+   Options :: <a href="#2_services_add_config_opts">service_options_internal()</a>} |
+  {external,
+   Prefix :: service_name_pattern(),
+   FilePath :: file:filename(),
+   Args :: string(),
+   Env :: list({string(), string()}),
+   DestRefresh :: <a href="#1_Intro_dest">dest_refresh()</a>,
+   Protocol :: local | tcp | udp,
+   BufferSize :: pos_integer(),
+   TimeoutInit :: timeout_initialize_milliseconds(),
+   TimeoutAsync :: timeout_send_async_milliseconds(),
+   TimeoutSync :: timeout_send_sync_milliseconds(),
+   DestListDeny :: dest_list(),
+   DestListAllow :: dest_list(),
+   CountProcess :: pos_integer(),
+   CountThread :: pos_integer(),
+   MaxR :: non_neg_integer(),
+   MaxT :: seconds(),
+   Options :: <a href="#2_services_add_config_opts">service_options_external()</a>}}]
+</pre>
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_set"></a>
@@ -4480,6 +4650,13 @@ curl -X POST -d "[{reconnect_delay, 300}]" http://localhost:6464/cloudi/api/rpc/
     2
   </td><td>
     Cost currency decimal places.
+  </td></tr><tr><td>
+    log_reconnect
+  </td><td>
+    info
+  </td><td>
+    The loglevel used to log the currently disconnected nodes before a
+    reconnect attempt occurs.
   </td></tr></table>
   <a name="2_nodes_set_config_discovery"></a>
   <h4>discovery:</h4>
@@ -4694,7 +4871,7 @@ curl http://localhost:6464/cloudi/api/rpc/nodes_dead.erl
   <div class="top"><a href="#CloudI">Top</a></div>
 
   <a name="2_nodes_status"></a>
-  <h3>2.18 - nodes_status (new in 1.7.5)</h3>
+  <h3>2.18 - nodes_status</h3>
 <p class="code" onclick="element_select(this);">
 curl -X POST -d '[]' http://localhost:6464/cloudi/api/rpc/nodes_status.erl
 </p>
@@ -4737,6 +4914,10 @@ curl -X POST -d "['cloudi@hostname']" http://localhost:6464/cloudi/api/rpc/nodes
     the cumulative cost of the node will also be present.
     All the status information is provided from information stored on the
     local node.
+  </p>
+  <p class="paragraph">
+    Example output is available at<br />
+    <a href="https://cloudi.org/config.html#nodes_status">https://cloudi.org/config.html#nodes_status</a>.
   </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
@@ -5165,17 +5346,12 @@ curl http://localhost:6464/cloudi/api/rpc/code_status.erl
     on the filesystem after CloudI started.  The files may have changed due to
     <a href="#2_services_update">services_update</a> use.
   </p>
+  <p class="paragraph">
+    Example output is available at<br />
+    <a href="https://cloudi.org/config.html#code_status">https://cloudi.org/config.html#code_status</a>.
+  </p>
   <div class="top"><a href="#CloudI">Top</a></div>
 
-</div>
-
-<br />
-<br />
-<br />
-<br />
-<br />
-<div id="footer">
-<a href="config.html"><img style="position: absolute; right: 10; bottom: 0;" src="images/powered_by_cloudi.png" /></a>
 </div>
 
 </body>

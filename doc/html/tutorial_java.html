@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.6.1">
+<meta name="generator" content="Asciidoctor 1.5.8">
 <meta name="description" content="Cloud Framework for fault-tolerant distributed processing with dynamic load balancing">
 <meta name="keywords" content="tutorial, java, cloud, private cloud, framework, erlang, fault tolerant, distributed systems, embarrassingly parallel, divide and conquer, cloudi">
 <title>CloudI Java Tutorial</title>
@@ -32,7 +32,7 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
     <li><a href="faq.html">FAQ</a></li>
     <li><a href="tutorials.html">Tutorials</a>
         (<a href="tutorial_java.html" class="active">Java</a>)</li>
-    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz" target="_blank">Download</a></li>
+    <li><a href="https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz" target="_blank">Download</a></li>
     <li><a href="https://github.com/CloudI/CloudI/tree/develop#readme">Source</a></li>
     <li><a href="support.html">Support</a></li>
   </ul>
@@ -40,8 +40,8 @@ Cloud<font style="font-family: serif">I</font><img width=156 height=106 src="ima
 <div id="header_document">
 <h1>CloudI Java Tutorial</h1>
 <div class="details">
-<span id="revnumber">version 1.7.5,</span>
-<span id="revdate">2018-12-18</span>
+<span id="revnumber">version 1.8.0,</span>
+<span id="revdate">2019-11-28</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle"></div>
@@ -106,7 +106,7 @@ The approach in CloudI simplifies development so the focus can remain on busines
 <p>The source code used in this tutorial is available at <a href="https://github.com/CloudI/cloudi_tutorial_java#readme" target="_blank" rel="noopener">https://github.com/CloudI/cloudi_tutorial_java</a> but we should first consider how this source code works with an overview.
 A single Java CloudI service is used to provide a REST API that handles book recommendations with the following Uniform Resource Locator (URL) path suffixes:</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 33.3333%;">
 <col style="width: 33.3333%;">
@@ -184,7 +184,7 @@ To send a service request to all destinations that match a service name requires
 <p>All services are structured for a 3 part sequence: initialization, handling-requests, and termination.
 During CloudI service initialization, data structures are initialized to confirm that the service is ready for a runtime that may last indefinitely (making the  initialization stage the most critical stage for a service&#8217;s reliability).
 Inside the service initialization the <code>subscribe</code> CloudI API function is typically called so that incoming service requests are handled after initialization is done.
-The book recommendation service initialization is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank" rel="noopener">Service.java:90-140</a>):</p>
+The book recommendation service initialization is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank" rel="noopener">Service.java:90-140</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -272,7 +272,7 @@ The CloudI service that handles the request can make the request asynchronous by
 That means that the <code>send_async</code> CloudI API function call is an asynchronous send due to not waiting for a response to occur, though a response may be sent in the future if the receiving service decides to send a response.</p>
 </div>
 <div class="paragraph">
-<p>An example of a service request handling function is below (using the "itemRefresh" function from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L163-L209" target="_blank" rel="noopener">Service.java:163-209</a>):</p>
+<p>An example of a service request handling function is below (using the "itemRefresh" function from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L163-L209" target="_blank" rel="noopener">Service.java:163-209</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -356,14 +356,15 @@ This approach keeps service development flexible so services can independently c
 <div class="sect3">
 <h4 id="creating_book_recommendations">Creating Book Recommendations</h4>
 <div class="paragraph">
-<p>Make sure you have Git, curl, Maven with Java 7 (or higher) and PostgreSQL running (&gt;= 9.3).
+<p>Make sure you have Git, curl, Maven with Java 7 (or 8) and PostgreSQL running (&gt;= 9.3).
+Later Java versions are not supported by the Lenskit dependency but are supported by the Java CloudI API.
 Make sure CloudI is installed and running, using the installation and start sequence below, if necessary:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-shell" data-lang="shell">wget https://osdn.net/dl/cloudi/cloudi-1.7.5.tar.gz
-tar zxvf cloudi-1.7.5.tar.gz
-cd cloudi-1.7.5/src
+<pre class="highlight"><code class="language-shell" data-lang="shell">wget https://osdn.net/dl/cloudi/cloudi-1.8.0.tar.gz
+tar zxvf cloudi-1.8.0.tar.gz
+cd cloudi-1.8.0/src
 ./configure
 make
 sudo make install
@@ -411,7 +412,7 @@ cat &lt;&lt; EOF &gt; tutorial.conf
          "-server "
          "-ea:org.cloudi... "
          "-Xms3g -Xmx3g "
-         "-jar $PWD/target/cloudi_tutorial_java-1.7.5-jar-with-dependencies.jar "
+         "-jar $PWD/target/cloudi_tutorial_java-1.8.0-jar-with-dependencies.jar "
          "-pgsql_hostname localhost "
          "-pgsql_port 5432 "
          "-pgsql_database cloudi_tutorial_java "
@@ -497,7 +498,7 @@ The "Rate" button will change to an "Update" button to allow the rating to chang
 <p>Set a rating for one of the items that was rated as user_id <code>1</code>.</p>
 </li>
 <li>
-<p>The Lenskit recommendation model has not yet been updated based on other user ratings to create suggestions so click the "Update Recommendation Model" button (this update action is typically done weekly or daily with online services that have many users, when Lenskit is used in production).</p>
+<p>The Lenskit recommendation model has not yet been updated based on other user ratings to create suggestions so click the "Refresh Recommendation Model" button (this update action is typically done weekly or daily with online services that have many users, when Lenskit is used in production).</p>
 </li>
 </ol>
 </div>
@@ -513,7 +514,7 @@ The "Rate" button will change to an "Update" button to allow the rating to chang
 <div class="paragraph">
 <p>To understand how book recommendations are occurring in the interface, lets start by looking closer at the REST API in the Java book recommendation service:</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
 <col style="width: 25%;">
@@ -580,14 +581,14 @@ The "Rate" button will change to an "Update" button to allow the rating to chang
 </tbody>
 </table>
 <div class="paragraph">
-<p>The table above shows the service subscriptions that occur during service initialization (in <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank" rel="noopener">Service.java:90-140</a>).
+<p>The table above shows the service subscriptions that occur during service initialization (in <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L90-L140" target="_blank" rel="noopener">Service.java:90-140</a>).
 The service configuration used for running <code>Service.java</code> was stored in the <code>tutorial.conf</code> file and it specified a total of 4 threads with <code>count_thread</code> being set to <code>4</code>.
 The service configuration did not provide a <code>count_process</code> setting so the number of OS processes defaulted to <code>1</code> (the thread count is applied to each OS process separately, i.e., <code>count_process</code> == <code>2</code> would have 2 OS processes, each with <code>4</code> threads).
 The service configuration always specifies a service name pattern prefix and that was set to "/tutorial/java/service/" in the <code>tutorial.conf</code> file.</p>
 </div>
 <div class="paragraph">
 <p>When a HTTP request (on port 8080) is made to the REST API through cloudi_service_http_cowboy1, a CloudI service request is sent based on the HTTP request URL path using the default timeout that was configured for cloudi_service_http_cowboy1 service requests (10 minutes).
-The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/html/tutorial/java/index.html#L542-L550" target="_blank" rel="noopener">index.html:542-550</a>):</p>
+The Javascript interface relies on a WebSocket connection for any usage of the REST API as shown below (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/html/tutorial/java/index.html#L542-L550" target="_blank" rel="noopener">index.html:542-550</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -617,7 +618,7 @@ The endpoints can also be used as separate URL paths to receive the same respons
 <div class="paragraph">
 <p>A WebSocket request is sent as a CloudI service request that is randomly load-balanced among the 3 threads that have subscribed with the function named "client" (in <code>Service.java</code> the subscription occurred when <code>thread_index</code> &gt; 0 with 4 threads so 3 threads handle the "client" function).
 If <code>Service.java</code> had <code>count_process</code> set to <code>2</code> in its service configuration, the service request would instead be randomly load-balanced among 6 total threads with each group of 3 in a separate OS process.
-The service request handler function "client" is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L429-L552" target="_blank" rel="noopener">Service.java:429-552</a>):</p>
+The service request handler function "client" is shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L429-L552" target="_blank" rel="noopener">Service.java:429-552</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -782,12 +783,12 @@ However, after the thread is done refreshing the items, the interface would want
 </div>
 <div class="paragraph">
 <p>To utilize the result of the "itemRefresh" function processing thread requires that the <code>poll</code> CloudI API function is interrupted to call a function that is not a service request handler (to allow usage of the <code>mcast_async</code> CloudI API function for sending a notification to all connected WebSockets, similar to what occurs with a successful "recommendation_refresh" <code>message_name</code> in the "client" function).
-For scheduling an interrupt of the <code>poll</code> function the timeout parameter is used as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/Service.java#L141-L146" target="_blank" rel="noopener">Service.java:141-146</a>):</p>
+For scheduling an interrupt of the <code>poll</code> function the timeout parameter is used as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/Service.java#L141-L146" target="_blank" rel="noopener">Service.java:141-146</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-java" data-lang="java">            // accept service requests
-            while (this.api.poll(ServiceIdle.INTERVAL) == Boolean.TRUE)
+            while (this.api.poll(ServiceIdle.INTERVAL))
             {
                 // execute ServiceIdle function objects
                 this.idle.check();
@@ -795,7 +796,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>Each interrupt of the <code>poll</code> function allows execution to check if it can run a chunk of function objects in the <code>ServiceIdle</code> class as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L9-L73" target="_blank" rel="noopener">ServiceIdle.java:9-73</a>):</p>
+<p>Each interrupt of the <code>poll</code> function allows execution to check if it can run a chunk of function objects in the <code>ServiceIdle</code> class as shown below (from <a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/ServiceIdle.java#L9-L73" target="_blank" rel="noopener">ServiceIdle.java:9-73</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -867,7 +868,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>The result of the "itemRefresh" function processing thread is stored in the <code>ServiceIdle</code> class instance within the <code>GutenbergRefresh</code> class which handles the item refresh process (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L99-L102" target="_blank" rel="noopener">GutenbergRefresh.java:99-102</a>):</p>
+<p>The result of the "itemRefresh" function processing thread is stored in the <code>ServiceIdle</code> class instance within the <code>GutenbergRefresh</code> class which handles the item refresh process (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/GutenbergRefresh.java#L99-L102" target="_blank" rel="noopener">GutenbergRefresh.java:99-102</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -878,7 +879,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 </div>
 </div>
 <div class="paragraph">
-<p>After the <code>poll</code> function is interrupted and the <code>ServiceIdle</code> class has function objects to call, the <code>GutenbergRefreshDone</code> function object is executed to send the "itemRefresh" result notification to all connected WebSockets (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.7.5/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L31-L51" target="_blank" rel="noopener">GutenbergRefreshDone.java:31-51</a>):</p>
+<p>After the <code>poll</code> function is interrupted and the <code>ServiceIdle</code> class has function objects to call, the <code>GutenbergRefreshDone</code> function object is executed to send the "itemRefresh" result notification to all connected WebSockets (<a href="https://github.com/CloudI/cloudi_tutorial_java/blob/v1.8.0/src/main/java/org/cloudi/examples/tutorial/GutenbergRefreshDone.java#L31-L51" target="_blank" rel="noopener">GutenbergRefreshDone.java:31-51</a>):</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -915,7 +916,7 @@ For scheduling an interrupt of the <code>poll</code> function the timeout parame
 <h3 id="what_if_i_want_to_create_my_own_service">What If I Want To Create My Own Service?</h3>
 <div class="paragraph">
 <p>The Java source code for this tutorial (at <a href="https://github.com/CloudI/cloudi_tutorial_java#readme" target="_blank" rel="noopener">https://github.com/CloudI/cloudi_tutorial_java</a>) can help provide a start for your CloudI Java Service development in the future.
-There is a separate documentation section for service development guidelines which contains information applicable to any programming language (<a href="tutorials.html#guidelines_for_creating_a_cloudi_service">Guidelines For Creating A CloudI Service</a>).
+There is a separate documentation section for service development guidelines which contains information applicable to any programming language (<a href="tutorials.html#guidelines_for_creating_a_cloudi_service">"Guidelines For Creating A CloudI Service"</a>).
 If you need other examples of Java services there are programming examples <a href="tutorials.html#cloudi_examples">below the tutorials list</a>.</p>
 </div>
 </div>
