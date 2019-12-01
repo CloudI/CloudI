@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2015-2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2015-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2015-2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2015-2019 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring_cloudi).
@@ -560,10 +560,10 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
              RequestPidInfo,
              InfoPidInfo,
              ProcessInfoN} = case erlang:tuple_size(State) of
-                30 -> % duo_mode == false
+                31 -> % duo_mode == false
                     state = erlang:element(1, State),
-                    RequestPid = erlang:element(23, State),
-                    InfoPid = erlang:element(24, State),
+                    RequestPid = erlang:element(24, State),
+                    InfoPid = erlang:element(25, State),
                     {RequestPidInfoValue,
                      ProcessInfo1} = if
                         RequestPid =:= undefined ->
@@ -581,20 +581,20 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                             process_info_update(InfoPid, ProcessInfo1)
                     end,
                     {?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
-                     erlang:element(9, State),             % queued
-                     erlang:element(10, State),            % queued_size
-                     erlang:element(11, State),            % queued_word_size
-                     erlang:element(12, State),            % queued_info
+                     erlang:element(10, State),            % queued
+                     erlang:element(11, State),            % queued_size
+                     erlang:element(12, State),            % queued_word_size
+                     erlang:element(13, State),            % queued_info
                      ServiceMemory,
                      ServiceMessages,
                      ServiceReductionsNow,
                      RequestPidInfoValue,
                      InfoPidInfoValue,
                      ProcessInfo2};
-                15 -> % duo_mode == true
+                16 -> % duo_mode == true
                     state_duo = erlang:element(1, State),
-                    Dispatcher =  erlang:element(13, State),
-                    RequestPid = erlang:element(14, State),
+                    Dispatcher =  erlang:element(14, State),
+                    RequestPid = erlang:element(15, State),
                     {RequestPidInfoValue,
                      ProcessInfo1} = if
                         RequestPid =:= undefined ->
@@ -608,7 +608,7 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                                         ServiceReductionsNow},
                     DispatcherOutgoing = case service_state(Dispatcher) of
                         {ok, DispatcherState} -> % gen_server/proc_lib
-                            30 = erlang:tuple_size(DispatcherState),
+                            31 = erlang:tuple_size(DispatcherState),
                             state = erlang:element(1, DispatcherState),
                             ?MAP_SIZE(erlang:element(3, DispatcherState));
                         {error, _} ->
@@ -642,10 +642,10 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                              ProcessInfo2}
                     end,
                     {DispatcherOutgoing,
-                     erlang:element(6, State),   % queued
-                     erlang:element(7, State),   % queued_size
-                     erlang:element(8, State),   % queued_word_size
-                     erlang:element(9, State),   % queued_info
+                     erlang:element(7, State),   % queued
+                     erlang:element(8, State),   % queued_size
+                     erlang:element(9, State),   % queued_word_size
+                     erlang:element(10, State),  % queued_info
                      MemoryValue,
                      MessagesValue,
                      ReductionsNowValue,
@@ -743,12 +743,12 @@ service_process_metrics({ServiceMemory, ServiceMessages, ServiceReductionsNow},
                         QueuedEmptySize, MetricPrefix) ->
     case service_state(Pid) of
         {ok, {_, State}} -> % gen_statem
-            40 = erlang:tuple_size(State),
+            41 = erlang:tuple_size(State),
             state = erlang:element(1, State),
             Outgoing = ?MAP_SIZE(erlang:element(3, State)),  % send_timeouts
-            QueuedRequests = erlang:element(9, State),       % queued
-            QueuedRequestsSize0 = erlang:element(10, State), % queued_size
-            WordSize = erlang:element(11, State),            % queued_word_size
+            QueuedRequests = erlang:element(10, State),      % queued
+            QueuedRequestsSize0 = erlang:element(11, State), % queued_size
+            WordSize = erlang:element(12, State),            % queued_word_size
             QueuedRequestsLength = cloudi_x_pqueue4:len(QueuedRequests),
             QueuedRequestsSizeN = if
                 QueuedRequestsLength > 0, QueuedRequestsSize0 == 0 ->

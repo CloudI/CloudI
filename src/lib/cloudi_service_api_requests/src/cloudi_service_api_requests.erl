@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api_requests).
@@ -378,6 +378,8 @@ convert_json_to_term(Method, Request)
 convert_json_to_term(Method, Request)
     when Method =:= services_remove;
          Method =:= services_restart;
+         Method =:= services_suspend;
+         Method =:= services_resume;
          Method =:= services_status ->
     case json_decode(Request) of
         List when is_list(List) ->

@@ -29,6 +29,8 @@ which subscribes to service names based on the functions defined in the [`cloudi
   * `"/cloudi/api/rpc/services_add.json"`
   * `"/cloudi/api/rpc/services_remove.json"`
   * `"/cloudi/api/rpc/services_restart.json"`
+  * `"/cloudi/api/rpc/services_suspend.json"`
+  * `"/cloudi/api/rpc/services_resume.json"`
   * `"/cloudi/api/rpc/services_search.json"`
   * `"/cloudi/api/rpc/services_status.json"`
   * `"/cloudi/api/rpc/services_update.json"`

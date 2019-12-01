@@ -33,7 +33,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_monitor).
@@ -49,6 +49,8 @@
          process_terminate_begin/2,
          shutdown/2,
          restart/2,
+         suspend/2,
+         resume/2,
          update/2,
          search/2,
          status/2,
@@ -262,6 +264,18 @@ restart(ServiceId, Timeout)
                                 {restart, ServiceId},
                                 Timeout)).
 
+suspend(ServiceId, Timeout)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {suspend, ServiceId},
+                                Timeout)).
+
+resume(ServiceId, Timeout)
+    when is_binary(ServiceId), byte_size(ServiceId) == 16 ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {resume, ServiceId},
+                                Timeout)).
+
 update(UpdatePlan, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {update, UpdatePlan},
@@ -360,10 +374,25 @@ handle_call({restart, ServiceId}, _,
             #state{services = Services} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
-            lists:foreach(fun(P) ->
-                erlang:exit(P, restart)
-            end, Pids),
-            {reply, ok, State};
+            {reply, restart_pids(Pids), State};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
+
+handle_call({suspend, ServiceId}, _,
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {Pids, _}} ->
+            {reply, suspend_pids(Pids, true), State};
+        error ->
+            {reply, {error, not_found}, State}
+    end;
+
+handle_call({resume, ServiceId}, _,
+            #state{services = Services} = State) ->
+    case cloudi_x_key2value:find1(ServiceId, Services) of
+        {ok, {Pids, _}} ->
+            {reply, suspend_pids(Pids, false), State};
         error ->
             {reply, {error, not_found}, State}
     end;
@@ -1610,6 +1639,29 @@ service_id_status(ServiceId, TimeNow,
             {ok, StatusN};
         error ->
             {error, {service_not_found, ServiceId}}
+    end.
+
+restart_pids([]) ->
+    ok;
+restart_pids([Pid | PidList]) ->
+    erlang:exit(Pid, restart),
+    restart_pids(PidList).
+
+suspend_pids(PidList, Suspended) ->
+    Self = self(),
+    [Pid ! {'cloudi_service_suspended', Self, Suspended} || Pid <- PidList],
+    suspend_pids_recv(PidList).
+
+suspend_pids_recv([]) ->
+    ok;
+suspend_pids_recv([Pid | PidList])
+    when is_pid(Pid) ->
+    receive
+        {'DOWN', _, 'process', Pid, _} = DOWN ->
+            self() ! DOWN,
+            suspend_pids_recv(PidList);
+        {'cloudi_service_suspended', Pid} ->
+            suspend_pids_recv(PidList)
     end.
 
 update_start(PidList, UpdatePlan) ->

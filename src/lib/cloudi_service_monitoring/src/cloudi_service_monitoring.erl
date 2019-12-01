@@ -69,7 +69,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2015-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_monitoring).

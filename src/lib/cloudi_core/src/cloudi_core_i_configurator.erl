@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configurator).
@@ -49,6 +49,8 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_suspend/2,
+         services_resume/2,
          services_update/2,
          services_search/3,
          service_ids/1,
@@ -69,6 +71,8 @@
          service_start/2,
          service_stop/3,
          service_restart/2,
+         service_suspend/2,
+         service_resume/2,
          service_update/2,
          service_update_external/5,
          service_process_init_end/1,
@@ -108,6 +112,12 @@
 -type error_reason_service_restart() ::
     {service_internal_restart_failed |
      service_external_restart_failed, any()}.
+-type error_reason_service_suspend() ::
+    {service_internal_suspend_failed |
+     service_external_suspend_failed, any()}.
+-type error_reason_service_resume() ::
+    {service_internal_resume_failed |
+     service_external_resume_failed, any()}.
 -type error_reason_service_update() ::
     {service_internal_update_failed |
      service_external_update_failed, any()}.
@@ -118,6 +128,8 @@
 -export_type([error_reason_service_start/0,
               error_reason_service_stop/0,
               error_reason_service_restart/0,
+              error_reason_service_suspend/0,
+              error_reason_service_resume/0,
               error_reason_service_update/0,
               error_reason_services_search/0,
               error_reason_code_status/0]).
@@ -173,6 +185,14 @@ services_remove(L, Timeout) ->
 services_restart(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
                                 {services_restart, L}, Timeout)).
+
+services_suspend(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_suspend, L}, Timeout)).
+
+services_resume(L, Timeout) ->
+    ?CATCH_EXIT(gen_server:call(?MODULE,
+                                {services_resume, L}, Timeout)).
 
 services_update(L, Timeout) ->
     ?CATCH_EXIT(gen_server:call(?MODULE,
@@ -308,6 +328,30 @@ service_restart(#config_service_internal{} = Service, Timeout) ->
 service_restart(#config_service_external{} = Service, Timeout) ->
     service_restart_external(Service, timeout_decr(Timeout)).
 
+-spec service_suspend(#config_service_internal{} |
+                      #config_service_external{},
+                      Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, error_reason_service_suspend()}.
+
+service_suspend(#config_service_internal{} = Service, Timeout) ->
+    service_suspend_internal(Service, timeout_decr(Timeout));
+
+service_suspend(#config_service_external{} = Service, Timeout) ->
+    service_suspend_external(Service, timeout_decr(Timeout)).
+
+-spec service_resume(#config_service_internal{} |
+                     #config_service_external{},
+                     Timeout :: pos_integer() | infinity) ->
+    ok |
+    {error, error_reason_service_resume()}.
+
+service_resume(#config_service_internal{} = Service, Timeout) ->
+    service_resume_internal(Service, timeout_decr(Timeout));
+
+service_resume(#config_service_external{} = Service, Timeout) ->
+    service_resume_external(Service, timeout_decr(Timeout)).
+
 -spec service_update(#config_service_update{},
                      Timeout :: pos_integer() | infinity) ->
     {ok, nonempty_list(cloudi_service_api:service_id())} |
@@ -414,8 +458,26 @@ handle_call({services_remove, L}, _,
 handle_call({services_restart, L}, _,
             #state{configuration = Config} = State) ->
     case cloudi_core_i_configuration:services_restart(L, Config, infinity) of
-        {ok, ConfigNew} ->
-            {reply, ok, State#state{configuration = ConfigNew}};
+        ok ->
+            {reply, ok, State};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({services_suspend, L}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:services_suspend(L, Config, infinity) of
+        ok ->
+            {reply, ok, State};
+        {error, _} = Error ->
+            {reply, Error, State}
+    end;
+
+handle_call({services_resume, L}, _,
+            #state{configuration = Config} = State) ->
+    case cloudi_core_i_configuration:services_resume(L, Config, infinity) of
+        ok ->
+            {reply, ok, State};
         {error, _} = Error ->
             {reply, Error, State}
     end;
@@ -1141,6 +1203,42 @@ service_restart_external(#config_service_external{
             ok;
         {error, Reason} ->
             {error, {service_external_restart_failed, Reason}}
+    end.
+
+service_suspend_internal(#config_service_internal{
+                             uuid = ID}, Timeout) ->
+    case cloudi_core_i_services_monitor:suspend(ID, Timeout) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            {error, {service_internal_suspend_failed, Reason}}
+    end.
+
+service_suspend_external(#config_service_external{
+                             uuid = ID}, Timeout) ->
+    case cloudi_core_i_services_monitor:suspend(ID, Timeout) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            {error, {service_external_suspend_failed, Reason}}
+    end.
+
+service_resume_internal(#config_service_internal{
+                            uuid = ID}, Timeout) ->
+    case cloudi_core_i_services_monitor:resume(ID, Timeout) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            {error, {service_internal_resume_failed, Reason}}
+    end.
+
+service_resume_external(#config_service_external{
+                            uuid = ID}, Timeout) ->
+    case cloudi_core_i_services_monitor:resume(ID, Timeout) of
+        ok ->
+            ok;
+        {error, Reason} ->
+            {error, {service_external_resume_failed, Reason}}
     end.
 
 service_update_external(CountProcess, [], [], _, _, CountProcess) ->

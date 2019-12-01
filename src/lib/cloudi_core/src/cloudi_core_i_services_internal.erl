@@ -32,7 +32,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_services_internal).
@@ -103,10 +103,13 @@
         % ( 7) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % ( 8) is the request/info pid busy?
+        % ( 8) is the request/info pid suspended?
+        suspended = false
+            :: undefined | boolean(),
+        % ( 9) is the request/info pid busy?
         queue_requests = true
             :: undefined | boolean(),
-        % ( 9) queued incoming service requests
+        % (10) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: undefined |
                cloudi_x_pqueue4:cloudi_x_pqueue4(
@@ -115,58 +118,58 @@
 
         % state record fields unique to the dispatcher Erlang process:
 
-        % (10) queued size in bytes
+        % (11) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % (11) erlang:system_info(wordsize) cached
+        % (12) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
-        % (12) queued incoming Erlang process messages
+        % (13) queued incoming Erlang process messages
         queued_info = queue:new()
             :: undefined | queue:queue(any()) |
                list(any()),
-        % (13) service module
+        % (14) service module
         module :: module(),
-        % (14) state internal to the service module source code
+        % (15) state internal to the service module source code
         service_state = undefined :: any(),
-        % (15) 0-based index of the process in all service instance processes
+        % (16) 0-based index of the process in all service instance processes
         process_index :: non_neg_integer(),
-        % (16) current count of all Erlang processes for the service instance
+        % (17) current count of all Erlang processes for the service instance
         process_count :: pos_integer(),
-        % (17) subscribe/unsubscribe name prefix set in service configuration
+        % (18) subscribe/unsubscribe name prefix set in service configuration
         prefix :: cloudi:service_name_pattern(),
-        % (18) default timeout for send_async set in service configuration
+        % (19) default timeout for send_async set in service configuration
         timeout_async
             :: cloudi_service_api:timeout_send_async_value_milliseconds(),
-        % (19) default timeout for send_sync set in service configuration
+        % (20) default timeout for send_sync set in service configuration
         timeout_sync
             :: cloudi_service_api:timeout_send_sync_value_milliseconds(),
-        % (20) cloudi_service_terminate timeout set by max_r and max_t
+        % (21) cloudi_service_terminate timeout set by max_r and max_t
         timeout_term
             :: cloudi_service_api:timeout_terminate_value_milliseconds(),
-        % (21) duo_mode_pid if duo_mode == true, else dispatcher pid
+        % (22) duo_mode_pid if duo_mode == true, else dispatcher pid
         receiver_pid :: pid(),
-        % (22) separate Erlang process for incoming throughput
+        % (23) separate Erlang process for incoming throughput
         duo_mode_pid :: undefined | pid(),
-        % (23) separate Erlang process for service request memory usage
+        % (24) separate Erlang process for service request memory usage
         request_pid = undefined :: undefined | pid(),
-        % (24) separate Erlang process for Erlang message memory usage
+        % (25) separate Erlang process for Erlang message memory usage
         info_pid = undefined :: undefined | pid(),
-        % (25) transaction id (UUIDv1) generator
+        % (26) transaction id (UUIDv1) generator
         uuid_generator :: cloudi_x_uuid:state(),
-        % (26) how service destination lookups occur for a service request send
+        % (27) how service destination lookups occur for a service request send
         dest_refresh :: cloudi_service_api:dest_refresh(),
-        % (27) cached cpg data for lazy destination refresh methods
+        % (28) cached cpg data for lazy destination refresh methods
         cpg_data
             :: undefined | cloudi_x_cpg_data:state() |
                list({cloudi:service_name_pattern(), any()}),
-        % (28) ACL lookup for denied destinations
+        % (29) ACL lookup for denied destinations
         dest_deny
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (29) ACL lookup for allowed destinations
+        % (30) ACL lookup for allowed destinations
         dest_allow
             :: undefined | cloudi_x_trie:cloudi_x_trie() |
                list({cloudi:service_name_pattern(), any()}),
-        % (30) service configuration options
+        % (31) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_internal()
@@ -184,32 +187,34 @@
         % ( 4) pending update configuration
         update_plan = undefined
             :: undefined | #config_service_update{},
-        % ( 5) is the request pid busy?
+        % ( 5) is the request pid suspended?
+        suspended = false :: boolean(),
+        % ( 6) is the request pid busy?
         queue_requests = true :: boolean(),
-        % ( 6) queued incoming service requests
+        % ( 7) queued incoming service requests
         queued = cloudi_x_pqueue4:new()
             :: cloudi_x_pqueue4:cloudi_x_pqueue4(
                    cloudi:message_service_request()) |
                list({cloudi:priority_value(), any()}),
-        % ( 7) queued size in bytes
+        % ( 8) queued size in bytes
         queued_size = 0 :: non_neg_integer(),
-        % ( 8) erlang:system_info(wordsize) cached
+        % ( 9) erlang:system_info(wordsize) cached
         queued_word_size :: pos_integer(),
-        % ( 9) queued incoming Erlang process messages
+        % (10) queued incoming Erlang process messages
         queued_info = queue:new()
             :: queue:queue(any()) |
                list(any()),
-        % (10) service module
+        % (11) service module
         module :: module(),
-        % (11) state internal to the service module source code
+        % (12) state internal to the service module source code
         service_state = undefined :: any(),
-        % (12) cloudi_service_terminate timeout set by max_r and max_t
+        % (13) cloudi_service_terminate timeout set by max_r and max_t
         timeout_term :: pos_integer(),
-        % (13) separate Erlang process for outgoing throughput
+        % (14) separate Erlang process for outgoing throughput
         dispatcher :: pid(),
-        % (14) separate Erlang process for service request memory usage
+        % (15) separate Erlang process for service request memory usage
         request_pid = undefined :: undefined | pid(),
-        % (15) service configuration options
+        % (16) service configuration options
         options
             :: #config_service_options{} |
                cloudi_service_api:service_options_internal()
@@ -1827,6 +1832,22 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
+handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
+            #state{dispatcher = Dispatcher,
+                   suspended = SuspendedOld,
+                   duo_mode_pid = undefined} = State) ->
+    SuspendPending ! {'cloudi_service_suspended', Dispatcher},
+    NewState = if
+        Suspended =:= SuspendedOld ->
+            State;
+        Suspended =:= true ->
+            State#state{suspended = true,
+                        queue_requests = true};
+        Suspended =:= false ->
+            process_queues(State#state{suspended = false})
+    end,
+    hibernate_check({noreply, NewState});
+
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
             #state{dispatcher = Dispatcher,
                    update_plan = undefined,
@@ -3109,6 +3130,8 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             State#state{update_plan = NewUpdatePlan}
     end;
+process_queues(#state{suspended = true} = State) ->
+    State;
 process_queues(State) ->
     % info messages should be processed before service requests
     NewState = process_queue_info(State),
@@ -3928,6 +3951,21 @@ duo_handle_info('cloudi_rate_request_max_rate',
      State#state_duo{options = ConfigOptions#config_service_options{
                          rate_request_max = NewRateRequest}}};
 
+duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
+                #state_duo{duo_mode_pid = DuoModePid,
+                           suspended = SuspendedOld} = State) ->
+    SuspendPending ! {'cloudi_service_suspended', DuoModePid},
+    NewState = if
+        Suspended =:= SuspendedOld ->
+            State;
+        Suspended =:= true ->
+            State#state_duo{suspended = true,
+                            queue_requests = true};
+        Suspended =:= false ->
+            duo_process_queues(State#state_duo{suspended = false})
+    end,
+    {noreply, NewState};
+
 duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                 #state_duo{duo_mode_pid = DuoModePid,
                            update_plan = undefined,
@@ -4147,6 +4185,8 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
         UpdateNow =:= undefined ->
             NewState
     end;
+duo_process_queues(#state_duo{suspended = true} = State) ->
+    State;
 duo_process_queues(State) ->
     % info messages should be processed before service requests
     NewState = duo_process_queue_info(State),

@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2009-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_configuration).
@@ -44,6 +44,8 @@
          services_add/3,
          services_remove/3,
          services_restart/3,
+         services_suspend/3,
+         services_resume/3,
          services_update/3,
          services_search/2,
          service_ids/1,
@@ -155,6 +157,12 @@
     {service_invalid |
      service_not_found, any()}.
 -type error_reason_services_restart_configuration() ::
+    {service_invalid |
+     service_not_found, any()}.
+-type error_reason_services_suspend_configuration() ::
+    {service_invalid |
+     service_not_found, any()}.
+-type error_reason_services_resume_configuration() ::
     {service_invalid |
      service_not_found, any()}.
 -type error_reason_services_update_configuration() ::
@@ -281,6 +289,12 @@
 -type error_reason_services_restart() ::
     error_reason_services_restart_configuration() |
     cloudi_core_i_configurator:error_reason_service_restart().
+-type error_reason_services_suspend() ::
+    error_reason_services_suspend_configuration() |
+    cloudi_core_i_configurator:error_reason_service_suspend().
+-type error_reason_services_resume() ::
+    error_reason_services_resume_configuration() |
+    cloudi_core_i_configurator:error_reason_service_resume().
 -type error_reason_services_update() ::
     error_reason_services_update_configuration().
 -type error_reason_services_search() ::
@@ -304,6 +318,8 @@
               error_reason_services_add/0,
               error_reason_services_remove/0,
               error_reason_services_restart/0,
+              error_reason_services_suspend/0,
+              error_reason_services_resume/0,
               error_reason_services_update/0,
               error_reason_services_search/0,
               error_reason_nodes_add/0,
@@ -552,19 +568,64 @@ services_remove(Value, _, _) ->
 -spec services_restart(Value :: nonempty_list(cloudi_service_api:service_id()),
                        Config :: #config{},
                        Timeout :: api_timeout_milliseconds()) ->
-    {ok, #config{}} |
+    ok |
     {error, error_reason_services_restart()}.
 
-services_restart([ID | _] = Value,
-                 #config{services = Services} = Config, Timeout)
+services_restart([ID | _] = Value, #config{services = Services}, Timeout)
     when is_binary(ID), byte_size(ID) == 16 ->
-    case services_restart_uuid(Value, Services, Timeout) of
+    case services_change_uuid(Value, Services, service_restart, Timeout) of
         ok ->
-            {ok, Config};
+            ok;
         {error, _} = Error ->
             Error
     end;
 services_restart(Value, _, _) ->
+    {error, {service_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Suspend services based on their UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_suspend(Value :: nonempty_list(cloudi_service_api:service_id()),
+                       Config :: #config{},
+                       Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error, error_reason_services_suspend()}.
+
+services_suspend([ID | _] = Value, #config{services = Services}, Timeout)
+    when is_binary(ID), byte_size(ID) == 16 ->
+    case services_change_uuid(Value, Services, service_suspend, Timeout) of
+        ok ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end;
+services_suspend(Value, _, _) ->
+    {error, {service_invalid, Value}}.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Resume services based on their UUID.===
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_resume(Value :: nonempty_list(cloudi_service_api:service_id()),
+                      Config :: #config{},
+                      Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error, error_reason_services_resume()}.
+
+services_resume([ID | _] = Value, #config{services = Services}, Timeout)
+    when is_binary(ID), byte_size(ID) == 16 ->
+    case services_change_uuid(Value, Services, service_resume, Timeout) of
+        ok ->
+            ok;
+        {error, _} = Error ->
+            Error
+    end;
+services_resume(Value, _, _) ->
     {error, {service_invalid, Value}}.
 
 %%-------------------------------------------------------------------------
@@ -3592,17 +3653,18 @@ services_remove_all([Service | RemoveServices], Services, Timeout) ->
             Error
     end.
 
-services_restart_uuid(Value, Services, Timeout) ->
-    services_restart_uuid(Value, [], Services, Timeout).
+services_change_uuid(Value, Services, Function, Timeout) ->
+    services_change_uuid(Value, [], Services, Function, Timeout).
 
-services_restart_uuid([], RestartServices, _, Timeout) ->
-    case services_restart_all(lists:reverse(RestartServices), Timeout) of
+services_change_uuid([], ChangeServices, _, Function, Timeout) ->
+    case services_change_all(lists:reverse(ChangeServices),
+                             Function, Timeout) of
         ok ->
             ok;
         {error, _} = Error ->
             Error
     end;
-services_restart_uuid([ID | IDs], RestartServices, Services, Timeout)
+services_change_uuid([ID | IDs], ChangeServices, Services, Function, Timeout)
     when is_binary(ID), byte_size(ID) == 16 ->
     ServiceList = lists:filter(fun(S) ->
         case S of
@@ -3618,18 +3680,18 @@ services_restart_uuid([ID | IDs], RestartServices, Services, Timeout)
         [] ->
             {error, {service_not_found, ID}};
         [Service] ->
-            services_restart_uuid(IDs, [Service | RestartServices],
-                                  Services, Timeout)
+            services_change_uuid(IDs, [Service | ChangeServices],
+                                 Services, Function, Timeout)
     end;
-services_restart_uuid([ID | _], _, _, _) ->
+services_change_uuid([ID | _], _, _, _, _) ->
     {error, {service_invalid, ID}}.
 
-services_restart_all([], _) ->
+services_change_all([], _, _) ->
     ok;
-services_restart_all([Service | RestartServices], Timeout) ->
-    case cloudi_core_i_configurator:service_restart(Service, Timeout) of
+services_change_all([Service | ChangeServices], Function, Timeout) ->
+    case cloudi_core_i_configurator:Function(Service, Timeout) of
         ok ->
-            services_restart_all(RestartServices, Timeout);
+            services_change_all(ChangeServices, Function, Timeout);
         {error, _} = Error ->
             Error
     end.

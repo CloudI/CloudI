@@ -3,6 +3,8 @@
 
 2019-11-30 Michael Truog   <mjtruog at protonmail dot com>
 
+    * Add the CloudI Service API services_suspend and services_resume
+      functions to pause the processing of incoming service messages
     * Fix cloudi_service_shell directory setting when
       user is provided with login as true
     * Add cloudi_service_map_reduce suspend/resume functionality

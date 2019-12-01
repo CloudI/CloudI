@@ -31,7 +31,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2011-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_api).
@@ -45,6 +45,8 @@
          services_add/2,
          services_remove/2,
          services_restart/2,
+         services_suspend/2,
+         services_resume/2,
          services_search/2,
          services_status/2,
          services_update/2,
@@ -1146,6 +1148,64 @@ services_restart([_ | _] = L, Timeout)
         {ok, ServiceIdsValid} ->
             cloudi_core_i_configurator:services_restart(ServiceIdsValid,
                                                         Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Suspend service instances.===
+%% Provide the Service UUIDs for the services that should be suspended.
+%% The Service UUID is shown in the output of services/1.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_suspend(L :: nonempty_list(binary() | string()),
+                       Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} |
+     cloudi_core_i_configuration:error_reason_services_suspend()}.
+
+services_suspend([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    case service_ids_convert(L) of
+        {ok, ServiceIdsValid} ->
+            cloudi_core_i_configurator:services_suspend(ServiceIdsValid,
+                                                        Timeout);
+        {error, _} = Error ->
+            Error
+    end.
+
+%%-------------------------------------------------------------------------
+%% @doc
+%% ===Resume service instances.===
+%% Provide the Service UUIDs for the services that should be resumed.
+%% The Service UUID is shown in the output of services/1.
+%% @end
+%%-------------------------------------------------------------------------
+
+-spec services_resume(L :: nonempty_list(binary() | string()),
+                      Timeout :: api_timeout_milliseconds()) ->
+    ok |
+    {error,
+     timeout | noproc |
+     {service_id_invalid, any()} |
+     cloudi_core_i_configuration:error_reason_services_resume()}.
+
+services_resume([_ | _] = L, Timeout)
+    when ((is_integer(Timeout) andalso
+           (Timeout > ?TIMEOUT_DELTA) andalso
+           (Timeout =< ?TIMEOUT_MAX_ERLANG)) orelse
+          (Timeout =:= infinity)) ->
+    case service_ids_convert(L) of
+        {ok, ServiceIdsValid} ->
+            cloudi_core_i_configurator:services_resume(ServiceIdsValid,
+                                                       Timeout);
         {error, _} = Error ->
             Error
     end.
