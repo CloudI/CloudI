@@ -1,6 +1,12 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-11-30 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Fix cloudi_service_shell directory setting when
+      user is provided with login as true
+    * Add cloudi_service_map_reduce suspend/resume functionality
+
 2019-11-28 Michael Truog   <mjtruog at protonmail dot com>
 
     * CloudI version 1.8.0 released

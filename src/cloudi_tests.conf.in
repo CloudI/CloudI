@@ -782,7 +782,7 @@
     %    none,
     %    5000, 5000, 5000, undefined, undefined, 1, 5, 300, []},
     % the service below manages the Hexidecimal PI test
-    [{prefix, "/tests/"},
+    [{prefix, "/tests/hexpi_control"},
      {module, cloudi_service_map_reduce},
      {args, [{map_reduce, cloudi_service_test_hexpi}, % map-reduce module
              {map_reduce_args, [1, 65536]},  % index start, index end

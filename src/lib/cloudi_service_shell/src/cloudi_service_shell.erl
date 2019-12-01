@@ -30,7 +30,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_shell).
@@ -78,8 +78,8 @@
 -type service_name() :: cloudi:service_name().
 -type timeout_milliseconds() :: cloudi:timeout_milliseconds().
 -type module_response(Result) ::
-    {{ok, Result}, NewAgent :: agent()} |
-    {{error, cloudi:error_reason_sync()}, NewAgent :: agent()}.
+    {{ok, Result}, AgentNew :: agent()} |
+    {{error, cloudi:error_reason_sync()}, AgentNew :: agent()}.
 
 -spec exec(Agent :: agent(),
            Prefix :: service_name(),
@@ -213,11 +213,11 @@ env_reset(L) ->
      {"RUN_ERL_LOG_MAXSIZE", false},
      {"TMPDIR", false} | L].
 
-env_set([], ShellInput) ->
-    ShellInput;
-env_set([{[_ | _] = Key, Value} | L], ShellInput) ->
+env_set([], Directory, ShellInput) ->
+    [["cd ", Directory, $\n] | ShellInput];
+env_set([{[_ | _] = Key, Value} | L], Directory, ShellInput) ->
     [[Key, $=, Value, "; export ", Key, $\n] |
-     env_set(L, ShellInput)].
+     env_set(L, Directory, ShellInput)].
 
 request(Exec, #state{file_path = FilePath,
                      directory = Directory,
@@ -227,14 +227,13 @@ request(Exec, #state{file_path = FilePath,
                      su = SUPath,
                      login = Login}) ->
     ShellInput0 = ["exec ", unicode:characters_to_binary(Exec, utf8), $\n],
-    PortOptions0 = [{cd, Directory},
-                    stream, binary, stderr_to_stdout, exit_status],
+    PortOptions0 = [stream, binary, stderr_to_stdout, exit_status],
     {ShellInputN, PortOptionsN} = if
         EnvPort =:= true ->
             {ShellInput0,
-             [{env, Env} | PortOptions0]};
+             [{env, Env}, {cd, Directory} | PortOptions0]};
         EnvPort =:= false ->
-            {env_set(Env, ShellInput0),
+            {env_set(Env, Directory, ShellInput0),
              PortOptions0}
     end,
     {ShellExecutable, ShellArgs} = if

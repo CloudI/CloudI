@@ -32,13 +32,19 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2012-2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_map_reduce).
 -author('mjtruog at protonmail dot com').
 
 -behaviour(cloudi_service).
+
+%% external interface
+-export([resume/2,
+         resume/3,
+         suspend/2,
+         suspend/3]).
 
 %% cloudi_service callbacks
 -export([cloudi_service_init/4,
@@ -64,7 +70,8 @@
         map_reduce_module :: module(),
         map_reduce_state :: any(),
         map_count :: pos_integer(),
-        map_requests :: #{cloudi_service:trans_id() := map_send_args()}
+        map_requests :: #{cloudi_service:trans_id() := map_send_args()},
+        suspend = false :: boolean()
     }).
 
 -record(init_begin,
@@ -88,10 +95,6 @@
 -define(INFO_RETRY_INTERVAL, 500). % milliseconds
 
 %%%------------------------------------------------------------------------
-%%% External interface functions
-%%%------------------------------------------------------------------------
-
-%%%------------------------------------------------------------------------
 %%% Callback functions from behavior
 %%%------------------------------------------------------------------------
 
@@ -107,13 +110,13 @@
 
 -callback cloudi_service_map_reduce_send(ModuleReduceState :: any(),
                                          Dispatcher :: pid()) ->
-    {'ok', SendArgs :: map_send_args(), NewModuleReduceState :: any()} |
-    {'done', NewModuleReduceState :: any()} |
+    {'ok', SendArgs :: map_send_args(), ModuleReduceStateNew :: any()} |
+    {'done', ModuleReduceStateNew :: any()} |
     {'error', Reason :: any()}.
 
 -callback cloudi_service_map_reduce_resend(SendArgs :: map_send_args(),
                                            ModuleReduceState :: any()) ->
-    {'ok', NewSendArgs :: map_send_args(), NewModuleReduceState :: any()} |
+    {'ok', SendArgsNew :: map_send_args(), ModuleReduceStateNew :: any()} |
     {'error', Reason :: any()}.
 
 -callback cloudi_service_map_reduce_recv(SendArgs :: map_send_args(),
@@ -123,22 +126,63 @@
                                          TransId :: binary(),
                                          ModuleReduceState :: any(),
                                          Dispatcher :: pid()) ->
-    {'ok', NewModuleReduceState :: any()} |
-    {'done', NewModuleReduceState :: any()} |
+    {'ok', ModuleReduceStateNew :: any()} |
+    {'done', ModuleReduceStateNew :: any()} |
     {'error', Reason :: any()}.
 
 -callback cloudi_service_map_reduce_info(Request :: any(),
                                          ModuleReduceState :: any(),
                                          Dispatcher :: pid()) ->
-    {'ok', NewModuleReduceState :: any()} |
-    {'done', NewModuleReduceState :: any()} |
+    {'ok', ModuleReduceStateNew :: any()} |
+    {'done', ModuleReduceStateNew :: any()} |
     {'error', Reason :: any()}.
+
+%%%------------------------------------------------------------------------
+%%% External interface functions
+%%%------------------------------------------------------------------------
+
+-type agent() :: cloudi:agent().
+-type service_name() :: cloudi:service_name().
+-type timeout_milliseconds() :: cloudi:timeout_milliseconds().
+-type module_response(Result) ::
+    {{ok, Result}, AgentNew :: agent()} |
+    {{error, cloudi:error_reason_sync()}, AgentNew :: agent()}.
+
+-spec resume(Agent :: agent(),
+             Prefix :: service_name()) ->
+    module_response(ok | {error, any()}).
+
+resume(Agent, Prefix) ->
+    cloudi:send_sync(Agent, Prefix, resume).
+
+-spec resume(Agent :: agent(),
+             Prefix :: service_name(),
+             Timeout :: timeout_milliseconds()) ->
+    module_response(ok | {error, any()}).
+
+resume(Agent, Prefix, Timeout) ->
+    cloudi:send_sync(Agent, Prefix, resume, Timeout).
+
+-spec suspend(Agent :: agent(),
+              Prefix :: service_name()) ->
+    module_response(ok | {error, any()}).
+
+suspend(Agent, Prefix) ->
+    cloudi:send_sync(Agent, Prefix, suspend).
+
+-spec suspend(Agent :: agent(),
+              Prefix :: service_name(),
+              Timeout :: timeout_milliseconds()) ->
+    module_response(ok | {error, any()}).
+
+suspend(Agent, Prefix, Timeout) ->
+    cloudi:send_sync(Agent, Prefix, suspend, Timeout).
 
 %%%------------------------------------------------------------------------
 %%% Callback functions from cloudi_service
 %%%------------------------------------------------------------------------
 
-cloudi_service_init(Args, Prefix, Timeout, _Dispatcher) ->
+cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Defaults = [
         {map_reduce,             ?DEFAULT_MAP_REDUCE_MODULE},
         {map_reduce_args,        ?DEFAULT_MAP_REDUCE_ARGUMENTS},
@@ -171,13 +215,14 @@ cloudi_service_init(Args, Prefix, Timeout, _Dispatcher) ->
                            map_reduce_module = MapReduceModule,
                            map_reduce_args = MapReduceArgs,
                            concurrency = Concurrency},
+    cloudi_service:subscribe(Dispatcher, ""),
     {ok, undefined}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
-                              _RequestInfo, _Request,
+                              _RequestInfo, Request,
                               _Timeout, _Priority, _TransId, _Pid,
-                              State, _Dispatcher) ->
-    {reply, <<>>, State}.
+                              State, Dispatcher) ->
+    request(Request, State, Dispatcher).
 
 cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
                            undefined, Dispatcher) ->
@@ -199,7 +244,6 @@ cloudi_service_handle_info(#init_begin{service = Service} = InitBegin,
         true = erlang:unlink(Service)
     end),
     {noreply, undefined};
-
 cloudi_service_handle_info(#init_end{state = State,
                                      error = Error},
                            undefined, _Dispatcher) ->
@@ -209,13 +253,11 @@ cloudi_service_handle_info(#init_end{state = State,
         true ->
             {stop, Error, State}
     end;
-
 cloudi_service_handle_info(Request, undefined, Dispatcher) ->
     % waiting for #init_end{} still
     erlang:send_after(?INFO_RETRY_INTERVAL,
                       cloudi_service:self(Dispatcher), Request),
     {noreply, undefined};
-
 cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
                            #state{map_reduce_module = MapReduceModule,
                                   map_reduce_state = MapReduceState,
@@ -223,19 +265,16 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
                            Dispatcher) ->
     case maps:find(TransId, MapRequests) of
         {ok, [_ | SendArgs]} ->
-            NextMapRequests = maps:remove(TransId, MapRequests),
-            case MapReduceModule:cloudi_service_map_reduce_resend(
-                [Dispatcher | SendArgs], MapReduceState) of
-                {ok, NewSendArgs, NewMapReduceState} ->
-                    case erlang:apply(cloudi_service, send_async_active,
-                                      NewSendArgs) of
-                        {ok, NewTransId} ->
-                            NewMapRequests = maps:put(NewTransId,
-                                                      NewSendArgs,
-                                                      NextMapRequests),
+            case MapReduceModule:
+                 cloudi_service_map_reduce_resend([Dispatcher | SendArgs],
+                                                  MapReduceState) of
+                {ok, SendArgsNew, MapReduceStateNew} ->
+                    case map_send_request(SendArgsNew,
+                                          maps:remove(TransId, MapRequests)) of
+                        {ok, MapRequestsNew} ->
                             {noreply,
-                             State#state{map_reduce_state = NewMapReduceState,
-                                         map_requests = NewMapRequests}};
+                             State#state{map_reduce_state = MapReduceStateNew,
+                                         map_requests = MapRequestsNew}};
                         {error, _} = Error ->
                             {stop, Error, State}
                     end;
@@ -245,7 +284,6 @@ cloudi_service_handle_info(#timeout_async_active{trans_id = TransId} = Request,
         error ->
             cloudi_service_map_reduce_info(Request, State, Dispatcher)
     end;
-
 cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                                                 response = Response,
                                                 timeout = Timeout,
@@ -256,37 +294,27 @@ cloudi_service_handle_info(#return_async_active{response_info = ResponseInfo,
                            Dispatcher) ->
     case maps:find(TransId, MapRequests) of
         {ok, [_ | SendArgs]} ->
-            case MapReduceModule:cloudi_service_map_reduce_recv(
-                [Dispatcher | SendArgs], ResponseInfo, Response,
-                Timeout, TransId, MapReduceState, Dispatcher) of
-                {ok, NextMapReduceState} ->
-                    case map_send(maps:remove(TransId, MapRequests),
-                                  Dispatcher, MapReduceModule,
-                                  NextMapReduceState) of
-                        {ok, NewMapRequests, NewMapReduceState} ->
-                            {noreply,
-                             State#state{map_reduce_state = NewMapReduceState,
-                                         map_requests = NewMapRequests}};
-                        {error, _} = Error ->
-                            {stop, Error, State}
-                    end;
-                {done, NewMapReduceState} ->
-                    NewMapRequests = maps:remove(TransId, MapRequests),
-                    NewState = State#state{map_reduce_state = NewMapReduceState,
-                                           map_requests = NewMapRequests},
-                    case maps:size(NewMapRequests) of
-                        0 ->
-                            {stop, shutdown, NewState};
-                        _ ->
-                            {noreply, NewState}
-                    end;
+            case MapReduceModule:
+                 cloudi_service_map_reduce_recv([Dispatcher | SendArgs],
+                                                ResponseInfo, Response,
+                                                Timeout, TransId,
+                                                MapReduceState, Dispatcher) of
+                {ok, MapReduceStateNew} ->
+                    MapRequestsNew = maps:remove(TransId, MapRequests),
+                    StateNew = State#state{map_reduce_state = MapReduceStateNew,
+                                           map_requests = MapRequestsNew},
+                    map_check_continue(StateNew, Dispatcher);
+                {done, MapReduceStateNew} ->
+                    MapRequestsNew = maps:remove(TransId, MapRequests),
+                    StateNew = State#state{map_reduce_state = MapReduceStateNew,
+                                           map_requests = MapRequestsNew},
+                    map_check_done(StateNew);
                 {error, _} = Error ->
                     {stop, Error, State}
             end;
         error ->
             cloudi_service_map_reduce_info(Request, State, Dispatcher)
     end;
-
 cloudi_service_handle_info(Request, State, Dispatcher) ->
     cloudi_service_map_reduce_info(Request, State, Dispatcher).
 
@@ -316,21 +344,20 @@ init(#init_begin{prefix = Prefix,
                  concurrency = Concurrency},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
-    case MapReduceModule:cloudi_service_map_reduce_new(MapReduceArgs,
-                                                       MapCount,
-                                                       Prefix,
-                                                       Timeout,
-                                                       Dispatcher) of
+    case MapReduceModule:
+         cloudi_service_map_reduce_new(MapReduceArgs, MapCount,
+                                       Prefix, Timeout, Dispatcher) of
         {ok, MapReduceState} ->
-            case map_send(MapCount, #{}, Dispatcher,
-                          MapReduceModule, MapReduceState) of
-                {ok, MapRequests, NewMapReduceState} ->
-                    {noreply, #state{time_start = TimeStart,
-                                     log_execution_time = LogExecutionTime,
-                                     map_reduce_module = MapReduceModule,
-                                     map_reduce_state = NewMapReduceState,
-                                     map_count = MapCount,
-                                     map_requests = MapRequests}};
+            case map_send(MapCount, #{},
+                          MapReduceModule, MapReduceState, Dispatcher) of
+                {ok, MapRequests, MapReduceStateNew} ->
+                    {noreply,
+                     #state{time_start = TimeStart,
+                            log_execution_time = LogExecutionTime,
+                            map_reduce_module = MapReduceModule,
+                            map_reduce_state = MapReduceStateNew,
+                            map_count = MapCount,
+                            map_requests = MapRequests}};
                 {error, _} = Error ->
                     {stop, Error, undefined}
             end;
@@ -338,50 +365,96 @@ init(#init_begin{prefix = Prefix,
             {stop, Error, undefined}
     end.
 
-map_send(MapRequests, Dispatcher, MapReduceModule, MapReduceState) ->
-    map_send(1, MapRequests, Dispatcher, MapReduceModule, MapReduceState).
+request(_, undefined, _Dispatcher) ->
+    {reply, {error, init_pending}, undefined};
+request(suspend,
+        #state{map_reduce_module = MapReduceModule,
+               suspend = false} = State, _Dispatcher) ->
+    ?LOG_INFO("~p suspended", [MapReduceModule]),
+    {reply, ok, State#state{suspend = true}};
+request(resume,
+        #state{map_reduce_module = MapReduceModule,
+               map_reduce_state = MapReduceState,
+               map_count = MapCount,
+               map_requests = MapRequests,
+               suspend = true} = State, Dispatcher) ->
+    case map_send(MapCount - maps:size(MapRequests), MapRequests,
+                  MapReduceModule, MapReduceState, Dispatcher) of
+        {ok, MapRequestsNew, MapReduceStateNew} ->
+            ?LOG_INFO("~p resumed", [MapReduceModule]),
+            {reply, ok,
+             State#state{map_reduce_state = MapReduceStateNew,
+                         map_requests = MapRequestsNew,
+                         suspend = false}};
+        {error, _} = Error ->
+            {stop, Error, State}
+    end;
+request(_, State, _Dispatcher) ->
+    {reply, ok, State}.
 
-map_send(0, MapRequests, _Dispatcher, _MapReduceModule, MapReduceState) ->
+cloudi_service_map_reduce_info(Request, State, Dispatcher) ->
+    #state{map_reduce_module = MapReduceModule,
+           map_reduce_state = MapReduceState} = State,
+    case MapReduceModule:
+         cloudi_service_map_reduce_info(Request, MapReduceState, Dispatcher) of
+        {ok, MapReduceStateNew} ->
+            {noreply, State#state{map_reduce_state = MapReduceStateNew}};
+        {done, MapReduceStateNew} ->
+            map_check_done(State#state{map_reduce_state = MapReduceStateNew});
+        {error, _} = Error ->
+            {stop, Error, State}
+    end.
+
+map_send(MapRequests, MapReduceModule, MapReduceState, Dispatcher) ->
+    map_send(1, MapRequests, MapReduceModule, MapReduceState, Dispatcher).
+
+map_send(0, MapRequests, _MapReduceModule, MapReduceState, _Dispatcher) ->
     {ok, MapRequests, MapReduceState};
-
-map_send(Count, MapRequests, Dispatcher, MapReduceModule, MapReduceState) ->
-    case MapReduceModule:cloudi_service_map_reduce_send(MapReduceState,
-                                                        Dispatcher) of
-        {ok, SendArgs, NewMapReduceState} ->
-            case erlang:apply(cloudi_service, send_async_active, SendArgs) of
-                {ok, TransId} ->
-                    map_send(Count - 1,
-                             maps:put(TransId, SendArgs, MapRequests),
-                             Dispatcher, MapReduceModule, NewMapReduceState);
+map_send(Count, MapRequests, MapReduceModule, MapReduceState, Dispatcher) ->
+    case MapReduceModule:
+         cloudi_service_map_reduce_send(MapReduceState, Dispatcher) of
+        {ok, SendArgs, MapReduceStateNew} ->
+            case map_send_request(SendArgs, MapRequests) of
+                {ok, MapRequestsNew} ->
+                    map_send(Count - 1, MapRequestsNew,
+                             MapReduceModule, MapReduceStateNew, Dispatcher);
                 {error, _} = Error ->
                     Error
             end;
-        {done, NewMapReduceState} ->
-            {ok, MapRequests, NewMapReduceState};
+        {done, MapReduceStateNew} ->
+            {ok, MapRequests, MapReduceStateNew};
         {error, _} = Error ->
             Error
     end.
 
-cloudi_service_map_reduce_info(Request,
-                               #state{map_reduce_module = MapReduceModule,
-                                      map_reduce_state = MapReduceState,
-                                      map_requests = MapRequests} = State,
-                               Dispatcher) ->
-    case MapReduceModule:cloudi_service_map_reduce_info(Request,
-                                                        MapReduceState,
-                                                        Dispatcher) of
-        {ok, NewMapReduceState} ->
-            {noreply, State#state{map_reduce_state = NewMapReduceState}};
-        {done, NewMapReduceState} ->
-            NewState = State#state{map_reduce_state = NewMapReduceState},
-            case maps:size(MapRequests) of
-                0 ->
-                    {stop, shutdown, NewState};
-                _ ->
-                    {noreply, NewState}
-            end;
+map_send_request(SendArgs, MapRequests) ->
+    case erlang:apply(cloudi_service, send_async_active, SendArgs) of
+        {ok, TransId} ->
+            {ok, maps:put(TransId, SendArgs, MapRequests)};
+        {error, _} = Error ->
+            Error
+    end.
+
+map_check_continue(#state{suspend = true} = State, _Dispatcher) ->
+    {noreply, State};
+map_check_continue(#state{map_reduce_module = MapReduceModule,
+                          map_reduce_state = MapReduceState,
+                          map_requests = MapRequests} = State, Dispatcher) ->
+    case map_send(MapRequests, MapReduceModule, MapReduceState, Dispatcher) of
+        {ok, MapRequestsNew, MapReduceStateNew} ->
+            {noreply,
+             State#state{map_reduce_state = MapReduceStateNew,
+                         map_requests = MapRequestsNew}};
         {error, _} = Error ->
             {stop, Error, State}
+    end.
+
+map_check_done(#state{map_requests = MapRequests} = State) ->
+    case maps:size(MapRequests) of
+        0 ->
+            {stop, shutdown, State};
+        _ ->
+            {noreply, State}
     end.
 
 hours_elapsed(Seconds1, Seconds0)

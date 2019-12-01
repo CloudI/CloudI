@@ -105,7 +105,7 @@
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
 %%% @copyright 2019 Michael Truog
-%%% @version 1.8.0 {@date} {@time}
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_cron).
@@ -228,6 +228,8 @@ new([_ | _] = Input) ->
                   parse_month(Month),
                   parse_day_of_week(DayOfWeek),
                   parse_year(Year)},
+    true = Expression /= {undefined, undefined, undefined,
+                          undefined, undefined, undefined, undefined},
     #cloudi_cron{expression_strings = ExpressionStrings,
                  expression = Expression}.
 
