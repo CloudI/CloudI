@@ -57,6 +57,7 @@
 
 -define(DEFAULT_MAP_REDUCE_MODULE,     undefined).
 -define(DEFAULT_MAP_REDUCE_ARGUMENTS,         []).
+-define(DEFAULT_NAME,               "controller").
 -define(DEFAULT_CONCURRENCY,                 1.0). % schedulers multiplier
 -define(DEFAULT_LOG_EXECUTION_TIME,         true).
 
@@ -186,9 +187,10 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Defaults = [
         {map_reduce,             ?DEFAULT_MAP_REDUCE_MODULE},
         {map_reduce_args,        ?DEFAULT_MAP_REDUCE_ARGUMENTS},
+        {name,                   ?DEFAULT_NAME},
         {concurrency,            ?DEFAULT_CONCURRENCY},
         {log_execution_time,     ?DEFAULT_LOG_EXECUTION_TIME}],
-    [MapReduceModule, MapReduceArgs, Concurrency, LogExecutionTime] =
+    [MapReduceModule, MapReduceArgs, Name, Concurrency, LogExecutionTime] =
         cloudi_proplists:take_values(Defaults, Args),
     TimeStart = cloudi_timestamp:seconds_monotonic(),
     true = is_atom(MapReduceModule) andalso (MapReduceModule /= undefined),
@@ -215,7 +217,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                            map_reduce_module = MapReduceModule,
                            map_reduce_args = MapReduceArgs,
                            concurrency = Concurrency},
-    cloudi_service:subscribe(Dispatcher, ""),
+    cloudi_service:subscribe(Dispatcher, Name),
     {ok, undefined}.
 
 cloudi_service_handle_request(_RequestType, _Name, _Pattern,
