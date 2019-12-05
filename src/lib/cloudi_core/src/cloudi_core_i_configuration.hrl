@@ -621,7 +621,7 @@
         update_start = true
             :: boolean(),
         % is a service request currently being handled?
-        queue_requests = undefined
+        process_busy = undefined
             :: undefined | boolean()
     }).
 

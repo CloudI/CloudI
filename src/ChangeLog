@@ -5,6 +5,8 @@
 
     * Add cloudi_service_map_reduce name argument for the
       suspend/resume service name
+    * Fix CloudI Service API services_suspend interaction with
+      services_update
 
 2019-11-30 Michael Truog   <mjtruog at protonmail dot com>
 

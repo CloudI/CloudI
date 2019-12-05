@@ -107,7 +107,8 @@
         update_plan = undefined
             :: undefined | #config_service_update{},
         % ( 8) is the external service OS process thread suspended?
-        suspended = false :: boolean(),
+        suspended = {false, false}
+            :: {boolean(), boolean()},
         % ( 9) is the external service OS process thread busy?
         queue_requests = true :: boolean(),
         % (10) queued incoming service requests
@@ -1427,31 +1428,45 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(info, {'cloudi_service_suspended', SuspendPending, Suspended},
          #state{dispatcher = Dispatcher,
-                suspended = SuspendedOld} = State) ->
+                suspended = SuspendedOld,
+                queue_requests = QueueRequests} = State) ->
     SuspendPending ! {'cloudi_service_suspended', Dispatcher},
-    NewState = if
-        Suspended =:= SuspendedOld ->
+    NewState = case SuspendedOld of
+        {Suspended, _} ->
             State;
-        Suspended =:= true ->
-            State#state{suspended = true,
+        {false, _} when Suspended =:= true ->
+            State#state{suspended = {true, QueueRequests},
                         queue_requests = true};
-        Suspended =:= false ->
-            process_queues(State#state{suspended = false})
+        {true, Busy} when Suspended =:= false ->
+            NextState = State#state{suspended = {false, false}},
+            if
+                Busy =:= true ->
+                    NextState;
+                Busy =:= false ->
+                    process_queues(NextState)
+            end
     end,
     {keep_state, NewState};
 
 'HANDLE'(info, {'cloudi_service_update', UpdatePending, UpdatePlan},
          #state{dispatcher = Dispatcher,
                 update_plan = undefined,
+                suspended = Suspended,
                 queue_requests = QueueRequests} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
+    ProcessBusy = case Suspended of
+        {true, SuspendedWhileBusy} ->
+            SuspendedWhileBusy;
+        {false, _} ->
+            QueueRequests
+    end,
     NewUpdatePlan = if
-        Sync =:= true, QueueRequests =:= true ->
+        Sync =:= true, ProcessBusy =:= true ->
             UpdatePlan#config_service_update{update_pending = UpdatePending,
-                                             queue_requests = QueueRequests};
+                                             process_busy = ProcessBusy};
         true ->
             UpdatePending ! {'cloudi_service_update', Dispatcher},
-            UpdatePlan#config_service_update{queue_requests = QueueRequests}
+            UpdatePlan#config_service_update{process_busy = ProcessBusy}
     end,
     {keep_state,
      State#state{update_plan = NewUpdatePlan,
@@ -1459,15 +1474,15 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(info, {'cloudi_service_update_now', UpdateNow, UpdateStart},
          #state{update_plan = UpdatePlan} = State) ->
-    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    #config_service_update{process_busy = ProcessBusy} = UpdatePlan,
     NewUpdatePlan = UpdatePlan#config_service_update{
                         update_now = UpdateNow,
                         update_start = UpdateStart},
     NewState = State#state{update_plan = NewUpdatePlan},
     if
-        QueueRequests =:= true ->
+        ProcessBusy =:= true ->
             {keep_state, NewState};
-        QueueRequests =:= false ->
+        ProcessBusy =:= false ->
             {keep_state, process_update(NewState)}
     end;
 
@@ -2160,7 +2175,7 @@ process_update(#state{dispatcher = Dispatcher,
                       update_plan = UpdatePlan} = State) ->
     #config_service_update{update_now = UpdateNow,
                            spawn_os_process = SpawnOsProcess,
-                           queue_requests = false} = UpdatePlan,
+                           process_busy = false} = UpdatePlan,
     {NewOsProcess, NewState} = case update(State, UpdatePlan) of
         {ok, undefined, NextState} ->
             false = SpawnOsProcess,
@@ -2214,9 +2229,9 @@ process_queues(#state{dispatcher = Dispatcher,
         is_pid(UpdatePending) ->
             UpdatePending ! {'cloudi_service_update', Dispatcher},
             UpdatePlan#config_service_update{update_pending = undefined,
-                                             queue_requests = false};
+                                             process_busy = false};
         UpdatePending =:= undefined ->
-            UpdatePlan#config_service_update{queue_requests = false}
+            UpdatePlan#config_service_update{process_busy = false}
     end,
     NewState = State#state{update_plan = NewUpdatePlan},
     if
@@ -2225,8 +2240,14 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             NewState
     end;
-process_queues(#state{suspended = true} = State) ->
-    State;
+process_queues(#state{suspended = {true, Busy} = Suspended} = State) ->
+    SuspendedNew = if
+        Busy =:= true ->
+            {true, false};
+        Busy =:= false ->
+            Suspended
+    end,
+    State#state{suspended = SuspendedNew};
 process_queues(State) ->
     process_queue(State).
 

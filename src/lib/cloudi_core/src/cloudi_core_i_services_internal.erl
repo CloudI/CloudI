@@ -104,8 +104,8 @@
         update_plan = undefined
             :: undefined | #config_service_update{},
         % ( 8) is the request/info pid suspended?
-        suspended = false
-            :: undefined | boolean(),
+        suspended = {false, false}
+            :: undefined | {boolean(), boolean()},
         % ( 9) is the request/info pid busy?
         queue_requests = true
             :: undefined | boolean(),
@@ -188,7 +188,8 @@
         update_plan = undefined
             :: undefined | #config_service_update{},
         % ( 5) is the request pid suspended?
-        suspended = false :: boolean(),
+        suspended = {false, false}
+            :: {boolean(), boolean()},
         % ( 6) is the request pid busy?
         queue_requests = true :: boolean(),
         % ( 7) queued incoming service requests
@@ -1835,32 +1836,46 @@ handle_info({'EXIT', Pid, Reason}, State) ->
 handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
             #state{dispatcher = Dispatcher,
                    suspended = SuspendedOld,
+                   queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
     SuspendPending ! {'cloudi_service_suspended', Dispatcher},
-    NewState = if
-        Suspended =:= SuspendedOld ->
+    NewState = case SuspendedOld of
+        {Suspended, _} ->
             State;
-        Suspended =:= true ->
-            State#state{suspended = true,
+        {false, _} when Suspended =:= true ->
+            State#state{suspended = {true, QueueRequests},
                         queue_requests = true};
-        Suspended =:= false ->
-            process_queues(State#state{suspended = false})
+        {true, Busy} when Suspended =:= false ->
+            NextState = State#state{suspended = {false, false}},
+            if
+                Busy =:= true ->
+                    NextState;
+                Busy =:= false ->
+                    process_queues(NextState)
+            end
     end,
     hibernate_check({noreply, NewState});
 
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
             #state{dispatcher = Dispatcher,
                    update_plan = undefined,
+                   suspended = Suspended,
                    queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
+    ProcessBusy = case Suspended of
+        {true, SuspendedWhileBusy} ->
+            SuspendedWhileBusy;
+        {false, _} ->
+            QueueRequests
+    end,
     NewUpdatePlan = if
-        Sync =:= true, QueueRequests =:= true ->
+        Sync =:= true, ProcessBusy =:= true ->
             UpdatePlan#config_service_update{update_pending = UpdatePending,
-                                             queue_requests = QueueRequests};
+                                             process_busy = ProcessBusy};
         true ->
             UpdatePending ! {'cloudi_service_update', Dispatcher},
-            UpdatePlan#config_service_update{queue_requests = QueueRequests}
+            UpdatePlan#config_service_update{process_busy = ProcessBusy}
     end,
     hibernate_check({noreply, State#state{update_plan = NewUpdatePlan,
                                           queue_requests = true}});
@@ -1868,15 +1883,15 @@ handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
 handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
             #state{update_plan = UpdatePlan,
                    duo_mode_pid = undefined} = State) ->
-    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    #config_service_update{process_busy = ProcessBusy} = UpdatePlan,
     NewUpdatePlan = UpdatePlan#config_service_update{
                         update_now = UpdateNow,
                         update_start = UpdateStart},
     NewState = State#state{update_plan = NewUpdatePlan},
     if
-        QueueRequests =:= true ->
+        ProcessBusy =:= true ->
             hibernate_check({noreply, NewState});
-        QueueRequests =:= false ->
+        ProcessBusy =:= false ->
             hibernate_check({noreply, process_update(NewState)})
     end;
 
@@ -3100,7 +3115,7 @@ process_update(#state{dispatcher = Dispatcher,
                       update_plan = UpdatePlan,
                       service_state = ServiceState} = State) ->
     #config_service_update{update_now = UpdateNow,
-                           queue_requests = false} = UpdatePlan,
+                           process_busy = false} = UpdatePlan,
     NewState = case update(ServiceState, State, UpdatePlan) of
         {ok, NextServiceState, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
@@ -3120,9 +3135,9 @@ process_queues(#state{dispatcher = Dispatcher,
         is_pid(UpdatePending) ->
             UpdatePending ! {'cloudi_service_update', Dispatcher},
             UpdatePlan#config_service_update{update_pending = undefined,
-                                             queue_requests = false};
+                                             process_busy = false};
         UpdatePending =:= undefined ->
-            UpdatePlan#config_service_update{queue_requests = false}
+            UpdatePlan#config_service_update{process_busy = false}
     end,
     if
         is_pid(UpdateNow) ->
@@ -3130,8 +3145,14 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             State#state{update_plan = NewUpdatePlan}
     end;
-process_queues(#state{suspended = true} = State) ->
-    State;
+process_queues(#state{suspended = {true, Busy} = Suspended} = State) ->
+    SuspendedNew = if
+        Busy =:= true ->
+            {true, false};
+        Busy =:= false ->
+            Suspended
+    end,
+    State#state{suspended = SuspendedNew};
 process_queues(State) ->
     % info messages should be processed before service requests
     NewState = process_queue_info(State),
@@ -3476,6 +3497,7 @@ duo_mode_loop_init(#state_duo{duo_mode_pid = DuoModePid,
                         duo_mode_dispatcher_options(NewConfigOptions),
                     NewDispatcherState = NextDispatcherState#state{
                         recv_timeouts = undefined,
+                        suspended = undefined,
                         queue_requests = undefined,
                         queued = undefined,
                         queued_info = undefined,
@@ -3953,46 +3975,60 @@ duo_handle_info('cloudi_rate_request_max_rate',
 
 duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
                 #state_duo{duo_mode_pid = DuoModePid,
-                           suspended = SuspendedOld} = State) ->
+                           suspended = SuspendedOld,
+                           queue_requests = QueueRequests} = State) ->
     SuspendPending ! {'cloudi_service_suspended', DuoModePid},
-    NewState = if
-        Suspended =:= SuspendedOld ->
+    NewState = case SuspendedOld of
+        {Suspended, _} ->
             State;
-        Suspended =:= true ->
-            State#state_duo{suspended = true,
+        {false, _} when Suspended =:= true ->
+            State#state_duo{suspended = {true, QueueRequests},
                             queue_requests = true};
-        Suspended =:= false ->
-            duo_process_queues(State#state_duo{suspended = false})
+        {true, Busy} when Suspended =:= false ->
+            NextState = State#state_duo{suspended = {false, false}},
+            if
+                Busy =:= true ->
+                    NextState;
+                Busy =:= false ->
+                    duo_process_queues(NextState)
+            end
     end,
     {noreply, NewState};
 
 duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                 #state_duo{duo_mode_pid = DuoModePid,
                            update_plan = undefined,
+                           suspended = Suspended,
                            queue_requests = QueueRequests} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
+    ProcessBusy = case Suspended of
+        {true, SuspendedWhileBusy} ->
+            SuspendedWhileBusy;
+        {false, _} ->
+            QueueRequests
+    end,
     NewUpdatePlan = if
-        Sync =:= true, QueueRequests =:= true ->
+        Sync =:= true, ProcessBusy =:= true ->
             UpdatePlan#config_service_update{update_pending = UpdatePending,
-                                             queue_requests = QueueRequests};
+                                             process_busy = ProcessBusy};
         true ->
             UpdatePending ! {'cloudi_service_update', DuoModePid},
-            UpdatePlan#config_service_update{queue_requests = QueueRequests}
+            UpdatePlan#config_service_update{process_busy = ProcessBusy}
     end,
     {noreply, State#state_duo{update_plan = NewUpdatePlan,
                               queue_requests = true}};
 
 duo_handle_info({'cloudi_service_update_now', UpdateNow, UpdateStart},
                 #state_duo{update_plan = UpdatePlan} = State) ->
-    #config_service_update{queue_requests = QueueRequests} = UpdatePlan,
+    #config_service_update{process_busy = ProcessBusy} = UpdatePlan,
     NewUpdatePlan = UpdatePlan#config_service_update{
                         update_now = UpdateNow,
                         update_start = UpdateStart},
     NewState = State#state_duo{update_plan = NewUpdatePlan},
     if
-        QueueRequests =:= true ->
+        ProcessBusy =:= true ->
             {noreply, NewState};
-        QueueRequests =:= false ->
+        ProcessBusy =:= false ->
             {noreply, duo_process_update(NewState)}
     end;
 
@@ -4154,7 +4190,7 @@ duo_process_update(#state_duo{duo_mode_pid = DuoModePid,
                               update_plan = UpdatePlan,
                               service_state = ServiceState} = State) ->
     #config_service_update{update_now = UpdateNow,
-                           queue_requests = false} = UpdatePlan,
+                           process_busy = false} = UpdatePlan,
     NewState = case update(ServiceState, State, UpdatePlan) of
         {ok, NextServiceState, NextState} ->
             UpdateNow ! {'cloudi_service_update_now', DuoModePid, ok},
@@ -4174,9 +4210,9 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
         is_pid(UpdatePending) ->
             UpdatePending ! {'cloudi_service_update', DuoModePid},
             UpdatePlan#config_service_update{update_pending = undefined,
-                                             queue_requests = false};
+                                             process_busy = false};
         UpdatePending =:= undefined ->
-            UpdatePlan#config_service_update{queue_requests = false}
+            UpdatePlan#config_service_update{process_busy = false}
     end,
     NewState = State#state_duo{update_plan = NewUpdatePlan},
     if
@@ -4185,8 +4221,14 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
         UpdateNow =:= undefined ->
             NewState
     end;
-duo_process_queues(#state_duo{suspended = true} = State) ->
-    State;
+duo_process_queues(#state_duo{suspended = {true, Busy} = Suspended} = State) ->
+    SuspendedNew = if
+        Busy =:= true ->
+            {true, false};
+        Busy =:= false ->
+            Suspended
+    end,
+    State#state_duo{suspended = SuspendedNew};
 duo_process_queues(State) ->
     % info messages should be processed before service requests
     NewState = duo_process_queue_info(State),
