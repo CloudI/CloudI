@@ -329,7 +329,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
         {ok, StateSocket} ->
             cloudi_x_quickrand:seed(),
             WordSize = erlang:system_info(wordsize),
-            NewConfigOptions =
+            ConfigOptionsNew =
                 check_init_receive(check_init_send(ConfigOptions)),
             {ok, MacAddress} = application:get_env(cloudi_core, mac_address),
             {ok, TimestampType} = application:get_env(cloudi_core,
@@ -340,7 +340,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
             Groups = destination_refresh_groups(DestRefresh, undefined),
             #config_service_options{
                 dest_refresh_start = Delay,
-                scope = Scope} = NewConfigOptions,
+                scope = Scope} = ConfigOptionsNew,
             erlang:process_flag(trap_exit, true),
             destination_refresh(DestRefresh, Dispatcher, Delay, Scope),
             State = #state{dispatcher = Dispatcher,
@@ -359,7 +359,7 @@ init([Protocol, SocketPath, ThreadIndex, ProcessIndex, ProcessCount,
                            cpg_data = Groups,
                            dest_deny = DestDeny,
                            dest_allow = DestAllow,
-                           options = NewConfigOptions},
+                           options = ConfigOptionsNew},
             {ok, 'CONNECT',
              socket_data_to_state(StateSocket, State)};
         {error, Reason} ->
@@ -389,9 +389,9 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'CONNECT'(info, {inet_async, _, _, {ok, _}} = Accept, State) ->
     StateSocket = socket_data_from_state(State),
-    NewStateSocket = socket_accept(Accept, StateSocket),
+    StateSocketNew = socket_accept(Accept, StateSocket),
     {keep_state,
-     socket_data_to_state(NewStateSocket, State)};
+     socket_data_to_state(StateSocketNew, State)};
 
 'CONNECT'(info, {inet_async, Listener, Acceptor, Error},
           #state{protocol = Protocol,
@@ -440,7 +440,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     cancel_timer_async(InitTimer),
     case aspects_init(Aspects, CommandLine, Prefix, Timeout,
                       ServiceState) of
-        {ok, NewServiceState} ->
+        {ok, ServiceStateNew} ->
             ok = cloudi_core_i_services_monitor:
                  process_init_end(Dispatcher),
             if
@@ -454,12 +454,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                                                    Dispatcher, infinity)
             end,
             {keep_state,
-             process_queues(State#state{service_state = NewServiceState,
+             process_queues(State#state{service_state = ServiceStateNew,
                                         init_timer = undefined,
                                         subscribed = []})};
-        {stop, Reason, NewServiceState} ->
+        {stop, Reason, ServiceStateNew} ->
             {stop, Reason,
-             State#state{service_state = NewServiceState,
+             State#state{service_state = ServiceStateNew,
                          init_timer = undefined}}
     end;
 
@@ -593,8 +593,8 @@ handle_event(EventType, EventContent, StateName, State) ->
     end;
 
 'HANDLE'(connection,
-         {'forward_async', NextName, NextRequestInfo, NextRequest,
-          NextTimeout, NextPriority, TransId, Source},
+         {'forward_async', NameNext, RequestInfoNext, RequestNext,
+          TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
@@ -610,63 +610,63 @@ handle_event(EventType, EventContent, StateName, State) ->
                         ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(NextName) andalso is_integer(hd(NextName)),
-    true = is_integer(NextTimeout),
-    true = (NextTimeout >= 0) andalso
-           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
-    true = is_integer(NextPriority),
-    true = (NextPriority >= ?PRIORITY_HIGH) andalso
-           (NextPriority =< ?PRIORITY_LOW),
+    true = is_list(NameNext) andalso is_integer(hd(NameNext)),
+    true = is_integer(TimeoutNext),
+    true = (TimeoutNext >= 0) andalso
+           (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(PriorityNext),
+    true = (PriorityNext >= ?PRIORITY_HIGH) andalso
+           (PriorityNext =< ?PRIORITY_LOW),
     Type = send_async,
-    Result = {forward, NextName,
-              NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority},
+    Result = {forward, NameNext,
+              RequestInfoNext, RequestNext,
+              TimeoutNext, PriorityNext},
     try aspects_request_after(AspectsAfter, Type,
                               Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Source,
                               Result, ServiceState) of
-        {ok, NewServiceState} ->
-            NewTimeout = if
-                NextTimeout == Timeout ->
+        {ok, ServiceStateNew} ->
+            TimeoutNew = if
+                TimeoutNext == Timeout ->
                     RequestTimeoutF(Timeout);
                 true ->
-                    NextTimeout
+                    TimeoutNext
             end,
-            case destination_allowed(NextName, DestDeny, DestAllow) of
+            case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
-                    case destination_get(DestRefresh, Scope, NextName, Source,
-                                         Groups, NewTimeout) of
+                    case destination_get(DestRefresh, Scope, NameNext, Source,
+                                         Groups, TimeoutNew) of
                         {error, timeout} ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
                             if
-                                NewTimeout >= ResponseTimeoutImmediateMax ->
+                                TimeoutNew >= ResponseTimeoutImmediateMax ->
                                     Source ! {'cloudi_service_return_async',
                                               Name, Pattern, <<>>, <<>>,
-                                              NewTimeout, TransId, Source};
+                                              TimeoutNew, TransId, Source};
                                 true ->
                                     ok
                             end,
                             ok;
                         {error, _}
-                            when NewTimeout >= ?FORWARD_ASYNC_INTERVAL ->
+                            when TimeoutNew >= ?FORWARD_ASYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_async_retry',
-                                     NextName, NextRequestInfo, NextRequest,
-                                     NewTimeout - ?FORWARD_ASYNC_INTERVAL,
-                                     NextPriority, TransId, Source},
+                                     NameNext, RequestInfoNext, RequestNext,
+                                     TimeoutNew - ?FORWARD_ASYNC_INTERVAL,
+                                     PriorityNext, TransId, Source},
                             erlang:send_after(?FORWARD_ASYNC_INTERVAL,
                                               Dispatcher, Retry),
                             ok;
                         {error, _} ->
                             ok;
-                        {ok, NextPattern, NextPid}
-                            when NewTimeout >= ?FORWARD_DELTA ->
-                            NextPid ! {'cloudi_service_send_async',
-                                       NextName, NextPattern,
-                                       NextRequestInfo, NextRequest,
-                                       NewTimeout - ?FORWARD_DELTA,
-                                       NextPriority, TransId, Source};
+                        {ok, PatternNext, PidNext}
+                            when TimeoutNew >= ?FORWARD_DELTA ->
+                            PidNext ! {'cloudi_service_send_async',
+                                       NameNext, PatternNext,
+                                       RequestInfoNext, RequestNext,
+                                       TimeoutNew - ?FORWARD_DELTA,
+                                       PriorityNext, TransId, Source};
                         _ ->
                             ok
                     end;
@@ -674,11 +674,11 @@ handle_event(EventType, EventContent, StateName, State) ->
                     ok
             end,
             {keep_state,
-             process_queues(State#state{service_state = NewServiceState,
+             process_queues(State#state{service_state = ServiceStateNew,
                                         request_data = undefined})};
-        {stop, Reason, NewServiceState} ->
+        {stop, Reason, ServiceStateNew} ->
             {stop, Reason,
-             State#state{service_state = NewServiceState,
+             State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
@@ -689,8 +689,8 @@ handle_event(EventType, EventContent, StateName, State) ->
     end;
 
 'HANDLE'(connection,
-         {'forward_sync', NextName, NextRequestInfo, NextRequest,
-          NextTimeout, NextPriority, TransId, Source},
+         {'forward_sync', NameNext, RequestInfoNext, RequestNext,
+          TimeoutNext, PriorityNext, TransId, Source},
          #state{dispatcher = Dispatcher,
                 service_state = ServiceState,
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
@@ -706,62 +706,62 @@ handle_event(EventType, EventContent, StateName, State) ->
                         ResponseTimeoutImmediateMax,
                     scope = Scope,
                     aspects_request_after = AspectsAfter}} = State) ->
-    true = is_list(NextName) andalso is_integer(hd(NextName)),
-    true = is_integer(NextTimeout),
-    true = (NextTimeout >= 0) andalso
-           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
-    true = is_integer(NextPriority),
-    true = (NextPriority >= ?PRIORITY_HIGH) andalso
-           (NextPriority =< ?PRIORITY_LOW),
+    true = is_list(NameNext) andalso is_integer(hd(NameNext)),
+    true = is_integer(TimeoutNext),
+    true = (TimeoutNext >= 0) andalso
+           (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(PriorityNext),
+    true = (PriorityNext >= ?PRIORITY_HIGH) andalso
+           (PriorityNext =< ?PRIORITY_LOW),
     Type = send_sync,
-    Result = {forward, NextName, NextRequestInfo, NextRequest,
-              NextTimeout, NextPriority},
+    Result = {forward, NameNext, RequestInfoNext, RequestNext,
+              TimeoutNext, PriorityNext},
     try aspects_request_after(AspectsAfter, Type,
                               Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Source,
                               Result, ServiceState) of
-        {ok, NewServiceState} ->
-            NewTimeout = if
-                NextTimeout == Timeout ->
+        {ok, ServiceStateNew} ->
+            TimeoutNew = if
+                TimeoutNext == Timeout ->
                     RequestTimeoutF(Timeout);
                 true ->
-                    NextTimeout
+                    TimeoutNext
             end,
-            case destination_allowed(NextName, DestDeny, DestAllow) of
+            case destination_allowed(NameNext, DestDeny, DestAllow) of
                 true ->
-                    case destination_get(DestRefresh, Scope, NextName, Source,
-                                         Groups, NewTimeout) of
+                    case destination_get(DestRefresh, Scope, NameNext, Source,
+                                         Groups, TimeoutNew) of
                         {error, timeout} ->
                             ok;
                         {error, _}
                             when RequestNameLookup =:= async ->
                             if
-                                NewTimeout >= ResponseTimeoutImmediateMax ->
+                                TimeoutNew >= ResponseTimeoutImmediateMax ->
                                     Source ! {'cloudi_service_return_sync',
                                               Name, Pattern, <<>>, <<>>,
-                                              NewTimeout, TransId, Source};
+                                              TimeoutNew, TransId, Source};
                                 true ->
                                     ok
                             end,
                             ok;
                         {error, _}
-                            when NewTimeout >= ?FORWARD_SYNC_INTERVAL ->
+                            when TimeoutNew >= ?FORWARD_SYNC_INTERVAL ->
                             Retry = {'cloudi_service_forward_sync_retry',
-                                     NextName, NextRequestInfo, NextRequest,
-                                     NewTimeout - ?FORWARD_SYNC_INTERVAL,
-                                     NextPriority, TransId, Source},
+                                     NameNext, RequestInfoNext, RequestNext,
+                                     TimeoutNew - ?FORWARD_SYNC_INTERVAL,
+                                     PriorityNext, TransId, Source},
                             erlang:send_after(?FORWARD_SYNC_INTERVAL,
                                               Dispatcher, Retry),
                             ok;
                         {error, _} ->
                             ok;
-                        {ok, NextPattern, NextPid}
-                            when NewTimeout >= ?FORWARD_DELTA ->
-                            NextPid ! {'cloudi_service_send_sync',
-                                       NextName, NextPattern,
-                                       NextRequestInfo, NextRequest,
-                                       NewTimeout - ?FORWARD_DELTA,
-                                       NextPriority, TransId, Source};
+                        {ok, PatternNext, PidNext}
+                            when TimeoutNew >= ?FORWARD_DELTA ->
+                            PidNext ! {'cloudi_service_send_sync',
+                                       NameNext, PatternNext,
+                                       RequestInfoNext, RequestNext,
+                                       TimeoutNew - ?FORWARD_DELTA,
+                                       PriorityNext, TransId, Source};
                         _ ->
                             ok
                     end;
@@ -769,11 +769,11 @@ handle_event(EventType, EventContent, StateName, State) ->
                     ok
             end,
             {keep_state,
-             process_queues(State#state{service_state = NewServiceState,
+             process_queues(State#state{service_state = ServiceStateNew,
                                         request_data = undefined})};
-        {stop, Reason, NewServiceState} ->
+        {stop, Reason, ServiceStateNew} ->
             {stop, Reason,
-             State#state{service_state = NewServiceState,
+             State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
@@ -785,7 +785,7 @@ handle_event(EventType, EventContent, StateName, State) ->
 
 'HANDLE'(connection,
          {ReturnType, Name, Pattern, ResponseInfo, Response,
-          NextTimeout, TransId, Source},
+          TimeoutNext, TransId, Source},
          #state{service_state = ServiceState,
                 request_data = {{_, Name, Pattern, RequestInfo, Request,
                                  Timeout, Priority, TransId, Source},
@@ -797,9 +797,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                         AspectsAfter}} = State)
     when ReturnType =:= 'return_async';
          ReturnType =:= 'return_sync' ->
-    true = is_integer(NextTimeout),
-    true = (NextTimeout >= 0) andalso
-           (NextTimeout =< ?TIMEOUT_MAX_ERLANG),
+    true = is_integer(TimeoutNext),
+    true = (TimeoutNext >= 0) andalso
+           (TimeoutNext =< ?TIMEOUT_MAX_ERLANG),
     Type = if
         ReturnType =:= 'return_async' ->
             send_async;
@@ -808,7 +808,7 @@ handle_event(EventType, EventContent, StateName, State) ->
     end,
     Result = if
         ResponseInfo == <<>>, Response == <<>>,
-        NextTimeout < ResponseTimeoutImmediateMax ->
+        TimeoutNext < ResponseTimeoutImmediateMax ->
             noreply;
         true ->
             {reply, ResponseInfo, Response}
@@ -817,12 +817,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                               Name, Pattern, RequestInfo, Request,
                               Timeout, Priority, TransId, Source,
                               Result, ServiceState) of
-        {ok, NewServiceState} ->
-            NewTimeout = if
-                NextTimeout == Timeout ->
+        {ok, ServiceStateNew} ->
+            TimeoutNew = if
+                TimeoutNext == Timeout ->
                     RequestTimeoutF(Timeout);
                 true ->
-                    NextTimeout
+                    TimeoutNext
             end,
             if
                 Result =:= noreply ->
@@ -830,18 +830,18 @@ handle_event(EventType, EventContent, StateName, State) ->
                 ReturnType =:= 'return_async' ->
                     Source ! {'cloudi_service_return_async',
                               Name, Pattern, ResponseInfo, Response,
-                              NewTimeout, TransId, Source};
+                              TimeoutNew, TransId, Source};
                 ReturnType =:= 'return_sync' ->
                     Source ! {'cloudi_service_return_sync',
                               Name, Pattern, ResponseInfo, Response,
-                              NewTimeout, TransId, Source}
+                              TimeoutNew, TransId, Source}
             end,
             {keep_state,
-             process_queues(State#state{service_state = NewServiceState,
+             process_queues(State#state{service_state = ServiceStateNew,
                                         request_data = undefined})};
-        {stop, Reason, NewServiceState} ->
+        {stop, Reason, ServiceStateNew} ->
             {stop, Reason,
-             State#state{service_state = NewServiceState,
+             State#state{service_state = ServiceStateNew,
                          request_data = undefined}}
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
@@ -980,8 +980,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             ok;
         {error, _} ->
             ok;
-        {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'cloudi_service_send_async', Name, Pattern,
+        {ok, Pattern, PidNext} when Timeout >= ?FORWARD_DELTA ->
+            PidNext ! {'cloudi_service_send_async', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Source};
@@ -1013,8 +1013,8 @@ handle_event(EventType, EventContent, StateName, State) ->
             ok;
         {error, _} ->
             ok;
-        {ok, Pattern, NextPid} when Timeout >= ?FORWARD_DELTA ->
-            NextPid ! {'cloudi_service_send_sync', Name, Pattern,
+        {ok, Pattern, PidNext} when Timeout >= ?FORWARD_DELTA ->
+            PidNext ! {'cloudi_service_send_sync', Name, Pattern,
                        RequestInfo, Request,
                        Timeout - ?FORWARD_DELTA,
                        Priority, TransId, Source};
@@ -1067,7 +1067,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                         ResponseTimeoutImmediateMax} = ConfigOptions} = State)
     when SendType =:= 'cloudi_service_send_async' orelse
          SendType =:= 'cloudi_service_send_sync' ->
-    {RateRequestOk, NewRateRequest} = if
+    {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
             rate_request_request(RateRequest);
@@ -1082,19 +1082,19 @@ handle_event(EventType, EventContent, StateName, State) ->
                 SendType =:= 'cloudi_service_send_sync' ->
                     'send_sync'
             end,
-            NewConfigOptions =
+            ConfigOptionsNew =
                 check_incoming(true, ConfigOptions#config_service_options{
-                                         rate_request_max = NewRateRequest}),
+                                         rate_request_max = RateRequestNew}),
             #config_service_options{
                 request_timeout_adjustment = RequestTimeoutAdjustment,
-                aspects_request_before = AspectsBefore} = NewConfigOptions,
+                aspects_request_before = AspectsBefore} = ConfigOptionsNew,
             RequestTimeoutF =
                 request_timeout_adjustment_f(RequestTimeoutAdjustment),
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
                                        Timeout, Priority, TransId, Source,
                                        ServiceState) of
-                {ok, NewServiceState} ->
+                {ok, ServiceStateNew} ->
                     if
                         SendType =:= 'cloudi_service_send_async' ->
                             ok = send('send_async_out'(Name, Pattern,
@@ -1111,19 +1111,19 @@ handle_event(EventType, EventContent, StateName, State) ->
                     end,
                     {keep_state,
                      State#state{queue_requests = true,
-                                 service_state = NewServiceState,
+                                 service_state = ServiceStateNew,
                                  request_data = {T, RequestTimeoutF},
-                                 options = NewConfigOptions}};
-                {stop, Reason, NewServiceState} ->
+                                 options = ConfigOptionsNew}};
+                {stop, Reason, ServiceStateNew} ->
                     {stop, Reason,
-                     State#state{service_state = NewServiceState,
-                                 options = NewConfigOptions}}
+                     State#state{service_state = ServiceStateNew,
+                                 options = ConfigOptionsNew}}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     {stop, {ErrorType, {Error, ErrorStackTrace}},
-                     State#state{options = NewConfigOptions}}
+                     State#state{options = ConfigOptionsNew}}
             end;
         RateRequestOk =:= false ->
             if
@@ -1143,7 +1143,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             end,
             {keep_state,
              State#state{options = ConfigOptions#config_service_options{
-                             rate_request_max = NewRateRequest}}}
+                             rate_request_max = RateRequestNew}}}
     end;
 
 'HANDLE'(info,
@@ -1174,21 +1174,21 @@ handle_event(EventType, EventContent, StateName, State) ->
         true ->
             {true, 0}
     end,
-    {RateRequestOk, NewRateRequest} = if
+    {RateRequestOk, RateRequestNew} = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
             rate_request_request(RateRequest);
         true ->
             {true, RateRequest}
     end,
-    NewState = State#state{
+    StateNew = State#state{
         options = ConfigOptions#config_service_options{
-            rate_request_max = NewRateRequest}},
+            rate_request_max = RateRequestNew}},
     if
         QueueLimitOk, QueueSizeOk, RateRequestOk ->
             {keep_state,
              recv_timeout_start(Timeout, Priority, TransId,
-                                Size, T, NewState)};
+                                Size, T, StateNew)};
         true ->
             if
                 Timeout >= ResponseTimeoutImmediateMax ->
@@ -1205,7 +1205,7 @@ handle_event(EventType, EventContent, StateName, State) ->
                 true ->
                     ok
             end,
-            {keep_state, NewState}
+            {keep_state, StateNew}
     end;
 
 'HANDLE'(info,
@@ -1214,30 +1214,30 @@ handle_event(EventType, EventContent, StateName, State) ->
                 queue_requests = QueueRequests,
                 queued = Queue,
                 queued_size = QueuedSize} = State) ->
-    {NewQueue, NewQueuedSize} = if
+    {QueueNew, QueuedSizeNew} = if
         QueueRequests =:= true ->
             F = fun({_, {_, _, _, _, _, _, _, Id, _}}) -> Id == TransId end,
             {Removed,
-             NextQueue} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
-            NextQueuedSize = if
+             QueueNext} = cloudi_x_pqueue4:remove_unique(F, Priority, Queue),
+            QueuedSizeNext = if
                 Removed =:= true ->
                     QueuedSize - Size;
                 Removed =:= false ->
                     % false if a timer message was sent while cancelling
                     QueuedSize
             end,
-            {NextQueue, NextQueuedSize};
+            {QueueNext, QueuedSizeNext};
         true ->
             {Queue, QueuedSize}
     end,
     {keep_state,
      State#state{recv_timeouts = maps:remove(TransId, RecvTimeouts),
-                 queued = NewQueue,
-                 queued_size = NewQueuedSize}};
+                 queued = QueueNew,
+                 queued_size = QueuedSizeNew}};
 
 'HANDLE'(info,
          {'cloudi_service_return_async', _Name, _Pattern,
-          ResponseInfo, Response, OldTimeout, TransId, Source},
+          ResponseInfo, Response, TimeoutOld, TransId, Source},
          #state{dispatcher = Dispatcher,
                 send_timeouts = SendTimeouts,
                 options = #config_service_options{
@@ -1254,7 +1254,7 @@ handle_event(EventType, EventContent, StateName, State) ->
             when ResponseInfo == <<>>, Response == <<>> ->
             if
                 ResponseTimeoutAdjustment;
-                OldTimeout >= RequestTimeoutImmediateMax ->
+                TimeoutOld >= RequestTimeoutImmediateMax ->
                     cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
@@ -1265,7 +1265,7 @@ handle_event(EventType, EventContent, StateName, State) ->
         {ok, {passive, Pid, Tref}} ->
             Timeout = if
                 ResponseTimeoutAdjustment;
-                OldTimeout >= RequestTimeoutImmediateMax ->
+                TimeoutOld >= RequestTimeoutImmediateMax ->
                     case erlang:cancel_timer(Tref) of
                         false ->
                             0;
@@ -1274,9 +1274,9 @@ handle_event(EventType, EventContent, StateName, State) ->
                     end;
                 true ->
                     % avoid cancel_timer/1 latency
-                    OldTimeout
+                    TimeoutOld
             end,
-            NewState = if
+            StateNew = if
                 is_binary(ResponseInfo) =:= false;
                 is_binary(Response) =:= false ->
                     State;
@@ -1285,12 +1285,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                                                  Timeout, TransId, State)
             end,
             {keep_state,
-             send_timeout_end(TransId, Pid, NewState)}
+             send_timeout_end(TransId, Pid, StateNew)}
     end;
 
 'HANDLE'(info,
          {'cloudi_service_return_sync', _Name, _Pattern,
-          ResponseInfo, Response, OldTimeout, TransId, Source},
+          ResponseInfo, Response, TimeoutOld, TransId, Source},
          #state{dispatcher = Dispatcher,
                 send_timeouts = SendTimeouts,
                 options = #config_service_options{
@@ -1306,7 +1306,7 @@ handle_event(EventType, EventContent, StateName, State) ->
         {ok, {_, Pid, Tref}} ->
             if
                 ResponseTimeoutAdjustment;
-                OldTimeout >= RequestTimeoutImmediateMax ->
+                TimeoutOld >= RequestTimeoutImmediateMax ->
                     cancel_timer_async(Tref);
                 true ->
                     % avoid cancel_timer/1 latency
@@ -1371,12 +1371,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                 options = #config_service_options{
                     count_process_dynamic =
                         CountProcessDynamic} = ConfigOptions} = State) ->
-    NewCountProcessDynamic = cloudi_core_i_rate_based_configuration:
+    CountProcessDynamicNew = cloudi_core_i_rate_based_configuration:
                              count_process_dynamic_reinit(Dispatcher,
                                                           CountProcessDynamic),
     {keep_state,
      State#state{options = ConfigOptions#config_service_options{
-                     count_process_dynamic = NewCountProcessDynamic}}};
+                     count_process_dynamic = CountProcessDynamicNew}}};
 
 'HANDLE'(info, {'cloudi_count_process_dynamic_update', ProcessCount},
          #state{timeout_async = TimeoutAsync,
@@ -1395,12 +1395,12 @@ handle_event(EventType, EventContent, StateName, State) ->
                     count_process_dynamic = CountProcessDynamic,
                     scope = Scope} = ConfigOptions} = State) ->
     cloudi_x_cpg:leave(Scope, Dispatcher, infinity),
-    NewCountProcessDynamic =
+    CountProcessDynamicNew =
         cloudi_core_i_rate_based_configuration:
         count_process_dynamic_terminate_set(Dispatcher, CountProcessDynamic),
     {keep_state,
      State#state{options = ConfigOptions#config_service_options{
-                     count_process_dynamic = NewCountProcessDynamic}}};
+                     count_process_dynamic = CountProcessDynamicNew}}};
 
 'HANDLE'(info, 'cloudi_count_process_dynamic_terminate_check',
          #state{dispatcher = Dispatcher,
@@ -1420,33 +1420,33 @@ handle_event(EventType, EventContent, StateName, State) ->
 'HANDLE'(info, 'cloudi_rate_request_max_rate',
          #state{options = #config_service_options{
                     rate_request_max = RateRequest} = ConfigOptions} = State) ->
-    NewRateRequest = cloudi_core_i_rate_based_configuration:
+    RateRequestNew = cloudi_core_i_rate_based_configuration:
                      rate_request_reinit(RateRequest),
     {keep_state,
      State#state{options = ConfigOptions#config_service_options{
-                     rate_request_max = NewRateRequest}}};
+                     rate_request_max = RateRequestNew}}};
 
 'HANDLE'(info, {'cloudi_service_suspended', SuspendPending, Suspended},
          #state{dispatcher = Dispatcher,
                 suspended = SuspendedOld,
                 queue_requests = QueueRequests} = State) ->
     SuspendPending ! {'cloudi_service_suspended', Dispatcher},
-    NewState = case SuspendedOld of
+    StateNew = case SuspendedOld of
         {Suspended, _} ->
             State;
         {false, _} when Suspended =:= true ->
             State#state{suspended = {true, QueueRequests},
                         queue_requests = true};
         {true, Busy} when Suspended =:= false ->
-            NextState = State#state{suspended = {false, false}},
+            StateNext = State#state{suspended = {false, false}},
             if
                 Busy =:= true ->
-                    NextState;
+                    StateNext;
                 Busy =:= false ->
-                    process_queues(NextState)
+                    process_queues(StateNext)
             end
     end,
-    {keep_state, NewState};
+    {keep_state, StateNew};
 
 'HANDLE'(info, {'cloudi_service_update', UpdatePending, UpdatePlan},
          #state{dispatcher = Dispatcher,
@@ -1460,7 +1460,7 @@ handle_event(EventType, EventContent, StateName, State) ->
         {false, _} ->
             QueueRequests
     end,
-    NewUpdatePlan = if
+    UpdatePlanNew = if
         Sync =:= true, ProcessBusy =:= true ->
             UpdatePlan#config_service_update{update_pending = UpdatePending,
                                              process_busy = ProcessBusy};
@@ -1469,21 +1469,21 @@ handle_event(EventType, EventContent, StateName, State) ->
             UpdatePlan#config_service_update{process_busy = ProcessBusy}
     end,
     {keep_state,
-     State#state{update_plan = NewUpdatePlan,
+     State#state{update_plan = UpdatePlanNew,
                  queue_requests = true}};
 
 'HANDLE'(info, {'cloudi_service_update_now', UpdateNow, UpdateStart},
          #state{update_plan = UpdatePlan} = State) ->
     #config_service_update{process_busy = ProcessBusy} = UpdatePlan,
-    NewUpdatePlan = UpdatePlan#config_service_update{
+    UpdatePlanNew = UpdatePlan#config_service_update{
                         update_now = UpdateNow,
                         update_start = UpdateStart},
-    NewState = State#state{update_plan = NewUpdatePlan},
+    StateNew = State#state{update_plan = UpdatePlanNew},
     if
         ProcessBusy =:= true ->
-            {keep_state, NewState};
+            {keep_state, StateNew};
         ProcessBusy =:= false ->
-            {keep_state, process_update(NewState)}
+            {keep_state, process_update(StateNew)}
     end;
 
 'HANDLE'(info, {'cloudi_service_update_state', CommandLine}, State) ->
@@ -1492,8 +1492,8 @@ handle_event(EventType, EventContent, StateName, State) ->
     {keep_state, State#state{command_line = CommandLine}};
 
 'HANDLE'(info, {'DOWN', _MonitorRef, process, Pid, _Info}, State) ->
-    {_, NewState} = send_timeout_dead(Pid, State),
-    {keep_state, NewState};
+    {_, StateNew} = send_timeout_dead(Pid, State),
+    {keep_state, StateNew};
 
 'HANDLE'(info, {ReplyRef, _}, _) when is_reference(ReplyRef) ->
     % gen_server:call/3 had a timeout exception that was caught but the
@@ -1537,25 +1537,25 @@ format_status(_Opt,
                       dest_deny = DestDeny,
                       dest_allow = DestAllow,
                       options = ConfigOptions} = State]) ->
-    NewGroups = case Groups of
+    GroupsNew = case Groups of
         undefined ->
             undefined;
         {GroupsDictI, GroupsData} ->
             GroupsDictI:to_list(GroupsData)
     end,
-    NewDestDeny = if
+    DestDenyNew = if
         DestDeny =:= undefined ->
             undefined;
         true ->
             cloudi_x_trie:to_list(DestDeny)
     end,
-    NewDestAllow = if
+    DestAllowNew = if
         DestAllow =:= undefined ->
             undefined;
         true ->
             cloudi_x_trie:to_list(DestAllow)
     end,
-    NewConfigOptions = cloudi_core_i_configuration:
+    ConfigOptionsNew = cloudi_core_i_configuration:
                        services_format_options_external(ConfigOptions),
     [{data,
       [{"State",
@@ -1564,10 +1564,10 @@ format_status(_Opt,
                     recv_timeouts = maps:to_list(RecvTimeouts),
                     async_responses = maps:to_list(AsyncResponses),
                     queued = cloudi_x_pqueue4:to_plist(Queue),
-                    cpg_data = NewGroups,
-                    dest_deny = NewDestDeny,
-                    dest_allow = NewDestAllow,
-                    options = NewConfigOptions}}]}].
+                    cpg_data = GroupsNew,
+                    dest_deny = DestDenyNew,
+                    dest_allow = DestAllowNew,
+                    options = ConfigOptionsNew}}]}].
 -endif.
 
 %%%------------------------------------------------------------------------
@@ -1749,14 +1749,14 @@ handle_send_async(Name, RequestInfo, Request, Timeout, Priority,
             ok = send('return_async_out'(), State),
             keep_state_and_data;
         {ok, Pattern, Pid} ->
-            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+            {TransId, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_async',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
             ok = send('return_async_out'(TransId), State),
             {keep_state,
              send_async_timeout_start(Timeout, TransId, Pid,
-                                      State#state{uuid_generator = NewUUID})}
+                                      State#state{uuid_generator = UUIDNew})}
     end.
 
 handle_send_sync(Name, RequestInfo, Request, Timeout, Priority,
@@ -1785,13 +1785,13 @@ handle_send_sync(Name, RequestInfo, Request, Timeout, Priority,
             ok = send('return_sync_out'(), State),
             keep_state_and_data;
         {ok, Pattern, Pid} ->
-            {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+            {TransId, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
             Pid ! {'cloudi_service_send_sync',
                    Name, Pattern, RequestInfo, Request,
                    Timeout, Priority, TransId, Dispatcher},
             {keep_state,
              send_sync_timeout_start(Timeout, TransId, Pid, undefined,
-                                     State#state{uuid_generator = NewUUID})}
+                                     State#state{uuid_generator = UUIDNew})}
     end.
 
 handle_mcast_async_pids(_Name, _Pattern, _RequestInfo, _Request,
@@ -1805,18 +1805,18 @@ handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                         TransIdList, [Pid | PidList],
                         #state{dispatcher = Dispatcher,
                                uuid_generator = UUID} = State) ->
-    {TransId, NewUUID} = cloudi_x_uuid:get_v1(UUID),
+    {TransId, UUIDNew} = cloudi_x_uuid:get_v1(UUID),
     Pid ! {'cloudi_service_send_async',
            Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Dispatcher},
-    NewState = State#state{uuid_generator = NewUUID},
+    StateNew = State#state{uuid_generator = UUIDNew},
     handle_mcast_async_pids(Name, Pattern, RequestInfo, Request,
                             Timeout, Priority,
                             [TransId | TransIdList], PidList,
                             send_async_timeout_start(Timeout,
                                                      TransId,
                                                      Pid,
-                                                     NewState)).
+                                                     StateNew)).
 
 handle_mcast_async(Name, RequestInfo, Request, Timeout, Priority,
                    #state{dispatcher = Dispatcher,
@@ -2060,26 +2060,26 @@ process_queue(#state{dispatcher = Dispatcher,
                      service_state = ServiceState,
                      options = ConfigOptions} = State) ->
     case cloudi_x_pqueue4:out(Queue) of
-        {empty, NewQueue} ->
+        {empty, QueueNew} ->
             State#state{queue_requests = false,
-                        queued = NewQueue};
+                        queued = QueueNew};
         {{value,
           {Size,
            {'cloudi_service_send_async',
             Name, Pattern, RequestInfo, Request,
-            OldTimeout, Priority, TransId, Source}}}, NewQueue} ->
+            TimeoutOld, Priority, TransId, Source}}}, QueueNew} ->
             Type = 'send_async',
-            NewConfigOptions = check_incoming(true, ConfigOptions),
+            ConfigOptionsNew = check_incoming(true, ConfigOptions),
             #config_service_options{
                 request_timeout_adjustment =
                     RequestTimeoutAdjustment,
                 aspects_request_before =
-                    AspectsBefore} = NewConfigOptions,
+                    AspectsBefore} = ConfigOptionsNew,
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
-                                       OldTimeout, Priority, TransId, Source,
+                                       TimeoutOld, Priority, TransId, Source,
                                        ServiceState) of
-                {ok, NewServiceState} ->
+                {ok, ServiceStateNew} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
@@ -2099,40 +2099,40 @@ process_queue(#state{dispatcher = Dispatcher,
                               State),
                     State#state{recv_timeouts = maps:remove(TransId,
                                                             RecvTimeouts),
-                                queued = NewQueue,
+                                queued = QueueNew,
                                 queued_size = QueuedSize - Size,
-                                service_state = NewServiceState,
+                                service_state = ServiceStateNew,
                                 request_data = {T, RequestTimeoutF},
-                                options = NewConfigOptions};
-                {stop, Reason, NewServiceState} ->
+                                options = ConfigOptionsNew};
+                {stop, Reason, ServiceStateNew} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{service_state = NewServiceState,
-                                options = NewConfigOptions}
+                    State#state{service_state = ServiceStateNew,
+                                options = ConfigOptionsNew}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{options = NewConfigOptions}
+                    State#state{options = ConfigOptionsNew}
             end;
         {{value,
           {Size,
            {'cloudi_service_send_sync',
             Name, Pattern, RequestInfo, Request,
-            OldTimeout, Priority, TransId, Source}}}, NewQueue} ->
+            TimeoutOld, Priority, TransId, Source}}}, QueueNew} ->
             Type = 'send_sync',
-            NewConfigOptions = check_incoming(true, ConfigOptions),
+            ConfigOptionsNew = check_incoming(true, ConfigOptions),
             #config_service_options{
                 request_timeout_adjustment =
                     RequestTimeoutAdjustment,
                 aspects_request_before =
-                    AspectsBefore} = NewConfigOptions,
+                    AspectsBefore} = ConfigOptionsNew,
             try aspects_request_before(AspectsBefore, Type,
                                        Name, Pattern, RequestInfo, Request,
-                                       OldTimeout, Priority, TransId, Source,
+                                       TimeoutOld, Priority, TransId, Source,
                                        ServiceState) of
-                {ok, NewServiceState} ->
+                {ok, ServiceStateNew} ->
                     RecvTimer = maps:get(TransId, RecvTimeouts),
                     Timeout = case erlang:cancel_timer(RecvTimer) of
                         false ->
@@ -2152,22 +2152,22 @@ process_queue(#state{dispatcher = Dispatcher,
                               State),
                     State#state{recv_timeouts = maps:remove(TransId,
                                                             RecvTimeouts),
-                                queued = NewQueue,
+                                queued = QueueNew,
                                 queued_size = QueuedSize - Size,
-                                service_state = NewServiceState,
+                                service_state = ServiceStateNew,
                                 request_data = {T, RequestTimeoutF},
-                                options = NewConfigOptions};
-                {stop, Reason, NewServiceState} ->
+                                options = ConfigOptionsNew};
+                {stop, Reason, ServiceStateNew} ->
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{service_state = NewServiceState,
-                                options = NewConfigOptions}
+                    State#state{service_state = ServiceStateNew,
+                                options = ConfigOptionsNew}
             catch
                 ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
                     ?LOG_ERROR("request ~tp ~tp~n~tp",
                                [ErrorType, Error, ErrorStackTrace]),
                     Reason = {ErrorType, {Error, ErrorStackTrace}},
                     Dispatcher ! {'EXIT', Dispatcher, Reason},
-                    State#state{options = NewConfigOptions}
+                    State#state{options = ConfigOptionsNew}
             end
     end.
 
@@ -2176,8 +2176,8 @@ process_update(#state{dispatcher = Dispatcher,
     #config_service_update{update_now = UpdateNow,
                            spawn_os_process = SpawnOsProcess,
                            process_busy = false} = UpdatePlan,
-    {NewOsProcess, NewState} = case update(State, UpdatePlan) of
-        {ok, undefined, NextState} ->
+    {OsProcessNew, StateNew} = case update(State, UpdatePlan) of
+        {ok, undefined, StateNext} ->
             false = SpawnOsProcess,
             % re-initialize the old OS process after the update success
             % when a new OS process is not created during the update
@@ -2186,21 +2186,21 @@ process_update(#state{dispatcher = Dispatcher,
                    timeout_sync = TimeoutSync,
                    options = #config_service_options{
                        priority_default = PriorityDefault}
-                   } = NextState,
+                   } = StateNext,
             ok = send('reinit_out'(ProcessCount,
                                    TimeoutAsync, TimeoutSync,
-                                   PriorityDefault), NextState),
+                                   PriorityDefault), StateNext),
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, ok},
-            {false, NextState};
+            {false, StateNext};
         {ok, {error, _} = Error} ->
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             {false, State};
-        {ok, #state_socket{port = Port} = StateSocket, NextState} ->
+        {ok, #state_socket{port = Port} = StateSocket, StateNext} ->
             true = SpawnOsProcess,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, {ok, Port}},
             receive
                 {'cloudi_service_update_after', ok} ->
-                    {true, update_after(StateSocket, NextState)};
+                    {true, update_after(StateSocket, StateNext)};
                 {'cloudi_service_update_after', error} ->
                     ok = socket_close(StateSocket),
                     erlang:exit(update_failed)
@@ -2210,13 +2210,13 @@ process_update(#state{dispatcher = Dispatcher,
             UpdateNow ! {'cloudi_service_update_now', Dispatcher, Error},
             erlang:exit(update_failed)
     end,
-    FinalState = NewState#state{update_plan = undefined},
+    FinalState = StateNew#state{update_plan = undefined},
     if
-        NewOsProcess =:= true ->
+        OsProcessNew =:= true ->
             % wait to receive 'polling' to make sure initialization is complete
             % with the newly created OS process
             FinalState;
-        NewOsProcess =:= false ->
+        OsProcessNew =:= false ->
             process_queues(FinalState)
     end.
 
@@ -2225,7 +2225,7 @@ process_queues(#state{dispatcher = Dispatcher,
     when is_record(UpdatePlan, config_service_update) ->
     #config_service_update{update_pending = UpdatePending,
                            update_now = UpdateNow} = UpdatePlan,
-    NewUpdatePlan = if
+    UpdatePlanNew = if
         is_pid(UpdatePending) ->
             UpdatePending ! {'cloudi_service_update', Dispatcher},
             UpdatePlan#config_service_update{update_pending = undefined,
@@ -2233,12 +2233,12 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdatePending =:= undefined ->
             UpdatePlan#config_service_update{process_busy = false}
     end,
-    NewState = State#state{update_plan = NewUpdatePlan},
+    StateNew = State#state{update_plan = UpdatePlanNew},
     if
         is_pid(UpdateNow) ->
-            process_update(NewState);
+            process_update(StateNew);
         UpdateNow =:= undefined ->
-            NewState
+            StateNew
     end;
 process_queues(#state{suspended = {true, Busy} = Suspended} = State) ->
     SuspendedNew = if
@@ -2305,10 +2305,10 @@ socket_recv(#state_socket{protocol = Protocol,
 
 socket_recv_term(StateSocket) ->
     case socket_recv(StateSocket) of
-        {ok, Data, NewStateSocket} ->
+        {ok, Data, StateSocketNew} ->
             try erlang:binary_to_term(Data, [safe]) of
                 Term ->
-                    {ok, Term, NewStateSocket}
+                    {ok, Term, StateSocketNew}
             catch
                 error:badarg ->
                     {error, protocol}
@@ -2563,15 +2563,15 @@ aspects_init([], _, _, _, ServiceState) ->
     {ok, ServiceState};
 aspects_init([{M, F} | L], CommandLine, Prefix, Timeout, ServiceState) ->
     case M:F(CommandLine, Prefix, Timeout, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_init(L, CommandLine, Prefix, Timeout, NewServiceState);
+        {ok, ServiceStateNew} ->
+            aspects_init(L, CommandLine, Prefix, Timeout, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end;
 aspects_init([F | L], CommandLine, Prefix, Timeout, ServiceState) ->
     case F(CommandLine, Prefix, Timeout, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_init(L, CommandLine, Prefix, Timeout, NewServiceState);
+        {ok, ServiceStateNew} ->
+            aspects_init(L, CommandLine, Prefix, Timeout, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end.
@@ -2584,10 +2584,10 @@ aspects_request_before([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
     case M:F(Type, Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              ServiceState) of
-        {ok, NewServiceState} ->
+        {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
-                                   NewServiceState);
+                                   ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end;
@@ -2597,10 +2597,10 @@ aspects_request_before([F | L], Type, Name, Pattern, RequestInfo, Request,
     case F(Type, Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Source,
            ServiceState) of
-        {ok, NewServiceState} ->
+        {ok, ServiceStateNew} ->
             aspects_request_before(L, Type, Name, Pattern, RequestInfo, Request,
                                    Timeout, Priority, TransId, Source,
-                                   NewServiceState);
+                                   ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end.
@@ -2613,10 +2613,10 @@ aspects_request_after([{M, F} | L], Type, Name, Pattern, RequestInfo, Request,
     case M:F(Type, Name, Pattern, RequestInfo, Request,
              Timeout, Priority, TransId, Source,
              Result, ServiceState) of
-        {ok, NewServiceState} ->
+        {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
-                                  Result, NewServiceState);
+                                  Result, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end;
@@ -2626,10 +2626,10 @@ aspects_request_after([F | L], Type, Name, Pattern, RequestInfo, Request,
     case F(Type, Name, Pattern, RequestInfo, Request,
            Timeout, Priority, TransId, Source,
            Result, ServiceState) of
-        {ok, NewServiceState} ->
+        {ok, ServiceStateNew} ->
             aspects_request_after(L, Type, Name, Pattern, RequestInfo, Request,
                                   Timeout, Priority, TransId, Source,
-                                  Result, NewServiceState);
+                                  Result, ServiceStateNew);
         {stop, _, _} = Stop ->
             Stop
     end.
@@ -2643,13 +2643,13 @@ update(State, #config_service_update{spawn_os_process = false} = UpdatePlan) ->
     {ok, undefined, update_state(State, UpdatePlan)};
 update(State, #config_service_update{spawn_os_process = true} = UpdatePlan) ->
     ok = socket_close(update, socket_data_from_state(State)),
-    NewState = update_state(State, UpdatePlan),
-    case socket_new(NewState) of
+    StateNew = update_state(State, UpdatePlan),
+    case socket_new(StateNew) of
         {ok, StateSocket} ->
             #state{dispatcher = Dispatcher,
                    timeout_init = Timeout,
                    options = #config_service_options{
-                       scope = Scope}} = NewState,
+                       scope = Scope}} = StateNew,
             InitTimer = erlang:send_after(Timeout, Dispatcher,
                                           'cloudi_service_init_timeout'),
             % all old subscriptions are stored but not removed until after
@@ -2661,7 +2661,7 @@ update(State, #config_service_update{spawn_os_process = true} = UpdatePlan) ->
                                                              Timeout),
             {ok, StateSocket,
              socket_data_to_state(StateSocket,
-                                  NewState#state{os_pid = undefined,
+                                  StateNew#state{os_pid = undefined,
                                                  init_timer = InitTimer,
                                                  subscribed = Subscriptions})};
         {error, _} = Error ->
@@ -2669,82 +2669,82 @@ update(State, #config_service_update{spawn_os_process = true} = UpdatePlan) ->
     end.
 
 update_state(#state{dispatcher = Dispatcher,
-                    timeout_init = OldTimeoutInit,
-                    timeout_async = OldTimeoutAsync,
-                    timeout_sync = OldTimeoutSync,
-                    dest_refresh = OldDestRefresh,
-                    cpg_data = OldGroups,
-                    dest_deny = OldDestDeny,
-                    dest_allow = OldDestAllow,
-                    options = OldConfigOptions} = State,
+                    timeout_init = TimeoutInitOld,
+                    timeout_async = TimeoutAsyncOld,
+                    timeout_sync = TimeoutSyncOld,
+                    dest_refresh = DestRefreshOld,
+                    cpg_data = GroupsOld,
+                    dest_deny = DestDenyOld,
+                    dest_allow = DestAllowOld,
+                    options = ConfigOptionsOld} = State,
              #config_service_update{
-                 dest_refresh = NewDestRefresh,
-                 timeout_init = NewTimeoutInit,
-                 timeout_async = NewTimeoutAsync,
-                 timeout_sync = NewTimeoutSync,
-                 dest_list_deny = NewDestListDeny,
-                 dest_list_allow = NewDestListAllow,
+                 dest_refresh = DestRefreshNew,
+                 timeout_init = TimeoutInitNew,
+                 timeout_async = TimeoutAsyncNew,
+                 timeout_sync = TimeoutSyncNew,
+                 dest_list_deny = DestListDenyNew,
+                 dest_list_allow = DestListAllowNew,
                  options_keys = OptionsKeys,
-                 options = NewConfigOptions}) ->
+                 options = ConfigOptionsNew}) ->
     DestRefresh = if
-        NewDestRefresh =:= undefined ->
-            OldDestRefresh;
-        is_atom(NewDestRefresh) ->
-            NewDestRefresh
+        DestRefreshNew =:= undefined ->
+            DestRefreshOld;
+        is_atom(DestRefreshNew) ->
+            DestRefreshNew
     end,
-    Groups = destination_refresh_groups(DestRefresh, OldGroups),
+    Groups = destination_refresh_groups(DestRefresh, GroupsOld),
     TimeoutInit = if
-        NewTimeoutInit =:= undefined ->
-            OldTimeoutInit;
-        is_integer(NewTimeoutInit) ->
-            NewTimeoutInit
+        TimeoutInitNew =:= undefined ->
+            TimeoutInitOld;
+        is_integer(TimeoutInitNew) ->
+            TimeoutInitNew
     end,
     TimeoutAsync = if
-        NewTimeoutAsync =:= undefined ->
-            OldTimeoutAsync;
-        is_integer(NewTimeoutAsync) ->
-            NewTimeoutAsync
+        TimeoutAsyncNew =:= undefined ->
+            TimeoutAsyncOld;
+        is_integer(TimeoutAsyncNew) ->
+            TimeoutAsyncNew
     end,
     TimeoutSync = if
-        NewTimeoutSync =:= undefined ->
-            OldTimeoutSync;
-        is_integer(NewTimeoutSync) ->
-            NewTimeoutSync
+        TimeoutSyncNew =:= undefined ->
+            TimeoutSyncOld;
+        is_integer(TimeoutSyncNew) ->
+            TimeoutSyncNew
     end,
     DestDeny = if
-        NewDestListDeny =:= invalid ->
-            OldDestDeny;
-        NewDestListDeny =:= undefined ->
+        DestListDenyNew =:= invalid ->
+            DestDenyOld;
+        DestListDenyNew =:= undefined ->
             undefined;
-        is_list(NewDestListDeny) ->
-            cloudi_x_trie:new(NewDestListDeny)
+        is_list(DestListDenyNew) ->
+            cloudi_x_trie:new(DestListDenyNew)
     end,
     DestAllow = if
-        NewDestListAllow =:= invalid ->
-            OldDestAllow;
-        NewDestListAllow =:= undefined ->
+        DestListAllowNew =:= invalid ->
+            DestAllowOld;
+        DestListAllowNew =:= undefined ->
             undefined;
-        is_list(NewDestListAllow) ->
-            cloudi_x_trie:new(NewDestListAllow)
+        is_list(DestListAllowNew) ->
+            cloudi_x_trie:new(DestListAllowNew)
     end,
     case lists:member(monkey_chaos, OptionsKeys) of
         true ->
             #config_service_options{
-                monkey_chaos = OldMonkeyChaos} = OldConfigOptions,
+                monkey_chaos = MonkeyChaosOld} = ConfigOptionsOld,
             cloudi_core_i_runtime_testing:
-            monkey_chaos_destroy(OldMonkeyChaos);
+            monkey_chaos_destroy(MonkeyChaosOld);
         false ->
             ok
     end,
     ConfigOptions0 = cloudi_core_i_configuration:
                      service_options_copy(OptionsKeys,
-                                          OldConfigOptions,
-                                          NewConfigOptions),
+                                          ConfigOptionsOld,
+                                          ConfigOptionsNew),
     ConfigOptionsN = case lists:member(rate_request_max, OptionsKeys) of
         true ->
             #config_service_options{
                 rate_request_max = RateRequest} = ConfigOptions0,
-            NewRateRequest = if
+            RateRequestNew = if
                 RateRequest =/= undefined ->
                     cloudi_core_i_rate_based_configuration:
                     rate_request_init(RateRequest);
@@ -2752,25 +2752,25 @@ update_state(#state{dispatcher = Dispatcher,
                     RateRequest
             end,
             ConfigOptions0#config_service_options{
-                rate_request_max = NewRateRequest};
+                rate_request_max = RateRequestNew};
         false ->
             ConfigOptions0
     end,
     if
-        (OldDestRefresh =:= immediate_closest orelse
-         OldDestRefresh =:= immediate_furthest orelse
-         OldDestRefresh =:= immediate_random orelse
-         OldDestRefresh =:= immediate_local orelse
-         OldDestRefresh =:= immediate_remote orelse
-         OldDestRefresh =:= immediate_newest orelse
-         OldDestRefresh =:= immediate_oldest) andalso
-        (NewDestRefresh =:= lazy_closest orelse
-         NewDestRefresh =:= lazy_furthest orelse
-         NewDestRefresh =:= lazy_random orelse
-         NewDestRefresh =:= lazy_local orelse
-         NewDestRefresh =:= lazy_remote orelse
-         NewDestRefresh =:= lazy_newest orelse
-         NewDestRefresh =:= lazy_oldest) ->
+        (DestRefreshOld =:= immediate_closest orelse
+         DestRefreshOld =:= immediate_furthest orelse
+         DestRefreshOld =:= immediate_random orelse
+         DestRefreshOld =:= immediate_local orelse
+         DestRefreshOld =:= immediate_remote orelse
+         DestRefreshOld =:= immediate_newest orelse
+         DestRefreshOld =:= immediate_oldest) andalso
+        (DestRefreshNew =:= lazy_closest orelse
+         DestRefreshNew =:= lazy_furthest orelse
+         DestRefreshNew =:= lazy_random orelse
+         DestRefreshNew =:= lazy_local orelse
+         DestRefreshNew =:= lazy_remote orelse
+         DestRefreshNew =:= lazy_newest orelse
+         DestRefreshNew =:= lazy_oldest) ->
             #config_service_options{
                 dest_refresh_delay = Delay,
                 scope = Scope} = ConfigOptionsN,
@@ -2789,13 +2789,13 @@ update_state(#state{dispatcher = Dispatcher,
 
 update_after(StateSocket, State) ->
     case socket_recv_term(StateSocket) of
-        {ok, {'pid', OSPid}, NewStateSocket} ->
-            NewState = socket_data_to_state(NewStateSocket, State),
-            update_after(NewStateSocket, os_pid_set(OSPid, NewState));
-        {ok, 'init', NewStateSocket} ->
-            NewState = socket_data_to_state(NewStateSocket, State),
-            ok = os_init(NewState),
-            NewState;
+        {ok, {'pid', OSPid}, StateSocketNew} ->
+            StateNew = socket_data_to_state(StateSocketNew, State),
+            update_after(StateSocketNew, os_pid_set(OSPid, StateNew));
+        {ok, 'init', StateSocketNew} ->
+            StateNew = socket_data_to_state(StateSocketNew, State),
+            ok = os_init(StateNew),
+            StateNew;
         {error, Reason} ->
             ?LOG_ERROR("update_failed: ~tp", [Reason]),
             erlang:exit(update_failed)

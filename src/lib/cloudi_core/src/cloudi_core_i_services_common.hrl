@@ -202,7 +202,7 @@ send_async_timeout_start(Timeout, TransId, Pid,
                                         RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case maps:find(Pid, SendTimeoutMonitors) of
+    SendTimeoutMonitorsNew = case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
             maps:put(Pid,
                      {MonitorRef,
@@ -218,7 +218,7 @@ send_async_timeout_start(Timeout, TransId, Pid,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_async_timeout', TransId})},
             SendTimeouts),
-        send_timeout_monitors = NewSendTimeoutMonitors};
+        send_timeout_monitors = SendTimeoutMonitorsNew};
 
 send_async_timeout_start(Timeout, TransId, _Pid,
                          #state{dispatcher = Dispatcher,
@@ -241,7 +241,7 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
                                        RequestTimeoutImmediateMax}} = State)
     when is_integer(Timeout), is_binary(TransId), is_pid(Pid),
          Timeout >= RequestTimeoutImmediateMax ->
-    NewSendTimeoutMonitors = case maps:find(Pid, SendTimeoutMonitors) of
+    SendTimeoutMonitorsNew = case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {MonitorRef, TransIdList}} ->
             maps:put(Pid,
                      {MonitorRef,
@@ -257,7 +257,7 @@ send_sync_timeout_start(Timeout, TransId, Pid, Client,
              erlang:send_after(Timeout, Dispatcher,
                                {'cloudi_service_send_sync_timeout', TransId})},
             SendTimeouts),
-        send_timeout_monitors = NewSendTimeoutMonitors};
+        send_timeout_monitors = SendTimeoutMonitorsNew};
 
 send_sync_timeout_start(Timeout, TransId, _Pid, Client,
                         #state{dispatcher = Dispatcher,
@@ -274,7 +274,7 @@ send_timeout_end(TransId, Pid,
                  #state{send_timeouts = SendTimeouts,
                         send_timeout_monitors = SendTimeoutMonitors} = State)
     when is_binary(TransId) ->
-    NewSendTimeoutMonitors = if
+    SendTimeoutMonitorsNew = if
         is_pid(Pid) ->
             case maps:find(Pid, SendTimeoutMonitors) of
                 {ok, {MonitorRef, [TransId]}} ->
@@ -292,7 +292,7 @@ send_timeout_end(TransId, Pid,
             SendTimeoutMonitors
     end,
     State#state{send_timeouts = maps:remove(TransId, SendTimeouts),
-                send_timeout_monitors = NewSendTimeoutMonitors}.
+                send_timeout_monitors = SendTimeoutMonitorsNew}.
 
 send_timeout_dead(Pid,
                   #state{dispatcher = Dispatcher,
@@ -302,7 +302,7 @@ send_timeout_dead(Pid,
     when is_pid(Pid) ->
     case maps:find(Pid, SendTimeoutMonitors) of
         {ok, {_MonitorRef, TransIdList}} ->
-            NewSendTimeouts = lists:foldl(fun(TransId, D) ->
+            SendTimeoutsNew = lists:foldl(fun(TransId, D) ->
                 case maps:find(TransId, D) of
                     {ok, {Type, _, Tref}}
                     when Type =:= active; Type =:= passive ->
@@ -329,10 +329,10 @@ send_timeout_dead(Pid,
                         D
                 end
             end, SendTimeouts, TransIdList),
-            NewSendTimeoutMonitors = maps:remove(Pid, SendTimeoutMonitors),
+            SendTimeoutMonitorsNew = maps:remove(Pid, SendTimeoutMonitors),
             {true,
-             State#state{send_timeouts = NewSendTimeouts,
-                         send_timeout_monitors = NewSendTimeoutMonitors}};
+             State#state{send_timeouts = SendTimeoutsNew,
+                         send_timeout_monitors = SendTimeoutMonitorsNew}};
         error ->
             {false, State}
     end.
@@ -378,14 +378,14 @@ check_init_send(#config_service_options{
 check_init_send(#config_service_options{
                     monkey_latency = MonkeyLatency,
                     monkey_chaos = MonkeyChaos} = ConfigOptions) ->
-    NewMonkeyLatency = if
+    MonkeyLatencyNew = if
         MonkeyLatency =/= false ->
             cloudi_core_i_runtime_testing:
             monkey_latency_init(MonkeyLatency);
         true ->
             MonkeyLatency
     end,
-    NewMonkeyChaos = if
+    MonkeyChaosNew = if
         MonkeyChaos =/= false ->
             cloudi_core_i_runtime_testing:
             monkey_chaos_init(MonkeyChaos);
@@ -393,8 +393,8 @@ check_init_send(#config_service_options{
             MonkeyChaos
     end,
     ConfigOptions#config_service_options{
-        monkey_latency = NewMonkeyLatency,
-        monkey_chaos = NewMonkeyChaos}.
+        monkey_latency = MonkeyLatencyNew,
+        monkey_chaos = MonkeyChaosNew}.
 
 check_init_receive(#config_service_options{
                        rate_request_max = undefined,
@@ -406,21 +406,21 @@ check_init_receive(#config_service_options{
                        rate_request_max = RateRequest,
                        count_process_dynamic = CountProcessDynamic,
                        hibernate = Hibernate} = ConfigOptions) ->
-    NewRateRequest = if
+    RateRequestNew = if
         RateRequest =/= undefined ->
             cloudi_core_i_rate_based_configuration:
             rate_request_init(RateRequest);
         true ->
             RateRequest
     end,
-    NewCountProcessDynamic = if
+    CountProcessDynamicNew = if
         CountProcessDynamic =/= false ->
             cloudi_core_i_rate_based_configuration:
             count_process_dynamic_init(CountProcessDynamic);
         true ->
             CountProcessDynamic
     end,
-    NewHibernate = if
+    HibernateNew = if
         not is_boolean(Hibernate) ->
             cloudi_core_i_rate_based_configuration:
             hibernate_init(Hibernate);
@@ -428,9 +428,9 @@ check_init_receive(#config_service_options{
             Hibernate
     end,
     ConfigOptions#config_service_options{
-        rate_request_max = NewRateRequest,
-        count_process_dynamic = NewCountProcessDynamic,
-        hibernate = NewHibernate}.
+        rate_request_max = RateRequestNew,
+        count_process_dynamic = CountProcessDynamicNew,
+        hibernate = HibernateNew}.
 
 check_incoming(_ServiceRequest,
                #config_service_options{
@@ -446,28 +446,28 @@ check_incoming(ServiceRequest,
                    monkey_latency = MonkeyLatency,
                    monkey_chaos = MonkeyChaos,
                    hibernate = Hibernate} = ConfigOptions) ->
-    NewCountProcessDynamic = if
+    CountProcessDynamicNew = if
         (CountProcessDynamic =/= false), ServiceRequest ->
             cloudi_core_i_rate_based_configuration:
             count_process_dynamic_request(CountProcessDynamic);
         true ->
             CountProcessDynamic
     end,
-    NewMonkeyLatency = if
+    MonkeyLatencyNew = if
         MonkeyLatency =/= false ->
             cloudi_core_i_runtime_testing:
             monkey_latency_check(MonkeyLatency);
         true ->
             MonkeyLatency
     end,
-    NewMonkeyChaos = if
+    MonkeyChaosNew = if
         MonkeyChaos =/= false ->
             cloudi_core_i_runtime_testing:
             monkey_chaos_check(MonkeyChaos);
         true ->
             MonkeyChaos
     end,
-    NewHibernate = if
+    HibernateNew = if
         (not is_boolean(Hibernate)), ServiceRequest ->
             cloudi_core_i_rate_based_configuration:
             hibernate_request(Hibernate);
@@ -475,10 +475,10 @@ check_incoming(ServiceRequest,
             Hibernate
     end,
     ConfigOptions#config_service_options{
-        count_process_dynamic = NewCountProcessDynamic,
-        monkey_latency = NewMonkeyLatency,
-        monkey_chaos = NewMonkeyChaos,
-        hibernate = NewHibernate}.
+        count_process_dynamic = CountProcessDynamicNew,
+        monkey_latency = MonkeyLatencyNew,
+        monkey_chaos = MonkeyChaosNew,
+        hibernate = HibernateNew}.
 
 request_timeout_adjustment_f(true) ->
     RequestTimeStart = cloudi_timestamp:milliseconds_monotonic(),
@@ -498,8 +498,8 @@ aspects_terminate([], _, _, ServiceState) ->
     {ok, ServiceState};
 aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
     try {ok, _} = M:F(Reason, TimeoutTerm, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
+        {ok, ServiceStateNew} ->
+            aspects_terminate(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",
@@ -508,8 +508,8 @@ aspects_terminate([{M, F} = Aspect | L], Reason, TimeoutTerm, ServiceState) ->
     end;
 aspects_terminate([F | L], Reason, TimeoutTerm, ServiceState) ->
     try {ok, _} = F(Reason, TimeoutTerm, ServiceState) of
-        {ok, NewServiceState} ->
-            aspects_terminate(L, Reason, TimeoutTerm, NewServiceState)
+        {ok, ServiceStateNew} ->
+            aspects_terminate(L, Reason, TimeoutTerm, ServiceStateNew)
     catch
         ?STACKTRACE(ErrorType, Error, ErrorStackTrace)
             ?LOG_ERROR("aspect_terminate(~tp) ~tp ~tp~n~tp",

@@ -70,6 +70,7 @@
         log_execution_time :: boolean(),
         map_reduce_module :: module(),
         map_reduce_state :: any(),
+        map_reduce_name :: string(),
         map_count :: pos_integer(),
         map_requests :: #{cloudi_service:trans_id() := map_send_args()},
         suspend = false :: boolean()
@@ -84,6 +85,7 @@
         log_execution_time :: boolean(),
         map_reduce_module :: module(),
         map_reduce_args :: list(),
+        map_reduce_name :: string(),
         concurrency :: number()
     }).
 
@@ -216,6 +218,7 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
                            log_execution_time = LogExecutionTime,
                            map_reduce_module = MapReduceModule,
                            map_reduce_args = MapReduceArgs,
+                           map_reduce_name = Name,
                            concurrency = Concurrency},
     cloudi_service:subscribe(Dispatcher, Name),
     {ok, undefined}.
@@ -343,6 +346,7 @@ init(#init_begin{prefix = Prefix,
                  log_execution_time = LogExecutionTime,
                  map_reduce_module = MapReduceModule,
                  map_reduce_args = MapReduceArgs,
+                 map_reduce_name = MapReduceName,
                  concurrency = Concurrency},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
@@ -358,6 +362,7 @@ init(#init_begin{prefix = Prefix,
                             log_execution_time = LogExecutionTime,
                             map_reduce_module = MapReduceModule,
                             map_reduce_state = MapReduceStateNew,
+                            map_reduce_name = MapReduceName,
                             map_count = MapCount,
                             map_requests = MapRequests}};
                 {error, _} = Error ->
@@ -371,19 +376,21 @@ request(_, undefined, _Dispatcher) ->
     {reply, {error, init_pending}, undefined};
 request(suspend,
         #state{map_reduce_module = MapReduceModule,
+               map_reduce_name = MapReduceName,
                suspend = false} = State, _Dispatcher) ->
-    ?LOG_INFO("~p suspended", [MapReduceModule]),
+    ?LOG_INFO("~s ~ts suspended", [MapReduceModule, MapReduceName]),
     {reply, ok, State#state{suspend = true}};
 request(resume,
         #state{map_reduce_module = MapReduceModule,
                map_reduce_state = MapReduceState,
+               map_reduce_name = MapReduceName,
                map_count = MapCount,
                map_requests = MapRequests,
                suspend = true} = State, Dispatcher) ->
     case map_send(MapCount - maps:size(MapRequests), MapRequests,
                   MapReduceModule, MapReduceState, Dispatcher) of
         {ok, MapRequestsNew, MapReduceStateNew} ->
-            ?LOG_INFO("~p resumed", [MapReduceModule]),
+            ?LOG_INFO("~s ~ts resumed", [MapReduceModule, MapReduceName]),
             {reply, ok,
              State#state{map_reduce_state = MapReduceStateNew,
                          map_requests = MapRequestsNew,
