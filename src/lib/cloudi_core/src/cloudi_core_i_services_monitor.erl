@@ -126,6 +126,10 @@
                                   pid(), #service{}),
         durations_update = cloudi_core_i_status:durations_new()
             :: cloudi_core_i_status:durations(cloudi_service_api:service_id()),
+        durations_suspend = cloudi_core_i_status:durations_new()
+            :: cloudi_core_i_status:durations(cloudi_service_api:service_id()),
+        suspended = sets:new()
+            :: sets:set(cloudi_service_api:service_id()),
         durations_restart = cloudi_core_i_status:durations_new()
             :: cloudi_core_i_status:durations(cloudi_service_api:service_id()),
         changes = #{}
@@ -380,19 +384,38 @@ handle_call({restart, ServiceId}, _,
     end;
 
 handle_call({suspend, ServiceId}, _,
-            #state{services = Services} = State) ->
+            #state{services = Services,
+                   suspended = Suspended} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
-            {reply, suspend_pids(Pids, true), State};
+            case suspend_pids(Pids) of
+                ok ->
+                    SuspendedNew = sets:add_element(ServiceId, Suspended),
+                    {reply, ok, State#state{suspended = SuspendedNew}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
         error ->
             {reply, {error, not_found}, State}
     end;
 
 handle_call({resume, ServiceId}, _,
-            #state{services = Services} = State) ->
+            #state{services = Services,
+                   durations_update = DurationsUpdate,
+                   durations_suspend = DurationsSuspend,
+                   suspended = Suspended} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
-            {reply, suspend_pids(Pids, false), State};
+            case resume_pids(Pids, DurationsSuspend,
+                             DurationsUpdate, ServiceId) of
+                {ok, DurationsSuspendNew} ->
+                    SuspendedNew = sets:del_element(ServiceId, Suspended),
+                    {reply, ok,
+                     State#state{durations_suspend = DurationsSuspendNew,
+                                 suspended = SuspendedNew}};
+                {error, _} = Error ->
+                    {reply, Error, State}
+            end;
         error ->
             {reply, {error, not_found}, State}
     end;
@@ -449,11 +472,13 @@ handle_call({search, PidList}, _,
 handle_call({status, ServiceIdList}, _,
             #state{services = Services,
                    durations_update = DurationsUpdate,
+                   durations_suspend = DurationsSuspend,
+                   suspended = Suspended,
                    durations_restart = DurationsRestart} = State) ->
     TimeNow = cloudi_timestamp:native_monotonic(),
     Reply = service_ids_status(ServiceIdList, TimeNow,
-                               DurationsUpdate, DurationsRestart,
-                               Services),
+                               DurationsUpdate, DurationsSuspend, Suspended,
+                               DurationsRestart, Services),
     {reply, Reply, State};
 
 handle_call({pids, ServiceId}, _,
@@ -656,7 +681,9 @@ initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
 restart(#service{time_start = TimeStart,
                  time_restart = TimeRestart,
                  time_terminate = TimeTerminate} = Service, Services,
-        #state{durations_update = DurationsUpdate} = State,
+        #state{durations_update = DurationsUpdate,
+               durations_suspend = DurationsSuspend,
+               suspended = Suspended} = State,
         ServiceId, OldPid) ->
     TimeTerminateNew = if
         TimeTerminate =:= undefined ->
@@ -672,8 +699,13 @@ restart(#service{time_start = TimeStart,
     end,
     DurationsUpdateNew = cloudi_core_i_status:
                          durations_erase(ServiceId, DurationsUpdate),
+    DurationsSuspendNew = cloudi_core_i_status:
+                          durations_erase(ServiceId, DurationsSuspend),
+    SuspendedNew = sets:del_element(ServiceId, Suspended),
     restart_stage1(Service#service{time_terminate = undefined}, Services,
-                   State#state{durations_update = DurationsUpdateNew},
+                   State#state{durations_update = DurationsUpdateNew,
+                               durations_suspend = DurationsSuspendNew,
+                               suspended = SuspendedNew},
                    ServiceId, TimeTerminateNew, OldPid).
 
 restart_stage1(#service{pids = Pids} = Service,
@@ -1320,7 +1352,8 @@ service_id_pids(ServiceId, Services) ->
     end.
 
 service_ids_status(ServiceIdList, TimeNow,
-                   DurationsUpdate, DurationsRestart, Services) ->
+                   DurationsUpdate, DurationsSuspend, Suspended,
+                   DurationsRestart, Services) ->
     TimeDayStart = TimeNow - ?NATIVE_TIME_IN_DAY,
     TimeWeekStart = TimeNow - ?NATIVE_TIME_IN_WEEK,
     TimeMonthStart = TimeNow - ?NATIVE_TIME_IN_MONTH,
@@ -1328,32 +1361,36 @@ service_ids_status(ServiceIdList, TimeNow,
     service_ids_status(ServiceIdList, [], TimeNow,
                        TimeDayStart, TimeWeekStart,
                        TimeMonthStart, TimeYearStart,
-                       DurationsUpdate, DurationsRestart, Services).
+                       DurationsUpdate, DurationsSuspend, Suspended,
+                       DurationsRestart, Services).
 
-service_ids_status([], StatusList, _, _, _, _, _, _, _, _) ->
+service_ids_status([], StatusList, _, _, _, _, _, _, _, _, _, _) ->
     {ok, lists:reverse(StatusList)};
 service_ids_status([ServiceId | ServiceIdList], StatusList, TimeNow,
                    TimeDayStart, TimeWeekStart,
                    TimeMonthStart, TimeYearStart,
-                   DurationsUpdate, DurationsRestart, Services) ->
+                   DurationsUpdate, DurationsSuspend, Suspended,
+                   DurationsRestart, Services) ->
     case service_id_status(ServiceId, TimeNow,
                            TimeDayStart, TimeWeekStart,
                            TimeMonthStart, TimeYearStart,
-                           DurationsUpdate, DurationsRestart, Services) of
+                           DurationsUpdate, DurationsSuspend, Suspended,
+                           DurationsRestart, Services) of
         {ok, Status} ->
             service_ids_status(ServiceIdList,
                                [{ServiceId, Status} | StatusList], TimeNow,
                                TimeDayStart, TimeWeekStart,
                                TimeMonthStart, TimeYearStart,
-                               DurationsUpdate, DurationsRestart,
-                               Services);
+                               DurationsUpdate, DurationsSuspend, Suspended,
+                               DurationsRestart, Services);
         {error, _} = Error ->
             Error
     end.
 
 service_id_status(ServiceId, TimeNow,
                   TimeDayStart, TimeWeekStart, TimeMonthStart, TimeYearStart,
-                  DurationsUpdate, DurationsRestart, Services) ->
+                  DurationsUpdate, DurationsSuspend, Suspended,
+                  DurationsRestart, Services) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {_, #service{service_m = Module,
                           service_f = Function,
@@ -1367,6 +1404,10 @@ service_id_status(ServiceId, TimeNow,
             DurationsStateUpdate = cloudi_core_i_status:
                                    durations_state(ServiceId,
                                                    DurationsUpdate),
+            DurationsStateSuspend = cloudi_core_i_status:
+                                    durations_state(ServiceId,
+                                                    DurationsSuspend),
+            ProcessingSuspended = sets:is_element(ServiceId, Suspended),
             DurationsStateRestart = cloudi_core_i_status:
                                     durations_state(ServiceId,
                                                     DurationsRestart),
@@ -1390,6 +1431,10 @@ service_id_status(ServiceId, TimeNow,
              NanoSecondsYearUpdate} = cloudi_core_i_status:
                                       durations_sum(DurationsStateUpdate,
                                                     TimeYearStart),
+            {ApproximateYearSuspend,
+             NanoSecondsYearSuspend} = cloudi_core_i_status:
+                                       durations_sum(DurationsStateSuspend,
+                                                     TimeYearStart),
             {ApproximateYearRestart,
              NanoSecondsYearRestart} = cloudi_core_i_status:
                                        durations_sum(DurationsStateRestart,
@@ -1398,6 +1443,10 @@ service_id_status(ServiceId, TimeNow,
              NanoSecondsMonthUpdate} = cloudi_core_i_status:
                                        durations_sum(DurationsStateUpdate,
                                                      TimeMonthStart),
+            {ApproximateMonthSuspend,
+             NanoSecondsMonthSuspend} = cloudi_core_i_status:
+                                        durations_sum(DurationsStateSuspend,
+                                                      TimeMonthStart),
             {ApproximateMonthRestart,
              NanoSecondsMonthRestart} = cloudi_core_i_status:
                                         durations_sum(DurationsStateRestart,
@@ -1406,6 +1455,10 @@ service_id_status(ServiceId, TimeNow,
              NanoSecondsWeekUpdate} = cloudi_core_i_status:
                                       durations_sum(DurationsStateUpdate,
                                                     TimeWeekStart),
+            {ApproximateWeekSuspend,
+             NanoSecondsWeekSuspend} = cloudi_core_i_status:
+                                       durations_sum(DurationsStateSuspend,
+                                                     TimeWeekStart),
             {ApproximateWeekRestart,
              NanoSecondsWeekRestart} = cloudi_core_i_status:
                                        durations_sum(DurationsStateRestart,
@@ -1414,6 +1467,10 @@ service_id_status(ServiceId, TimeNow,
              NanoSecondsDayUpdate} = cloudi_core_i_status:
                                      durations_sum(DurationsStateUpdate,
                                                    TimeDayStart),
+            {ApproximateDaySuspend,
+             NanoSecondsDaySuspend} = cloudi_core_i_status:
+                                      durations_sum(DurationsStateSuspend,
+                                                    TimeDayStart),
             {ApproximateDayRestart,
              NanoSecondsDayRestart} = cloudi_core_i_status:
                                       durations_sum(DurationsStateRestart,
@@ -1422,97 +1479,136 @@ service_id_status(ServiceId, TimeNow,
             Status1 = case cloudi_core_i_status:
                            nanoseconds_to_availability_year(
                                NanoSecondsRunning,
-                               ApproximateYearUpdate,
-                               NanoSecondsYearUpdate) of
+                               ApproximateYearUpdate orelse
+                               ApproximateYearSuspend,
+                               NanoSecondsYearUpdate +
+                               NanoSecondsYearSuspend) of
                 ?AVAILABILITY_ZERO ->
                     Status0;
-                AvailabilityYearUpdated ->
-                    [{availability_year_updated,
-                      AvailabilityYearUpdated} | Status0]
+                AvailabilityYearProcessing ->
+                    [{availability_year_processing,
+                      AvailabilityYearProcessing} | Status0]
             end,
             Status2 = case cloudi_core_i_status:
                            nanoseconds_to_availability_year(
-                               NanoSecondsRunning) of
+                               NanoSecondsRunning,
+                               ApproximateYearUpdate,
+                               NanoSecondsYearUpdate) of
                 ?AVAILABILITY_ZERO ->
                     Status1;
-                AvailabilityYearRunning ->
-                    [{availability_year_running,
-                      AvailabilityYearRunning} | Status1]
+                AvailabilityYearUpdated ->
+                    [{availability_year_updated,
+                      AvailabilityYearUpdated} | Status1]
             end,
             Status3 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_year(
+                               NanoSecondsRunning) of
+                ?AVAILABILITY_ZERO ->
+                    Status2;
+                AvailabilityYearRunning ->
+                    [{availability_year_running,
+                      AvailabilityYearRunning} | Status2]
+            end,
+            Status4 = case cloudi_core_i_status:
                            nanoseconds_to_availability_year(
                                NanoSecondsTotal,
                                ApproximateYearRestart,
                                NanoSecondsYearRestart) of
                 ?AVAILABILITY_ZERO ->
-                    Status2;
+                    Status3;
                 AvailabilityYearTotal ->
                     [{availability_year_total,
-                      AvailabilityYearTotal} | Status2]
+                      AvailabilityYearTotal} | Status3]
             end,
-            Status4 = case cloudi_core_i_status:
+            Status5 = case cloudi_core_i_status:
+                           nanoseconds_to_availability_month(
+                               NanoSecondsRunning,
+                               ApproximateMonthUpdate orelse
+                               ApproximateMonthSuspend,
+                               NanoSecondsMonthUpdate +
+                               NanoSecondsMonthSuspend) of
+                ?AVAILABILITY_ZERO ->
+                    Status4;
+                AvailabilityMonthProcessing ->
+                    [{availability_month_processing,
+                      AvailabilityMonthProcessing} | Status4]
+            end,
+            Status6 = case cloudi_core_i_status:
                            nanoseconds_to_availability_month(
                                NanoSecondsRunning,
                                ApproximateMonthUpdate,
                                NanoSecondsMonthUpdate) of
                 ?AVAILABILITY_ZERO ->
-                    Status3;
+                    Status5;
                 AvailabilityMonthUpdated ->
                     [{availability_month_updated,
-                      AvailabilityMonthUpdated} | Status3]
+                      AvailabilityMonthUpdated} | Status5]
             end,
-            Status5 = case cloudi_core_i_status:
+            Status7 = case cloudi_core_i_status:
                            nanoseconds_to_availability_month(
                                NanoSecondsRunning) of
                 ?AVAILABILITY_ZERO ->
-                    Status4;
+                    Status6;
                 AvailabilityMonthRunning ->
                     [{availability_month_running,
-                      AvailabilityMonthRunning} | Status4]
+                      AvailabilityMonthRunning} | Status6]
             end,
-            Status6 = case cloudi_core_i_status:
+            Status8 = case cloudi_core_i_status:
                            nanoseconds_to_availability_month(
                                NanoSecondsTotal,
                                ApproximateMonthRestart,
                                NanoSecondsMonthRestart) of
                 ?AVAILABILITY_ZERO ->
-                    Status5;
+                    Status7;
                 AvailabilityMonthTotal ->
                     [{availability_month_total,
-                      AvailabilityMonthTotal} | Status5]
-            end,
-            Status7 = case cloudi_core_i_status:
-                           nanoseconds_to_availability_week(
-                               NanoSecondsRunning,
-                               ApproximateWeekUpdate,
-                               NanoSecondsWeekUpdate) of
-                ?AVAILABILITY_ZERO ->
-                    Status6;
-                AvailabilityWeekUpdated ->
-                    [{availability_week_updated,
-                      AvailabilityWeekUpdated} | Status6]
-            end,
-            Status8 = case cloudi_core_i_status:
-                           nanoseconds_to_availability_week(
-                               NanoSecondsRunning) of
-                ?AVAILABILITY_ZERO ->
-                    Status7;
-                AvailabilityWeekRunning ->
-                    [{availability_week_running,
-                      AvailabilityWeekRunning} | Status7]
+                      AvailabilityMonthTotal} | Status7]
             end,
             Status9 = case cloudi_core_i_status:
                            nanoseconds_to_availability_week(
-                               NanoSecondsTotal,
-                               ApproximateWeekRestart,
-                               NanoSecondsWeekRestart) of
+                               NanoSecondsRunning,
+                               ApproximateWeekUpdate orelse
+                               ApproximateWeekSuspend,
+                               NanoSecondsWeekUpdate +
+                               NanoSecondsWeekSuspend) of
                 ?AVAILABILITY_ZERO ->
                     Status8;
+                AvailabilityWeekProcessing ->
+                    [{availability_week_processing,
+                      AvailabilityWeekProcessing} | Status8]
+            end,
+            Status10 = case cloudi_core_i_status:
+                            nanoseconds_to_availability_week(
+                                NanoSecondsRunning,
+                                ApproximateWeekUpdate,
+                                NanoSecondsWeekUpdate) of
+                ?AVAILABILITY_ZERO ->
+                    Status9;
+                AvailabilityWeekUpdated ->
+                    [{availability_week_updated,
+                      AvailabilityWeekUpdated} | Status9]
+            end,
+            Status11 = case cloudi_core_i_status:
+                            nanoseconds_to_availability_week(
+                                NanoSecondsRunning) of
+                ?AVAILABILITY_ZERO ->
+                    Status10;
+                AvailabilityWeekRunning ->
+                    [{availability_week_running,
+                      AvailabilityWeekRunning} | Status10]
+            end,
+            Status12 = case cloudi_core_i_status:
+                            nanoseconds_to_availability_week(
+                                NanoSecondsTotal,
+                                ApproximateWeekRestart,
+                                NanoSecondsWeekRestart) of
+                ?AVAILABILITY_ZERO ->
+                    Status11;
                 AvailabilityWeekTotal ->
                     [{availability_week_total,
-                      AvailabilityWeekTotal} | Status8]
+                      AvailabilityWeekTotal} | Status11]
             end,
-            Status10 = [{availability_day_total,
+            Status13 = [{availability_day_total,
                          cloudi_core_i_status:
                          nanoseconds_to_availability_day(
                              NanoSecondsTotal,
@@ -1527,19 +1623,75 @@ service_id_status(ServiceId, TimeNow,
                          nanoseconds_to_availability_day(
                              NanoSecondsRunning,
                              ApproximateDayUpdate,
-                             NanoSecondsDayUpdate)} | Status9],
-            Status11 = if
+                             NanoSecondsDayUpdate)},
+                        {availability_day_processing,
+                         cloudi_core_i_status:
+                         nanoseconds_to_availability_day(
+                             NanoSecondsRunning,
+                             ApproximateDayUpdate orelse
+                             ApproximateDaySuspend,
+                             NanoSecondsDayUpdate +
+                             NanoSecondsDaySuspend)} | Status12],
+            Status14 = if
+                TimeRunning =< TimeMonthStart,
+                NanoSecondsYearSuspend > 0 ->
+                    [{interrupt_year_suspended,
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsYearSuspend,
+                                            ApproximateYearSuspend)} |
+                     Status13];
+                true ->
+                    Status13
+            end,
+            Status15 = if
+                TimeRunning =< TimeWeekStart,
+                NanoSecondsMonthSuspend > 0 orelse
+                NanoSecondsYearSuspend > 0 ->
+                    [{interrupt_month_suspended,
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsMonthSuspend,
+                                            ApproximateMonthSuspend)} |
+                     Status14];
+                true ->
+                    Status14
+            end,
+            Status16 = if
+                TimeRunning =< TimeDayStart,
+                NanoSecondsWeekSuspend > 0 orelse
+                NanoSecondsMonthSuspend > 0 orelse
+                NanoSecondsYearSuspend > 0 ->
+                    [{interrupt_week_suspended,
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsWeekSuspend,
+                                            ApproximateWeekSuspend)} |
+                     Status15];
+                true ->
+                    Status15
+            end,
+            Status17 = if
+                NanoSecondsDaySuspend > 0 orelse
+                NanoSecondsWeekSuspend > 0 orelse
+                NanoSecondsMonthSuspend > 0 ->
+                    [{interrupt_day_suspended,
+                      cloudi_core_i_status:
+                      nanoseconds_to_string(NanoSecondsDaySuspend,
+                                            ApproximateDaySuspend)} |
+                     Status16];
+                true ->
+                    Status16
+            end,
+            Status18 = if
                 TimeRunning =< TimeMonthStart,
                 NanoSecondsYearUpdate > 0 ->
                     [{interrupt_year_updating,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsYearUpdate,
                                             ApproximateYearUpdate)} |
-                     Status10];
+                     Status17];
                 true ->
-                    Status10
+                    Status17
             end,
-            Status12 = if
+            Status19 = if
                 TimeRunning =< TimeWeekStart,
                 NanoSecondsMonthUpdate > 0 orelse
                 NanoSecondsYearUpdate > 0 ->
@@ -1547,11 +1699,11 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsMonthUpdate,
                                             ApproximateMonthUpdate)} |
-                     Status11];
+                     Status18];
                 true ->
-                    Status11
+                    Status18
             end,
-            Status13 = if
+            Status20 = if
                 TimeRunning =< TimeDayStart,
                 NanoSecondsWeekUpdate > 0 orelse
                 NanoSecondsMonthUpdate > 0 orelse
@@ -1560,11 +1712,11 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsWeekUpdate,
                                             ApproximateWeekUpdate)} |
-                     Status12];
+                     Status19];
                 true ->
-                    Status12
+                    Status19
             end,
-            Status14 = if
+            Status21 = if
                 NanoSecondsDayUpdate > 0 orelse
                 NanoSecondsWeekUpdate > 0 orelse
                 NanoSecondsMonthUpdate > 0 ->
@@ -1572,22 +1724,22 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsDayUpdate,
                                             ApproximateDayUpdate)} |
-                     Status13];
+                     Status20];
                 true ->
-                    Status13
+                    Status20
             end,
-            Status15 = if
+            Status22 = if
                 TimeStart =< TimeMonthStart,
                 NanoSecondsYearRestart > 0 ->
                     [{downtime_year_restarting,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsYearRestart,
                                             ApproximateYearRestart)} |
-                     Status14];
+                     Status21];
                 true ->
-                    Status14
+                    Status21
             end,
-            Status16 = if
+            Status23 = if
                 TimeStart =< TimeWeekStart,
                 NanoSecondsMonthRestart > 0 orelse
                 NanoSecondsYearRestart > 0 ->
@@ -1595,11 +1747,11 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsMonthRestart,
                                             ApproximateMonthRestart)} |
-                     Status15];
+                     Status22];
                 true ->
-                    Status15
+                    Status22
             end,
-            Status17 = if
+            Status24 = if
                 TimeStart =< TimeDayStart,
                 NanoSecondsWeekRestart > 0 orelse
                 NanoSecondsMonthRestart > 0 orelse
@@ -1608,11 +1760,11 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsWeekRestart,
                                             ApproximateWeekRestart)} |
-                     Status16];
+                     Status23];
                 true ->
-                    Status16
+                    Status23
             end,
-            Status18 = if
+            Status25 = if
                 NanoSecondsDayRestart > 0 orelse
                 NanoSecondsWeekRestart > 0 orelse
                 NanoSecondsMonthRestart > 0 ->
@@ -1620,21 +1772,32 @@ service_id_status(ServiceId, TimeNow,
                       cloudi_core_i_status:
                       nanoseconds_to_string(NanoSecondsDayRestart,
                                             ApproximateDayRestart)} |
-                     Status17];
+                     Status24];
                 true ->
-                    Status17
+                    Status24
             end,
-            Status19 = [{uptime_total, UptimeTotal},
+            NanoSecondsProcessing = NanoSecondsRunning -
+                                    (NanoSecondsYearUpdate +
+                                     NanoSecondsYearSuspend),
+            ApproximateProcessing = ProcessingSuspended orelse
+                                    ApproximateYearUpdate orelse
+                                    ApproximateYearSuspend,
+            UptimeProcessing = cloudi_core_i_status:
+                               nanoseconds_to_string(NanoSecondsProcessing,
+                                                     ApproximateProcessing, $<),
+            Status26 = [{suspended, ProcessingSuspended},
+                        {uptime_total, UptimeTotal},
                         {uptime_running, UptimeRunning},
+                        {uptime_processing, UptimeProcessing},
                         {uptime_restarts,
-                         erlang:integer_to_list(Restarts)} | Status18],
+                         erlang:integer_to_list(Restarts)} | Status25],
             StatusN = if
                 Function =:= start_internal ->
                     Module:status_internal(CountProcess,
-                                           Arguments,Status19);
+                                           Arguments, Status26);
                 Function =:= start_external ->
-                    Module:status_external(CountProcess,CountThread,
-                                           Arguments,Status19)
+                    Module:status_external(CountProcess, CountThread,
+                                           Arguments, Status26)
             end,
             {ok, StatusN};
         error ->
@@ -1647,21 +1810,68 @@ restart_pids([Pid | PidList]) ->
     erlang:exit(Pid, restart),
     restart_pids(PidList).
 
-suspend_pids(PidList, Suspended) ->
+suspend_pids(PidList) ->
     Self = self(),
-    [Pid ! {'cloudi_service_suspended', Self, Suspended} || Pid <- PidList],
-    suspend_pids_recv(PidList).
+    [Pid ! {'cloudi_service_suspended', Self, true} || Pid <- PidList],
+    suspend_pids_recv(PidList, ok).
 
-suspend_pids_recv([]) ->
-    ok;
-suspend_pids_recv([Pid | PidList])
+suspend_pids_recv([], Result) ->
+    if
+        Result =:= ok ->
+            ok;
+        true ->
+            {error, Result}
+    end;
+suspend_pids_recv([Pid | PidList], Result)
     when is_pid(Pid) ->
     receive
         {'DOWN', _, 'process', Pid, _} = DOWN ->
             self() ! DOWN,
-            suspend_pids_recv(PidList);
-        {'cloudi_service_suspended', Pid} ->
-            suspend_pids_recv(PidList)
+            suspend_pids_recv(PidList, Result);
+        {'cloudi_service_suspended', Pid, already_suspended} ->
+            suspend_pids_recv(PidList, already_suspended);
+        {'cloudi_service_suspended', Pid, ok} ->
+            suspend_pids_recv(PidList, Result)
+    end.
+
+resume_pids(PidList, DurationsSuspend, DurationsUpdate, ServiceId) ->
+    Self = self(),
+    [Pid ! {'cloudi_service_suspended', Self, false} || Pid <- PidList],
+    case resume_pids_recv(PidList, ok, undefined) of
+        {ok, undefined} ->
+            {ok, DurationsSuspend};
+        {ok, Duration} ->
+            {ok,
+             cloudi_core_i_status:
+             durations_store_difference([ServiceId], Duration,
+                                        DurationsSuspend, DurationsUpdate)};
+        {error, _} = Error ->
+            Error
+    end.
+
+resume_pids_recv([], Result, Duration) ->
+    if
+        Result =:= ok ->
+            {ok, Duration};
+        true ->
+            {error, Result}
+    end;
+resume_pids_recv([Pid | PidList], Result, Duration)
+    when is_pid(Pid) ->
+    receive
+        {'DOWN', _, 'process', Pid, _} = DOWN ->
+            self() ! DOWN,
+            resume_pids_recv(PidList, Result, Duration);
+        {'cloudi_service_suspended', Pid, already_resumed} ->
+            resume_pids_recv(PidList, already_resumed, Duration);
+        {'cloudi_service_suspended', Pid, {ok, {T0, T1} = DurationNext}} ->
+            DurationNew = case Duration of
+                undefined ->
+                    DurationNext;
+                {T0Old, T1Old} ->
+                    {erlang:min(T0, T0Old), erlang:max(T1, T1Old)}
+            end,
+            resume_pids_recv(PidList, Result, DurationNew)
     end.
 
 update_start(PidList, UpdatePlan) ->

@@ -66,6 +66,7 @@
 -include("cloudi_logger.hrl").
 -include("cloudi_core_i_configuration.hrl").
 -include("cloudi_core_i_constants.hrl").
+-include("cloudi_core_i_services_common_types.hrl").
 
 -record(state,
     {
@@ -104,8 +105,8 @@
         update_plan = undefined
             :: undefined | #config_service_update{},
         % ( 8) is the request/info pid suspended?
-        suspended = {false, false}
-            :: undefined | {boolean(), boolean()},
+        suspended = #suspended{}
+            :: undefined | #suspended{},
         % ( 9) is the request/info pid busy?
         queue_requests = true
             :: undefined | boolean(),
@@ -188,8 +189,8 @@
         update_plan = undefined
             :: undefined | #config_service_update{},
         % ( 5) is the request pid suspended?
-        suspended = {false, false}
-            :: {boolean(), boolean()},
+        suspended = #suspended{}
+            :: #suspended{},
         % ( 6) is the request pid busy?
         queue_requests = true :: boolean(),
         % ( 7) queued incoming service requests
@@ -1833,27 +1834,43 @@ handle_info({'EXIT', Pid, Reason}, State) ->
     ?LOG_ERROR("~p forced exit: ~tp", [Pid, Reason]),
     {stop, Reason, State};
 
-handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
+handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
             #state{dispatcher = Dispatcher,
                    suspended = SuspendedOld,
                    queue_requests = QueueRequests,
                    duo_mode_pid = undefined} = State) ->
-    SuspendPending ! {'cloudi_service_suspended', Dispatcher},
-    StateNew = case SuspendedOld of
-        {Suspended, _} ->
-            State;
-        {false, _} when Suspended =:= true ->
-            State#state{suspended = {true, QueueRequests},
-                        queue_requests = true};
-        {true, Busy} when Suspended =:= false ->
-            StateNext = State#state{suspended = {false, false}},
-            if
-                Busy =:= true ->
-                    StateNext;
-                Busy =:= false ->
-                    process_queues(StateNext)
-            end
+    {Result, StateNew} = case SuspendedOld of
+        #suspended{processing = Suspend} ->
+            {if
+                 Suspend =:= true ->
+                     already_suspended;
+                 Suspend =:= false ->
+                     already_resumed
+             end,
+             State};
+        #suspended{processing = false}
+            when Suspend =:= true ->
+            TimeSuspend = cloudi_timestamp:native_monotonic(),
+            {ok,
+             State#state{suspended = #suspended{
+                             processing = true,
+                             busy = QueueRequests,
+                             time_suspend = TimeSuspend},
+                         queue_requests = true}};
+        #suspended{processing = true,
+                   busy = Busy,
+                   time_suspend = TimeSuspend}
+            when Suspend =:= false ->
+            StateNext = State#state{suspended = #suspended{}},
+            {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
+             if
+                 Busy =:= true ->
+                     StateNext;
+                 Busy =:= false ->
+                     process_queues(StateNext)
+             end}
     end,
+    SuspendPending ! {'cloudi_service_suspended', Dispatcher, Result},
     hibernate_check({noreply, StateNew});
 
 handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
@@ -1864,9 +1881,10 @@ handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                    duo_mode_pid = undefined} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
     ProcessBusy = case Suspended of
-        {true, SuspendedWhileBusy} ->
+        #suspended{processing = true,
+                   busy = SuspendedWhileBusy} ->
             SuspendedWhileBusy;
-        {false, _} ->
+        #suspended{processing = false} ->
             QueueRequests
     end,
     UpdatePlanNew = if
@@ -3145,10 +3163,12 @@ process_queues(#state{dispatcher = Dispatcher,
         UpdateNow =:= undefined ->
             State#state{update_plan = UpdatePlanNew}
     end;
-process_queues(#state{suspended = {true, Busy} = Suspended} = State) ->
+process_queues(#state{suspended = #suspended{
+                          processing = true,
+                          busy = Busy} = Suspended} = State) ->
     SuspendedNew = if
         Busy =:= true ->
-            {true, false};
+            Suspended#suspended{busy = false};
         Busy =:= false ->
             Suspended
     end,
@@ -3973,26 +3993,42 @@ duo_handle_info('cloudi_rate_request_max_rate',
      State#state_duo{options = ConfigOptions#config_service_options{
                          rate_request_max = RateRequestNew}}};
 
-duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspended},
+duo_handle_info({'cloudi_service_suspended', SuspendPending, Suspend},
                 #state_duo{duo_mode_pid = DuoModePid,
                            suspended = SuspendedOld,
                            queue_requests = QueueRequests} = State) ->
-    SuspendPending ! {'cloudi_service_suspended', DuoModePid},
-    StateNew = case SuspendedOld of
-        {Suspended, _} ->
-            State;
-        {false, _} when Suspended =:= true ->
-            State#state_duo{suspended = {true, QueueRequests},
-                            queue_requests = true};
-        {true, Busy} when Suspended =:= false ->
-            StateNext = State#state_duo{suspended = {false, false}},
-            if
-                Busy =:= true ->
-                    StateNext;
-                Busy =:= false ->
-                    duo_process_queues(StateNext)
-            end
+    {Result, StateNew} = case SuspendedOld of
+        #suspended{processing = Suspend} ->
+            {if
+                 Suspend =:= true ->
+                     already_suspended;
+                 Suspend =:= false ->
+                     already_resumed
+             end,
+             State};
+        #suspended{processing = false}
+            when Suspend =:= true ->
+            TimeSuspend = cloudi_timestamp:native_monotonic(),
+            {ok,
+             State#state_duo{suspended = #suspended{
+                                 processing = true,
+                                 busy = QueueRequests,
+                                 time_suspend = TimeSuspend},
+                             queue_requests = true}};
+        #suspended{processing = true,
+                   busy = Busy,
+                   time_suspend = TimeSuspend}
+            when Suspend =:= false ->
+            StateNext = State#state_duo{suspended = #suspended{}},
+            {{ok, {TimeSuspend, cloudi_timestamp:native_monotonic()}},
+             if
+                 Busy =:= true ->
+                     StateNext;
+                 Busy =:= false ->
+                     duo_process_queues(StateNext)
+             end}
     end,
+    SuspendPending ! {'cloudi_service_suspended', DuoModePid, Result},
     {noreply, StateNew};
 
 duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
@@ -4002,9 +4038,10 @@ duo_handle_info({'cloudi_service_update', UpdatePending, UpdatePlan},
                            queue_requests = QueueRequests} = State) ->
     #config_service_update{sync = Sync} = UpdatePlan,
     ProcessBusy = case Suspended of
-        {true, SuspendedWhileBusy} ->
+        #suspended{processing = true,
+                   busy = SuspendedWhileBusy} ->
             SuspendedWhileBusy;
-        {false, _} ->
+        #suspended{processing = false} ->
             QueueRequests
     end,
     UpdatePlanNew = if
@@ -4221,10 +4258,12 @@ duo_process_queues(#state_duo{duo_mode_pid = DuoModePid,
         UpdateNow =:= undefined ->
             StateNew
     end;
-duo_process_queues(#state_duo{suspended = {true, Busy} = Suspended} = State) ->
+duo_process_queues(#state_duo{suspended = #suspended{
+                                  processing = true,
+                                  busy = Busy} = Suspended} = State) ->
     SuspendedNew = if
         Busy =:= true ->
-            {true, false};
+            Suspended#suspended{busy = false};
         Busy =:= false ->
             Suspended
     end,

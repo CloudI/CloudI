@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2018 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2018-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2018 Michael Truog
-%%% @version 1.7.5 {@date} {@time}
+%%% @copyright 2018-2019 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_core_i_status).
@@ -42,6 +42,7 @@
          durations_new/0,
          durations_state/2,
          durations_store/3,
+         durations_store_difference/4,
          durations_sum/2,
          nanoseconds_to_availability_day/1,
          nanoseconds_to_availability_day/3,
@@ -51,7 +52,8 @@
          nanoseconds_to_availability_month/3,
          nanoseconds_to_availability_year/1,
          nanoseconds_to_availability_year/3,
-         nanoseconds_to_string/2]).
+         nanoseconds_to_string/2,
+         nanoseconds_to_string/3]).
 
 -type nanoseconds() :: non_neg_integer().
 -type duration() ::
@@ -101,6 +103,17 @@ durations_state(Key, DurationsLookup) ->
 durations_store([_ | _] = KeyList, {_, T1} = Duration, DurationsLookup) ->
     duration_store(KeyList, T1 - ?NATIVE_TIME_IN_YEAR,
                    Duration, DurationsLookup).
+
+-spec durations_store_difference(KeyList :: nonempty_list(),
+                                 Duration :: duration(),
+                                 DurationsAddLookup :: durations(any()),
+                                 DurationsSubtractLookup :: durations(any())) ->
+    durations(any()).
+
+durations_store_difference([_ | _] = KeyList, {_, T1} = Duration,
+                           DurationsAddLookup, DurationsSubtractLookup) ->
+    duration_store_difference(KeyList, T1 - ?NATIVE_TIME_IN_YEAR, Duration,
+                              DurationsAddLookup, DurationsSubtractLookup).
 
 -spec durations_sum(durations_state(),
                     T :: cloudi_timestamp:native_monotonic()) ->
@@ -190,26 +203,86 @@ nanoseconds_to_availability_year(NanoSecondsUptime,
                             Approximate :: boolean()) ->
     string().
 
-nanoseconds_to_string(NanoSeconds, true) ->
-    [$>, $  | cloudi_timestamp:nanoseconds_to_string(NanoSeconds)];
-nanoseconds_to_string(NanoSeconds, false) ->
+nanoseconds_to_string(NanoSeconds, Approximate) ->
+    nanoseconds_to_string(NanoSeconds, Approximate, $>).
+
+-spec nanoseconds_to_string(NanoSeconds :: nanoseconds(),
+                            Approximate :: boolean(),
+                            ApproximateChar :: char()) ->
+    string().
+
+nanoseconds_to_string(NanoSeconds, true, ApproximateChar) ->
+    [ApproximateChar,
+     $  | cloudi_timestamp:nanoseconds_to_string(NanoSeconds)];
+nanoseconds_to_string(NanoSeconds, false, _) ->
     cloudi_timestamp:nanoseconds_to_string(NanoSeconds).
 
 %%%------------------------------------------------------------------------
 %%% Private functions
 %%%------------------------------------------------------------------------
 
-duration_store([], _, _, DurationsLookup) ->
-    DurationsLookup;
-duration_store([Key | KeyList], T, Duration, DurationsLookup) ->
+duration_store_clear(Key, T, Duration, DurationsLookup) ->
     {DurationCount,
      DurationList} = durations_state(Key, DurationsLookup),
     {DurationCountNew,
      DurationListNew} = duration_clear(lists:reverse(DurationList),
                                        DurationCount, T),
     DurationsStateNew = {DurationCountNew + 1, [Duration | DurationListNew]},
+    maps:put(Key, DurationsStateNew, DurationsLookup).
+
+duration_store([], _, _, DurationsLookup) ->
+    DurationsLookup;
+duration_store([Key | KeyList], T, Duration, DurationsLookup) ->
     duration_store(KeyList, T, Duration,
-                   maps:put(Key, DurationsStateNew, DurationsLookup)).
+                   duration_store_clear(Key, T, Duration, DurationsLookup)).
+
+duration_store_difference([], _, _, DurationsAddLookup, _) ->
+    DurationsAddLookup;
+duration_store_difference([Key | KeyList], T, Duration,
+                          DurationsAddLookup, DurationsSubtractLookup) ->
+    DurationsAddLookupNew = case maps:find(Key, DurationsSubtractLookup) of
+        error ->
+            duration_store_clear(Key, T, Duration, DurationsAddLookup);
+        {ok, {0, []}} ->
+            duration_store_clear(Key, T, Duration, DurationsAddLookup);
+        {ok, {_, DurationSubtractList}} ->
+            {DurationAddCount,
+             DurationAddList} = durations_subtract(DurationSubtractList,
+                                                   Duration),
+            {DurationCount,
+             DurationList} = durations_state(Key, DurationsAddLookup),
+            DurationCountNew = DurationAddCount + DurationCount,
+            DurationListNew = DurationAddList ++ DurationList,
+            DurationsStateNew = duration_clear(lists:reverse(DurationListNew),
+                                               DurationCountNew, T),
+            maps:put(Key, DurationsStateNew, DurationsAddLookup)
+    end,
+    duration_store_difference(KeyList, T, Duration,
+                              DurationsAddLookupNew, DurationsSubtractLookup).
+
+durations_subtract([], Duration,  DurationList, DurationCount) ->
+    {DurationCount + 1, lists:reverse([Duration | DurationList])};
+durations_subtract([{SegmentT0, SegmentT1} | _],
+                   {T0, T1}, DurationList, DurationCount)
+    when SegmentT0 =< T0, SegmentT1 >= T1 ->
+    {DurationCount, lists:reverse(DurationList)};
+durations_subtract([{_, SegmentT1} | DurationSubtractList],
+                   {T0, _} = Duration, DurationList, DurationCount)
+    when SegmentT1 =< T0 ->
+    durations_subtract(DurationSubtractList, Duration,
+                       DurationList, DurationCount);
+durations_subtract([{SegmentT0, _} | _],
+                   {_, T1} = Duration, DurationList, DurationCount)
+    when SegmentT0 >= T1 ->
+    {DurationCount + 1, lists:reverse([Duration | DurationList])};
+durations_subtract([{SegmentT0, SegmentT1} | DurationSubtractList], {T0, T1},
+                   DurationList, DurationCount) ->
+    true = (SegmentT0 > T0) andalso (SegmentT1 < T1),
+    durations_subtract(DurationSubtractList, {SegmentT1, T1},
+                       [{T0, SegmentT0} | DurationList], DurationCount + 1).
+
+durations_subtract(DurationSubtractList, Duration) ->
+    durations_subtract(DurationSubtractList, Duration, [], 0).
 
 duration_clear([] = DurationList, 0 = DurationCount, _) ->
     {DurationCount, DurationList};

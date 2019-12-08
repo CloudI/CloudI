@@ -1,6 +1,21 @@
 # -*- coding: utf-8; tab-width: 4; -*-
 # ex: set fenc=utf-8 sts=4 ts=4 et nomod:
 
+2019-12-07 Michael Truog   <mjtruog at protonmail dot com>
+
+    * Add suspend-related information to the CloudI Service API
+      services_status output:
+      suspended,
+      uptime_processing,
+      interrupt_day_suspended,
+      interrupt_week_suspended,
+      interrupt_month_suspended,
+      interrupt_year_suspended,
+      availability_day_processing,
+      availability_week_processing,
+      availability_month_processing,
+      availability_year_processing
+
 2019-12-06 Michael Truog   <mjtruog at protonmail dot com>
 
     * Put cloudi_service_map_reduce name argument into log output
