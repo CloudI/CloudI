@@ -16,7 +16,8 @@
       availability_month_processing,
       availability_year_processing
     * Fix cloudi_service_map_reduce execution time tracking to
-      exclude time spend suspended with cloudi_service_map_reduce:suspend/2,3
+      exclude time spent suspended with cloudi_service_map_reduce:suspend/2,3
+    * Fix cloudi_service_test_hexpi max timeout used
 
 2019-12-06 Michael Truog   <mjtruog at protonmail dot com>
 

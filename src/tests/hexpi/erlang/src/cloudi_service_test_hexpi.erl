@@ -8,7 +8,7 @@
 %%%
 %%% MIT License
 %%%
-%%% Copyright (c) 2012-2017 Michael Truog <mjtruog at protonmail dot com>
+%%% Copyright (c) 2012-2019 Michael Truog <mjtruog at protonmail dot com>
 %%%
 %%% Permission is hereby granted, free of charge, to any person obtaining a
 %%% copy of this software and associated documentation files (the "Software"),
@@ -29,8 +29,8 @@
 %%% DEALINGS IN THE SOFTWARE.
 %%%
 %%% @author Michael Truog <mjtruog at protonmail dot com>
-%%% @copyright 2012-2017 Michael Truog
-%%% @version 1.7.3 {@date} {@time}
+%%% @copyright 2012-2019 Michael Truog
+%%% @version 1.8.1 {@date} {@time}
 %%%------------------------------------------------------------------------
 
 -module(cloudi_service_test_hexpi).
@@ -157,7 +157,8 @@ cloudi_service_map_reduce_resend([Dispatcher, Name, Request,
             ?LOG_INFO("index ~s result timeout (after ~p ms)",
                       [IndexStr, Timeout]),
             NewTaskSize = cloudi_task_size:reduce(OldPid, 0.9, TaskSize),
-            {ok, [Dispatcher, Name, Request, Timeout * 2, PatternPid],
+            NewTimeout = erlang:min(Timeout * 2, 4294967195),
+            {ok, [Dispatcher, Name, Request, NewTimeout, PatternPid],
              State#state{task_size = NewTaskSize}};
         {error, _} = Error ->
             Error

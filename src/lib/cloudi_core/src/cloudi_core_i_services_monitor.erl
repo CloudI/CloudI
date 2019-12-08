@@ -388,13 +388,14 @@ handle_call({suspend, ServiceId}, _,
                    suspended = Suspended} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
-            case suspend_pids(Pids) of
+            StateNew = case suspend_pids(Pids) of
                 ok ->
                     SuspendedNew = sets:add_element(ServiceId, Suspended),
-                    {reply, ok, State#state{suspended = SuspendedNew}};
-                {error, _} = Error ->
-                    {reply, Error, State}
-            end;
+                    State#state{suspended = SuspendedNew};
+                {error, already_suspended} ->
+                    State
+            end,
+            {reply, ok, StateNew};
         error ->
             {reply, {error, not_found}, State}
     end;
@@ -406,16 +407,16 @@ handle_call({resume, ServiceId}, _,
                    suspended = Suspended} = State) ->
     case cloudi_x_key2value:find1(ServiceId, Services) of
         {ok, {Pids, _}} ->
-            case resume_pids(Pids, DurationsSuspend,
-                             DurationsUpdate, ServiceId) of
+            StateNew = case resume_pids(Pids, DurationsSuspend,
+                                        DurationsUpdate, ServiceId) of
                 {ok, DurationsSuspendNew} ->
                     SuspendedNew = sets:del_element(ServiceId, Suspended),
-                    {reply, ok,
-                     State#state{durations_suspend = DurationsSuspendNew,
-                                 suspended = SuspendedNew}};
-                {error, _} = Error ->
-                    {reply, Error, State}
-            end;
+                    State#state{durations_suspend = DurationsSuspendNew,
+                                suspended = SuspendedNew};
+                {error, already_resumed} ->
+                    State
+            end,
+            {reply, ok, StateNew};
         error ->
             {reply, {error, not_found}, State}
     end;
