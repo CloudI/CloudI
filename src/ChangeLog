@@ -15,6 +15,8 @@
       availability_week_processing,
       availability_month_processing,
       availability_year_processing
+    * Fix cloudi_service_map_reduce execution time tracking to
+      exclude time spend suspended with cloudi_service_map_reduce:suspend/2,3
 
 2019-12-06 Michael Truog   <mjtruog at protonmail dot com>
 

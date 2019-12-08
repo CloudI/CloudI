@@ -66,14 +66,15 @@
 
 -record(state,
     {
-        time_start :: cloudi_timestamp:seconds_monotonic(),
-        log_execution_time :: boolean(),
         map_reduce_module :: module(),
         map_reduce_state :: any(),
         map_reduce_name :: string(),
         map_count :: pos_integer(),
+        log_execution_time :: boolean(),
         map_requests :: #{cloudi_service:trans_id() := map_send_args()},
-        suspend = false :: boolean()
+        time_running :: cloudi_timestamp:seconds_monotonic(),
+        suspended = false :: boolean(),
+        elapsed_seconds = 0 :: non_neg_integer()
     }).
 
 -record(init_begin,
@@ -81,12 +82,12 @@
         service :: pid(),
         prefix :: string(),
         timeout :: cloudi_service_api:timeout_initialize_value_milliseconds(),
-        time_start :: cloudi_timestamp:seconds_monotonic(),
-        log_execution_time :: boolean(),
         map_reduce_module :: module(),
         map_reduce_args :: list(),
         map_reduce_name :: string(),
-        concurrency :: number()
+        concurrency :: number(),
+        log_execution_time :: boolean(),
+        time_start :: cloudi_timestamp:seconds_monotonic()
     }).
 
 -record(init_end,
@@ -214,12 +215,12 @@ cloudi_service_init(Args, Prefix, Timeout, Dispatcher) ->
     Service !  #init_begin{service = Service,
                            prefix = Prefix,
                            timeout = Timeout,
-                           time_start = TimeStart,
-                           log_execution_time = LogExecutionTime,
                            map_reduce_module = MapReduceModule,
                            map_reduce_args = MapReduceArgs,
                            map_reduce_name = Name,
-                           concurrency = Concurrency},
+                           concurrency = Concurrency,
+                           log_execution_time = LogExecutionTime,
+                           time_start = TimeStart},
     cloudi_service:subscribe(Dispatcher, Name),
     {ok, undefined}.
 
@@ -326,12 +327,14 @@ cloudi_service_handle_info(Request, State, Dispatcher) ->
 cloudi_service_terminate(_Reason, _Timeout, undefined) ->
     ok;
 cloudi_service_terminate(shutdown, _Timeout,
-                         #state{time_start = TimeStart,
-                                log_execution_time = true,
-                                map_requests = #{}}) ->
-    TimeEnd = cloudi_timestamp:seconds_monotonic(),
+                         #state{log_execution_time = true,
+                                map_requests = #{},
+                                time_running = TimeRunningStart,
+                                elapsed_seconds = ElapsedSeconds}) ->
+    TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
+    ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
     ?LOG_INFO("total time taken was ~p hours",
-              [hours_elapsed(TimeEnd, TimeStart)]),
+              [hours_elapsed(ElapsedSecondsNew)]),
     ok;
 cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
     ok.
@@ -342,12 +345,12 @@ cloudi_service_terminate(_Reason, _Timeout, #state{}) ->
 
 init(#init_begin{prefix = Prefix,
                  timeout = Timeout,
-                 time_start = TimeStart,
-                 log_execution_time = LogExecutionTime,
                  map_reduce_module = MapReduceModule,
                  map_reduce_args = MapReduceArgs,
                  map_reduce_name = MapReduceName,
-                 concurrency = Concurrency},
+                 concurrency = Concurrency,
+                 log_execution_time = LogExecutionTime,
+                 time_start = TimeStart},
      Dispatcher) ->
     MapCount = cloudi_concurrency:count(Concurrency),
     case MapReduceModule:
@@ -358,13 +361,13 @@ init(#init_begin{prefix = Prefix,
                           MapReduceModule, MapReduceState, Dispatcher) of
                 {ok, MapRequests, MapReduceStateNew} ->
                     {noreply,
-                     #state{time_start = TimeStart,
-                            log_execution_time = LogExecutionTime,
-                            map_reduce_module = MapReduceModule,
+                     #state{map_reduce_module = MapReduceModule,
                             map_reduce_state = MapReduceStateNew,
                             map_reduce_name = MapReduceName,
                             map_count = MapCount,
-                            map_requests = MapRequests}};
+                            log_execution_time = LogExecutionTime,
+                            map_requests = MapRequests,
+                            time_running = TimeStart}};
                 {error, _} = Error ->
                     {stop, Error, undefined}
             end;
@@ -377,16 +380,26 @@ request(_, undefined, _Dispatcher) ->
 request(suspend,
         #state{map_reduce_module = MapReduceModule,
                map_reduce_name = MapReduceName,
-               suspend = false} = State, _Dispatcher) ->
+               time_running = TimeRunningStart,
+               suspended = false,
+               elapsed_seconds = ElapsedSeconds} = State, _Dispatcher) ->
+    TimeRunningEnd = cloudi_timestamp:seconds_monotonic(),
+    ElapsedSecondsNew = ElapsedSeconds + (TimeRunningEnd - TimeRunningStart),
     ?LOG_INFO("~s ~ts suspended", [MapReduceModule, MapReduceName]),
-    {reply, ok, State#state{suspend = true}};
+    {reply, ok,
+     State#state{suspended = true,
+                 elapsed_seconds = ElapsedSecondsNew}};
+request(suspend,
+        #state{suspended = true} = State, _Dispatcher) ->
+    {reply, {error, already_suspended}, State};
 request(resume,
         #state{map_reduce_module = MapReduceModule,
                map_reduce_state = MapReduceState,
                map_reduce_name = MapReduceName,
                map_count = MapCount,
                map_requests = MapRequests,
-               suspend = true} = State, Dispatcher) ->
+               suspended = true} = State, Dispatcher) ->
+    TimeRunningStart = cloudi_timestamp:seconds_monotonic(),
     case map_send(MapCount - maps:size(MapRequests), MapRequests,
                   MapReduceModule, MapReduceState, Dispatcher) of
         {ok, MapRequestsNew, MapReduceStateNew} ->
@@ -394,12 +407,14 @@ request(resume,
             {reply, ok,
              State#state{map_reduce_state = MapReduceStateNew,
                          map_requests = MapRequestsNew,
-                         suspend = false}};
+                         time_running = TimeRunningStart,
+                         suspended = false}};
         {error, _} = Error ->
             {stop, Error, State}
     end;
-request(_, State, _Dispatcher) ->
-    {reply, ok, State}.
+request(resume,
+        #state{suspended = false} = State, _Dispatcher) ->
+    {reply, {error, already_resumed}, State}.
 
 cloudi_service_map_reduce_info(Request, State, Dispatcher) ->
     #state{map_reduce_module = MapReduceModule,
@@ -444,7 +459,7 @@ map_send_request(SendArgs, MapRequests) ->
             Error
     end.
 
-map_check_continue(#state{suspend = true} = State, _Dispatcher) ->
+map_check_continue(#state{suspended = true} = State, _Dispatcher) ->
     {noreply, State};
 map_check_continue(#state{map_reduce_module = MapReduceModule,
                           map_reduce_state = MapReduceState,
@@ -466,7 +481,6 @@ map_check_done(#state{map_requests = MapRequests} = State) ->
             {noreply, State}
     end.
 
-hours_elapsed(Seconds1, Seconds0)
-    when Seconds1 >= Seconds0 ->
-    erlang:round(((Seconds1 - Seconds0) / (60 * 60)) * 10) / 10.
+hours_elapsed(ElapsedSeconds) ->
+    erlang:round((ElapsedSeconds / (60 * 60)) * 10) / 10.
 
