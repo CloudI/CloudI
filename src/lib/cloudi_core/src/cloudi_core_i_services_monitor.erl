@@ -681,11 +681,8 @@ initialize_wait_pids([{MonitorRef, Pid} | MonitorPids], Time) ->
 
 restart(#service{time_start = TimeStart,
                  time_restart = TimeRestart,
-                 time_terminate = TimeTerminate} = Service, Services,
-        #state{durations_update = DurationsUpdate,
-               durations_suspend = DurationsSuspend,
-               suspended = Suspended} = State,
-        ServiceId, OldPid) ->
+                 time_terminate = TimeTerminate} = Service,
+        Services, State, ServiceId, OldPid) ->
     TimeTerminateNew = if
         TimeTerminate =:= undefined ->
             % service initialization did not complete
@@ -698,24 +695,44 @@ restart(#service{time_start = TimeStart,
         is_integer(TimeTerminate) ->
             TimeTerminate
     end,
+    restart_stage1(Service#service{time_terminate = undefined},
+                   Services, State, ServiceId, TimeTerminateNew, OldPid).
+
+restart_stage1(#service{pids = Pids} = Service, Services,
+               #state{durations_update = DurationsUpdate,
+                      durations_suspend = DurationsSuspend,
+                      suspended = Suspended} = State,
+               ServiceId, TimeTerminate, OldPid) ->
+    ServicesNew = terminate_service(Pids, undefined, Service,
+                                    Services, ServiceId, OldPid, true),
+    % clear all data and messages related to the old processes
     DurationsUpdateNew = cloudi_core_i_status:
                          durations_erase(ServiceId, DurationsUpdate),
     DurationsSuspendNew = cloudi_core_i_status:
                           durations_erase(ServiceId, DurationsSuspend),
     SuspendedNew = sets:del_element(ServiceId, Suspended),
-    restart_stage1(Service#service{time_terminate = undefined}, Services,
+    ok = restart_stage1_clear(Pids),
+    restart_stage2(Service#service{pids = [],
+                                   monitor = undefined}, ServicesNew,
                    State#state{durations_update = DurationsUpdateNew,
                                durations_suspend = DurationsSuspendNew,
                                suspended = SuspendedNew},
-                   ServiceId, TimeTerminateNew, OldPid).
+                   ServiceId, TimeTerminate, OldPid).
 
-restart_stage1(#service{pids = Pids} = Service,
-               Services, State, ServiceId, TimeTerminate, OldPid) ->
-    ServicesNew = terminate_service(Pids, undefined, Service,
-                                    Services, ServiceId, OldPid, true),
-    restart_stage2(Service#service{pids = [],
-                                   monitor = undefined},
-                   ServicesNew, State, ServiceId, TimeTerminate, OldPid).
+restart_stage1_clear([]) ->
+    ok;
+restart_stage1_clear([Pid | Pids] = L) ->
+    receive
+        {'cloudi_service_update', Pid} ->
+            restart_stage1_clear(L);
+        {'cloudi_service_update_now', Pid, _} ->
+            restart_stage1_clear(L);
+        {'cloudi_service_suspended', Pid, _} ->
+            restart_stage1_clear(L)
+    after
+        0 ->
+            restart_stage1_clear(Pids)
+    end.
 
 restart_stage2_async(Service, ServiceId, TimeTerminate, OldPid) ->
     self() ! #restart_stage2{pid = OldPid,

@@ -557,8 +557,10 @@
                   {prefix, cloudi:service_name_pattern()} |
                   {module, atom()} |
                   {count_process, pos_integer()} |
+                  {suspended, boolean()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
+                  {uptime_processing, nonempty_string()} |
                   {uptime_restarts, nonempty_string()} |
                   {downtime_day_restarting, nonempty_string()} |
                   {downtime_week_restarting, nonempty_string()} |
@@ -568,26 +570,36 @@
                   {interrupt_week_updating, nonempty_string()} |
                   {interrupt_month_updating, nonempty_string()} |
                   {interrupt_year_updating, nonempty_string()} |
+                  {interrupt_day_suspended, nonempty_string()} |
+                  {interrupt_week_suspended, nonempty_string()} |
+                  {interrupt_month_suspended, nonempty_string()} |
+                  {interrupt_year_suspended, nonempty_string()} |
                   {availability_day_total, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
+                  {availability_day_processing, nonempty_string()} |
                   {availability_week_total, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |
                   {availability_week_updated, nonempty_string()} |
+                  {availability_week_processing, nonempty_string()} |
                   {availability_month_total, nonempty_string()} |
                   {availability_month_running, nonempty_string()} |
                   {availability_month_updated, nonempty_string()} |
+                  {availability_month_processing, nonempty_string()} |
                   {availability_year_total, nonempty_string()} |
                   {availability_year_running, nonempty_string()} |
-                  {availability_year_updated, nonempty_string()}).
+                  {availability_year_updated, nonempty_string()} |
+                  {availability_year_processing, nonempty_string()}).
 -type service_status_external() ::
     nonempty_list({type, external} |
                   {prefix, cloudi:service_name_pattern()} |
                   {file_path, file:filename()} |
                   {count_process, pos_integer()} |
                   {count_thread, pos_integer()} |
+                  {suspended, boolean()} |
                   {uptime_total, nonempty_string()} |
                   {uptime_running, nonempty_string()} |
+                  {uptime_processing, nonempty_string()} |
                   {uptime_restarts, nonempty_string()} |
                   {downtime_day_restarting, nonempty_string()} |
                   {downtime_week_restarting, nonempty_string()} |
@@ -597,18 +609,26 @@
                   {interrupt_week_updating, nonempty_string()} |
                   {interrupt_month_updating, nonempty_string()} |
                   {interrupt_year_updating, nonempty_string()} |
+                  {interrupt_day_suspended, nonempty_string()} |
+                  {interrupt_week_suspended, nonempty_string()} |
+                  {interrupt_month_suspended, nonempty_string()} |
+                  {interrupt_year_suspended, nonempty_string()} |
                   {availability_day_total, nonempty_string()} |
                   {availability_day_running, nonempty_string()} |
                   {availability_day_updated, nonempty_string()} |
+                  {availability_day_processing, nonempty_string()} |
                   {availability_week_total, nonempty_string()} |
                   {availability_week_running, nonempty_string()} |
                   {availability_week_updated, nonempty_string()} |
+                  {availability_week_processing, nonempty_string()} |
                   {availability_month_total, nonempty_string()} |
                   {availability_month_running, nonempty_string()} |
                   {availability_month_updated, nonempty_string()} |
+                  {availability_month_processing, nonempty_string()} |
                   {availability_year_total, nonempty_string()} |
                   {availability_year_running, nonempty_string()} |
-                  {availability_year_updated, nonempty_string()}).
+                  {availability_year_updated, nonempty_string()} |
+                  {availability_year_processing, nonempty_string()}).
 -type service_status() ::
     service_status_internal() | service_status_external().
 -export_type([service_id/0,
